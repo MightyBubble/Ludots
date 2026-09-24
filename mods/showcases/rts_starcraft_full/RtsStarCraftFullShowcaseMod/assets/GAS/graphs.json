@@ -1,0 +1,82 @@
+[
+  {
+    "id": "Graph.Scf.Mining.Minerals",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "income"
+      },
+      {
+        "id": "income",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Scf.Mining.Tick",
+        "inputs": [
+          "target"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Scf.Zerg.RegenOnKill",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadContextSource",
+        "next": "heal"
+      },
+      {
+        "id": "heal",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Scf.Graph.ZergRegen",
+        "inputs": [
+          "source"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Scf.Terran.ArmorShred",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "shred"
+      },
+      {
+        "id": "shred",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Scf.Graph.ArmorShred",
+        "inputs": [
+          "target"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Scf.Protoss.ShieldRecharge",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "recharge"
+      },
+      {
+        "id": "recharge",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Scf.Graph.ShieldRecharge",
+        "inputs": [
+          "target"
+        ]
+      }
+    ]
+  }
+]

@@ -1442,6 +1442,53 @@
       "status": "active"
     },
     {
+      "id": "rts_starcraft_full",
+      "path": "mods/showcases/rts_starcraft_full/RtsStarCraftFullShowcaseMod",
+      "projectPath": "RtsStarCraftFullShowcaseMod.csproj",
+      "title": "StarCraft Full RTS Showcase",
+      "summary": "100-unit StarCraft-style playable RTS slice with browser command HUD, production, items, GAS effects, and graph-driven combat loops.",
+      "tier": "T2",
+      "category": "genre",
+      "tags": [
+        "rts",
+        "browser",
+        "production",
+        "graph"
+      ],
+      "binding": "rts_starcraft_full_showcase",
+      "preset": "rts_starcraft_full_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/rts_starcraft_full/RtsStarCraftFullShowcaseMod/README.md",
+      "acceptanceTest": "RtsStarCraftFullShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "cnc_tri_nation",
+      "path": "mods/showcases/cnc_tri_nation/CncTriNationFullGameMod",
+      "projectPath": "CncTriNationFullGameMod.csproj",
+      "title": "C&C Tri-Nation Full Game Showcase",
+      "summary": "Player-facing C&C-style tri-nation RTS slice with a live DataPlane command HUD, faction view switching, selection, production, and graph signal panels.",
+      "tier": "T2",
+      "category": "genre",
+      "tags": [
+        "rts",
+        "cnc",
+        "browser",
+        "production",
+        "graph"
+      ],
+      "binding": "cnc_tri_nation_showcase",
+      "preset": "cnc_tri_nation_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/cnc_tri_nation/CncTriNationFullGameMod/README.md",
+      "acceptanceTest": "CncTriNationShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "rts_training_cnc",
       "path": "mods/showcases/rts_training_cnc/RtsCncTrainingShowcaseMod",
       "projectPath": "RtsCncTrainingShowcaseMod.csproj",

@@ -12,5 +12,14 @@
       { "id": "transferId", "op": "InvokeBuiltin", "builtinHandler": "TransferStableId", "next": "consume" },
       { "id": "consume", "op": "InvokeBuiltin", "builtinHandler": "ConsumeEntity" }
     ]
+  },
+  {
+    "id": "Graph.Lifecycle.ConsumeSource",
+    "kind": "Effect",
+    "entry": "begin",
+    "nodes": [
+      { "id": "begin", "op": "BeginLifecycleConsumeSource", "next": "consume" },
+      { "id": "consume", "op": "InvokeBuiltin", "builtinHandler": "ConsumeEntity" }
+    ]
   }
 ]

@@ -235,7 +235,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             };
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
 
@@ -275,7 +275,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             };
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
 

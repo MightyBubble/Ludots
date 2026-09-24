@@ -14,6 +14,12 @@ import {
 import type { Camera, PerspectiveCamera } from 'three';
 import type { OrbitControls } from 'three-stdlib';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
+import {
+    DEFAULT_TERRAIN_VISUAL_OPTIONS,
+    TERRAIN_HEIGHT_CONTRAST_MAX,
+    TERRAIN_HEIGHT_CONTRAST_MIN,
+    type TerrainViewMode,
+} from '../../Core/Render/TerrainVisualStyle';
 
 export type JsonRecord = Record<string, unknown>;
 export type EntityTemplatePayload = JsonRecord;
@@ -147,6 +153,8 @@ export interface EditorState {
     showGrid: boolean;
     showChunkBorders: boolean;
     showNavMesh: boolean; // Added NavMesh Toggle
+    terrainViewMode: TerrainViewMode;
+    terrainHeightContrast: number;
     navMeshBakeVersion: number;
     bakedNavTiles: Map<string, BakedNavTileVisual>;
     bakedNavTilePayloads: BakedNavTilePayload[];
@@ -168,6 +176,8 @@ export interface EditorState {
     toggleGrid: () => void;
     toggleChunkBorders: () => void;
     toggleNavMesh: () => void; // Added Action
+    setTerrainViewMode: (mode: TerrainViewMode) => void;
+    setTerrainHeightContrast: (contrast: number) => void;
     
     // Map Actions
     initMap: (w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
@@ -271,6 +281,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     showGrid: true,
     showChunkBorders: true,
     showNavMesh: false, // Default Off
+    terrainViewMode: DEFAULT_TERRAIN_VISUAL_OPTIONS.terrainViewMode,
+    terrainHeightContrast: DEFAULT_TERRAIN_VISUAL_OPTIONS.heightContrast,
     navMeshBakeVersion: 0,
     bakedNavTiles: new Map(),
     bakedNavTilePayloads: [],
@@ -299,6 +311,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleChunkBorders: () => set((state) => ({ showChunkBorders: !state.showChunkBorders })),
     toggleNavMesh: () => set((state) => ({ showNavMesh: !state.showNavMesh })),
+    setTerrainViewMode: (mode) => set({ terrainViewMode: mode }),
+    setTerrainHeightContrast: (contrast) => set({
+        terrainHeightContrast: Math.max(
+            TERRAIN_HEIGHT_CONTRAST_MIN,
+            Math.min(TERRAIN_HEIGHT_CONTRAST_MAX, Number.isFinite(contrast) ? contrast : DEFAULT_TERRAIN_VISUAL_OPTIONS.heightContrast)),
+    }),
     
     bakeNavMesh: () => {
         set((state) => ({ navMeshBakeVersion: state.navMeshBakeVersion + 1 }));
@@ -409,7 +427,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
         newTerrain.loadFromBytes(w, h, data, format);
         const boardMetrics = normalizeBoardMetrics(metrics ?? get().boardMetrics);
-        const allChunks = new Set<string>(newTerrain.chunks.keys());
         
         set({ 
             terrain: newTerrain, 
@@ -421,7 +438,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             loadedMapInfo: null,
             loadedBoardName: null,
             loadedBoardInfo: null,
-            minimapDirtyChunks: allChunks,
+            minimapDirtyChunks: new Set(),
             navDirtyChunks: new Set(),
             bakedNavTiles: new Map(),
             bakedNavTilePayloads: [],

@@ -144,6 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.AggMaxEntityByAttribute] = HandleAggMaxEntityByAttribute;
             h[(ushort)GraphNodeOp.AggMinEntityByAttribute] = HandleAggMinEntityByAttribute;
             h[(ushort)GraphNodeOp.BeginLifecycleTransaction] = HandleBeginLifecycleTransaction;
+            h[(ushort)GraphNodeOp.BeginLifecycleConsumeSource] = HandleBeginLifecycleConsumeSource;
             h[(ushort)GraphNodeOp.InvokeBuiltin] = HandleInvokeBuiltin;
 
             // ── Int Math / Bool (29, 31-33) ──
@@ -1097,6 +1098,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleBeginLifecycleTransaction(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.BeginLifecycleTransaction();
+        }
+
+        private static void HandleBeginLifecycleConsumeSource(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.BeginLifecycleConsumeSource();
         }
 
         private static void HandleInvokeBuiltin(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

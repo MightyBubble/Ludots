@@ -1,0 +1,146 @@
+[
+  {
+    "id": "exchange_buy_itm_allied_upgrade_0",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 500
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_allied_upgrade_0",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_allied_upgrade_1",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 700
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_allied_upgrade_1",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_allied_upgrade_2",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 900
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_allied_upgrade_2",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_soviet_upgrade_0",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 500
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_soviet_upgrade_0",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_soviet_upgrade_1",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 700
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_soviet_upgrade_1",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_soviet_upgrade_2",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 900
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_soviet_upgrade_2",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_yuri_upgrade_0",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 500
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_yuri_upgrade_0",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_yuri_upgrade_1",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 700
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_yuri_upgrade_1",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "exchange_buy_itm_yuri_upgrade_2",
+    "kind": "Buy",
+    "costAttributes": [
+      {
+        "attribute": "Credits",
+        "amount": 900
+      }
+    ],
+    "outputs": [
+      {
+        "itemId": "itm_yuri_upgrade_2",
+        "quantity": 1
+      }
+    ]
+  }
+]

@@ -327,6 +327,22 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "rts_starcraft_full_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_starcraft_full/RtsStarCraftFullShowcaseMod",
+        "projectPath": "RtsStarCraftFullShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "cnc_tri_nation_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/cnc_tri_nation/CncTriNationFullGameMod",
+        "projectPath": "CncTriNationFullGameMod.csproj"
+      }
     }
   ],
   "adapters": {

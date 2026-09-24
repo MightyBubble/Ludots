@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -40,7 +40,7 @@ internal sealed class ParticipantViewCapabilityRuntime
 
         EnsurePresentationSystemInstalled(engine);
         EnsureSelectedParticipant(engine);
-        ApplySelectionView(engine);
+        ApplyCommandSourceProjection(engine);
         RefreshPanel(engine);
         return Task.CompletedTask;
     }
@@ -66,7 +66,7 @@ internal sealed class ParticipantViewCapabilityRuntime
         }
 
         EnsureSelectedParticipant(engine);
-        ApplySelectionView(engine);
+        ApplyCommandSourceProjection(engine);
 
         if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
         {
@@ -84,7 +84,7 @@ internal sealed class ParticipantViewCapabilityRuntime
     {
         _mode = mode;
         EnsureSelectedParticipant(engine);
-        ApplySelectionView(engine);
+        ApplyCommandSourceProjection(engine);
         RefreshMountedPanel(engine);
     }
 
@@ -97,7 +97,7 @@ internal sealed class ParticipantViewCapabilityRuntime
 
         _mode = ParticipantViewMode.Players;
         _selectedPlayerId = playerId;
-        ApplySelectionView(engine);
+        ApplyCommandSourceProjection(engine);
         RefreshMountedPanel(engine);
     }
 
@@ -110,7 +110,7 @@ internal sealed class ParticipantViewCapabilityRuntime
 
         _mode = ParticipantViewMode.Teams;
         _selectedTeamId = teamId;
-        ApplySelectionView(engine);
+        ApplyCommandSourceProjection(engine);
         RefreshMountedPanel(engine);
     }
 
@@ -155,25 +155,27 @@ internal sealed class ParticipantViewCapabilityRuntime
         }
     }
 
-    private void ApplySelectionView(GameEngine engine)
+    private void ApplyCommandSourceProjection(GameEngine engine)
     {
         var session = engine.CurrentMapSession;
-        if (session == null ||
-            engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+        if (session == null)
         {
             return;
         }
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("ParticipantViewCapabilityMod requires EntityCollectionStore.");
 
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
             localObj is not Entity commandSourceOwner ||
             commandSourceOwner == Entity.Null ||
             !engine.World.IsAlive(commandSourceOwner))
         {
-            return;
+            throw new InvalidOperationException("ParticipantViewCapabilityMod requires an alive LocalPlayerEntity.");
         }
 
-        Entity viewViewer = ResolveCurrentViewerEntity(engine, session);
-        if (viewViewer == Entity.Null || !engine.World.IsAlive(viewViewer))
+        Entity contextEntity = ResolveCurrentViewerEntity(engine, session);
+        if (contextEntity == Entity.Null || !engine.World.IsAlive(contextEntity))
         {
             return;
         }
@@ -186,7 +188,7 @@ internal sealed class ParticipantViewCapabilityRuntime
                 ? ParticipantViewProjection.ResolveTeamMembers(engine.World, session, _selectedTeamId)
                 : Array.Empty<Entity>();
 
-        PublishCommandSourceProjection(collections, commandSourceOwner, viewViewer, members);
+        ReplaceCommandSourceIfChanged(collections, commandSourceOwner, contextEntity, members);
     }
 
     private void RefreshMountedPanel(GameEngine engine)
@@ -282,12 +284,37 @@ internal sealed class ParticipantViewCapabilityRuntime
         return Entity.Null;
     }
 
-    private static void PublishCommandSourceProjection(
+    private static void ReplaceCommandSourceIfChanged(
         EntityCollectionStore collections,
         Entity owner,
         Entity contextEntity,
         Entity[] members)
     {
+        if (collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle) &&
+            collections.TryGetView(handle, out EntityCollectionView view) &&
+            view.Count == members.Length)
+        {
+            var current = new Entity[members.Length];
+            int written = collections.CopyEntities(handle, 0, current);
+            if (written == members.Length)
+            {
+                bool equal = true;
+                for (int i = 0; i < members.Length; i++)
+                {
+                    if (current[i] != members[i])
+                    {
+                        equal = false;
+                        break;
+                    }
+                }
+
+                if (equal)
+                {
+                    return;
+                }
+            }
+        }
+
         var descriptor = EntityCollectionDescriptor.Create(
             EntityCollectionKeys.CommandSource,
             EntityCollectionSourceKind.DynamicParticipant,

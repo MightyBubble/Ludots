@@ -1,0 +1,6827 @@
+[
+  {
+    "id": "cnc_allied_team_anchor",
+    "components": {
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_player_anchor",
+    "components": {
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_team_anchor",
+    "components": {
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_player_anchor",
+    "components": {
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_team_anchor",
+    "components": {
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_player_anchor",
+    "components": {
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_power",
+    "components": {
+      "Name": {
+        "Value": "Allied Power Plant"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_refinery",
+    "components": {
+      "Name": {
+        "Value": "Allied Ore Refinery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_gi",
+    "components": {
+      "Name": {
+        "Value": "Allied GI"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_engineer",
+    "components": {
+      "Name": {
+        "Value": "Allied Engineer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_medic",
+    "components": {
+      "Name": {
+        "Value": "Allied Medic"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_rocketeer",
+    "components": {
+      "Name": {
+        "Value": "Allied Rocketeer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_sniper",
+    "components": {
+      "Name": {
+        "Value": "Allied Sniper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_spy",
+    "components": {
+      "Name": {
+        "Value": "Allied Spy"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_seal",
+    "components": {
+      "Name": {
+        "Value": "Allied Seal"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_infantry_chrono_legionnaire",
+    "components": {
+      "Name": {
+        "Value": "Allied Chrono Legionnaire"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_barracks",
+    "components": {
+      "Name": {
+        "Value": "Allied Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Allied.Train.gi",
+          "Ability.Cnc.Allied.Train.engineer",
+          "Ability.Cnc.Allied.Train.medic",
+          "Ability.Cnc.Allied.Train.rocketeer",
+          "Ability.Cnc.Allied.Train.sniper",
+          "Ability.Cnc.Allied.Train.spy",
+          "Ability.Cnc.Allied.Train.seal"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_grizzly_tank",
+    "components": {
+      "Name": {
+        "Value": "Allied Grizzly Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_ifv",
+    "components": {
+      "Name": {
+        "Value": "Allied IFV"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_mirage_tank",
+    "components": {
+      "Name": {
+        "Value": "Allied Mirage Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_prism_tank",
+    "components": {
+      "Name": {
+        "Value": "Allied Prism Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_battle_fortress",
+    "components": {
+      "Name": {
+        "Value": "Allied Battle Fortress"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_destroyer",
+    "components": {
+      "Name": {
+        "Value": "Allied Destroyer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_aircraft_carrier",
+    "components": {
+      "Name": {
+        "Value": "Allied Aircraft Carrier"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_vehicle_chrono_tank",
+    "components": {
+      "Name": {
+        "Value": "Allied Chrono Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_war_factory",
+    "components": {
+      "Name": {
+        "Value": "Allied War Factory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Allied.Train.grizzly_tank",
+          "Ability.Cnc.Allied.Train.ifv",
+          "Ability.Cnc.Allied.Train.mirage_tank",
+          "Ability.Cnc.Allied.Train.prism_tank",
+          "Ability.Cnc.Allied.Train.battle_fortress",
+          "Ability.Cnc.Allied.Train.destroyer",
+          "Ability.Cnc.Allied.Train.aircraft_carrier"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_aircraft_harrier",
+    "components": {
+      "Name": {
+        "Value": "Allied Harrier"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_aircraft_black_eagle",
+    "components": {
+      "Name": {
+        "Value": "Allied Black Eagle"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_aircraft_nighthawk",
+    "components": {
+      "Name": {
+        "Value": "Allied Nighthawk"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_aircraft_chrono_copter",
+    "components": {
+      "Name": {
+        "Value": "Allied Chrono Copter"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_airfield",
+    "components": {
+      "Name": {
+        "Value": "Allied Airfield"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Allied.Train.harrier",
+          "Ability.Cnc.Allied.Train.black_eagle",
+          "Ability.Cnc.Allied.Train.nighthawk",
+          "Ability.Cnc.Allied.Train.chrono_copter",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_battle_lab",
+    "components": {
+      "Name": {
+        "Value": "Allied Battle Lab"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_pillbox",
+    "components": {
+      "Name": {
+        "Value": "Allied Pillbox"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_super_weapon",
+    "components": {
+      "Name": {
+        "Value": "Allied Super Weapon"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_service_depot",
+    "components": {
+      "Name": {
+        "Value": "Allied Service Depot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_structure_conyard",
+    "components": {
+      "Name": {
+        "Value": "Allied Construction Yard"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Allied.Build.power_plant",
+          "Ability.Cnc.Allied.Build.ore_refinery",
+          "Ability.Cnc.Allied.Build.barracks",
+          "Ability.Cnc.Allied.Build.war_factory",
+          "Ability.Cnc.Allied.Build.airfield",
+          "Ability.Cnc.Allied.Build.battle_lab",
+          "Ability.Cnc.Allied.Build.pillbox",
+          "Ability.Cnc.Allied.Build.super_weapon"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "cnc_allied_conyard_forms"
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_worker_harvester",
+    "components": {
+      "Name": {
+        "Value": "Allied Ore Harvester"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_special_tanya",
+    "components": {
+      "Name": {
+        "Value": "Allied Tanya"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_special_weather_controller",
+    "components": {
+      "Name": {
+        "Value": "Allied Weather Controller"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_allied_special_grand_cannon",
+    "components": {
+      "Name": {
+        "Value": "Allied Grand Cannon"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_power",
+    "components": {
+      "Name": {
+        "Value": "Soviet Power Plant"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_refinery",
+    "components": {
+      "Name": {
+        "Value": "Soviet Ore Refinery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_conscript",
+    "components": {
+      "Name": {
+        "Value": "Soviet Conscript"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_flak_trooper",
+    "components": {
+      "Name": {
+        "Value": "Soviet Flak Trooper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_tesla_trooper",
+    "components": {
+      "Name": {
+        "Value": "Soviet Tesla Trooper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_engineer",
+    "components": {
+      "Name": {
+        "Value": "Soviet Engineer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_crazy_ivan",
+    "components": {
+      "Name": {
+        "Value": "Soviet Crazy Ivan"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_desolator",
+    "components": {
+      "Name": {
+        "Value": "Soviet Desolator"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_boris",
+    "components": {
+      "Name": {
+        "Value": "Soviet Boris"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_infantry_terrorist",
+    "components": {
+      "Name": {
+        "Value": "Soviet Terrorist"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_barracks",
+    "components": {
+      "Name": {
+        "Value": "Soviet Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Soviet.Train.conscript",
+          "Ability.Cnc.Soviet.Train.flak_trooper",
+          "Ability.Cnc.Soviet.Train.tesla_trooper",
+          "Ability.Cnc.Soviet.Train.engineer",
+          "Ability.Cnc.Soviet.Train.crazy_ivan",
+          "Ability.Cnc.Soviet.Train.desolator",
+          "Ability.Cnc.Soviet.Train.boris"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_rhino_tank",
+    "components": {
+      "Name": {
+        "Value": "Soviet Rhino Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_flak_track",
+    "components": {
+      "Name": {
+        "Value": "Soviet Flak Track"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_v3_launcher",
+    "components": {
+      "Name": {
+        "Value": "Soviet V3 Launcher"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_apocalypse_tank",
+    "components": {
+      "Name": {
+        "Value": "Soviet Apocalypse Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_tesla_tank",
+    "components": {
+      "Name": {
+        "Value": "Soviet Tesla Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_demolisher",
+    "components": {
+      "Name": {
+        "Value": "Soviet Demolisher"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_dreadnought",
+    "components": {
+      "Name": {
+        "Value": "Soviet Dreadnought"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_vehicle_mammoth_tank",
+    "components": {
+      "Name": {
+        "Value": "Soviet Mammoth Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_war_factory",
+    "components": {
+      "Name": {
+        "Value": "Soviet War Factory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Soviet.Train.rhino_tank",
+          "Ability.Cnc.Soviet.Train.flak_track",
+          "Ability.Cnc.Soviet.Train.v3_launcher",
+          "Ability.Cnc.Soviet.Train.apocalypse_tank",
+          "Ability.Cnc.Soviet.Train.tesla_tank",
+          "Ability.Cnc.Soviet.Train.demolisher",
+          "Ability.Cnc.Soviet.Train.dreadnought"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_aircraft_mig",
+    "components": {
+      "Name": {
+        "Value": "Soviet MiG"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_aircraft_kirov",
+    "components": {
+      "Name": {
+        "Value": "Soviet Kirov"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_aircraft_siege_chopper",
+    "components": {
+      "Name": {
+        "Value": "Soviet Siege Chopper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_aircraft_vortex",
+    "components": {
+      "Name": {
+        "Value": "Soviet Vortex"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_airfield",
+    "components": {
+      "Name": {
+        "Value": "Soviet Airfield"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Soviet.Train.mig",
+          "Ability.Cnc.Soviet.Train.kirov",
+          "Ability.Cnc.Soviet.Train.siege_chopper",
+          "Ability.Cnc.Soviet.Train.vortex",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_battle_lab",
+    "components": {
+      "Name": {
+        "Value": "Soviet Battle Lab"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_pillbox",
+    "components": {
+      "Name": {
+        "Value": "Soviet Pillbox"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_super_weapon",
+    "components": {
+      "Name": {
+        "Value": "Soviet Super Weapon"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_service_depot",
+    "components": {
+      "Name": {
+        "Value": "Soviet Service Depot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_structure_conyard",
+    "components": {
+      "Name": {
+        "Value": "Soviet Construction Yard"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Soviet.Build.power_plant",
+          "Ability.Cnc.Soviet.Build.ore_refinery",
+          "Ability.Cnc.Soviet.Build.barracks",
+          "Ability.Cnc.Soviet.Build.war_factory",
+          "Ability.Cnc.Soviet.Build.airfield",
+          "Ability.Cnc.Soviet.Build.battle_lab",
+          "Ability.Cnc.Soviet.Build.pillbox",
+          "Ability.Cnc.Soviet.Build.super_weapon"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "cnc_soviet_conyard_forms"
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_worker_harvester",
+    "components": {
+      "Name": {
+        "Value": "Soviet Ore Harvester"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_special_iron_curtain",
+    "components": {
+      "Name": {
+        "Value": "Soviet Iron Curtain"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_special_nuclear_silo",
+    "components": {
+      "Name": {
+        "Value": "Soviet Nuclear Silo"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_soviet_special_tesla_coil",
+    "components": {
+      "Name": {
+        "Value": "Soviet Tesla Coil"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_power",
+    "components": {
+      "Name": {
+        "Value": "Yuri Power Plant"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 800,
+          "Power": 160,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_refinery",
+    "components": {
+      "Name": {
+        "Value": "Yuri Ore Refinery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1200,
+          "Credits": 2000,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_initiate",
+    "components": {
+      "Name": {
+        "Value": "Yuri Initiate"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 200,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_brute",
+    "components": {
+      "Name": {
+        "Value": "Yuri Brute"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 220,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_virus",
+    "components": {
+      "Name": {
+        "Value": "Yuri Virus"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 240,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_yuri_clone",
+    "components": {
+      "Name": {
+        "Value": "Yuri Yuri Clone"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 260,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_yuri_prime",
+    "components": {
+      "Name": {
+        "Value": "Yuri Yuri Prime"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 280,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_genetic_mutator",
+    "components": {
+      "Name": {
+        "Value": "Yuri Genetic Mutator"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 300,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_slave_miner",
+    "components": {
+      "Name": {
+        "Value": "Yuri Slave Miner"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 320,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_infantry_guardian_gi",
+    "components": {
+      "Name": {
+        "Value": "Yuri Guardian GI"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 340,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 30,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 30,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_barracks",
+    "components": {
+      "Name": {
+        "Value": "Yuri Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1000,
+          "Credits": 500,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Yuri.Train.initiate",
+          "Ability.Cnc.Yuri.Train.brute",
+          "Ability.Cnc.Yuri.Train.virus",
+          "Ability.Cnc.Yuri.Train.yuri_clone",
+          "Ability.Cnc.Yuri.Train.yuri_prime",
+          "Ability.Cnc.Yuri.Train.genetic_mutator",
+          "Ability.Cnc.Yuri.Train.slave_miner"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_gattling_tank",
+    "components": {
+      "Name": {
+        "Value": "Yuri Gattling Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 430,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_magnetron",
+    "components": {
+      "Name": {
+        "Value": "Yuri Magnetron"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 460,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_mastermind",
+    "components": {
+      "Name": {
+        "Value": "Yuri Mastermind"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 490,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_floating_disk",
+    "components": {
+      "Name": {
+        "Value": "Yuri Floating Disk"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 520,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_lasher_tank",
+    "components": {
+      "Name": {
+        "Value": "Yuri Lasher Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 550,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_virus_tank",
+    "components": {
+      "Name": {
+        "Value": "Yuri Virus Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 580,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_chaos_tank",
+    "components": {
+      "Name": {
+        "Value": "Yuri Chaos Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 610,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_vehicle_battle_fortress_yuri",
+    "components": {
+      "Name": {
+        "Value": "Yuri Battle Fortress Yuri"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 640,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 160,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 160
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_war_factory",
+    "components": {
+      "Name": {
+        "Value": "Yuri War Factory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1400,
+          "Credits": 2800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Yuri.Train.gattling_tank",
+          "Ability.Cnc.Yuri.Train.magnetron",
+          "Ability.Cnc.Yuri.Train.mastermind",
+          "Ability.Cnc.Yuri.Train.floating_disk",
+          "Ability.Cnc.Yuri.Train.lasher_tank",
+          "Ability.Cnc.Yuri.Train.virus_tank",
+          "Ability.Cnc.Yuri.Train.chaos_tank"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_aircraft_floating_disk_scout",
+    "components": {
+      "Name": {
+        "Value": "Yuri Floating Disk Scout"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_aircraft_harrier_yuri",
+    "components": {
+      "Name": {
+        "Value": "Yuri Harrier Yuri"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_aircraft_kirov_yuri",
+    "components": {
+      "Name": {
+        "Value": "Yuri Kirov Yuri"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_aircraft_vortex_yuri",
+    "components": {
+      "Name": {
+        "Value": "Yuri Vortex Yuri"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 250,
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 120
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_airfield",
+    "components": {
+      "Name": {
+        "Value": "Yuri Airfield"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1100,
+          "Credits": 1800,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Yuri.Train.floating_disk_scout",
+          "Ability.Cnc.Yuri.Train.harrier_yuri",
+          "Ability.Cnc.Yuri.Train.kirov_yuri",
+          "Ability.Cnc.Yuri.Train.vortex_yuri",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold",
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_battle_lab",
+    "components": {
+      "Name": {
+        "Value": "Yuri Battle Lab"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1300,
+          "Credits": 3200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_pillbox",
+    "components": {
+      "Name": {
+        "Value": "Yuri Pillbox"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 600,
+          "Credits": 600,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_super_weapon",
+    "components": {
+      "Name": {
+        "Value": "Yuri Super Weapon"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 2000,
+          "Credits": 5000,
+          "Power": 200,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_service_depot",
+    "components": {
+      "Name": {
+        "Value": "Yuri Service Depot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 900,
+          "Credits": 1200,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_structure_conyard",
+    "components": {
+      "Name": {
+        "Value": "Yuri Construction Yard"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 1600,
+          "Credits": 6000,
+          "Power": 120,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Yuri.Build.power_plant",
+          "Ability.Cnc.Yuri.Build.ore_refinery",
+          "Ability.Cnc.Yuri.Build.barracks",
+          "Ability.Cnc.Yuri.Build.war_factory",
+          "Ability.Cnc.Yuri.Build.airfield",
+          "Ability.Cnc.Yuri.Build.battle_lab",
+          "Ability.Cnc.Yuri.Build.pillbox",
+          "Ability.Cnc.Yuri.Build.super_weapon"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "cnc_yuri_conyard_forms"
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_worker_harvester",
+    "components": {
+      "Name": {
+        "Value": "Yuri Ore Harvester"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 500,
+          "Credits": 1400,
+          "Power": 0,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 80,
+        "halfSizeYCm": 45,
+        "halfSizeZCm": 80
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_special_psychic_dominator",
+    "components": {
+      "Name": {
+        "Value": "Yuri Psychic Dominator"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_special_cloning_vats",
+    "components": {
+      "Name": {
+        "Value": "Yuri Cloning Vats"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "cnc_yuri_special_genetic_mutator_device",
+    "components": {
+      "Name": {
+        "Value": "Yuri Genetic Mutator Device"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        },
+        "current": {
+          "Health": 800,
+          "Credits": 3000,
+          "Power": 100,
+          "Ore": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 170,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 200,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 200
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Cnc.Shared.Hold"
+        ]
+      }
+    }
+  }
+]

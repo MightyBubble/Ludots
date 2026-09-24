@@ -1,0 +1,140 @@
+[
+  {
+    "id": "cnc_allied_conyard_forms",
+    "forms": [
+      {
+        "formId": "default",
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Cnc.Allied.Place.power_plant"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Cnc.Allied.Place.ore_refinery"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Cnc.Allied.Place.barracks"
+          },
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Cnc.Allied.Place.war_factory"
+          },
+          {
+            "slotIndex": 4,
+            "abilityId": "Ability.Cnc.Allied.Place.airfield"
+          },
+          {
+            "slotIndex": 5,
+            "abilityId": "Ability.Cnc.Allied.Place.battle_lab"
+          },
+          {
+            "slotIndex": 6,
+            "abilityId": "Ability.Cnc.Allied.Place.pillbox"
+          },
+          {
+            "slotIndex": 7,
+            "abilityId": "Ability.Cnc.Allied.Place.super_weapon"
+          },
+          {
+            "slotIndex": 8,
+            "abilityId": "Ability.Cnc.Allied.Place.service_depot"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cnc_soviet_conyard_forms",
+    "forms": [
+      {
+        "formId": "default",
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Cnc.Soviet.Place.power_plant"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Cnc.Soviet.Place.ore_refinery"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Cnc.Soviet.Place.barracks"
+          },
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Cnc.Soviet.Place.war_factory"
+          },
+          {
+            "slotIndex": 4,
+            "abilityId": "Ability.Cnc.Soviet.Place.airfield"
+          },
+          {
+            "slotIndex": 5,
+            "abilityId": "Ability.Cnc.Soviet.Place.battle_lab"
+          },
+          {
+            "slotIndex": 6,
+            "abilityId": "Ability.Cnc.Soviet.Place.pillbox"
+          },
+          {
+            "slotIndex": 7,
+            "abilityId": "Ability.Cnc.Soviet.Place.super_weapon"
+          },
+          {
+            "slotIndex": 8,
+            "abilityId": "Ability.Cnc.Soviet.Place.service_depot"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cnc_yuri_conyard_forms",
+    "forms": [
+      {
+        "formId": "default",
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Cnc.Yuri.Place.power_plant"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Cnc.Yuri.Place.ore_refinery"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Cnc.Yuri.Place.barracks"
+          },
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Cnc.Yuri.Place.war_factory"
+          },
+          {
+            "slotIndex": 4,
+            "abilityId": "Ability.Cnc.Yuri.Place.airfield"
+          },
+          {
+            "slotIndex": 5,
+            "abilityId": "Ability.Cnc.Yuri.Place.battle_lab"
+          },
+          {
+            "slotIndex": 6,
+            "abilityId": "Ability.Cnc.Yuri.Place.pillbox"
+          },
+          {
+            "slotIndex": 7,
+            "abilityId": "Ability.Cnc.Yuri.Place.super_weapon"
+          },
+          {
+            "slotIndex": 8,
+            "abilityId": "Ability.Cnc.Yuri.Place.service_depot"
+          }
+        ]
+      }
+    ]
+  }
+]

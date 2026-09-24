@@ -16,7 +16,14 @@ import {
     Layers,
     Map as MapIcon,
     MapPin,
+    Minus,
     Mountain,
+    PanelBottom,
+    PanelBottomClose,
+    PanelLeft,
+    PanelLeftClose,
+    PanelRight,
+    PanelRightClose,
     PaintBucket,
     Play,
     Plus,
@@ -35,7 +42,7 @@ import {
 import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type BoardUpdateRequest, type BakedNavTilePayload, type EntityTemplatePayload, type JsonRecord } from './EditorStore';
 import { Minimap } from './Minimap';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
-import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
+import { cellToWorldCm, worldPointToCell, type BoardMetrics, type BoardTopology } from '../../Core/Map/TopologyMetrics';
 import { CHUNK_BYTE_SIZE, REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE } from '../../Core/Map/TerrainStore';
 import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
 
@@ -294,6 +301,8 @@ export const Toolbar: React.FC = () => {
         showGrid, toggleGrid,
         showChunkBorders, toggleChunkBorders,
         showNavMesh, toggleNavMesh,
+        terrainViewMode, setTerrainViewMode,
+        terrainHeightContrast, setTerrainHeightContrast,
         setBakedNavTiles,
         mergeBakedNavTiles,
         clearBakedNavTiles,
@@ -350,6 +359,9 @@ export const Toolbar: React.FC = () => {
     const [navBakeState, setNavBakeState] = React.useState<NavBakeState>(idleNavBakeState);
     const [navQueryState, setNavQueryState] = React.useState<NavQueryUiState>(idleNavQueryState);
     const [navQueryMaxPortals, setNavQueryMaxPortals] = React.useState(DefaultNavQueryMaxPortals);
+    const [leftPanelOpen, setLeftPanelOpen] = React.useState(false);
+    const [rightPanelOpen, setRightPanelOpen] = React.useState(true);
+    const [toolPanelOpen, setToolPanelOpen] = React.useState(true);
     const navAbortRef = React.useRef<AbortController | null>(null);
 
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
@@ -362,6 +374,10 @@ export const Toolbar: React.FC = () => {
     const canvasCanEdit = Boolean(canvasHasLocalSession || (canvasMapLoaded && loadedBoardInfo?.canEditTerrain));
     const brushInspectorLocked = !canvasCanEdit || navPanelTab === 'simulation';
     const selectedDiffersFromCanvas = Boolean(canvasHasRepoSession && !canvasMapLoaded);
+    const bottomLeftInsetClass = leftPanelOpen ? 'left-[408px]' : 'left-4';
+    const bottomRightInsetClass = rightPanelOpen ? 'right-[392px]' : 'right-4';
+    const loadingProgress = Math.max(0, Math.min(100, loadingState.progress));
+    const loadingIsNavBake = loadingState.message.startsWith('Baking NavTiles');
     const bakeMapId = canvasMapLoaded ? loadedMapId : null;
     const bakeBoardName = canvasMapLoaded ? loadedBoardName : null;
     const selectedTargetLabel = `${selectedMapId ?? 'no map'} / ${selectedBoardName ?? 'no board'}`;
@@ -417,34 +433,63 @@ export const Toolbar: React.FC = () => {
         : canvasMapLoaded
             ? 'Open another board before deleting the loaded board'
             : 'Delete selected board from MapConfig; terrain data file is kept';
-    const boardPropertyTopology = canvasMapLoaded
+    const boardPropertiesUseCanvas = canvasMapLoaded || canvasHasLocalSession;
+    const boardPropertyTopology = boardPropertiesUseCanvas
         ? boardMetrics.topology
         : (selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? boardMetrics.topology);
-    const boardPropertyWidthChunks = canvasMapLoaded
+    const boardPropertyWidthChunks = boardPropertiesUseCanvas
         ? terrain.widthChunks
         : (selectedBoardInfo?.widthChunks ?? selectedMapInfo?.widthChunks ?? terrain.widthChunks);
-    const boardPropertyHeightChunks = canvasMapLoaded
+    const boardPropertyHeightChunks = boardPropertiesUseCanvas
         ? terrain.heightChunks
         : (selectedBoardInfo?.heightChunks ?? selectedMapInfo?.heightChunks ?? terrain.heightChunks);
     const boardPropertyChunks = `${boardPropertyWidthChunks} x ${boardPropertyHeightChunks}`;
-    const boardPropertyCellSizeCm = canvasMapLoaded
+    const boardPropertyCellSizeCm = boardPropertiesUseCanvas
         ? boardMetrics.cellSizeCm
         : (selectedBoardInfo?.cellSizeCm ?? selectedMapInfo?.cellSizeCm ?? boardMetrics.cellSizeCm);
-    const boardPropertyHexEdgeLengthCm = canvasMapLoaded
+    const boardPropertyHexEdgeLengthCm = boardPropertiesUseCanvas
         ? boardMetrics.hexEdgeLengthCm
         : (selectedBoardInfo?.hexEdgeLengthCm ?? selectedMapInfo?.hexEdgeLengthCm ?? boardMetrics.hexEdgeLengthCm);
-    const boardPropertyChunkSizeCells = canvasMapLoaded
+    const boardPropertyChunkSizeCells = boardPropertiesUseCanvas
         ? boardMetrics.chunkSizeCells
         : (selectedBoardInfo?.chunkSizeCells ?? selectedMapInfo?.chunkSizeCells ?? boardMetrics.chunkSizeCells);
+    const boardPropertyStatusTone = boardPropertiesUseCanvas
+        ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+        : selectedMapInfo?.canBake
+            ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200'
+            : 'border-amber-700/60 bg-amber-950/30 text-amber-200';
+    const boardPropertyStatusLabel = boardPropertiesUseCanvas
+        ? loadedCanvasLabel
+        : `${selectedBoardName ?? 'No board'} / ${selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? 'Unknown'}`;
+    const boardPropertyStatusMessage = boardPropertiesUseCanvas
+        ? boardSessionMessage
+        : selectedBoardInfo?.reason ?? selectedMapInfo?.reason ?? 'Select a map from the top bar.';
+    const boardEditorTopology = selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? boardMetrics.topology;
+    const boardEditorWidthChunks = selectedBoardInfo?.widthChunks ?? selectedMapInfo?.widthChunks ?? terrain.widthChunks;
+    const boardEditorHeightChunks = selectedBoardInfo?.heightChunks ?? selectedMapInfo?.heightChunks ?? terrain.heightChunks;
+    const boardEditorChunks = `${boardEditorWidthChunks} x ${boardEditorHeightChunks}`;
+    const boardEditorCellSizeCm = selectedBoardInfo?.cellSizeCm ?? selectedMapInfo?.cellSizeCm ?? boardMetrics.cellSizeCm;
+    const boardEditorHexEdgeLengthCm = selectedBoardInfo?.hexEdgeLengthCm ?? selectedMapInfo?.hexEdgeLengthCm ?? boardMetrics.hexEdgeLengthCm;
+    const boardEditorChunkSizeCells = selectedBoardInfo?.chunkSizeCells ?? selectedMapInfo?.chunkSizeCells ?? boardMetrics.chunkSizeCells;
+    const importBoardMetrics = React.useMemo<BoardMetrics | null>(() => {
+        const source = selectedBoardInfo ?? selectedMapInfo;
+        if (source?.spatialType !== 'Grid' && source?.spatialType !== 'HexGrid') return null;
+        return {
+            topology: source.spatialType,
+            cellSizeCm: source.cellSizeCm,
+            hexEdgeLengthCm: source.hexEdgeLengthCm,
+            chunkSizeCells: source.chunkSizeCells,
+        };
+    }, [selectedBoardInfo, selectedMapInfo]);
     const boardScalePreviewCellSizeCm = Math.max(1, Math.floor(editBoardCellSizeCm || CellCm));
     const boardScalePreviewHexEdgeLengthCm = Math.max(1, Math.floor(editBoardHexEdgeLengthCm || DefaultHexEdgeLengthCm));
-    const boardScalePreviewWidthCells = boardPropertyWidthChunks * boardPropertyChunkSizeCells;
-    const boardScalePreviewHeightCells = boardPropertyHeightChunks * boardPropertyChunkSizeCells;
+    const boardScalePreviewWidthCells = boardEditorWidthChunks * boardEditorChunkSizeCells;
+    const boardScalePreviewHeightCells = boardEditorHeightChunks * boardEditorChunkSizeCells;
     const boardScalePreviewWidthCm = boardScalePreviewWidthCells * boardScalePreviewCellSizeCm;
     const boardScalePreviewHeightCm = boardScalePreviewHeightCells * boardScalePreviewCellSizeCm;
-    const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
-    const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
-    const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
+    const boardScalePreviewChunkCm = boardEditorChunkSizeCells * boardScalePreviewCellSizeCm;
+    const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardEditorCellSizeCm;
+    const boardScaleHexChanged = boardEditorTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardEditorHexEdgeLengthCm;
     const boardScaleNavChanged = editBoardNavigationEnabled !== (selectedBoardInfo?.navigationEnabled ?? selectedMapInfo?.navigationEnabled ?? true);
     const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || boardScaleNavChanged;
     const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
@@ -1312,6 +1357,11 @@ export const Toolbar: React.FC = () => {
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!importBoardMetrics) {
+            alert('Select a Grid or HexGrid board before importing terrain.');
+            e.currentTarget.value = '';
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -1328,8 +1378,8 @@ export const Toolbar: React.FC = () => {
                 return;
             }
 
-            const data = new Uint8Array(buffer.slice(9));
-            loadMap(data, w, h, boardMetrics, stride);
+            const data = new Uint8Array(buffer, 9);
+            loadMap(data, w, h, importBoardMetrics, stride);
         };
         reader.readAsArrayBuffer(file);
     };
@@ -1773,29 +1823,31 @@ export const Toolbar: React.FC = () => {
     return (
         <div className="pointer-events-none absolute inset-0 z-40 text-slate-100">
             {loadingState.isLoading ? (
-                <div className="pointer-events-auto absolute left-1/2 top-24 z-50 w-80 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
-                    <div className="mb-3 flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full border-4 border-sky-500 border-t-transparent animate-spin" />
-                        <div>
-                            <div className="text-sm font-semibold text-white">{loadingState.message}</div>
-                            <div className="text-[10px] text-slate-500">{loadingState.progress}%</div>
+                <div className="pointer-events-auto absolute left-4 right-4 top-[84px] z-50 mx-auto max-w-xl overflow-hidden rounded-lg border border-sky-800/70 bg-slate-950/88 px-3 py-2 shadow-xl backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <RefreshCw size={15} className="shrink-0 animate-spin text-sky-300" />
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="truncate text-xs font-semibold text-white">{loadingState.message}</div>
+                                <div className="font-mono text-[10px] text-slate-400">{loadingProgress}%</div>
+                            </div>
+                            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-800">
+                                <div className="h-full bg-sky-400 transition-all duration-100" style={{ width: `${loadingProgress}%` }} />
+                            </div>
                         </div>
+                        {loadingIsNavBake ? (
+                            <button
+                                onClick={() => {
+                                    navAbortRef.current?.abort();
+                                    navAbortRef.current = null;
+                                    setLoading(false);
+                                }}
+                                className="shrink-0 rounded border border-red-800 bg-red-950/60 px-2 py-1 text-[10px] font-semibold text-red-100 hover:border-red-600 hover:bg-red-900/80"
+                            >
+                                Cancel
+                            </button>
+                        ) : null}
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div className="h-full bg-sky-500 transition-all duration-100" style={{ width: `${loadingState.progress}%` }} />
-                    </div>
-                    {loadingState.message.startsWith('Baking NavTiles') ? (
-                        <button
-                            onClick={() => {
-                                navAbortRef.current?.abort();
-                                navAbortRef.current = null;
-                                setLoading(false);
-                            }}
-                            className="mt-4 w-full rounded bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"
-                        >
-                            Cancel Bake
-                        </button>
-                    ) : null}
                 </div>
             ) : null}
 
@@ -1871,10 +1923,24 @@ export const Toolbar: React.FC = () => {
                 </button>
             </header>
 
+            {rightPanelOpen ? (
             <aside className={`${panelClass} absolute bottom-4 right-4 top-[92px] flex w-[360px] flex-col overflow-hidden`}>
                 <div className="border-b border-slate-800 px-3 py-2">
-                    <div className={sectionTitleClass}>Map And Board</div>
-                    <div className="mt-1 truncate text-xs text-slate-300">{selectedMapId ?? 'No map selected'}</div>
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <div className={sectionTitleClass}>Map And Board</div>
+                            <div className="mt-1 truncate text-xs text-slate-300">{selectedMapId ?? 'No map selected'}</div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setRightPanelOpen(false)}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                            title="Collapse Map And Board"
+                            aria-label="Collapse Map And Board"
+                        >
+                            <PanelRightClose size={15} />
+                        </button>
+                    </div>
                 </div>
                 <div className="space-y-4 overflow-auto p-3">
                     <Minimap embedded className="border-slate-800/90 bg-slate-900/60 shadow-none" />
@@ -1902,8 +1968,8 @@ export const Toolbar: React.FC = () => {
                                 <div className="font-medium text-slate-200">{boardPropertyChunkSizeCells} cells</div>
                             </div>
                         </div>
-                        <div className={`rounded border p-2 text-[11px] ${selectedMapInfo?.canBake ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200' : 'border-amber-700/60 bg-amber-950/30 text-amber-200'}`}>
-                            <div>{selectedBoardName ?? 'No board'} / {selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? 'Unknown'} / {selectedBoardInfo?.reason ?? selectedMapInfo?.reason ?? 'Select a map from the top bar.'}</div>
+                        <div className={`rounded border p-2 text-[11px] ${boardPropertyStatusTone}`}>
+                            <div>{boardPropertyStatusLabel} / {boardPropertyStatusMessage}</div>
                             <div className="mt-1 text-slate-400">Nav dirty chunks: {dirtyChunkCount}</div>
                         </div>
                     </section>
@@ -1916,19 +1982,19 @@ export const Toolbar: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
                                 <div className="text-[10px] text-slate-500">Grid cell</div>
-                                <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
+                                <div className="font-medium text-slate-200">{boardEditorCellSizeCm} cm</div>
                             </div>
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
                                 <div className="text-[10px] text-slate-500">Hex edge</div>
-                                <div className="font-medium text-slate-200">{boardPropertyHexEdgeLengthCm} cm</div>
+                                <div className="font-medium text-slate-200">{boardEditorHexEdgeLengthCm} cm</div>
                             </div>
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
                                 <div className="text-[10px] text-slate-500">Topology</div>
-                                <div className="font-medium text-slate-200">{boardPropertyTopology}</div>
+                                <div className="font-medium text-slate-200">{boardEditorTopology}</div>
                             </div>
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
                                 <div className="text-[10px] text-slate-500">Chunks</div>
-                                <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
+                                <div className="font-medium text-slate-200">{boardEditorChunks}</div>
                             </div>
                         </div>
                         <div className="space-y-2 rounded border border-slate-800 bg-slate-900/45 p-2">
@@ -1950,8 +2016,8 @@ export const Toolbar: React.FC = () => {
                                     value={editBoardHexEdgeLengthCm}
                                     onChange={(e) => setEditBoardHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
                                     className={inputClass}
-                                    disabled={boardPropertyTopology !== 'HexGrid'}
-                                    title={boardPropertyTopology === 'HexGrid' ? 'Hex edge length for this board.' : 'Hex edge length only applies to HexGrid boards.'}
+                                    disabled={boardEditorTopology !== 'HexGrid'}
+                                    title={boardEditorTopology === 'HexGrid' ? 'Hex edge length for this board.' : 'Hex edge length only applies to HexGrid boards.'}
                                 />
                             </label>
                             <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-950/70 p-2 text-[10px] text-slate-400">
@@ -1965,11 +2031,11 @@ export const Toolbar: React.FC = () => {
                                 </div>
                                 <div>
                                     <div className="uppercase tracking-wide text-slate-600">Terrain/NavTile</div>
-                                    <div className="font-mono text-slate-200">{boardPropertyChunkSizeCells} cells / {(boardScalePreviewChunkCm / 100).toLocaleString()}m</div>
+                                    <div className="font-mono text-slate-200">{boardEditorChunkSizeCells} cells / {(boardScalePreviewChunkCm / 100).toLocaleString()}m</div>
                                 </div>
                                 <div>
                                     <div className="uppercase tracking-wide text-slate-600">Hex geometry</div>
-                                    <div className="font-mono text-slate-200">{boardPropertyTopology === 'HexGrid' ? `${boardScalePreviewHexEdgeLengthCm}cm edge` : 'not used'}</div>
+                                    <div className="font-mono text-slate-200">{boardEditorTopology === 'HexGrid' ? `${boardScalePreviewHexEdgeLengthCm}cm edge` : 'not used'}</div>
                                 </div>
                                 <div className="col-span-2 rounded border border-slate-800 bg-slate-900/60 px-2 py-1 text-slate-500">
                                     {boardScaleCellChanged || boardScaleHexChanged
@@ -2214,7 +2280,19 @@ export const Toolbar: React.FC = () => {
                     </section>
                 </div>
             </aside>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setRightPanelOpen(true)}
+                    className={`${panelClass} absolute right-4 top-[92px] flex h-10 w-10 items-center justify-center text-slate-300 hover:border-slate-500 hover:bg-slate-900`}
+                    title="Open Map And Board"
+                    aria-label="Open Map And Board"
+                >
+                    <PanelRight size={17} />
+                </button>
+            )}
 
+            {leftPanelOpen ? (
             <aside className={`${panelClass} absolute bottom-4 left-4 top-[92px] flex w-[380px] flex-col overflow-hidden`}>
                 <div className="border-b border-slate-800 px-3 py-2">
                     <div className="flex items-center justify-between">
@@ -2222,7 +2300,18 @@ export const Toolbar: React.FC = () => {
                             <div className={sectionTitleClass}>Navigation SSOT</div>
                             <div className="mt-1 text-xs text-slate-300">{canvasMapLoaded ? `${bakeMapId} / ${bakeBoardName}` : 'No loaded board'}</div>
                         </div>
-                        <Footprints size={18} className="text-orange-300" />
+                        <div className="flex items-center gap-2">
+                            <Footprints size={18} className="text-orange-300" />
+                            <button
+                                type="button"
+                                onClick={() => setLeftPanelOpen(false)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                                title="Collapse Navigation"
+                                aria-label="Collapse Navigation"
+                            >
+                                <PanelLeftClose size={15} />
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div className="space-y-4 overflow-auto p-3">
@@ -2647,8 +2736,20 @@ export const Toolbar: React.FC = () => {
                     </section>
                 </div>
             </aside>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setLeftPanelOpen(true)}
+                    className={`${panelClass} absolute left-4 top-[92px] flex h-10 w-10 items-center justify-center text-slate-300 hover:border-slate-500 hover:bg-slate-900`}
+                    title="Open Navigation"
+                    aria-label="Open Navigation"
+                >
+                    <PanelLeft size={17} />
+                </button>
+            )}
 
-            <section className={`${panelClass} absolute bottom-4 left-[408px] right-[392px] flex min-h-[136px] flex-col overflow-hidden px-3 py-3`}>
+            {toolPanelOpen ? (
+            <section className={`${panelClass} absolute bottom-4 ${bottomLeftInsetClass} ${bottomRightInsetClass} flex min-h-[136px] flex-col overflow-hidden px-3 py-3`}>
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <div>
                         <div className={sectionTitleClass}>Brush Inspector</div>
@@ -2656,16 +2757,27 @@ export const Toolbar: React.FC = () => {
                             {navPanelTab === 'simulation' ? 'Simulation pick mode' : `${activeCategory} / ${activeMode}`}
                         </div>
                     </div>
-                    <div className={`rounded border px-2 py-1 text-[10px] ${
-                        navPanelTab === 'simulation'
-                            ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
-                            : canvasCanEdit
-                            ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-100'
-                            : 'border-amber-800/70 bg-amber-950/25 text-amber-100'
-                    }`}>
-                        {navPanelTab === 'simulation'
-                            ? 'Left start / right goal'
-                            : canvasCanEdit ? 'Canvas editable' : 'Open selected board before editing'}
+                    <div className="flex items-center gap-2">
+                        <div className={`rounded border px-2 py-1 text-[10px] ${
+                            navPanelTab === 'simulation'
+                                ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+                                : canvasCanEdit
+                                ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-100'
+                                : 'border-amber-800/70 bg-amber-950/25 text-amber-100'
+                        }`}>
+                            {navPanelTab === 'simulation'
+                                ? 'Left start / right goal'
+                                : canvasCanEdit ? 'Canvas editable' : 'Open selected board before editing'}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setToolPanelOpen(false)}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                            title="Collapse Brush Inspector"
+                            aria-label="Collapse Brush Inspector"
+                        >
+                            <PanelBottomClose size={15} />
+                        </button>
                     </div>
                 </div>
                 <div className="grid grid-cols-[minmax(260px,1.1fr)_minmax(260px,1fr)_auto] gap-3">
@@ -2732,7 +2844,7 @@ export const Toolbar: React.FC = () => {
                         </fieldset>
                     </div>
 
-                    <div className="flex w-36 flex-col justify-between gap-2">
+                    <div className="flex w-44 flex-col justify-between gap-2">
                         <div>
                             <div className={sectionTitleClass}>View</div>
                             <div className="mt-2 flex gap-2">
@@ -2758,6 +2870,63 @@ export const Toolbar: React.FC = () => {
                                     <Eye size={16} />
                                 </button>
                             </div>
+                            <div className="mt-2 grid grid-cols-2 gap-1 rounded border border-slate-800 bg-slate-900/40 p-1">
+                                <button
+                                    onClick={() => setTerrainViewMode('terrain')}
+                                    className={`inline-flex h-8 items-center justify-center rounded text-slate-400 transition hover:bg-slate-800 hover:text-slate-100 ${
+                                        terrainViewMode === 'terrain' ? 'bg-sky-700 text-white' : ''
+                                    }`}
+                                    title="Terrain colors"
+                                    aria-label="Terrain colors"
+                                >
+                                    <MapIcon size={15} />
+                                </button>
+                                <button
+                                    onClick={() => setTerrainViewMode('heightmap')}
+                                    className={`inline-flex h-8 items-center justify-center rounded text-slate-400 transition hover:bg-slate-800 hover:text-slate-100 ${
+                                        terrainViewMode === 'heightmap' ? 'bg-sky-700 text-white' : ''
+                                    }`}
+                                    title="Pure visual heightmap"
+                                    aria-label="Pure visual heightmap"
+                                >
+                                    <Mountain size={15} />
+                                </button>
+                            </div>
+                            <label className={`${fieldLabelClass} mt-2`}>
+                                <div className="flex items-center justify-between">
+                                    <span>Contrast</span>
+                                    <span className="font-mono text-slate-300">{terrainHeightContrast.toFixed(1)}x</span>
+                                </div>
+                                <div className="mt-1 flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTerrainHeightContrast(Math.round((terrainHeightContrast - 0.1) * 10) / 10)}
+                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                                        title="Decrease contrast"
+                                        aria-label="Decrease contrast"
+                                    >
+                                        <Minus size={13} />
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="3"
+                                        step="0.1"
+                                        value={terrainHeightContrast}
+                                        onChange={(e) => setTerrainHeightContrast(Number(e.target.value))}
+                                        className="min-w-0 flex-1 accent-sky-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setTerrainHeightContrast(Math.round((terrainHeightContrast + 0.1) * 10) / 10)}
+                                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                                        title="Increase contrast"
+                                        aria-label="Increase contrast"
+                                    >
+                                        <Plus size={13} />
+                                    </button>
+                                </div>
+                            </label>
                         </div>
                         <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-500">
                             {navPanelTab === 'simulation'
@@ -2769,6 +2938,17 @@ export const Toolbar: React.FC = () => {
                     </div>
                 </div>
             </section>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setToolPanelOpen(true)}
+                    className={`${panelClass} absolute bottom-4 left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center text-slate-300 hover:border-slate-500 hover:bg-slate-900`}
+                    title="Open Brush Inspector"
+                    aria-label="Open Brush Inspector"
+                >
+                    <PanelBottom size={17} />
+                </button>
+            )}
 
             {showNewMap ? (
                 <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">

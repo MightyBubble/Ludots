@@ -376,6 +376,34 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "rts_starcraft_full_raylib",
+      "name": "RTS StarCraft Full Raylib",
+      "selectors": [
+        "$rts_starcraft_full_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "cnc_tri_nation_raylib",
+      "name": "C&C Tri-Nation Raylib",
+      "selectors": [
+        "$cnc_tri_nation_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
     }
   ]
 }

@@ -1,0 +1,1860 @@
+{
+  "Id": "rts_starcraft_full",
+  "Tags": [
+    "rts",
+    "rts_showcase",
+    "rts_production",
+    "starcraft_full",
+    "sc2",
+    "scf"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 7200,
+    "TargetYCm": 7200,
+    "Yaw": 180,
+    "Pitch": 48,
+    "DistanceCm": 12000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "sc2_highlands.vtxm"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "scf_terran_scv",
+      "InstanceId": "map_scf_terran_scv_0",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5850,
+            "Y": 5200
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "SCV"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_command_center",
+      "InstanceId": "map_scf_terran_command_center_1",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5762,
+            "Y": 5525
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Command Center"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_supply_depot",
+      "InstanceId": "map_scf_terran_supply_depot_2",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5525,
+            "Y": 5762
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Supply Depot"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_barracks",
+      "InstanceId": "map_scf_terran_barracks_3",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 5850
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Barracks"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_factory",
+      "InstanceId": "map_scf_terran_factory_4",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4875,
+            "Y": 5762
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Factory"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_starport",
+      "InstanceId": "map_scf_terran_starport_5",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4637,
+            "Y": 5525
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Starport"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_refinery",
+      "InstanceId": "map_scf_terran_refinery_6",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4550,
+            "Y": 5200
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Refinery"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_engineering_bay",
+      "InstanceId": "map_scf_terran_engineering_bay_7",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4637,
+            "Y": 4875
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Engineering Bay"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_armory",
+      "InstanceId": "map_scf_terran_armory_8",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4875,
+            "Y": 4637
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Armory"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_bunker",
+      "InstanceId": "map_scf_terran_bunker_9",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 4550
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Bunker"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_missile_turret",
+      "InstanceId": "map_scf_terran_missile_turret_10",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5525,
+            "Y": 4637
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Missile Turret"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_fusion_core",
+      "InstanceId": "map_scf_terran_fusion_core_11",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5762,
+            "Y": 4875
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Fusion Core"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_orbital_command",
+      "InstanceId": "map_scf_terran_orbital_command_12",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6358,
+            "Y": 5362
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Orbital Command"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_marine",
+      "InstanceId": "map_scf_terran_marine_13",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6121,
+            "Y": 5920
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Marine"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_marauder",
+      "InstanceId": "map_scf_terran_marauder_14",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5638,
+            "Y": 6284
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Marauder"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_reaper",
+      "InstanceId": "map_scf_terran_reaper_15",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5037,
+            "Y": 6358
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Reaper"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_ghost",
+      "InstanceId": "map_scf_terran_ghost_16",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4479,
+            "Y": 6121
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Ghost"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_firebat",
+      "InstanceId": "map_scf_terran_firebat_17",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4115,
+            "Y": 5638
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Firebat"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_medic",
+      "InstanceId": "map_scf_terran_medic_18",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4041,
+            "Y": 5037
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Medic"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_vulture",
+      "InstanceId": "map_scf_terran_vulture_19",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4278,
+            "Y": 4479
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Vulture"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_goliath",
+      "InstanceId": "map_scf_terran_goliath_20",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4761,
+            "Y": 4115
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Goliath"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_siege_tank",
+      "InstanceId": "map_scf_terran_siege_tank_21",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5362,
+            "Y": 4041
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Siege Tank"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_hellion",
+      "InstanceId": "map_scf_terran_hellion_22",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5920,
+            "Y": 4278
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Hellion"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_hellbat",
+      "InstanceId": "map_scf_terran_hellbat_23",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6284,
+            "Y": 4761
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Hellbat"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_thor",
+      "InstanceId": "map_scf_terran_thor_24",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6824,
+            "Y": 5665
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Thor"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_viking",
+      "InstanceId": "map_scf_terran_viking_25",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6373,
+            "Y": 6415
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Viking"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_medivac",
+      "InstanceId": "map_scf_terran_medivac_26",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5608,
+            "Y": 6839
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Medivac"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_banshee",
+      "InstanceId": "map_scf_terran_banshee_27",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4734,
+            "Y": 6824
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Banshee"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_battlecruiser",
+      "InstanceId": "map_scf_terran_battlecruiser_28",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3984,
+            "Y": 6373
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Battlecruiser"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_raven",
+      "InstanceId": "map_scf_terran_raven_29",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3560,
+            "Y": 5608
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Raven"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_cyclone",
+      "InstanceId": "map_scf_terran_cyclone_30",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3575,
+            "Y": 4734
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Cyclone"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_widow_mine",
+      "InstanceId": "map_scf_terran_widow_mine_31",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4026,
+            "Y": 3984
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Widow Mine"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_liberator",
+      "InstanceId": "map_scf_terran_liberator_32",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4791,
+            "Y": 3560
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Liberator"
+        }
+      }
+    },
+    {
+      "Template": "scf_terran_diamondback",
+      "InstanceId": "map_scf_terran_diamondback_33",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5665,
+            "Y": 3575
+          }
+        },
+        "Team": {
+          "Id": 1
+        },
+        "Name": {
+          "Value": "Diamondback"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_drone",
+      "InstanceId": "map_scf_zerg_drone_34",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5850,
+            "Y": 9800
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Drone"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_overlord",
+      "InstanceId": "map_scf_zerg_overlord_35",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5762,
+            "Y": 10125
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Overlord"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_hatchery",
+      "InstanceId": "map_scf_zerg_hatchery_36",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5525,
+            "Y": 10362
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Hatchery"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_spawning_pool",
+      "InstanceId": "map_scf_zerg_spawning_pool_37",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 10450
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Spawning Pool"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_roach_warren",
+      "InstanceId": "map_scf_zerg_roach_warren_38",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4875,
+            "Y": 10362
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Roach Warren"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_baneling_nest",
+      "InstanceId": "map_scf_zerg_baneling_nest_39",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4637,
+            "Y": 10125
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Baneling Nest"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_hydra_den",
+      "InstanceId": "map_scf_zerg_hydra_den_40",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4550,
+            "Y": 9800
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Hydralisk Den"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_spire",
+      "InstanceId": "map_scf_zerg_spire_41",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4637,
+            "Y": 9475
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Spire"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_infestation_pit",
+      "InstanceId": "map_scf_zerg_infestation_pit_42",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4875,
+            "Y": 9237
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Infestation Pit"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_ultra_cavern",
+      "InstanceId": "map_scf_zerg_ultra_cavern_43",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 9150
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Ultralisk Cavern"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_evolution_chamber",
+      "InstanceId": "map_scf_zerg_evolution_chamber_44",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5525,
+            "Y": 9237
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Evolution Chamber"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_extractor",
+      "InstanceId": "map_scf_zerg_extractor_45",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5762,
+            "Y": 9475
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Extractor"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_nydus",
+      "InstanceId": "map_scf_zerg_nydus_46",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6358,
+            "Y": 9962
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Nydus Network"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_hive",
+      "InstanceId": "map_scf_zerg_hive_47",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6121,
+            "Y": 10520
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Hive"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_creep_tumor",
+      "InstanceId": "map_scf_zerg_creep_tumor_48",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5638,
+            "Y": 10884
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Creep Tumor"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_zergling",
+      "InstanceId": "map_scf_zerg_zergling_49",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5037,
+            "Y": 10958
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Zergling"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_baneling",
+      "InstanceId": "map_scf_zerg_baneling_50",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4479,
+            "Y": 10721
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Baneling"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_roach",
+      "InstanceId": "map_scf_zerg_roach_51",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4115,
+            "Y": 10238
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Roach"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_ravager",
+      "InstanceId": "map_scf_zerg_ravager_52",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4041,
+            "Y": 9637
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Ravager"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_hydralisk",
+      "InstanceId": "map_scf_zerg_hydralisk_53",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4278,
+            "Y": 9079
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Hydralisk"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_lurker",
+      "InstanceId": "map_scf_zerg_lurker_54",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4761,
+            "Y": 8715
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Lurker"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_mutalisk",
+      "InstanceId": "map_scf_zerg_mutalisk_55",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5362,
+            "Y": 8641
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Mutalisk"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_corruptor",
+      "InstanceId": "map_scf_zerg_corruptor_56",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5920,
+            "Y": 8878
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Corruptor"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_broodlord",
+      "InstanceId": "map_scf_zerg_broodlord_57",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6284,
+            "Y": 9361
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Brood Lord"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_swarm_host",
+      "InstanceId": "map_scf_zerg_swarm_host_58",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6824,
+            "Y": 10265
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Swarm Host"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_viper",
+      "InstanceId": "map_scf_zerg_viper_59",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6373,
+            "Y": 11015
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Viper"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_infestor",
+      "InstanceId": "map_scf_zerg_infestor_60",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5608,
+            "Y": 11439
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Infestor"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_ultralisk",
+      "InstanceId": "map_scf_zerg_ultralisk_61",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4734,
+            "Y": 11424
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Ultralisk"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_queen",
+      "InstanceId": "map_scf_zerg_queen_62",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3984,
+            "Y": 10973
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Queen"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_spine_crawler",
+      "InstanceId": "map_scf_zerg_spine_crawler_63",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3560,
+            "Y": 10208
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Spine Crawler"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_spore_crawler",
+      "InstanceId": "map_scf_zerg_spore_crawler_64",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3575,
+            "Y": 9334
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Spore Crawler"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_nydus_worm",
+      "InstanceId": "map_scf_zerg_nydus_worm_65",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4026,
+            "Y": 8584
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Nydus Worm"
+        }
+      }
+    },
+    {
+      "Template": "scf_zerg_brutalisk",
+      "InstanceId": "map_scf_zerg_brutalisk_66",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4791,
+            "Y": 8160
+          }
+        },
+        "Team": {
+          "Id": 2
+        },
+        "Name": {
+          "Value": "Brutalisk"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_probe",
+      "InstanceId": "map_scf_protoss_probe_67",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10450,
+            "Y": 5200
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Probe"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_nexus",
+      "InstanceId": "map_scf_protoss_nexus_68",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10362,
+            "Y": 5525
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Nexus"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_pylon",
+      "InstanceId": "map_scf_protoss_pylon_69",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10125,
+            "Y": 5762
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Pylon"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_gateway",
+      "InstanceId": "map_scf_protoss_gateway_70",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9800,
+            "Y": 5850
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Gateway"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_cybernetics",
+      "InstanceId": "map_scf_protoss_cybernetics_71",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9475,
+            "Y": 5762
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Cybernetics Core"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_robotics",
+      "InstanceId": "map_scf_protoss_robotics_72",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9237,
+            "Y": 5525
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Robotics Facility"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_stargate",
+      "InstanceId": "map_scf_protoss_stargate_73",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9150,
+            "Y": 5200
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Stargate"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_forge",
+      "InstanceId": "map_scf_protoss_forge_74",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9237,
+            "Y": 4875
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Forge"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_assimilator",
+      "InstanceId": "map_scf_protoss_assimilator_75",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9475,
+            "Y": 4637
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Assimilator"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_twilight",
+      "InstanceId": "map_scf_protoss_twilight_76",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9800,
+            "Y": 4550
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Twilight Council"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_templar_archives",
+      "InstanceId": "map_scf_protoss_templar_archives_77",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10125,
+            "Y": 4637
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Templar Archives"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_robo_bay",
+      "InstanceId": "map_scf_protoss_robo_bay_78",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10362,
+            "Y": 4875
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Robotics Bay"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_fleet_beacon",
+      "InstanceId": "map_scf_protoss_fleet_beacon_79",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10958,
+            "Y": 5362
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Fleet Beacon"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_photon_cannon",
+      "InstanceId": "map_scf_protoss_photon_cannon_80",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10721,
+            "Y": 5920
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Photon Cannon"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_zealot",
+      "InstanceId": "map_scf_protoss_zealot_81",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10238,
+            "Y": 6284
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Zealot"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_stalker",
+      "InstanceId": "map_scf_protoss_stalker_82",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9637,
+            "Y": 6358
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Stalker"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_sentry",
+      "InstanceId": "map_scf_protoss_sentry_83",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9079,
+            "Y": 6121
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Sentry"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_adept",
+      "InstanceId": "map_scf_protoss_adept_84",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8715,
+            "Y": 5638
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Adept"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_hightemplar",
+      "InstanceId": "map_scf_protoss_hightemplar_85",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8641,
+            "Y": 5037
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "High Templar"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_darktemplar",
+      "InstanceId": "map_scf_protoss_darktemplar_86",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8878,
+            "Y": 4479
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Dark Templar"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_archon",
+      "InstanceId": "map_scf_protoss_archon_87",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9361,
+            "Y": 4115
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Archon"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_immortal",
+      "InstanceId": "map_scf_protoss_immortal_88",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9962,
+            "Y": 4041
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Immortal"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_colossus",
+      "InstanceId": "map_scf_protoss_colossus_89",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10520,
+            "Y": 4278
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Colossus"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_disruptor",
+      "InstanceId": "map_scf_protoss_disruptor_90",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10884,
+            "Y": 4761
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Disruptor"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_phoenix",
+      "InstanceId": "map_scf_protoss_phoenix_91",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 11424,
+            "Y": 5665
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Phoenix"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_voidray",
+      "InstanceId": "map_scf_protoss_voidray_92",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10973,
+            "Y": 6415
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Void Ray"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_oracle",
+      "InstanceId": "map_scf_protoss_oracle_93",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10208,
+            "Y": 6839
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Oracle"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_carrier",
+      "InstanceId": "map_scf_protoss_carrier_94",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9334,
+            "Y": 6824
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Carrier"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_tempest",
+      "InstanceId": "map_scf_protoss_tempest_95",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8584,
+            "Y": 6373
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Tempest"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_mothership",
+      "InstanceId": "map_scf_protoss_mothership_96",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8160,
+            "Y": 5608
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Mothership"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_observer",
+      "InstanceId": "map_scf_protoss_observer_97",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8175,
+            "Y": 4734
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Observer"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_warp_prism",
+      "InstanceId": "map_scf_protoss_warp_prism_98",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8626,
+            "Y": 3984
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Warp Prism"
+        }
+      }
+    },
+    {
+      "Template": "scf_protoss_corsair",
+      "InstanceId": "map_scf_protoss_corsair_99",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9391,
+            "Y": 3560
+          }
+        },
+        "Team": {
+          "Id": 3
+        },
+        "Name": {
+          "Value": "Corsair"
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "map_scf_terran_command_center_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "map_scf_zerg_hatchery_36"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "map_scf_protoss_nexus_68"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "map_scf_terran_scv_0"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "map_scf_zerg_drone_34"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 3,
+      "RepresentativeInstanceId": "map_scf_protoss_probe_67"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "CncTriNationFullGameMod",
+  "version": "1.0.0",
+  "description": "Complete C&C-like tri-nation RTS mod with 102 unit types, Web UI DataPlane, GAS, items, and graph queries.",
+  "main": "bin/net8.0/CncTriNationFullGameMod.dll",
+  "priority": 240,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "cnc", "tri-nation", "production", "browser-ui"]
+}

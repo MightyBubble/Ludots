@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>C&amp;C Tri-Nation Command</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07100d;
+        --panel: rgba(11, 20, 17, 0.88);
+        --panel-solid: #0e1714;
+        --panel-soft: rgba(27, 42, 35, 0.86);
+        --line: rgba(151, 183, 162, 0.22);
+        --line-strong: rgba(190, 218, 196, 0.45);
+        --text: #edf7ee;
+        --muted: #94a89a;
+        --dim: #607368;
+        --green: #72d572;
+        --amber: #f5c15b;
+        --red: #e76161;
+        --blue: #62a4ff;
+        --shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+        font-family:
+          "Segoe UI",
+          "Inter",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+          linear-gradient(135deg, rgba(17, 42, 31, 0.72), transparent 34%),
+          radial-gradient(circle at 75% 12%, rgba(93, 126, 101, 0.22), transparent 28%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-rows: 74px minmax(0, 1fr) 148px;
+        gap: 12px;
+        width: 100%;
+        height: 100%;
+        padding: 12px;
+      }
+
+      .topbar,
+      .left,
+      .right,
+      .commandbar,
+      .map {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr) 360px;
+        gap: 12px;
+        align-items: stretch;
+        border-radius: 8px;
+        padding: 10px;
+      }
+
+      .brand {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: linear-gradient(160deg, #1c3328, #0c1713);
+        color: var(--amber);
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .brand h1 {
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 18px;
+        line-height: 1.05;
+        font-weight: 750;
+        letter-spacing: 0;
+      }
+
+      .brand p {
+        margin: 5px 0 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .resources,
+      .status-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .resource {
+        min-width: 118px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(3, 11, 8, 0.48);
+      }
+
+      .resource span,
+      .metric span,
+      .tiny-label {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.1;
+      }
+
+      .resource strong,
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 17px;
+        line-height: 1;
+      }
+
+      .metric {
+        min-width: 96px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(3, 11, 8, 0.38);
+      }
+
+      .middle {
+        display: grid;
+        grid-template-columns: 300px minmax(360px, 1fr) 340px;
+        gap: 12px;
+        min-height: 0;
+      }
+
+      .left,
+      .right,
+      .map {
+        min-height: 0;
+        border-radius: 8px;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 48px;
+        padding: 12px 12px 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-head h2 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 720;
+        letter-spacing: 0;
+      }
+
+      .panel-head small {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .factions {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .faction {
+        display: grid;
+        grid-template-columns: 9px minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: center;
+        width: 100%;
+        min-height: 38px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(8, 15, 12, 0.58);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .faction.active {
+        border-color: var(--line-strong);
+        background: rgba(39, 63, 49, 0.78);
+      }
+
+      .swatch {
+        width: 9px;
+        height: 24px;
+        border-radius: 3px;
+        background: var(--green);
+      }
+
+      .faction strong,
+      .entity strong,
+      .slot strong,
+      .queue strong,
+      .buildable strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .faction span,
+      .entity span,
+      .slot span,
+      .queue span,
+      .buildable span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.2;
+      }
+
+      .list {
+        display: grid;
+        gap: 8px;
+        max-height: calc(100% - 154px);
+        padding: 10px 12px 14px;
+        overflow: auto;
+      }
+
+      .entity {
+        display: grid;
+        grid-template-columns: 7px minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: center;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(7, 14, 11, 0.62);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .entity.selected {
+        border-color: rgba(245, 193, 91, 0.72);
+        background: rgba(63, 49, 20, 0.58);
+      }
+
+      .entity-health {
+        width: 52px;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .entity-health i {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--green);
+      }
+
+      .map {
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(rgba(157, 186, 164, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(157, 186, 164, 0.08) 1px, transparent 1px),
+          radial-gradient(circle at 52% 50%, rgba(91, 128, 90, 0.2), transparent 34%),
+          #08120f;
+        background-size: 48px 48px, 48px 48px, auto, auto;
+      }
+
+      .map-head {
+        position: absolute;
+        z-index: 2;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        pointer-events: none;
+      }
+
+      .map-head h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 760;
+      }
+
+      .map-head span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .map-field {
+        position: absolute;
+        inset: 0;
+      }
+
+      .unit-dot {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.72);
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+      }
+
+      .unit-dot.selected {
+        width: 22px;
+        height: 22px;
+        border-color: var(--amber);
+        box-shadow: 0 0 0 6px rgba(245, 193, 91, 0.16);
+      }
+
+      .right {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
+
+      .selected-card {
+        padding: 14px 14px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .selected-card h2 {
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 24px;
+        line-height: 1.05;
+        font-weight: 780;
+      }
+
+      .selected-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .bars {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .bar {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) 44px;
+        gap: 8px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .bar-track {
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .bar-track i {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--green);
+      }
+
+      .bar.shield .bar-track i {
+        background: var(--blue);
+      }
+
+      .queue-list,
+      .graph-list {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        overflow: auto;
+      }
+
+      .queue,
+      .graph-row {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(6, 13, 10, 0.58);
+      }
+
+      .progress {
+        height: 6px;
+        margin-top: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .progress i {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--amber);
+      }
+
+      .graph-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .graph-row strong {
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .commandbar {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr) 340px;
+        gap: 12px;
+        align-items: stretch;
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+
+      .command-section {
+        min-width: 0;
+      }
+
+      .command-section h2 {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .slots,
+      .buildables {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(96px, 1fr));
+        gap: 8px;
+      }
+
+      .buildables {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
+      .slot,
+      .buildable {
+        display: grid;
+        align-content: center;
+        min-height: 86px;
+        padding: 9px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(7, 14, 11, 0.68);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .slot:disabled,
+      .buildable:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .slot:hover:not(:disabled),
+      .buildable:hover:not(:disabled),
+      .entity:hover,
+      .faction:hover {
+        border-color: var(--line-strong);
+      }
+
+      .diagnostics {
+        display: grid;
+        align-content: center;
+        gap: 5px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(3, 11, 8, 0.48);
+      }
+
+      .diagnostics strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+      }
+
+      .diagnostics span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 12px;
+        display: none;
+        place-items: center;
+        z-index: 10;
+        border: 1px solid rgba(231, 97, 97, 0.48);
+        border-radius: 8px;
+        background: rgba(5, 8, 7, 0.92);
+      }
+
+      .overlay.visible {
+        display: grid;
+      }
+
+      .overlay-card {
+        width: min(560px, calc(100vw - 48px));
+        padding: 24px;
+        border: 1px solid rgba(231, 97, 97, 0.52);
+        border-radius: 8px;
+        background: #111715;
+      }
+
+      .overlay-card h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+      }
+
+      .overlay-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .empty {
+        padding: 16px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1100px) {
+        .app {
+          grid-template-rows: 118px minmax(0, 1fr) 202px;
+        }
+
+        .topbar,
+        .middle,
+        .commandbar {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          grid-template-rows: auto auto;
+        }
+
+        .resources,
+        .status-strip {
+          overflow-x: auto;
+        }
+
+        .left,
+        .right {
+          display: none;
+        }
+
+        .commandbar {
+          overflow: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app" id="app" aria-live="polite">
+      <section class="topbar">
+        <div class="brand">
+          <div class="brand-mark">C&amp;C</div>
+          <div>
+            <h1>Tri-Nation Command</h1>
+            <p id="subtitle">Waiting for Ludots DataPlane</p>
+          </div>
+        </div>
+        <div class="resources" id="resources"></div>
+        <div class="status-strip">
+          <div class="metric">
+            <span>Map</span>
+            <strong id="mapId">-</strong>
+          </div>
+          <div class="metric">
+            <span>Entities</span>
+            <strong id="entityCount">0</strong>
+          </div>
+          <div class="metric">
+            <span>Last command</span>
+            <strong id="lastCommand">idle</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="middle">
+        <aside class="left">
+          <div class="panel-head">
+            <h2>Factions</h2>
+            <small>click to inspect</small>
+          </div>
+          <div class="factions" id="factions"></div>
+          <div class="panel-head">
+            <h2>Field roster</h2>
+            <small id="rosterCount">0 visible</small>
+          </div>
+          <div class="list" id="entities"></div>
+        </aside>
+
+        <section class="map">
+          <div class="map-head">
+            <div>
+              <h2 id="mapTitle">Battlefield</h2>
+              <span>Select a unit, then use the command bar.</span>
+            </div>
+            <span id="tick">tick 0</span>
+          </div>
+          <div class="map-field" id="mapField"></div>
+        </section>
+
+        <aside class="right">
+          <div class="selected-card" id="selection"></div>
+          <div>
+            <div class="panel-head">
+              <h2>Production</h2>
+              <small id="queueCount">0 queued</small>
+            </div>
+            <div class="queue-list" id="queue"></div>
+          </div>
+          <div>
+            <div class="panel-head">
+              <h2>Graph signals</h2>
+              <small>live summaries</small>
+            </div>
+            <div class="graph-list" id="graphs"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="commandbar">
+        <div class="command-section">
+          <h2>Build options</h2>
+          <div class="buildables" id="buildables"></div>
+        </div>
+        <div class="command-section">
+          <h2>Selected unit commands</h2>
+          <div class="slots" id="slots"></div>
+        </div>
+        <div class="diagnostics">
+          <strong id="diagStatus">Connecting</strong>
+          <span id="diagMessage">DataPlane handshake has not completed.</span>
+          <span id="diagDetail">No commands have been sent.</span>
+        </div>
+      </section>
+    </main>
+
+    <section class="overlay" id="overlay">
+      <div class="overlay-card">
+        <h2 id="overlayTitle">DataPlane transport missing</h2>
+        <p id="overlayMessage">window.ludotsDataplane was not installed by the host. Launch this showcase through the Ludots launcher with the CEF browser runtime enabled.</p>
+      </div>
+    </section>
+
+    <script>
+      const SCHEMA_VERSION = 1;
+      const TOPIC = "ludots.cnc.triNation.world";
+      const CONTROL_CHANNEL = "ludots.dataplane.control";
+      const state = {
+        sessionId: `cnc-tri-nation-${Math.random().toString(16).slice(2)}`,
+        requestId: 0,
+        snapshot: null,
+        selectedKey: "",
+        pending: new Map()
+      };
+
+      const els = {
+        subtitle: document.getElementById("subtitle"),
+        resources: document.getElementById("resources"),
+        mapId: document.getElementById("mapId"),
+        entityCount: document.getElementById("entityCount"),
+        lastCommand: document.getElementById("lastCommand"),
+        factions: document.getElementById("factions"),
+        rosterCount: document.getElementById("rosterCount"),
+        entities: document.getElementById("entities"),
+        mapTitle: document.getElementById("mapTitle"),
+        tick: document.getElementById("tick"),
+        mapField: document.getElementById("mapField"),
+        selection: document.getElementById("selection"),
+        queueCount: document.getElementById("queueCount"),
+        queue: document.getElementById("queue"),
+        graphs: document.getElementById("graphs"),
+        buildables: document.getElementById("buildables"),
+        slots: document.getElementById("slots"),
+        diagStatus: document.getElementById("diagStatus"),
+        diagMessage: document.getElementById("diagMessage"),
+        diagDetail: document.getElementById("diagDetail"),
+        overlay: document.getElementById("overlay"),
+        overlayTitle: document.getElementById("overlayTitle"),
+        overlayMessage: document.getElementById("overlayMessage")
+      };
+
+      boot().catch((error) => showFatal("DataPlane startup failed", error.message));
+
+      async function boot() {
+        if (!window.ludotsDataplane || typeof window.ludotsDataplane.postMessage !== "function") {
+          showFatal(
+            "DataPlane transport missing",
+            "window.ludotsDataplane was not installed by the host. Launch cnc_tri_nation_showcase through the Ludots launcher with the CEF browser runtime enabled."
+          );
+          return;
+        }
+
+        window.addEventListener("message", onMessage);
+        els.diagStatus.textContent = "Connecting";
+        await request("handshake", "system", {
+          metadata: { app: "cnc-tri-nation-command", topic: TOPIC },
+          capabilities: ["handshake", "subscribe", "command"],
+          sdkVersion: "0.1.0-cnc-tri-nation"
+        });
+        els.diagStatus.textContent = "Connected";
+        els.diagMessage.textContent = "Subscribed to live C&C battlefield state.";
+        await request("subscribe", TOPIC, {
+          subscriptionId: "cnc-tri-nation-ui",
+          snapshot: true,
+          cursor: null
+        });
+      }
+
+      function request(kind, topic, payload) {
+        const requestId = ++state.requestId;
+        const envelope = {
+          schemaVersion: SCHEMA_VERSION,
+          sessionId: state.sessionId,
+          requestId,
+          kind,
+          topic,
+          payload
+        };
+
+        return new Promise((resolve, reject) => {
+          const timeout = window.setTimeout(() => {
+            state.pending.delete(requestId);
+            reject(new Error(`DataPlane request timed out: ${kind}`));
+          }, 4500);
+          state.pending.set(requestId, { resolve, reject, timeout, kind });
+          window.ludotsDataplane.postMessage(envelope);
+        });
+      }
+
+      async function command(name, payload) {
+        try {
+          els.diagStatus.textContent = "Command pending";
+          els.diagMessage.textContent = name;
+          await request("command", "orders", { name, clientSeq: Date.now(), entityRefs: [], payload });
+          els.diagStatus.textContent = "Command accepted";
+          els.diagDetail.textContent = JSON.stringify(payload);
+        } catch (error) {
+          els.diagStatus.textContent = "Command rejected";
+          els.diagMessage.textContent = error.message;
+        }
+      }
+
+      function onMessage(event) {
+        const incoming = normalizeIncoming(event);
+        if (!incoming) {
+          return;
+        }
+
+        const pending = incoming.requestId ? state.pending.get(incoming.requestId) : null;
+        if (pending) {
+          state.pending.delete(incoming.requestId);
+          window.clearTimeout(pending.timeout);
+          if (incoming.kind === "commandError" || incoming.payload?.error || incoming.payload?.code) {
+            pending.reject(new Error(incoming.payload?.message || incoming.payload?.error || `${pending.kind} failed`));
+          } else {
+            pending.resolve(incoming);
+          }
+        }
+
+        if ((incoming.kind === "snapshot" || incoming.kind === "delta") && incoming.topic === TOPIC) {
+          applySnapshot(incoming.payload);
+        }
+      }
+
+      function normalizeIncoming(event) {
+        const data = event && typeof event === "object" && "data" in event ? event.data : event;
+        if (!data) {
+          return null;
+        }
+
+        if (typeof data === "string") {
+          return normalizeEnvelope(parseJson(data));
+        }
+
+        if (data.channel === CONTROL_CHANNEL) {
+          return normalizeEnvelope(typeof data.payload === "string" ? parseJson(data.payload) : data.payload);
+        }
+
+        return normalizeEnvelope(data);
+      }
+
+      function normalizeEnvelope(envelope) {
+        if (!envelope || envelope.schemaVersion !== SCHEMA_VERSION) {
+          return null;
+        }
+
+        const payload = envelope.payload?.schemaVersion === SCHEMA_VERSION ? envelope.payload : envelope;
+        return {
+          schemaVersion: SCHEMA_VERSION,
+          sessionId: payload.sessionId,
+          requestId: payload.requestId || 0,
+          kind: lowerFirst(payload.kind || envelope.kind || "unknown"),
+          topic: payload.topic || envelope.topic || "",
+          payload: payload.payload || envelope.payload || {}
+        };
+      }
+
+      function parseJson(text) {
+        try {
+          return JSON.parse(text);
+        } catch {
+          showFatal("Malformed DataPlane packet", "The host posted a packet that is not valid JSON.");
+          return null;
+        }
+      }
+
+      function applySnapshot(snapshot) {
+        if (!snapshot || typeof snapshot !== "object") {
+          showFatal("Invalid snapshot", "C&C DataPlane delivered an empty or malformed snapshot.");
+          return;
+        }
+
+        state.snapshot = snapshot;
+        state.selectedKey = snapshot.selection?.entityKey || state.selectedKey;
+        render(snapshot);
+      }
+
+      function render(snapshot) {
+        const entities = snapshot.entities || [];
+        const factions = snapshot.factions || [];
+        const resources = snapshot.resources || [];
+        const diagnostics = snapshot.diagnostics || {};
+        const selection = snapshot.selection || {};
+        const commandGroups = snapshot.commands?.groups || [];
+        const slots = commandGroups.flatMap((group) =>
+          (group.slots || []).map((slot) => ({ ...slot, groupIndex: group.groupIndex, groupLabel: group.label }))
+        );
+
+        els.subtitle.textContent = `${snapshot.flavor || "cnc"} / ${snapshot.activeFactionId || "team-1"}`;
+        els.mapId.textContent = snapshot.mapId || "-";
+        els.entityCount.textContent = String(diagnostics.entityCount ?? entities.length);
+        els.lastCommand.textContent = diagnostics.lastCommand || "idle";
+        els.tick.textContent = `tick ${snapshot.tick ?? 0}`;
+        els.mapTitle.textContent = snapshot.mapId || "Battlefield";
+        els.diagStatus.textContent = diagnostics.lastCommandStatus || "Connected";
+        els.diagMessage.textContent = (diagnostics.messages || [diagnostics.reason || "Live snapshot"])[0] || "Live snapshot";
+        els.diagDetail.textContent = `commands ${diagnostics.commandCount ?? 0} / reason ${diagnostics.reason || "snapshot"}`;
+
+        renderResources(resources);
+        renderFactions(factions);
+        renderEntities(entities);
+        renderMap(entities);
+        renderSelection(selection);
+        renderQueue(snapshot.productionQueue || []);
+        renderGraphs(snapshot.graphSummaries || []);
+        renderBuildables(snapshot.buildables || []);
+        renderSlots(slots, selection.entityKey || "");
+      }
+
+      function renderResources(resources) {
+        els.resources.replaceChildren(...resources.map((resource) => {
+          const node = document.createElement("div");
+          node.className = "resource";
+          node.innerHTML = `<span>${escapeHtml(resource.name)}</span><strong>${formatNumber(resource.amount)}</strong>`;
+          return node;
+        }));
+      }
+
+      function renderFactions(factions) {
+        els.factions.replaceChildren(...factions.map((faction) => {
+          const button = document.createElement("button");
+          button.className = `faction${faction.active ? " active" : ""}`;
+          button.type = "button";
+          button.onclick = () => command("switchParticipantView", { participantId: faction.id });
+          button.innerHTML = `
+            <i class="swatch" style="background:${safeColor(faction.color)}"></i>
+            <span><strong>${escapeHtml(faction.name)}</strong><span>${escapeHtml(faction.controller)} / ${escapeHtml(faction.relationship)}</span></span>
+            <span>${faction.entityCount ?? 0}</span>
+          `;
+          return button;
+        }));
+      }
+
+      function renderEntities(entities) {
+        els.rosterCount.textContent = `${entities.length} visible`;
+        els.entities.replaceChildren(...entities.map((entity) => {
+          const button = document.createElement("button");
+          button.className = `entity${entity.selected ? " selected" : ""}`;
+          button.type = "button";
+          button.onclick = () => command("selectEntity", { entityKey: entity.key });
+          button.innerHTML = `
+            <i class="swatch" style="background:${safeColor(entity.teamColor)}"></i>
+            <span><strong>${escapeHtml(entity.name)}</strong><span>${escapeHtml(entity.teamName)} / ${escapeHtml(entity.kind)}</span></span>
+            <span class="entity-health"><i style="width:${healthWidth(entity.health)}%"></i></span>
+          `;
+          return button;
+        }));
+      }
+
+      function renderMap(entities) {
+        if (entities.length === 0) {
+          els.mapField.innerHTML = `<div class="empty">No battlefield entities are present in the current snapshot.</div>`;
+          return;
+        }
+
+        const xs = entities.map((entity) => Number(entity.x) || 0);
+        const ys = entities.map((entity) => Number(entity.y) || 0);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        const dots = entities.map((entity) => {
+          const x = 8 + (((Number(entity.x) || 0) - minX) / width) * 84;
+          const y = 12 + (((Number(entity.y) || 0) - minY) / height) * 76;
+          const dot = document.createElement("button");
+          dot.className = `unit-dot${entity.selected ? " selected" : ""}`;
+          dot.type = "button";
+          dot.title = entity.name;
+          dot.style.left = `${x}%`;
+          dot.style.top = `${y}%`;
+          dot.style.background = safeColor(entity.teamColor);
+          dot.onclick = () => command("selectEntity", { entityKey: entity.key });
+          return dot;
+        });
+        els.mapField.replaceChildren(...dots);
+      }
+
+      function renderSelection(selection) {
+        const members = selection.members || [];
+        const name = selection.name || "No entity selected";
+        const kind = selection.kind || "Select a unit from the field roster.";
+        els.selection.innerHTML = `
+          <h2>${escapeHtml(name)}</h2>
+          <p>${escapeHtml(kind)}${members.length > 1 ? ` / ${members.length} selected` : ""}</p>
+          <div class="bars">
+            <div class="bar"><span>Health</span><div class="bar-track"><i style="width:${healthWidth(selection.health)}%"></i></div><span>${formatNumber(selection.health || 0)}</span></div>
+            <div class="bar shield"><span>Shield</span><div class="bar-track"><i style="width:${healthWidth(selection.shield)}%"></i></div><span>${formatNumber(selection.shield || 0)}</span></div>
+          </div>
+        `;
+      }
+
+      function renderQueue(queue) {
+        els.queueCount.textContent = `${queue.length} queued`;
+        if (queue.length === 0) {
+          els.queue.innerHTML = `<div class="empty">No active production. Select a factory or barracks to start building.</div>`;
+          return;
+        }
+
+        els.queue.replaceChildren(...queue.map((item) => {
+          const node = document.createElement("div");
+          node.className = "queue";
+          node.innerHTML = `
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.stage)} / ${escapeHtml(item.detail)}</span>
+            <div class="progress"><i style="width:${progressWidth(item.progressPermille)}%; background:${safeColor(item.accentColorHex || "#f5c15b")}"></i></div>
+          `;
+          return node;
+        }));
+      }
+
+      function renderGraphs(graphs) {
+        if (graphs.length === 0) {
+          els.graphs.innerHTML = `<div class="empty">Graph summaries will appear after scenario scripts publish metrics.</div>`;
+          return;
+        }
+
+        els.graphs.replaceChildren(...graphs.map((graph) => {
+          const node = document.createElement("div");
+          node.className = "graph-row";
+          node.innerHTML = `<span>${escapeHtml(graph.metric)}</span><strong>${escapeHtml(graph.value)}</strong>`;
+          return node;
+        }));
+      }
+
+      function renderBuildables(buildables) {
+        const rows = buildables.slice(0, 4);
+        if (rows.length === 0) {
+          els.buildables.innerHTML = `<div class="empty">Select a production structure to see build options.</div>`;
+          return;
+        }
+
+        els.buildables.replaceChildren(...rows.map((item) => {
+          const button = document.createElement("button");
+          button.className = "buildable";
+          button.type = "button";
+          button.disabled = !item.available;
+          button.onclick = () => command("activateAbilitySlot", { slotIndex: resolveBuildSlot(item), entityKey: state.snapshot?.selection?.entityKey || "" });
+          button.innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.requirement)}</span>`;
+          return button;
+        }));
+      }
+
+      function renderSlots(slots, entityKey) {
+        if (slots.length === 0) {
+          els.slots.innerHTML = `<div class="empty">No commands are exposed for this selection.</div>`;
+          return;
+        }
+
+        els.slots.replaceChildren(...slots.slice(0, 8).map((slot) => {
+          const button = document.createElement("button");
+          button.className = "slot";
+          button.type = "button";
+          button.disabled = !slot.enabled;
+          button.onclick = () => command("activateAbilitySlot", {
+            entityKey,
+            groupIndex: slot.groupIndex,
+            slotIndex: slot.slotIndex
+          });
+          button.innerHTML = `<strong>${escapeHtml(slot.label)}</strong><span>${escapeHtml(slot.detail || slot.groupLabel || slot.actionId)}</span>`;
+          return button;
+        }));
+      }
+
+      function resolveBuildSlot(buildable) {
+        const groups = state.snapshot?.commands?.groups || [];
+        for (const group of groups) {
+          for (const slot of group.slots || []) {
+            if (slot.abilityId === buildable.abilityId) {
+              return slot.slotIndex;
+            }
+          }
+        }
+        return -1;
+      }
+
+      function showFatal(title, message) {
+        els.overlayTitle.textContent = title;
+        els.overlayMessage.textContent = message;
+        els.overlay.classList.add("visible");
+        els.diagStatus.textContent = title;
+        els.diagMessage.textContent = message;
+      }
+
+      function lowerFirst(value) {
+        const text = String(value);
+        return text.charAt(0).toLowerCase() + text.slice(1);
+      }
+
+      function healthWidth(value) {
+        return Math.max(0, Math.min(100, Number(value) || 0));
+      }
+
+      function progressWidth(value) {
+        return Math.max(0, Math.min(100, (Number(value) || 0) / 10));
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(Number(value) || 0);
+      }
+
+      function safeColor(value) {
+        const text = String(value || "#72d572");
+        return /^#[0-9a-f]{6}$/i.test(text) ? text : "#72d572";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[char]);
+      }
+    </script>
+  </body>
+</html>

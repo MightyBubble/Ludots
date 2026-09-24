@@ -1,0 +1,402 @@
+{
+  "Id": "cnc_tri_nation_war",
+  "Tags": [
+    "rts",
+    "cnc",
+    "tri_nation",
+    "production"
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 12000,
+    "TargetYCm": 9000,
+    "Yaw": 180,
+    "Pitch": 54,
+    "DistanceCm": 14000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 80,
+      "HeightInTiles": 80,
+      "GridCellSizeCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "cnc_allied_team_anchor",
+      "InstanceId": "allied_team",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 14000
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_allied_player_anchor",
+      "InstanceId": "allied_player",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8200,
+            "Y": 14200
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_allied_structure_conyard",
+      "InstanceId": "allied_conyard",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 13600
+          }
+        },
+        "Name": {
+          "Value": "Allied Construction Yard"
+        }
+      }
+    },
+    {
+      "Template": "cnc_allied_structure_barracks",
+      "InstanceId": "allied_barracks",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9200,
+            "Y": 14000
+          }
+        },
+        "Name": {
+          "Value": "Allied Barracks"
+        }
+      }
+    },
+    {
+      "Template": "cnc_allied_structure_war_factory",
+      "InstanceId": "allied_factory",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6800,
+            "Y": 14000
+          }
+        },
+        "Name": {
+          "Value": "Allied War Factory"
+        }
+      }
+    },
+    {
+      "Template": "cnc_allied_worker_harvester",
+      "InstanceId": "allied_harvester",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8600,
+            "Y": 14800
+          }
+        },
+        "Name": {
+          "Value": "Allied Ore Harvester"
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_team_anchor",
+      "InstanceId": "soviet_team",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 16000,
+            "Y": 8000
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_player_anchor",
+      "InstanceId": "soviet_player",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 16200,
+            "Y": 8200
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_structure_conyard",
+      "InstanceId": "soviet_conyard",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 16000,
+            "Y": 7600
+          }
+        },
+        "Name": {
+          "Value": "Soviet Construction Yard"
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_structure_barracks",
+      "InstanceId": "soviet_barracks",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17200,
+            "Y": 8000
+          }
+        },
+        "Name": {
+          "Value": "Soviet Barracks"
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_structure_war_factory",
+      "InstanceId": "soviet_factory",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14800,
+            "Y": 8000
+          }
+        },
+        "Name": {
+          "Value": "Soviet War Factory"
+        }
+      }
+    },
+    {
+      "Template": "cnc_soviet_worker_harvester",
+      "InstanceId": "soviet_harvester",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 16600,
+            "Y": 8800
+          }
+        },
+        "Name": {
+          "Value": "Soviet Ore Harvester"
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_team_anchor",
+      "InstanceId": "yuri_team",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12000,
+            "Y": 4000
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_player_anchor",
+      "InstanceId": "yuri_player",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12200,
+            "Y": 4200
+          }
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_structure_conyard",
+      "InstanceId": "yuri_conyard",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12000,
+            "Y": 3600
+          }
+        },
+        "Name": {
+          "Value": "Yuri Construction Yard"
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_structure_barracks",
+      "InstanceId": "yuri_barracks",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13200,
+            "Y": 4000
+          }
+        },
+        "Name": {
+          "Value": "Yuri Barracks"
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_structure_war_factory",
+      "InstanceId": "yuri_factory",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10800,
+            "Y": 4000
+          }
+        },
+        "Name": {
+          "Value": "Yuri War Factory"
+        }
+      }
+    },
+    {
+      "Template": "cnc_yuri_worker_harvester",
+      "InstanceId": "yuri_harvester",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12600,
+            "Y": 4800
+          }
+        },
+        "Name": {
+          "Value": "Yuri Ore Harvester"
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "allied_team"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "soviet_team"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "yuri_team"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "allied_player"
+    }
+  ]
+}

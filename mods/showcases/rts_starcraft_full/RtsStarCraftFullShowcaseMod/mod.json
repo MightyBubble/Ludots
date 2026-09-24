@@ -1,0 +1,17 @@
+{
+  "name": "RtsStarCraftFullShowcaseMod",
+  "version": "1.0.0",
+  "description": "Full StarCraft-like RTS showcase with 100 units across Terran, Zerg, and Protoss using GAS, items, graphs, and browser DataPlane HUD.",
+  "main": "bin/net8.0/RtsStarCraftFullShowcaseMod.dll",
+  "priority": 230,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0",
+    "BrowserRtsProductionShowcaseMod": "^1.0.0",
+    "CombatStanceBehaviorMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "production", "starcraft-full", "playable"]
+}

@@ -1,0 +1,15 @@
+{
+  "startupMapId": "rts_starcraft_full",
+  "startupLocalPlayerId": 1,
+  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay"],
+  "windowTitle": "Ludots — StarCraft Full RTS (100 Units)",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
+}

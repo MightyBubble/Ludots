@@ -1,0 +1,2996 @@
+[
+  {
+    "id": "Effect.Cnc.Construction",
+    "tags": [
+      "Effect.Cnc.Construction"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 45,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Cnc.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.power_plant",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.power_plant",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_power",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -250.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_refinery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.barracks",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.barracks",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.gi",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -31.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.gi",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_gi",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.engineer",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -37.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.engineer",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.medic",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -43.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.medic",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_medic",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.rocketeer",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -50.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.rocketeer",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_rocketeer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.sniper",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.sniper",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_sniper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.spy",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.spy",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_spy",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.seal",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -68.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.seal",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_seal",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.chrono_legionnaire",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.chrono_legionnaire",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_infantry_chrono_legionnaire",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.war_factory",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -350.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.war_factory",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_war_factory",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.grizzly_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -48.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.grizzly_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_grizzly_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.ifv",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.ifv",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.mirage_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -64.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.mirage_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_mirage_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.prism_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -72.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.prism_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_prism_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.battle_fortress",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -80.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.battle_fortress",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_battle_fortress",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.destroyer",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -88.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.destroyer",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_destroyer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.aircraft_carrier",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -96.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.aircraft_carrier",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_aircraft_carrier",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.chrono_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -104.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.chrono_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_vehicle_chrono_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.airfield",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -225.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.airfield",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_airfield",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.harrier",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -58.333333333333336
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.harrier",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_aircraft_harrier",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.black_eagle",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -66.66666666666667
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.black_eagle",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_aircraft_black_eagle",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.nighthawk",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.nighthawk",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_aircraft_nighthawk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostTrainStep.chrono_copter",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -83.33333333333333
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Train.chrono_copter",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_aircraft_chrono_copter",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.battle_lab",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -400.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.battle_lab",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_battle_lab",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.pillbox",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.pillbox",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_pillbox",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.super_weapon",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -625.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.super_weapon",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_super_weapon",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Allied.CostBuildStep.service_depot",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -150.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Allied.Place.service_depot",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_allied_structure_service_depot",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.power_plant",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.power_plant",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_power",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -250.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_refinery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.barracks",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.barracks",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.conscript",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -31.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.conscript",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_conscript",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.flak_trooper",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -37.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.flak_trooper",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_flak_trooper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.tesla_trooper",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -43.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.tesla_trooper",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_tesla_trooper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.engineer",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -50.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.engineer",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.crazy_ivan",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.crazy_ivan",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_crazy_ivan",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.desolator",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.desolator",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_desolator",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.boris",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -68.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.boris",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_boris",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.terrorist",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.terrorist",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_infantry_terrorist",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.war_factory",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -350.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.war_factory",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_war_factory",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.rhino_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -48.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.rhino_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_rhino_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.flak_track",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.flak_track",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_flak_track",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.v3_launcher",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -64.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.v3_launcher",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_v3_launcher",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.apocalypse_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -72.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.apocalypse_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_apocalypse_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.tesla_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -80.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.tesla_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_tesla_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.demolisher",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -88.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.demolisher",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_demolisher",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.dreadnought",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -96.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.dreadnought",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_dreadnought",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.mammoth_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -104.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.mammoth_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_vehicle_mammoth_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.airfield",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -225.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.airfield",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_airfield",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.mig",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -58.333333333333336
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.mig",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_aircraft_mig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.kirov",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -66.66666666666667
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.kirov",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_aircraft_kirov",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.siege_chopper",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.siege_chopper",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_aircraft_siege_chopper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostTrainStep.vortex",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -83.33333333333333
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Train.vortex",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_aircraft_vortex",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.battle_lab",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -400.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.battle_lab",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_battle_lab",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.pillbox",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.pillbox",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_pillbox",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.super_weapon",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -625.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.super_weapon",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_super_weapon",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Soviet.CostBuildStep.service_depot",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -150.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Soviet.Place.service_depot",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_soviet_structure_service_depot",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.power_plant",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.power_plant",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_power",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -250.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.ore_refinery",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_refinery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.barracks",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.barracks",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.initiate",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -31.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.initiate",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_initiate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.brute",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -37.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.brute",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_brute",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.virus",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -43.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.virus",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_virus",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.yuri_clone",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -50.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.yuri_clone",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_yuri_clone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.yuri_prime",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.yuri_prime",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_yuri_prime",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.genetic_mutator",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -62.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.genetic_mutator",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_genetic_mutator",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.slave_miner",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -68.75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.slave_miner",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_slave_miner",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.guardian_gi",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.guardian_gi",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_infantry_guardian_gi",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.war_factory",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -350.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.war_factory",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_war_factory",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.gattling_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -48.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.gattling_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_gattling_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.magnetron",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -56.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.magnetron",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_magnetron",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.mastermind",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -64.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.mastermind",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_mastermind",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.floating_disk",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -72.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.floating_disk",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_floating_disk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.lasher_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -80.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.lasher_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_lasher_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.virus_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -88.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.virus_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_virus_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.chaos_tank",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -96.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.chaos_tank",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_chaos_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.battle_fortress_yuri",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -104.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.battle_fortress_yuri",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_vehicle_battle_fortress_yuri",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.airfield",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -225.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.airfield",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_airfield",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.floating_disk_scout",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -58.333333333333336
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.floating_disk_scout",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_aircraft_floating_disk_scout",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.harrier_yuri",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -66.66666666666667
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.harrier_yuri",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_aircraft_harrier_yuri",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.kirov_yuri",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.kirov_yuri",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_aircraft_kirov_yuri",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostTrainStep.vortex_yuri",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -83.33333333333333
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Train.vortex_yuri",
+    "tags": [
+      "Effect.Cnc.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_aircraft_vortex_yuri",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.battle_lab",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -400.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.battle_lab",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_battle_lab",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.pillbox",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -75.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.pillbox",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_pillbox",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.super_weapon",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -625.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.super_weapon",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_super_weapon",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Yuri.CostBuildStep.service_depot",
+    "tags": [
+      "Effect.Cnc.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -150.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Yuri.Place.service_depot",
+    "tags": [
+      "Effect.Cnc.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "cnc_yuri_structure_service_depot",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Cnc.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Cnc.Item.Allied.Upgrade0",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Allied.Upgrade1",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 75
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Allied.Upgrade2",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 100
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Soviet.Upgrade0",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Soviet.Upgrade1",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 75
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Soviet.Upgrade2",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 100
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Yuri.Upgrade0",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Yuri.Upgrade1",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 75
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Cnc.Item.Yuri.Upgrade2",
+    "tags": [
+      "Effect.Cnc.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 100
+      },
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": 0
+      }
+    ]
+  }
+]

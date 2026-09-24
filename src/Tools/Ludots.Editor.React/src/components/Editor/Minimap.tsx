@@ -2,21 +2,46 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useEditorStore } from './EditorStore';
 import * as THREE from 'three';
 import { getMapWorldSizeM } from '../../Core/Map/TopologyMetrics';
+import { getTerrainDisplayByteRgb, type TerrainVisualOptions } from '../../Core/Render/TerrainVisualStyle';
 
 type MinimapProps = {
     embedded?: boolean;
     className?: string;
 };
 
+const MINIMAP_LONG_EDGE_PX = 256;
+
+function paintTerrainPixel(data: Uint8ClampedArray, index: number, height: number, water: number, biome: number, visualOptions: TerrainVisualOptions) {
+    const [r, g, b] = getTerrainDisplayByteRgb(height, water, biome, visualOptions);
+    data[index] = r;
+    data[index + 1] = g;
+    data[index + 2] = b;
+    data[index + 3] = 255;
+}
+
 export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = '' }) => {
     const terrainCanvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     
-    const { terrain, boardMetrics, activeCategory, cameraRef, controlsRef, navDirtyChunks, canvasSessionKind } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, cameraRef, controlsRef, navDirtyChunks, canvasSessionKind, terrainViewMode, terrainHeightContrast } = useEditorStore();
     const hasCanvasSession = canvasSessionKind === 'local' || canvasSessionKind === 'repo';
+    const terrainVisualOptions = React.useMemo<TerrainVisualOptions>(() => ({
+        terrainViewMode,
+        heightContrast: terrainHeightContrast,
+    }), [terrainViewMode, terrainHeightContrast]);
     const [isDragging, setIsDragging] = useState(false);
     const [cameraInfo, setCameraInfo] = useState('camera --');
+    const chunkAspectRatio = React.useMemo(() => {
+        if (!hasCanvasSession || terrain.widthChunks <= 0 || terrain.heightChunks <= 0) return 1;
+        return terrain.widthChunks / terrain.heightChunks;
+    }, [hasCanvasSession, terrain.widthChunks, terrain.heightChunks]);
+    const minimapCanvasWidth = chunkAspectRatio >= 1
+        ? MINIMAP_LONG_EDGE_PX
+        : Math.max(1, Math.round(MINIMAP_LONG_EDGE_PX * chunkAspectRatio));
+    const minimapCanvasHeight = chunkAspectRatio >= 1
+        ? Math.max(1, Math.round(MINIMAP_LONG_EDGE_PX / chunkAspectRatio))
+        : MINIMAP_LONG_EDGE_PX;
 
     // 1. Terrain Render (Cached)
     useEffect(() => {
@@ -57,26 +82,10 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
                 if (mx >= mapW || my >= mapH) continue;
 
                 const index = (y * w + x) * 4;
-                let r=0, g=0, b=0;
-                
                 const height = terrain.getHeight(mx, my);
                 const water = terrain.getWater(mx, my);
-                
-                if (water > 0) {
-                    r = 0; g = 100 + water * 10; b = 200 + water * 5;
-                } else {
-                    const val = height * 16;
-                    r = val; g = val + 20; b = val; // Greenish
-                    
-                    const biome = terrain.getBiome(mx, my);
-                    if (biome === 1) { r += 50; b += 20; } 
-                    if (biome === 2) { g += 40; } 
-                }
-                
-                data[index] = r;
-                data[index+1] = g;
-                data[index+2] = b;
-                data[index+3] = 255;
+                const biome = terrain.getBiome(mx, my);
+                paintTerrainPixel(data, index, height, water, biome, terrainVisualOptions);
             }
         }
         ctx.putImageData(imgData, 0, 0);
@@ -97,7 +106,7 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
         }
         ctx.stroke();
 
-    }, [terrain, terrain.widthChunks, terrain.heightChunks, boardMetrics, hasCanvasSession]); // Redraw on load/resize
+    }, [terrain, terrain.widthChunks, terrain.heightChunks, boardMetrics, hasCanvasSession, terrainVisualOptions, minimapCanvasWidth, minimapCanvasHeight]); // Redraw on load/resize
 
     // 2. Animation Loop (Overlay: Camera + Dirty + Interaction)
     useEffect(() => {
@@ -173,21 +182,7 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
                             const height = terrain.getHeight(mx, my);
                             const water = terrain.getWater(mx, my);
                             const biome = terrain.getBiome(mx, my);
-                            
-                            let r=0, g=0, b=0;
-                            if (water > 0) {
-                                r = 0; g = 100 + water * 10; b = 200 + water * 5;
-                            } else {
-                                const val = height * 16;
-                                r = val; g = val + 20; b = val;
-                                if (biome === 1) { r += 50; b += 20; } 
-                                if (biome === 2) { g += 40; } 
-                            }
-                            
-                            data[index] = r;
-                            data[index+1] = g;
-                            data[index+2] = b;
-                            data[index+3] = 255;
+                            paintTerrainPixel(data, index, height, water, biome, terrainVisualOptions);
                         }
                     }
                     ctxTerrain.putImageData(imgData, cxPx, cyPx);
@@ -259,7 +254,7 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
         
         frameId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(frameId);
-    }, [terrain, boardMetrics, hasCanvasSession]);
+    }, [terrain, boardMetrics, hasCanvasSession, terrainVisualOptions, minimapCanvasWidth, minimapCanvasHeight]);
 
     // 3. Interaction
     const handlePointer = (e: React.PointerEvent) => {
@@ -300,7 +295,7 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
     return (
         <div
             ref={containerRef}
-            className={`${embedded ? 'mx-auto w-[220px]' : 'absolute right-4 top-4 z-40 w-[228px]'} select-none rounded-lg border border-slate-700/80 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-md ${className}`}
+            className={`${embedded ? 'w-full' : 'absolute right-4 top-4 z-40 w-[260px]'} select-none rounded-lg border border-slate-700/80 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-md ${className}`}
         >
             <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
@@ -311,17 +306,20 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
                     dirty {navDirtyChunks.size}
                 </div>
             </div>
-            <div className="relative aspect-square w-full overflow-hidden rounded border border-slate-700 bg-black">
+            <div
+                className="relative w-full overflow-hidden rounded border border-slate-700 bg-black"
+                style={{ aspectRatio: `${terrain.widthChunks || 1} / ${terrain.heightChunks || 1}` }}
+            >
                 <canvas
                     ref={terrainCanvasRef}
-                    width={200}
-                    height={200}
+                    width={minimapCanvasWidth}
+                    height={minimapCanvasHeight}
                     className="absolute left-0 top-0 h-full w-full"
                 />
                 <canvas
                     ref={overlayCanvasRef}
-                    width={200}
-                    height={200}
+                    width={minimapCanvasWidth}
+                    height={minimapCanvasHeight}
                     className={`absolute left-0 top-0 z-10 h-full w-full ${hasCanvasSession ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
                     onPointerDown={handlePointer}
                     onPointerMove={handlePointer}

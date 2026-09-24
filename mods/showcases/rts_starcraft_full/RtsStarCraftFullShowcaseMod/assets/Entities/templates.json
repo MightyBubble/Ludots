@@ -1,0 +1,4637 @@
+[
+  {
+    "id": "scf_terran_scv",
+    "components": {
+      "Name": {
+        "Value": "SCV"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "Minerals": 6200,
+          "Gas": 5000,
+          "MoveSpeed": 600
+        },
+        "current": {
+          "Minerals": 1200,
+          "Gas": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Harvest.Minerals",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_command_center",
+    "components": {
+      "Name": {
+        "Value": "Command Center"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1500,
+          "Minerals": 9000,
+          "Gas": 5000
+        },
+        "current": {
+          "Minerals": 4000,
+          "Gas": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_terran_command_center_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.terran.scv",
+          "Ability.Scf.Train.terran.marine",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_supply_depot",
+    "components": {
+      "Name": {
+        "Value": "Supply Depot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Minerals": 5100
+        },
+        "current": {
+          "Minerals": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_barracks",
+    "components": {
+      "Name": {
+        "Value": "Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Minerals": 6500
+        },
+        "current": {
+          "Minerals": 1500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_terran_barracks_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.terran.marine",
+          "Ability.Scf.Train.terran.marauder",
+          "Ability.Scf.Train.terran.reaper",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_factory",
+    "components": {
+      "Name": {
+        "Value": "Factory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1250,
+          "Minerals": 6500,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 1500,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_terran_factory_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.terran.hellion",
+          "Ability.Scf.Train.terran.siege.tank",
+          "Ability.Scf.Train.terran.hellbat",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_starport",
+    "components": {
+      "Name": {
+        "Value": "Starport"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300,
+          "Minerals": 6500,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 1500,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_terran_starport_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.terran.viking",
+          "Ability.Scf.Train.terran.medivac",
+          "Ability.Scf.Train.terran.banshee",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_refinery",
+    "components": {
+      "Name": {
+        "Value": "Refinery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 750,
+          "Minerals": 5075
+        },
+        "current": {
+          "Minerals": 75
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_engineering_bay",
+    "components": {
+      "Name": {
+        "Value": "Engineering Bay"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5125
+        },
+        "current": {
+          "Minerals": 125
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_armory",
+    "components": {
+      "Name": {
+        "Value": "Armory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 750,
+          "Minerals": 5150,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_bunker",
+    "components": {
+      "Name": {
+        "Value": "Bunker"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "Minerals": 5100,
+          "AttackDamage": 6,
+          "AttackRange": 500
+        },
+        "current": {
+          "Minerals": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.bunker",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.bunker"
+  },
+  {
+    "id": "scf_terran_missile_turret",
+    "components": {
+      "Name": {
+        "Value": "Missile Turret"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "Minerals": 5100,
+          "AttackDamage": 12,
+          "AttackRange": 700
+        },
+        "current": {
+          "Minerals": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.missile.turret",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.missile.turret"
+  },
+  {
+    "id": "scf_terran_fusion_core",
+    "components": {
+      "Name": {
+        "Value": "Fusion Core"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 750,
+          "Minerals": 5150,
+          "Gas": 5150
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_orbital_command",
+    "components": {
+      "Name": {
+        "Value": "Orbital Command"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1500,
+          "Minerals": 5550,
+          "Gas": 5000
+        },
+        "current": {
+          "Minerals": 550,
+          "Gas": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_terran_orbital_command_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.terran.scv",
+          "Ability.Scf.Train.terran.marine",
+          "Ability.Scf.Train.terran.marauder",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_marine",
+    "components": {
+      "Name": {
+        "Value": "Marine"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 600,
+          "AttackDamage": 6,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.marine",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.marine"
+  },
+  {
+    "id": "scf_terran_marauder",
+    "components": {
+      "Name": {
+        "Value": "Marauder"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 625,
+          "MoveSpeed": 550,
+          "AttackDamage": 10,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.marauder",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.marauder"
+  },
+  {
+    "id": "scf_terran_reaper",
+    "components": {
+      "Name": {
+        "Value": "Reaper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 750,
+          "AttackDamage": 4,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.reaper",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.reaper"
+  },
+  {
+    "id": "scf_terran_ghost",
+    "components": {
+      "Name": {
+        "Value": "Ghost"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Gas": 5050,
+          "MoveSpeed": 600,
+          "AttackDamage": 10,
+          "AttackRange": 600
+        },
+        "current": {
+          "Gas": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.ghost",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.ghost"
+  },
+  {
+    "id": "scf_terran_firebat",
+    "components": {
+      "Name": {
+        "Value": "Firebat"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 550,
+          "AttackDamage": 8,
+          "AttackRange": 350
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.firebat",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.firebat"
+  },
+  {
+    "id": "scf_terran_medic",
+    "components": {
+      "Name": {
+        "Value": "Medic"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "MoveSpeed": 600
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_vulture",
+    "components": {
+      "Name": {
+        "Value": "Vulture"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 800,
+          "AttackDamage": 6,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.vulture",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.vulture"
+  },
+  {
+    "id": "scf_terran_goliath",
+    "components": {
+      "Name": {
+        "Value": "Goliath"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 500,
+          "AttackDamage": 12,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.goliath",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.goliath"
+  },
+  {
+    "id": "scf_terran_siege_tank",
+    "components": {
+      "Name": {
+        "Value": "Siege Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 450,
+          "AttackDamage": 35,
+          "AttackRange": 700
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.siege.tank",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.siege.tank"
+  },
+  {
+    "id": "scf_terran_hellion",
+    "components": {
+      "Name": {
+        "Value": "Hellion"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 850,
+          "AttackDamage": 8,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.hellion",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.hellion"
+  },
+  {
+    "id": "scf_terran_hellbat",
+    "components": {
+      "Name": {
+        "Value": "Hellbat"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "MoveSpeed": 550,
+          "AttackDamage": 12,
+          "AttackRange": 350
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.hellbat",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.hellbat"
+  },
+  {
+    "id": "scf_terran_thor",
+    "components": {
+      "Name": {
+        "Value": "Thor"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1600,
+          "MoveSpeed": 400,
+          "AttackDamage": 30,
+          "AttackRange": 600
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.thor",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.thor"
+  },
+  {
+    "id": "scf_terran_viking",
+    "components": {
+      "Name": {
+        "Value": "Viking"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 700,
+          "AttackDamage": 10,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.viking",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.viking"
+  },
+  {
+    "id": "scf_terran_medivac",
+    "components": {
+      "Name": {
+        "Value": "Medivac"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_banshee",
+    "components": {
+      "Name": {
+        "Value": "Banshee"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "MoveSpeed": 700,
+          "AttackDamage": 12,
+          "AttackRange": 600
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.banshee",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.banshee"
+  },
+  {
+    "id": "scf_terran_battlecruiser",
+    "components": {
+      "Name": {
+        "Value": "Battlecruiser"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2500,
+          "MoveSpeed": 450,
+          "AttackDamage": 25,
+          "AttackRange": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.battlecruiser",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.battlecruiser"
+  },
+  {
+    "id": "scf_terran_raven",
+    "components": {
+      "Name": {
+        "Value": "Raven"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_terran_cyclone",
+    "components": {
+      "Name": {
+        "Value": "Cyclone"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "MoveSpeed": 600,
+          "AttackDamage": 11,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.cyclone",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.cyclone"
+  },
+  {
+    "id": "scf_terran_widow_mine",
+    "components": {
+      "Name": {
+        "Value": "Widow Mine"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 650,
+          "AttackDamage": 40,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.widow.mine",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.widow.mine"
+  },
+  {
+    "id": "scf_terran_liberator",
+    "components": {
+      "Name": {
+        "Value": "Liberator"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 750,
+          "MoveSpeed": 550,
+          "AttackDamage": 18,
+          "AttackRange": 700
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.liberator",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.liberator"
+  },
+  {
+    "id": "scf_terran_diamondback",
+    "components": {
+      "Name": {
+        "Value": "Diamondback"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "MoveSpeed": 650,
+          "AttackDamage": 14,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.terran.diamondback",
+          "Ability.Scf.Assault.ZergBase",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.terran.diamondback"
+  },
+  {
+    "id": "scf_zerg_drone",
+    "components": {
+      "Name": {
+        "Value": "Drone"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 240,
+          "Minerals": 5900,
+          "MoveSpeed": 600
+        },
+        "current": {
+          "Minerals": 900
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Harvest.Minerals",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_overlord",
+    "components": {
+      "Name": {
+        "Value": "Overlord"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "MoveSpeed": 450,
+          "Supply": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_hatchery",
+    "components": {
+      "Name": {
+        "Value": "Hatchery"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1500,
+          "Minerals": 5300
+        },
+        "current": {
+          "Minerals": 300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_hatchery_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.drone",
+          "Ability.Scf.Train.zerg.zergling",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_spawning_pool",
+    "components": {
+      "Name": {
+        "Value": "Spawning Pool"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Minerals": 5200
+        },
+        "current": {
+          "Minerals": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_spawning_pool_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.zergling",
+          "Ability.Scf.Train.zerg.baneling",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_roach_warren",
+    "components": {
+      "Name": {
+        "Value": "Roach Warren"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5150,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_roach_warren_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.roach",
+          "Ability.Scf.Train.zerg.ravager",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_baneling_nest",
+    "components": {
+      "Name": {
+        "Value": "Baneling Nest"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5100,
+          "Gas": 5050
+        },
+        "current": {
+          "Minerals": 100,
+          "Gas": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_hydra_den",
+    "components": {
+      "Name": {
+        "Value": "Hydralisk Den"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5150,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_hydra_den_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.hydralisk",
+          "Ability.Scf.Train.zerg.lurker",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_spire",
+    "components": {
+      "Name": {
+        "Value": "Spire"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5200,
+          "Gas": 5200
+        },
+        "current": {
+          "Minerals": 200,
+          "Gas": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_spire_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.mutalisk",
+          "Ability.Scf.Train.zerg.corruptor",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_infestation_pit",
+    "components": {
+      "Name": {
+        "Value": "Infestation Pit"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5100,
+          "Gas": 5150
+        },
+        "current": {
+          "Minerals": 100,
+          "Gas": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_infestation_pit_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.infestor",
+          "Ability.Scf.Train.zerg.viper",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_ultra_cavern",
+    "components": {
+      "Name": {
+        "Value": "Ultralisk Cavern"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Minerals": 5150,
+          "Gas": 5200
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_ultra_cavern_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.ultralisk",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_evolution_chamber",
+    "components": {
+      "Name": {
+        "Value": "Evolution Chamber"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Minerals": 5075
+        },
+        "current": {
+          "Minerals": 75
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_extractor",
+    "components": {
+      "Name": {
+        "Value": "Extractor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Minerals": 5050
+        },
+        "current": {
+          "Minerals": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_nydus",
+    "components": {
+      "Name": {
+        "Value": "Nydus Network"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Minerals": 5150,
+          "Gas": 5200
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_hive",
+    "components": {
+      "Name": {
+        "Value": "Hive"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000,
+          "Minerals": 5400,
+          "Gas": 5200
+        },
+        "current": {
+          "Minerals": 400,
+          "Gas": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_zerg_hive_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.zerg.drone",
+          "Ability.Scf.Train.zerg.queen",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_creep_tumor",
+    "components": {
+      "Name": {
+        "Value": "Creep Tumor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Minerals": 5000
+        },
+        "current": {
+          "Minerals": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_zergling",
+    "components": {
+      "Name": {
+        "Value": "Zergling"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "MoveSpeed": 900,
+          "AttackDamage": 5,
+          "AttackRange": 350
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.zergling",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.zergling"
+  },
+  {
+    "id": "scf_zerg_baneling",
+    "components": {
+      "Name": {
+        "Value": "Baneling"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 700,
+          "AttackDamage": 20,
+          "AttackRange": 300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.baneling",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.baneling"
+  },
+  {
+    "id": "scf_zerg_roach",
+    "components": {
+      "Name": {
+        "Value": "Roach"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 750,
+          "MoveSpeed": 550,
+          "AttackDamage": 16,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.roach",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.roach"
+  },
+  {
+    "id": "scf_zerg_ravager",
+    "components": {
+      "Name": {
+        "Value": "Ravager"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 500,
+          "AttackDamage": 18,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.ravager",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.ravager"
+  },
+  {
+    "id": "scf_zerg_hydralisk",
+    "components": {
+      "Name": {
+        "Value": "Hydralisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "MoveSpeed": 600,
+          "AttackDamage": 12,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.hydralisk",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.hydralisk"
+  },
+  {
+    "id": "scf_zerg_lurker",
+    "components": {
+      "Name": {
+        "Value": "Lurker"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 650,
+          "MoveSpeed": 450,
+          "AttackDamage": 20,
+          "AttackRange": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.lurker",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.lurker"
+  },
+  {
+    "id": "scf_zerg_mutalisk",
+    "components": {
+      "Name": {
+        "Value": "Mutalisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 850,
+          "AttackDamage": 9,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.mutalisk",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.mutalisk"
+  },
+  {
+    "id": "scf_zerg_corruptor",
+    "components": {
+      "Name": {
+        "Value": "Corruptor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "MoveSpeed": 700,
+          "AttackDamage": 14,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.corruptor",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.corruptor"
+  },
+  {
+    "id": "scf_zerg_broodlord",
+    "components": {
+      "Name": {
+        "Value": "Brood Lord"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100,
+          "MoveSpeed": 450,
+          "AttackDamage": 25,
+          "AttackRange": 700
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.broodlord",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.broodlord"
+  },
+  {
+    "id": "scf_zerg_swarm_host",
+    "components": {
+      "Name": {
+        "Value": "Swarm Host"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "MoveSpeed": 400,
+          "AttackDamage": 15,
+          "AttackRange": 600
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.swarm.host",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.swarm.host"
+  },
+  {
+    "id": "scf_zerg_viper",
+    "components": {
+      "Name": {
+        "Value": "Viper"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_infestor",
+    "components": {
+      "Name": {
+        "Value": "Infestor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_ultralisk",
+    "components": {
+      "Name": {
+        "Value": "Ultralisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000,
+          "MoveSpeed": 450,
+          "AttackDamage": 35,
+          "AttackRange": 400
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.ultralisk",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.ultralisk"
+  },
+  {
+    "id": "scf_zerg_queen",
+    "components": {
+      "Name": {
+        "Value": "Queen"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 550,
+          "AttackDamage": 8,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.queen"
+  },
+  {
+    "id": "scf_zerg_spine_crawler",
+    "components": {
+      "Name": {
+        "Value": "Spine Crawler"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Minerals": 5100,
+          "AttackDamage": 15,
+          "AttackRange": 550
+        },
+        "current": {
+          "Minerals": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.spine.crawler",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.spine.crawler"
+  },
+  {
+    "id": "scf_zerg_spore_crawler",
+    "components": {
+      "Name": {
+        "Value": "Spore Crawler"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Minerals": 5075,
+          "AttackDamage": 15,
+          "AttackRange": 650
+        },
+        "current": {
+          "Minerals": 75
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.spore.crawler",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.spore.crawler"
+  },
+  {
+    "id": "scf_zerg_nydus_worm",
+    "components": {
+      "Name": {
+        "Value": "Nydus Worm"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Minerals": 5100,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 100,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_zerg_brutalisk",
+    "components": {
+      "Name": {
+        "Value": "Brutalisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "MoveSpeed": 500,
+          "AttackDamage": 28,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.zerg.brutalisk",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.zerg.brutalisk"
+  },
+  {
+    "id": "scf_protoss_probe",
+    "components": {
+      "Name": {
+        "Value": "Probe"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Shield": 200,
+          "Minerals": 5500,
+          "MoveSpeed": 600
+        },
+        "current": {
+          "Minerals": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Harvest.Minerals",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_nexus",
+    "components": {
+      "Name": {
+        "Value": "Nexus"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Shield": 1000,
+          "Minerals": 5400
+        },
+        "current": {
+          "Minerals": 400
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_nexus_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.probe",
+          "Ability.Scf.Train.protoss.zealot",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_pylon",
+    "components": {
+      "Name": {
+        "Value": "Pylon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Shield": 200,
+          "Minerals": 5100,
+          "Supply": 8
+        },
+        "current": {
+          "Minerals": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_gateway",
+    "components": {
+      "Name": {
+        "Value": "Gateway"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Shield": 500,
+          "Minerals": 5150
+        },
+        "current": {
+          "Minerals": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_gateway_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.zealot",
+          "Ability.Scf.Train.protoss.stalker",
+          "Ability.Scf.Train.protoss.sentry",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_cybernetics",
+    "components": {
+      "Name": {
+        "Value": "Cybernetics Core"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Shield": 550,
+          "Minerals": 5150
+        },
+        "current": {
+          "Minerals": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_robotics",
+    "components": {
+      "Name": {
+        "Value": "Robotics Facility"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Shield": 500,
+          "Minerals": 5200,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 200,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_robotics_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.immortal",
+          "Ability.Scf.Train.protoss.colossus",
+          "Ability.Scf.Train.protoss.observer",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_stargate",
+    "components": {
+      "Name": {
+        "Value": "Stargate"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Shield": 600,
+          "Minerals": 5150,
+          "Gas": 5150
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_stargate_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.phoenix",
+          "Ability.Scf.Train.protoss.voidray",
+          "Ability.Scf.Train.protoss.carrier",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_forge",
+    "components": {
+      "Name": {
+        "Value": "Forge"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 400,
+          "Minerals": 5150
+        },
+        "current": {
+          "Minerals": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_assimilator",
+    "components": {
+      "Name": {
+        "Value": "Assimilator"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "Shield": 450,
+          "Minerals": 5075
+        },
+        "current": {
+          "Minerals": 75
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_twilight",
+    "components": {
+      "Name": {
+        "Value": "Twilight Council"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 650,
+          "Shield": 650,
+          "Minerals": 5150,
+          "Gas": 5100
+        },
+        "current": {
+          "Minerals": 150,
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_templar_archives",
+    "components": {
+      "Name": {
+        "Value": "Templar Archives"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 650,
+          "Shield": 650,
+          "Minerals": 5200,
+          "Gas": 5150
+        },
+        "current": {
+          "Minerals": 200,
+          "Gas": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_templar_archives_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.hightemplar",
+          "Ability.Scf.Train.protoss.darktemplar",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_robo_bay",
+    "components": {
+      "Name": {
+        "Value": "Robotics Bay"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Shield": 550,
+          "Minerals": 5200,
+          "Gas": 5150
+        },
+        "current": {
+          "Minerals": 200,
+          "Gas": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_robo_bay_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.disruptor",
+          "Ability.Scf.Train.protoss.warp.prism",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_fleet_beacon",
+    "components": {
+      "Name": {
+        "Value": "Fleet Beacon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 550,
+          "Shield": 550,
+          "Minerals": 5300,
+          "Gas": 5200
+        },
+        "current": {
+          "Minerals": 300,
+          "Gas": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityFormSetRef": {
+        "formSetId": "scf_protoss_fleet_beacon_forms"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Train.protoss.tempest",
+          "Ability.Scf.Train.protoss.mothership",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_photon_cannon",
+    "components": {
+      "Name": {
+        "Value": "Photon Cannon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Shield": 300,
+          "Minerals": 5150,
+          "AttackDamage": 20,
+          "AttackRange": 600
+        },
+        "current": {
+          "Minerals": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.photon.cannon",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.photon.cannon"
+  },
+  {
+    "id": "scf_protoss_zealot",
+    "components": {
+      "Name": {
+        "Value": "Zealot"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Shield": 500,
+          "MoveSpeed": 600,
+          "AttackDamage": 8,
+          "AttackRange": 350
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.zealot",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.zealot"
+  },
+  {
+    "id": "scf_protoss_stalker",
+    "components": {
+      "Name": {
+        "Value": "Stalker"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 400,
+          "MoveSpeed": 650,
+          "AttackDamage": 10,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.stalker",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.stalker"
+  },
+  {
+    "id": "scf_protoss_sentry",
+    "components": {
+      "Name": {
+        "Value": "Sentry"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Shield": 300,
+          "MoveSpeed": 600,
+          "AttackDamage": 6,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.sentry"
+  },
+  {
+    "id": "scf_protoss_adept",
+    "components": {
+      "Name": {
+        "Value": "Adept"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "Shield": 350,
+          "MoveSpeed": 700,
+          "AttackDamage": 7,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.adept",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.adept"
+  },
+  {
+    "id": "scf_protoss_hightemplar",
+    "components": {
+      "Name": {
+        "Value": "High Templar"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Shield": 300,
+          "Gas": 5100,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Gas": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_darktemplar",
+    "components": {
+      "Name": {
+        "Value": "Dark Templar"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 400,
+          "MoveSpeed": 700,
+          "AttackDamage": 15,
+          "AttackRange": 350
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.darktemplar",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.darktemplar"
+  },
+  {
+    "id": "scf_protoss_archon",
+    "components": {
+      "Name": {
+        "Value": "Archon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Shield": 800,
+          "MoveSpeed": 550,
+          "AttackDamage": 25,
+          "AttackRange": 450
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.archon",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.archon"
+  },
+  {
+    "id": "scf_protoss_immortal",
+    "components": {
+      "Name": {
+        "Value": "Immortal"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 400,
+          "MoveSpeed": 450,
+          "AttackDamage": 20,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.immortal",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.immortal"
+  },
+  {
+    "id": "scf_protoss_colossus",
+    "components": {
+      "Name": {
+        "Value": "Colossus"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Shield": 600,
+          "MoveSpeed": 450,
+          "AttackDamage": 15,
+          "AttackRange": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.colossus",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.colossus"
+  },
+  {
+    "id": "scf_protoss_disruptor",
+    "components": {
+      "Name": {
+        "Value": "Disruptor"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Shield": 300,
+          "MoveSpeed": 500,
+          "AttackDamage": 30,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.disruptor",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.disruptor"
+  },
+  {
+    "id": "scf_protoss_phoenix",
+    "components": {
+      "Name": {
+        "Value": "Phoenix"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "Shield": 350,
+          "MoveSpeed": 800,
+          "AttackDamage": 8,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.phoenix",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.phoenix"
+  },
+  {
+    "id": "scf_protoss_voidray",
+    "components": {
+      "Name": {
+        "Value": "Void Ray"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Shield": 500,
+          "MoveSpeed": 650,
+          "AttackDamage": 12,
+          "AttackRange": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.voidray",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.voidray"
+  },
+  {
+    "id": "scf_protoss_oracle",
+    "components": {
+      "Name": {
+        "Value": "Oracle"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "Shield": 300,
+          "MoveSpeed": 750
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_carrier",
+    "components": {
+      "Name": {
+        "Value": "Carrier"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Shield": 900,
+          "MoveSpeed": 450,
+          "AttackDamage": 8,
+          "AttackRange": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.carrier",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.carrier"
+  },
+  {
+    "id": "scf_protoss_tempest",
+    "components": {
+      "Name": {
+        "Value": "Tempest"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Shield": 600,
+          "MoveSpeed": 500,
+          "AttackDamage": 22,
+          "AttackRange": 800
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.tempest",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.tempest"
+  },
+  {
+    "id": "scf_protoss_mothership",
+    "components": {
+      "Name": {
+        "Value": "Mothership"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Shield": 1000,
+          "MoveSpeed": 450,
+          "AttackDamage": 6,
+          "AttackRange": 600
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.mothership",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.mothership"
+  },
+  {
+    "id": "scf_protoss_observer",
+    "components": {
+      "Name": {
+        "Value": "Observer"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Shield": 200,
+          "MoveSpeed": 700
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_warp_prism",
+    "components": {
+      "Name": {
+        "Value": "Warp Prism"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "Shield": 400,
+          "MoveSpeed": 650
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "scf_protoss_corsair",
+    "components": {
+      "Name": {
+        "Value": "Corsair"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 350,
+          "Shield": 350,
+          "MoveSpeed": 750,
+          "AttackDamage": 5,
+          "AttackRange": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Scf.Attack.protoss.corsair",
+          "Ability.Scf.Combat.AttackMove",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      }
+    },
+    "onSpawnEffect": "Effect.Scf.AutoAttack.protoss.corsair"
+  }
+]

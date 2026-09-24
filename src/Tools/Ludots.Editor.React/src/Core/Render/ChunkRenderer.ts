@@ -7,6 +7,7 @@ import {
     cellToWorldPosition,
     normalizeBoardMetrics,
 } from '../Map/TopologyMetrics';
+import { getTerrainDisplayRgb, type TerrainVisualOptions } from './TerrainVisualStyle';
 
 type TerrainVertex = {
     x: number;
@@ -43,6 +44,7 @@ type GridSurfaceBuffers = {
 export class ChunkRenderer {
     store: TerrainStore;
     metrics: BoardMetrics;
+    private visualOptions: TerrainVisualOptions;
     
     // Geometry Buffers (Reused)
     pointPositions: number[] = [];
@@ -75,47 +77,20 @@ export class ChunkRenderer {
     // Stats
     stats = { vertices: 0, edgesFlat: 0, edgesRamp: 0, edgesCliff: 0, facesFlat: 0, facesRamp: 0, facesCliff: 0, facesWater: 0, facesNav: 0 };
 
-    constructor(store: TerrainStore, metrics: BoardMetrics = DEFAULT_BOARD_METRICS) {
+    constructor(store: TerrainStore, metrics: BoardMetrics = DEFAULT_BOARD_METRICS, visualOptions: TerrainVisualOptions = {}) {
         this.store = store;
         this.metrics = normalizeBoardMetrics(metrics);
+        this.visualOptions = visualOptions;
+    }
+
+    setVisualOptions(visualOptions: TerrainVisualOptions) {
+        this.visualOptions = visualOptions;
     }
     
     // Biome Color Map
-    private getVertexColor(h: number, biome: number): THREE.Color {
-        const c = new THREE.Color();
-        
-        switch(biome) {
-            case 0: // Dirt
-                c.setHex(0x8B4513); 
-                break;
-            case 1: // Sand
-                c.setHex(0xF4A460);
-                break;
-            case 2: // Rock
-                c.setHex(0x808080);
-                break;
-            case 3: // Grass
-                c.setHex(0x3d6c2e);
-                break;
-            case 4: // Wasteland
-                c.setHex(0x696969);
-                break;
-            case 5: // Swamp
-                c.setHex(0x556B2F);
-                break;
-            default: // Fallback (Dirt)
-                c.setHex(0x8B4513); 
-                break;
-        }
-
-        // Height Influence
-        const t = h / 15.0;
-        const hsl = { h: 0, s: 0, l: 0 };
-        c.getHSL(hsl);
-        hsl.l = Math.min(1.0, hsl.l + t * 0.3);
-        hsl.s = Math.max(0.0, hsl.s - t * 0.2);
-        c.setHSL(hsl.h, hsl.s, hsl.l);
-        return c;
+    private getVertexColor(h: number, water: number, biome: number): THREE.Color {
+        const [r, g, b] = getTerrainDisplayRgb(h, water, biome, this.visualOptions);
+        return new THREE.Color(r, g, b);
     }
 
     generateChunk(cx: number, cy: number, offsetX: number, offsetZ: number, hScale: number): THREE.Group {
@@ -444,17 +419,28 @@ export class ChunkRenderer {
         this.createGridSurfaceMesh(surface, group);
         this.createWaterMesh(this.waterFacePos, group);
         // Baked nav debug is rendered from serialized Recast NavTile triangles in HexRenderer.
-        this.createNamedMesh(this.edgeFlatPos, 0x9fb37c, 'line', group, 'CellGrid', 0.38);
-        const bx0 = startC * cellSizeM + offsetX;
-        const bx1 = Math.min(endC, maxC) * cellSizeM + offsetX;
-        const bz0 = startR * cellSizeM + offsetZ;
-        const bz1 = Math.min(endR, maxR) * cellSizeM + offsetZ;
-        const by = 0.08;
-        chunkBorderPos.push(bx0, by, bz0, bx1, by, bz0);
-        chunkBorderPos.push(bx1, by, bz0, bx1, by, bz1);
-        chunkBorderPos.push(bx1, by, bz1, bx0, by, bz1);
-        chunkBorderPos.push(bx0, by, bz1, bx0, by, bz0);
-        this.createNamedMesh(chunkBorderPos, 0x00e5ff, 'line', group, 'ChunkBorder', 0.85);
+        this.createNamedMesh(this.edgeFlatPos, 0x6f8f73, 'line', group, 'CellGrid', 0.06);
+        const borderMinC = startC;
+        const borderMaxC = Math.min(endC, maxC);
+        const borderMinR = startR;
+        const borderMaxR = Math.min(endR, maxR);
+        const lineYBias = this.getGridLineYBias();
+        const pushChunkBorder = (c0: number, r0: number, c1: number, r1: number) => {
+            const y0 = this.getGridCornerHeight(c0, r0, maxC, maxR, cornerHeights) * hScale + lineYBias;
+            const y1 = this.getGridCornerHeight(c1, r1, maxC, maxR, cornerHeights) * hScale + lineYBias;
+            chunkBorderPos.push(
+                c0 * cellSizeM + offsetX, y0, r0 * cellSizeM + offsetZ,
+                c1 * cellSizeM + offsetX, y1, r1 * cellSizeM + offsetZ);
+        };
+        for (let c = borderMinC; c < borderMaxC; c++) {
+            pushChunkBorder(c, borderMinR, c + 1, borderMinR);
+            pushChunkBorder(c, borderMaxR, c + 1, borderMaxR);
+        }
+        for (let r = borderMinR; r < borderMaxR; r++) {
+            pushChunkBorder(borderMinC, r, borderMinC, r + 1);
+            pushChunkBorder(borderMaxC, r, borderMaxC, r + 1);
+        }
+        this.createNamedMesh(chunkBorderPos, 0x00e5ff, 'line', group, 'ChunkBorder', 0.32);
         this.addVegetationMeshes(group);
         return group;
     }
@@ -626,8 +612,13 @@ export class ChunkRenderer {
     }
 
     private pushGridLine(a: TerrainVertex, b: TerrainVertex) {
-        const yBias = 0.03;
+        const yBias = this.getGridLineYBias();
         this.edgeFlatPos.push(a.x, a.y + yBias, a.z, b.x, b.y + yBias, b.z);
+    }
+
+    private getGridLineYBias(): number {
+        const cellSizeM = this.metrics.cellSizeCm / 100.0;
+        return Math.max(0.08, Math.min(1.2, cellSizeM * 0.001));
     }
 
     private addGridNavQuad(p00: TerrainVertex, p10: TerrainVertex, p11: TerrainVertex, p01: TerrainVertex) {
@@ -688,7 +679,11 @@ export class ChunkRenderer {
 
     private getCellColor(c: number, r: number, h: number) {
         const biome = this.store.getBiome(c, r);
-        const col = this.getVertexColor(h, biome);
+        const col = this.getVertexColor(h, this.store.getWater(c, r), biome);
+
+        if (this.visualOptions.terrainViewMode === 'heightmap') {
+            return col;
+        }
         
         // Dynamic Layer Overlays
         // Snow: Add White

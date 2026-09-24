@@ -297,6 +297,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             runtime.LifecycleTransaction = state;
         }
 
+        public void BeginLifecycleConsumeSource()
+        {
+            var runtime = RequireBuiltinRuntime();
+
+            if (runtime.LifecycleTransaction != null)
+            {
+                throw new InvalidOperationException("BeginLifecycleConsumeSource cannot nest an active lifecycle transaction.");
+            }
+
+            if (!_hasEffectContext)
+            {
+                throw new InvalidOperationException("BeginLifecycleConsumeSource requires an active effect context.");
+            }
+
+            Entity source = _currentEffectContext.Source;
+            if (!_world.IsAlive(source))
+            {
+                throw new LifecycleExecutionException("Entity lifecycle transaction failed because the source entity is no longer alive.");
+            }
+
+            if (_world.Has<PresentationDestroyPending>(source))
+            {
+                throw new LifecycleExecutionException("Entity lifecycle transaction failed because the source entity is already pending destroy.");
+            }
+
+            runtime.LifecycleTransaction = new LifecycleTransactionState
+            {
+                Source = source,
+                Snapshot = LifecycleSnapshot.Capture(_world, source),
+            };
+        }
+
         public void InvokeBuiltin(int builtinHandlerId)
         {
             var runtime = RequireBuiltinRuntime();

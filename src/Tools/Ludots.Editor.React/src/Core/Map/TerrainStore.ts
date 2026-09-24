@@ -408,7 +408,7 @@ export class TerrainStore {
                 const cx = view.getInt32(offset, true);
                 const cy = view.getInt32(offset + 4, true);
                 if (this.isValidChunk(cx, cy)) {
-                    this.chunks.set(`${cx},${cy}`, bytes.slice(offset + 8, offset + 8 + CHUNK_BYTE_SIZE));
+                    this.chunks.set(`${cx},${cy}`, bytes.subarray(offset + 8, offset + 8 + CHUNK_BYTE_SIZE));
                 }
                 offset += 8 + CHUNK_BYTE_SIZE;
             }
@@ -428,7 +428,7 @@ export class TerrainStore {
                     continue;
                 }
 
-                const chunkData = bytes.slice(offset, offset + CHUNK_BYTE_SIZE);
+                const chunkData = bytes.subarray(offset, offset + CHUNK_BYTE_SIZE);
                 if (chunkData.length === CHUNK_BYTE_SIZE) {
                     this.chunks.set(`${cx},${cy}`, chunkData);
                 }

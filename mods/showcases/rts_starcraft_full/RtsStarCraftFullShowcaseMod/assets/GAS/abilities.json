@@ -1,0 +1,3049 @@
+[
+  {
+    "id": "Ability.Scf.Combat.AttackMove",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack Move",
+      "iconGlyph": "A",
+      "accentColor": "#EF4444",
+      "hintText": "Move while engaging hostiles."
+    }
+  },
+  {
+    "id": "Ability.Scf.Harvest.Minerals",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Mining.Minerals",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Scf.Mining"
+      ]
+    },
+    "presentation": {
+      "displayName": "Harvest Minerals",
+      "iconGlyph": "MIN",
+      "accentColor": "#22C55E",
+      "hintText": "Start a mineral mining loop through a periodic GAS effect."
+    }
+  },
+  {
+    "id": "Ability.Scf.Assault.ZergBase",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Assault.Signal",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Assault Hatchery",
+      "iconGlyph": "ATK",
+      "accentColor": "#EF4444",
+      "hintText": "Commit the Terran force to attack the Zerg Hatchery."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.scv",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.scv"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.scv",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train SCV",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce SCV from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.marine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.marine"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.marine",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marine",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Marine from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.marauder",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.marauder"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.marauder",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marauder",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Marauder from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.reaper",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.reaper"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.reaper",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Reaper",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Reaper from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.hellion",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.hellion"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.hellion",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Hellion",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Hellion from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.siege.tank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.siege.tank"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.siege.tank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Siege Tank",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Siege Tank from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.hellbat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.hellbat"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.hellbat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Hellbat",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Hellbat from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.viking",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.viking"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.viking",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Viking",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Viking from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.medivac",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.medivac"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.medivac",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Medivac",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Medivac from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.terran.banshee",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.terran.banshee"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.terran.banshee",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Banshee",
+      "iconGlyph": "TR",
+      "accentColor": "#3B82F6",
+      "hintText": "Produce Banshee from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.bunker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.bunker"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Bunker)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 6 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.terran.bunker"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.missile.turret",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.missile.turret"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Missile Turret)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 700,
+      "impactEffect": "Effect.Scf.Damage.terran.missile.turret"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.marine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.marine"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Marine)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 6 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.terran.marine"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.marauder",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.marauder"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Marauder)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 10 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.terran.marauder"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.reaper",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.reaper"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Reaper)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 4 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.terran.reaper"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.ghost",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.ghost"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Ghost)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 10 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.terran.ghost"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.firebat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.firebat"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Firebat)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 350,
+      "impactEffect": "Effect.Scf.Damage.terran.firebat"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.vulture",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.vulture"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Vulture)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 6 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.terran.vulture"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.goliath",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.goliath"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Goliath)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.terran.goliath"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.siege.tank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.siege.tank"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Siege Tank)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 35 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 700,
+      "impactEffect": "Effect.Scf.Damage.terran.siege.tank"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.hellion",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.hellion"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Hellion)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.terran.hellion"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.hellbat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.hellbat"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Hellbat)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 350,
+      "impactEffect": "Effect.Scf.Damage.terran.hellbat"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.thor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.thor"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Thor)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 30 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.terran.thor"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.viking",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.viking"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Viking)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 10 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.terran.viking"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.banshee",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.banshee"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Banshee)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.terran.banshee"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.battlecruiser",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.battlecruiser"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Battlecruiser)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 25 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 650,
+      "impactEffect": "Effect.Scf.Damage.terran.battlecruiser"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.cyclone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.cyclone"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Cyclone)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 11 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.terran.cyclone"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.widow.mine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.widow.mine"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Widow Mine)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 40 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.terran.widow.mine"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.liberator",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.liberator"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Liberator)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 18 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 700,
+      "impactEffect": "Effect.Scf.Damage.terran.liberator"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.terran.diamondback",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.terran.diamondback"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Diamondback)",
+      "iconGlyph": "ATK",
+      "accentColor": "#3B82F6",
+      "hintText": "Deal 14 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.terran.diamondback"
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.drone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.drone"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.drone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Drone",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Drone from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.zergling",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.zergling"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.zergling",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Zergling",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Zergling from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.baneling",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.baneling"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.baneling",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Baneling",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Baneling from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.roach",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.roach"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.roach",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Roach",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Roach from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.ravager",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.ravager"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.ravager",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Ravager",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Ravager from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.hydralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.hydralisk"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.hydralisk",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Hydralisk",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Hydralisk from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.lurker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.lurker"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.lurker",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Lurker",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Lurker from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.mutalisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.mutalisk"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.mutalisk",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Mutalisk",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Mutalisk from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.corruptor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.corruptor"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.corruptor",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Corruptor",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Corruptor from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.infestor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.infestor"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.infestor",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Infestor",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Infestor from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.viper",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.viper"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.viper",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Viper",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Viper from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.ultralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.ultralisk"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.ultralisk",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Ultralisk",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Ultralisk from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.zerg.queen",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.zerg.queen"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.zerg.queen",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Queen",
+      "iconGlyph": "TR",
+      "accentColor": "#A855F7",
+      "hintText": "Produce Queen from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.zergling",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.zergling"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Zergling)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 5 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 350,
+      "impactEffect": "Effect.Scf.Damage.zerg.zergling"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.baneling",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.baneling"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Baneling)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 20 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 300,
+      "impactEffect": "Effect.Scf.Damage.zerg.baneling"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.roach",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.roach"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Roach)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 16 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.zerg.roach"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.ravager",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.ravager"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Ravager)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 18 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.zerg.ravager"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.hydralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.hydralisk"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Hydralisk)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.zerg.hydralisk"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.lurker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.lurker"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Lurker)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 20 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 650,
+      "impactEffect": "Effect.Scf.Damage.zerg.lurker"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.mutalisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.mutalisk"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Mutalisk)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 9 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.zerg.mutalisk"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.corruptor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.corruptor"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Corruptor)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 14 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.zerg.corruptor"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.broodlord",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.broodlord"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Brood Lord)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 25 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 700,
+      "impactEffect": "Effect.Scf.Damage.zerg.broodlord"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.swarm.host",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.swarm.host"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Swarm Host)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 15 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.zerg.swarm.host"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.ultralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.ultralisk"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Ultralisk)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 35 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 400,
+      "impactEffect": "Effect.Scf.Damage.zerg.ultralisk"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.queen",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.queen"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Queen)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.zerg.queen"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.spine.crawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.spine.crawler"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Spine Crawler)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 15 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.zerg.spine.crawler"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.spore.crawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.spore.crawler"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Spore Crawler)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 15 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 650,
+      "impactEffect": "Effect.Scf.Damage.zerg.spore.crawler"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.zerg.brutalisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.zerg.brutalisk"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Brutalisk)",
+      "iconGlyph": "ATK",
+      "accentColor": "#A855F7",
+      "hintText": "Deal 28 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.zerg.brutalisk"
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.probe",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.probe"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.probe",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Probe",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Probe from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.zealot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.zealot"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.zealot",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Zealot",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Zealot from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.stalker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.stalker"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.stalker",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Stalker",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Stalker from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.sentry",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.sentry"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.sentry",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Sentry",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Sentry from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.immortal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.immortal"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.immortal",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Immortal",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Immortal from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.colossus",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.colossus"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.colossus",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Colossus",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Colossus from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.observer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.observer"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.observer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Observer",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Observer from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.phoenix",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.phoenix"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.phoenix",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Phoenix",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Phoenix from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.voidray",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.voidray"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.voidray",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Void Ray",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Void Ray from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.carrier",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.carrier"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.carrier",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Carrier",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Carrier from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.hightemplar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.hightemplar"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.hightemplar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train High Templar",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce High Templar from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.darktemplar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.darktemplar"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.darktemplar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Dark Templar",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Dark Templar from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.disruptor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.disruptor"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.disruptor",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Disruptor",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Disruptor from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.warp.prism",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.warp.prism"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.warp.prism",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Warp Prism",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Warp Prism from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.tempest",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.tempest"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.tempest",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Tempest",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Tempest from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Train.protoss.mothership",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Cost.Train.protoss.mothership"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Scf.Train.protoss.mothership",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Mothership",
+      "iconGlyph": "TR",
+      "accentColor": "#F59E0B",
+      "hintText": "Produce Mothership from this structure."
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.photon.cannon",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.photon.cannon"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Photon Cannon)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 20 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.protoss.photon.cannon"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.zealot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.zealot"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Zealot)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 350,
+      "impactEffect": "Effect.Scf.Damage.protoss.zealot"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.stalker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.stalker"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Stalker)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 10 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.protoss.stalker"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.sentry",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.sentry"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Sentry)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 6 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.protoss.sentry"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.adept",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.adept"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Adept)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 7 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.protoss.adept"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.darktemplar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.darktemplar"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Dark Templar)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 15 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 350,
+      "impactEffect": "Effect.Scf.Damage.protoss.darktemplar"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.archon",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.archon"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Archon)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 25 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 450,
+      "impactEffect": "Effect.Scf.Damage.protoss.archon"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.immortal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.immortal"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Immortal)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 20 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.protoss.immortal"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.colossus",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.colossus"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Colossus)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 15 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 650,
+      "impactEffect": "Effect.Scf.Damage.protoss.colossus"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.disruptor",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.disruptor"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Disruptor)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 30 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.protoss.disruptor"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.phoenix",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.phoenix"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Phoenix)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.protoss.phoenix"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.voidray",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.voidray"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Void Ray)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 12 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 550,
+      "impactEffect": "Effect.Scf.Damage.protoss.voidray"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.carrier",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.carrier"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Carrier)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 8 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 650,
+      "impactEffect": "Effect.Scf.Damage.protoss.carrier"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.tempest",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.tempest"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Tempest)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 22 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 800,
+      "impactEffect": "Effect.Scf.Damage.protoss.tempest"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.mothership",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.mothership"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Mothership)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 6 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 600,
+      "impactEffect": "Effect.Scf.Damage.protoss.mothership"
+    }
+  },
+  {
+    "id": "Ability.Scf.Attack.protoss.corsair",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Scf.Damage.protoss.corsair"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Attack (Corsair)",
+      "iconGlyph": "ATK",
+      "accentColor": "#F59E0B",
+      "hintText": "Deal 5 damage to target."
+    },
+    "targeting": {
+      "castRangeCm": 500,
+      "impactEffect": "Effect.Scf.Damage.protoss.corsair"
+    }
+  }
+]

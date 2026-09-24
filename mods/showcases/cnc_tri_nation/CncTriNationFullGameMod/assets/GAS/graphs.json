@@ -1,0 +1,157 @@
+[
+  {
+    "id": "cnc.graph.armyComposition",
+    "kind": "Query",
+    "entry": "allMapEntities",
+    "nodes": [
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities",
+        "next": "filterTeam"
+      },
+      {
+        "id": "filterTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 1,
+        "next": "hasHealth"
+      },
+      {
+        "id": "hasHealth",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Health",
+        "inputs": [
+          "minHealth",
+          "maxHealth"
+        ],
+        "next": "unitCount"
+      },
+      {
+        "id": "minHealth",
+        "op": "ConstFloat",
+        "floatValue": 1,
+        "next": "maxHealth"
+      },
+      {
+        "id": "maxHealth",
+        "op": "ConstFloat",
+        "floatValue": 10000,
+        "next": "filterTeam"
+      },
+      {
+        "id": "unitCount",
+        "op": "AggCount",
+        "next": "totalHealth"
+      },
+      {
+        "id": "totalHealth",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "army",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "cnc.collection.team1.army",
+        "role": "Display",
+        "title": "Allied Army",
+        "summary": "Team 1 combat entities with health."
+      },
+      {
+        "id": "unitCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "unitCount",
+        "key": "cnc.summary.unitCount"
+      },
+      {
+        "id": "totalHealth",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "totalHealth",
+        "key": "cnc.summary.totalHealth"
+      }
+    ]
+  },
+  {
+    "id": "cnc.graph.sovietArmy",
+    "kind": "Query",
+    "entry": "allMapEntities",
+    "nodes": [
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities",
+        "next": "filterTeam"
+      },
+      {
+        "id": "filterTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 2,
+        "next": "unitCount"
+      },
+      {
+        "id": "unitCount",
+        "op": "AggCount"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "army",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "cnc.collection.team2.army",
+        "role": "Display",
+        "title": "Soviet Army",
+        "summary": "Team 2 entities."
+      },
+      {
+        "id": "unitCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "unitCount",
+        "key": "cnc.summary.sovietCount"
+      }
+    ]
+  },
+  {
+    "id": "cnc.graph.yuriArmy",
+    "kind": "Query",
+    "entry": "allMapEntities",
+    "nodes": [
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities",
+        "next": "filterTeam"
+      },
+      {
+        "id": "filterTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 3,
+        "next": "unitCount"
+      },
+      {
+        "id": "unitCount",
+        "op": "AggCount"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "army",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "cnc.collection.team3.army",
+        "role": "Display",
+        "title": "Yuri Army",
+        "summary": "Team 3 entities."
+      },
+      {
+        "id": "unitCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "unitCount",
+        "key": "cnc.summary.yuriCount"
+      }
+    ]
+  }
+]

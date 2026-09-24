@@ -1,0 +1,14 @@
+[
+  {
+    "id": "layout_cnc_depot",
+    "purpose": "Equipment",
+    "namedSlots": [
+      {
+        "id": "upgrade_module",
+        "requiredAll": [
+          "Equip.Slot.CncUpgrade"
+        ]
+      }
+    ]
+  }
+]

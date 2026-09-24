@@ -1,0 +1,18 @@
+[
+  {
+    "id": "layout_scf_armory",
+    "purpose": "Equipment",
+    "width": 4,
+    "height": 4,
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      {
+        "id": "upgrade",
+        "label": "Upgrade",
+        "requiredAll": [
+          "Item.Scf.Upgrade"
+        ]
+      }
+    ]
+  }
+]
