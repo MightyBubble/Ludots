@@ -31,6 +31,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
     ///   inside the volume's box. Entities the partition does not contain are
     ///   still read directly. A mover whose travel segment meets the box is
     ///   read even when the sampled position lies outside it.
+    /// - The per-tick scan is an inline chunk job into reused columns. Enter
+    ///   and exit events run after those jobs return, so the scan itself does
+    ///   not record structural commands. A tick with no crossing allocates nothing.
     /// - Dead movers leave the inside-set silently: death is not a crossing.
     /// - Boundary positions count as inside; a mover that stops matching the tag
     ///   filter (or loses its position/map components) counts as an exit.
@@ -50,25 +53,39 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly ISpatialQueryService _spatialQueries;
         private readonly Dictionary<Entity, VolumeRuntimeState> _states = new Dictionary<Entity, VolumeRuntimeState>();
         private readonly List<VolumeRuntimeState> _orphanScratch = new List<VolumeRuntimeState>();
-        private readonly QueryDescription _volumeQuery = new QueryDescription()
+        private static readonly QueryDescription VolumeQuery = new QueryDescription()
             .WithAll<MapEntity, RegionVolumeCm, WorldPositionCm>();
-        private readonly QueryDescription _unindexedQuery = new QueryDescription()
+        private static readonly QueryDescription UnindexedQuery = new QueryDescription()
             .WithAll<MapEntity, WorldPositionCm>()
-            .WithNone<SpatialCellRef, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
-        private readonly QueryDescription _inactiveMembershipQuery = new QueryDescription()
-            .WithAll<MapEntity, WorldPositionCm, SpatialCellRef>()
-            .WithNone<SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
-        private readonly QueryDescription _moverQuery = new QueryDescription()
+            .WithNone<SpatialCellRef, PreviousWorldPositionCm, GameplayTagContainer, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription UnindexedTaggedQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, GameplayTagContainer>()
+            .WithNone<SpatialCellRef, PreviousWorldPositionCm, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription UnindexedMovedQuery = new QueryDescription()
             .WithAll<MapEntity, WorldPositionCm, PreviousWorldPositionCm>()
+            .WithNone<SpatialCellRef, GameplayTagContainer, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription UnindexedMovedTaggedQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, PreviousWorldPositionCm, GameplayTagContainer>()
+            .WithNone<SpatialCellRef, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription InactiveQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, SpatialCellRef>()
+            .WithNone<PreviousWorldPositionCm, GameplayTagContainer, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription InactiveTaggedQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, SpatialCellRef, GameplayTagContainer>()
+            .WithNone<PreviousWorldPositionCm, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription MembershipMovedQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>()
+            .WithNone<GameplayTagContainer, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private static readonly QueryDescription MembershipMovedTaggedQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef, GameplayTagContainer>()
             .WithNone<SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
-        private readonly List<TrackedEntity> _directBuffer = new List<TrackedEntity>();
-        private readonly List<TrackedEntity> _moverBuffer = new List<TrackedEntity>();
+        private readonly CandidateColumns _direct = new CandidateColumns();
+        private readonly CandidateColumns _movers = new CandidateColumns();
         private readonly HashSet<Entity> _considered = new HashSet<Entity>();
         private readonly HashSet<Entity> _matchedBuffer = new HashSet<Entity>();
         private readonly List<Entity> _exitBuffer = new List<Entity>();
         private readonly List<Entity> _silentRemovalBuffer = new List<Entity>();
         private Entity[] _broadphaseBuffer = new Entity[InitialBroadphaseCapacity];
-        private static readonly List<string> EmptyTags = new List<string>();
 
         public RegionVolumeTriggerSystem(
             World world,
@@ -98,7 +115,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            foreach (KeyValuePair<MapId, MapSession> sessionPair in sessions.All)
+            foreach (KeyValuePair<MapId, MapSession> sessionPair in sessions.EnumerateSessions())
             {
                 MapSession session = sessionPair.Value;
                 if (session.State != MapSessionState.Active) continue;
@@ -119,103 +136,47 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void SyncVolumeStates(MapSession session)
         {
-            foreach (ref var chunk in World.Query(in _volumeQuery))
+            var job = new SyncVolumeJob
             {
-                ref var entityFirst = ref chunk.Entity(0);
-                var mapEntities = chunk.GetSpan<MapEntity>();
-                var volumes = chunk.GetSpan<RegionVolumeCm>();
-                var positions = chunk.GetSpan<WorldPositionCm>();
+                MapId = session.MapId,
+                System = this,
+            };
+            World.InlineEntityQuery<SyncVolumeJob, MapEntity, RegionVolumeCm, WorldPositionCm>(in VolumeQuery, ref job);
+        }
 
-                foreach (var index in chunk)
-                {
-                    if (mapEntities[index].MapId != session.MapId)
-                    {
-                        continue;
-                    }
-
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    RegionVolumeCm volume = volumes[index];
-                    if (!_states.TryGetValue(entity, out VolumeRuntimeState? state))
-                    {
-                        state = new VolumeRuntimeState(session.MapId);
-                        _states[entity] = state;
-                    }
-
-                    state.Refresh(World, entity, volume, positions[index].Value, _triggerManager.EventSchemas);
-                }
+        private void UpsertVolume(MapId mapId, Entity entity, RegionVolumeCm volume, Fix64Vec2 anchor)
+        {
+            if (!_states.TryGetValue(entity, out VolumeRuntimeState? state))
+            {
+                state = new VolumeRuntimeState(mapId);
+                _states[entity] = state;
             }
+
+            state.Refresh(World, entity, volume, anchor, _triggerManager.EventSchemas);
         }
 
         private void CollectCandidates(MapId mapId)
         {
-            _directBuffer.Clear();
-            _moverBuffer.Clear();
-            AppendDirect(in _unindexedQuery, mapId, rejectActiveMembership: false);
-            AppendDirect(in _inactiveMembershipQuery, mapId, rejectActiveMembership: true);
-            AppendMovers(mapId);
-        }
+            _direct.Reset();
+            _movers.Reset();
 
-        private void AppendDirect(in QueryDescription query, MapId mapId, bool rejectActiveMembership)
-        {
-            foreach (ref var chunk in World.Query(in query))
-            {
-                ref var entityFirst = ref chunk.Entity(0);
-                var mapEntities = chunk.GetSpan<MapEntity>();
-                var positions = chunk.GetSpan<WorldPositionCm>();
-                var memberships = rejectActiveMembership ? chunk.GetSpan<SpatialCellRef>() : default;
+            var plain = new CollectPositionJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectPositionJob, MapEntity, WorldPositionCm>(in UnindexedQuery, ref plain);
+            var tagged = new CollectTaggedJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectTaggedJob, MapEntity, WorldPositionCm, GameplayTagContainer>(in UnindexedTaggedQuery, ref tagged);
+            var moved = new CollectMovedJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectMovedJob, MapEntity, WorldPositionCm, PreviousWorldPositionCm>(in UnindexedMovedQuery, ref moved);
+            var movedTagged = new CollectMovedTaggedJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectMovedTaggedJob, MapEntity, WorldPositionCm, PreviousWorldPositionCm, GameplayTagContainer>(in UnindexedMovedTaggedQuery, ref movedTagged);
 
-                foreach (var index in chunk)
-                {
-                    if (mapEntities[index].MapId != mapId)
-                    {
-                        continue;
-                    }
-
-                    if (rejectActiveMembership && memberships[index].State == SpatialMembershipState.Active)
-                    {
-                        continue;
-                    }
-
-                    _directBuffer.Add(ReadTracked(Unsafe.Add(ref entityFirst, index), positions[index].Value));
-                }
-            }
-        }
-
-        private void AppendMovers(MapId mapId)
-        {
-            foreach (ref var chunk in World.Query(in _moverQuery))
-            {
-                ref var entityFirst = ref chunk.Entity(0);
-                var mapEntities = chunk.GetSpan<MapEntity>();
-                var positions = chunk.GetSpan<WorldPositionCm>();
-                var previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
-
-                foreach (var index in chunk)
-                {
-                    if (mapEntities[index].MapId != mapId)
-                    {
-                        continue;
-                    }
-
-                    Fix64Vec2 position = positions[index].Value;
-                    Fix64Vec2 previous = previousPositions[index].Value;
-                    if (previous == position)
-                    {
-                        continue;
-                    }
-
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
-                    _moverBuffer.Add(new TrackedEntity(entity, position, previous, true, tags, hasTags));
-                }
-            }
-        }
-
-        private TrackedEntity ReadTracked(Entity entity, Fix64Vec2 position)
-        {
-            bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
-            bool hasPrevious = World.TryGet(entity, out PreviousWorldPositionCm previous);
-            return new TrackedEntity(entity, position, previous.Value, hasPrevious, tags, hasTags);
+            var inactive = new CollectInactiveJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectInactiveJob, MapEntity, WorldPositionCm, SpatialCellRef>(in InactiveQuery, ref inactive);
+            var inactiveTagged = new CollectInactiveTaggedJob { MapId = mapId, Columns = _direct };
+            World.InlineEntityQuery<CollectInactiveTaggedJob, MapEntity, WorldPositionCm, SpatialCellRef, GameplayTagContainer>(in InactiveTaggedQuery, ref inactiveTagged);
+            var membershipMoved = new CollectMembershipMovedJob { MapId = mapId, Direct = _direct, Movers = _movers };
+            World.InlineEntityQuery<CollectMembershipMovedJob, MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>(in MembershipMovedQuery, ref membershipMoved);
+            var membershipMovedTagged = new CollectMembershipMovedTaggedJob { MapId = mapId, Direct = _direct, Movers = _movers };
+            World.InlineEntityQuery<CollectMembershipMovedTaggedJob, MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef, GameplayTagContainer>(in MembershipMovedTaggedQuery, ref membershipMovedTagged);
         }
 
         private void EvaluateVolume(MapSession session, VolumeRuntimeState volume)
@@ -241,25 +202,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             }
 
-            for (int i = 0; i < _directBuffer.Count; i++)
+            for (int i = 0; i < _direct.Count; i++)
             {
-                TrackedEntity tracked = _directBuffer[i];
+                TrackedEntity tracked = _direct.At(i);
                 if (_considered.Add(tracked.Entity))
                 {
                     Consider(session, volume, tracked);
                 }
             }
 
-            for (int i = 0; i < _moverBuffer.Count; i++)
+            for (int i = 0; i < _movers.Count; i++)
             {
-                TrackedEntity tracked = _moverBuffer[i];
-                if (_considered.Contains(tracked.Entity) || !SegmentOverlapsBox(tracked.PreviousPosition, tracked.Position, in bounds))
+                Entity entity = _movers.EntityAt(i);
+                if (_considered.Contains(entity) || !_movers.SegmentOverlaps(i, in bounds))
                 {
                     continue;
                 }
 
-                _considered.Add(tracked.Entity);
-                Consider(session, volume, tracked);
+                _considered.Add(entity);
+                Consider(session, volume, _movers.At(i));
             }
 
             _exitBuffer.Clear();
@@ -332,6 +293,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 FireVolumeEvent(session, volume, entering: true, tracked.Entity);
             }
+        }
+
+        private TrackedEntity ReadTracked(Entity entity, Fix64Vec2 position)
+        {
+            bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
+            bool hasPrevious = World.TryGet(entity, out PreviousWorldPositionCm previous);
+            return new TrackedEntity(entity, position, previous.Value, hasPrevious, tags, hasTags);
         }
 
         private bool TryReadTracked(Entity entity, MapId mapId, out TrackedEntity tracked)
@@ -484,17 +452,279 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void FireVolumeEvent(MapSession session, VolumeRuntimeState volume, bool entering, Entity entity)
         {
+            EventKey eventKey = entering ? volume.EnterEvent : volume.ExitEvent;
+            if (!_triggerManager.HasDispatchTarget(session.MapId, eventKey.Value))
+            {
+                return;
+            }
+
             // Shared outlet with the field membership line (#1468); semantics
             // documented on RegionEmissionFiring.
             RegionEmissionFiring.Fire(
                 _triggerManager,
                 _contextFactory,
                 session,
-                entering ? volume.EnterEvent : volume.ExitEvent,
+                eventKey,
                 volume.VolumeKey,
                 entity,
                 entering ? volume.EnterSchema : volume.ExitSchema,
                 volume.Payload);
+        }
+
+        private sealed class CandidateColumns
+        {
+            private Entity[] _entities = new Entity[InitialBroadphaseCapacity];
+            private Fix64Vec2[] _positions = new Fix64Vec2[InitialBroadphaseCapacity];
+            private Fix64Vec2[] _previous = new Fix64Vec2[InitialBroadphaseCapacity];
+            private GameplayTagContainer[] _tags = new GameplayTagContainer[InitialBroadphaseCapacity];
+            private byte[] _hasPrevious = new byte[InitialBroadphaseCapacity];
+            private byte[] _hasTags = new byte[InitialBroadphaseCapacity];
+
+            public int Count { get; private set; }
+
+            public void Reset() => Count = 0;
+
+            public void Add(
+                Entity entity,
+                Fix64Vec2 position,
+                Fix64Vec2 previous,
+                bool hasPrevious,
+                in GameplayTagContainer tags,
+                bool hasTags)
+            {
+                if (Count == _entities.Length)
+                {
+                    int next = _entities.Length * 2;
+                    Array.Resize(ref _entities, next);
+                    Array.Resize(ref _positions, next);
+                    Array.Resize(ref _previous, next);
+                    Array.Resize(ref _tags, next);
+                    Array.Resize(ref _hasPrevious, next);
+                    Array.Resize(ref _hasTags, next);
+                }
+
+                int index = Count++;
+                _entities[index] = entity;
+                _positions[index] = position;
+                _previous[index] = previous;
+                _tags[index] = tags;
+                _hasPrevious[index] = hasPrevious ? (byte)1 : (byte)0;
+                _hasTags[index] = hasTags ? (byte)1 : (byte)0;
+            }
+
+            public Entity EntityAt(int index) => _entities[index];
+
+            public bool SegmentOverlaps(int index, in WorldAabbCm box)
+            {
+                return SegmentOverlapsBox(_previous[index], _positions[index], in box);
+            }
+
+            public TrackedEntity At(int index)
+            {
+                return new TrackedEntity(
+                    _entities[index],
+                    _positions[index],
+                    _previous[index],
+                    _hasPrevious[index] != 0,
+                    _tags[index],
+                    _hasTags[index] != 0);
+            }
+        }
+
+        private struct SyncVolumeJob : IForEachWithEntity<MapEntity, RegionVolumeCm, WorldPositionCm>
+        {
+            public MapId MapId;
+            public RegionVolumeTriggerSystem System;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref MapEntity map, ref RegionVolumeCm volume, ref WorldPositionCm position)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                System.UpsertVolume(MapId, entity, volume, position.Value);
+            }
+        }
+
+        private struct CollectPositionJob : IForEachWithEntity<MapEntity, WorldPositionCm>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref MapEntity map, ref WorldPositionCm position)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, default, false, default, false);
+            }
+        }
+
+        private struct CollectTaggedJob : IForEachWithEntity<MapEntity, WorldPositionCm, GameplayTagContainer>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref MapEntity map, ref WorldPositionCm position, ref GameplayTagContainer tags)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, default, false, tags, true);
+            }
+        }
+
+        private struct CollectMovedJob : IForEachWithEntity<MapEntity, WorldPositionCm, PreviousWorldPositionCm>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref MapEntity map, ref WorldPositionCm position, ref PreviousWorldPositionCm previous)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, previous.Value, true, default, false);
+            }
+        }
+
+        private struct CollectMovedTaggedJob : IForEachWithEntity<MapEntity, WorldPositionCm, PreviousWorldPositionCm, GameplayTagContainer>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(
+                Entity entity,
+                ref MapEntity map,
+                ref WorldPositionCm position,
+                ref PreviousWorldPositionCm previous,
+                ref GameplayTagContainer tags)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, previous.Value, true, tags, true);
+            }
+        }
+
+        private struct CollectInactiveJob : IForEachWithEntity<MapEntity, WorldPositionCm, SpatialCellRef>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref MapEntity map, ref WorldPositionCm position, ref SpatialCellRef cell)
+            {
+                if (map.MapId != MapId || cell.State == SpatialMembershipState.Active)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, default, false, default, false);
+            }
+        }
+
+        private struct CollectInactiveTaggedJob : IForEachWithEntity<MapEntity, WorldPositionCm, SpatialCellRef, GameplayTagContainer>
+        {
+            public MapId MapId;
+            public CandidateColumns Columns;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(
+                Entity entity,
+                ref MapEntity map,
+                ref WorldPositionCm position,
+                ref SpatialCellRef cell,
+                ref GameplayTagContainer tags)
+            {
+                if (map.MapId != MapId || cell.State == SpatialMembershipState.Active)
+                {
+                    return;
+                }
+
+                Columns.Add(entity, position.Value, default, false, tags, true);
+            }
+        }
+
+        private struct CollectMembershipMovedJob : IForEachWithEntity<MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>
+        {
+            public MapId MapId;
+            public CandidateColumns Direct;
+            public CandidateColumns Movers;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(
+                Entity entity,
+                ref MapEntity map,
+                ref WorldPositionCm position,
+                ref PreviousWorldPositionCm previous,
+                ref SpatialCellRef cell)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                if (cell.State == SpatialMembershipState.Active)
+                {
+                    if (previous.Value != position.Value)
+                    {
+                        Movers.Add(entity, position.Value, previous.Value, true, default, false);
+                    }
+
+                    return;
+                }
+
+                Direct.Add(entity, position.Value, previous.Value, true, default, false);
+            }
+        }
+
+        private struct CollectMembershipMovedTaggedJob : IForEachWithEntity<MapEntity, WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef, GameplayTagContainer>
+        {
+            public MapId MapId;
+            public CandidateColumns Direct;
+            public CandidateColumns Movers;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(
+                Entity entity,
+                ref MapEntity map,
+                ref WorldPositionCm position,
+                ref PreviousWorldPositionCm previous,
+                ref SpatialCellRef cell,
+                ref GameplayTagContainer tags)
+            {
+                if (map.MapId != MapId)
+                {
+                    return;
+                }
+
+                if (cell.State == SpatialMembershipState.Active)
+                {
+                    if (previous.Value != position.Value)
+                    {
+                        Movers.Add(entity, position.Value, previous.Value, true, tags, true);
+                    }
+
+                    return;
+                }
+
+                Direct.Add(entity, position.Value, previous.Value, true, tags, true);
+            }
         }
 
         private readonly struct TrackedEntity

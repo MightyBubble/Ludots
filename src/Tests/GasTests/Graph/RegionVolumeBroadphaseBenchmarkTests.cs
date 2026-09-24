@@ -111,6 +111,8 @@ namespace Ludots.Tests.Gas.Graph
             Console.WriteLine(report);
 
             Assert.That(inside, Is.GreaterThan(0), "The map must place someone inside a ring, or the precise loop can be deleted by the compiler.");
+            Assert.That(stationaryAlloc, Is.EqualTo(0),
+                "A tick where nobody enters or leaves must not allocate.");
             Assert.That(stationaryMedian * 2, Is.LessThan(fullMedian),
                 "Standing units must be cheaper through the partition than a precise test of every unit against every ring.");
         }
