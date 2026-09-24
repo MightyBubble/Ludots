@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -44,6 +45,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GasPresentationEvent[] _stagedPresentationEvents;
     private readonly GameplayEvent[] _stagedGameplayEvents;
     private readonly Entity[] _gameplayEffectEntities;
+    private readonly Dictionary<Entity, int> _gameplayEffectIndex;
     private readonly GameplayEffect[] _gameplayEffectOriginalValues;
     private readonly GameplayEffect[] _gameplayEffectValues;
     private readonly Entity[] _tagEntities;
@@ -191,6 +193,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _stagedPresentationEvents = new GasPresentationEvent[presentationEvents?.Capacity ?? 1];
         _stagedGameplayEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         _gameplayEffectEntities = new Entity[attributeEntityCapacity];
+        _gameplayEffectIndex = new Dictionary<Entity, int>(attributeEntityCapacity);
         _gameplayEffectOriginalValues = new GameplayEffect[attributeEntityCapacity];
         _gameplayEffectValues = new GameplayEffect[attributeEntityCapacity];
         _tagEntities = new Entity[attributeEntityCapacity];
@@ -293,6 +296,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _presentationEventCount = 0;
         _gameplayEventCount = 0;
         _gameplayEffectCount = 0;
+        _gameplayEffectIndex.Clear();
         _tagEntityCount = 0;
         _activeEffectCount = 0;
         _destroyedEffectCount = 0;
@@ -855,8 +859,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     public bool TryGetGameplayEffectState(Entity entity, out GameplayEffect effect)
     {
-        int index = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
-        if (index >= 0)
+        if (_gameplayEffectIndex.TryGetValue(entity, out int index))
         {
             effect = _gameplayEffectValues[index];
             return true;
@@ -1470,8 +1473,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int GetOrAddGameplayEffectEntity(Entity entity)
     {
         RequireActive();
-        int existing = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
-        if (existing >= 0)
+        if (_gameplayEffectIndex.TryGetValue(entity, out int existing))
         {
             return existing;
         }
@@ -1488,6 +1490,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _gameplayEffectCount++;
         _gameplayEffectEntities[index] = entity;
+        _gameplayEffectIndex.Add(entity, index);
         _gameplayEffectOriginalValues[index] = _world.Get<GameplayEffect>(entity);
         _gameplayEffectValues[index] = _gameplayEffectOriginalValues[index];
         return index;
@@ -2834,6 +2837,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _presentationEventCount = 0;
         _gameplayEventCount = 0;
         _gameplayEffectCount = 0;
+        _gameplayEffectIndex.Clear();
         _tagEntityCount = 0;
         _activeEffectCount = 0;
         _destroyedEffectCount = 0;

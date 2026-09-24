@@ -697,10 +697,18 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                Span<PresenterTransformSource> mixedSources = !singleDefinitionChunk &&
+                    !chunk.Has<PresenterInstanceBehaviors>() && chunk.Has<PresenterTransformSource>()
+                    ? chunk.GetSpan<PresenterTransformSource>()
+                    : Span<PresenterTransformSource>.Empty;
                 foreach (int index in chunk)
                 {
                     processed++;
                     Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (!mixedSources.IsEmpty && TrySkipOwnerBackedGroundingTick(in states[index], mixedSources[index].Value))
+                    {
+                        continue;
+                    }
                     ProcessPresenter(
                         entity,
                         firstFrame: false,
@@ -2226,6 +2234,37 @@ namespace Ludots.Core.Presentation.Systems
                 !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
             {
                 return false;
+            }
+
+            return true;
+        }
+
+        private bool TrySkipOwnerBackedGroundingTick(in PresenterState state, TransformSource transformSource)
+        {
+            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
+                !definition.TickBehaviorsAreGroundingOnly ||
+                definition.ExtensionTickBehaviorIndices.Length != 0 ||
+                definition.HasOwnerFacingBindingWork ||
+                definition.HasGraphParamBindingWork ||
+                definition.HasLiveParamBindingWork)
+            {
+                return false;
+            }
+
+            foreach (int behaviorIndex in definition.TickBehaviorIndices)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndex];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                if (!CanSkipOwnerBackedSnapToGroundBehavior(in slot.Grounding) ||
+                    !CanSkipOwnerBackedSnapToGroundPresenter(in state, transformSource) ||
+                    !OwnerHasResolvedContinuousHeightSample(state.OwnerEntity))
+                {
+                    return false;
+                }
             }
 
             return true;

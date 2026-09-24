@@ -1310,6 +1310,89 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.Get<PresenterWorldPosition>(presenter).Value.Y, Is.EqualTo(4f).Within(0.001f));
         }
 
+        [TestCase(true, 0f)]
+        [TestCase(false, 0f)]
+        [TestCase(true, 1.25f)]
+        public void BehaviorSystem_MixedGroundingDefinitions_PreserveHeightAndOwnerMovement(bool sampled, float offset)
+        {
+            using var world = World.Create();
+            var runtime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var definitionIds = new int[2];
+            for (int i = 0; i < definitionIds.Length; i++)
+            {
+                definitionIds[i] = definitions.Register($"grounded.variant.{i}", new PresenterDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.Grounding,
+                            ActiveByDefault = true,
+                            Grounding = new GroundingConfig
+                            {
+                                Mode = GroundingMode.SnapToGround,
+                                Offset = offset,
+                                UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                            },
+                        },
+                    ],
+                });
+            }
+
+            var owners = new Entity[96];
+            var presenters = new Entity[owners.Length];
+            for (int i = 0; i < owners.Length; i++)
+            {
+                owners[i] = world.Create(new VisualTransform
+                {
+                    Position = new Vector3(i, 2.5f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                }, new ContinuousHeightmapSampleState());
+                int defId = definitionIds[i % definitionIds.Length];
+                presenters[i] = runtime.Create(defId, owners[i], 1, PresentationAnchorKind.Entity,
+                    world.Get<VisualTransform>(owners[i]).Position, i + 1, Entity.Null, definitions.Get(defId));
+                world.Get<ContinuousHeightmapSampleState>(owners[i]).Sampled = sampled ? (byte)1 : (byte)0;
+            }
+            foreach (Entity presenter in presenters)
+            {
+                if (world.Has<PresenterBootstrapPending>(presenter))
+                    world.Remove<PresenterBootstrapPending>(presenter);
+            }
+
+            bool hasMixedChunk = false;
+            var query = new QueryDescription().WithAll<PresenterState, PerfHasGrounding>();
+            foreach (ref var chunk in world.Query(in query))
+            {
+                var states = chunk.GetSpan<PresenterState>();
+                for (int i = 1; i < chunk.Count; i++)
+                    hasMixedChunk |= states[i].DefId != states[0].DefId;
+            }
+            Assert.That(hasMixedChunk, Is.True);
+
+            using var behavior = new PresenterBehaviorSystem(world, runtime, definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8), new SoundRequestBuffer(), new StubHeightmap(heightCm: 400f));
+            using var transformSync = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            for (int tick = 0; tick < 3; tick++)
+            {
+                for (int i = 0; i < owners.Length; i++)
+                    world.Get<VisualTransform>(owners[i]).Position = new Vector3(i + tick, 2.5f + tick, 20f);
+                behavior.Update(0.016f);
+                if (sampled && offset == 0f)
+                    transformSync.Update(0.016f);
+
+                for (int i = 0; i < presenters.Length; i++)
+                {
+                    Vector3 position = world.Get<PresenterWorldPosition>(presenters[i]).Value;
+                    Assert.That(position.X, Is.EqualTo(i + tick).Within(0.001f));
+                    Assert.That(position.Y, Is.EqualTo(sampled && offset == 0f ? 2.5f + tick : 4f + offset).Within(0.001f));
+                }
+            }
+        }
+
         [Test]
         public void BehaviorSystem_OnceSnapToGroundUnresolved_StillProcessesNonGroundingFirstFrameBehaviors()
         {

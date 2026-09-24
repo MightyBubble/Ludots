@@ -8,7 +8,8 @@
     "orderQueueCapacity": 16384,
     "orderAdmissionResultCapacity": 32768,
     "orderAdmissionRejectionCapacity": 16384,
-    "orderTerminalResultCapacity": 16384
+    "orderTerminalResultCapacity": 16384,
+    "deferredTriggerPerFrameCapacity": 16384
   },
   "commandSource": {
     "targetFilter": {

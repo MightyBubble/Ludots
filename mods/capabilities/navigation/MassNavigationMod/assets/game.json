@@ -5,7 +5,8 @@
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
-    "effectRequestQueueCapacity": 5000
+    "effectRequestQueueCapacity": 5000,
+    "deferredTriggerPerFrameCapacity": 16384
   },
   "commandSource": {
     "movePathPreviewOrderTypeKeys": [

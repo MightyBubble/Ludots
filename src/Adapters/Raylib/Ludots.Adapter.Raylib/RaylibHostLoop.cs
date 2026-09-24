@@ -738,24 +738,34 @@ namespace Ludots.Adapter.Raylib
                             frameLighting.Evaluate();
                         }
 
-                        CaptureDirectionalShadows(
-                            directionalShadowMap,
-                            frameLighting,
-                            in activeCamera,
-                            drawTerrain,
-                            drawContinuousHeightmap,
-                            hasContinuousHeightmap,
-                            drawPrimitives,
-                            terrainRenderer,
-                            continuousHeightmapRenderer,
-                            primitiveRenderer,
-                            engine,
-                            renderDebug.AcceptanceScaleMultiplier);
-                        float shadowTexelWorld = HostShadowTexelWorld;
-                        terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
-                        continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
-                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
-                        Restore3DDepthState();
+                        bool hostShadowEnabled = HostShadowsEnabled(renderDebug);
+                        if (hostShadowEnabled)
+                        {
+                            CaptureDirectionalShadows(
+                                directionalShadowMap,
+                                frameLighting,
+                                in activeCamera,
+                                drawTerrain,
+                                drawContinuousHeightmap,
+                                hasContinuousHeightmap,
+                                drawPrimitives,
+                                terrainRenderer,
+                                continuousHeightmapRenderer,
+                                primitiveRenderer,
+                                engine,
+                                renderDebug.AcceptanceScaleMultiplier);
+                            float shadowTexelWorld = HostShadowTexelWorld;
+                            terrainRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                            continuousHeightmapRenderer.ApplyFrameLighting(frameLighting, directionalShadowMap, shadowTexelWorld);
+                            primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position, directionalShadowMap, shadowTexelWorld);
+                            Restore3DDepthState();
+                        }
+                        else
+                        {
+                            terrainRenderer.ApplyFrameLighting(frameLighting);
+                            continuousHeightmapRenderer.ApplyFrameLighting(frameLighting);
+                            primitiveRenderer.DrawSurfaceWireBoxes = drawDebugDraw;
+                        }
 
                         bool waterOnContinuousHeightmap = waterPass.IsActive &&
                                                       drawTerrain &&
@@ -2873,6 +2883,11 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
+
+        private static bool HostShadowsEnabled(RenderDebugState renderDebug)
+        {
+            return renderDebug.DrawShadows && ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SHADOW", defaultValue: true);
+        }
 
         private static void CaptureDirectionalShadows(
             RaylibDirectionalShadowMap shadowMap,
