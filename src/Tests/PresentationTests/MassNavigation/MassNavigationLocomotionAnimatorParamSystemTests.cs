@@ -33,7 +33,7 @@ namespace Ludots.Tests.Presentation
                 new[]
                 {
                     new MassNavigationAgentSeed(
-                        teamId: 1,
+                        relationshipDomainId: 1,
                         localPositionXCm: 100f,
                         localPositionYCm: 100f,
                         heavy: false,
@@ -43,7 +43,7 @@ namespace Ludots.Tests.Presentation
                         speedCmPerSecond: 800f,
                         layer),
                     new MassNavigationAgentSeed(
-                        teamId: 1,
+                        relationshipDomainId: 1,
                         localPositionXCm: 300f,
                         localPositionYCm: 100f,
                         heavy: false,
@@ -92,7 +92,7 @@ namespace Ludots.Tests.Presentation
                 new[]
                 {
                     new MassNavigationAgentSeed(
-                        teamId: 1,
+                        relationshipDomainId: 1,
                         localPositionXCm: 100f,
                         localPositionYCm: 100f,
                         heavy: false,
@@ -102,7 +102,7 @@ namespace Ludots.Tests.Presentation
                         speedCmPerSecond: 800f,
                         layer),
                     new MassNavigationAgentSeed(
-                        teamId: 1,
+                        relationshipDomainId: 1,
                         localPositionXCm: 300f,
                         localPositionYCm: 100f,
                         heavy: false,

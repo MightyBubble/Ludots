@@ -781,7 +781,7 @@ namespace Ludots.Tests.Presentation
         private static MassNavigationAgentSeed CreateSeed(float localX, float localY, MassNavigationAgentLayer layer)
         {
             return new MassNavigationAgentSeed(
-                teamId: TeamId,
+                relationshipDomainId: TeamId,
                 localPositionXCm: localX,
                 localPositionYCm: localY,
                 heavy: false,

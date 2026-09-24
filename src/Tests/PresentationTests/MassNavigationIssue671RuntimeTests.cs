@@ -326,7 +326,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         MassNavigationAgentLayer layer)
     {
         return new MassNavigationAgentSeed(
-            teamId: 1,
+            relationshipDomainId: 1,
             localPositionXCm: localX,
             localPositionYCm: localY,
             heavy: false,
