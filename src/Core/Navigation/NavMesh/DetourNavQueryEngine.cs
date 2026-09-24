@@ -20,82 +20,35 @@ namespace Ludots.Core.Navigation.NavMesh
         private const float QuantizationHeightM = 0.01f;
         private const int BorderToleranceCm = 2;
 
+        /// <summary>
+        /// 从已加载 NavTile 集合装配查询用 Detour 网格（每 tile 建 DtMeshData 含 BVH，代价高——
+        /// 调用方应经 DetourQueryMeshCache 按 LoadedVersion 复用，禁止每查询重建）。
+        /// </summary>
+        public static DtNavMesh? BuildDetourNavMesh(NavTile[] tiles, int layer, int tileWidthCm, int tileHeightCm)
+        {
+            if (tiles == null || tiles.Length == 0)
+            {
+                return null;
+            }
+
+            return BuildNavMesh(tiles, layer, tileWidthCm, tileHeightCm);
+        }
+
         public static NavPathResult FindPath(
-            NavTile[] tiles,
-            int layer,
+            DtNavMesh navMesh,
             NavAreaCostTable areaCosts,
-            int tileWidthCm,
-            int tileHeightCm,
             int startXcm,
             int startZcm,
             int goalXcm,
             int goalZcm,
             int maxPortals)
         {
-            if (tiles == null || tiles.Length == 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            var navMesh = BuildNavMesh(tiles, layer, tileWidthCm, tileHeightCm);
             if (navMesh == null)
             {
                 return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
 
-            var query = new DtNavMeshQuery(navMesh);
-            var filter = BuildFilter(areaCosts);
-            float tileWidthM = tileWidthCm / 100f;
-            float tileHeightM = tileHeightCm / 100f;
-            var extents = new RcVec3f(
-                MathF.Max(1.0f, tileWidthM * 0.5f),
-                256f,
-                MathF.Max(1.0f, tileHeightM * 0.5f));
-
-            var start = new RcVec3f(startXcm / 100f, 0f, startZcm / 100f);
-            var goal = new RcVec3f(goalXcm / 100f, 0f, goalZcm / 100f);
-
-            var startStatus = query.FindNearestPoly(start, extents, filter, out long startRef, out RcVec3f startPos, out _);
-            if (startStatus.Failed() || startRef == 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            var goalStatus = query.FindNearestPoly(goal, extents, filter, out long goalRef, out RcVec3f goalPos, out _);
-            if (goalStatus.Failed() || goalRef == 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            int pathCapacity = Math.Clamp(maxPortals <= 0 ? 256 : maxPortals, 2, 4096);
-            if (TryFindDirectRaycastPath(query, filter, startRef, goalRef, startPos, goalPos, pathCapacity, out NavPathResult directResult))
-            {
-                return directResult;
-            }
-
-            long[] pathRefs = new long[pathCapacity];
-            var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs.AsSpan(), out int pathCount, pathCapacity);
-            if (pathStatus.Failed() || pathStatus.IsPartial() || pathCount <= 0 || pathRefs[pathCount - 1] != goalRef)
-            {
-                return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            var straight = new DtStraightPath[pathCapacity];
-            var straightStatus = query.FindStraightPath(
-                startPos,
-                goalPos,
-                pathRefs.AsSpan(0, pathCount),
-                pathCount,
-                straight.AsSpan(),
-                out int straightCount,
-                pathCapacity,
-                0);
-            if (straightStatus.Failed() || straightCount <= 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            return BuildPathResult(straight, straightCount);
+            return FindPathCore(navMesh, areaCosts, startXcm, startZcm, goalXcm, goalZcm, maxPortals);
         }
 
         public static NavPathResult FindPathFromDetourTileBytes(
@@ -176,7 +129,7 @@ namespace Ludots.Core.Navigation.NavMesh
             return WriteDetourTileBytes(data);
         }
 
-        private static NavPathResult FindPath(
+        private static NavPathResult FindPathCore(
             DtNavMesh navMesh,
             NavAreaCostTable areaCosts,
             int startXcm,

@@ -28,6 +28,7 @@
   ],
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 4,
+    "bakeWorkerCount": 2,
     "includeNeighborTiles": true,
     "heightScaleMeters": 2.0,
     "minWalkableUpDot": 0.6,

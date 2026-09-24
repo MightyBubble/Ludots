@@ -54,24 +54,39 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
+        private readonly DetourQueryMeshCache _meshCache;
 
-        public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            int tileWidthCm,
+            int tileHeightCm,
+            DetourQueryMeshCache meshCache)
             : this(
                 store,
                 layer,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                meshCache)
         {
         }
 
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        private NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            Fix64 tileWidthCm,
+            Fix64 tileHeightCm,
+            DetourQueryMeshCache meshCache)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _meshCache = meshCache ?? throw new ArgumentNullException(nameof(meshCache));
         }
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
@@ -117,8 +132,8 @@ namespace Ludots.Core.Navigation.NavMesh
                 _store.GetOrLoad(LocateTile(startXcm, startZcm));
                 _store.GetOrLoad(LocateTile(goalXcm, goalZcm));
 
-                return DetourNavQueryEngine.FindPath(
-                    _store.SnapshotLoadedTiles(),
+                return _meshCache.FindPath(
+                    _store,
                     _layer,
                     _areaCosts,
                     _tileWidthCm.RoundToInt(),

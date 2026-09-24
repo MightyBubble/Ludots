@@ -428,6 +428,161 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void RuntimeIncrementalNavMeshRebuildQueue_BakeWorkersBakeConcurrently()
+        {
+            var terrain = new FlatGridLogicTerrainField(16, 4, chunkSizeCells: 4);
+            var context = CreateRuntimeIncrementalContext(terrain, bakeWorkerCount: 4);
+            var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
+            var algorithm = new ControlledNavBakeAlgorithm(gateFirstBake: false, bakeDurationMs: 300);
+            var store = new NavTileStore(_ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."));
+            var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+            {
+                [new NavQueryServiceKey(layer: 0, profile: 0)] = store
+            }, tileWidthCm: 400, tileHeightCm: 400);
+            using var queue = new RuntimeIncrementalNavMeshRebuildQueue(
+                new NavBakeService(algorithm),
+                context,
+                queryServices,
+                navProfiles);
+
+            for (int chunkX = 0; chunkX < 4; chunkX++)
+            {
+                Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(chunkX, 0)), Is.True);
+            }
+
+            _ = PumpUntilNPublished(queue, submitBudget: 4, expectedPublished: 4);
+
+            Assert.That(algorithm.BakeEntries, Is.EqualTo(4), "4 个脏瓦片都要被烘焙");
+            Assert.That(algorithm.MaxConcurrent, Is.GreaterThanOrEqualTo(2),
+                "bakeWorkerCount=4 时 worker 必须真正并发烘焙（慢环境峰值至少 2，理想 4）");
+            Assert.That(store.Revision, Is.EqualTo(4u), "四瓦片全部流式发布");
+            for (int chunkX = 0; chunkX < 4; chunkX++)
+            {
+                Assert.That(store.TryGet(new NavTileId(chunkX, 0, 0), out _), Is.True, $"tile ({chunkX},0) published");
+            }
+        }
+
+        [Test]
+        public void RuntimeIncrementalNavMeshRebuildQueue_SupersededInFlightGenerationIsDropped()
+        {
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var context = CreateRuntimeIncrementalContext(terrain, bakeWorkerCount: 1);
+            var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
+            var algorithm = new ControlledNavBakeAlgorithm(gateFirstBake: true, bakeDurationMs: 0);
+            var store = new NavTileStore(_ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."));
+            uint baselineRevision = store.Replace(
+                DefaultGridNavTileFactory.CreateFlatTile(0, 0, layer: 0, tileVersion: 1, chunkSizeCells: 4, cellSizeCm: 100));
+            var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+            {
+                [new NavQueryServiceKey(layer: 0, profile: 0)] = store
+            }, tileWidthCm: 400, tileHeightCm: 400);
+            using var queue = new RuntimeIncrementalNavMeshRebuildQueue(
+                new NavBakeService(algorithm),
+                context,
+                queryServices,
+                navProfiles);
+
+            Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True);
+            _ = queue.ProcessBudget(1);
+
+            // 首代烘焙进入受控门闸后，同瓦片再次变脏（在途 → 代际 +1）
+            Assert.That(algorithm.FirstBakeEntered.Wait(5000), Is.True, "首代烘焙必须已进入算法");
+            Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True, "在途瓦片允许再次入队");
+            algorithm.ReleaseFirstBake.Set();
+
+            _ = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
+
+            Assert.That(algorithm.BakeEntries, Is.EqualTo(2), "两代各烘焙一次");
+            Assert.That(store.Revision, Is.EqualTo(baselineRevision + 1u),
+                "被顶替的旧代结果不得发布——只有新代 Replace 一次");
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// 受控烘焙算法：可设时长、可门闸首次烘焙（代际测试需要在途窗口内重新弄脏）、统计并发峰值。
+        /// 产出与 FlatGrid 地形一致的平瓦片，保证发布链路可用。
+        /// </summary>
+        private sealed class ControlledNavBakeAlgorithm : INavBakeAlgorithm
+        {
+            private readonly bool _gateFirstBake;
+            private readonly int _bakeDurationMs;
+            private int _concurrent;
+            private bool _firstBakeGated;
+
+            public ControlledNavBakeAlgorithm(bool gateFirstBake, int bakeDurationMs)
+            {
+                _gateFirstBake = gateFirstBake;
+                _bakeDurationMs = bakeDurationMs;
+                _firstBakeGated = gateFirstBake;
+            }
+
+            public NavBakeAlgorithmKind Kind => NavBakeAlgorithmKind.Cdt;
+
+            public ManualResetEventSlim FirstBakeEntered { get; } = new ManualResetEventSlim(false);
+
+            public ManualResetEventSlim ReleaseFirstBake { get; } = new ManualResetEventSlim(false);
+
+            public int BakeEntries { get; private set; }
+
+            public int MaxConcurrent { get; private set; }
+
+            public bool TryBake(
+                NavBakeContext context,
+                NavBakeTileCoord target,
+                NavLayerConfig layer,
+                NavMeshAgentProfileConfig navProfile,
+                AgentProfileConfig agentProfile,
+                out NavTile tile,
+                out byte[] detourTileBytes,
+                out NavBakeArtifact artifact)
+            {
+                int nowConcurrent = Interlocked.Increment(ref _concurrent);
+                BakeEntries++;
+                lock (this)
+                {
+                    if (nowConcurrent > MaxConcurrent)
+                    {
+                        MaxConcurrent = nowConcurrent;
+                    }
+                }
+
+                bool gateThisBake = false;
+                lock (this)
+                {
+                    if (_firstBakeGated)
+                    {
+                        _firstBakeGated = false;
+                        gateThisBake = true;
+                    }
+                }
+
+                if (gateThisBake)
+                {
+                    FirstBakeEntered.Set();
+                    ReleaseFirstBake.Wait(5000);
+                }
+                else if (_bakeDurationMs > 0)
+                {
+                    Thread.Sleep(_bakeDurationMs);
+                }
+
+                Interlocked.Decrement(ref _concurrent);
+
+                var flatTerrain = (FlatGridLogicTerrainField)context.Terrain;
+                tile = DefaultGridNavTileFactory.CreateFlatTile(
+                    target.ChunkX,
+                    target.ChunkY,
+                    layer.Layer,
+                    context.TileVersion,
+                    flatTerrain.ChunkSizeCells,
+                    flatTerrain.CellSizeCm);
+                detourTileBytes = Array.Empty<byte>();
+                artifact = new NavBakeArtifact(tile.TileId, context.TileVersion, NavBakeStage.Serialize, NavBakeErrorCode.None, "", tile.TriangleCount, tile.VertexCount, tile.TriangleCount, tile.Portals.Length);
+                return true;
+            }
+        }
+
+        [Test]
         public void CdtBake_ConsumesObstacleSetWithStrictLayerId()
         {
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
@@ -678,6 +833,7 @@ namespace Ludots.Tests.Architecture
                   "areas": [],
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
+                    "bakeWorkerCount": 1,
                     "includeNeighborTiles": true,
                     "heightScaleMeters": 1,
                     "minWalkableUpDot": 0.6,
@@ -711,6 +867,7 @@ namespace Ludots.Tests.Architecture
                   "areas": [],
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 1,
+                    "bakeWorkerCount": 1,
                     "includeNeighborTiles": true,
                     "heightScaleMeters": 1,
                     "minWalkableUpDot": 0.6,
@@ -861,6 +1018,7 @@ namespace Ludots.Tests.Architecture
                       "areas": [],
                       "runtimeIncremental": {
                         "tileBudgetPerFixedTick": 2,
+                        "bakeWorkerCount": 1,
                         "includeNeighborTiles": false,
                         "heightScaleMeters": 1,
                         "minWalkableUpDot": 0.5,
@@ -1140,9 +1298,10 @@ namespace Ludots.Tests.Architecture
         private static NavBakeContext CreateRuntimeIncrementalContext(
             LogicTerrainField terrain,
             NavBakeAlgorithmKind algorithm = NavBakeAlgorithmKind.Cdt,
-            NavObstacleSet obstacles = null)
+            NavObstacleSet obstacles = null,
+            int bakeWorkerCount = 0)
         {
-            return new NavBakeContext
+            var context = new NavBakeContext
             {
                 MapId = "nav_runtime_incremental_contract",
                 SourceUri = "Core:Maps/nav_runtime_incremental_contract.hex",
@@ -1157,6 +1316,12 @@ namespace Ludots.Tests.Architecture
                 Algorithm = algorithm,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
+            if (bakeWorkerCount > 0)
+            {
+                context.Config.RuntimeIncremental.BakeWorkerCount = bakeWorkerCount;
+            }
+
+            return context;
         }
 
         private static NavBakeContext CreateEstimateBudgetContext(
@@ -1283,6 +1448,7 @@ namespace Ludots.Tests.Architecture
                   "areas": [],
                   "runtimeIncremental": {
                     "tileBudgetPerFixedTick": 4,
+                    "bakeWorkerCount": 1,
                     "includeNeighborTiles": true,
                     "heightScaleMeters": 1,
                     "minWalkableUpDot": 0.6,
