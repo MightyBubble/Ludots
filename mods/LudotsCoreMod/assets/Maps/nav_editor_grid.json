@@ -1,6 +1,22 @@
 {
   "Id": "nav_editor_grid",
-  "Tags": ["nav_editor", "grid", "navigation"],
+  "ParentId": null,
+  "Dependencies": {},
+  "VisualHeightmapAsset": null,
+  "Tags": [
+    "nav_editor",
+    "grid",
+    "navigation"
+  ],
+  "Metadata": {},
+  "Entities": [],
+  "Teams": [],
+  "Players": [],
+  "ParticipantRelationships": {
+    "Teams": [],
+    "Players": [],
+    "PlayerTeams": []
+  },
   "Boards": [
     {
       "Name": "default",
@@ -8,8 +24,10 @@
       "WidthInMacroTiles": 1,
       "HeightInMacroTiles": 1,
       "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,
       "DataFile": "nav_editor_grid.bin",
+      "VisualHeightmapAsset": null,
       "NavigationEnabled": true
     },
     {
@@ -21,18 +39,19 @@
       "HexEdgeLengthCm": 100,
       "ChunkSizeCells": 64,
       "DataFile": "nav_editor_grid_board_2.bin",
+      "VisualHeightmapAsset": null,
       "NavigationEnabled": true
     }
   ],
-  "Entities": [],
+  "VisualHeightmap": null,
   "TriggerTypes": [],
   "DefaultCamera": {
-    "VirtualCameraId": "Rts",
-    "TargetXCm": 12800,
-    "TargetYCm": 12800,
+    "VirtualCameraId": null,
+    "TargetXCm": 13293,
+    "TargetYCm": 14104,
     "Yaw": 180,
-    "Pitch": 50,
-    "DistanceCm": 24000,
+    "Pitch": 45,
+    "DistanceCm": 24609,
     "FovYDeg": 60
   }
 }
