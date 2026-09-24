@@ -5,6 +5,7 @@
 ## 当前页面
 
 - [Launcher CLI Runbook](cli-runbook.md)
+- [RTS Mod 作者指南](rts-mod-authoring-guide.md)
 - [MassNavigation 用户教学书](mass-navigation-user-book.md)
 - [MassNavigation 正式链路手册](mass-navigation-formal-chain.md)
 - [项目地图](project-map.md)

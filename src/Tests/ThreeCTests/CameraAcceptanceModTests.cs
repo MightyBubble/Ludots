@@ -12,6 +12,7 @@ using CameraAcceptanceMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
@@ -896,9 +897,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     var root = graphDocument.RootElement;
                     Assert.That(root.GetProperty("schemaVersion").GetInt32(), Is.GreaterThanOrEqualTo(1));
                     Assert.That(root.GetProperty("planFingerprint").GetString(), Is.EqualTo(result.Plan.PlanFingerprint));
-                    Assert.That(root.GetProperty("adapter").GetProperty("id").GetString(), Is.EqualTo(LauncherPlatformIds.Raylib));
                     Assert.That(root.GetProperty("orderedModIds").EnumerateArray().Select(item => item.GetString()).ToArray(),
                         Does.Contain("CameraAcceptanceMod"));
+                    Assert.That(root.TryGetProperty("adapter", out _), Is.False);
+                    Assert.That(root.TryGetProperty("buildMode", out _), Is.False);
+                    Assert.That(root.TryGetProperty("diagnostics", out _), Is.False);
+                    Assert.That(root.GetProperty("plannedMods")[0].TryGetProperty("projectPath", out _), Is.False);
                 }
 
                 bootstrapPath = service.WriteBootstrap(result.Plan);
@@ -910,6 +914,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 Assert.That(bootstrapRoot.GetProperty("LaunchGraphFullPath").GetString(), Is.EqualTo(graphPath));
                 Assert.That(bootstrapRoot.GetProperty("PlanSchemaVersion").GetInt32(), Is.EqualTo(result.Plan.SchemaVersion));
                 Assert.That(bootstrapRoot.GetProperty("PlanGeneratedAtUtc").GetString(), Is.EqualTo(result.Plan.GeneratedAtUtc));
+
+                var bootstrapResult = GameBootstrapper.InitializeFromBaseDirectory(
+                    Path.GetDirectoryName(bootstrapPath)!,
+                    Path.GetFileName(bootstrapPath));
+                Assert.That(bootstrapResult.Engine, Is.Not.Null);
             }
             finally
             {

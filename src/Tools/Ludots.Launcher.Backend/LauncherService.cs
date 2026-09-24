@@ -1377,24 +1377,14 @@ public sealed class LauncherService
 
     private string WriteLaunchGraphDocument(LauncherLaunchPlan plan)
     {
-        var document = new LauncherGraphDocument(
+        var document = new LauncherRuntimeGraphDocument(
             plan.SchemaVersion,
             plan.GeneratedAtUtc,
             plan.PlanFingerprint,
-            plan.Adapter,
-            plan.BuildMode,
-            plan.Selectors,
-            plan.RootModIds,
             plan.OrderedModIds,
-            plan.Mods,
-            new LauncherRuntimeArtifacts(
-                plan.BootstrapArtifactStrategy,
-                plan.BootstrapArtifactPath,
-                plan.GraphArtifactPath,
-                plan.AppOutputDirectory,
-                plan.AppAssemblyPath,
-                plan.LaunchUrl),
-            plan.Diagnostics);
+            plan.Mods
+                .Select(mod => new LauncherRuntimeGraphMod(mod.Id, mod.RootPath))
+                .ToList());
         var directory = Path.GetDirectoryName(plan.GraphArtifactPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {

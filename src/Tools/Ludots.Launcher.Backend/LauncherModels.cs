@@ -130,14 +130,6 @@ public sealed record LauncherPlanDiagnostics(
     IReadOnlyList<LauncherResolvedSetting> Settings,
     IReadOnlyList<string> Warnings);
 
-public sealed record LauncherRuntimeArtifacts(
-    string BootstrapArtifactStrategy,
-    string BootstrapArtifactPath,
-    string GraphArtifactPath,
-    string AppOutputDirectory,
-    string AppAssemblyPath,
-    string LaunchUrl);
-
 public sealed record LauncherGraphDocument(
     int SchemaVersion,
     string GeneratedAtUtc,
@@ -148,8 +140,18 @@ public sealed record LauncherGraphDocument(
     IReadOnlyList<string> RootModIds,
     IReadOnlyList<string> OrderedModIds,
     IReadOnlyList<LauncherPlannedMod> PlannedMods,
-    LauncherRuntimeArtifacts RuntimeArtifacts,
     LauncherPlanDiagnostics Diagnostics);
+
+public sealed record LauncherRuntimeGraphMod(
+    string Id,
+    string RootPath);
+
+public sealed record LauncherRuntimeGraphDocument(
+    int SchemaVersion,
+    string GeneratedAtUtc,
+    string PlanFingerprint,
+    IReadOnlyList<string> OrderedModIds,
+    IReadOnlyList<LauncherRuntimeGraphMod> PlannedMods);
 
 public sealed record LauncherLaunchPlan(
     string AdapterId,

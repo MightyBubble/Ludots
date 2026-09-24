@@ -26,6 +26,7 @@
   - [Performer 编译式执行分层](architecture/performer-compiled-lanes.md)
 - [参考资料](reference/README.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
+  - [RTS Mod 作者指南](reference/rts-mod-authoring-guide.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
   - [项目地图](reference/project-map.md)
