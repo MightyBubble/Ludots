@@ -2681,7 +2681,7 @@ Assert.Fail(
                 Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
                 var world = engine.World;
                 string ctx = world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance inst)
-                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} activeKey={inst.ActiveCollectionKeyId}"
+                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} contextId={inst.ContextId} intent={inst.CommandIntentProfileId} source={inst.Source}"
                     : "ctx=<none>";
                 string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView v)
                     ? $"view owner={v.Owner.Id} key={v.Key} count={v.Count} primary={v.PrimaryEntity.Id}"

@@ -1,46 +1,50 @@
 [
-  {
-    "id": "Ability.Ballista.Shot",
-    "categories": [
-      "ability.catalog.weapon"
-    ],
-    "exec": {
-      "clockId": "FixedFrame",
-      "items": [
-        {
-          "kind": "EffectSignal",
-          "tick": 3,
-          "template": "Effect.Ballista.Bolt"
-        },
-        {
-          "kind": "End",
-          "tick": 3
-        }
-      ]
-    }
-  },
-  {
-    "id": "Ability.Ballista.SiegeBolt",
-    "categories": [
-      "ability.catalog.siege"
-    ],
-    "exec": {
-      "clockId": "FixedFrame",
-      "items": [
-        {
-          "kind": "EffectSignal",
-          "tick": 3,
-          "template": "Effect.Ballista.Bolt"
-        },
-        {
-          "kind": "End",
-          "tick": 3
-        }
-      ]
+ {
+  "id": "Ability.Ballista.Shot",
+  "categories": [
+   "ability.catalog.weapon"
+  ],
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 3,
+     "template": "Effect.Ballista.BoltProjectile"
     },
-    "targeting": {
-      "castRangeCm": 900,
-      "impactEffect": "Effect.Ballista.Bolt"
+    {
+     "kind": "End",
+     "tick": 3
     }
+   ]
+  },
+  "targeting": {
+   "castRangeCm": 900,
+   "impactEffect": "Effect.Ballista.BoltProjectile"
   }
+ },
+ {
+  "id": "Ability.Ballista.SiegeBolt",
+  "categories": [
+   "ability.catalog.siege"
+  ],
+  "exec": {
+   "clockId": "FixedFrame",
+   "items": [
+    {
+     "kind": "EffectSignal",
+     "tick": 3,
+     "template": "Effect.Ballista.SiegeProjectile"
+    },
+    {
+     "kind": "End",
+     "tick": 3
+    }
+   ]
+  },
+  "targeting": {
+   "castRangeCm": 900,
+   "impactEffect": "Effect.Ballista.Bolt"
+  }
+ }
 ]

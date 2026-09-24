@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-21T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "SelectionInteractionMod",
+    "BallistaRouteByTargetMod",
+    "MassNavigationMod",
+    "NavMeshDebugLaunchMod",
+    "TotalWarFlowShowcaseMod",
+    "AgentBridgeMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "CameraProfilesMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
+      "id": "SelectionInteractionMod",
+      "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
+    },
+    {
+      "id": "BallistaRouteByTargetMod",
+      "rootPath": "../../../../../../../mods/fixtures/gas/BallistaRouteByTargetMod"
+    },
+    {
+      "id": "MassNavigationMod",
+      "rootPath": "../../../../../../../mods/capabilities/navigation/MassNavigationMod"
+    },
+    {
+      "id": "NavMeshDebugLaunchMod",
+      "rootPath": "../../../../../../../mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
+    },
+    {
+      "id": "TotalWarFlowShowcaseMod",
+      "rootPath": "../../../../../../../mods/showcases/total_war_flow/TotalWarFlowShowcaseMod"
+    },
+    {
+      "id": "AgentBridgeMod",
+      "rootPath": "../../../../../../../mods/AgentBridgeMod"
+    }
+  ]
+}

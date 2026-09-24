@@ -1,0 +1,123 @@
+[
+ {
+  "id": "tw.advance.rts",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_action",
+    "action": "Tw.Advance",
+    "start": "caster",
+    "refire": "restart"
+   }
+  ],
+  "nodes": [
+   {
+    "id": "caster",
+    "op": "LoadCaster"
+   },
+   {
+    "id": "off",
+    "op": "DeactivateContext",
+    "context": "interaction.context.tw.rts"
+   },
+   {
+    "id": "on",
+    "op": "ActivateContext",
+    "context": "interaction.context.tw.tps"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   },
+   {
+    "id": "offsel",
+    "op": "DeactivateContext",
+    "context": "interaction.context.tw.selection"
+   },
+   {
+    "id": "phase_const",
+    "op": "ConstInt",
+    "intValue": 4
+   },
+   {
+    "id": "write_phase",
+    "op": "WriteMapVarInt",
+    "var": "tw.phase"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "caster",
+    "fromPort": "next",
+    "to": "offsel"
+   },
+   {
+    "from": "off",
+    "fromPort": "next",
+    "to": "on"
+   },
+   {
+    "from": "on",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "phase_const"
+   },
+   {
+    "from": "offsel",
+    "fromPort": "next",
+    "to": "off"
+   },
+   {
+    "from": "phase_const",
+    "fromPort": "next",
+    "to": "write_phase"
+   },
+   {
+    "from": "write_phase",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   },
+   {
+    "from": "caster",
+    "fromPort": "value",
+    "to": "off",
+    "toPort": "source"
+   },
+   {
+    "from": "caster",
+    "fromPort": "value",
+    "to": "on",
+    "toPort": "source"
+   },
+   {
+    "from": "caster",
+    "fromPort": "value",
+    "to": "offsel",
+    "toPort": "source"
+   },
+   {
+    "from": "phase_const",
+    "fromPort": "value",
+    "to": "write_phase",
+    "toPort": "value"
+   }
+  ]
+ }
+]

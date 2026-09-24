@@ -1,0 +1,681 @@
+[
+  {
+    "id": "tw.rts.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Rts.Command",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "gnd",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "gok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "slot0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "slot1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "qb",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "fb",
+        "op": "QueryFilterTagAny",
+        "tag": "Unit.Biological"
+      },
+      {
+        "id": "cb",
+        "op": "AggCount"
+      },
+      {
+        "id": "ifb",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "gtb",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brb",
+        "op": "BranchBool"
+      },
+      {
+        "id": "qs",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "fs",
+        "op": "QueryFilterTagAny",
+        "tag": "Structure.Building"
+      },
+      {
+        "id": "cs",
+        "op": "AggCount"
+      },
+      {
+        "id": "ifs",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "gts",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brs",
+        "op": "BranchBool"
+      },
+      {
+        "id": "getb",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "gets",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "selc",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "selse",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "selm",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "cast0",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "engage",
+        "op": "SubmitEngageBatch",
+        "engageProfile": "engage.siege.ring",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "move",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "halt_ok0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt_ok1",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt_ng",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "sgc_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sgc_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sgc_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sgc_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sgc_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "sge_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sge_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sge_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sge_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sge_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "sgm_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sgm_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sgm_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sgm_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sgm_br",
+        "op": "BranchBool"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "gnd"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "next",
+        "to": "gok"
+      },
+      {
+        "from": "gok",
+        "fromPort": "true",
+        "to": "idx0"
+      },
+      {
+        "from": "gok",
+        "fromPort": "false",
+        "to": "halt_ng"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "slot0"
+      },
+      {
+        "from": "slot0",
+        "fromPort": "next",
+        "to": "slot1"
+      },
+      {
+        "from": "slot1",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "qb"
+      },
+      {
+        "from": "qb",
+        "fromPort": "next",
+        "to": "fb"
+      },
+      {
+        "from": "fb",
+        "fromPort": "next",
+        "to": "cb"
+      },
+      {
+        "from": "cb",
+        "fromPort": "next",
+        "to": "ifb"
+      },
+      {
+        "from": "ifb",
+        "fromPort": "next",
+        "to": "gtb"
+      },
+      {
+        "from": "gtb",
+        "fromPort": "next",
+        "to": "brb"
+      },
+      {
+        "from": "brb",
+        "fromPort": "true",
+        "to": "getb"
+      },
+      {
+        "from": "brb",
+        "fromPort": "false",
+        "to": "qs"
+      },
+      {
+        "from": "getb",
+        "fromPort": "next",
+        "to": "selc"
+      },
+      {
+        "from": "selc",
+        "fromPort": "next",
+        "to": "sgc_cnt"
+      },
+      {
+        "from": "cast0",
+        "fromPort": "next",
+        "to": "halt_ok0"
+      },
+      {
+        "from": "qs",
+        "fromPort": "next",
+        "to": "fs"
+      },
+      {
+        "from": "fs",
+        "fromPort": "next",
+        "to": "cs"
+      },
+      {
+        "from": "cs",
+        "fromPort": "next",
+        "to": "ifs"
+      },
+      {
+        "from": "ifs",
+        "fromPort": "next",
+        "to": "gts"
+      },
+      {
+        "from": "gts",
+        "fromPort": "next",
+        "to": "brs"
+      },
+      {
+        "from": "brs",
+        "fromPort": "true",
+        "to": "gets"
+      },
+      {
+        "from": "brs",
+        "fromPort": "false",
+        "to": "selm"
+      },
+      {
+        "from": "gets",
+        "fromPort": "next",
+        "to": "selse"
+      },
+      {
+        "from": "selse",
+        "fromPort": "next",
+        "to": "sge_cnt"
+      },
+      {
+        "from": "engage",
+        "fromPort": "next",
+        "to": "halt_ok1"
+      },
+      {
+        "from": "selm",
+        "fromPort": "next",
+        "to": "sgm_cnt"
+      },
+      {
+        "from": "move",
+        "fromPort": "next",
+        "to": "halt_ng"
+      },
+      {
+        "from": "sgc_cnt",
+        "fromPort": "next",
+        "to": "sgc_cntf"
+      },
+      {
+        "from": "sgc_cntf",
+        "fromPort": "next",
+        "to": "sgc_zero"
+      },
+      {
+        "from": "sgc_gt",
+        "fromPort": "next",
+        "to": "sgc_br"
+      },
+      {
+        "from": "sgc_br",
+        "fromPort": "true",
+        "to": "cast0"
+      },
+      {
+        "from": "sgc_br",
+        "fromPort": "false",
+        "to": "halt_ok0"
+      },
+      {
+        "from": "sge_cnt",
+        "fromPort": "next",
+        "to": "sge_cntf"
+      },
+      {
+        "from": "sge_cntf",
+        "fromPort": "next",
+        "to": "sge_zero"
+      },
+      {
+        "from": "sge_gt",
+        "fromPort": "next",
+        "to": "sge_br"
+      },
+      {
+        "from": "sge_br",
+        "fromPort": "true",
+        "to": "engage"
+      },
+      {
+        "from": "sge_br",
+        "fromPort": "false",
+        "to": "halt_ok1"
+      },
+      {
+        "from": "sgm_cnt",
+        "fromPort": "next",
+        "to": "sgm_cntf"
+      },
+      {
+        "from": "sgm_cntf",
+        "fromPort": "next",
+        "to": "sgm_zero"
+      },
+      {
+        "from": "sgm_gt",
+        "fromPort": "next",
+        "to": "sgm_br"
+      },
+      {
+        "from": "sgm_br",
+        "fromPort": "true",
+        "to": "move"
+      },
+      {
+        "from": "sgm_br",
+        "fromPort": "false",
+        "to": "halt_ng"
+      },
+      {
+        "from": "sgc_zero",
+        "fromPort": "next",
+        "to": "sgc_gt"
+      },
+      {
+        "from": "sge_zero",
+        "fromPort": "next",
+        "to": "sge_gt"
+      },
+      {
+        "from": "sgm_zero",
+        "fromPort": "next",
+        "to": "sgm_gt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "b"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "gok",
+        "toPort": "condition"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "condition"
+      },
+      {
+        "from": "cb",
+        "fromPort": "value",
+        "to": "ifb",
+        "toPort": "a"
+      },
+      {
+        "from": "ifb",
+        "fromPort": "value",
+        "to": "gtb",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "gtb",
+        "toPort": "b"
+      },
+      {
+        "from": "gtb",
+        "fromPort": "value",
+        "to": "brb",
+        "toPort": "condition"
+      },
+      {
+        "from": "cs",
+        "fromPort": "value",
+        "to": "ifs",
+        "toPort": "a"
+      },
+      {
+        "from": "ifs",
+        "fromPort": "value",
+        "to": "gts",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "gts",
+        "toPort": "b"
+      },
+      {
+        "from": "gts",
+        "fromPort": "value",
+        "to": "brs",
+        "toPort": "condition"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "getb",
+        "toPort": "value"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "gets",
+        "toPort": "value"
+      },
+      {
+        "from": "slot0",
+        "fromPort": "value",
+        "to": "cast0",
+        "toPort": "value"
+      },
+      {
+        "from": "slot1",
+        "fromPort": "value",
+        "to": "engage",
+        "toPort": "value"
+      },
+      {
+        "from": "getb",
+        "fromPort": "value",
+        "to": "cast0",
+        "toPort": "target"
+      },
+      {
+        "from": "gets",
+        "fromPort": "value",
+        "to": "engage",
+        "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selc",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selse",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selm",
+        "toPort": "source"
+      },
+      {
+        "from": "sgc_cnt",
+        "fromPort": "value",
+        "to": "sgc_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sgc_cntf",
+        "fromPort": "value",
+        "to": "sgc_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sgc_zero",
+        "fromPort": "value",
+        "to": "sgc_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sgc_gt",
+        "fromPort": "value",
+        "to": "sgc_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "sge_cnt",
+        "fromPort": "value",
+        "to": "sge_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sge_cntf",
+        "fromPort": "value",
+        "to": "sge_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sge_zero",
+        "fromPort": "value",
+        "to": "sge_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sge_gt",
+        "fromPort": "value",
+        "to": "sge_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "sgm_cnt",
+        "fromPort": "value",
+        "to": "sgm_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sgm_cntf",
+        "fromPort": "value",
+        "to": "sgm_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sgm_zero",
+        "fromPort": "value",
+        "to": "sgm_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sgm_gt",
+        "fromPort": "value",
+        "to": "sgm_br",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

@@ -29,13 +29,22 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "roster_q",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "roster_f",
+        "op": "QueryFilterTemplate",
+        "template": "arpg_hero"
       }
     ],
     "controlEdges": [
       {
         "from": "slot",
         "fromPort": "next",
-        "to": "submit"
+        "to": "roster_q"
       },
       {
         "from": "submit",
@@ -46,6 +55,16 @@
         "from": "ok",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "roster_q",
+        "fromPort": "next",
+        "to": "roster_f"
+      },
+      {
+        "from": "roster_f",
+        "fromPort": "next",
+        "to": "submit"
       }
     ],
     "valueEdges": [

@@ -55,8 +55,7 @@ namespace Ludots.Core.Input.Interaction
     /// <para>
     /// All int fields are registry ids resolved once at
     /// <see cref="InteractionContextProfileRegistry"/> install time: context and input context
-    /// ids in the profile registry's own spaces, collection keys in the
-    /// <c>EntityCollectionStore</c> key space, filter and command intent ids in their kernel
+    /// ids in the profile registry's own spaces, filter and command intent ids in their kernel
     /// registries' spaces. Component equality across a save round trip therefore only requires
     /// the same install order.
     /// </para>
@@ -85,12 +84,6 @@ namespace Ludots.Core.Input.Interaction
         /// and pointer commands do not route — never bubble (no fallback).
         /// </summary>
         public int CommandIntentProfileId;
-
-        /// <summary>
-        /// Collection key id in the <c>EntityCollectionStore</c> key space that context-bound
-        /// cast commits write and command intent routing reads while this context is active.
-        /// </summary>
-        public int ActiveCollectionKeyId;
 
         /// <summary>
         /// Filter profile id in the <see cref="FilterProfileRegistry.ProfileIdRegistry"/> id

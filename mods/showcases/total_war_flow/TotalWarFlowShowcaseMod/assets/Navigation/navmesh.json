@@ -1,0 +1,42 @@
+{
+  "mode": "offline",
+  "algorithm": "recast",
+  "profiles": [
+    {
+      "id": "tw.agent",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45,
+      "cellSizeCm": 15
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 1,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.7071,
+    "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "total_war_flow_field": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
+      }
+    }
+  }
+}

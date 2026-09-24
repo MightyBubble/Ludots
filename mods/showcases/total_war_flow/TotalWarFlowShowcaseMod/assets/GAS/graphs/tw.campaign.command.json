@@ -1,0 +1,214 @@
+[
+  {
+    "id": "tw.campaign.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Campaign.Command",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "gnd",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "gok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "selq",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "selguard_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "selguard_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "selguard_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "selguard_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "selguard_br",
+        "op": "BranchBool"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "gnd"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "next",
+        "to": "gok"
+      },
+      {
+        "from": "gok",
+        "fromPort": "true",
+        "to": "selq"
+      },
+      {
+        "from": "gok",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "selq",
+        "fromPort": "next",
+        "to": "selguard_cnt"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "next",
+        "to": "selguard_cntf"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "next",
+        "to": "selguard_zero"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "next",
+        "to": "selguard_br"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "true",
+        "to": "submit"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "next",
+        "to": "selguard_gt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "b"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "gok",
+        "toPort": "condition"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selq",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "value",
+        "to": "selguard_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "value",
+        "to": "selguard_br",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

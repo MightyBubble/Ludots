@@ -309,7 +309,6 @@ namespace Ludots.Core.Input.Interaction
             return left.ContextId == right.ContextId &&
                 left.ContextEntity == right.ContextEntity &&
                 left.CommandIntentProfileId == right.CommandIntentProfileId &&
-                left.ActiveCollectionKeyId == right.ActiveCollectionKeyId &&
                 left.FilterProfileId == right.FilterProfileId &&
                 left.InputContextId == right.InputContextId &&
                 left.Source == right.Source;

@@ -135,6 +135,33 @@
         "op": "SubmitEngageBatch",
         "engageProfile": "engage.siege.ring",
         "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "crewb",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "crewfb",
+        "op": "QueryFilterTemplate",
+        "template": "ballista_crew"
+      },
+      {
+        "id": "crews",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "crewfs",
+        "op": "QueryFilterTemplate",
+        "template": "ballista_crew"
+      },
+      {
+        "id": "crewg",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "crewfg",
+        "op": "QueryFilterTemplate",
+        "template": "ballista_crew"
       }
     ],
     "controlEdges": [
@@ -221,7 +248,7 @@
       {
         "from": "getb",
         "fromPort": "next",
-        "to": "cast0"
+        "to": "crewb"
       },
       {
         "from": "cast0",
@@ -261,12 +288,12 @@
       {
         "from": "brs",
         "fromPort": "false",
-        "to": "move"
+        "to": "crewg"
       },
       {
         "from": "gets",
         "fromPort": "next",
-        "to": "engage"
+        "to": "crews"
       },
       {
         "from": "engage",
@@ -277,6 +304,36 @@
         "from": "move",
         "fromPort": "next",
         "to": "halt_ng"
+      },
+      {
+        "from": "crewb",
+        "fromPort": "next",
+        "to": "crewfb"
+      },
+      {
+        "from": "crewfb",
+        "fromPort": "next",
+        "to": "cast0"
+      },
+      {
+        "from": "crews",
+        "fromPort": "next",
+        "to": "crewfs"
+      },
+      {
+        "from": "crewfs",
+        "fromPort": "next",
+        "to": "engage"
+      },
+      {
+        "from": "crewg",
+        "fromPort": "next",
+        "to": "crewfg"
+      },
+      {
+        "from": "crewfg",
+        "fromPort": "next",
+        "to": "move"
       }
     ],
     "valueEdges": [

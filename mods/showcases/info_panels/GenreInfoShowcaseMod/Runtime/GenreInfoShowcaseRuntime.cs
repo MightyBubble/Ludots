@@ -183,7 +183,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 EntityCollectionRoleKind.Display,
                 members,
                 "Formation view");
-            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = "collection.command.source";
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = "collection.command.source";
             engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
@@ -195,7 +195,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return false;
             }
 
-            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = "collection.command.source";
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = "collection.command.source";
             return true;
         }
 
@@ -218,7 +218,7 @@ namespace GenreInfoShowcaseMod.Runtime
                     "Formation view");
             }
 
-            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = GenreInfoShowcaseIds.FormationCollectionKey;
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = GenreInfoShowcaseIds.FormationCollectionKey;
             return true;
         }
 
@@ -435,14 +435,14 @@ namespace GenreInfoShowcaseMod.Runtime
         {
             handle = EntityCollectionHandle.Invalid;
             view = default;
-            string key = ResolveActiveCollectionKey(engine);
+            string key = ResolveRosterKeyChannel(engine);
             return collections.TryGet(viewer, key, out handle) &&
                    collections.TryGetView(handle, out view);
         }
 
-        private static string ResolveActiveCollectionKey(GameEngine engine)
+        private static string ResolveRosterKeyChannel(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.ActiveCollectionKey, out object? keyObj) &&
+            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.RosterKeyChannel, out object? keyObj) &&
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key

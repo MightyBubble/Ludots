@@ -41,6 +41,16 @@ namespace Ludots.Core.Navigation.Pathing
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
         }
 
+        public bool TrySnapToNavigationSurface(string agentTypeId, int worldXcm, int worldZcm, out int snappedXcm, out int snappedZcm)
+        {
+            if (_auto != null && _auto.TrySnapToNavigationSurface(agentTypeId, worldXcm, worldZcm, out snappedXcm, out snappedZcm))
+            {
+                return true;
+            }
+
+            return _navMesh.TrySnapToNavigationSurface(agentTypeId, worldXcm, worldZcm, out snappedXcm, out snappedZcm);
+        }
+
         private static bool FailInvalid(in PathRequest request, out PathResult result)
         {
             result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, 0, errorCode: 1);

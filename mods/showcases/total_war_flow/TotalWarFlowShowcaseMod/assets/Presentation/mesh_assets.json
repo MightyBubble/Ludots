@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tw.death_explosion.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": { "particleVfxId": "tw.death_explosion" }
+  },
+  {
+    "id": "tw.death_smoke.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": { "particleVfxId": "tw.death_smoke" }
+  }
+]

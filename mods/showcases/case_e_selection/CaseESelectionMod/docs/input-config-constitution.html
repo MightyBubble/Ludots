@@ -134,7 +134,6 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
   "profiles": [
     {
       "id": "interaction.context.case_e.battle",
-      "activeCollectionKey": "case_e.battle",
       "activeEntityViewKey": "case_e.battle.view",
       "bindings": [ "CaseE.BoxSelectBegin", "QueueModifier", "PrecisionModifier", "ModifierSubtract", "CaseE.Pointer" ],
       "triggers": [
@@ -144,7 +143,6 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
     },
     {
       "id": "interaction.context.case_e.boxing",
-      "activeCollectionKey": "case_e.boxing",
       "activeEntityViewKey": "case_e.boxing.view",
       "bindings": [ "CaseE.BoxSelectEnd", "CaseE.Pointer" ],
       "triggers": [
@@ -164,7 +162,7 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
 <thead><tr><th>字段</th><th>规则</th></tr></thead>
 <tbody>
 <tr><td><code>id</code></td><td>全局唯一；命名惯例 <code>interaction.context.&lt;mod&gt;.&lt;状态&gt;</code></td></tr>
-<tr><td><code>activeCollectionKey</code></td><td>「这个 context 的操作对象落在哪个集合」的 key——<strong>下令管线的唯一读接口</strong>（下单时按 rep 活跃 context 找到此集合，令下给成员，见 §12）。成员是运行时的；此处只声明 key 名。可下令的 context 必须声明；纯玩法 context（不下单）可省略。引擎不设任何默认键、默认 profile 或隐式回退——活跃 context 链上没有任何声明此字段的 context 时，下单具名拒绝</td></tr>
+<tr><td><code>activeCollectionKey</code>（已退役，v2：意图自带成员集）</td><td>「这个 context 的操作对象落在哪个集合」的 key——<strong>下令管线的唯一读接口</strong>（下单时按 rep 活跃 context 找到此集合，令下给成员，见 §12）。成员是运行时的；此处只声明 key 名。可下令的 context 必须声明；纯玩法 context（不下单）可省略。引擎不设任何默认键、默认 profile 或隐式回退——活跃 context 链上没有任何声明此字段的 context 时，下单具名拒绝</td></tr>
 <tr><td><code>activeEntityViewKey</code></td><td>上者集合的控制面视图 key（UI / 控制面投影名）。同为静态 key 名 + 动态成员</td></tr>
 <tr><td><code>bindings</code></td><td>动作门控表：<strong>只决定哪些动作在此 context 活</strong>，不含任何行为。所有挂载引用的动作必须 ⊆ 本表</td></tr>
 <tr><td><code>triggers[]</code></td><td>边沿挂载（§04）</td></tr>
@@ -366,16 +364,16 @@ hr{border:none;border-top:1px solid var(--border);margin:30px 0}
 <hr>
 
 <h2>12. 出界引用：从选中集合到下令<span class="state">接口已落地；引擎特权键进入拆除排期</span></h2>
-<p>本系统与下令管线的<strong>唯一接口是「rep 活跃 context 的 <code>activeCollectionKey</code> 集合」</strong>：下令侧按活跃 context 找到集合，令下给成员，不碰本页任何输入配置。合同如下：</p>
+<p><strong>该字段已退役（v2）</strong>：意图自带成员集——提交图自己装载演员集（QueryFromCollection 或查询后过滤），drain 只做授权与逐成员提交；context 不再声明/路由任何集合。合同如下：</p>
 <ul>
 <li><strong>基础 context 由数据挂载</strong>：实体模板的 <code>initialInteractionContext</code>（spawn 时挂，不覆盖已有实例）或启动数据声明。引擎不安装任何保留 profile、不注册任何默认集合键——没有"稳态锚点"这回事，只有声明。派生 context 由图的 <code>ActivateContext</code> 挂载并声明父级。</li>
-<li><strong>路由只认声明</strong>：下单时在 rep 的活跃 context 链上按 LIFO 仲裁取「最近激活且声明了 <code>activeCollectionKey</code>」的 context，读其集合令下给成员。链上没有任何声明者 → 具名拒绝，无隐式键回退。</li>
+<li><strong>成员自带</strong>（v2）：提交图在提交前装载演员集；空集 = rep 单体。context 链只用于仲裁 commandIntentId。</li>
 <li><strong>提交入口是图 op</strong>：边沿图调 <code>SubmitCommandIntent</code>（地物点 / 可选命中实体）或 <code>SubmitCast</code>（技能槽语义键、瞄准载荷、蓄力档位）把意图写进预分配意图缓冲（容量走 <code>gasRuntimeCapacity</code>，超限抛错点名）；下令域在自己的 SystemGroup 相位 drain 路由，相位与 <code>DispatchMapEvent</code> 同节奏，图执行期内不路由。replicated client 上该 op 经客户端命令端口转发，context 状态以服务器为权威。</li>
 <li><strong>直接占有是数据形态，不是内核规则</strong>：无选择中介的玩法（rep 即受控体）用 self-roster 图把 rep 写进自己 context 声明的活跃集——"谁下令"永远只是"活跃集成员"。</li>
 <li><strong>瞄准 / 蓄力是 context + 图</strong>：技能按下图读 InteractionPref（实体组件）分支——智能施法直接 <code>SubmitCast</code>；非智能 <code>ActivateContext</code>(瞄准, parent=战斗)，瞄准 context 挂 whileActive 瞄准图（aimsource 纯函数算方向 / 地面点 / 自动目标，结果写 context 黑板），确认边沿图 <code>SubmitCast</code>，取消边沿图 <code>DeactivateContext</code>。蓄力 = press 激活蓄力 context + whileActive 按激活 tick 差累计，抬起图按档位分发不同 <code>SubmitCast</code>，超时由 whileActive 图比较阈值后 <code>DeactivateContext</code>。档位判定按固定 tick 累计，回放确定。</li>
 <li><strong>一切指示器 presenter 化</strong>：瞄准圈 / 扇形 / 方向线 / 蓄力条 / 地面标记 / 移动路径 = presenter 定义 + 规则订阅 + 参数绑定（§10）。表现域零计算，只读图写好的同一份黑板 / 集合参数。</li>
 </ul>
-<p>概念见 <code>input-command-system.html</code> §5–§6（去向 B）；下令侧自己的配置（意图路由、扇出、派发）见其所属文档，本宪法不重复。Case E 全链下单（battle 声明 <code>activeCollectionKey</code> + 右键提交图）随迁移切1 落地。</p>
+<p>概念见 <code>input-command-system.html</code> §5–§6（去向 B）；下令侧自己的配置（意图路由、扇出、派发）见其所属文档，本宪法不重复。Case E 全链下单（提交图 QueryFromCollection(selected) + 右键提交）随退役片落地。</p>
 <hr>
 
 <h2>13. 从零搭一遍：文件清单与顺序<span class="state">规范</span></h2>

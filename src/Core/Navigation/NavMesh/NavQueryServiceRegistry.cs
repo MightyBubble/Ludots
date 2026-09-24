@@ -24,19 +24,32 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly Dictionary<NavQueryServiceKey, NavTileStore> _stores;
         private readonly int _tileWidthCm;
         private readonly int _tileHeightCm;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
 
-        public NavQueryServiceRegistry(Dictionary<NavQueryServiceKey, NavTileStore> stores, int tileWidthCm, int tileHeightCm)
+        public NavQueryServiceRegistry(
+            Dictionary<NavQueryServiceKey, NavTileStore> stores,
+            int tileWidthCm,
+            int tileHeightCm,
+            int originXcm = 0,
+            int originZcm = 0)
         {
             _stores = stores ?? throw new ArgumentNullException(nameof(stores));
             if (tileWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCm));
             if (tileHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCm));
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
         }
 
         public int TileWidthCm => _tileWidthCm;
 
         public int TileHeightCm => _tileHeightCm;
+
+        public int OriginXcm => _originXcm;
+
+        public int OriginZcm => _originZcm;
 
         public bool TryGetStore(int layer, int profile, out NavTileStore store)
         {
@@ -47,7 +60,14 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             if (TryGetStore(layer, profile, out var store))
             {
-                service = new NavQueryService(store, layer, areaCosts, _tileWidthCm, _tileHeightCm);
+                service = new NavQueryService(
+                    store,
+                    layer,
+                    areaCosts,
+                    _tileWidthCm,
+                    _tileHeightCm,
+                    _originXcm,
+                    _originZcm);
                 return true;
             }
             service = null;

@@ -311,7 +311,6 @@ namespace Ludots.Tests.GAS
             => new()
             {
                 Id = id,
-                ActiveCollectionKey = "collection." + id,
             };
 
         private static StringIntRegistry NewRegistry()

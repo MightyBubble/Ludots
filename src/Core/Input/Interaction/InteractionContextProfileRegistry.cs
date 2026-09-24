@@ -65,7 +65,6 @@ namespace Ludots.Core.Input.Interaction
         private readonly StringIntRegistry _profileIds;
         private readonly StringIntRegistry _inputContextIds;
         private InteractionContextProfileDefinition[] _profiles = new InteractionContextProfileDefinition[8];
-        private int[] _collectionKeyIds = new int[8];
         private int[] _filterProfileIds = new int[8];
         private int[] _commandIntentProfileIds = new int[8];
         private int[] _inputContextIdsByProfile = new int[8];
@@ -175,7 +174,6 @@ namespace Ludots.Core.Input.Interaction
             {
                 ContextId = profileId,
                 ContextEntity = contextEntity,
-                ActiveCollectionKeyId = _collectionKeyIds[profileId],
                 FilterProfileId = _filterProfileIds[profileId],
                 CommandIntentProfileId = _commandIntentProfileIds[profileId],
                 InputContextId = _inputContextIdsByProfile[profileId],
@@ -217,25 +215,8 @@ namespace Ludots.Core.Input.Interaction
             return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
         }
 
-        /// <summary>
-        /// Steady-state routing anchor: the reserved default profile's resolved collection key
-        /// and filter profile ids (the data-declared home of the retired engine default frame).
-        /// Returns false when the default profile is not installed.
-        /// </summary>
-        public bool TryGetSteadyStateRouting(out int collectionKeyId, out int filterProfileId)
-        {
-            int defaultProfileId = _profileIds.GetId(InteractionContextIds.Default);
-            if (!IsInstalled(defaultProfileId))
-            {
-                collectionKeyId = 0;
-                filterProfileId = 0;
-                return false;
-            }
 
-            collectionKeyId = _collectionKeyIds[defaultProfileId];
-            filterProfileId = _filterProfileIds[defaultProfileId];
-            return true;
-        }
+
 
         private int _inputContextIdsFor(int profileId)
         {
@@ -267,7 +248,6 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 Array.Resize(ref _profiles, next);
-                Array.Resize(ref _collectionKeyIds, next);
                 Array.Resize(ref _filterProfileIds, next);
                 Array.Resize(ref _commandIntentProfileIds, next);
                 Array.Resize(ref _inputContextIdsByProfile, next);
@@ -290,9 +270,6 @@ namespace Ludots.Core.Input.Interaction
                 "command intent profile");
 
             _profiles[profileId] = definition;
-            _collectionKeyIds[profileId] = string.IsNullOrWhiteSpace(definition.ActiveCollectionKey)
-                ? collectionKeyRegistry.InvalidId
-                : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _isForeground[profileId] = definition.Foreground;

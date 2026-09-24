@@ -37,21 +37,26 @@ namespace Ludots.Tests.GAS
             Order order = ctx.LatestOrder(ballista, "castAbility");
             Assert.That(order.Args.I0, Is.EqualTo(0), "wolf (biological) routes to weapon slot 0");
             Assert.That(order.Target, Is.EqualTo(wolf), "cast carries the hit entity");
-            ctx.Tick(8);
+            // 弹道化后伤害随飞行时间到达：轮询到血量稳定
             float wolfHealth = ctx.Health(wolf);
-            TestContext.Out.WriteLine($"[S3] wolf 300 -> {wolfHealth} (weapon bolt, armor 0, flat -80)");
+            for (int frame = 0; frame < 120 && wolfHealth >= 300f; frame++)
+            {
+                ctx.Tick(1);
+                wolfHealth = ctx.Health(wolf);
+            }
+
+            TestContext.Out.WriteLine($"[S3] wolf first bolt lands -> {wolfHealth} (weapon bolt, armor 0, flat -80)");
             Assert.That(wolfHealth, Is.EqualTo(220f).Within(0.01f), "Q4 formula: armor 0 → flat -80");
         }
 
         [Test]
         public void RightClickTower_EngageBatchRingsAroundTarget_AndSiegeSettlesAfterArrival()
         {
-            using var ctx = Boot(out var backend);
+            using var ctx = Boot(out var backend, "ballista_engage_field");
             Entity ballista1 = ctx.Resolve("ballista_1");
             Entity ballista2 = ctx.Resolve("ballista_2");
             Entity ballista3 = ctx.Resolve("ballista_3");
             Entity tower = ctx.Resolve("tower_1");
-            ctx.SeedAllActiveCollections(ballista1, ballista2, ballista3);
             ctx.Tick(10);
 
             ctx.ClickAt(ctx.Project(tower));
@@ -138,40 +143,8 @@ namespace Ludots.Tests.GAS
             public Entity Resolve(string instanceId)
             {
                 var session = Engine.CurrentMapSession ?? throw new InvalidOperationException("map not loaded");
-                var e = session.EntityIndex.GetRequired(
+                return session.EntityIndex.GetRequired(
                     session.MapId.Value, instanceId, "BallistaRoute");
-                if (instanceId == "ballista_1")
-                {
-                    SeedActiveCollection(e);
-                }
-                return e;
-            }
-
-            /// <summary>Seeds the command-source collection with every ballista (engage fixture).</summary>
-            public void SeedAllActiveCollections(params Entity[] ballistas)
-            {
-                var store = Engine.GetService(CoreServiceKeys.EntityCollectionStore)
-                    as Ludots.Core.EntityCollections.EntityCollectionStore
-                    ?? throw new InvalidOperationException("collection store missing");
-                int keyId = store.KeyRegistry.Register("collection.command.source");
-                var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
-                    "collection.command.source",
-                    Ludots.Core.EntityCollections.EntityCollectionSourceKind.Explicit,
-                    Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource);
-                store.Replace(ballistas[0], keyId, in descriptor, ballistas, ballistas[0]);
-            }
-
-            private void SeedActiveCollection(Entity ballista)
-            {
-                var store = Engine.GetService(CoreServiceKeys.EntityCollectionStore)
-                    as Ludots.Core.EntityCollections.EntityCollectionStore
-                    ?? throw new InvalidOperationException("collection store missing");
-                int keyId = store.KeyRegistry.Register("collection.command.source");
-                var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
-                    "collection.command.source",
-                    Ludots.Core.EntityCollections.EntityCollectionSourceKind.Explicit,
-                    Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource);
-                store.Replace(ballista, keyId, in descriptor, new[] { ballista }, ballista);
             }
 
             public Entity Spawn(string kind, int xCm, int yCm)
@@ -325,7 +298,7 @@ namespace Ludots.Tests.GAS
             public void Dispose() => Engine.Dispose();
         }
 
-        private static Ctx Boot(out TestInputBackend backend)
+        private static Ctx Boot(out TestInputBackend backend, string mapId = "ballista_route_field")
         {
             string repoRoot = FindRepoRoot();
             backend = new TestInputBackend();
@@ -353,7 +326,7 @@ namespace Ludots.Tests.GAS
                 (Ludots.Platform.Abstractions.IScreenProjector)new WindowPointRayProvider());
             engine.Start();
             engine.LoadMap(new MapLoadRequest(
-                new MapId("ballista_route_field"),
+                new MapId(mapId),
                 MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
             for (int i = 0; i < 40 && engine.CurrentMapSession == null; i++) engine.Tick(1f / 60f);
 

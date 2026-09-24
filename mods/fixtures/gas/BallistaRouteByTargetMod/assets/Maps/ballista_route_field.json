@@ -1,76 +1,103 @@
 {
-  "Id": "ballista_route_field",
-  "World": {
-    "WidthCm": 1638400,
-    "HeightCm": 1638400,
-    "CellSizeCm": 100
+ "Id": "ballista_route_field",
+ "World": {
+  "WidthCm": 1638400,
+  "HeightCm": 1638400,
+  "CellSizeCm": 100
+ },
+ "Tags": [
+  "showcase",
+  "input",
+  "route"
+ ],
+ "HeartbeatIntervalTicks": 6,
+ "Entities": [
+  {
+   "template": "ballista_crew",
+   "instanceId": "ballista_1",
+   "PositionXCm": 0,
+   "PositionYCm": 0,
+   "Overrides": {
+    "PlayerIdentity": {
+     "PlayerId": 1
+    }
+   }
   },
-  "Tags": [
-    "showcase",
-    "input",
-    "route"
-  ],
-  "HeartbeatIntervalTicks": 6,
-  "Entities": [
-    {
-      "template": "ballista_crew",
-      "instanceId": "ballista_1",
-      "PositionXCm": 0,
-      "PositionYCm": 0,
-      "Overrides": {
-        "PlayerIdentity": {
-          "PlayerId": 1
-        }
-      }
-    },
-    {
-      "template": "ballista_wolf",
-      "instanceId": "wolf_1",
-      "PositionXCm": 400,
-      "PositionYCm": 0
-    },
-    {
-      "template": "ballista_tower",
-      "instanceId": "tower_1",
-      "PositionXCm": 400,
-      "PositionYCm": 600
-    },
-    {
-      "template": "ballista_crew",
-      "instanceId": "ballista_2",
-      "PositionXCm": -400,
-      "PositionYCm": 300,
-      "Overrides": {
-        "Team": {
-          "Id": 1
-        }
-      }
-    },
-    {
-      "template": "ballista_crew",
-      "instanceId": "ballista_3",
-      "PositionXCm": -400,
-      "PositionYCm": -300,
-      "Overrides": {
-        "Team": {
-          "Id": 1
-        }
-      }
+  {
+   "template": "ballista_wolf",
+   "instanceId": "wolf_1",
+   "PositionXCm": 400,
+   "PositionYCm": 0
+  },
+  {
+   "template": "ballista_tower",
+   "instanceId": "tower_1",
+   "PositionXCm": 400,
+   "PositionYCm": 600
+  },
+  {
+   "Template": "ballista_team_anchor",
+   "InstanceId": "ballista-route-hostiles-anchor",
+   "PositionXCm": 2000,
+   "PositionYCm": 2000,
+   "Overrides": {
+    "Name": {
+     "Value": "Hostiles Anchor"
     }
-  ],
-  "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
+   }
+  }
+ ],
+ "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
+ "Teams": [
+  {
+   "TeamId": 1,
+   "Name": "Player",
+   "RepresentativeInstanceId": "ballista_1"
+  },
+  {
+   "TeamId": 2,
+   "RepresentativeInstanceId": "ballista-route-hostiles-anchor"
+  }
+ ],
+ "Players": [
+  {
+   "PlayerId": 1,
+   "TeamId": 1,
+   "RepresentativeInstanceId": "ballista_1"
+  }
+ ],
+ "ParticipantRelationships": {
   "Teams": [
-    {
-      "TeamId": 1,
-      "Name": "Player",
-      "RepresentativeInstanceId": "ballista_1"
-    }
+   {
+    "TeamA": 1,
+    "TeamB": 1,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Friendly",
+    "Symmetric": true
+   },
+   {
+    "TeamA": 2,
+    "TeamB": 2,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Friendly",
+    "Symmetric": true
+   },
+   {
+    "TeamA": 1,
+    "TeamB": 2,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Hostile",
+    "Symmetric": true
+   }
   ],
-  "Players": [
-    {
-      "PlayerId": 1,
-      "TeamId": 1,
-      "RepresentativeInstanceId": "ballista_1"
-    }
+  "Players": [],
+  "PlayerTeams": [
+   {
+    "PlayerId": 1,
+    "TeamId": 1,
+    "TypeId": "LudotsCore.Participant",
+    "Symmetric": false
+   }
   ]
+ }
 }

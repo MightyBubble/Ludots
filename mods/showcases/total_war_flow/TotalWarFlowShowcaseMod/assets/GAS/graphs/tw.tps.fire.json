@@ -1,0 +1,150 @@
+[
+ {
+  "id": "tw.tps.fire",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_action",
+    "action": "Tw.Tps.Fire",
+    "start": "px",
+    "refire": "restart"
+   }
+  ],
+  "nodes": [
+   {
+    "id": "px",
+    "op": "LoadPointerScreenX"
+   },
+   {
+    "id": "py",
+    "op": "LoadPointerScreenY"
+   },
+   {
+    "id": "gnd",
+    "op": "ScreenPointToGround"
+   },
+   {
+    "id": "gok",
+    "op": "JumpIfFalse"
+   },
+   {
+    "id": "slot0",
+    "op": "ConstInt",
+    "intValue": 0
+   },
+   {
+    "id": "reps",
+    "op": "QueryAllMapEntities"
+   },
+   {
+    "id": "repsf",
+    "op": "QueryFilterTemplate",
+    "template": "tw_commander"
+   },
+   {
+    "id": "fire",
+    "op": "SubmitCast",
+    "orderTypeKey": "castAbility"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "px",
+    "fromPort": "next",
+    "to": "py"
+   },
+   {
+    "from": "py",
+    "fromPort": "next",
+    "to": "gnd"
+   },
+   {
+    "from": "gnd",
+    "fromPort": "next",
+    "to": "gok"
+   },
+   {
+    "from": "gok",
+    "fromPort": "true",
+    "to": "slot0"
+   },
+   {
+    "from": "gok",
+    "fromPort": "false",
+    "to": "halt"
+   },
+   {
+    "from": "slot0",
+    "fromPort": "next",
+    "to": "reps"
+   },
+   {
+    "from": "reps",
+    "fromPort": "next",
+    "to": "repsf"
+   },
+   {
+    "from": "repsf",
+    "fromPort": "next",
+    "to": "fire"
+   },
+   {
+    "from": "fire",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "px",
+    "fromPort": "value",
+    "to": "gnd",
+    "toPort": "a"
+   },
+   {
+    "from": "py",
+    "fromPort": "value",
+    "to": "gnd",
+    "toPort": "b"
+   },
+   {
+    "from": "gnd",
+    "fromPort": "value",
+    "to": "gok",
+    "toPort": "condition"
+   },
+   {
+    "from": "gnd",
+    "fromPort": "value",
+    "to": "fire",
+    "toPort": "condition"
+   },
+   {
+    "from": "slot0",
+    "fromPort": "value",
+    "to": "fire",
+    "toPort": "value"
+   },
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   }
+  ]
+ }
+]

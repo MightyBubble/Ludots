@@ -1,0 +1,17 @@
+{
+  "name": "TotalWarFlowShowcaseMod",
+  "version": "1.0.0",
+  "description": "全战四阶段端到端验收（#1398 切片③验收样板）：战役大地图→战斗备置→RTS 战斗→TPS 瞄准射击，单地图四上下文迁移；成员装载全走 v2 图自取。",
+  "priority": 1100,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "BallistaRouteByTargetMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "input",
+    "total-war",
+    "context-flow"
+  ]
+}

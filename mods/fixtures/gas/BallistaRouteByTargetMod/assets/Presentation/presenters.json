@@ -1,0 +1,664 @@
+[
+ {
+  "id": "ballista.fixture.crew",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      1,
+      1,
+      1
+     ]
+    },
+    "style": {
+     "color": [
+      0.36,
+      0.62,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.wolf",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.62,
+      0.62,
+      0.62
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.32,
+      0.22,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.tower",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.obelisk",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      5.0,
+      5.0,
+      5.0
+     ]
+    },
+    "style": {
+     "color": [
+      0.78,
+      0.74,
+      0.66,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.crew_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_crew"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.crew",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_crew"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.wolf_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_wolf"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.wolf",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_wolf"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.tower_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_tower"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.tower",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_tower"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.projectile.bolt",
+  "rules": [
+   {
+    "event": {
+     "kind": "ProjectileSpawned",
+     "key": "Effect.Ballista.BoltProjectile"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "scopeSource": "EventPayloadA",
+     "definitionId": "ballista.projectile.bolt"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "*"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ],
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.0,
+      2.0,
+      2.0
+     ]
+    },
+    "style": {
+     "color": [
+      0.98,
+      0.72,
+      0.32,
+      0.94
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "persistence": "Scoped"
+  }
+ },
+ {
+  "id": "ballista.projectile.siege",
+  "rules": [
+   {
+    "event": {
+     "kind": "ProjectileSpawned",
+     "key": "Effect.Ballista.SiegeProjectile"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "scopeSource": "EventPayloadA",
+     "definitionId": "ballista.projectile.siege"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "*"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ],
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.8,
+      2.8,
+      2.8
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.45,
+      0.28,
+      0.94
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "persistence": "Scoped"
+  }
+ },
+ {
+  "id": "ballista.cue.shot_cast",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      1.6,
+      1.6,
+      1.6
+     ]
+    },
+    "style": {
+     "color": [
+      0.98,
+      0.78,
+      0.42,
+      0.86
+     ],
+     "alphaPolicy": "FadeOverLifetime"
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.18
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.72,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cue.siege_cast",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.2,
+      2.2,
+      2.2
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.55,
+      0.3,
+      0.86
+     ],
+     "alphaPolicy": "FadeOverLifetime"
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.24
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.9,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cue.bolt_hit",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "GroundOverlay",
+     "assetId": "Circle",
+     "renderPath": "None",
+     "mobility": "Movable",
+     "localScale": [
+      1.4,
+      1.4,
+      1.4
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.5,
+      0.3,
+      0.2
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.26
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.06,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cast_cues",
+  "rules": [
+   {
+    "event": {
+     "kind": "CastCommitted",
+     "key": "Ability.Ballista.Shot"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.shot_cast",
+     "scopeSource": "Fixed"
+    }
+   },
+   {
+    "event": {
+     "kind": "CastCommitted",
+     "key": "Ability.Ballista.SiegeBolt"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.siege_cast",
+     "scopeSource": "Fixed"
+    }
+   },
+   {
+    "event": {
+     "kind": "EffectApplied",
+     "key": "Effect.Ballista.Bolt"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.bolt_hit",
+     "scopeSource": "Fixed"
+    }
+   }
+  ]
+ },
+ {
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "WorldHud",
+     "materialParamKey": "ballista.hud.health.ratio",
+     "renderPath": "None",
+     "mobility": "Movable",
+     "localScale": [
+      46,
+      6,
+      1
+     ]
+    },
+    "style": {
+     "color": [
+      0.12,
+      0.92,
+      0.3,
+      0.96
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "Attachment",
+    "activeByDefault": true,
+    "attachment": {
+     "target": "Parent",
+     "offset": [
+      0,
+      1.35,
+      0
+     ],
+     "rotationOffset": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "inheritScale": false
+    }
+   },
+   {
+    "slot": "attributeRatio",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.ratio",
+     "mode": "AttributeRatio"
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "ballista.hud.health.ratio",
+    "lane": "Float",
+    "floatValue": 1
+   }
+  ],
+  "id": "ballista.hud.health_bar"
+ },
+ {
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "hud.attribute.current_over_base",
+     "mode": "AttributeCurrentOverBase",
+     "fontSize": 14,
+     "valueParamKey": "ballista.hud.health.current",
+     "secondaryValueParamKey": "ballista.hud.health.base"
+    },
+    "style": {
+     "color": [
+      1,
+      0.98,
+      0.92,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "Attachment",
+    "activeByDefault": true,
+    "attachment": {
+     "target": "Parent",
+     "offset": [
+      0,
+      1.6,
+      0
+     ],
+     "rotationOffset": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "inheritScale": false
+    }
+   },
+   {
+    "slot": "attributeCurrent",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.current",
+     "mode": "Attribute"
+    }
+   },
+   {
+    "slot": "attributeBase",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.base",
+     "mode": "AttributeBase"
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "ballista.hud.health.current",
+    "lane": "Float",
+    "floatValue": 400
+   },
+   {
+    "paramKey": "ballista.hud.health.base",
+    "lane": "Float",
+    "floatValue": 400
+   }
+  ],
+  "id": "ballista.hud.health_text"
+ }
+]

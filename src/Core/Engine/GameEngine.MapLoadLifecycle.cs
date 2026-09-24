@@ -691,11 +691,16 @@ namespace Ludots.Core.Engine
                     "before the MovePlan order adapter can install.");
             }
 
+            // Composite engage plans (MoveThenCast) and legacy profiles submit plain
+            // moveTo orders; on mass-navigation maps those must flow into the same
+            // nav move-plan pipeline (formation slots + arrival completion), so the
+            // adapter accepts both order ids.
+            orderTypes.TryGetId("moveTo", out int legacyMoveOrderTypeId);
             InsertSystemBeforeRequired<IMovePlanCommandGroupExecutionSystem>(
-                new MovePlanOrderProjectionSystem(World, moveOrderTypeId),
+                new MovePlanOrderProjectionSystem(World, moveOrderTypeId, legacyMoveOrderTypeId),
                 SystemGroup.AbilityActivation);
             RegisterSystem(
-                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId),
+                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId, legacyMoveOrderTypeId),
                 SystemGroup.AbilityActivation);
             GlobalContext[MassNavigationMovePlanOrderAdapterInstalledKey] = true;
         }

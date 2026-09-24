@@ -3633,6 +3633,27 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "ballista_route_by_target_raylib",
+      "name": "Ballista Route By Target Raylib",
+      "selectors": [
+        "$ballista_route_by_target",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "total_war_flow_raylib",
+      "name": "Total War Flow Raylib",
+      "selectors": [
+        "$total_war_flow",
+        "$ballista_route_by_target",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

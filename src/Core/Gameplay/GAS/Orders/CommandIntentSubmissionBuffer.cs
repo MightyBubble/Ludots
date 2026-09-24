@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _submissions = new CommandIntentSubmission[capacity];
             _casts = new CastIntentSubmission[capacity];
             _engages = new EngageIntentSubmission[capacity];
+            _memberPool = new Entity[capacity * 4];
         }
 
         public int Capacity => _submissions.Length;
@@ -48,8 +49,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        public void Push(in CommandIntentSubmission submission)
+        public void Push(in CommandIntentSubmission submission, System.ReadOnlySpan<Entity> members)
         {
+            var range = PushMembers(members);
+            var record = submission with { MemberOffset = range.Offset, MemberCount = range.Count };
             if (_count >= _submissions.Length)
             {
                 throw new InvalidOperationException(
@@ -57,7 +60,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer intents per tick.");
             }
 
-            _submissions[_count++] = submission;
+            _submissions[_count++] = record;
         }
 
         /// <summary>Consumes the whole buffer; the drain is the only reader, so reset is wholesale.</summary>
@@ -66,6 +69,40 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _count = 0;
             _castCount = 0;
             _engageCount = 0;
+            _memberPoolCount = 0;
+        }
+
+        private readonly Entity[] _memberPool;
+        private int _memberPoolCount;
+
+        /// <summary>
+        /// Copies one graph-supplied actor set into the shared member pool; empty spans mean
+        /// "the acting rep alone" (v2: the submitting graph owns fan-out membership). Overflow
+        /// fails loud instead of truncating.
+        /// </summary>
+        private (int Offset, int Count) PushMembers(System.ReadOnlySpan<Entity> members)
+        {
+            if (members.Length == 0)
+            {
+                return (0, 0);
+            }
+
+            if (_memberPoolCount + members.Length > _memberPool.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.INTENT.ERR.MemberPoolOverflow: member pool capacity {_memberPool.Length} exceeded; " +
+                    "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer actors per intent.");
+            }
+
+            int offset = _memberPoolCount;
+            members.CopyTo(_memberPool.AsSpan(_memberPoolCount));
+            _memberPoolCount += members.Length;
+            return (offset, members.Length);
+        }
+
+        public System.ReadOnlySpan<Entity> Members(int offset, int count)
+        {
+            return _memberPool.AsSpan(offset, count);
         }
 
         private readonly CastIntentSubmission[] _casts;
@@ -84,8 +121,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _casts[index];
         }
 
-        public void PushCast(in CastIntentSubmission submission)
+        public void PushCast(in CastIntentSubmission submission, System.ReadOnlySpan<Entity> members)
         {
+            var range = PushMembers(members);
+            var record = submission with { MemberOffset = range.Offset, MemberCount = range.Count };
             if (_castCount >= _casts.Length)
             {
                 throw new InvalidOperationException(
@@ -93,7 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer intents per tick.");
             }
 
-            _casts[_castCount++] = submission;
+            _casts[_castCount++] = record;
         }
 
         private readonly EngageIntentSubmission[] _engages;
@@ -112,8 +151,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _engages[index];
         }
 
-        public void PushEngage(in EngageIntentSubmission submission)
+        public void PushEngage(in EngageIntentSubmission submission, System.ReadOnlySpan<Entity> members)
         {
+            var range = PushMembers(members);
+            var record = submission with { MemberOffset = range.Offset, MemberCount = range.Count };
             if (_engageCount >= _engages.Length)
             {
                 throw new InvalidOperationException(
@@ -121,7 +162,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer intents per tick.");
             }
 
-            _engages[_engageCount++] = submission;
+            _engages[_engageCount++] = record;
         }
     }
 
@@ -129,7 +170,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Entity Rep,
         Entity Target,
         bool HasTarget,
-        IntVector2 GroundCm);
+        IntVector2 GroundCm,
+        int MemberOffset = 0,
+        int MemberCount = 0);
 
     /// <summary>
     /// One graph-submitted cast intent: the slot lands as Args.I0; GroundCm applies only when
@@ -143,7 +186,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         bool HasTarget,
         bool HasGround,
         IntVector2 GroundCm,
-        int OrderTypeKeyId);
+        int OrderTypeKeyId,
+        int MemberOffset = 0,
+        int MemberCount = 0);
 
     /// <summary>
     /// One graph-submitted engage intent: the drain resolves actors from the rep's
@@ -157,5 +202,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         int Slot,
         Entity Target,
         int ProfileKeyId,
-        int OrderTypeKeyId);
+        int OrderTypeKeyId,
+        int MemberOffset = 0,
+        int MemberCount = 0);
 }

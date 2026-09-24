@@ -1,0 +1,56 @@
+[
+ {
+  "Path": "MassNavigationConfig.json",
+  "Policy": "DeepObject"
+ },
+ {
+  "Path": "Input/default_input.json",
+  "Policy": "DeepObject"
+ },
+ {
+  "Path": "Input/interaction_context_profiles.json",
+  "Policy": "DeepObject",
+  "ArrayAppendFields": [
+   "profiles",
+   "rules"
+  ]
+ },
+ {
+  "Path": "Entities/templates.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "GAS/graphs.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "GAS/graphs/*.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "Maps/total_war_flow_field.json",
+  "Policy": "DeepObject"
+ },
+ {
+  "Path": "Spatial/eqs_queries.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "Navigation/pathing.json",
+  "Policy": "DeepObject"
+ },
+ {
+  "Path": "Presentation/presenters.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "GAS/effects.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ }
+]

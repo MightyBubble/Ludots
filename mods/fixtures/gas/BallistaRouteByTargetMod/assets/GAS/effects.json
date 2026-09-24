@@ -1,15 +1,68 @@
 [
-  {
-    "id": "Effect.Ballista.Bolt",
-    "presetType": "InstantDamage",
-    "lifetime": "Instant",
-    "participatesInResponse": false,
-    "configParams": {
-      "baseDamage": { "type": "Float", "value": 80 }
-    },
-    "phaseGraphs": {
-      "OnApply": { "main": "Graph.Ballista.BoltByArmor" }
-    },
-    "categories": [ "Effect.Ballista.Damage" ]
-  }
+ {
+  "id": "Effect.Ballista.BoltProjectile",
+  "presetType": "LaunchProjectile",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "projectile": {
+   "speed": 2200,
+   "range": 900,
+   "arcHeight": 0,
+   "impactEffect": "Effect.Ballista.Bolt",
+   "hitEffect": "Effect.Ballista.Bolt",
+   "presentationEffect": "Effect.Ballista.BoltProjectile",
+   "travelMode": "Direction",
+   "impactPolicy": "DestroyOnFirstHit",
+   "collisionHalfWidth": 70,
+   "collisionRelationFilter": "Hostile",
+   "collisionExcludeSource": true,
+   "maxHitCount": 1
+  },
+  "categories": [
+   "Effect.Ballista.Damage"
+  ]
+ },
+ {
+  "id": "Effect.Ballista.SiegeProjectile",
+  "presetType": "LaunchProjectile",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "projectile": {
+   "speed": 1400,
+   "range": 1000,
+   "arcHeight": 160,
+   "impactEffect": "Effect.Ballista.Bolt",
+   "hitEffect": "Effect.Ballista.Bolt",
+   "presentationEffect": "Effect.Ballista.SiegeProjectile",
+   "travelMode": "TrackTarget",
+   "impactPolicy": "DestroyOnFirstHit",
+   "collisionHalfWidth": 110,
+   "collisionRelationFilter": "Hostile",
+   "collisionExcludeSource": true,
+   "maxHitCount": 1
+  },
+  "categories": [
+   "Effect.Ballista.Damage"
+  ]
+ },
+ {
+  "id": "Effect.Ballista.Bolt",
+  "presetType": "InstantDamage",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "configParams": {
+   "baseDamage": {
+    "type": "Float",
+    "value": 80
+   }
+  },
+  "phaseGraphs": {
+   "OnApply": {
+    "main": "Graph.Ballista.BoltByArmor"
+   }
+  },
+  "categories": [
+   "Effect.Ballista.Damage"
+  ]
+ }
 ]

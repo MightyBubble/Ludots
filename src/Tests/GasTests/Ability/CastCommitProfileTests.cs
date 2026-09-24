@@ -72,10 +72,6 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.SubjectContext(out InteractionContextInstance mounted), Is.True);
             Assert.That(mounted.Source, Is.EqualTo(InteractionContextInstanceSource.CastCommitOp));
             Assert.That(mounted.ContextEntity, Is.EqualTo(harness.Subject));
-            Assert.That(
-                mounted.ActiveCollectionKeyId,
-                Is.EqualTo(harness.CollectionKeys.GetId(Harness.TargetingCollectionKey)),
-                "the mounted context is the real targeting context profile.");
         }
 
         [Test]
@@ -367,7 +363,6 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = TargetingContextProfileId,
-                            ActiveCollectionKey = TargetingCollectionKey,
                         },
                     },
                 }, collectionKeys, filterProfileIds, commandIntentProfileIds);

@@ -344,7 +344,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             ResolveActiveCollectionChoice(engine, playerViewer, aiViewer, debugViewer, out Entity owner, out string key);
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = key;
+            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = key;
             MirrorActiveSelectionViewToCommandSource(engine, collections, playerViewer, owner, key);
         }
 
@@ -451,7 +451,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 engine.World.IsAlive(existing.PrimaryEntity))
             {
                 engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-                engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = "collection.command.source";
+                engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
                 return true;
             }
 
@@ -470,7 +470,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 commandSourceBuffer,
                 "Initial command source");
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = "collection.command.source";
+            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
             return true;
         }
 
@@ -858,7 +858,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 owner = RequireSolePossessedRep(engine);
             }
 
-            string key = engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ActiveCollectionKey, out object? keyObj) &&
+            string key = engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.RosterKeyChannel, out object? keyObj) &&
                          keyObj is string storedKey &&
                          !string.IsNullOrWhiteSpace(storedKey)
                 ? storedKey
@@ -1020,7 +1020,7 @@ namespace ChampionSkillSandboxMod.Runtime
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.CameraFollowModeKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.ActiveCollectionOwnerKey);
-            engine.GlobalContext.Remove(ChampionSkillSandboxIds.ActiveCollectionKey);
+            engine.GlobalContext.Remove(ChampionSkillSandboxIds.RosterKeyChannel);
         }
     }
 }

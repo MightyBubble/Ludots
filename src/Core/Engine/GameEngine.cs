@@ -2252,7 +2252,7 @@ namespace Ludots.Core.Engine
             // Constitution §12 order bridge: graph-pushed command intents (SubmitCommandIntent
             // op) drain here in the order kernel's phase — after last tick's trigger phase wrote
             // them, before this tick's movement consumes the routed orders. No engine-reserved
-            // key: routing reads only the rep's active-context-declared activeCollectionKey.
+            // key: intents carry their own actor sets (v2); no context-declared collection routing.
             var commandIntentBufferDrain = new Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem(
                 World,
                 commandIntentSubmissions,
@@ -2267,7 +2267,9 @@ namespace Ludots.Core.Engine
                 eqsQueries: eqsQueryRegistry,
                 abilities: abilityDefinitions,
                 castAbilityOrderTypeId: cfgCastAbility,
-                moveToOrderTypeId: cfgMoveTo);
+                moveToOrderTypeId: cfgMoveTo,
+                pathServiceAccessor: () => GetService(CoreServiceKeys.PathService),
+                pathStoreAccessor: () => GetService(CoreServiceKeys.PathStore));
             SetService(CoreServiceKeys.CommandIntentSubmissions, commandIntentSubmissions);
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
@@ -3866,7 +3868,8 @@ namespace Ludots.Core.Engine
                     heightStepCm,
                     blockedAtOrBelowHeightCm: authoredBounds ? boardConfig.TerrainBlockedAtOrBelowHeightCm : null,
                     originXcm: originXcm,
-                    originZcm: originZcm));
+                    originZcm: originZcm,
+                    markAsRamp: boardConfig.TerrainProjectAsRamp));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
@@ -4527,7 +4530,7 @@ namespace Ludots.Core.Engine
                 }
                 else
                 {
-                    pathService = navMeshService;
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                 }
             }
             else if (loadedGraphRuntime != null)

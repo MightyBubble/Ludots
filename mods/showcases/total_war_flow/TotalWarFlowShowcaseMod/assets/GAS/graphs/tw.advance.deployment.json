@@ -1,0 +1,107 @@
+[
+ {
+  "id": "tw.advance.deployment",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_action",
+    "action": "Tw.Advance",
+    "start": "caster",
+    "refire": "restart"
+   }
+  ],
+  "nodes": [
+   {
+    "id": "caster",
+    "op": "LoadCaster"
+   },
+   {
+    "id": "off",
+    "op": "DeactivateContext",
+    "context": "interaction.context.tw.deployment"
+   },
+   {
+    "id": "on",
+    "op": "ActivateContext",
+    "context": "interaction.context.tw.rts"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   },
+   {
+    "id": "phase_const",
+    "op": "ConstInt",
+    "intValue": 3
+   },
+   {
+    "id": "write_phase",
+    "op": "WriteMapVarInt",
+    "var": "tw.phase"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "caster",
+    "fromPort": "next",
+    "to": "off"
+   },
+   {
+    "from": "off",
+    "fromPort": "next",
+    "to": "on"
+   },
+   {
+    "from": "on",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "phase_const"
+   },
+   {
+    "from": "phase_const",
+    "fromPort": "next",
+    "to": "write_phase"
+   },
+   {
+    "from": "write_phase",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   },
+   {
+    "from": "caster",
+    "fromPort": "value",
+    "to": "off",
+    "toPort": "source"
+   },
+   {
+    "from": "caster",
+    "fromPort": "value",
+    "to": "on",
+    "toPort": "source"
+   },
+   {
+    "from": "phase_const",
+    "fromPort": "value",
+    "to": "write_phase",
+    "toPort": "value"
+   }
+  ]
+ }
+]

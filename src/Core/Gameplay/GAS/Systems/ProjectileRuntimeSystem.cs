@@ -206,7 +206,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (completed)
             {
-                PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
+                // The completion publish applies to the stored cast target directly, so
+                // it must honor the same collision contract as travel hits: a target the
+                // relation filter rejects (or the excluded source) never takes the
+                // impact — the projectile fizzles at its landing point instead.
+                Entity completionTarget = World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null;
+                if (completionTarget != Entity.Null &&
+                    !IsValidCollisionTarget(entity, in projectile, completionTarget, TryGetTeamId(projectile.Source)))
+                {
+                    completionTarget = Entity.Null;
+                }
+
+                PublishEffect(projectile.ImpactEffectTemplateId, in projectile, completionTarget, position.Value);
                 QueueDestroy(entity);
             }
         }

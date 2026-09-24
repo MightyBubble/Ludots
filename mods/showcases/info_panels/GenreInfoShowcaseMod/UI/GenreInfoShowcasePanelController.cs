@@ -640,7 +640,7 @@ namespace GenreInfoShowcaseMod.UI
 
         private static SelectionViewMode ResolveSelectionViewMode(GameEngine engine)
         {
-            return string.Equals(ResolveActiveCollectionKey(engine), GenreInfoShowcaseIds.FormationCollectionKey, StringComparison.Ordinal)
+            return string.Equals(ResolveRosterKeyChannel(engine), GenreInfoShowcaseIds.FormationCollectionKey, StringComparison.Ordinal)
                 ? SelectionViewMode.Formation
                 : SelectionViewMode.Live;
         }
@@ -701,7 +701,7 @@ namespace GenreInfoShowcaseMod.UI
                 return false;
             }
 
-            string key = ResolveActiveCollectionKey(engine);
+            string key = ResolveRosterKeyChannel(engine);
             if (!store.TryGet(viewer, key, out handle) ||
                 !store.TryGetView(handle, out view))
             {
@@ -712,9 +712,9 @@ namespace GenreInfoShowcaseMod.UI
             return true;
         }
 
-        private static string ResolveActiveCollectionKey(GameEngine engine)
+        private static string ResolveRosterKeyChannel(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.ActiveCollectionKey, out object? keyObj) &&
+            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.RosterKeyChannel, out object? keyObj) &&
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key

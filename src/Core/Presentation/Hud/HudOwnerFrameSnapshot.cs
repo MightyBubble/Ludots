@@ -47,8 +47,11 @@ namespace Ludots.Core.Presentation.Hud
             Array.Resize(ref _currentByAttribute, index + 1);
             Array.Resize(ref _baseByAttribute, index + 1);
             _attributeIds[index] = attributeId;
-            _currentByAttribute[index] = new float[_count];
-            _baseByAttribute[index] = new float[_count];
+            // 列长对齐行容量而非当前行数：登记可能发生在 Rebuild 增行中途，
+            // 迟登记列必须容得下后续 AppendRow 的满行写入
+            int rowCapacity = Math.Max(_count, _ownerIds.Length);
+            _currentByAttribute[index] = new float[rowCapacity];
+            _baseByAttribute[index] = new float[rowCapacity];
         }
 
         public bool IsTracked(int attributeId) => ColumnOf(attributeId) >= 0;

@@ -2679,17 +2679,13 @@ namespace Ludots.Adapter.Raylib
 
             string selectedSummary = "commandSource=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out debugOwner, out debugCollections) &&
-                engine.World.IsAlive(debugOwner) &&
-                engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(debugOwner, out var debugContext) &&
-                debugContext.ActiveCollectionKeyId > 0)
+                engine.World.IsAlive(debugOwner))
             {
-                string activeKey = debugCollections.KeyRegistry.GetName(debugContext.ActiveCollectionKeyId);
-                if (!string.IsNullOrEmpty(activeKey) &&
-                    EntityCollectionContextRuntime.TryGetPrimary(
+                if (EntityCollectionContextRuntime.TryGetPrimary(
                         engine.World,
                         debugCollections,
                         debugOwner,
-                        activeKey,
+                        "collection.command.source",
                         out Entity commandSource) &&
                     commandSource != Entity.Null)
                 {

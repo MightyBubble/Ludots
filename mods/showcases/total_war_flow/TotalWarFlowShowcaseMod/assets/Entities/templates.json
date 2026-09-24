@@ -1,0 +1,134 @@
+[
+ {
+  "id": "tw_commander",
+  "components": {
+   "AttributeBuffer": {
+    "base": {
+     "Ballista.Health": 400,
+     "Ballista.Armor": 50,
+     "MoveSpeed": 300
+    }
+   },
+   "AbilityStateBuffer": {
+    "abilityIds": [
+     "Ability.Ballista.Shot",
+     "Ability.Ballista.SiegeBolt"
+    ]
+   },
+   "GameplayTagContainer": {
+    "tags": [
+     "Unit.Commandable"
+    ]
+   },
+   "OrderBuffer": {},
+   "BlackboardIntBuffer": {},
+   "BlackboardEntityBuffer": {},
+   "BlackboardSpatialBuffer": {},
+   "DirtyFlags": {},
+   "PlayerOwner": {
+    "PlayerId": 1
+   },
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "MassNavigationAgent": {
+    "profileId": "tw.agent"
+   },
+   "EntityLayer": {
+    "category": [
+     "massNavigation.agent"
+    ],
+    "mask": [
+     "massNavigation.agent"
+    ]
+   }
+  },
+  "initialInteractionContext": "interaction.context.tw.controls"
+ },
+ {
+  "id": "tw_marine",
+  "components": {
+   "AttributeBuffer": {
+    "base": {
+     "Ballista.Health": 400,
+     "Ballista.Armor": 50,
+     "MoveSpeed": 300
+    }
+   },
+   "AbilityStateBuffer": {
+    "abilityIds": [
+     "Ability.Ballista.Shot",
+     "Ability.Ballista.SiegeBolt"
+    ]
+   },
+   "GameplayTagContainer": {
+    "tags": [
+     "Unit.Commandable"
+    ]
+   },
+   "OrderBuffer": {},
+   "BlackboardIntBuffer": {},
+   "BlackboardEntityBuffer": {},
+   "BlackboardSpatialBuffer": {},
+   "DirtyFlags": {},
+   "PlayerOwner": {
+    "PlayerId": 1
+   },
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "MassNavigationAgent": {
+    "profileId": "tw.agent"
+   },
+   "EntityLayer": {
+    "category": [
+     "massNavigation.agent"
+    ],
+    "mask": [
+     "massNavigation.agent"
+    ]
+   }
+  }
+ },
+ {
+  "id": "tw_pond",
+  "components": {
+   "DirtyFlags": {},
+   "ManifestationObstacleIntent2D": {
+    "shape": "Polygon",
+    "sinkPhysicsCollider": false,
+    "sinkNavigationObstacle": true,
+    "navRadiusCm": 0,
+    "localOffsetXCm": 0,
+    "localOffsetYCm": 0
+   },
+   "ManifestationObstaclePolygon2D": {
+    "vertices": [
+     { "x": -2250, "y": 0 },
+     { "x": -2630, "y": 1520 },
+     { "x": -4150, "y": 2225 },
+     { "x": -5582, "y": 1432 },
+     { "x": -5975, "y": 0 },
+     { "x": -5423, "y": -1273 },
+     { "x": -4150, "y": -1975 },
+     { "x": -2630, "y": -1520 }
+    ]
+   }
+  }
+ },
+ {
+  "id": "tw_death_burst",
+  "onSpawnEffect": "Effect.Tw.DeathBurst.SelfDestruct",
+  "components": {
+   "AttributeBuffer": {
+    "base": {
+     "Ballista.Health": 100
+    }
+   },
+   "GameplayTagContainer": {
+    "tags": [
+     "Fx.DeathBurst"
+    ]
+   },
+   "DirtyFlags": {}
+  }
+ }
+]

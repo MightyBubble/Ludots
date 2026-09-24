@@ -89,11 +89,13 @@ namespace Ludots.Tests.GAS
         public void BoardConfigClone_CopiesTransportNetworkDeclaration()
         {
             BoardConfig board = NodeGraphBoard("default", "TransportNetwork/alt.json");
+            board.TerrainProjectAsRamp = true;
 
             BoardConfig clone = board.Clone();
 
             Assert.That(clone.TransportNetwork, Is.Not.SameAs(board.TransportNetwork));
             Assert.That(clone.TransportNetwork!.AssetPath, Is.EqualTo("TransportNetwork/alt.json"));
+            Assert.That(clone.TerrainProjectAsRamp, Is.True);
         }
 
         [Test]

@@ -1,0 +1,57 @@
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "massNavigationMove": {
+      "orderTypeId": "massNavigationMove",
+      "label": "Mass Navigation Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    }
+  },
+  "orderRules": {
+    "massNavigationMove": {
+      "orderTypeKey": "massNavigationMove",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "attackTarget"
+      ]
+    },
+    "castAbility": {
+      "orderTypeKey": "castAbility",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
+    },
+    "castAbility.Start": {
+      "orderTypeKey": "castAbility.Start",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
+    },
+    "attackTarget": {
+      "orderTypeKey": "attackTarget",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
+    }
+  }
+}

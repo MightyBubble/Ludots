@@ -1,0 +1,82 @@
+[
+  {
+    "id": "tw.startup",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "rep",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadPlacedEntity",
+        "instanceId": "tw-commander"
+      },
+      {
+        "id": "on",
+        "op": "ActivateContext",
+        "context": "interaction.context.tw.campaign"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "sel",
+        "op": "ActivateContext",
+        "context": "interaction.context.tw.selection"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "sel"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "sel",
+        "fromPort": "next",
+        "to": "on"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "sel",
+        "toPort": "source"
+      }
+    ]
+  }
+]

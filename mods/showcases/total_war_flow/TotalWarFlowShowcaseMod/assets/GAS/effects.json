@@ -1,0 +1,21 @@
+[
+ {
+  "id": "Effect.Tw.DeathBurst.SelfDestruct",
+  "presetType": "Buff",
+  "lifetime": "Infinite",
+  "participatesInResponse": false,
+  "duration": {
+   "durationTicks": 0,
+   "periodTicks": 60,
+   "clockId": "FixedFrame"
+  },
+  "phaseGraphs": {
+   "OnPeriod": {
+    "post": "tw.death.burst.drain"
+   }
+  },
+  "categories": [
+   "Effect.Tw.DeathBurst"
+  ]
+ }
+]

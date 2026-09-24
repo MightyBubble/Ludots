@@ -153,7 +153,7 @@ InstallDeclaredLocalOrderSources(engine);
         private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
         {
             bool found = TryResolveLocalCommandSourceOwner(engine, out owner);
-            collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(engine.World, engine.GlobalContext, owner);
+            collectionKey = InputInteractionContextAccessor.CommandActorCollectionKey;
             return found;
         }
 

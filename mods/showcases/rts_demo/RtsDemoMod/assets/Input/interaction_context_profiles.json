@@ -27,10 +27,6 @@
         {
           "trigger": "graph.rts.select_begin"
         }
-      ],
-      "activeCollectionKey": "collection.command.source",
-      "onActivated": [
-        "graph.rts.roster_sync"
       ]
     },
     {

@@ -69,7 +69,6 @@ namespace Ludots.Tests.GAS.Production
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
-        private const string ActiveCollectionKey = "ChampionSkillSandbox.Collection.ActiveKey";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
@@ -1724,11 +1723,7 @@ namespace Ludots.Tests.GAS.Production
                            engine.World.IsAlive(activeOwner)
                 ? activeOwner
                 : ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            string key = engine.GlobalContext.TryGetValue(ActiveCollectionKey, out object? keyObj) &&
-                         keyObj is string activeKey &&
-                         !string.IsNullOrWhiteSpace(activeKey)
-                ? activeKey
-                : "collection.command.source";
+            const string key = "collection.command.source";
 
             if (owner == Entity.Null ||
                 !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||

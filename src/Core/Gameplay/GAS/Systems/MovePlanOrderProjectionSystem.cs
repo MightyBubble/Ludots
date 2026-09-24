@@ -19,7 +19,16 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
         .WithNone<SuspendedTag>();
 
     private readonly int _moveOrderTypeId;
+    private readonly int _secondaryMoveOrderTypeId;
+
+    private bool IsMoveOrder(int orderTypeId) =>
+        orderTypeId == _moveOrderTypeId || orderTypeId == _secondaryMoveOrderTypeId;
     public MovePlanOrderProjectionSystem(World world, int moveOrderTypeId)
+        : this(world, moveOrderTypeId, secondaryMoveOrderTypeId: 0)
+    {
+    }
+
+    public MovePlanOrderProjectionSystem(World world, int moveOrderTypeId, int secondaryMoveOrderTypeId)
         : base(world)
     {
         if (moveOrderTypeId <= 0)
@@ -28,6 +37,7 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
         }
 
         _moveOrderTypeId = moveOrderTypeId;
+        _secondaryMoveOrderTypeId = secondaryMoveOrderTypeId;
     }
 
     public override void Update(in float dt)
@@ -43,7 +53,7 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                 ref OrderBuffer buffer = ref buffers[index];
                 ref MovePlanExecutionIntent intent = ref intents[index];
                 ref MovePlanExecutionResult result = ref results[index];
-                if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+                if (!buffer.HasActive || !IsMoveOrder(buffer.ActiveOrder.Order.OrderTypeId))
                 {
                     if (intent.Mode == MovePlanExecutionMode.CommandGroup)
                     {

@@ -1,0 +1,238 @@
+[
+ {
+  "id": "tw.fixture.commander",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      1.15,
+      1.15,
+      1.15
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.83,
+      0.3,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
+  ]
+ },
+ {
+  "id": "tw.fixture.marine",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.85,
+      0.85,
+      0.85
+     ]
+    },
+    "style": {
+     "color": [
+      0.3,
+      0.8,
+      0.45,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
+  ]
+ },
+ {
+  "id": "tw.fixture.commander_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "tw_commander"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "tw.fixture.commander",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "tw_commander"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "tw.fixture.marine_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "tw_marine"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "tw.fixture.marine",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "tw_marine"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "tw.fx.death_explosion",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "VFX",
+     "assetId": "tw.death_explosion.effect",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.2,
+      2.2,
+      2.2
+     ]
+    }
+   }
+  ],
+  "anchor": {
+   "offset": [
+    0,
+    0.6,
+    0
+   ]
+  },
+  "lifecycle": {
+   "durationSeconds": 0.9
+  }
+ },
+ {
+  "id": "tw.fx.death_smoke",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "VFX",
+     "assetId": "tw.death_smoke.effect",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.0,
+      2.0,
+      2.0
+     ]
+    }
+   }
+  ],
+  "anchor": {
+   "offset": [
+    0,
+    0.6,
+    0
+   ]
+  },
+  "lifecycle": {
+   "durationSeconds": 1.4
+  }
+ },
+ {
+  "id": "tw.fixture.death_fx_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "tw_death_burst"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "tw.fx.death_explosion",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ }
+]

@@ -1,0 +1,217 @@
+[
+ {
+  "id": "tw.panel.setup",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_map_loaded",
+    "event": "MapLoaded",
+    "start": "rep",
+    "once": true
+   }
+  ],
+  "nodes": [
+   {
+    "id": "rep",
+    "op": "LoadPlacedEntity",
+    "instanceId": "tw-commander"
+   },
+   {
+    "id": "phase_one",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "write_phase",
+    "op": "WriteMapVarInt",
+    "var": "tw.phase"
+   },
+   {
+    "id": "zero",
+    "op": "ConstInt",
+    "intValue": 0
+   },
+   {
+    "id": "write_kills",
+    "op": "WriteMapVarInt",
+    "var": "tw.kills"
+   },
+   {
+    "id": "panel",
+    "op": "CreatePanel",
+    "panelType": "panel.tw.hud",
+    "panelAnchor": "screen.topLeft"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "rep",
+    "fromPort": "next",
+    "to": "phase_one"
+   },
+   {
+    "from": "phase_one",
+    "fromPort": "next",
+    "to": "write_phase"
+   },
+   {
+    "from": "write_phase",
+    "fromPort": "next",
+    "to": "zero"
+   },
+   {
+    "from": "zero",
+    "fromPort": "next",
+    "to": "write_kills"
+   },
+   {
+    "from": "write_kills",
+    "fromPort": "next",
+    "to": "panel"
+   },
+   {
+    "from": "panel",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "rep",
+    "fromPort": "value",
+    "to": "panel",
+    "toPort": "source"
+   },
+   {
+    "from": "phase_one",
+    "fromPort": "value",
+    "to": "write_phase",
+    "toPort": "value"
+   },
+   {
+    "from": "zero",
+    "fromPort": "value",
+    "to": "write_kills",
+    "toPort": "value"
+   },
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   }
+  ]
+ },
+ {
+  "id": "tw.kills",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_entity_died",
+    "event": "EntityDied",
+    "start": "read_kills",
+    "refire": "restart",
+    "filters": {
+     "team": 2
+    }
+   }
+  ],
+  "nodes": [
+   {
+    "id": "read_kills",
+    "op": "ReadMapVarInt",
+    "var": "tw.kills"
+   },
+   {
+    "id": "one",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "add",
+    "op": "AddInt"
+   },
+   {
+    "id": "write_kills",
+    "op": "WriteMapVarInt",
+    "var": "tw.kills"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "read_kills",
+    "fromPort": "next",
+    "to": "one"
+   },
+   {
+    "from": "one",
+    "fromPort": "next",
+    "to": "add"
+   },
+   {
+    "from": "add",
+    "fromPort": "next",
+    "to": "write_kills"
+   },
+   {
+    "from": "write_kills",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "read_kills",
+    "fromPort": "value",
+    "to": "add",
+    "toPort": "a"
+   },
+   {
+    "from": "one",
+    "fromPort": "value",
+    "to": "add",
+    "toPort": "b"
+   },
+   {
+    "from": "add",
+    "fromPort": "value",
+    "to": "write_kills",
+    "toPort": "value"
+   },
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   }
+  ]
+ }
+]

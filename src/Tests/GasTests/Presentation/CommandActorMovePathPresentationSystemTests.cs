@@ -235,7 +235,6 @@ namespace Ludots.Tests.GAS
                 var collections = new EntityCollectionStore(collectionKeys);
                 Entity viewer = world.Create(new Ludots.Core.Input.Interaction.InteractionContextInstance
                 {
-                    ActiveCollectionKeyId = collectionKeys.Register("selected"),
                 });
 
                 var events = new PresentationEventStream(512);

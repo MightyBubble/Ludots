@@ -4,5 +4,6 @@
   "description": "Slice-3 acceptance fixture: one right-click Command, route graph resolves hit-target kind via lookup table, submits cast or move intent per route.",
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
-  }
+  },
+  "priority": 1000
 }

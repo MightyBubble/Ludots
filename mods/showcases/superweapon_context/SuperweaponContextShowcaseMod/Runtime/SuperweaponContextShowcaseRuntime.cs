@@ -334,11 +334,15 @@ namespace SuperweaponContextShowcaseMod.Runtime
         {
             var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
                 ?? throw new InvalidOperationException("Superweapon context showcase requires CollectionApplier.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                as Ludots.Core.EntityCollections.EntityCollectionStore
+                ?? throw new InvalidOperationException("Superweapon context showcase requires the collection store.");
+            int routedKeyId = collections.KeyRegistry.Register("collection.ui.command.hover");
 
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;
             targets[1] = State.Vanguard;
-            writer.CommitCast(State.SolePossessedRep, targets, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(State.SolePossessedRep, routedKeyId, targets, EntityCollectionSourceKind.UiAcquisition);
             State.RoutedTargetCount = targets.Length;
         }
 

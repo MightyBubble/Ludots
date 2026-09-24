@@ -180,7 +180,7 @@ namespace Ludots.Tests.GAS
             Assert.That(members[..count].ToArray(), Is.EqualTo(new[] { m99b }), "Every controller's view reads the shared domain command state, not a private snapshot.");
 
             // Orthogonal exit for private parallel selection: a per-controller context frame yields a
-            // different activeCollectionKey, so the writes land on a different (domain, key) row.
+            // different collection key, so the writes land on a different (domain, key) row.
             int privateKeyId = harness.Store.KeyRegistry.Register("collection.ctx.p1_frame.command.source");
             harness.Writer.ReplaceRouted(
                 p1Rep,

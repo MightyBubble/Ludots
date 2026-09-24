@@ -1115,7 +1115,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// Pushes one command intent into the submission buffer; routing happens when the
         /// order kernel drains the buffer in its own system-group phase (constitution §12).
         /// </summary>
-        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm)
+        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1123,7 +1123,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 rep,
                 hasTarget ? target : Entity.Null,
                 hasTarget,
-                groundCm));
+                groundCm), members);
         }
 
         /// <summary>
@@ -1137,7 +1137,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             bool hasTarget,
             bool hasGround,
             in Ludots.Platform.Abstractions.IntVector2 groundCm,
-            int orderTypeKeyId)
+            int orderTypeKeyId,
+            System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1148,14 +1149,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 hasTarget,
                 hasGround,
                 groundCm,
-                orderTypeKeyId));
+                orderTypeKeyId), members);
         }
 
         /// <summary>
         /// Pushes one engage intent into the submission buffer; the drain runs the profile's
         /// EQS query around the target and lands per-actor move-then-cast (constitution §12).
         /// </summary>
-        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1164,7 +1165,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 slot,
                 target,
                 profileKeyId,
-                orderTypeKeyId));
+                orderTypeKeyId), members);
         }
 
         /// <summary>
