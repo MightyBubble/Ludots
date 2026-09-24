@@ -1,0 +1,1193 @@
+[
+  {
+    "id": "primitive_ring",
+    "mapId": "raylib_micro_primitive_ring",
+    "rootDefinitionId": "raylib_micro_primitive_ring_root",
+    "title": "圆环图元",
+    "group": "primitive",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "只看圆环：外边界、内边界、刻度和脉冲范围。",
+    "binding": "performer_raylib_micro_primitive_ring",
+    "preset": "performer_raylib_micro_primitive_ring_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_ring",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_ring/primitive_ring.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_ring/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_line",
+    "mapId": "raylib_micro_primitive_line",
+    "rootDefinitionId": "raylib_micro_primitive_line_root",
+    "title": "线段图元",
+    "group": "primitive",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "只看线段：起点、终点、宽度、核心和命中端点。",
+    "binding": "performer_raylib_micro_primitive_line",
+    "preset": "performer_raylib_micro_primitive_line_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_line",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_line/primitive_line.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_line/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_sprite_emitter",
+    "mapId": "raylib_micro_primitive_sprite_emitter",
+    "rootDefinitionId": "raylib_micro_primitive_sprite_emitter_root",
+    "title": "面片粒子发射器",
+    "group": "primitive",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "只看面片粒子的发射、闪光、缩放和消散。",
+    "binding": "performer_raylib_micro_primitive_sprite_emitter",
+    "preset": "performer_raylib_micro_primitive_sprite_emitter_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_sprite_emitter",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_sprite_emitter/primitive_sprite_emitter.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_sprite_emitter/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_ribbon_emitter",
+    "mapId": "raylib_micro_primitive_ribbon_emitter",
+    "rootDefinitionId": "raylib_micro_primitive_ribbon_emitter_root",
+    "title": "带状发射器",
+    "group": "primitive",
+    "themeId": "ludots.theme.frost",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "寒霜",
+    "intent": "只看柔性带随运动连续成形的方向、宽度和残影。",
+    "binding": "performer_raylib_micro_primitive_ribbon_emitter",
+    "preset": "performer_raylib_micro_primitive_ribbon_emitter_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_ribbon_emitter",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_ribbon_emitter/primitive_ribbon_emitter.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_ribbon_emitter/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_track_emitter",
+    "mapId": "raylib_micro_primitive_track_emitter",
+    "rootDefinitionId": "raylib_micro_primitive_track_emitter_root",
+    "title": "轨迹发射器",
+    "group": "primitive",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "只看有宽度、有头尾变化的连续轨迹。",
+    "binding": "performer_raylib_micro_primitive_track_emitter",
+    "preset": "performer_raylib_micro_primitive_track_emitter_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_track_emitter",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_track_emitter/primitive_track_emitter.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_track_emitter/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_ring_emitter",
+    "mapId": "raylib_micro_primitive_ring_emitter",
+    "rootDefinitionId": "raylib_micro_primitive_ring_emitter_root",
+    "title": "环形发射器",
+    "group": "primitive",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "只看粒子构成的扩张环，和稳定的原生圆环区分。",
+    "binding": "performer_raylib_micro_primitive_ring_emitter",
+    "preset": "performer_raylib_micro_primitive_ring_emitter_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_ring_emitter",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_ring_emitter/primitive_ring_emitter.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_ring_emitter/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "primitive_model_emitter",
+    "mapId": "raylib_micro_primitive_model_emitter",
+    "rootDefinitionId": "raylib_micro_primitive_model_emitter_root",
+    "title": "模型粒子发射器",
+    "group": "primitive",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "只看模型碎片的发射、旋转、上升和回收。",
+    "binding": "performer_raylib_micro_primitive_model_emitter",
+    "preset": "performer_raylib_micro_primitive_model_emitter_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/primitive_model_emitter",
+    "recording": "artifacts/raylib-performer-micro-showcases/primitive_model_emitter/primitive_model_emitter.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/primitive_model_emitter/poster.png",
+    "signatureEmitterId": null,
+    "semanticPresetId": null,
+    "semanticPresetVersion": null,
+    "parameters": null
+  },
+  {
+    "id": "semantic_explosion",
+    "mapId": "raylib_micro_semantic_explosion",
+    "rootDefinitionId": "raylib_micro_semantic_explosion_root",
+    "title": "爆炸命中",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "目标点被击中：中心亮、外圈扩散、碎火上扬。",
+    "binding": "performer_raylib_micro_semantic_explosion",
+    "preset": "performer_raylib_micro_semantic_explosion_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_explosion",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_explosion/semantic_explosion.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_explosion/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.explosion.signature",
+    "semanticPresetId": "ludots.semantic.explosion",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_laser",
+    "mapId": "raylib_micro_semantic_laser",
+    "rootDefinitionId": "raylib_micro_semantic_laser_root",
+    "title": "激光命中",
+    "group": "semantic",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "施法者到目标的持续直线命中，谁发射、打到谁都要清楚。",
+    "binding": "performer_raylib_micro_semantic_laser",
+    "preset": "performer_raylib_micro_semantic_laser_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_laser",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_laser/semantic_laser.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_laser/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.laser.signature",
+    "semanticPresetId": "ludots.semantic.laser",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        -1.7,
+        0.56,
+        0
+      ],
+      "target": [
+        1.7,
+        0.55,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_lightning",
+    "mapId": "raylib_micro_semantic_lightning",
+    "rootDefinitionId": "raylib_micro_semantic_lightning_root",
+    "title": "闪电链路",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "两个目标之间跳跃链路，折线路径和击中点要有电感。",
+    "binding": "performer_raylib_micro_semantic_lightning",
+    "preset": "performer_raylib_micro_semantic_lightning_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_lightning",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_lightning/semantic_lightning.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_lightning/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.lightning.signature",
+    "semanticPresetId": "ludots.semantic.lightning",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_projectile_trail",
+    "mapId": "raylib_micro_semantic_projectile_trail",
+    "rootDefinitionId": "raylib_micro_semantic_projectile_root",
+    "title": "投射物轨迹",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "发光弹头指向前方，后方连续残影清楚标出路径方向。",
+    "binding": "performer_raylib_micro_semantic_projectile_trail",
+    "preset": "performer_raylib_micro_semantic_projectile_trail_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_projectile_trail",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_projectile_trail/semantic_projectile_trail.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_projectile_trail/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.projectile_trail.signature",
+    "semanticPresetId": "ludots.semantic.projectile-trail",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_slash",
+    "mapId": "raylib_micro_semantic_slash",
+    "rootDefinitionId": "raylib_micro_semantic_slash_root",
+    "title": "近战斩击",
+    "group": "semantic",
+    "themeId": "ludots.theme.frost",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "寒霜",
+    "intent": "角色前方的宽亮斩痕短促交替闪现，方向和打击面一眼能看懂。",
+    "binding": "performer_raylib_micro_semantic_slash",
+    "preset": "performer_raylib_micro_semantic_slash_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_slash",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_slash/semantic_slash.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_slash/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.slash.signature",
+    "semanticPresetId": "ludots.semantic.slash",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_shield",
+    "mapId": "raylib_micro_semantic_shield",
+    "rootDefinitionId": "raylib_micro_semantic_shield_root",
+    "title": "护盾展开",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "角色周围出现保护壳，边界和被保护主体都必须明确。",
+    "binding": "performer_raylib_micro_semantic_shield",
+    "preset": "performer_raylib_micro_semantic_shield_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_shield",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_shield/semantic_shield.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_shield/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.shield.signature",
+    "semanticPresetId": "ludots.semantic.shield",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_heal",
+    "mapId": "raylib_micro_semantic_heal",
+    "rootDefinitionId": "raylib_micro_semantic_heal_root",
+    "title": "治疗脉冲",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "友方获得治疗：地面医疗十字、上升粒子和柔光共同表达恢复。",
+    "binding": "performer_raylib_micro_semantic_heal",
+    "preset": "performer_raylib_micro_semantic_heal_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_heal",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_heal/semantic_heal.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_heal/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.heal.signature",
+    "semanticPresetId": "ludots.semantic.heal",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_burn",
+    "mapId": "raylib_micro_semantic_burn",
+    "rootDefinitionId": "raylib_micro_semantic_burn_root",
+    "title": "灼烧地面",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "橙红危险边界中有多束向上火舌，明确表达持续燃烧。",
+    "binding": "performer_raylib_micro_semantic_burn",
+    "preset": "performer_raylib_micro_semantic_burn_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_burn",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_burn/semantic_burn.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_burn/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.burn.signature",
+    "semanticPresetId": "ludots.semantic.burn",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_poison",
+    "mapId": "raylib_micro_semantic_poison",
+    "rootDefinitionId": "raylib_micro_semantic_poison_root",
+    "title": "毒雾地面",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "低空毒云分成多个漂浮团簇并冒出气泡，不能和治疗绿色混淆。",
+    "binding": "performer_raylib_micro_semantic_poison",
+    "preset": "performer_raylib_micro_semantic_poison_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_poison",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_poison/semantic_poison.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_poison/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.poison.signature",
+    "semanticPresetId": "ludots.semantic.poison",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_frost",
+    "mapId": "raylib_micro_semantic_frost",
+    "rootDefinitionId": "raylib_micro_semantic_frost_root",
+    "title": "冰冻地面",
+    "group": "semantic",
+    "themeId": "ludots.theme.frost",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "寒霜",
+    "intent": "低温范围以放射裂纹和硬质冰刺表达冻结。",
+    "binding": "performer_raylib_micro_semantic_frost",
+    "preset": "performer_raylib_micro_semantic_frost_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_frost",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_frost/semantic_frost.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_frost/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.frost.signature",
+    "semanticPresetId": "ludots.semantic.frost",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_portal",
+    "mapId": "raylib_micro_semantic_portal",
+    "rootDefinitionId": "raylib_micro_semantic_portal_root",
+    "title": "传送门",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "竖直入口和环绕粒子要让玩家知道这是可穿越的门。",
+    "binding": "performer_raylib_micro_semantic_portal",
+    "preset": "performer_raylib_micro_semantic_portal_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_portal",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_portal/semantic_portal.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_portal/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.portal.signature",
+    "semanticPresetId": "ludots.semantic.portal",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_target_lock",
+    "mapId": "raylib_micro_semantic_target_lock",
+    "rootDefinitionId": "raylib_micro_semantic_target_lock_root",
+    "title": "目标锁定",
+    "group": "semantic",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "单个目标被选中或锁定，十字与边界集中在同一目标上。",
+    "binding": "performer_raylib_micro_semantic_target_lock",
+    "preset": "performer_raylib_micro_semantic_target_lock_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_target_lock",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_target_lock/semantic_target_lock.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_target_lock/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.target_lock.signature",
+    "semanticPresetId": "ludots.semantic.target-lock",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_selection",
+    "mapId": "raylib_micro_semantic_selection",
+    "rootDefinitionId": "raylib_micro_semantic_selection_root",
+    "title": "对象选中",
+    "group": "semantic",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "稳定标出当前选中对象，不把普通选中误读成攻击锁定。",
+    "binding": "performer_raylib_micro_semantic_selection",
+    "preset": "performer_raylib_micro_semantic_selection_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_selection",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_selection/semantic_selection.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_selection/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.selection.signature",
+    "semanticPresetId": "ludots.semantic.selection",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_cast_radius",
+    "mapId": "raylib_micro_semantic_cast_radius",
+    "rootDefinitionId": "raylib_micro_semantic_cast_radius_root",
+    "title": "圆形施法范围",
+    "group": "semantic",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "施法前预览圆形半径，只表达一个范围判断。",
+    "binding": "performer_raylib_micro_semantic_cast_radius",
+    "preset": "performer_raylib_micro_semantic_cast_radius_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_cast_radius",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_cast_radius/semantic_cast_radius.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_cast_radius/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.cast_radius.signature",
+    "semanticPresetId": "ludots.semantic.cast-radius",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_warning_circle",
+    "mapId": "raylib_micro_semantic_warning_circle",
+    "rootDefinitionId": "raylib_micro_semantic_warning_circle_root",
+    "title": "圆形危险预警",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "危险区域和即将爆发的中心同时清楚，不与可施法范围混淆。",
+    "binding": "performer_raylib_micro_semantic_warning_circle",
+    "preset": "performer_raylib_micro_semantic_warning_circle_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_warning_circle",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_warning_circle/semantic_warning_circle.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_warning_circle/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.warning_circle.signature",
+    "semanticPresetId": "ludots.semantic.warning-circle",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_warning_cone",
+    "mapId": "raylib_micro_semantic_warning_cone",
+    "rootDefinitionId": "raylib_micro_semantic_warning_cone_root",
+    "title": "锥形危险预警",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "危险方向、张角和最远距离一眼可见。",
+    "binding": "performer_raylib_micro_semantic_warning_cone",
+    "preset": "performer_raylib_micro_semantic_warning_cone_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_warning_cone",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_warning_cone/semantic_warning_cone.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_warning_cone/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.warning_cone.signature",
+    "semanticPresetId": "ludots.semantic.warning-cone",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_warning_line",
+    "mapId": "raylib_micro_semantic_warning_line",
+    "rootDefinitionId": "raylib_micro_semantic_warning_line_root",
+    "title": "直线危险预警",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "起点、方向、宽度和终点组成一条明确的危险走廊。",
+    "binding": "performer_raylib_micro_semantic_warning_line",
+    "preset": "performer_raylib_micro_semantic_warning_line_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_warning_line",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_warning_line/semantic_warning_line.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_warning_line/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.warning_line.signature",
+    "semanticPresetId": "ludots.semantic.warning-line",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_placement",
+    "mapId": "raylib_micro_semantic_placement",
+    "rootDefinitionId": "raylib_micro_semantic_placement_root",
+    "title": "放置预览",
+    "group": "semantic",
+    "themeId": "ludots.theme.tech",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "科技",
+    "intent": "建筑或道具落点预览，中心占位和可放置边界要清楚。",
+    "binding": "performer_raylib_micro_semantic_placement",
+    "preset": "performer_raylib_micro_semantic_placement_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_placement",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_placement/semantic_placement.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_placement/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.placement.signature",
+    "semanticPresetId": "ludots.semantic.placement",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_dash_path",
+    "mapId": "raylib_micro_semantic_dash_path",
+    "rootDefinitionId": "raylib_micro_semantic_dash_path_root",
+    "title": "冲刺路径与落点",
+    "group": "semantic",
+    "themeId": "ludots.theme.frost",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "寒霜",
+    "intent": "从当前位置冲到落点，起点、路径、终点不能混在一起。",
+    "binding": "performer_raylib_micro_semantic_dash_path",
+    "preset": "performer_raylib_micro_semantic_dash_path_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_dash_path",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_dash_path/semantic_dash_path.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_dash_path/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.dash_path.signature",
+    "semanticPresetId": "ludots.semantic.dash-path",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_tether",
+    "mapId": "raylib_micro_semantic_tether",
+    "rootDefinitionId": "raylib_micro_semantic_tether_root",
+    "title": "牵引链接",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "两个角色被持续连接，链路要可见但不能像攻击激光。",
+    "binding": "performer_raylib_micro_semantic_tether",
+    "preset": "performer_raylib_micro_semantic_tether_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_tether",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_tether/semantic_tether.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_tether/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.tether.signature",
+    "semanticPresetId": "ludots.semantic.tether",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_summon",
+    "mapId": "raylib_micro_semantic_summon",
+    "rootDefinitionId": "raylib_micro_semantic_summon_root",
+    "title": "召唤法阵",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "六芒阵围住中心成形轮廓，明确表达单位正在被召唤。",
+    "binding": "performer_raylib_micro_semantic_summon",
+    "preset": "performer_raylib_micro_semantic_summon_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_summon",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_summon/semantic_summon.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_summon/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.summon.signature",
+    "semanticPresetId": "ludots.semantic.summon",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_buff",
+    "mapId": "raylib_micro_semantic_buff",
+    "rootDefinitionId": "raylib_micro_semantic_buff_root",
+    "title": "增益状态",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "角色旁连续亮起双层前进箭头，明确表达能力提升。",
+    "binding": "performer_raylib_micro_semantic_buff",
+    "preset": "performer_raylib_micro_semantic_buff_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_buff",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_buff/semantic_buff.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_buff/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.buff.signature",
+    "semanticPresetId": "ludots.semantic.buff",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_debuff_warning",
+    "mapId": "raylib_micro_semantic_debuff_warning",
+    "rootDefinitionId": "raylib_micro_semantic_debuff_warning_root",
+    "title": "减益警示",
+    "group": "semantic",
+    "themeId": "ludots.theme.lava",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "熔岩",
+    "intent": "角色脚下出现红色叉号和警示环，明确表达负面状态。",
+    "binding": "performer_raylib_micro_semantic_debuff_warning",
+    "preset": "performer_raylib_micro_semantic_debuff_warning_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_debuff_warning",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_debuff_warning/semantic_debuff_warning.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_debuff_warning/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.debuff_warning.signature",
+    "semanticPresetId": "ludots.semantic.debuff-warning",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_stun",
+    "mapId": "raylib_micro_semantic_stun",
+    "rootDefinitionId": "raylib_micro_semantic_stun_root",
+    "title": "眩晕状态",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "目标头顶一圈亮点依次追逐，明确表示暂时无法行动。",
+    "binding": "performer_raylib_micro_semantic_stun",
+    "preset": "performer_raylib_micro_semantic_stun_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_stun",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_stun/semantic_stun.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_stun/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.stun.signature",
+    "semanticPresetId": "ludots.semantic.stun",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_silence",
+    "mapId": "raylib_micro_semantic_silence",
+    "rootDefinitionId": "raylib_micro_semantic_silence_root",
+    "title": "沉默状态",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "封闭符号覆盖施法位置，表示技能被禁用但角色仍可行动。",
+    "binding": "performer_raylib_micro_semantic_silence",
+    "preset": "performer_raylib_micro_semantic_silence_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_silence",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_silence/semantic_silence.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_silence/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.silence.signature",
+    "semanticPresetId": "ludots.semantic.silence",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_root",
+    "mapId": "raylib_micro_semantic_root",
+    "rootDefinitionId": "raylib_micro_semantic_root_root",
+    "title": "定身束缚",
+    "group": "semantic",
+    "themeId": "ludots.theme.frost",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "寒霜",
+    "intent": "束缚从脚下向外锁住目标，和头顶眩晕明确区分。",
+    "binding": "performer_raylib_micro_semantic_root",
+    "preset": "performer_raylib_micro_semantic_root_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_root",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_root/semantic_root.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_root/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.root.signature",
+    "semanticPresetId": "ludots.semantic.root",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_stealth_reveal",
+    "mapId": "raylib_micro_semantic_stealth_reveal",
+    "rootDefinitionId": "raylib_micro_semantic_stealth_reveal_root",
+    "title": "潜行显形",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "从低透明轮廓过渡到明亮实体，让暴露时刻无需文字也能读懂。",
+    "binding": "performer_raylib_micro_semantic_stealth_reveal",
+    "preset": "performer_raylib_micro_semantic_stealth_reveal_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_stealth_reveal",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_stealth_reveal/semantic_stealth_reveal.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_stealth_reveal/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.stealth_reveal.signature",
+    "semanticPresetId": "ludots.semantic.stealth-reveal",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_channeling",
+    "mapId": "raylib_micro_semantic_channeling",
+    "rootDefinitionId": "raylib_micro_semantic_channeling_root",
+    "title": "持续引导",
+    "group": "semantic",
+    "themeId": "ludots.theme.dark",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "黑暗",
+    "intent": "施法者正在读条连接目标，线束和环绕波动要持续可见。",
+    "binding": "performer_raylib_micro_semantic_channeling",
+    "preset": "performer_raylib_micro_semantic_channeling_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_channeling",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_channeling/semantic_channeling.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_channeling/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.channeling.signature",
+    "semanticPresetId": "ludots.semantic.channeling",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  },
+  {
+    "id": "semantic_interact_pickup",
+    "mapId": "raylib_micro_semantic_interact_pickup",
+    "rootDefinitionId": "raylib_micro_semantic_pickup_root",
+    "title": "拾取提示",
+    "group": "semantic",
+    "themeId": "ludots.theme.holy",
+    "themeVersion": 1,
+    "meshMaterialToken": "default_surface",
+    "themeLabel": "圣光",
+    "intent": "地面物品可拾取，提示环和物品本体都要看得见。",
+    "binding": "performer_raylib_micro_semantic_interact_pickup",
+    "preset": "performer_raylib_micro_semantic_interact_pickup_raylib",
+    "artifactDir": "artifacts/raylib-performer-micro-showcases/semantic_interact_pickup",
+    "recording": "artifacts/raylib-performer-micro-showcases/semantic_interact_pickup/semantic_interact_pickup.mp4",
+    "poster": "artifacts/raylib-performer-micro-showcases/semantic_interact_pickup/poster.png",
+    "signatureEmitterId": "raylib.emitter.semantic.interact_pickup.signature",
+    "semanticPresetId": "ludots.semantic.interact-pickup",
+    "semanticPresetVersion": 1,
+    "parameters": {
+      "source": [
+        0,
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 1,
+      "size": 1,
+      "width": 1,
+      "tempo": 1
+    }
+  }
+]

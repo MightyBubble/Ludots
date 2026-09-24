@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroPrimitiveSpriteEmitterEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 面片粒子发射器.",
+  "main": "bin/net8.0/PerformerRaylibMicroPrimitiveSpriteEmitterEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "primitive",
+    "ludots.theme.lava"
+  ]
+}

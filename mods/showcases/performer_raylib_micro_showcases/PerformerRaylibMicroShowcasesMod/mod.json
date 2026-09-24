@@ -1,0 +1,17 @@
+{
+  "name": "PerformerRaylibMicroShowcasesMod",
+  "version": "1.0.0",
+  "description": "Focused Raylib performer micro-showcases: one concrete primitive or one player-facing feedback semantic per map.",
+  "main": "bin/net8.0/PerformerRaylibMicroShowcasesMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro"
+  ]
+}

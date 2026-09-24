@@ -50,8 +50,12 @@ namespace Ludots.Adapter.Raylib
             {
                 throw new InvalidOperationException("Raylib host requires PresentationMaterialRegistry before host asset binding.");
             }
+            if (!engine.TryGetService(CoreServiceKeys.PresentationEmitterAssetRegistry, out EmitterAssetRegistry emitterAssets))
+            {
+                throw new InvalidOperationException("Raylib host requires PresentationEmitterAssetRegistry before host asset binding.");
+            }
 
-            new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets, materialAssets)
+            new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets, materialAssets, emitterAssets)
                 .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
 
             // Upgrade backend with file logging if configured

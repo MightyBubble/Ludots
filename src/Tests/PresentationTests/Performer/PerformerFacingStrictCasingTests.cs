@@ -67,12 +67,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(definitions.GetId("selectionMarker"), Is.EqualTo(definitionId));
             Assert.That(definitions.GetId("SelectionMarker"), Is.EqualTo(0));
 
-            var behaviors = new PresentationBehaviorRegistry();
-            int behaviorId = behaviors.Register("worldTextBehavior", default);
-
-            Assert.That(behaviors.GetId("worldTextBehavior"), Is.EqualTo(behaviorId));
-            Assert.That(behaviors.GetId("WorldTextBehavior"), Is.EqualTo(0));
-
             var materials = new PresentationMaterialRegistry();
             int defaultMaterialId = materials.GetId(PresentationMaterialRegistry.DefaultSurfaceKey);
             int workerMaterialId = materials.Register(

@@ -67,8 +67,14 @@ namespace Ludots.Core.Presentation.Systems
                 case AssetKind.Mesh:
                 case AssetKind.SkinnedMesh:
                 case AssetKind.Decal:
-                case AssetKind.VFX:
                 case AssetKind.Surface:
+                case AssetKind.Ring:
+                case AssetKind.Line:
+                case AssetKind.SpriteEmitter:
+                case AssetKind.RibbonEmitter:
+                case AssetKind.ModelEmitter:
+                case AssetKind.TrackEmitter:
+                case AssetKind.RingEmitter:
                     EmitVisualAsset(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
@@ -132,6 +138,12 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                if (!asset.AssetKind.IsVisualProxyKind())
+                {
+                    throw new InvalidOperationException(
+                        $"Static stable visual direct emit does not support assetKind '{asset.AssetKind}'.");
+                }
+
                 if (lod != LODLevel.Culled &&
                     (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset)))
                 {
@@ -147,15 +159,24 @@ namespace Ludots.Core.Presentation.Systems
                 Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
                 Vector3 assetPosition = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset);
                 Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), ResolveAlpha(in state, in definition));
+                Vector3 targetPosition = ResolveTargetPosition(
+                    entity,
+                    in asset,
+                    in position,
+                    in performerWorldRotation,
+                    in performerWorldScale,
+                    out bool hasTarget);
                 int stableId = GetOrAllocateVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId);
                 PresentationVisualProxy proxy = new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Performer,
-                    MeshAssetId = ResolveAssetId(entity, in asset),
+                    AssetId = ResolveAssetId(entity, in asset),
                     Position = assetPosition,
                     Rotation = rotation,
                     Scale = scale,
                     Color = color,
+                    TargetPosition = targetPosition,
+                    HasTarget = hasTarget,
                     StableId = stableId,
                     MaterialId = ResolveMaterialId(entity, in asset),
                     TemplateId = state.DefId,
@@ -315,6 +336,12 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             float alpha)
         {
+            if (!asset.AssetKind.IsVisualProxyKind())
+            {
+                throw new InvalidOperationException(
+                    $"Visual asset emission does not support assetKind '{asset.AssetKind}'.");
+            }
+
             _requests.Add(PresentationRequest.FromVisualProxy(
                 state.OwnerEntity,
                 BuildVisualProxy(
@@ -343,7 +370,7 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             float alpha)
         {
-            if (asset.AssetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface))
+            if (!asset.AssetKind.IsVisualProxyKind())
             {
                 return;
             }
@@ -721,6 +748,31 @@ namespace Ludots.Core.Presentation.Systems
                 : defaultColor;
         }
 
+        private Vector3 ResolveTargetPosition(
+            Entity entity,
+            in AssetBindingConfig asset,
+            in Vector3 performerWorldPosition,
+            in Quaternion performerWorldRotation,
+            in Vector3 performerWorldScale,
+            out bool hasTarget)
+        {
+            if (asset.TargetParamKey < 0)
+            {
+                hasTarget = false;
+                return default;
+            }
+
+            Vector4 target = RequireVectorParam(entity, asset.TargetParamKey, "AssetBinding.targetParamKey");
+            hasTarget = true;
+            Vector3 targetPosition = new(target.X, target.Y, target.Z);
+            return AssetTargetSpaceResolver.Resolve(
+                asset.TargetSpace,
+                in targetPosition,
+                in performerWorldPosition,
+                in performerWorldRotation,
+                in performerWorldScale);
+        }
+
         private float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
         {
             return RequireFloatParam(entity, paramKey, context);
@@ -844,14 +896,23 @@ namespace Ludots.Core.Presentation.Systems
             VisualVisibility visibility)
         {
             VisualRenderPath renderPath = ResolveRenderPath(in asset);
+            Vector3 targetPosition = ResolveTargetPosition(
+                entity,
+                in asset,
+                in position,
+                in performerWorldRotation,
+                in performerWorldScale,
+                out bool hasTarget);
             return new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(entity, in asset),
+                AssetId = ResolveAssetId(entity, in asset),
                 Position = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset),
                 Rotation = ResolveRotation(in asset, performerWorldRotation),
                 Scale = ResolveScale(entity, in asset, performerWorldScale),
                 Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
+                TargetPosition = targetPosition,
+                HasTarget = hasTarget,
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
                 MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
@@ -872,7 +933,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+            return slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots && (mask & (1u << slotIndex)) != 0;
         }
 
         private static GroundOverlayShape ResolveGroundOverlayShape(int assetId)

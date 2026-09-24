@@ -7,17 +7,16 @@ namespace Ludots.Core.Presentation.Rendering
     {
         None = 0,
         Decal = 1 << 0,
-        Vfx = 1 << 1,
-        Surface = 1 << 2,
-        MaterialOverride = 1 << 3,
-        InstanceCustomData = 1 << 4,
-        ExternalTargetLifecycle = 1 << 5,
-        InstancedStaticMeshBatch = 1 << 6,
-        HierarchicalInstancedStaticMeshBatch = 1 << 7,
-        InstancedBatchVisibility = 1 << 8,
-        InstancedBatchRefresh = 1 << 9,
-        InstancedBatchPresentationState = 1 << 10,
-        InstancedBatchEffect = 1 << 11,
+        Surface = 1 << 1,
+        MaterialOverride = 1 << 2,
+        InstanceCustomData = 1 << 3,
+        ExternalTargetLifecycle = 1 << 4,
+        InstancedStaticMeshBatch = 1 << 5,
+        HierarchicalInstancedStaticMeshBatch = 1 << 6,
+        InstancedBatchVisibility = 1 << 7,
+        InstancedBatchRefresh = 1 << 8,
+        InstancedBatchPresentationState = 1 << 9,
+        InstancedBatchEffect = 1 << 10,
     }
 
     public sealed class PresentationAdapterCapabilities
@@ -34,7 +33,6 @@ namespace Ludots.Core.Presentation.Rendering
             return kind switch
             {
                 PresentationVisualRequestKind.Decal => Visuals.HasFlag(PresentationVisualCapabilities.Decal),
-                PresentationVisualRequestKind.Vfx => Visuals.HasFlag(PresentationVisualCapabilities.Vfx),
                 PresentationVisualRequestKind.Surface => Visuals.HasFlag(PresentationVisualCapabilities.Surface),
                 PresentationVisualRequestKind.MaterialOverride => Visuals.HasFlag(PresentationVisualCapabilities.MaterialOverride),
                 PresentationVisualRequestKind.InstanceCustomData => Visuals.HasFlag(PresentationVisualCapabilities.InstanceCustomData),

@@ -1,0 +1,206 @@
+[
+  {
+    "id": "raylib.emitter.sprite.impact_flash",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "59453cc025d1f7b08908afcf78535988cc8b8058cc7eeb9746a3cbdeeb9307ae"
+  },
+  {
+    "id": "raylib.emitter.ribbon.energy_trail",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "9a50938feb85cdeae5705bdee97379ceef75cbf7bde1061ae3148c0f546be766"
+  },
+  {
+    "id": "raylib.emitter.track.main_beam",
+    "assetKind": "TrackEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "eeecef06793914ea29587c478bdbc4a2246d3f00a98fdb14b1fd545557b65265"
+  },
+  {
+    "id": "raylib.emitter.ring.impact_wave",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "0e00a452b2ad0acb3b228c92f639ee6c8b7a4a6c77bb03c1a190205ae719995e"
+  },
+  {
+    "id": "raylib.emitter.model.energy_shard",
+    "assetKind": "ModelEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "ba0953c4af91b04e181f84e14e160f81f76f34494da2720f006eefe521f4d4ab"
+  },
+  {
+    "id": "raylib.emitter.semantic.explosion.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "d1be8f5b93a1cdc0168b50738fcca3a7e5da39e66309c495f8a2e77bbe0e6c34"
+  },
+  {
+    "id": "raylib.emitter.semantic.laser.signature",
+    "assetKind": "TrackEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "d61e0c7cc5ea002f760c760a3faa52bef4369699507602ee1b925f8464f906f9"
+  },
+  {
+    "id": "raylib.emitter.semantic.lightning.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "c8cbeebc0d331f787938e5c93827e38fbf13a490cbbb8644020a9a7d264b59ed"
+  },
+  {
+    "id": "raylib.emitter.semantic.projectile_trail.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "5d29e15d934657d93f22e3300bf4f72ae9eeb8bb8c670f6825aeb222e97d2f15"
+  },
+  {
+    "id": "raylib.emitter.semantic.slash.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "db9809c08aa0a7156f90eff3027c750b1390fab8505e532c8ec7577f2f9bf27f"
+  },
+  {
+    "id": "raylib.emitter.semantic.shield.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "48a4a82b3227d10f6239c10bf2269f4f0fd4894f10200c13c421b752d58a7a33"
+  },
+  {
+    "id": "raylib.emitter.semantic.heal.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "52bf333987e5969a3fd12f635a9cc49da063c8fb504b634866d30dcd39d225b9"
+  },
+  {
+    "id": "raylib.emitter.semantic.burn.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "53766c6b60740e240878da6530da39da1e665bba1130cff0482d1f58ab988502"
+  },
+  {
+    "id": "raylib.emitter.semantic.poison.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "7bbc296072e7e8aef9cdae575f3c526aef0190b7929caf1e9afc18f24a8f3ee4"
+  },
+  {
+    "id": "raylib.emitter.semantic.frost.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "942362a4cfeacf70f5c431c93d09dca5b4b57fa49b9e2da424c696f5a8572768"
+  },
+  {
+    "id": "raylib.emitter.semantic.portal.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "0a3213a675f64aa647e8524e2b87fdadc518c71a1d566b2ede99810b034a4015"
+  },
+  {
+    "id": "raylib.emitter.semantic.target_lock.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "8dbd0ed38801c071fe6bca20ad07140167a9f2f9c2b9530251acc1e6a2bf298e"
+  },
+  {
+    "id": "raylib.emitter.semantic.selection.signature",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "4548221a9a5a0b5654dae955b135adc546a9cd42456736f0fd80caf5bd5b1b91"
+  },
+  {
+    "id": "raylib.emitter.semantic.cast_radius.signature",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "7b1605687363c7ea9033a6ebca874f245929a48a3e2ed69d0eb9abf4b17360f0"
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_circle.signature",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "fc8b5a505f0b2b639d41b80b5921001bb35e13eff1790cc86b4d8d5c9e00c54e"
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_cone.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "7fba5fbbe91f165e6d6beb4335885b2c4477e33bac1b04d077275aaafa0f1816"
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_line.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "3886cd47c64e1f2c4f806e03e78eb1f72d61896ba4dd8b1c7ab1e64d2222f97c"
+  },
+  {
+    "id": "raylib.emitter.semantic.placement.signature",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "4317959570167805aec363ac3e685ae00b59c4d9d8539f179535284ecdc8e9d3"
+  },
+  {
+    "id": "raylib.emitter.semantic.dash_path.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "c1b5e715008420897202826b8f62385cfcf46dd15b47dc62a3c5c50480bc13e9"
+  },
+  {
+    "id": "raylib.emitter.semantic.tether.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "14fc9e8c4371f2cff45ba030a5396d2e991b93a1fb3fba3fab886211f47b2ffe"
+  },
+  {
+    "id": "raylib.emitter.semantic.summon.signature",
+    "assetKind": "RibbonEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "4274ca789cb5cc32827efca19c67a0e744256a36fe75107c187354c0dca3cfe4"
+  },
+  {
+    "id": "raylib.emitter.semantic.buff.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "1abf4dabd0de639ffb1778a7be9d5655463242d545bc163dd886fed493cfa01b"
+  },
+  {
+    "id": "raylib.emitter.semantic.debuff_warning.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "c93c2b460163809337b12fa654458e51e521bff1c16656c9b617cc8ac618c61d"
+  },
+  {
+    "id": "raylib.emitter.semantic.stun.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "ecc6b844f70a6993099f473336215d307328be7e6d0c2d3ba733cd0778cff109"
+  },
+  {
+    "id": "raylib.emitter.semantic.silence.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "ac896d53051df4dd295975f2b6ed37c693e3848178a264a6026f53df96f40cb5"
+  },
+  {
+    "id": "raylib.emitter.semantic.root.signature",
+    "assetKind": "ModelEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "79a3ddb6aace606ab476e1a6f992df723a09c53967f3ef24c0399df247c684af"
+  },
+  {
+    "id": "raylib.emitter.semantic.stealth_reveal.signature",
+    "assetKind": "RingEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "971c8947b738fdbcf601d78f3ef49d2774ff1d77210bde7d7b251754cc36431d"
+  },
+  {
+    "id": "raylib.emitter.semantic.channeling.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "5b5886ae19f315bcb6ae2606a5d6592f65dee449693e0043790f212c457ae5e7"
+  },
+  {
+    "id": "raylib.emitter.semantic.interact_pickup.signature",
+    "assetKind": "SpriteEmitter",
+    "runtimeFormatVersion": 1810,
+    "sha256": "0946bcdf386b47a1b868cd89bfc59657e9c9ed96272136c414ac3b69e4b2bd41"
+  }
+]

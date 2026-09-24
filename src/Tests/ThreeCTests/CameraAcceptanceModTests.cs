@@ -127,8 +127,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report mesh visuals for the camera acceptance typed cue marker.");
             Assert.That(evidence.LastDecalCount, Is.GreaterThan(0),
                 $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report decal visuals for the camera acceptance typed cue marker.");
-            Assert.That(evidence.LastVfxCount, Is.GreaterThan(0),
-                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report vfx visuals for the camera acceptance typed cue marker.");
             Assert.That(evidence.LastSurfaceCount, Is.GreaterThan(0),
                 $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report surface visuals for the camera acceptance typed cue marker.");
         }
@@ -2497,7 +2495,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     null,
                     0,
                     0,
-                    0,
                     0);
             }
 
@@ -2518,7 +2515,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             string diagnosticText = File.ReadAllText(diagnosticPath);
             Match match = Regex.Match(
                 diagnosticText,
-                @"prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
+                @"prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),surface=(?<surface>\d+)\)",
                 RegexOptions.CultureInvariant | RegexOptions.RightToLeft);
             Assert.That(match.Success, Is.True,
                 $"Expected Raylib diagnostic '{diagnosticPath}' to contain prefab visual counts for the screenshot frame.");
@@ -2532,7 +2529,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 notBeforeUtc,
                 ParseMatchGroup(match, "mesh"),
                 ParseMatchGroup(match, "decal"),
-                ParseMatchGroup(match, "vfx"),
                 ParseMatchGroup(match, "surface"));
         }
 
@@ -2584,7 +2580,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DateTimeOffset? notBeforeUtc,
                 int lastMeshCount,
                 int lastDecalCount,
-                int lastVfxCount,
                 int lastSurfaceCount)
             {
                 ScreenshotPath = screenshotPath;
@@ -2595,7 +2590,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 NotBeforeUtc = notBeforeUtc;
                 LastMeshCount = lastMeshCount;
                 LastDecalCount = lastDecalCount;
-                LastVfxCount = lastVfxCount;
                 LastSurfaceCount = lastSurfaceCount;
             }
 
@@ -2607,7 +2601,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public DateTimeOffset? NotBeforeUtc { get; }
             public int LastMeshCount { get; }
             public int LastDecalCount { get; }
-            public int LastVfxCount { get; }
             public int LastSurfaceCount { get; }
         }
 

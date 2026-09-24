@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\..\Build\SkiaNativeRuntime.props" />
+  <Import Project="..\..\..\Build\EffekseerNativeRuntime.props" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

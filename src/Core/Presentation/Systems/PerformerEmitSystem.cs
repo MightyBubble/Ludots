@@ -626,6 +626,31 @@ namespace Ludots.Core.Presentation.Systems
                 : defaultColor;
         }
 
+        private Vector3 ResolveAssetTargetPosition(
+            Entity entity,
+            in AssetBindingConfig asset,
+            in Vector3 performerWorldPosition,
+            in Quaternion performerWorldRotation,
+            in Vector3 performerWorldScale,
+            out bool hasTarget)
+        {
+            if (asset.TargetParamKey < 0)
+            {
+                hasTarget = false;
+                return default;
+            }
+
+            Vector4 target = RequireVectorParam(entity, asset.TargetParamKey, "AssetBinding.targetParamKey");
+            hasTarget = true;
+            Vector3 targetPosition = new(target.X, target.Y, target.Z);
+            return AssetTargetSpaceResolver.Resolve(
+                asset.TargetSpace,
+                in targetPosition,
+                in performerWorldPosition,
+                in performerWorldRotation,
+                in performerWorldScale);
+        }
+
         private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
         {
             if (asset.MaterialParamKey < 0)
@@ -1218,11 +1243,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
                 if (slot.AssetBinding.Mobility == VisualMobility.Movable ||
-                    slot.AssetBinding.AssetKind == AssetKind.SkinnedMesh ||
-                    slot.AssetBinding.AssetKind == AssetKind.Mesh ||
-                    slot.AssetBinding.AssetKind == AssetKind.Decal ||
-                    slot.AssetBinding.AssetKind == AssetKind.VFX ||
-                    slot.AssetBinding.AssetKind == AssetKind.Surface)
+                    slot.AssetBinding.AssetKind.IsVisualProxyKind())
                 {
                     return true;
                 }
@@ -1565,14 +1586,23 @@ namespace Ludots.Core.Presentation.Systems
                     $"Visual AssetBinding assetKind '{asset.AssetKind}' requires an explicit renderPath.");
             }
 
+            Vector3 targetPosition = ResolveAssetTargetPosition(
+                entity,
+                in asset,
+                in resolvedPosition,
+                in performerWorldRotation,
+                in performerWorldScale,
+                out bool hasTarget);
             return new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(entity, in asset),
+                AssetId = ResolveAssetId(entity, in asset),
                 Position = ResolveAssetPosition(resolvedPosition, performerWorldRotation, performerWorldScale, in asset),
                 Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
                 Color = ResolveAssetColor(entity, in asset, definition.DefaultColor),
+                TargetPosition = targetPosition,
+                HasTarget = hasTarget,
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
                 MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
@@ -1624,12 +1654,12 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+            return slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots && (mask & (1u << slotIndex)) != 0;
         }
 
         private static bool IsCacheableVisualKind(AssetKind kind)
         {
-            return kind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface;
+            return kind.IsVisualProxyKind();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -24,10 +24,6 @@
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
-        "activationCondition": {
-          "inline": "None",
-          "graphProgramId": 0
-        },
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "ref_mesh_cube",
@@ -333,14 +329,14 @@
     ]
   },
   {
-    "id": "ref_vfx",
+    "id": "ref_smoke_billboard",
     "behaviors": [
       {
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "VFX",
+          "assetKind": "Mesh",
           "assetId": "ref_vfx_smoke",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
@@ -348,6 +344,68 @@
             0,
             3,
             0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_ring_primitive",
+    "defaultColor": [
+      0.2,
+      0.85,
+      1.0,
+      0.72
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Ring",
+          "renderPath": "Primitive",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.08,
+            0
+          ],
+          "localScale": [
+            2.5,
+            1,
+            1.5
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_line_primitive",
+    "defaultColor": [
+      0.1,
+      0.95,
+      1.0,
+      0.86
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Line",
+          "renderPath": "Primitive",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ],
+          "localScale": [
+            3,
+            0.1,
+            0.1
           ]
         }
       }
@@ -489,7 +547,7 @@
         },
         "command": {
           "kind": "CreatePerformer",
-          "definitionId": "ref_vfx",
+          "definitionId": "ref_smoke_billboard",
           "scopeSource": "Fixed",
           "scopeTag": "working"
         }

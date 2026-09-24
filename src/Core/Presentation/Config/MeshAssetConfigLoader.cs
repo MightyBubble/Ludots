@@ -174,9 +174,6 @@ namespace Ludots.Core.Presentation.Config
                     PrefabVisualPartKind.Decal => PrefabPart.Decal(
                         p?["materialId"]?.GetValue<int>() ?? 0,
                         ParseVector2WithDefault(p?["size"], Vector2.One)),
-                    PrefabVisualPartKind.Vfx => PrefabPart.Vfx(
-                        p?["effectAssetId"]?.GetValue<int>() ?? 0,
-                        ParseSpawnMode(p?["spawnMode"]?.GetValue<string>())),
                     PrefabVisualPartKind.Surface => PrefabPart.Surface(
                         meshId,
                         p?["materialId"]?.GetValue<int>() ?? 0,
@@ -191,7 +188,6 @@ namespace Ludots.Core.Presentation.Config
                 part.ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One);
                 part.Grounding = ParseGrounding(p?["grounding"]);
                 part.MaterialId = p?["materialId"]?.GetValue<int>() ?? part.MaterialId;
-                part.EffectAssetId = p?["effectAssetId"]?.GetValue<int>() ?? part.EffectAssetId;
                 part.Size = ParseVector2WithDefault(p?["size"], part.Size == Vector2.Zero ? Vector2.One : part.Size);
                 part.Tiling = ParseVector2WithDefault(p?["tiling"], part.Tiling == Vector2.Zero ? Vector2.One : part.Tiling);
                 part.AlignToSurface = p?["alignToSurface"]?.GetValue<bool>() ?? part.AlignToSurface;
@@ -200,19 +196,6 @@ namespace Ludots.Core.Presentation.Config
                 parts[j] = part;
             }
             return parts;
-        }
-
-        private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)
-        {
-            string resolved = string.IsNullOrWhiteSpace(spawnModeText)
-                ? nameof(PrefabVfxSpawnMode.Once)
-                : spawnModeText;
-            if (!Enum.TryParse(resolved, ignoreCase: false, out PrefabVfxSpawnMode spawnMode))
-            {
-                throw new InvalidOperationException($"Prefab part VFX spawnMode has invalid value '{resolved}'.");
-            }
-
-            return spawnMode;
         }
 
         private static PrefabPartGrounding ParseGrounding(JsonNode node)

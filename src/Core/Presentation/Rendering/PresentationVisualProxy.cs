@@ -18,6 +18,12 @@ namespace Ludots.Core.Presentation.Rendering
             set => Payload.MeshAssetId = value;
         }
 
+        public int AssetId
+        {
+            readonly get => Payload.MeshAssetId;
+            set => Payload.MeshAssetId = value;
+        }
+
         public Vector3 Position
         {
             readonly get => Payload.Position;
@@ -40,6 +46,18 @@ namespace Ludots.Core.Presentation.Rendering
         {
             readonly get => Payload.Color;
             set => Payload.Color = value;
+        }
+
+        public Vector3 TargetPosition
+        {
+            readonly get => Payload.TargetPosition;
+            set => Payload.TargetPosition = value;
+        }
+
+        public bool HasTarget
+        {
+            readonly get => Payload.HasTarget;
+            set => Payload.HasTarget = value;
         }
 
         public int StableId

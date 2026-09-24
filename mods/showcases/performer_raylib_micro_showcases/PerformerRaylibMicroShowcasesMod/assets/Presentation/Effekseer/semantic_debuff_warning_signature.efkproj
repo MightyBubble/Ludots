@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Value>1</Value><Infinite>False</Infinite></MaxGeneration><RemoveWhenLifeIsExtinct>False</RemoveWhenLifeIsExtinct><Life><Center>1000</Center><Max>1000</Max><Min>1000</Min></Life><GenerationTime><Center>1</Center><Max>1</Max><Min>1</Min></GenerationTime><GenerationTimeOffset><Center>0</Center><Max>0</Max><Min>0</Min></GenerationTimeOffset></CommonValues>
+        <ScalingValues><Fixed><Scale><X>0.943</X><Y>0.943</Y><Z>0.943</Z></Scale></Fixed></ScalingValues>
+        <RendererCommonValues><ColorTexture>textures/signatures/semantic_debuff_warning.png</ColorTexture><AlphaBlend>1</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeOutType>1</FadeOutType><FadeOut><Frame>0</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>2</Type><ColorAll><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>255</A></Fixed></ColorAll><Sprite><Billboard>0</Billboard></Sprite></DrawingValues>
+        <Name>semantic_debuff_warning_signature</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

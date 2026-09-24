@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticRootEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 定身束缚.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticRootEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "ludots.theme.frost"
+  ]
+}

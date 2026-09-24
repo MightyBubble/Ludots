@@ -4,6 +4,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Performers;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -11,6 +12,8 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class PresentationHostAssetConfigLoaderTests
     {
+        private const int TestRuntimeFormatVersion = 1810;
+
         [Test]
         public void MeshAssetConfigLoader_WhenModelDeclaresSourceUris_ThrowsExplicitHostAssetError()
         {
@@ -289,6 +292,125 @@ namespace Ludots.Tests.Presentation
             Assert.That(materials.TryGet(materialId, out var boundDescriptor), Is.True);
             Assert.That(boundDescriptor.SourceUris, Is.EqualTo(new[] { "TestMod:assets/Materials/surface.mat" }));
             Assert.That(boundDescriptor.Flags, Is.EqualTo(MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided));
+        }
+
+        [TestCase(AssetKind.SpriteEmitter)]
+        [TestCase(AssetKind.RibbonEmitter)]
+        [TestCase(AssetKind.ModelEmitter)]
+        [TestCase(AssetKind.TrackEmitter)]
+        [TestCase(AssetKind.RingEmitter)]
+        public void Apply_WhenEmitterBackendMatches_BindsSourceUrisWithoutChangingIntegrityContract(AssetKind emitterKind)
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            string assetKey = $"emitter.{emitterKind}";
+            string sourceUri = $"TestMod:assets/Presentation/{emitterKind}.efkefc";
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                $$"""
+                [
+                  {
+                    "id": "{{assetKey}}.raylib",
+                    "assetKind": "{{emitterKind}}",
+                    "assetId": "{{assetKey}}",
+                    "backendId": "raylib",
+                    "sourceUris": [ "{{sourceUri}}" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var emitters = new EmitterAssetRegistry();
+            string sha256 = new string('a', 64);
+            int id = emitters.Register(
+                assetKey,
+                emitterKind,
+                TestRuntimeFormatVersion,
+                sha256);
+
+            new PresentationHostAssetConfigLoader(
+                pipeline,
+                new MeshAssetRegistry(),
+                new PresentationMaterialRegistry(),
+                emitters).Apply("raylib", BuildPresentationCatalog());
+
+            Assert.That(emitters.Count, Is.EqualTo(1));
+            Assert.That(emitters.TryGetDescriptor(id, out EmitterAssetDescriptor descriptor), Is.True);
+            Assert.That(descriptor.AssetKind, Is.EqualTo(emitterKind));
+            Assert.That(descriptor.RuntimeFormatVersion, Is.EqualTo(TestRuntimeFormatVersion));
+            Assert.That(descriptor.Sha256, Is.EqualTo(sha256));
+            Assert.That(descriptor.SourceUris, Is.EqualTo(new[] { sourceUri }));
+        }
+
+        [Test]
+        public void Apply_WhenEmitterKindDoesNotMatchSemanticDescriptor_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            WriteEmitterHostAssets(root, "TrackEmitter", "trail.ribbon");
+            var emitters = new EmitterAssetRegistry();
+            emitters.Register(
+                "trail.ribbon",
+                AssetKind.RibbonEmitter,
+                TestRuntimeFormatVersion,
+                new string('b', 64));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(
+                    BuildCorePipeline(root),
+                    new MeshAssetRegistry(),
+                    new PresentationMaterialRegistry(),
+                    emitters).Apply("raylib", BuildPresentationCatalog()))!;
+
+            Assert.That(ex.Message, Does.Contain("not requested kind 'TrackEmitter'"));
+        }
+
+        [Test]
+        public void Apply_WhenEmitterBindingHasNoEmitterRegistry_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            WriteEmitterHostAssets(root, "TrackEmitter", "beam.core");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(
+                    BuildCorePipeline(root),
+                    new MeshAssetRegistry(),
+                    new PresentationMaterialRegistry()).Apply("raylib", BuildPresentationCatalog()))!;
+
+            Assert.That(ex.Message, Does.Contain("no EmitterAssetRegistry was supplied"));
+        }
+
+        [Test]
+        public void Apply_WhenEmitterAssetIsUnknown_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            WriteEmitterHostAssets(root, "TrackEmitter", "beam.missing");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(
+                    BuildCorePipeline(root),
+                    new MeshAssetRegistry(),
+                    new PresentationMaterialRegistry(),
+                    new EmitterAssetRegistry()).Apply("raylib", BuildPresentationCatalog()))!;
+
+            Assert.That(ex.Message, Does.Contain("Unknown emitter asset 'beam.missing'"));
+        }
+
+        private static void WriteEmitterHostAssets(string root, string assetKind, string assetId)
+        {
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                $$"""
+                [
+                  {
+                    "id": "{{assetId}}.raylib",
+                    "assetKind": "{{assetKind}}",
+                    "assetId": "{{assetId}}",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Presentation/test.efkefc" ]
+                  }
+                ]
+                """);
         }
 
         private static string CreateTempCoreRoot()

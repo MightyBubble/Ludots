@@ -1,0 +1,44 @@
+<Project>
+  <PropertyGroup>
+    <EffekseerNativeAssetsRoot>$(MSBuildThisFileDirectory)..\Libraries\Effekseer\runtimes</EffekseerNativeAssetsRoot>
+    <EffekseerNativeRid Condition="'$(EffekseerNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</EffekseerNativeRid>
+    <EffekseerNativeRid Condition="'$(EffekseerNativeRid)' == '' and '$(NETCoreSdkRuntimeIdentifier)' != ''">$(NETCoreSdkRuntimeIdentifier)</EffekseerNativeRid>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\Libraries\Effekseer\runtime-contract.props" />
+
+  <PropertyGroup>
+    <EffekseerNativeLibrary>$(EffekseerNativeAssetsRoot)\$(EffekseerNativeRid)\$(EffekseerNativeContractLibrary)</EffekseerNativeLibrary>
+    <EffekseerNativeManifest>$(EffekseerNativeAssetsRoot)\$(EffekseerNativeRid)\runtime-manifest.json</EffekseerNativeManifest>
+  </PropertyGroup>
+
+  <Target Name="ValidateEffekseerNativeRuntime" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(EffekseerNativeRid)' == ''"
+           Text="Effekseer native runtime requires an explicit current RuntimeIdentifier." />
+    <Error Condition="'$(EffekseerNativeContractLibrary)' == ''"
+           Text="Effekseer native runtime does not support '$(EffekseerNativeRid)'. Supported runtimes: $(EffekseerSupportedRuntimeIdentifiers)." />
+    <Error Condition="!Exists('$(EffekseerNativeLibrary)')"
+           Text="Effekseer native runtime is missing: $(EffekseerNativeLibrary). Run src/Build/build-effekseer-native.ps1." />
+    <Error Condition="!Exists('$(EffekseerNativeManifest)')"
+           Text="Effekseer native runtime manifest is missing: $(EffekseerNativeManifest)." />
+  </Target>
+
+  <ItemGroup>
+    <None Include="$(EffekseerNativeLibrary)"
+          Link="$(EffekseerNativeContractLibrary)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(EffekseerNativeManifest)"
+          Link="runtime-manifest.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(MSBuildThisFileDirectory)..\Libraries\Effekseer\LICENSE.txt"
+          Link="licenses\Effekseer\LICENSE.txt"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(MSBuildThisFileDirectory)..\Libraries\Effekseer\THIRD-PARTY-NOTICES.md"
+          Link="licenses\Effekseer\THIRD-PARTY-NOTICES.md"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

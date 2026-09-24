@@ -1,0 +1,44 @@
+{
+  "Id": "raylib_micro_semantic_laser",
+  "Tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "ludots.theme.tech",
+    "focus",
+    "Raylib.Background:Deep",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 32,
+    "Pitch": 58,
+    "DistanceCm": 820,
+    "FovYDeg": 44
+  },
+  "Entities": [
+    {
+      "Template": "raylib_micro_semantic_laser_entity",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "authoringSchemaVersion": 2,
+  "themePackageVersion": 1,
+  "semanticPresetVersion": 1,
+  "entryTargetFramework": "net8.0",
+  "maxChildPerformers": 16,
+  "semanticParameters": {
+    "sourceComponentCount": 3,
+    "targetComponentCount": 3,
+    "coordinateSpace": "PerformerLocal",
+    "targetParamKey": "raylib.micro.emitter.target",
+    "vectorComponentMin": -1000,
+    "vectorComponentMax": 1000,
+    "alphaMin": 0,
+    "alphaMax": 1,
+    "multiplierMin": 0.000001,
+    "multiplierMax": 1000
+  },
+  "effekseerExport": {
+    "timeoutMilliseconds": 60000,
+    "outputStableCheckCount": 3,
+    "outputStableMaxAttempts": 50,
+    "outputStablePollMilliseconds": 100
+  },
+  "raylibPrimitiveAssetKinds": [
+    "Ring",
+    "Line"
+  ],
+  "motionBehaviorSlots": {
+    "scale": "motion_scale",
+    "alpha": "motion_alpha"
+  },
+  "recording": {
+    "artifactRoot": "artifacts/raylib-performer-micro-showcases",
+    "reportPath": "artifacts/raylib-performer-micro-showcases-report.html",
+    "recordingSummaryPath": "artifacts/raylib-performer-micro-showcases/recording-summary.json",
+    "contactSheetPath": "artifacts/raylib-performer-micro-showcases/poster-contact-sheet.png",
+    "workRoot": "output/raylib-micro-recording-work",
+    "logRoot": "output/raylib-micro-recording-logs",
+    "raylibAppProject": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+    "raylibAppOutput": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+    "raylibAppEntryAssembly": "Ludots.App.Raylib.dll",
+    "launcherCliProject": "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj",
+    "launcherCliOutput": "src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0",
+    "launcherCliEntryAssembly": "Ludots.Launcher.Cli.dll",
+    "launcherUserConfig": "mods/showcases/performer_raylib_micro_showcases/PerformerRaylibMicroShowcasesMod/assets/Presentation/Authoring/raylib-micro-launcher-user-config.json",
+    "launcherUserConfigEnvironmentVariable": "LUDOTS_LAUNCHER_USER_CONFIG_PATH",
+    "captureEnvironmentVariables": {
+      "screenshotPath": "LUDOTS_TAKE_SCREENSHOT_PATH",
+      "screenshotFrames": "LUDOTS_TAKE_SCREENSHOT_FRAMES",
+      "screenshotFrame": "LUDOTS_TAKE_SCREENSHOT_FRAME",
+      "minimumRuntimeMilliseconds": "LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT",
+      "autoExitFrame": "LUDOTS_AUTO_EXIT_FRAME",
+      "autoOrbitDegreesPerSecond": "LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC",
+      "lightweightDiagnosticHud": "LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD",
+      "fixedFrameDeltaSeconds": "LUDOTS_RAYLIB_FIXED_FRAME_DELTA_SECONDS"
+    },
+    "launcherConfigFiles": [
+      "launcher.config.json",
+      "launcher.presets.json"
+    ],
+    "runtimeProjectRoots": [
+      "mods/showcases/performer_raylib_micro_showcases/PerformerRaylibMicroShowcasesMod",
+      "mods/showcases/performer_raylib_micro_showcases_entries"
+    ],
+    "runtimeNonMsBuildSourceRoots": [
+      "src/Native/Ludots.Effekseer.Native",
+      "src/Libraries/Effekseer"
+    ],
+    "runtimeAdditionalInputs": [
+      "src/Build/build-effekseer-native.ps1",
+      "scripts/effekseer-runtime-contract.mjs",
+      "scripts/export-raylib-effekseer-assets.ps1",
+      "scripts/generate-raylib-effekseer-projects.mjs",
+      "scripts/generate-raylib-effekseer-signature-textures.ps1",
+      "scripts/generate-raylib-micro-assets.mjs",
+      "scripts/raylib-effekseer-profile-contracts.mjs",
+      "scripts/raylib-micro-recording-evidence.mjs",
+      "scripts/raylib-micro-runtime-inputs.mjs",
+      "scripts/record-raylib-micro-showcases.ps1"
+    ],
+    "captureFrameCount": 48,
+    "posterFrame": 24,
+    "autoExitGraceFrames": 8,
+    "framesPerSecond": 8,
+    "durationSeconds": 2,
+    "width": 1280,
+    "height": 720,
+    "launcherCliBuildTimeoutMilliseconds": 300000,
+    "raylibAppBuildTimeoutMilliseconds": 300000,
+    "entryBuildTimeoutMilliseconds": 900000,
+    "launchTimeoutMilliseconds": 180000,
+    "encodeTimeoutMilliseconds": 60000,
+    "contactSheetColumns": 5,
+    "contactSheetTileWidth": 320,
+    "contactSheetTileHeight": 180,
+    "contactSheetLabelHeight": 22
+  },
+  "showcases": [
+    {
+      "group": "primitive",
+      "id": "primitive_ring"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_line"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_sprite_emitter"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_ribbon_emitter"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_track_emitter"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_ring_emitter"
+    },
+    {
+      "group": "primitive",
+      "id": "primitive_model_emitter"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_explosion",
+      "presetId": "ludots.semantic.explosion"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_laser",
+      "presetId": "ludots.semantic.laser"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_lightning",
+      "presetId": "ludots.semantic.lightning"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_projectile_trail",
+      "presetId": "ludots.semantic.projectile-trail"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_slash",
+      "presetId": "ludots.semantic.slash"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_shield",
+      "presetId": "ludots.semantic.shield"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_heal",
+      "presetId": "ludots.semantic.heal"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_burn",
+      "presetId": "ludots.semantic.burn"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_poison",
+      "presetId": "ludots.semantic.poison"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_frost",
+      "presetId": "ludots.semantic.frost"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_portal",
+      "presetId": "ludots.semantic.portal"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_target_lock",
+      "presetId": "ludots.semantic.target-lock"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_selection",
+      "presetId": "ludots.semantic.selection"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_cast_radius",
+      "presetId": "ludots.semantic.cast-radius"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_warning_circle",
+      "presetId": "ludots.semantic.warning-circle"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_warning_cone",
+      "presetId": "ludots.semantic.warning-cone"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_warning_line",
+      "presetId": "ludots.semantic.warning-line"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_placement",
+      "presetId": "ludots.semantic.placement"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_dash_path",
+      "presetId": "ludots.semantic.dash-path"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_tether",
+      "presetId": "ludots.semantic.tether"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_summon",
+      "presetId": "ludots.semantic.summon"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_buff",
+      "presetId": "ludots.semantic.buff"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_debuff_warning",
+      "presetId": "ludots.semantic.debuff-warning"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_stun",
+      "presetId": "ludots.semantic.stun"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_silence",
+      "presetId": "ludots.semantic.silence"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_root",
+      "presetId": "ludots.semantic.root"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_stealth_reveal",
+      "presetId": "ludots.semantic.stealth-reveal"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_channeling",
+      "presetId": "ludots.semantic.channeling"
+    },
+    {
+      "group": "semantic",
+      "id": "semantic_interact_pickup",
+      "presetId": "ludots.semantic.interact-pickup"
+    }
+  ]
+}

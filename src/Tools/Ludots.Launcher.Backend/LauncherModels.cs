@@ -107,4 +107,7 @@ public sealed record LauncherLaunchResult(
     int Pid,
     string Url,
     string BootstrapPath,
-    LauncherLaunchPlan? Plan);
+    LauncherLaunchPlan? Plan)
+{
+    public int? ExitCode { get; init; }
+}

@@ -1,0 +1,6 @@
+<Project>
+  <Import Project="..\..\Directory.Build.props" />
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(TEMP)\ludots-raylib-micro-obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

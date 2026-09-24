@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticPoisonEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 毒雾地面.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticPoisonEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "ludots.theme.dark"
+  ]
+}

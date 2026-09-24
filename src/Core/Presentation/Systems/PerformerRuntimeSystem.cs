@@ -122,7 +122,7 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.ActivateBehavior:
-                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < PerformerBehaviorCapacity.MaxSlots)
                         {
                             ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
                             if (_definitions.TryGet(state.DefId, out PerformerDefinition definition))
@@ -136,7 +136,7 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.DeactivateBehavior:
-                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < PerformerBehaviorCapacity.MaxSlots)
                         {
                             ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
                             if (_definitions.TryGet(state.DefId, out PerformerDefinition definition))
@@ -151,6 +151,10 @@ namespace Ludots.Core.Presentation.Systems
                     case PerformerCommandKind.InitializeTransform:
                         HandleInitializeTransform(in cmd);
                         break;
+
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unsupported performer command kind '{cmd.CommandKind}' ({(byte)cmd.CommandKind}).");
                 }
             }
             _commands.Clear();
@@ -470,7 +474,7 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < definition.Behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
-                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= 32)
+                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= PerformerBehaviorCapacity.MaxSlots)
                     continue;
                 mask |= 1u << slot.SlotIndex;
             }

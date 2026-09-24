@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>42</Center><Max>48</Max><Min>36</Min></Life><GenerationTime><Center>4</Center><Max>5</Max><Min>3</Min></GenerationTime><GenerationTimeOffset><Center>-12</Center><Max>-12</Max><Min>-12</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA>
+          <Location><X><Max>0.2</Max><Min>-0.2</Min></X><Y><Max>0.1</Max><Min>-0.1</Min></Y><Z><Max>0.2</Max><Min>-0.2</Min></Z></Location>
+          <Velocity><X><Max>0.015</Max><Min>-0.015</Min></X><Y><Center>0.025</Center><Max>0.04</Max><Min>0.01</Min></Y><Z><Max>0.015</Max><Min>-0.015</Min></Z></Velocity>
+        </PVA></LocationValues>
+        <RotationValues><Type>1</Type><PVA><Rotation><Z><Max>180</Max><Min>-180</Min></Z></Rotation><Velocity><Z><Center>2</Center><Max>3</Max><Min>1</Min></Z></Velocity></PVA></RotationValues>
+        <ScalingValues><Type>1</Type><PVA><Scale><X><Center>0.24</Center><Max>0.3</Max><Min>0.18</Min></X><Y><Center>0.24</Center><Max>0.3</Max><Min>0.18</Min></Y><Z><Center>0.24</Center><Max>0.3</Max><Min>0.18</Min></Z></Scale><Velocity><X><Center>0.003</Center><Max>0.004</Max><Min>0.002</Min></X><Y><Center>0.003</Center><Max>0.004</Max><Min>0.002</Min></Y><Z><Center>0.003</Center><Max>0.004</Max><Min>0.002</Min></Z></Velocity></PVA></ScalingValues>
+        <RendererCommonValues><ColorTexture>textures/laser_soft_disc.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>2</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>18</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>2</Type><ColorAll><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>190</A></Fixed></ColorAll><Sprite><Billboard>0</Billboard></Sprite></DrawingValues>
+        <Name>laser_sprite_impact_flash</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

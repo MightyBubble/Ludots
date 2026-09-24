@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>38.727273</Center><Max>38.727273</Max><Min>38.727273</Min></Life><GenerationTime><Center>0.724638</Center><Max>0.724638</Max><Min>0.724638</Min></GenerationTime><GenerationTimeOffset><Center>-15.151515</Center><Max>-15.151515</Max><Min>-15.151515</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Velocity><X><Center>0.0264</Center><Max>0.0264</Max><Min>0.0264</Min></X></Velocity></PVA></LocationValues>
+        <RendererCommonValues><ColorTexture>textures/laser_beam_profile.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>1.515152</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>9.090909</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>3</Type><Ribbon><ViewpointDependent>True</ViewpointDependent><ColorAll_Fixed><R>255</R><G>255</G><B>255</B><A>240</A></ColorAll_Fixed><Position>1</Position><Position_Fixed_L>-0.083538</Position_Fixed_L><Position_Fixed_R>0.083538</Position_Fixed_R><SplineDivision>1</SplineDivision></Ribbon></DrawingValues>
+        <Name>semantic_tether_signature</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

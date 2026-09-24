@@ -28,6 +28,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly PresentationMaterialRegistry? _materials;
+        private readonly bool _emitterConsumerActive;
         private readonly string? _diagnosticPath;
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
         private const int DefaultMaxModelInstancesPerDraw = 32768;
@@ -58,6 +59,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly HashSet<int> _reportedInvalidInstancedMaterials = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
+        private Texture2D _softGlowTexture;
+        private bool _softGlowTextureLoaded;
         private readonly int _maxModelInstancesPerDraw;
 
         public int LastInstancedInstances { get; private set; }
@@ -79,11 +82,9 @@ namespace Ludots.Client.Raylib.Rendering
         public double LastGpuSkinnedMeshDrawMs { get; private set; }
         public int LastMeshVisualCount { get; private set; }
         public int LastDecalVisualCount { get; private set; }
-        public int LastVfxVisualCount { get; private set; }
         public int LastSurfaceVisualCount { get; private set; }
         public int TotalMeshVisualCount { get; private set; }
         public int TotalDecalVisualCount { get; private set; }
-        public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
@@ -91,11 +92,13 @@ namespace Ludots.Client.Raylib.Rendering
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
             IVirtualFileSystem? vfs = null,
-            PresentationMaterialRegistry? materials = null)
+            PresentationMaterialRegistry? materials = null,
+            bool emitterConsumerActive = false)
         {
             _mode = mode;
             _vfs = vfs;
             _materials = materials;
+            _emitterConsumerActive = emitterConsumerActive;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
         }
@@ -141,7 +144,6 @@ namespace Ludots.Client.Raylib.Rendering
             LastGpuSkinnedMeshDrawMs = 0d;
             LastMeshVisualCount = 0;
             LastDecalVisualCount = 0;
-            LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
@@ -218,6 +220,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawConcretePrimitive(in item, camera, scaleMul))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -264,6 +271,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawConcretePrimitive(in item, camera, scaleMul))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -295,6 +307,111 @@ namespace Ludots.Client.Raylib.Rendering
             return _ismBridge.ActiveBindings.ContainsKey(item.StableId);
         }
 
+        private bool TryDrawConcretePrimitive(in PrimitiveDrawItem item, Camera3D camera, float scaleMul)
+        {
+            if (!item.RenderPath.IsPrimitiveLane())
+            {
+                return false;
+            }
+
+            // Concrete emitter lanes are consumed by RaylibEffekseerRuntime from the same full snapshot.
+            if (item.AssetKind.IsEmitterKind())
+            {
+                if (!_emitterConsumerActive)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot delegate emitter assetKind '{item.AssetKind}' (stableId={item.StableId}) because the Raylib Effekseer consumer is not active.");
+                }
+
+                return true;
+            }
+
+            switch (item.AssetKind)
+            {
+                case AssetKind.Ring:
+                    DrawRingPrimitive(in item, camera, scaleMul);
+                    return true;
+
+                case AssetKind.Line:
+                    DrawLinePrimitive(in item, camera, scaleMul);
+                    return true;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not support primitive renderPath '{item.RenderPath}' for assetKind '{item.AssetKind}' (stableId={item.StableId}).");
+            }
+        }
+
+        private void DrawRingPrimitive(in PrimitiveDrawItem item, Camera3D camera, float scaleMul)
+        {
+            Vector3 scale = item.Scale * scaleMul;
+            if (!float.IsFinite(scale.X) || !float.IsFinite(scale.Z) || scale.X <= 0f || scale.Z <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Ring primitive stableId={item.StableId} requires positive finite Scale.X and Scale.Z. Got ({scale.X}, {scale.Z}).");
+            }
+
+            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(item.Rotation);
+            float pulse = PrimitivePulse(item.StableId, 1.35f);
+            float outerPulse = 1f + pulse * 0.055f;
+            float innerPulse = 1f - pulse * 0.035f;
+
+            Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+            Rl.rlDisableDepthMask();
+            DrawSoftBillboard(camera, item.Position + Vector3.UnitY * 0.18f, MathF.Max(scale.X, scale.Z) * 1.02f, MultiplyColor(item.Color, 0.34f, 0.52f, 0.76f, 0.12f));
+            DrawRotatedRing(item.Position, rotation, scale.X, scale.Z, 72, MultiplyColor(item.Color, 1.28f, 1.22f, 1.16f, 0.96f));
+            DrawRotatedRingBand(item.Position + Vector3.UnitY * 0.006f, rotation, scale.X * 0.94f, scale.Z * 0.94f, 72, 5, MultiplyColor(item.Color, 0.72f, 0.96f, 1.3f, 0.2f));
+            DrawRotatedRing(item.Position + Vector3.UnitY * 0.012f, rotation, scale.X * 0.82f * innerPulse, scale.Z * 0.82f * innerPulse, 72, MultiplyColor(item.Color, 1.55f, 1.42f, 1.18f, 0.42f));
+            DrawRotatedRing(item.Position + Vector3.UnitY * 0.024f, rotation, scale.X * 1.16f * outerPulse, scale.Z * 1.16f * outerPulse, 72, MultiplyColor(item.Color, 0.86f, 1.08f, 1.55f, 0.3f));
+            DrawRingTicks(item.Position + Vector3.UnitY * 0.036f, rotation, scale.X * 1.05f, scale.Z * 1.05f, 16, MathF.Min(scale.X, scale.Z) * 0.12f, MultiplyColor(item.Color, 1.32f, 1.24f, 1.08f, 0.78f));
+            DrawRingTicks(item.Position + Vector3.UnitY * 0.052f, rotation, scale.X * 0.66f, scale.Z * 0.66f, 8, MathF.Min(scale.X, scale.Z) * 0.1f, MultiplyColor(item.Color, 0.82f, 1.12f, 1.45f, 0.48f));
+            DrawRingGlowDots(camera, item.Position + Vector3.UnitY * 0.09f, rotation, scale.X * 1.02f, scale.Z * 1.02f, 12, MathF.Min(scale.X, scale.Z) * 0.12f, MultiplyColor(item.Color, 1.2f, 1.15f, 1.0f, 0.42f));
+            DrawRingGlowDots(camera, item.Position + Vector3.UnitY * 0.14f, rotation, scale.X * 0.58f, scale.Z * 0.58f, 6, MathF.Min(scale.X, scale.Z) * 0.09f, MultiplyColor(item.Color, 0.72f, 1.05f, 1.38f, 0.24f));
+            Rl.rlEnableDepthMask();
+            Rl.EndBlendMode();
+        }
+
+        private void DrawLinePrimitive(in PrimitiveDrawItem item, Camera3D camera, float scaleMul)
+        {
+            Vector3 scale = item.Scale * scaleMul;
+            float length = MathF.Abs(scale.X);
+            float width = MathF.Max(MathF.Abs(scale.Y), MathF.Abs(scale.Z));
+            if (!float.IsFinite(length) || !float.IsFinite(width) || length <= 0f || width <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Line primitive stableId={item.StableId} requires positive finite Scale.X and Scale.Y or Scale.Z. Got ({scale.X}, {scale.Y}, {scale.Z}).");
+            }
+
+            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(item.Rotation);
+            Vector3 half = Vector3.Transform(new Vector3(length * 0.5f, 0f, 0f), rotation);
+            Vector3 up = Vector3.Transform(Vector3.UnitY, rotation);
+            Vector3 side = Vector3.Transform(Vector3.UnitZ, rotation);
+            Vector3 start = item.Position - half;
+            Vector3 end = item.Position + half;
+            Color coreColor = ToRaylibColor(MultiplyColor(item.Color, 1.35f, 1.35f, 1.35f, 0.95f));
+            float pulse = PrimitivePulse(item.StableId, 1.9f);
+            Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+            Rl.rlDisableDepthMask();
+            DrawSoftBeam(camera, start, end, width * (2.45f + pulse * 0.45f), MultiplyColor(item.Color, 0.74f, 0.96f, 1.38f, 0.24f), 10);
+            DrawSoftBeam(camera, start, end, width * 1.05f, MultiplyColor(item.Color, 1.2f, 1.18f, 1.04f, 0.36f), 8);
+            DrawBeamVolume(item.Position, rotation, length, width * (1.15f + pulse * 0.22f), MultiplyColor(item.Color, 0.82f, 1.0f, 1.34f, 0.12f));
+            DrawBeamVolume(item.Position, rotation, length * 0.9f, width * 0.22f, MultiplyColor(item.Color, 1.65f, 1.55f, 1.18f, 0.45f));
+            Rl.DrawLine3D(start, end, coreColor);
+
+            float offset = MathF.Min(width * 0.5f, length * 0.08f);
+            Color softColor = ToRaylibColor(MultiplyColor(item.Color, 1.05f, 1.1f, 1.35f, 0.46f));
+            Rl.DrawLine3D(start + up * offset, end + up * offset, softColor);
+            Rl.DrawLine3D(start - up * offset, end - up * offset, softColor);
+            Rl.DrawLine3D(start + side * offset, end + side * offset, softColor);
+            Rl.DrawLine3D(start - side * offset, end - side * offset, softColor);
+            Rl.DrawLine3D(start + up * offset * 1.8f, end + up * offset * 1.8f, ToRaylibColor(MultiplyColor(item.Color, 0.8f, 1.0f, 1.5f, 0.22f)));
+            Rl.DrawLine3D(start - up * offset * 1.8f, end - up * offset * 1.8f, ToRaylibColor(MultiplyColor(item.Color, 0.8f, 1.0f, 1.5f, 0.22f)));
+            DrawBeamCap(camera, start, up, side, width * (0.9f + pulse * 0.24f), MultiplyColor(item.Color, 1.18f, 1.22f, 1.36f, 0.55f));
+            DrawBeamCap(camera, end, up, side, width * (1.18f + pulse * 0.42f), MultiplyColor(item.Color, 1.45f, 1.36f, 1.05f, 0.74f));
+            Rl.rlEnableDepthMask();
+            Rl.EndBlendMode();
+        }
+
         private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
         {
             EnsureInitialized();
@@ -303,6 +420,11 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 ref readonly var item = ref span[i];
                 if (IsHostSurfaceLane(in item))
+                {
+                    continue;
+                }
+
+                if (TryDrawConcretePrimitive(in item, camera, scaleMul))
                 {
                     continue;
                 }
@@ -365,9 +487,6 @@ namespace Ludots.Client.Raylib.Rendering
                     break;
                 case PrefabVisualPartKind.Decal:
                     DrawDecalVisual(in visual);
-                    break;
-                case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -634,9 +753,6 @@ namespace Ludots.Client.Raylib.Rendering
                 case PrefabVisualPartKind.Decal:
                     DrawDecalVisual(in visual);
                     break;
-                case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
-                    break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
                     break;
@@ -648,7 +764,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public string BuildVisualKindDiagnosticSummary()
         {
-            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
+            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},surface={TotalSurfaceVisualCount})";
         }
 
         public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
@@ -752,29 +868,6 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawLine3D(center, markerTop, edge);
         }
 
-        private void DrawVfxVisual(in PrefabFinalizedVisual visual)
-        {
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
-            float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
-                ? baseExtent * 1.15f
-                : baseExtent * 0.9f;
-            Vector4 pulseColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
-            Vector4 shellColor = LerpColor(pulseColor, new Vector4(1f, 1f, 1f, pulseColor.W), 0.35f);
-
-            DrawPrototypeSphere(visual.Position, radius * 0.28f, pulseColor);
-            DrawRotatedRing(visual.Position, rotation, radius, 12, MultiplyColor(shellColor, 1f, 1f, 1f, 0.72f));
-            DrawRotatedRing(visual.Position, rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f), radius * 0.82f, 10, MultiplyColor(shellColor, 0.92f, 1f, 1.1f, 0.64f));
-
-            Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rotation));
-            Color beamColor = ToRaylibColor(MultiplyColor(pulseColor, 1.1f, 1.08f, 1.18f, 0.88f));
-            Rl.DrawLine3D(visual.Position - (right * radius), visual.Position + (right * radius), beamColor);
-            Rl.DrawLine3D(visual.Position - (up * radius * 0.8f), visual.Position + (up * radius * 0.8f), beamColor);
-            Rl.DrawLine3D(visual.Position - (forward * radius * 0.9f), visual.Position + (forward * radius * 0.9f), beamColor);
-        }
-
         private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
             Vector4 surfaceColor = BlendSemanticColor(visual.Color, visual.MaterialId, 0.38f);
@@ -822,10 +915,6 @@ namespace Ludots.Client.Raylib.Rendering
                     LastDecalVisualCount++;
                     TotalDecalVisualCount++;
                     break;
-                case PrefabVisualPartKind.Vfx:
-                    LastVfxVisualCount++;
-                    TotalVfxVisualCount++;
-                    break;
                 case PrefabVisualPartKind.Surface:
                     LastSurfaceVisualCount++;
                     TotalSurfaceVisualCount++;
@@ -848,13 +937,16 @@ namespace Ludots.Client.Raylib.Rendering
                 Matrix4x4.CreateTranslation(position));
             Color rayColor = ToRaylibColor(color);
 
-            if (kind == PrimitiveMeshKind.Cube)
+            switch (kind)
             {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Cube, rayColor);
-            }
-            else if (kind == PrimitiveMeshKind.Sphere)
-            {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Sphere, rayColor);
+                case PrimitiveMeshKind.Cube:
+                case PrimitiveMeshKind.Sphere:
+                    DrawTransformedPrimitive(in transform, kind, rayColor);
+                    return;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not support primitive mesh kind '{kind}'.");
             }
         }
 
@@ -865,13 +957,19 @@ namespace Ludots.Client.Raylib.Rendering
             try
             {
                 MultMatrix(in transform);
-                if (kind == PrimitiveMeshKind.Cube)
+                switch (kind)
                 {
-                    Rl.DrawCube(Vector3.Zero, 1f, 1f, 1f, color);
-                }
-                else if (kind == PrimitiveMeshKind.Sphere)
-                {
-                    Rl.DrawSphere(Vector3.Zero, 0.5f, color);
+                    case PrimitiveMeshKind.Cube:
+                        Rl.DrawCube(Vector3.Zero, 1f, 1f, 1f, color);
+                        return;
+
+                    case PrimitiveMeshKind.Sphere:
+                        Rl.DrawSphere(Vector3.Zero, 0.5f, color);
+                        return;
+
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} does not support transformed primitive mesh kind '{kind}'.");
                 }
             }
             finally
@@ -1105,6 +1203,124 @@ namespace Ludots.Client.Raylib.Rendering
                 from.Y + (to.Y - from.Y) * t,
                 from.Z + (to.Z - from.Z) * t,
                 from.W + (to.W - from.W) * t);
+        }
+
+        private static float PrimitiveTime()
+        {
+            return (float)Rl.GetTime();
+        }
+
+        private static float PrimitivePulse(int stableId, float speed)
+        {
+            uint seed = Hash((uint)Math.Max(1, stableId));
+            return 0.5f + MathF.Sin(PrimitiveTime() * speed + UnitHash(seed) * MathF.Tau) * 0.5f;
+        }
+
+        private void EnsureSoftGlowTexture()
+        {
+            if (_softGlowTextureLoaded)
+            {
+                return;
+            }
+
+            const int size = 96;
+            Image image = Rl.GenImageColor(size, size, Color.BLANK);
+            if (image.data == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} could not allocate the procedural soft glow texture image.");
+            }
+
+            try
+            {
+                Color* pixels = (Color*)image.data;
+                float center = (size - 1) * 0.5f;
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dx = (x - center) / center;
+                        float dy = (y - center) / center;
+                        float distance = MathF.Sqrt(dx * dx + dy * dy);
+                        float core = 1f - Math.Clamp(distance, 0f, 1f);
+                        float alpha = MathF.Pow(core, 1.55f) * 255f;
+                        pixels[(y * size) + x] = new Color(255, 255, 255, (byte)Math.Clamp(alpha, 0f, 255f));
+                    }
+                }
+
+                _softGlowTexture = Rl.LoadTextureFromImage(image);
+                if (_softGlowTexture.id == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} could not create the procedural soft glow texture.");
+                }
+
+                _softGlowTextureLoaded = true;
+            }
+            finally
+            {
+                Rl.UnloadImage(image);
+            }
+        }
+
+        private void DrawSoftBillboard(Camera3D camera, Vector3 position, float size, Vector4 color)
+        {
+            if (!float.IsFinite(size) || size <= 0f || color.W <= 0f)
+            {
+                return;
+            }
+
+            EnsureSoftGlowTexture();
+            Rectangle source = new(0f, 0f, _softGlowTexture.width, _softGlowTexture.height);
+            Rl.DrawBillboardRec(camera, _softGlowTexture, source, position, new Vector2(size, size), ToRaylibColor(color));
+        }
+
+        private void DrawSoftBeam(Camera3D camera, Vector3 start, Vector3 end, float width, Vector4 color, int samples)
+        {
+            if (samples <= 0 || !float.IsFinite(width) || width <= 0f || color.W <= 0f)
+            {
+                return;
+            }
+
+            for (int index = 0; index < samples; index++)
+            {
+                float t = samples == 1 ? 0.5f : index / (float)(samples - 1);
+                float endpointFade = MathF.Sin(t * MathF.PI);
+                float size = width * (0.72f + endpointFade * 0.58f);
+                Vector4 sampleColor = color;
+                sampleColor.W *= 0.42f + endpointFade * 0.58f;
+                DrawSoftBillboard(camera, Vector3.Lerp(start, end, t), size, sampleColor);
+            }
+        }
+
+        private void DrawRingGlowDots(
+            Camera3D camera,
+            Vector3 center,
+            Quaternion rotation,
+            float radiusX,
+            float radiusZ,
+            int count,
+            float size,
+            Vector4 color)
+        {
+            if (count <= 0 || radiusX <= 0f || radiusZ <= 0f || size <= 0f)
+            {
+                return;
+            }
+
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            float phase = PrimitiveTime() * 0.42f;
+            for (int index = 0; index < count; index++)
+            {
+                float angle = phase + MathF.Tau * index / count;
+                Vector3 position = TransformLocal(
+                    center,
+                    normalized,
+                    new Vector3(MathF.Cos(angle) * radiusX, 0f, MathF.Sin(angle) * radiusZ));
+                Vector4 dotColor = color;
+                dotColor.W *= index % 3 == 0 ? 1f : 0.62f;
+                DrawSoftBillboard(camera, position, size * (index % 4 == 0 ? 1.35f : 1f), dotColor);
+            }
         }
 
         private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
@@ -1556,7 +1772,12 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void DrawRotatedRing(Vector3 center, Quaternion rotation, float radius, int segments, Vector4 color)
         {
-            if (segments < 3 || radius <= 0f)
+            DrawRotatedRing(center, rotation, radius, radius, segments, color);
+        }
+
+        private static void DrawRotatedRing(Vector3 center, Quaternion rotation, float radiusX, float radiusZ, int segments, Vector4 color)
+        {
+            if (segments < 3 || radiusX <= 0f || radiusZ <= 0f)
             {
                 return;
             }
@@ -1564,17 +1785,116 @@ namespace Ludots.Client.Raylib.Rendering
             Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
             Color ringColor = ToRaylibColor(color);
             float step = MathF.Tau / segments;
-            Vector3 previous = TransformLocal(center, normalized, new Vector3(radius, 0f, 0f));
+            Vector3 previous = TransformLocal(center, normalized, new Vector3(radiusX, 0f, 0f));
             for (int index = 1; index <= segments; index++)
             {
                 float angle = index * step;
                 Vector3 current = TransformLocal(
                     center,
                     normalized,
-                    new Vector3(MathF.Cos(angle) * radius, 0f, MathF.Sin(angle) * radius));
+                    new Vector3(MathF.Cos(angle) * radiusX, 0f, MathF.Sin(angle) * radiusZ));
                 Rl.DrawLine3D(previous, current, ringColor);
                 previous = current;
             }
+        }
+
+        private static void DrawRotatedRingBand(
+            Vector3 center,
+            Quaternion rotation,
+            float radiusX,
+            float radiusZ,
+            int segments,
+            int bands,
+            Vector4 color)
+        {
+            if (bands <= 0 || radiusX <= 0f || radiusZ <= 0f)
+            {
+                return;
+            }
+
+            for (int index = 0; index < bands; index++)
+            {
+                float t = bands == 1 ? 0f : index / (float)(bands - 1);
+                float inset = 0.1f + (t * 0.36f);
+                Vector4 bandColor = color;
+                bandColor.W *= 1f - (t * 0.62f);
+                DrawRotatedRing(
+                    center + Vector3.UnitY * (0.004f * index),
+                    rotation,
+                    radiusX * (1f - inset),
+                    radiusZ * (1f - inset),
+                    segments,
+                    bandColor);
+            }
+        }
+
+        private static void DrawRingTicks(
+            Vector3 center,
+            Quaternion rotation,
+            float radiusX,
+            float radiusZ,
+            int count,
+            float tickLength,
+            Vector4 color)
+        {
+            if (count <= 0 || radiusX <= 0f || radiusZ <= 0f || tickLength <= 0f)
+            {
+                return;
+            }
+
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Color tickColor = ToRaylibColor(color);
+            float phase = PrimitiveTime() * 0.55f;
+            for (int index = 0; index < count; index++)
+            {
+                float angle = phase + MathF.Tau * index / count;
+                float cos = MathF.Cos(angle);
+                float sin = MathF.Sin(angle);
+                float major = index % 4 == 0 ? 1.35f : 0.86f;
+                Vector3 outer = TransformLocal(center, normalized, new Vector3(cos * radiusX, 0f, sin * radiusZ));
+                Vector3 inner = TransformLocal(center, normalized, new Vector3(
+                    cos * MathF.Max(0.02f, radiusX - tickLength * major),
+                    0f,
+                    sin * MathF.Max(0.02f, radiusZ - tickLength * major)));
+                Rl.DrawLine3D(inner, outer, tickColor);
+            }
+        }
+
+        private void DrawBeamCap(Camera3D camera, Vector3 center, Vector3 up, Vector3 side, float radius, Vector4 color)
+        {
+            if (!float.IsFinite(radius) || radius <= 0f)
+            {
+                return;
+            }
+
+            Vector3 safeUp = SafeNormalize(up, Vector3.UnitY);
+            Vector3 safeSide = SafeNormalize(side, Vector3.UnitZ);
+            Color rayColor = ToRaylibColor(color);
+            Rl.DrawLine3D(center - safeSide * radius, center + safeSide * radius, rayColor);
+            Rl.DrawLine3D(center - safeUp * radius * 0.72f, center + safeUp * radius * 0.72f, rayColor);
+            DrawSoftBillboard(camera, center, radius * 2.4f, MultiplyColor(color, 1.08f, 1.08f, 1.0f, 0.38f));
+            DrawPrototypeSphere(center, radius * 0.24f, MultiplyColor(color, 1.22f, 1.18f, 1.05f, 0.88f));
+        }
+
+        private void DrawBeamVolume(Vector3 center, Quaternion rotation, float length, float width, Vector4 color)
+        {
+            if (!float.IsFinite(length) || !float.IsFinite(width) || length <= 0f || width <= 0f)
+            {
+                return;
+            }
+
+            DrawPrimitive(PrimitiveMeshKind.Cube, center, rotation, new Vector3(length, width, width), color);
+        }
+
+        private static Vector3 SafeNormalize(Vector3 value, Vector3 fallback)
+        {
+            float lengthSquared = value.LengthSquared();
+            if (!float.IsFinite(lengthSquared) || lengthSquared <= 0.000001f)
+            {
+                return fallback;
+            }
+
+            return value / MathF.Sqrt(lengthSquared);
         }
 
         private static Vector2 ResolveDecalSize(in PrefabFinalizedVisual visual)
@@ -1626,6 +1946,11 @@ namespace Ludots.Client.Raylib.Rendering
             value *= 0x846CA68Bu;
             value ^= value >> 16;
             return value;
+        }
+
+        private static float UnitHash(uint value)
+        {
+            return (Hash(value) & 0x00FFFFFFu) / 16777215f;
         }
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
@@ -2038,22 +2363,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_initialized) return;
 
             _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
-            if (_cubeMesh.colors == null)
-            {
-                int bytes = _cubeMesh.vertexCount * 4;
-                _cubeMesh.colors = (byte*)Rl.MemAlloc(bytes);
-                for (int i = 0; i < bytes; i++) _cubeMesh.colors[i] = 255;
-            }
-            Rl.UploadMesh(ref _cubeMesh, false);
-
             _sphereMesh = Rl.GenMeshSphere(0.5f, 8, 8);
-            if (_sphereMesh.colors == null)
-            {
-                int bytes = _sphereMesh.vertexCount * 4;
-                _sphereMesh.colors = (byte*)Rl.MemAlloc(bytes);
-                for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
-            }
-            Rl.UploadMesh(ref _sphereMesh, false);
 
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
@@ -2069,13 +2379,14 @@ namespace Ludots.Client.Raylib.Rendering
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
+            int locVertexColor = Rl.GetShaderLocationAttrib(_shader, "vertexColor");
 
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_VIEW] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_PROJECTION] = -1;
@@ -2099,6 +2410,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
             if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
+            if (locVertexColor < 0) throw new InvalidOperationException("Shader attrib 'vertexColor' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
             if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
@@ -2148,6 +2460,13 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
+            }
+
+            if (_softGlowTextureLoaded)
+            {
+                Rl.UnloadTexture(_softGlowTexture);
+                _softGlowTexture = default;
+                _softGlowTextureLoaded = false;
             }
 
             if (!_initialized) return;

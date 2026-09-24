@@ -525,7 +525,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly PerformerDefinition.MinimapMarkerWorkItem work = ref workItems[0];
-                if (work.SlotIndex is < 0 or >= 32)
+                if (work.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots)
                 {
                     return false;
                 }
@@ -568,7 +568,7 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+            return slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots && (mask & (1u << slotIndex)) != 0;
         }
 
         private static bool IsMarkerVisible(

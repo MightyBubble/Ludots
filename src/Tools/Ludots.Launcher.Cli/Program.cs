@@ -5,7 +5,8 @@ using Ludots.Launcher.Backend;
 using Ludots.Launcher.Evidence;
 
 var repoRoot = LauncherService.FindRepoRoot(AppDomain.CurrentDomain.BaseDirectory);
-var service = new LauncherService(repoRoot);
+var explicitUserConfigPath = Environment.GetEnvironmentVariable(LauncherEnvironmentKeys.UserConfigPath);
+var service = new LauncherService(repoRoot, userConfigPath: explicitUserConfigPath);
 var command = CliCommand.Parse(args);
 
 try
@@ -33,14 +34,23 @@ try
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
             if (!string.IsNullOrWhiteSpace(command.RecordDirectory))
             {
+                if (command.Wait)
+                {
+                    throw new InvalidOperationException("launch --wait cannot be combined with --record.");
+                }
+
                 return await RunRecordedLaunchAsync(service, repoRoot, selectors, ResolveRequestedAdapter(service, command), command, args);
             }
 
-            var result = await service.LaunchAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var result = await service.LaunchAsync(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                waitForExit: command.Wait);
             if (!result.Ok)
             {
                 Console.Error.WriteLine(result.Error);
-                return 1;
+                return LauncherCliExitCode.FromLaunchResult(result);
             }
 
             Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
@@ -58,7 +68,7 @@ try
                 Console.WriteLine(result.Url);
             }
 
-            return 0;
+            return LauncherCliExitCode.FromLaunchResult(result);
         }
         case "build" when command.Secondary == "app":
         {
@@ -536,7 +546,7 @@ Commands
   resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
   build [selectors...] [--adapter raylib|web] [--build auto|always|never]
   build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--wait] [--record <artifactDir>]
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -585,6 +595,7 @@ internal sealed class CliCommand
     public string? BindingTargetValue { get; private set; }
     public LauncherBuildMode BuildMode { get; private set; } = LauncherBuildMode.Auto;
     public bool Json { get; private set; }
+    public bool Wait { get; private set; }
     public List<string> SelectorValues { get; } = new();
     public List<string> ModIds { get; } = new();
     public List<string> PathValues { get; } = new();
@@ -648,6 +659,9 @@ internal sealed class CliCommand
                 case "--json":
                     command.Json = true;
                     break;
+                case "--wait":
+                    command.Wait = true;
+                    break;
                 default:
                     command.Operands.Add(token);
                     break;
@@ -693,3 +707,12 @@ internal sealed class CliCommand
 }
 
 internal sealed record BindingTarget(string TargetType, string TargetValue, string? ProjectPath);
+
+internal static class LauncherCliExitCode
+{
+    public static int FromLaunchResult(LauncherLaunchResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.ExitCode ?? (result.Ok ? 0 : 1);
+    }
+}

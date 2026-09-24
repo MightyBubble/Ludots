@@ -1630,7 +1630,6 @@ namespace Ludots.Tests.Presentation
                     0,
                     PrefabPart.Default(cubeId),
                     PrefabPart.Decal(materialId: 17, size: new Vector2(2f, 3f)),
-                    PrefabPart.Vfx(effectAssetId: 23, spawnMode: PrefabVfxSpawnMode.Loop),
                     PrefabPart.Surface(cubeId, materialId: 31, tiling: new Vector2(2f, 2f))));
             int prefabId = prefabs.Register(
                 "test.prefab.typed_root",

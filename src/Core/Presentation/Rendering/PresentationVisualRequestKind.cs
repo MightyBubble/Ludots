@@ -4,9 +4,8 @@ namespace Ludots.Core.Presentation.Rendering
     {
         None = 0,
         Decal = 1,
-        Vfx = 2,
-        Surface = 3,
-        MaterialOverride = 4,
-        InstanceCustomData = 5,
+        Surface = 2,
+        MaterialOverride = 3,
+        InstanceCustomData = 4,
     }
 }

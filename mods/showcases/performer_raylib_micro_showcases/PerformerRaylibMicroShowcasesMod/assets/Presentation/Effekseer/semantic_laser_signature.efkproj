@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>38.380952</Center><Max>38.380952</Max><Min>38.380952</Min></Life><GenerationTime><Center>1.041667</Center><Max>1.041667</Max><Min>1.041667</Min></GenerationTime><GenerationTimeOffset><Center>-35.714286</Center><Max>-35.714286</Max><Min>-35.714286</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Velocity><X><Center>0.21</Center><Max>0.21</Max><Min>0.21</Min></X></Velocity></PVA></LocationValues>
+        <RendererCommonValues><ColorTexture>textures/laser_beam_profile.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>2.380952</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>4.761905</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>6</Type>
+          <TrailColorLeft><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>79</A></Fixed></TrailColorLeft><TrailColorLeftMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>163</A></Fixed></TrailColorLeftMiddle>
+          <TrailColorCenter><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>209</A></Fixed></TrailColorCenter><TrailColorCenterMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>209</A></Fixed></TrailColorCenterMiddle>
+          <TrailColorRight><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>79</A></Fixed></TrailColorRight><TrailColorRightMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>163</A></Fixed></TrailColorRightMiddle>
+          <Track><TrackSizeFor_Fixed>0.130928</TrackSizeFor_Fixed><TrackSizeMiddle_Fixed>0.24549</TrackSizeMiddle_Fixed><TrackSizeBack_Fixed>0.130928</TrackSizeBack_Fixed><SplineDivision>1</SplineDivision></Track>
+        </DrawingValues>
+        <Name>semantic_laser_signature</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

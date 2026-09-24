@@ -73,6 +73,8 @@ namespace Ludots.Core.Presentation.Rendering
         public Quaternion Rotation;
         public Vector3 Scale;
         public Vector4 Color;
+        public Vector3 TargetPosition;
+        public bool HasTarget;
         public int StableId;
         public int MaterialId;
         public int TemplateId;
@@ -93,6 +95,8 @@ namespace Ludots.Core.Presentation.Rendering
                    Rotation.Equals(other.Rotation) &&
                    Scale.Equals(other.Scale) &&
                    Color.Equals(other.Color) &&
+                   TargetPosition.Equals(other.TargetPosition) &&
+                   HasTarget == other.HasTarget &&
                    StableId == other.StableId &&
                    MaterialId == other.MaterialId &&
                    TemplateId == other.TemplateId &&
@@ -120,6 +124,8 @@ namespace Ludots.Core.Presentation.Rendering
             hash.Add(Rotation);
             hash.Add(Scale);
             hash.Add(Color);
+            hash.Add(TargetPosition);
+            hash.Add(HasTarget);
             hash.Add(StableId);
             hash.Add(MaterialId);
             hash.Add(TemplateId);

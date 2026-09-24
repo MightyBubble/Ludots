@@ -39,7 +39,7 @@ namespace Ludots.Tests.Presentation
             var timings = new PresentationTimingDiagnostics { SystemBreakdownEnabled = true };
 
             int decalDefId = RegisterStaticVisual(definitions, "subtype.static.decal", AssetKind.Decal, 101, 201);
-            int vfxDefId = RegisterStaticVisual(definitions, "subtype.static.vfx", AssetKind.VFX, 102, 202);
+            int ringDefId = RegisterStaticVisual(definitions, "subtype.static.ring", AssetKind.Ring, 0, 0);
             int splineDefId = RegisterRetainedAsset(definitions, "subtype.retained.spline", AssetKind.Spline, 103);
             int overlayDefId = RegisterRetainedAsset(definitions, "subtype.retained.ground_overlay", AssetKind.GroundOverlay, (int)GroundOverlayShape.Circle);
             int surfaceDefId = definitions.Register("subtype.surface.source", new PerformerDefinition
@@ -54,7 +54,7 @@ namespace Ludots.Tests.Presentation
 
             long createStart = Stopwatch.GetTimestamp();
             CreateSubtypeBatch(world, runtime, definitions, decalDefId, CountPerSubtype, stableIdBase: 100_000);
-            CreateSubtypeBatch(world, runtime, definitions, vfxDefId, CountPerSubtype, stableIdBase: 200_000);
+            CreateSubtypeBatch(world, runtime, definitions, ringDefId, CountPerSubtype, stableIdBase: 200_000);
             CreateSubtypeBatch(world, runtime, definitions, splineDefId, CountPerSubtype, stableIdBase: 300_000);
             CreateSubtypeBatch(world, runtime, definitions, overlayDefId, CountPerSubtype, stableIdBase: 400_000);
             CreateSubtypeBatch(world, runtime, definitions, surfaceDefId, CountPerSubtype, stableIdBase: 500_000);
@@ -114,7 +114,7 @@ namespace Ludots.Tests.Presentation
             WriteReport(result);
 
             Assert.That(result.FirstRequestCount, Is.EqualTo(CountPerSubtype * 3), "Spline, GroundOverlay, and SurfaceSource should emit once on first frame.");
-            Assert.That(result.FirstStableCacheCount, Is.EqualTo(CountPerSubtype * 2), "Decal and VFX should enter StableDrawCache.");
+            Assert.That(result.FirstStableCacheCount, Is.EqualTo(CountPerSubtype * 2), "Decal and Ring should enter StableDrawCache.");
             Assert.That(Max(result.RequestCounts), Is.EqualTo(0), "Retained subtypes must not re-emit steady-state requests.");
             Assert.That(Min(result.StableCacheCounts), Is.EqualTo(CountPerSubtype * 2));
             Assert.That(Max(result.StableCacheCounts), Is.EqualTo(CountPerSubtype * 2));
@@ -143,10 +143,13 @@ namespace Ludots.Tests.Presentation
                             AssetId = assetId,
                             MaterialId = materialId,
                             Mobility = VisualMobility.Static,
-                            RenderPath = VisualRenderPath.StaticMesh,
+                            RenderPath = kind == AssetKind.Ring
+                                ? VisualRenderPath.Primitive
+                                : VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
+                            MaterialParamKey = -1,
                         },
                     },
                 ],
@@ -216,7 +219,7 @@ namespace Ludots.Tests.Presentation
             var sb = new StringBuilder();
             sb.AppendLine("# Performer Subtype Retained/Static Lane Benchmark");
             sb.AppendLine();
-            sb.AppendLine("- subtypes: `Decal`, `VFX`, `Spline`, `GroundOverlay`, `SurfaceSource`");
+            sb.AppendLine("- subtypes: `Decal`, `Ring`, `Spline`, `GroundOverlay`, `SurfaceSource`");
             sb.AppendLine("- production path: `PerformerEntityRuntime` -> `PerformerEmitSystem` -> `StableDrawCache` / `PresentationRequestBuffer`");
             sb.AppendLine("- steady-state requirement: retained subtypes emit no unchanged requests; static subtypes do not rewrite stable cache");
             sb.AppendLine();

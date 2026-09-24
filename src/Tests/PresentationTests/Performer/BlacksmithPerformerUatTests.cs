@@ -140,6 +140,7 @@ namespace Ludots.Tests.Presentation
                 "src",
                 "Tests",
                 "PresentationTests",
+                "Performer",
                 "BlacksmithPerformerUatTests.cs");
 
             string source = File.ReadAllText(sourcePath);
@@ -584,7 +585,7 @@ namespace Ludots.Tests.Presentation
                 {
                     return kind switch
                     {
-                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.VFX => meshAssets.GetId(key),
+                        AssetKind.Mesh or AssetKind.SkinnedMesh => meshAssets.GetId(key),
                         AssetKind.Spline when string.Equals(key, PatrolSplineAssetKey, StringComparison.Ordinal) => PatrolSplineAssetId,
                         AssetKind.Sound when string.Equals(key, HammerSoundAssetKey, StringComparison.Ordinal) => HammerSoundAssetId,
                         _ => throw new InvalidOperationException(

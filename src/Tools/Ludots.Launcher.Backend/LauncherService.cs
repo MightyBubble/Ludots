@@ -388,7 +388,8 @@ public sealed class LauncherService
     public async Task<LauncherLaunchResult> LaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
-        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        bool waitForExit = false)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
@@ -402,10 +403,13 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        var appBuild = await PrepareAppForLaunchAsync(resolveResult.Plan, buildMode);
         if (!appBuild.Ok)
         {
-            return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan)
+            {
+                ExitCode = appBuild.ExitCode
+            };
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
@@ -418,14 +422,80 @@ public sealed class LauncherService
             UseShellExecute = false
         };
 
-        var process = Process.Start(startInfo);
+        using var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
         }
 
-        PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+        ActiveLaunchProcessRecord activeProcessRecord = PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
+        int processId = process.Id;
+        int? exitCode = await WaitForExitAsync(process, waitForExit);
+        if (exitCode.HasValue)
+        {
+            DeleteActiveProcessRecordIfOwned(resolveResult.Plan, activeProcessRecord);
+        }
+
+        bool launchSucceeded = !exitCode.HasValue || exitCode.Value == 0;
+        string launchError = launchSucceeded
+            ? string.Empty
+            : $"Platform process exited with code {exitCode.Value}.";
+        return new LauncherLaunchResult(
+            launchSucceeded,
+            launchError,
+            processId,
+            resolveResult.Plan.LaunchUrl,
+            bootstrapPath,
+            resolveResult.Plan)
+        {
+            ExitCode = exitCode
+        };
+    }
+
+    internal async Task<LauncherBuildResult> PrepareAppForLaunchAsync(
+        LauncherLaunchPlan plan,
+        LauncherBuildMode buildMode)
+    {
+        if (buildMode != LauncherBuildMode.Never)
+        {
+            return await BuildAppAsync(plan.AdapterId);
+        }
+
+        string[] requiredArtifacts =
+        {
+            plan.AppAssemblyPath,
+            Path.ChangeExtension(plan.AppAssemblyPath, ".deps.json"),
+            Path.ChangeExtension(plan.AppAssemblyPath, ".runtimeconfig.json")
+        };
+        string[] missingArtifacts = requiredArtifacts
+            .Where(path => !File.Exists(path))
+            .ToArray();
+        if (missingArtifacts.Length > 0)
+        {
+            return new LauncherBuildResult(
+                plan.AdapterId,
+                false,
+                1,
+                $"App build is disabled by --build never, but required runtime artifact(s) are missing: {string.Join(", ", missingArtifacts)}");
+        }
+
+        return new LauncherBuildResult(
+            plan.AdapterId,
+            true,
+            0,
+            "App build skipped by --build never; required runtime artifacts already exist.");
+    }
+
+    internal static async Task<int?> WaitForExitAsync(Process process, bool waitForExit)
+    {
+        ArgumentNullException.ThrowIfNull(process);
+        if (!waitForExit)
+        {
+            return null;
+        }
+
+        await process.WaitForExitAsync();
+        return process.ExitCode;
     }
 
     public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
@@ -1526,16 +1596,18 @@ public sealed class LauncherService
         }
 
         ct.ThrowIfCancellationRequested();
-        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            ValidateBrowserRuntimePackage(browserRuntime, out _))
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant())
         {
+            bool exists = ValidateBrowserRuntimePackage(browserRuntime, out string validationMessage);
             return new[]
             {
                 new LauncherBuildResult(
                     resultId,
-                    true,
-                    0,
-                    "Host browser runtime provider build skipped by request.")
+                    exists,
+                    exists ? 0 : 1,
+                    exists
+                        ? "Host browser runtime provider build skipped by --build never; required package already exists."
+                        : $"Host browser runtime provider build is disabled by --build never. {validationMessage}")
             };
         }
 
@@ -1628,7 +1700,8 @@ public sealed class LauncherService
             })
             .ToList();
 
-        if (plannedEntries.Any(entry => entry.Info.Kind == LauncherModKind.BuildableSource))
+        bool buildDisabled = plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant();
+        if (!buildDisabled && plannedEntries.Any(entry => entry.Info.Kind == LauncherModKind.BuildableSource))
         {
             await ExportSdkAsync(ct);
         }
@@ -1662,10 +1735,23 @@ public sealed class LauncherService
             return new LauncherBuildResult(entry.Info.Id, false, 1, $"Missing main assembly for {entry.Info.Id}: {entry.Info.MainAssemblyPath}");
         }
 
-        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            entry.Info.BuildState == LauncherBuildState.Succeeded)
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant())
         {
-            return new LauncherBuildResult(entry.Info.Id, true, 0, "Build skipped by request.");
+            string requiredMainAssemblyPath = ResolveMainAssemblyPath(entry.Info.RootPath, entry.Manifest.Main);
+            if (string.IsNullOrWhiteSpace(entry.Manifest.Main) || !File.Exists(requiredMainAssemblyPath))
+            {
+                return new LauncherBuildResult(
+                    entry.Info.Id,
+                    false,
+                    1,
+                    $"Mod build is disabled by --build never, but the required main assembly is missing: {requiredMainAssemblyPath}");
+            }
+
+            return new LauncherBuildResult(
+                entry.Info.Id,
+                true,
+                0,
+                $"Mod build skipped by --build never; required main assembly already exists: {requiredMainAssemblyPath}");
         }
 
         var projectPath = EnsureProjectFile(entry, config);
@@ -1818,7 +1904,7 @@ public sealed class LauncherService
         }
     }
 
-    private void PersistActiveProcess(LauncherLaunchPlan plan, string bootstrapPath, Process process)
+    private ActiveLaunchProcessRecord PersistActiveProcess(LauncherLaunchPlan plan, string bootstrapPath, Process process)
     {
         var record = new ActiveLaunchProcessRecord(
             process.Id,
@@ -1835,6 +1921,19 @@ public sealed class LauncherService
 
         var json = JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(recordPath, json);
+        return record;
+    }
+
+    private void DeleteActiveProcessRecordIfOwned(LauncherLaunchPlan plan, ActiveLaunchProcessRecord ownedRecord)
+    {
+        string recordPath = GetActiveProcessRecordPath(plan.AdapterId);
+        ActiveLaunchProcessRecord? record = ReadActiveProcessRecord(recordPath);
+        if (record != null &&
+            record.Pid == ownedRecord.Pid &&
+            record.StartedAtUtcTicks == ownedRecord.StartedAtUtcTicks)
+        {
+            DeleteActiveProcessRecord(recordPath);
+        }
     }
 
     private static ActiveLaunchProcessRecord? ReadActiveProcessRecord(string path)

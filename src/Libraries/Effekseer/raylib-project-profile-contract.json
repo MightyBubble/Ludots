@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "version": 3,
+    "startFrame": 0,
+    "endFrame": 180,
+    "isLoop": true
+  },
+  "rendererDefaults": {
+    "zWrite": false,
+    "zTest": true
+  },
+  "color": {
+    "red": 255,
+    "green": 255,
+    "blue": 255,
+    "channelMax": 255
+  },
+  "parameterTypes": {
+    "factor": {
+      "kind": "number",
+      "minimum": 0.25,
+      "maximum": 4
+    },
+    "unit": {
+      "kind": "number",
+      "minimum": 0.1,
+      "maximum": 1
+    },
+    "pngResource": {
+      "kind": "resource",
+      "extension": ".png"
+    }
+  },
+  "assetKinds": {
+    "SpriteEmitter": {
+      "primitive": "sprite_burst",
+      "signature": "sprite_icon"
+    },
+    "RibbonEmitter": {
+      "primitive": "ribbon_trail",
+      "signature": "ribbon_trail"
+    },
+    "TrackEmitter": {
+      "primitive": "track_beam",
+      "signature": "track_beam"
+    },
+    "RingEmitter": {
+      "primitive": "ring_pulse",
+      "signature": "ring_pulse"
+    },
+    "ModelEmitter": {
+      "primitive": "model_shard",
+      "signature": "model_shard"
+    }
+  },
+  "profiles": {
+    "sprite_burst": {
+      "assetKind": "SpriteEmitter",
+      "generator": "spriteBurst",
+      "parameters": {
+        "tempo": "factor",
+        "density": "factor",
+        "size": "factor",
+        "alpha": "unit",
+        "spread": "factor",
+        "rise": "factor",
+        "spin": "factor",
+        "growth": "factor",
+        "texture": "pngResource"
+      },
+      "visual": {
+        "lifeFrames": [36, 42, 48],
+        "generationIntervalFrames": [3, 4, 5],
+        "generationOffsetFrames": -12,
+        "locationHorizontalRadius": 0.2,
+        "locationVerticalRadius": 0.1,
+        "horizontalVelocity": 0.015,
+        "verticalVelocity": [0.01, 0.025, 0.04],
+        "rotationDegrees": [-180, 180],
+        "spinVelocity": [1, 2, 3],
+        "baseScale": 0.24,
+        "scaleRange": [0.75, 1.25],
+        "scaleVelocity": [0.002, 0.003, 0.004],
+        "renderer": {
+          "texture": "authoring",
+          "alphaBlend": 2,
+          "fadeInFrames": 2,
+          "fadeOutFrames": 18
+        },
+        "billboard": 0
+      }
+    },
+    "sprite_icon": {
+      "assetKind": "SpriteEmitter",
+      "generator": "spriteIcon",
+      "parameters": {
+        "size": "factor",
+        "texture": "pngResource"
+      },
+      "visual": {
+        "maxGeneration": 1,
+        "removeWhenLifeIsExtinct": false,
+        "lifeFrames": [1000, 1000, 1000],
+        "generationIntervalFrames": [1, 1, 1],
+        "generationOffsetFrames": [0, 0, 0],
+        "renderer": {
+          "texture": "authoring",
+          "alphaBlend": 1,
+          "fadeInFrames": 0,
+          "fadeOutFrames": 0
+        },
+        "alpha": 1,
+        "billboard": 0
+      }
+    },
+    "ribbon_trail": {
+      "assetKind": "RibbonEmitter",
+      "generator": "ribbonTrail",
+      "parameters": {
+        "tempo": "factor",
+        "density": "factor",
+        "size": "factor",
+        "alpha": "unit",
+        "length": "factor",
+        "width": "factor"
+      },
+      "visual": {
+        "lifeFrames": 36,
+        "generationIntervalFrames": 1,
+        "generationOffsetFrames": -20,
+        "forwardVelocity": 0.02,
+        "renderer": {
+          "texture": "textures/laser_beam_profile.png",
+          "alphaBlend": 2,
+          "fadeInFrames": 2,
+          "fadeOutFrames": 12
+        },
+        "viewpointDependent": true,
+        "positionMode": 1,
+        "halfWidth": 0.06,
+        "splineDivision": 1
+      }
+    },
+    "track_beam": {
+      "assetKind": "TrackEmitter",
+      "generator": "trackBeam",
+      "parameters": {
+        "tempo": "factor",
+        "density": "factor",
+        "size": "factor",
+        "alpha": "unit",
+        "length": "factor",
+        "width": "factor"
+      },
+      "visual": {
+        "lifeFrames": 31,
+        "generationIntervalFrames": 1,
+        "generationOffsetFrames": -30,
+        "forwardVelocity": 0.25,
+        "renderer": {
+          "texture": "textures/laser_beam_profile.png",
+          "alphaBlend": 2,
+          "fadeInFrames": 2,
+          "fadeOutFrames": 4
+        },
+        "minimumLayerAlpha": 0.1,
+        "edgeAlphaMultiplier": 0.38,
+        "middleAlphaMultiplier": 0.78,
+        "widths": [0.16, 0.3, 0.16],
+        "splineDivision": 1
+      }
+    },
+    "ring_pulse": {
+      "assetKind": "RingEmitter",
+      "generator": "ringPulse",
+      "parameters": {
+        "tempo": "factor",
+        "density": "factor",
+        "size": "factor",
+        "alpha": "unit",
+        "width": "factor",
+        "growth": "factor"
+      },
+      "visual": {
+        "lifeFrames": 60,
+        "generationIntervalFrames": 45,
+        "generationOffsetFrames": -15,
+        "initialScale": 0.3,
+        "scaleVelocity": 0.01,
+        "renderer": {
+          "texture": null,
+          "alphaBlend": 1,
+          "fadeInFrames": 0,
+          "fadeOutFrames": 18
+        },
+        "billboard": 0,
+        "vertexCount": 48,
+        "outerRadius": 1,
+        "innerWidthMultiplier": 0.28,
+        "minimumInnerRadius": 0.15,
+        "centerRatio": 0.5,
+        "edgeAlphaMultiplier": 0.2
+      }
+    },
+    "model_shard": {
+      "assetKind": "ModelEmitter",
+      "generator": "modelShard",
+      "parameters": {
+        "tempo": "factor",
+        "density": "factor",
+        "size": "factor",
+        "alpha": "unit",
+        "spread": "factor",
+        "rise": "factor",
+        "spin": "factor"
+      },
+      "visual": {
+        "lifeFrames": [60, 72, 84],
+        "generationIntervalFrames": [4, 6, 8],
+        "generationOffsetFrames": -30,
+        "locationHorizontalRadius": 0.45,
+        "locationVerticalRadius": 0.18,
+        "verticalVelocity": [0.01, 0.025, 0.04],
+        "rotationDegrees": [-180, 180],
+        "rotationVelocityY": [2, 4, 6],
+        "rotationVelocityZ": [-1, 2, 4],
+        "baseScale": 0.28,
+        "renderer": {
+          "texture": null,
+          "alphaBlend": 2,
+          "fadeInFrames": 3,
+          "fadeOutFrames": 24
+        },
+        "model": "models/energy_shard.efkmodel",
+        "colorMode": 0
+      }
+    }
+  }
+}

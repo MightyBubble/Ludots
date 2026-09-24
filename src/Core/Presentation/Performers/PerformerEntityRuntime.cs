@@ -31,6 +31,7 @@ namespace Ludots.Core.Presentation.Performers
 
         private readonly World _world;
         private PerformerDefinitionRegistry? _definitions;
+        private int _boundDefinitionsVersion = -1;
         private int _activeCount;
         private int _structureVersion;
         private int _nonRootCount;
@@ -199,13 +200,16 @@ namespace Ludots.Core.Presentation.Performers
 
         public void BindDefinitions(PerformerDefinitionRegistry definitions)
         {
-            if (ReferenceEquals(_definitions, definitions))
+            ArgumentNullException.ThrowIfNull(definitions);
+            int version = definitions.Version;
+            if (ReferenceEquals(_definitions, definitions) && _boundDefinitionsVersion == version)
             {
                 return;
             }
 
-            _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _definitions = definitions;
             ReconcileBoundDefinitions();
+            _boundDefinitionsVersion = version;
         }
 
         public void BindAnimatorStates(PerformerAnimatorStateBuffer animatorStates)
@@ -244,6 +248,15 @@ namespace Ludots.Core.Presentation.Performers
             PerformerDefinition definition)
         {
             definition = ResolveDefinition(defId, definition);
+            if (parent != Entity.Null && _world.IsAlive(parent))
+            {
+                ref readonly PerformerChildren existingChildren = ref _world.Get<PerformerChildren>(parent);
+                if (existingChildren.Count >= PerformerChildren.MAX_CHILDREN)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer parent {parent.Id} cannot exceed {PerformerChildren.MAX_CHILDREN} direct children.");
+                }
+            }
 
             var state = new PerformerState
             {
@@ -287,6 +300,11 @@ namespace Ludots.Core.Presentation.Performers
                 new PerformerVectorDefaults(),
                 new PerformerEmitCache());
 
+            if (definition.HasParamTweenBehavior)
+            {
+                _world.Add<PerformerParamTweenState>(entity);
+            }
+
             InitializeAnimatorSlotIfPresent(entity, definition);
             AddBehaviorMarkers(entity, definition, state.BehaviorActiveMask);
             AddEventDrivenStaticEmitMarkers(entity, definition);
@@ -295,7 +313,11 @@ namespace Ludots.Core.Presentation.Performers
             if (parent != Entity.Null && _world.IsAlive(parent))
             {
                 ref var parentChildren = ref _world.Get<PerformerChildren>(parent);
-                parentChildren.Add(entity);
+                if (!parentChildren.Add(entity))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer parent {parent.Id} rejected child {entity.Id} after capacity preflight.");
+                }
                 _nonRootCount++;
             }
 
@@ -598,17 +620,38 @@ namespace Ludots.Core.Presentation.Performers
             {
                 case ParamLane.Float:
                     ref var fp = ref _world.Get<PerformerFloatParams>(performer);
-                    changed = !fp.TryGet(paramKey, out float existingFloat) || existingFloat != floatValue;
+                    bool hasExistingFloat = fp.TryGet(paramKey, out float existingFloat);
+                    if (!hasExistingFloat && fp.Count >= PerformerFloatParams.MAX_ENTRIES)
+                    {
+                        throw new InvalidOperationException(
+                            $"Performer {performer.Id} float param capacity {PerformerFloatParams.MAX_ENTRIES} is full; cannot set key {paramKey}.");
+                    }
+
+                    changed = !hasExistingFloat || existingFloat != floatValue;
                     fp.Set(paramKey, floatValue);
                     break;
                 case ParamLane.Int:
                     ref var ip = ref _world.Get<PerformerIntParams>(performer);
-                    changed = !ip.TryGet(paramKey, out int existingInt) || existingInt != intValue;
+                    bool hasExistingInt = ip.TryGet(paramKey, out int existingInt);
+                    if (!hasExistingInt && ip.Count >= PerformerIntParams.MAX_ENTRIES)
+                    {
+                        throw new InvalidOperationException(
+                            $"Performer {performer.Id} int param capacity {PerformerIntParams.MAX_ENTRIES} is full; cannot set key {paramKey}.");
+                    }
+
+                    changed = !hasExistingInt || existingInt != intValue;
                     ip.Set(paramKey, intValue);
                     break;
                 case ParamLane.Vector:
                     ref var vp = ref _world.Get<PerformerVectorParams>(performer);
-                    changed = !vp.TryGet(paramKey, out Vector4 existingVector) || existingVector != vectorValue;
+                    bool hasExistingVector = vp.TryGet(paramKey, out Vector4 existingVector);
+                    if (!hasExistingVector && vp.Count >= PerformerVectorParams.MAX_ENTRIES)
+                    {
+                        throw new InvalidOperationException(
+                            $"Performer {performer.Id} vector param capacity {PerformerVectorParams.MAX_ENTRIES} is full; cannot set key {paramKey}.");
+                    }
+
+                    changed = !hasExistingVector || existingVector != vectorValue;
                     vp.Set(paramKey, in vectorValue);
                     break;
                 default:
@@ -1383,11 +1426,12 @@ namespace Ludots.Core.Presentation.Performers
             bool hasAnimator = false;
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasMinimapMarker = false;
+            bool hasParamTween = false;
 
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.SlotIndex is < 0 or >= 32 ||
+                if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeBehaviorMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -1410,6 +1454,7 @@ namespace Ludots.Core.Presentation.Performers
 
                         break;
                     case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                    case BehaviorKind.ParamTween: hasParamTween = true; break;
                 }
             }
 
@@ -1426,6 +1471,7 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
+            SyncTickBehaviorMarker<PerfHasParamTween>(entity, hasParamTween);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
             SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
@@ -1452,7 +1498,7 @@ namespace Ludots.Core.Presentation.Performers
                     {
                         ref readonly BehaviorSlot slot = ref behaviors[i];
                         if (slot.Kind != BehaviorKind.AssetBinding ||
-                            slot.SlotIndex is < 0 or >= 32)
+                            slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots)
                         {
                             continue;
                         }
@@ -1496,7 +1542,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             if (!_world.IsAlive(entity) ||
                 !_world.Has<PerformerState>(entity) ||
-                slotIndex is < 0 or >= 32)
+                slotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots)
             {
                 return false;
             }
@@ -1513,23 +1559,43 @@ namespace Ludots.Core.Presentation.Performers
 
             state.BehaviorActiveMask = nextMask;
             state.Version++;
+            ResetParamTweenSlotIfPresent(entity, definition, slotIndex);
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
             MarkStaticDirty(entity);
             return true;
         }
 
+        private void ResetParamTweenSlotIfPresent(Entity entity, PerformerDefinition definition, int slotIndex)
+        {
+            if (!_world.Has<PerformerParamTweenState>(entity))
+            {
+                return;
+            }
+
+            int[] tweenBehaviorIndices = definition.ParamTweenBehaviorIndices;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < tweenBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tweenBehaviorIndices[i]];
+                if (slot.SlotIndex != slotIndex)
+                {
+                    continue;
+                }
+
+                ref PerformerParamTweenState tweenState = ref _world.Get<PerformerParamTweenState>(entity);
+                tweenState.ResetSlot(slotIndex);
+                return;
+            }
+        }
+
         private static bool IsRequestBackedVisual(AssetKind kind)
         {
-            return kind is AssetKind.Mesh
-                or AssetKind.SkinnedMesh
-                or AssetKind.Decal
-                or AssetKind.VFX
-                or AssetKind.Surface
-                or AssetKind.WorldHud
-                or AssetKind.WorldText
-                or AssetKind.Spline
-                or AssetKind.GroundOverlay;
+            return kind.IsVisualProxyKind()
+                || kind is AssetKind.WorldHud
+                    or AssetKind.WorldText
+                    or AssetKind.Spline
+                    or AssetKind.GroundOverlay;
         }
 
         private void AddBehaviorMarkers(Entity entity, PerformerDefinition definition, uint activeBehaviorMask)
@@ -1573,6 +1639,11 @@ namespace Ludots.Core.Presentation.Performers
             if (_world.Has<PerfHasMinimapMarker>(entity))
             {
                 RemoveMarker<PerfHasMinimapMarker>(entity);
+            }
+
+            if (_world.Has<PerfHasParamTween>(entity))
+            {
+                RemoveMarker<PerfHasParamTween>(entity);
             }
 
             if (_world.Has<PerfTransformSyncTick>(entity))
@@ -1817,7 +1888,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.SlotIndex is < 0 or >= 32 ||
+                if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0 ||
                     slot.Kind != BehaviorKind.Grounding)
                 {
@@ -1899,7 +1970,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.SlotIndex is < 0 or >= 32 ||
+                if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -1912,6 +1983,7 @@ namespace Ludots.Core.Presentation.Performers
                     case BehaviorKind.MinimapMarker:
                     case BehaviorKind.Animator:
                     case BehaviorKind.Material:
+                    case BehaviorKind.ParamTween:
                         break;
 
                     default:
@@ -1938,7 +2010,7 @@ namespace Ludots.Core.Presentation.Performers
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (slot.SlotIndex is < 0 or >= 32 ||
+                    if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                         (activeMask & (1u << slot.SlotIndex)) == 0)
                     {
                         continue;
@@ -2021,7 +2093,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.SlotIndex is < 0 or >= 32 ||
+                if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -2393,7 +2465,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < definition.Behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
-                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= 32)
+                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= PerformerBehaviorCapacity.MaxSlots)
                 {
                     continue;
                 }
@@ -2444,6 +2516,11 @@ namespace Ludots.Core.Presentation.Performers
                 Component<PerformerVectorDefaults>.Signature +
                 Component<PerformerEmitCache>.Signature;
 
+            if (definition.HasParamTweenBehavior)
+            {
+                signature += Component<PerformerParamTweenState>.Signature;
+            }
+
             BehaviorSlot[] behaviors = definition.Behaviors;
             if (behaviors != null)
             {
@@ -2455,10 +2532,11 @@ namespace Ludots.Core.Presentation.Performers
                 bool hasAnimator = false;
                 bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
                 bool hasMinimapMarker = false;
+                bool hasParamTween = false;
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (slot.SlotIndex is < 0 or >= 32 ||
+                    if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                         (defaultBehaviorMask & (1u << slot.SlotIndex)) == 0)
                     {
                         continue;
@@ -2480,6 +2558,7 @@ namespace Ludots.Core.Presentation.Performers
                                                  DefinitionHasAttachmentTransformConsumers(definition);
                             break;
                         case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                        case BehaviorKind.ParamTween: hasParamTween = true; break;
                     }
                 }
 
@@ -2495,6 +2574,7 @@ namespace Ludots.Core.Presentation.Performers
                 if (hasGrounding) signature += Component<PerfHasGrounding>.Signature;
                 if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
+                if (hasParamTween) signature += Component<PerfHasParamTween>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
                     !definition.UsesEventDrivenStaticEmit &&
                     !definition.UsesRetainedPresentationRequest)
@@ -2543,6 +2623,7 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             if (definition.HasSurfaceAuthoring ||
+                definition.HasParamTweenBehavior ||
                 definition.HasOwnerTagBindingWork ||
                 definition.MaterialBehaviorIndices.Length != 0 ||
                 definition.BootstrapGroundingBehaviorIndices.Length != 0 ||
@@ -2632,7 +2713,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
                 if (slot.Kind != BehaviorKind.AttributeBinding ||
-                    slot.SlotIndex is < 0 or >= 32 ||
+                    slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -2656,7 +2737,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
                 if (slot.Kind != BehaviorKind.AssetBinding ||
-                    slot.SlotIndex is < 0 or >= 32 ||
+                    slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -2688,7 +2769,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
                 if (slot.Kind != BehaviorKind.Attachment ||
-                    slot.SlotIndex is < 0 or >= 32 ||
+                    slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -2745,6 +2826,8 @@ namespace Ludots.Core.Presentation.Performers
             var syncEmitWork = new List<ReconcileDefinitionWork>();
             var addBootstrap = new List<Entity>();
             var removeUnknownTickMarkers = new List<Entity>();
+            var addParamTweenState = new List<Entity>();
+            var removeParamTweenState = new List<Entity>();
             var query = new QueryDescription().WithAll<PerformerState>();
             _suppressOwnerPayloadMarkerWrites = true;
             try
@@ -2759,6 +2842,10 @@ namespace Ludots.Core.Presentation.Performers
                         }
 
                         removeUnknownTickMarkers.Add(entity);
+                        if (_world.Has<PerformerParamTweenState>(entity))
+                        {
+                            removeParamTweenState.Add(entity);
+                        }
                         AddToOwnerIndex(state.OwnerEntity, entity);
                         if (state.ScopeId > 0)
                         {
@@ -2771,6 +2858,21 @@ namespace Ludots.Core.Presentation.Performers
                     AddIndexes(entity, in state, definition);
                     syncTickWork.Add(new ReconcileDefinitionWork(entity, definition, state.BehaviorActiveMask));
                     syncEmitWork.Add(new ReconcileDefinitionWork(entity, definition, state.BehaviorActiveMask));
+                    if (definition.HasParamTweenBehavior)
+                    {
+                        if (_world.Has<PerformerParamTweenState>(entity))
+                        {
+                            _world.Get<PerformerParamTweenState>(entity) = default;
+                        }
+                        else
+                        {
+                            addParamTweenState.Add(entity);
+                        }
+                    }
+                    else if (_world.Has<PerformerParamTweenState>(entity))
+                    {
+                        removeParamTweenState.Add(entity);
+                    }
                     if (definition.RequiresBootstrapProcessing && !_world.Has<PerformerBootstrapPending>(entity))
                     {
                         addBootstrap.Add(entity);
@@ -2837,6 +2939,24 @@ namespace Ludots.Core.Presentation.Performers
                 if (_world.IsAlive(entity))
                 {
                     RemoveTickBehaviorMarkers(entity);
+                }
+            }
+
+            for (int i = 0; i < removeParamTweenState.Count; i++)
+            {
+                Entity entity = removeParamTweenState[i];
+                if (_world.IsAlive(entity) && _world.Has<PerformerParamTweenState>(entity))
+                {
+                    RemoveMarker<PerformerParamTweenState>(entity);
+                }
+            }
+
+            for (int i = 0; i < addParamTweenState.Count; i++)
+            {
+                Entity entity = addParamTweenState[i];
+                if (_world.IsAlive(entity) && !_world.Has<PerformerParamTweenState>(entity))
+                {
+                    AddMarker<PerformerParamTweenState>(entity);
                 }
             }
 
@@ -3178,7 +3298,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
                 if (slot.Kind != BehaviorKind.Attachment ||
-                    slot.SlotIndex is < 0 or >= 32 ||
+                    slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -3241,7 +3361,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
                 if (slot.Kind != BehaviorKind.AttributeBinding ||
-                    slot.SlotIndex is < 0 or >= 32 ||
+                    slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
                     continue;
@@ -3348,7 +3468,11 @@ namespace Ludots.Core.Presentation.Performers
                 if (parent != Entity.Null && _world.IsAlive(parent))
                 {
                     ref PerformerChildren parentChildren = ref _world.Get<PerformerChildren>(parent);
-                    parentChildren.Add(performer);
+                    if (!parentChildren.Add(performer))
+                    {
+                        throw new InvalidOperationException(
+                            $"Performer parent {parent.Id} rejected child {performer.Id} during batch index registration.");
+                    }
                 }
             }
         }
@@ -4035,7 +4159,7 @@ namespace Ludots.Core.Presentation.Performers
                 }
 
                 int slotIndex = behaviors[behaviorIndex].SlotIndex;
-                if (slotIndex is >= 0 and < 32)
+                if (slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots)
                 {
                     mask |= 1u << slotIndex;
                 }
@@ -4356,7 +4480,7 @@ namespace Ludots.Core.Presentation.Performers
                 }
 
                 int slotIndex = behaviors[behaviorIndex].SlotIndex;
-                if (slotIndex is >= 0 and < 32 &&
+                if (slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots &&
                     (activeBehaviorMask & (1u << slotIndex)) != 0)
                 {
                     return true;

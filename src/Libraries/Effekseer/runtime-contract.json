@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "bridgeAbiVersion": 2,
+  "runtimeFormatVersion": 1810,
+  "dynamicInputSlotCount": 4,
+  "runtimes": [
+    {
+      "runtimeIdentifier": "win-x64",
+      "library": "native/ludots_effekseer.dll"
+    }
+  ],
+  "emitterNodeTypes": {
+    "SpriteEmitter": 2,
+    "RibbonEmitter": 3,
+    "RingEmitter": 4,
+    "ModelEmitter": 5,
+    "TrackEmitter": 6
+  }
+}

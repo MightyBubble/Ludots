@@ -314,18 +314,6 @@ namespace Ludots.Core.Presentation.Assets
                         part.AlignToSurface));
                     return;
 
-                case PrefabVisualPartKind.Vfx:
-                    ValidatePartContract(part, stableId);
-                    output.Add(PrefabFinalizedVisual.Vfx(
-                        stableId,
-                        position,
-                        rotation,
-                        scale,
-                        color,
-                        part.EffectAssetId,
-                        part.VfxSpawnMode));
-                    return;
-
                 case PrefabVisualPartKind.Surface:
                     ValidatePartContract(part, stableId);
                     if (!meshes.TryGetDescriptor(part.MeshAssetId, out MeshAssetDescriptor surfaceDescriptor))
@@ -397,15 +385,6 @@ namespace Ludots.Core.Presentation.Assets
                     {
                         throw new InvalidOperationException(
                             $"Prefab decal part stableId={stableId} must declare a positive materialId.");
-                    }
-
-                    return;
-
-                case PrefabVisualPartKind.Vfx:
-                    if (part.EffectAssetId <= 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Prefab VFX part stableId={stableId} must declare a positive effectAssetId.");
                     }
 
                     return;

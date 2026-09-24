@@ -309,7 +309,7 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+            return slotIndex is >= 0 and < PerformerBehaviorCapacity.MaxSlots && (mask & (1u << slotIndex)) != 0;
         }
 
     }

@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -1119,6 +1120,11 @@ namespace Ludots.Core.Presentation.Config
             {
                 return Array.Empty<ChildPerformerRef>();
             }
+            if (arr.Count > PerformerChildren.MAX_CHILDREN)
+            {
+                throw new InvalidOperationException(
+                    $"Performer children count {arr.Count} exceeds direct child capacity {PerformerChildren.MAX_CHILDREN}.");
+            }
 
             var children = new ChildPerformerRef[arr.Count];
             for (int i = 0; i < arr.Count; i++)
@@ -1260,9 +1266,9 @@ namespace Ludots.Core.Presentation.Config
                 return Array.Empty<BehaviorSlot>();
             }
 
-            if (arr.Count > 32)
+            if (arr.Count > PerformerBehaviorCapacity.MaxSlots)
             {
-                throw new InvalidOperationException($"Performer '{ownerKey}' exceeds the max 32 behaviors per performer limit.");
+                throw new InvalidOperationException($"Performer '{ownerKey}' exceeds the max {PerformerBehaviorCapacity.MaxSlots} behaviors per performer limit.");
             }
 
             var slots = new BehaviorSlot[arr.Count];
@@ -1275,8 +1281,10 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 BehaviorKind kind = ParseRequiredEnum<BehaviorKind>(obj["kind"], $"Performer '{ownerKey}' behavior[{i}].kind");
+                string behaviorContext = $"Performer '{ownerKey}' behavior[{i}]";
+                ValidateBehaviorObjectFields(obj, kind, behaviorContext);
                 int slotIndex = ParseRequiredBehaviorSlot(obj["slot"], $"Performer '{ownerKey}' behavior[{i}].slot");
-                if (slotIndex is < 0 or >= 32)
+                if (slotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots)
                 {
                     throw new InvalidOperationException($"Performer '{ownerKey}' behavior[{i}] uses slot {slotIndex}, but valid behavior slots are 0-31.");
                 }
@@ -1293,7 +1301,6 @@ namespace Ludots.Core.Presentation.Config
                     SlotIndex = slotIndex,
                     Kind = kind,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
-                    ActivationCondition = ParseConditionRef(obj["activationCondition"]),
                 };
 
                 switch (kind)
@@ -1328,6 +1335,9 @@ namespace Ludots.Core.Presentation.Config
                     case BehaviorKind.MinimapMarker:
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"]);
                         break;
+                    case BehaviorKind.ParamTween:
+                        slot.ParamTween = ParseParamTween(obj["paramTween"]);
+                        break;
                     default:
                         throw new InvalidOperationException($"Unsupported performer behavior kind '{kind}'.");
                 }
@@ -1336,6 +1346,43 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return slots;
+        }
+
+        private static void ValidateBehaviorObjectFields(JsonObject obj, BehaviorKind kind, string context)
+        {
+            string payloadField = kind switch
+            {
+                BehaviorKind.AssetBinding => "assetBinding",
+                BehaviorKind.AttributeBinding => "attributeBinding",
+                BehaviorKind.TagBinding => "tagBinding",
+                BehaviorKind.Animator => "animator",
+                BehaviorKind.Attachment => "attachment",
+                BehaviorKind.Sound => "sound",
+                BehaviorKind.Material => "material",
+                BehaviorKind.Spline => "spline",
+                BehaviorKind.Grounding => "grounding",
+                BehaviorKind.MinimapMarker => "minimapMarker",
+                BehaviorKind.ParamTween => "paramTween",
+                _ => throw new InvalidOperationException($"Unsupported performer behavior kind '{kind}'."),
+            };
+
+            foreach ((string propertyName, _) in obj)
+            {
+                if (propertyName != "slot" &&
+                    propertyName != "kind" &&
+                    propertyName != "activeByDefault" &&
+                    propertyName != payloadField)
+                {
+                    throw new InvalidOperationException(
+                        $"{context} of kind '{kind}' uses unsupported field '{propertyName}'.");
+                }
+            }
+
+            if (obj[payloadField] is not JsonObject)
+            {
+                throw new InvalidOperationException(
+                    $"{context} of kind '{kind}' requires object field '{payloadField}'.");
+            }
         }
 
         private InstancedBatchBinding[] ParseInstancedBatchBindings(JsonNode? node, string ownerKey)
@@ -1467,10 +1514,33 @@ namespace Ludots.Core.Presentation.Config
             ValidateAssetBindingRenderPath(assetKind, renderPath);
             int assetIdParamKey = ParseOptionalParamKey(obj["assetIdParamKey"], "AssetBinding.assetIdParamKey");
             int assetSwapParamKey = ParseOptionalParamKey(obj["assetSwapParamKey"], "AssetBinding.assetSwapParamKey");
+            int targetParamKey = ParseOptionalParamKey(obj["targetParamKey"], "AssetBinding.targetParamKey");
+            bool hasTargetSpace = obj.ContainsKey("targetSpace");
+            if (targetParamKey >= 0 && !hasTargetSpace)
+            {
+                throw new InvalidOperationException(
+                    "AssetBinding.targetParamKey requires explicit targetSpace.");
+            }
+            if (targetParamKey < 0 && hasTargetSpace)
+            {
+                throw new InvalidOperationException(
+                    "AssetBinding.targetSpace requires explicit targetParamKey.");
+            }
+            AssetTargetSpace targetSpace = hasTargetSpace
+                ? ParseRequiredNonNoneEnum<AssetTargetSpace>(obj["targetSpace"], "AssetBinding.targetSpace")
+                : AssetTargetSpace.None;
             string surfaceLayerKey = ParseOptionalCanonicalString(obj["surfaceLayerKey"], "AssetBinding.surfaceLayerKey");
             int sortId = obj["sortId"]?.GetValue<int>() ?? 0;
             MaterialCustomDataBinding materialCustomData = ParseMaterialCustomData(obj["materialCustomData"], renderPath);
             ValidateSurfaceMetadata(assetKind, surfaceLayerKey, obj.ContainsKey("surfaceLayerKey"), obj.ContainsKey("sortId"));
+            ValidateConcretePrimitiveMetadata(
+                assetKind,
+                obj.ContainsKey("assetId"),
+                obj.ContainsKey("materialId"),
+                obj.ContainsKey("assetIdParamKey"),
+                obj.ContainsKey("assetSwapParamKey"),
+                obj.ContainsKey("assetSwapTable"),
+                obj.ContainsKey("materialParamKey"));
             if (assetKind == AssetKind.WorldHud &&
                 (obj.ContainsKey("assetId") || assetIdParamKey >= 0 || assetSwapParamKey >= 0 || obj.ContainsKey("assetSwapTable")))
             {
@@ -1507,6 +1577,8 @@ namespace Ludots.Core.Presentation.Config
                 LocalScale = ParseVector3OrDefault(obj["localScale"], Vector3.One),
                 ScaleParamKey = ParseOptionalParamKey(obj["scaleParamKey"], "AssetBinding.scaleParamKey"),
                 ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "AssetBinding.colorParamKey"),
+                TargetParamKey = targetParamKey,
+                TargetSpace = targetSpace,
                 MaterialParamKey = ParseOptionalParamKey(obj["materialParamKey"], "AssetBinding.materialParamKey"),
                 AssetIdParamKey = assetIdParamKey,
                 AssetSwapParamKey = assetSwapParamKey,
@@ -1544,6 +1616,31 @@ namespace Ludots.Core.Presentation.Config
             if (hasSortId)
             {
                 throw new InvalidOperationException("AssetBinding.sortId is only valid for Surface assets.");
+            }
+        }
+
+        private static void ValidateConcretePrimitiveMetadata(
+            AssetKind assetKind,
+            bool hasAssetId,
+            bool hasMaterialId,
+            bool hasAssetIdParamKey,
+            bool hasAssetSwapParamKey,
+            bool hasAssetSwapTable,
+            bool hasMaterialParamKey)
+        {
+            if (!assetKind.IsConcretePrimitiveKind())
+            {
+                return;
+            }
+
+            if (hasAssetId || hasAssetIdParamKey || hasAssetSwapParamKey || hasAssetSwapTable)
+            {
+                throw new InvalidOperationException($"{assetKind} AssetBinding must not declare assetId, assetIdParamKey, assetSwapParamKey, or assetSwapTable.");
+            }
+
+            if (hasMaterialId || hasMaterialParamKey)
+            {
+                throw new InvalidOperationException($"{assetKind} AssetBinding must not declare materialId or materialParamKey.");
             }
         }
 
@@ -1638,13 +1735,113 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private static ParamTweenConfig ParseParamTween(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ParamTween behavior requires object field 'paramTween'.");
+            }
+
+            const string context = "ParamTween";
+            ParamLane lane = ParseRequiredParamLane(obj, context);
+            if (lane == ParamLane.Int)
+            {
+                throw new InvalidOperationException(
+                    "ParamTween lane must be Float or Vector. Use SetParam commands for discrete Int changes.");
+            }
+
+            if (obj["from"] != null || obj["to"] != null)
+            {
+                throw new InvalidOperationException(
+                    "ParamTween does not accept generic from/to fields. Use fromFloat/toFloat or fromVector/toVector for the declared lane.");
+            }
+
+            float durationSeconds = ParseRequiredFiniteFloat(obj["durationSeconds"], $"{context}.durationSeconds");
+            float delaySeconds = obj["delaySeconds"] == null
+                ? 0f
+                : ParseRequiredFiniteFloat(obj["delaySeconds"], $"{context}.delaySeconds");
+            TweenEasing easing = ParseRequiredEnum<TweenEasing>(obj["easing"], $"{context}.easing");
+            bool loop = obj["loop"]?.GetValue<bool>() ?? false;
+            bool pingPong = obj["pingPong"]?.GetValue<bool>() ?? false;
+
+            if (durationSeconds < 0f)
+            {
+                throw new InvalidOperationException("ParamTween.durationSeconds must be non-negative.");
+            }
+
+            if (delaySeconds < 0f)
+            {
+                throw new InvalidOperationException("ParamTween.delaySeconds must be non-negative.");
+            }
+
+            if (easing == TweenEasing.Cut)
+            {
+                if (durationSeconds != 0f)
+                {
+                    throw new InvalidOperationException("ParamTween Cut easing requires durationSeconds 0.");
+                }
+
+                if (loop)
+                {
+                    throw new InvalidOperationException("ParamTween Cut easing cannot loop.");
+                }
+            }
+            else if (durationSeconds <= 0f)
+            {
+                throw new InvalidOperationException("ParamTween requires positive durationSeconds for non-Cut easing.");
+            }
+
+            if (pingPong && !loop)
+            {
+                throw new InvalidOperationException("ParamTween pingPong requires loop=true.");
+            }
+
+            var config = new ParamTweenConfig
+            {
+                ParamKey = ParseRequiredParamKey(obj["paramKey"], $"{context}.paramKey"),
+                Lane = lane,
+                DurationSeconds = durationSeconds,
+                DelaySeconds = delaySeconds,
+                Easing = easing,
+                Loop = loop,
+                PingPong = pingPong,
+            };
+
+            switch (lane)
+            {
+                case ParamLane.Float:
+                    if (obj["fromVector"] != null || obj["toVector"] != null)
+                    {
+                        throw new InvalidOperationException("ParamTween Float lane must not declare fromVector or toVector.");
+                    }
+
+                    config.FromFloat = ParseRequiredFiniteFloat(obj["fromFloat"], $"{context}.fromFloat");
+                    config.ToFloat = ParseRequiredFiniteFloat(obj["toFloat"], $"{context}.toFloat");
+                    break;
+
+                case ParamLane.Vector:
+                    if (obj["fromFloat"] != null || obj["toFloat"] != null)
+                    {
+                        throw new InvalidOperationException("ParamTween Vector lane must not declare fromFloat or toFloat.");
+                    }
+
+                    config.FromVector = ParseRequiredFiniteVector4(obj["fromVector"], $"{context}.fromVector");
+                    config.ToVector = ParseRequiredFiniteVector4(obj["toVector"], $"{context}.toVector");
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"ParamTween lane '{lane}' is not supported.");
+            }
+
+            return config;
+        }
+
         private static void ValidateAssetBindingRenderPath(AssetKind assetKind, VisualRenderPath renderPath)
         {
             switch (assetKind)
             {
                 case AssetKind.Mesh:
                 case AssetKind.Decal:
-                case AssetKind.VFX:
                     if (!renderPath.IsStaticInstanceLane())
                     {
                         throw new InvalidOperationException(
@@ -1665,6 +1862,20 @@ namespace Ludots.Core.Presentation.Config
                     {
                         throw new InvalidOperationException(
                             $"AssetBinding assetKind '{assetKind}' requires renderPath 'Surface', not '{renderPath}'.");
+                    }
+
+                    break;
+                case AssetKind.Ring:
+                case AssetKind.Line:
+                case AssetKind.SpriteEmitter:
+                case AssetKind.RibbonEmitter:
+                case AssetKind.ModelEmitter:
+                case AssetKind.TrackEmitter:
+                case AssetKind.RingEmitter:
+                    if (renderPath != VisualRenderPath.Primitive)
+                    {
+                        throw new InvalidOperationException(
+                            $"AssetBinding assetKind '{assetKind}' requires renderPath 'Primitive', not '{renderPath}'.");
                     }
 
                     break;
@@ -1995,6 +2206,12 @@ namespace Ludots.Core.Presentation.Config
                         throw new InvalidOperationException($"{context} uses invalid sentinel '{key}'. Use lowercase 'none'.");
                     }
 
+                    if (key.StartsWith("presentation.theme.", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context} uses reserved authoring-only theme key '{key}'. Compile themes into ordinary performer params before loading runtime config.");
+                    }
+
                     return PerformerParamKeyRegistry.Register(key);
                 }
             }
@@ -2080,41 +2297,11 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     key = RequireCanonicalString(key, context);
-                    return PerformerBehaviorSlotRegistry.Register(key);
+                    return PerformerBehaviorSlotRegistry.Resolve(key);
                 }
             }
 
             throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
-        }
-
-        private static class PerformerBehaviorSlotRegistry
-        {
-            private static readonly Dictionary<string, int> Slots = new(StringComparer.Ordinal)
-            {
-                ["body"] = 0,
-                ["attachment"] = 1,
-                ["minimap"] = 2,
-                ["grounding"] = 3,
-                ["animator"] = 4,
-                ["material"] = 5,
-                ["sound"] = 6,
-                ["spline"] = 7,
-                ["attribute"] = 8,
-                ["tag"] = 9,
-                ["orientation"] = 10,
-                ["hud"] = 11,
-            };
-
-            public static int Register(string key)
-            {
-                if (!Slots.TryGetValue(key, out int slot))
-                {
-                    throw new InvalidOperationException(
-                        $"Unknown performer behavior slot '{key}'. Register a semantic slot in PerformerBehaviorSlotRegistry instead of relying on load order.");
-                }
-
-                return slot;
-            }
         }
 
         private static ThresholdMapping[] ParseThresholds(JsonNode? node)
@@ -2202,6 +2389,8 @@ namespace Ludots.Core.Presentation.Config
             return kind switch
             {
                 AssetKind.WorldHud => 0,
+                AssetKind.Ring => 0,
+                AssetKind.Line => 0,
                 AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(node),
                 _ => ResolveBehaviorAssetId(kind, node),
             };
@@ -2537,6 +2726,20 @@ namespace Ludots.Core.Presentation.Config
                 ParseRequiredFloat(arr[1], $"{context}[1]"),
                 ParseRequiredFloat(arr[2], $"{context}[2]"),
                 ParseRequiredFloat(arr[3], $"{context}[3]"));
+        }
+
+        private static Vector4 ParseRequiredFiniteVector4(JsonNode? node, string context)
+        {
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"{context} requires an explicit 4-component array field.");
+            }
+
+            return new Vector4(
+                ParseRequiredFiniteFloat(arr[0], $"{context}[0]"),
+                ParseRequiredFiniteFloat(arr[1], $"{context}[1]"),
+                ParseRequiredFiniteFloat(arr[2], $"{context}[2]"),
+                ParseRequiredFiniteFloat(arr[3], $"{context}[3]"));
         }
 
         private static float ParseRequiredFloat(JsonNode? node, string context)

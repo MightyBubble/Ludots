@@ -1,6 +1,8 @@
 using System.Numerics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -121,7 +123,9 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
         internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
         internal int[] MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+        internal int[] ParamTweenBehaviorIndices = System.Array.Empty<int>();
         internal MinimapMarkerWorkItem[] MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
+        internal bool HasParamTweenBehavior;
         internal bool HasEveryFrameGroundingWork;
         internal bool TickBehaviorsAreGroundingOnly;
         internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -285,6 +289,7 @@ namespace Ludots.Core.Presentation.Performers
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
+            HasParamTweenBehavior = false;
             HasSurfaceAuthoring = Surface != null;
             RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring || HasInstancedBatchBindings;
             UsesStableVisualCache = false;
@@ -308,6 +313,7 @@ namespace Ludots.Core.Presentation.Performers
             BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
             MaterialBehaviorIndices = System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+            ParamTweenBehaviorIndices = System.Array.Empty<int>();
             MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
             HasEveryFrameGroundingWork = false;
             TickBehaviorsAreGroundingOnly = false;
@@ -330,6 +336,7 @@ namespace Ludots.Core.Presentation.Performers
             System.Collections.Generic.List<int>? materialBehaviorIndices = null;
             System.Collections.Generic.List<int>? minimapMarkerBehaviorIndices = null;
             System.Collections.Generic.List<MinimapMarkerWorkItem>? minimapMarkerWorkItems = null;
+            System.Collections.Generic.List<int>? paramTweenBehaviorIndices = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
             if (Bindings != null)
@@ -379,7 +386,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < Behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref Behaviors[i];
-                if (slot.SlotIndex is < 0 or >= 32)
+                if (slot.SlotIndex is < 0 or >= PerformerBehaviorCapacity.MaxSlots)
                 {
                     continue;
                 }
@@ -402,13 +409,20 @@ namespace Ludots.Core.Presentation.Performers
 
                         assetBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         assetBehaviorIndices.Add(i);
+                        ValidateAssetBindingContract(slot.AssetBinding);
                         switch (slot.AssetBinding.AssetKind)
                         {
                             case AssetKind.Mesh:
                             case AssetKind.SkinnedMesh:
                             case AssetKind.Decal:
-                            case AssetKind.VFX:
                             case AssetKind.Surface:
+                            case AssetKind.Ring:
+                            case AssetKind.Line:
+                            case AssetKind.SpriteEmitter:
+                            case AssetKind.RibbonEmitter:
+                            case AssetKind.ModelEmitter:
+                            case AssetKind.TrackEmitter:
+                            case AssetKind.RingEmitter:
                                 if (AssetBindingSupportsEventDrivenStaticEmit(slot.AssetBinding))
                                 {
                                     hasCacheableVisual = true;
@@ -527,6 +541,17 @@ namespace Ludots.Core.Presentation.Performers
                         minimapMarkerWorkItems ??= new System.Collections.Generic.List<MinimapMarkerWorkItem>(2);
                         minimapMarkerWorkItems.Add(new MinimapMarkerWorkItem(slot.SlotIndex, in slot.MinimapMarker));
                         break;
+                    case BehaviorKind.ParamTween:
+                        ValidateParamTweenContract(in slot.ParamTween, slot.SlotIndex);
+                        HasParamTweenBehavior = true;
+                        RequiresBootstrapProcessing = true;
+                        paramTweenBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                        paramTweenBehaviorIndices.Add(i);
+                        tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                        tickBehaviorIndices.Add(i);
+                        blocksEventDrivenStaticEmit = true;
+                        hasStaticOnlyVisuals = false;
+                        break;
                 }
             }
 
@@ -536,7 +561,9 @@ namespace Ludots.Core.Presentation.Performers
             BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = minimapMarkerBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            ParamTweenBehaviorIndices = paramTweenBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MinimapMarkerWorkItems = minimapMarkerWorkItems?.ToArray() ?? System.Array.Empty<MinimapMarkerWorkItem>();
+            ValidateParamTweenMaterialTargets(Behaviors, ParamTweenBehaviorIndices, MaterialBehaviorIndices);
             TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
                                            TickBehaviorIndices.Length != 0 &&
                                            TickBehaviorIndices.Length == CountEveryFrameGroundingTickBehaviors(Behaviors, TickBehaviorIndices);
@@ -595,6 +622,106 @@ namespace Ludots.Core.Presentation.Performers
                    (AlphaFadeOverLifetime && DefaultLifetime > 0f);
         }
 
+        private static void ValidateParamTweenContract(in ParamTweenConfig config, int slotIndex)
+        {
+            string context = $"ParamTween behavior slot {slotIndex}";
+            if (config.ParamKey <= 0)
+            {
+                throw new System.InvalidOperationException($"{context} requires a positive semantic param key.");
+            }
+
+            if (config.Lane is not ParamLane.Float and not ParamLane.Vector)
+            {
+                throw new System.InvalidOperationException(
+                    $"{context} lane must be Float or Vector. Use SetParam commands for discrete Int changes.");
+            }
+
+            if (!float.IsFinite(config.DelaySeconds) || config.DelaySeconds < 0f)
+            {
+                throw new System.InvalidOperationException($"{context} delaySeconds must be finite and non-negative.");
+            }
+
+            if (!float.IsFinite(config.DurationSeconds) || config.DurationSeconds < 0f)
+            {
+                throw new System.InvalidOperationException($"{context} durationSeconds must be finite and non-negative.");
+            }
+
+            if (!System.Enum.IsDefined(config.Easing))
+            {
+                throw new System.InvalidOperationException($"{context} easing '{config.Easing}' is not defined.");
+            }
+
+            if (config.Easing == TweenEasing.Cut)
+            {
+                if (config.DurationSeconds != 0f)
+                {
+                    throw new System.InvalidOperationException($"{context} Cut easing requires durationSeconds 0.");
+                }
+
+                if (config.Loop)
+                {
+                    throw new System.InvalidOperationException($"{context} Cut easing cannot loop.");
+                }
+            }
+            else if (config.DurationSeconds <= 0f)
+            {
+                throw new System.InvalidOperationException($"{context} requires positive durationSeconds for non-Cut easing.");
+            }
+
+            if (config.PingPong && !config.Loop)
+            {
+                throw new System.InvalidOperationException($"{context} pingPong requires loop=true.");
+            }
+
+            if (config.Lane == ParamLane.Float)
+            {
+                if (!float.IsFinite(config.FromFloat) || !float.IsFinite(config.ToFloat))
+                {
+                    throw new System.InvalidOperationException($"{context} Float endpoints must be finite.");
+                }
+
+                return;
+            }
+
+            if (!IsFinite(in config.FromVector) || !IsFinite(in config.ToVector))
+            {
+                throw new System.InvalidOperationException($"{context} Vector endpoints must contain only finite components.");
+            }
+        }
+
+        private static void ValidateParamTweenMaterialTargets(
+            BehaviorSlot[] behaviors,
+            int[] paramTweenBehaviorIndices,
+            int[] materialBehaviorIndices)
+        {
+            for (int tweenIndex = 0; tweenIndex < paramTweenBehaviorIndices.Length; tweenIndex++)
+            {
+                ref readonly ParamTweenConfig tween = ref behaviors[paramTweenBehaviorIndices[tweenIndex]].ParamTween;
+                if (tween.Lane != ParamLane.Float)
+                {
+                    continue;
+                }
+
+                for (int materialIndex = 0; materialIndex < materialBehaviorIndices.Length; materialIndex++)
+                {
+                    ref readonly MaterialConfig material = ref behaviors[materialBehaviorIndices[materialIndex]].Material;
+                    if (material.MaterialSwapParamKey == tween.ParamKey)
+                    {
+                        throw new System.InvalidOperationException(
+                            $"ParamTween cannot drive Material materialSwapParamKey {tween.ParamKey}. Use SetParam commands for discrete material selection.");
+                    }
+                }
+            }
+        }
+
+        private static bool IsFinite(in Vector4 value)
+        {
+            return float.IsFinite(value.X) &&
+                   float.IsFinite(value.Y) &&
+                   float.IsFinite(value.Z) &&
+                   float.IsFinite(value.W);
+        }
+
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)
         {
             if (behaviors == null || slotIndex < 0)
@@ -645,9 +772,10 @@ namespace Ludots.Core.Presentation.Performers
 
         private static bool SupportsVisualProxyFastEmitFor(in AssetBindingConfig asset)
         {
-            return asset.AssetKind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface &&
+            return asset.AssetKind.IsVisualProxyKind() &&
                    asset.ScaleParamKey < 0 &&
                    asset.ColorParamKey < 0 &&
+                   asset.TargetParamKey < 0 &&
                    asset.MaterialParamKey < 0 &&
                    asset.AssetIdParamKey < 0 &&
                    asset.AssetSwapParamKey < 0 &&
@@ -659,6 +787,71 @@ namespace Ludots.Core.Presentation.Performers
         private static bool HasAssetSwapTable(in AssetBindingConfig asset)
         {
             return asset.AssetSwapTable != null && asset.AssetSwapTable.Length != 0;
+        }
+
+        private static void ValidateAssetBindingContract(in AssetBindingConfig asset)
+        {
+            if (asset.TargetParamKey >= 0 && asset.TargetSpace == AssetTargetSpace.None)
+            {
+                throw new System.InvalidOperationException(
+                    "PerformerDefinition.AssetBinding targetParamKey requires explicit targetSpace.");
+            }
+            if (asset.TargetParamKey < 0 && asset.TargetSpace != AssetTargetSpace.None)
+            {
+                throw new System.InvalidOperationException(
+                    "PerformerDefinition.AssetBinding targetSpace requires explicit targetParamKey.");
+            }
+
+            if (asset.AssetKind.IsConcretePrimitiveKind())
+            {
+                if (asset.RenderPath != VisualRenderPath.Primitive)
+                {
+                    throw new System.InvalidOperationException(
+                        $"PerformerDefinition.AssetBinding assetKind '{asset.AssetKind}' requires renderPath '{VisualRenderPath.Primitive}', not '{asset.RenderPath}'.");
+                }
+
+                if (asset.AssetId != 0 ||
+                    asset.MaterialId != 0 ||
+                    asset.AssetIdParamKey >= 0 ||
+                    asset.AssetSwapParamKey >= 0 ||
+                    asset.MaterialParamKey >= 0 ||
+                    HasAssetSwapTable(asset) ||
+                    HasMaterialCustomData(asset))
+                {
+                    throw new System.InvalidOperationException(
+                        $"PerformerDefinition.AssetBinding assetKind '{asset.AssetKind}' must not declare assetId, materialId, assetIdParamKey, assetSwapParamKey, assetSwapTable, materialParamKey, or materialCustomData.");
+                }
+
+                return;
+            }
+
+            if (!asset.AssetKind.IsEmitterKind())
+            {
+                return;
+            }
+
+            if (asset.RenderPath != VisualRenderPath.Primitive)
+            {
+                throw new System.InvalidOperationException(
+                    $"PerformerDefinition.AssetBinding emitter kind '{asset.AssetKind}' requires renderPath '{VisualRenderPath.Primitive}', not '{asset.RenderPath}'.");
+            }
+
+            if (asset.AssetId <= 0 && asset.AssetIdParamKey < 0 && asset.AssetSwapParamKey < 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"PerformerDefinition.AssetBinding emitter kind '{asset.AssetKind}' requires a registered emitter asset id or explicit asset id parameter binding.");
+            }
+
+            if (asset.MaterialId != 0 || asset.MaterialParamKey >= 0 || HasMaterialCustomData(asset))
+            {
+                throw new System.InvalidOperationException(
+                    $"PerformerDefinition.AssetBinding emitter kind '{asset.AssetKind}' must not declare materialId, materialParamKey, or materialCustomData; emitter materials belong to the emitter asset.");
+            }
+        }
+
+        private static bool HasMaterialCustomData(in AssetBindingConfig asset)
+        {
+            return asset.MaterialCustomData.Slots != null && asset.MaterialCustomData.Slots.Length != 0;
         }
 
         private static bool SupportsReplayableSingleRequest(AssetKind kind)
@@ -776,6 +969,7 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            AddIfValid(vectorParams, asset.TargetParamKey);
             CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
         }
 
@@ -791,6 +985,7 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            AddIfValid(vectorParams, asset.TargetParamKey);
             if (asset.AssetKind == AssetKind.GroundOverlay)
             {
                 CollectGroundOverlayParams(floatParams);

@@ -16,11 +16,9 @@ namespace Ludots.Core.Presentation.Assets
             int materialId,
             PrefabMaterialBinding[]? materialBindings,
             in ProceduralMeshBounds localBounds,
-            int effectAssetId,
             in Vector2 size,
             bool alignToSurface,
             in Vector2 tiling,
-            PrefabVfxSpawnMode vfxSpawnMode,
             bool terrainFacing)
         {
             Kind = kind;
@@ -34,11 +32,9 @@ namespace Ludots.Core.Presentation.Assets
             MaterialId = materialId;
             MaterialBindings = materialBindings;
             LocalBounds = localBounds;
-            EffectAssetId = effectAssetId;
             Size = size;
             AlignToSurface = alignToSurface;
             Tiling = tiling;
-            VfxSpawnMode = vfxSpawnMode;
             TerrainFacing = terrainFacing;
         }
 
@@ -64,15 +60,11 @@ namespace Ludots.Core.Presentation.Assets
 
         public ProceduralMeshBounds LocalBounds { get; }
 
-        public int EffectAssetId { get; }
-
         public Vector2 Size { get; }
 
         public bool AlignToSurface { get; }
 
         public Vector2 Tiling { get; }
-
-        public PrefabVfxSpawnMode VfxSpawnMode { get; }
 
         public bool TerrainFacing { get; }
 
@@ -100,11 +92,9 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 materialBindings,
                 localBounds,
-                effectAssetId: 0,
                 size: Vector2.Zero,
                 alignToSurface: false,
                 tiling: Vector2.Zero,
-                vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing: false);
         }
 
@@ -130,40 +120,9 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 materialBindings: null,
                 localBounds: default,
-                effectAssetId: 0,
                 size,
                 alignToSurface,
                 tiling: Vector2.Zero,
-                vfxSpawnMode: PrefabVfxSpawnMode.Once,
-                terrainFacing: false);
-        }
-
-        public static PrefabFinalizedVisual Vfx(
-            int stableId,
-            in Vector3 position,
-            in Quaternion rotation,
-            in Vector3 scale,
-            in Vector4 color,
-            int effectAssetId,
-            PrefabVfxSpawnMode spawnMode)
-        {
-            return new PrefabFinalizedVisual(
-                PrefabVisualPartKind.Vfx,
-                stableId,
-                position,
-                rotation,
-                scale,
-                color,
-                meshAssetId: 0,
-                meshDescriptor: default,
-                materialId: 0,
-                materialBindings: null,
-                localBounds: default,
-                effectAssetId,
-                size: Vector2.Zero,
-                alignToSurface: false,
-                tiling: Vector2.Zero,
-                vfxSpawnMode: spawnMode,
                 terrainFacing: false);
         }
 
@@ -192,11 +151,9 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 materialBindings: null,
                 localBounds,
-                effectAssetId: 0,
                 size: Vector2.Zero,
                 alignToSurface: false,
                 tiling,
-                vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing);
         }
 
@@ -226,11 +183,9 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 materialBindings,
                 localBounds,
-                effectAssetId: 0,
                 size: Vector2.Zero,
                 alignToSurface: false,
                 tiling: Vector2.Zero,
-                vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing: false);
         }
     }

@@ -27,7 +27,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(10), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(11), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
             Assert.That(values, Does.Contain(BehaviorKind.TagBinding));
@@ -38,6 +38,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.Spline));
             Assert.That(values, Does.Contain(BehaviorKind.Grounding));
             Assert.That(values, Does.Contain(BehaviorKind.MinimapMarker));
+            Assert.That(values, Does.Contain(BehaviorKind.ParamTween));
         }
 
         [Test]
@@ -53,6 +54,32 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.Spline, Is.EqualTo(8));
             Assert.That((byte)BehaviorKind.Grounding, Is.EqualTo(9));
             Assert.That((byte)BehaviorKind.MinimapMarker, Is.EqualTo(10));
+            Assert.That((byte)BehaviorKind.ParamTween, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void Runtime_RejectsUnknownPerformerCommandKind()
+        {
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer(1);
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = (PerformerCommandKind)255,
+            }), Is.True);
+
+            using var system = new PerformerRuntimeSystem(
+                world,
+                commands,
+                new PresentationEventStream(1),
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                new PerformerEntityRuntime(world),
+                new PresentationStableIdAllocator(),
+                new PerformerDefinitionRegistry());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f))!;
+            Assert.That(ex.Message, Does.Contain("Unsupported performer command kind"));
+            Assert.That(ex.Message, Does.Contain("(255)"));
         }
 
         [Test]

@@ -997,6 +997,7 @@ namespace Ludots.Core.Engine
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
+            var emitterAssets = new EmitterAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
             var instancedBatchAssets = new InstancedBatchAssetRegistry();
             var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
@@ -1032,7 +1033,6 @@ namespace Ludots.Core.Engine
             performerRuntime.BindAnimatorStates(performerAnimatorStates);
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
-            var presentationBehaviors = new PresentationBehaviorRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(
                 World,
                 spatialQueries: null,
@@ -1079,6 +1079,7 @@ namespace Ludots.Core.Engine
             }
 
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new EmitterAssetConfigLoader(ConfigPipeline, emitterAssets).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new InstancedBatchAssetConfigLoader(
                 ConfigPipeline,
@@ -1088,8 +1089,6 @@ namespace Ludots.Core.Engine
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
                 ResolveInstancedBatchGasEventKey,
                 ResolveInstancedBatchPresentationEventKey).Load(ConfigCatalog, ConfigConflictReport);
-            new PresentationBehaviorConfigLoader(ConfigPipeline, presentationBehaviors, meshAssets).Load(ConfigCatalog, ConfigConflictReport);
-            var presentationBehaviorResolver = new PresentationBehaviorResolver(presentationBehaviors, meshAssets);
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
@@ -1186,12 +1185,12 @@ namespace Ludots.Core.Engine
                     AssetKind.Mesh => meshAssets.GetId(key),
                     AssetKind.SkinnedMesh => meshAssets.GetId(key),
                     AssetKind.Decal => meshAssets.GetId(key),
-                    AssetKind.VFX => meshAssets.GetId(key),
                     AssetKind.Spline => meshAssets.GetId(key),
                     AssetKind.Surface => meshAssets.GetId(key),
                     AssetKind.Sound => meshAssets.GetId(key),
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
+                    _ when kind.IsEmitterKind() => emitterAssets.ResolveId(kind, key),
                     _ => 0,
                 },
                 instancedBatchAssets.GetId,
@@ -1510,12 +1509,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
+            SetService(CoreServiceKeys.PresentationEmitterAssetRegistry, emitterAssets);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
             SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);
             SetService(CoreServiceKeys.InstancedBatchOperationBuffer, instancedBatchOperations);
-            SetService(CoreServiceKeys.PresentationBehaviorRegistry, presentationBehaviors);
-            SetService(CoreServiceKeys.PresentationBehaviorResolver, presentationBehaviorResolver);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);

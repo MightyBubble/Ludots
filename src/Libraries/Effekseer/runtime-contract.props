@@ -1,0 +1,9 @@
+<!-- Generated from runtime-contract.json by scripts/effekseer-runtime-contract.mjs. -->
+<Project>
+  <PropertyGroup>
+    <EffekseerSupportedRuntimeIdentifiers>win-x64</EffekseerSupportedRuntimeIdentifiers>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EffekseerNativeRid)' == 'win-x64'">
+    <EffekseerNativeContractLibrary>native\ludots_effekseer.dll</EffekseerNativeContractLibrary>
+  </PropertyGroup>
+</Project>

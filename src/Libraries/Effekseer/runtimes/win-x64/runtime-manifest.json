@@ -1,0 +1,19 @@
+{
+    "runtimeIdentifier":  "win-x64",
+    "library":  "native/ludots_effekseer.dll",
+    "bridgeAbiVersion":  2,
+    "effekseerVersion":  "1.80.6",
+    "effekseerCommit":  "93dd29c7b4e353fcef6186fe4ac74c9757243550",
+    "effekseerVendoredTreeSha256":  "42cbc79a7f945361f38d045d97b7524ccf6870b5260aaf272bd14db6aaa3bfe0",
+    "effekseerVendoredFileCount":  1663,
+    "effekseerRuntimeFormatVersion":  1810,
+    "dynamicInputSlotCount":  4,
+    "emitterNodeTypes":  {
+                             "SpriteEmitter":  2,
+                             "RibbonEmitter":  3,
+                             "RingEmitter":  4,
+                             "ModelEmitter":  5,
+                             "TrackEmitter":  6
+                         },
+    "sha256":  "e270644dc2386a4fd0cc53c74a48ca5a05ec8f7d5b578950e1dece3c8134b43c"
+}

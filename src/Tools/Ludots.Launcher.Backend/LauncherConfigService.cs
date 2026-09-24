@@ -2,6 +2,11 @@ using System.Text.Json;
 
 namespace Ludots.Launcher.Backend;
 
+public static class LauncherEnvironmentKeys
+{
+    public const string UserConfigPath = "LUDOTS_LAUNCHER_USER_CONFIG_PATH";
+}
+
 public sealed class LauncherConfigService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -46,26 +51,26 @@ public sealed class LauncherConfigService
 
     public LauncherConfig LoadMergedConfig()
     {
-        var repoConfig = EnsureWorkspaceDefaults(ReadJsonFile<LauncherConfig>(RepoConfigPath));
-        var userOverlay = EnsureWorkspaceDefaults(ReadJsonFile<LauncherConfig>(UserConfigPath), injectDefaults: false);
+        var repoConfig = EnsureWorkspaceDefaults(ReadRequiredJsonFile<LauncherConfig>(RepoConfigPath));
+        var userOverlay = EnsureWorkspaceDefaults(ReadOptionalJsonFile<LauncherConfig>(UserConfigPath), injectDefaults: false);
         return MergeWorkspaceConfig(repoConfig, userOverlay);
     }
 
     public LauncherConfig LoadRepoConfig()
     {
-        return EnsureWorkspaceDefaults(ReadJsonFile<LauncherConfig>(RepoConfigPath));
+        return EnsureWorkspaceDefaults(ReadRequiredJsonFile<LauncherConfig>(RepoConfigPath));
     }
 
     public LauncherPresetDocument LoadPresets()
     {
-        var document = ReadJsonFile<LauncherPresetDocument>(RepoPresetsPath);
+        var document = ReadRequiredJsonFile<LauncherPresetDocument>(RepoPresetsPath);
         document.Presets ??= new List<LauncherPresetDefinition>();
         return document;
     }
 
     public LauncherPreferences LoadPreferences()
     {
-        return ReadJsonFile<LauncherPreferences>(PreferencesPath);
+        return ReadOptionalJsonFile<LauncherPreferences>(PreferencesPath);
     }
 
     public void SaveRepoConfig(LauncherConfig config)
@@ -106,22 +111,55 @@ public sealed class LauncherConfigService
         return Path.Combine(appData, "Ludots", "Launcher");
     }
 
-    private static T ReadJsonFile<T>(string path)
+    private static T ReadRequiredJsonFile<T>(string path)
+        where T : new()
+    {
+        return ReadJsonFile<T>(path, allowMissing: false);
+    }
+
+    private static T ReadOptionalJsonFile<T>(string path)
+        where T : new()
+    {
+        return ReadJsonFile<T>(path, allowMissing: true);
+    }
+
+    private static T ReadJsonFile<T>(string path, bool allowMissing)
         where T : new()
     {
         try
         {
-            if (!File.Exists(path))
-            {
-                return new T();
-            }
-
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? new T();
+            return JsonSerializer.Deserialize<T>(json, SerializerOptions)
+                ?? throw new JsonException("The JSON document deserialized to null.");
         }
-        catch
+        catch (Exception exception) when (
+            allowMissing && exception is FileNotFoundException or DirectoryNotFoundException)
         {
             return new T();
+        }
+        catch (FileNotFoundException exception)
+        {
+            throw new FileNotFoundException(
+                $"Required launcher JSON file was not found: '{path}'.",
+                path,
+                exception);
+        }
+        catch (DirectoryNotFoundException exception)
+        {
+            throw new DirectoryNotFoundException(
+                $"Required launcher JSON file was not found: '{path}'.",
+                exception);
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or System.Security.SecurityException
+                or JsonException
+                or NotSupportedException)
+        {
+            throw new InvalidDataException(
+                $"Launcher JSON file '{path}' could not be read or deserialized.",
+                exception);
         }
     }
 

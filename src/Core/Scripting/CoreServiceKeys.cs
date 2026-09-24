@@ -287,12 +287,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
+        public static readonly ServiceKey<EmitterAssetRegistry> PresentationEmitterAssetRegistry = new("PresentationEmitterAssetRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
         public static readonly ServiceKey<InstancedBatchAssetRegistry> InstancedBatchAssetRegistry = new("InstancedBatchAssetRegistry");
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");
         public static readonly ServiceKey<InstancedBatchOperationBuffer> InstancedBatchOperationBuffer = new("InstancedBatchOperationBuffer");
-        public static readonly ServiceKey<PresentationBehaviorRegistry> PresentationBehaviorRegistry = new("PresentationBehaviorRegistry");
-        public static readonly ServiceKey<PresentationBehaviorResolver> PresentationBehaviorResolver = new("PresentationBehaviorResolver");
         public static readonly ServiceKey<AnimatorControllerRegistry> AnimatorControllerRegistry = new("AnimatorControllerRegistry");
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");

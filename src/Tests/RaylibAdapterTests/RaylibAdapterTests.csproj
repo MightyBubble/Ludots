@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\Build\EffekseerNativeRuntime.props" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
   <PropertyGroup>
     <AssemblyName>Ludots.Adapter.Raylib.Tests</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>

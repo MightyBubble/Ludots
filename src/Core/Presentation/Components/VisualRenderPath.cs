@@ -30,6 +30,10 @@ namespace Ludots.Core.Presentation.Components
         /// Host-owned surface lane. Core emits stable semantic payload; adapters own platform-specific surface runtime state.
         /// </summary>
         Surface = 6,
+        /// <summary>
+        /// Adapter-drawn concrete primitive lane. It is not a mesh resource lane and must not enter static mesh adapter sync.
+        /// </summary>
+        Primitive = 7,
     }
 
     public static class VisualRenderPathSemantics
@@ -60,6 +64,11 @@ namespace Ludots.Core.Presentation.Components
         public static bool IsSurfaceLane(this VisualRenderPath renderPath)
         {
             return renderPath == VisualRenderPath.Surface;
+        }
+
+        public static bool IsPrimitiveLane(this VisualRenderPath renderPath)
+        {
+            return renderPath == VisualRenderPath.Primitive;
         }
     }
 }

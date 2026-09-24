@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>19.5</Center><Max>19.5</Max><Min>19.5</Min></Life><GenerationTime><Center>1.219512</Center><Max>1.219512</Max><Min>1.219512</Min></GenerationTime><GenerationTimeOffset><Center>-13.888889</Center><Max>-13.888889</Max><Min>-13.888889</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Velocity><X><Center>0.0288</Center><Max>0.0288</Max><Min>0.0288</Min></X></Velocity></PVA></LocationValues>
+        <RendererCommonValues><ColorTexture>textures/laser_beam_profile.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>1.388889</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>8.333333</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>3</Type><Ribbon><ViewpointDependent>True</ViewpointDependent><ColorAll_Fixed><R>255</R><G>255</G><B>255</B><A>194</A></ColorAll_Fixed><Position>1</Position><Position_Fixed_L>-0.048384</Position_Fixed_L><Position_Fixed_R>0.048384</Position_Fixed_R><SplineDivision>1</SplineDivision></Ribbon></DrawingValues>
+        <Name>semantic_summon_signature</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

@@ -934,7 +934,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_AssetBinding_EmitsDecalAndVfxAsVisualProxies()
+        public void PerformerEmitSystem_AssetBinding_EmitsDecalAndRingAsVisualProxies()
         {
             using var world = World.Create();
             Entity owner = world.Create();
@@ -944,10 +944,12 @@ namespace Ludots.Tests.Presentation
             var animatorStates = new PerformerAnimatorStateBuffer(8);
 
             int decalDef = RegisterAssetDefinition(definitions, "decal", AssetKind.Decal, assetId: 61, materialId: 71, slot: 0);
-            int vfxDef = RegisterAssetDefinition(definitions, "vfx", AssetKind.VFX, assetId: 62, materialId: 72, slot: 0);
+            int ringDef = RegisterAssetDefinition(definitions, "ring", AssetKind.Ring, assetId: 0, materialId: 0, slot: 0, VisualRenderPath.Primitive);
+            int lineDef = RegisterAssetDefinition(definitions, "line", AssetKind.Line, assetId: 0, materialId: 0, slot: 0, VisualRenderPath.Primitive);
             instances.BindDefinitions(definitions);
             AllocateActive(instances, world, decalDef, owner, 201);
-            AllocateActive(instances, world, vfxDef, owner, 202);
+            AllocateActive(instances, world, ringDef, owner, 202);
+            AllocateActive(instances, world, lineDef, owner, 203);
 
             using var system = new PerformerEmitSystem(
                 world,
@@ -961,6 +963,9 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             int visualCount = 0;
+            bool sawDecal = false;
+            bool sawRing = false;
+            bool sawLine = false;
             foreach (ref readonly PresentationRequest request in requests.GetSpan())
             {
                 if (request.Kind != PresentationRequestKind.VisualProxy)
@@ -969,10 +974,29 @@ namespace Ludots.Tests.Presentation
                 }
 
                 visualCount++;
-                Assert.That(request.VisualProxy.MeshAssetId is 61 or 62, Is.True);
+                if (request.VisualProxy.AssetKind == AssetKind.Decal)
+                {
+                    sawDecal = request.VisualProxy.MeshAssetId == 61 &&
+                        request.VisualProxy.RenderPath == VisualRenderPath.StaticMesh;
+                }
+                else if (request.VisualProxy.AssetKind == AssetKind.Ring)
+                {
+                    sawRing = request.VisualProxy.MeshAssetId == 0 &&
+                        request.VisualProxy.MaterialId == 0 &&
+                        request.VisualProxy.RenderPath == VisualRenderPath.Primitive;
+                }
+                else if (request.VisualProxy.AssetKind == AssetKind.Line)
+                {
+                    sawLine = request.VisualProxy.MeshAssetId == 0 &&
+                        request.VisualProxy.MaterialId == 0 &&
+                        request.VisualProxy.RenderPath == VisualRenderPath.Primitive;
+                }
             }
 
-            Assert.That(visualCount, Is.EqualTo(2));
+            Assert.That(visualCount, Is.EqualTo(3));
+            Assert.That(sawDecal, Is.True);
+            Assert.That(sawRing, Is.True);
+            Assert.That(sawLine, Is.True);
         }
 
         [Test]
@@ -1076,11 +1100,13 @@ namespace Ludots.Tests.Presentation
                             AssetKind = assetKind,
                             AssetId = assetId,
                             MaterialId = materialId,
-                            RenderPath = renderPath == VisualRenderPath.None && assetKind is AssetKind.Mesh or AssetKind.Decal or AssetKind.VFX
+                            RenderPath = renderPath == VisualRenderPath.None && assetKind is AssetKind.Mesh or AssetKind.Decal
                                 ? VisualRenderPath.StaticMesh
                                 : renderPath,
                             Mobility = VisualMobility.Movable,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                             ColorParamKey = assetKind == AssetKind.Mesh ? 900 : -1,
                             MaterialParamKey = assetKind == AssetKind.WorldHud ? 901 : -1,
                         },

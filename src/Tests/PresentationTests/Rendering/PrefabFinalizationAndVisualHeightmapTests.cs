@@ -227,7 +227,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PrefabFinalizationPipeline_FinalizeVisuals_ProducesTypedMeshDecalVfxAndSurfaceOutputs()
+        public void PrefabFinalizationPipeline_FinalizeVisuals_ProducesTypedMeshDecalAndSurfaceOutputs()
         {
             var meshes = new MeshAssetRegistry();
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
@@ -237,7 +237,6 @@ namespace Ludots.Tests.Presentation
                     0,
                     PrefabPart.Default(cubeId),
                     PrefabPart.Decal(materialId: 22, size: new Vector2(4f, 5f)),
-                    PrefabPart.Vfx(effectAssetId: 33, spawnMode: PrefabVfxSpawnMode.Loop),
                     PrefabPart.Surface(cubeId, materialId: 44, tiling: new Vector2(2f, 3f))));
 
             var output = new PrefabFinalizedVisualBuffer();
@@ -252,7 +251,7 @@ namespace Ludots.Tests.Presentation
                 color: Vector4.One,
                 output);
 
-            Assert.That(output.Count, Is.EqualTo(4));
+            Assert.That(output.Count, Is.EqualTo(3));
 
             ReadOnlySpan<PrefabFinalizedVisual> visuals = output.GetSpan();
             Assert.That(visuals[0].Kind, Is.EqualTo(PrefabVisualPartKind.Mesh));
@@ -263,15 +262,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(visuals[1].Size, Is.EqualTo(new Vector2(4f, 5f)));
             Assert.That(visuals[1].AlignToSurface, Is.True);
 
-            Assert.That(visuals[2].Kind, Is.EqualTo(PrefabVisualPartKind.Vfx));
-            Assert.That(visuals[2].EffectAssetId, Is.EqualTo(33));
-            Assert.That(visuals[2].VfxSpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
-
-            Assert.That(visuals[3].Kind, Is.EqualTo(PrefabVisualPartKind.Surface));
-            Assert.That(visuals[3].MeshAssetId, Is.EqualTo(cubeId));
-            Assert.That(visuals[3].MaterialId, Is.EqualTo(44));
-            Assert.That(visuals[3].Tiling, Is.EqualTo(new Vector2(2f, 3f)));
-            Assert.That(visuals[3].TerrainFacing, Is.True);
+            Assert.That(visuals[2].Kind, Is.EqualTo(PrefabVisualPartKind.Surface));
+            Assert.That(visuals[2].MeshAssetId, Is.EqualTo(cubeId));
+            Assert.That(visuals[2].MaterialId, Is.EqualTo(44));
+            Assert.That(visuals[2].Tiling, Is.EqualTo(new Vector2(2f, 3f)));
+            Assert.That(visuals[2].TerrainFacing, Is.True);
         }
 
         [Test]
@@ -418,77 +413,6 @@ namespace Ludots.Tests.Presentation
                     output));
 
             Assert.That(ex!.Message, Does.Contain("cannot receive an instance material override"));
-        }
-
-        [Test]
-        public void PresentationBehaviorResolver_ResolvesStateToTypedVisualOutputs()
-        {
-            var meshes = new MeshAssetRegistry();
-            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
-            int prefabId = meshes.Register(
-                "prefab.behavior.stage0",
-                MeshAssetDescriptor.Prefab(
-                    0,
-                    PrefabPart.Default(cubeId),
-                    PrefabPart.Decal(materialId: 77, size: new Vector2(6f, 2f))));
-
-            var behaviors = new PresentationBehaviorRegistry();
-            int behaviorId = behaviors.Register(
-                "behavior.crop",
-                new PresentationBehaviorDefinition
-                {
-                    States = new[]
-                    {
-                        new PresentationBehaviorStateDefinition("Growing", prefabId),
-                    },
-                });
-
-            var resolver = new PresentationBehaviorResolver(behaviors, meshes);
-            var output = new PrefabFinalizedVisualBuffer();
-
-            resolver.ResolveState(
-                behaviorId,
-                "Growing",
-                stableId: 50,
-                position: Vector3.Zero,
-                rotation: Quaternion.Identity,
-                scale: Vector3.One,
-                color: Vector4.One,
-                output);
-
-            Assert.That(output.Count, Is.EqualTo(2));
-            Assert.That(output.GetSpan()[0].Kind, Is.EqualTo(PrefabVisualPartKind.Mesh));
-            Assert.That(output.GetSpan()[1].Kind, Is.EqualTo(PrefabVisualPartKind.Decal));
-        }
-
-        [Test]
-        public void PresentationBehaviorResolver_WhenStateMissing_ThrowsExplicitly()
-        {
-            var meshes = new MeshAssetRegistry();
-            var behaviors = new PresentationBehaviorRegistry();
-            int behaviorId = behaviors.Register(
-                "behavior.empty",
-                new PresentationBehaviorDefinition
-                {
-                    States = new[]
-                    {
-                        new PresentationBehaviorStateDefinition("Idle", 0),
-                    },
-                });
-
-            var resolver = new PresentationBehaviorResolver(behaviors, meshes);
-            var output = new PrefabFinalizedVisualBuffer();
-
-            var ex = Assert.Throws<InvalidOperationException>(() => resolver.ResolveState(
-                behaviorId,
-                "Missing",
-                stableId: 61,
-                position: Vector3.Zero,
-                rotation: Quaternion.Identity,
-                scale: Vector3.One,
-                color: Vector4.One,
-                output));
-            Assert.That(ex!.Message, Does.Contain("does not define state"));
         }
 
         [Test]

@@ -1,15 +1,21 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Presentation.Performers
 {
+    public static class PerformerBehaviorCapacity
+    {
+        public const int MaxSlots = 32;
+    }
+
     public struct BehaviorSlot
     {
         public int SlotIndex;
         public BehaviorKind Kind;
         public bool ActiveByDefault;
-        public ConditionRef ActivationCondition;
         public AssetBindingConfig AssetBinding;
         public AttributeBindingConfig AttributeBinding;
         public TagBindingConfig TagBinding;
@@ -20,6 +26,7 @@ namespace Ludots.Core.Presentation.Performers
         public SplineConfig Spline;
         public GroundingConfig Grounding;
         public MinimapMarkerConfig MinimapMarker;
+        public ParamTweenConfig ParamTween;
     }
 
     public enum BehaviorKind : byte
@@ -34,6 +41,37 @@ namespace Ludots.Core.Presentation.Performers
         Spline = 8,
         Grounding = 9,
         MinimapMarker = 10,
+        ParamTween = 11,
+    }
+
+    public enum AssetTargetSpace : byte
+    {
+        None = 0,
+        World = 1,
+        PerformerLocal = 2,
+    }
+
+    public static class AssetTargetSpaceResolver
+    {
+        public static Vector3 Resolve(
+            AssetTargetSpace targetSpace,
+            in Vector3 target,
+            in Vector3 performerWorldPosition,
+            in Quaternion performerWorldRotation,
+            in Vector3 performerWorldScale)
+        {
+            return targetSpace switch
+            {
+                AssetTargetSpace.World => target,
+                AssetTargetSpace.PerformerLocal => WorldPlane2D.TransformVisualLocal(
+                    performerWorldPosition,
+                    performerWorldRotation,
+                    performerWorldScale,
+                    in target),
+                _ => throw new System.InvalidOperationException(
+                    $"AssetBinding target space '{targetSpace}' cannot resolve a target position."),
+            };
+        }
     }
 
     public struct AssetBindingConfig
@@ -50,6 +88,8 @@ namespace Ludots.Core.Presentation.Performers
             LocalScale = Vector3.One;
             ScaleParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             ColorParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            TargetParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            TargetSpace = AssetTargetSpace.None;
             MaterialParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             AssetIdParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             AssetSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey;
@@ -72,6 +112,8 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 LocalScale;
         public int ScaleParamKey;
         public int ColorParamKey;
+        public int TargetParamKey;
+        public AssetTargetSpace TargetSpace;
         public int MaterialParamKey;
         public int AssetIdParamKey;
         public int AssetSwapParamKey;
@@ -299,5 +341,20 @@ namespace Ludots.Core.Presentation.Performers
         public int OrientationParamKey;
         public float OrientationOffsetRad;
         public float OrientationLengthPx;
+    }
+
+    public struct ParamTweenConfig
+    {
+        public int ParamKey;
+        public ParamLane Lane;
+        public float FromFloat;
+        public float ToFloat;
+        public Vector4 FromVector;
+        public Vector4 ToVector;
+        public float DurationSeconds;
+        public float DelaySeconds;
+        public TweenEasing Easing;
+        public bool Loop;
+        public bool PingPong;
     }
 }
