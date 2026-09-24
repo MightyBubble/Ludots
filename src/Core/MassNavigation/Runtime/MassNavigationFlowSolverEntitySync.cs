@@ -35,22 +35,22 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
+            syncedCount++;
             if (!agentState.TryGetAgentEntity(i, out Entity entity))
             {
                 throw new InvalidOperationException(
                     $"MassNavigationFlowSolverState cannot sync unit {i} because no tracked agent entity is registered.");
             }
 
-            // Agents destroyed outside the nav runtime's own removal (death rule,
-            // two-phase presentation destroy) stay dirty for one removal cycle.
-            // Skipping the pose write is the guard; the metadata sync drops the slot
-            // on its next pass. Death is gameplay, not a corrupt table.
             if (!world.IsAlive(entity))
             {
+                // Agents destroyed outside the nav runtime's own removal (death rule,
+                // two-phase presentation destroy) stay dirty for one removal cycle;
+                // skipping the pose write is the guard — the metadata sync drops the
+                // slot on its next pass.
+                syncedCount--;
                 continue;
             }
-
-            syncedCount++;
 
             int i2 = i << 1;
             float xCm = _positionsCm[i2];
