@@ -35,6 +35,9 @@
     "maxServerOutboundBytesPerSecondPerClient": 262144,
     "tickP95BudgetMicroseconds": 26700,
     "tickP99BudgetMicroseconds": 31000,
+    "activeFaultProfile": "normal",
+    "acceptanceMode": false,
+    "metricsSampleCapacity": 512,
     "commandSchemas": [
       {
         "orderTypeKey": "moveTo",

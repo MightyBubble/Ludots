@@ -14,7 +14,8 @@ namespace Ludots.Tests.Networking;
 public sealed class NetworkWireCodecTests
 {
     private static readonly ProtocolVersion Protocol = new(1, 0);
-    private static readonly ContentFingerprint Content = ContentFingerprintBuilder.FromCanonicalBytes("rts_duel_v1"u8);
+    private static readonly ContentIdentityManifest RequiredContent = ContentIdentityTestFixtures.CreateManifest("rts_duel_v1");
+    private static readonly ContentFingerprint Content = RequiredContent.Aggregate;
     private static readonly SessionEpoch Epoch = new(42);
 
     [Test]
@@ -61,7 +62,8 @@ public sealed class NetworkWireCodecTests
             Protocol,
             Content,
             new ReconnectToken(0x0102030405060708UL, 0x1112131415161718UL),
-            Epoch);
+            Epoch,
+            ContentIdentityTestFixtures.CategoryDigests(RequiredContent));
 
         Span<byte> buffer = stackalloc byte[HandshakeWireCodec.RequestSizeInBytes];
         Assert.That(
@@ -71,9 +73,10 @@ public sealed class NetworkWireCodecTests
 
         ushort major = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(0, 2));
         ushort minor = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2, 2));
-        ulong tokenLow = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(4 + 32, 8));
-        ulong tokenHigh = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(4 + 32 + 8, 8));
-        ulong epoch = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(4 + 32 + 16, 8));
+        int tokenOffset = 4 + ContentFingerprint.ByteLength + (ContentIdentityManifest.CategoryCount * ContentFingerprint.ByteLength);
+        ulong tokenLow = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(tokenOffset, 8));
+        ulong tokenHigh = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(tokenOffset + 8, 8));
+        ulong epoch = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(tokenOffset + 16, 8));
         Assert.Multiple(() =>
         {
             Assert.That(major, Is.EqualTo(1));
@@ -88,6 +91,7 @@ public sealed class NetworkWireCodecTests
             Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decoded.ProtocolVersion, Is.EqualTo(request.ProtocolVersion));
         Assert.That(decoded.ContentFingerprint, Is.EqualTo(request.ContentFingerprint));
+        Assert.That(decoded.CategoryDigests, Is.EqualTo(request.CategoryDigests));
         Assert.That(decoded.ReconnectToken, Is.EqualTo(request.ReconnectToken));
         Assert.That(decoded.SessionEpoch, Is.EqualTo(request.SessionEpoch));
     }
@@ -113,11 +117,14 @@ public sealed class NetworkWireCodecTests
             HandshakeRejectReason.ContentMismatch,
             Protocol,
             Content,
-            Epoch);
+            Epoch,
+            new ContentMismatchDetail(ContentIdentityCategory.Config, "Configs/game.json"));
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in reject, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(HandshakeWireCodec.TryDecodeResponse(buffer, out SessionHandshakeResponse decodedReject), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decodedReject.Accepted, Is.False);
         Assert.That(decodedReject.RejectReason, Is.EqualTo(HandshakeRejectReason.ContentMismatch));
+        Assert.That(decodedReject.MismatchDetail.Category, Is.EqualTo(ContentIdentityCategory.Config));
+        Assert.That(decodedReject.MismatchDetail.HasItemKey, Is.False);
     }
 
     [Test]
@@ -170,6 +177,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
+            OrderAdmissionStage.GlobalIntake,
             OrderSubmitResult.Queued,
             isReplay: false);
 
@@ -185,6 +193,30 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
+    public void CommandAdmissionOutcome_EntityIntakeActivated_RoundTrip()
+    {
+        var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 4,
+            targetTick: 50,
+            actorCount: 1,
+            orderId: 12,
+            admissionBatchId: 3,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated,
+            isReplay: false);
+
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Activated));
+        Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+    }
+
+    [Test]
     public void CommandAdmissionOutcome_RejectsDifferentSessionEpoch()
     {
         var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
@@ -195,6 +227,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
+            OrderAdmissionStage.GlobalIntake,
             OrderSubmitResult.Queued,
             isReplay: false);
 
@@ -216,6 +249,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
+            OrderAdmissionStage.NetworkIntake,
             OrderSubmitResult.NetworkMatchCompleted,
             isReplay: false);
 
@@ -406,7 +440,10 @@ public sealed class NetworkWireCodecTests
         Span<byte> overflowDest = stackalloc byte[4];
         Assert.That(
             HandshakeWireCodec.TryEncodeRequest(
-                new SessionHandshakeRequest(Protocol, Content),
+                new SessionHandshakeRequest(
+                    Protocol,
+                    Content,
+                    categoryDigests: ContentIdentityTestFixtures.CategoryDigests(RequiredContent)),
                 overflowDest,
                 out _),
             Is.EqualTo(NetworkWireCodecStatus.BufferTooSmall));

@@ -117,14 +117,9 @@ namespace Ludots.Core.Networking.Protocol
                 actorCount,
                 orderId,
                 admissionBatchId,
+                (OrderAdmissionStage)stageByte,
                 (OrderSubmitResult)resultByte,
                 isReplay: replayByte == 1);
-
-            // Constructor derives Stage from Result; reject wires that disagree.
-            if (outcome.Stage != (OrderAdmissionStage)stageByte)
-            {
-                return NetworkWireCodecStatus.InvalidInput;
-            }
 
             return NetworkWireCodecStatus.Success;
         }

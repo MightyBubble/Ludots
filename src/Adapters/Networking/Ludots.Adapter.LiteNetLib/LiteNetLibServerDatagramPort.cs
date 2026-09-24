@@ -5,9 +5,7 @@ using Ludots.Core.Networking.Transport;
 namespace Ludots.Adapter.LiteNetLib;
 
 public sealed class LiteNetLibServerDatagramPort :
-    IServerDatagramPort,
-    IServerConnectionEventPort,
-    IServerConnectionControlPort,
+    ILiteNetLibServerTransport,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;

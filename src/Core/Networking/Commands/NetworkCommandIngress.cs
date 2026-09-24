@@ -857,9 +857,15 @@ namespace Ludots.Core.Networking.Commands
                 actorCount,
                 orderId,
                 admissionBatchId,
+                ResolveNetworkStage(result),
                 result,
                 isReplay);
         }
+
+        private static OrderAdmissionStage ResolveNetworkStage(OrderSubmitResult result) =>
+            result is OrderSubmitResult.Queued or OrderSubmitResult.QueueFull
+                ? OrderAdmissionStage.GlobalIntake
+                : OrderAdmissionStage.NetworkIntake;
 
         private void ValidateSeatShape(in NetworkCommandSeat seat)
         {

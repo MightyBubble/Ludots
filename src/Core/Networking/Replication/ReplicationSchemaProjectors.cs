@@ -77,5 +77,8 @@ namespace Ludots.Core.Networking.Replication
         {
             return _registry.TryGet(schemaId, out projector);
         }
+
+        public int CopyRegisteredSchemaIds(Span<int> destination) =>
+            _registry.CopyRegisteredSchemaIds(destination);
     }
 }

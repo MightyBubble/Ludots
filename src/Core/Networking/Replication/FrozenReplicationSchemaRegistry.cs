@@ -72,5 +72,28 @@ namespace Ludots.Core.Networking.Replication
             handler = _handlers[schemaId]!;
             return true;
         }
+
+        public int CopyRegisteredSchemaIds(Span<int> destination)
+        {
+            int written = 0;
+            for (int schemaId = 1; schemaId < _handlers.Length; schemaId++)
+            {
+                if (_handlers[schemaId] == null)
+                {
+                    continue;
+                }
+
+                if (written >= destination.Length)
+                {
+                    throw new ArgumentException(
+                        "Destination is too small for registered schema ids.",
+                        nameof(destination));
+                }
+
+                destination[written++] = schemaId;
+            }
+
+            return written;
+        }
     }
 }

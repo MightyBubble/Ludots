@@ -43,9 +43,35 @@ namespace Ludots.Core.Networking.Configuration
         public int MaxServerOutboundBytesPerSecondPerClient { get; set; }
         public int TickP95BudgetMicroseconds { get; set; }
         public int TickP99BudgetMicroseconds { get; set; }
+        /// <summary>"normal" | "unstable" — selects which fault profile the adapter applies.</summary>
+        public string ActiveFaultProfile { get; set; } = "normal";
+        /// <summary>When true, budget violations fail closed.</summary>
+        public bool AcceptanceMode { get; set; }
+        /// <summary>Ring size for tick duration samples. Required when acceptance or fault injection is active.</summary>
+        public int MetricsSampleCapacity { get; set; }
         public List<NetworkCommandSchemaConfig> CommandSchemas { get; set; } = new();
         public NetworkFaultProfileConfig NormalConnection { get; set; } = new();
         public NetworkFaultProfileConfig UnstableConnection { get; set; } = new();
+
+        public NetworkFaultProfileConfig ResolveActiveFaultProfile() =>
+            string.Equals(ActiveFaultProfile, "unstable", StringComparison.OrdinalIgnoreCase)
+                ? UnstableConnection
+                : NormalConnection;
+
+        public bool RequiresAdapterMetricsOrFaultWrap()
+        {
+            if (AcceptanceMode)
+            {
+                return true;
+            }
+
+            if (string.Equals(ActiveFaultProfile, "unstable", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return ResolveActiveFaultProfile().HasInjection;
+        }
 
         public void Validate()
         {
@@ -120,6 +146,22 @@ namespace Ludots.Core.Networking.Configuration
                     $"Configured datagram payload {MaxDatagramPayloadBytes} cannot carry the {roomSnapshotBytes}-byte room snapshot.");
             }
 
+            int handshakeRequestBytes = checked(
+                NetworkWireEnvelope.SizeInBytes + HandshakeWireCodec.RequestSizeInBytes);
+            if (handshakeRequestBytes > MaxDatagramPayloadBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Configured datagram payload {MaxDatagramPayloadBytes} cannot carry the {handshakeRequestBytes}-byte session handshake request.");
+            }
+
+            int handshakeResponseBytes = checked(
+                NetworkWireEnvelope.SizeInBytes + HandshakeWireCodec.ResponseSizeInBytes);
+            if (handshakeResponseBytes > MaxDatagramPayloadBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Configured datagram payload {MaxDatagramPayloadBytes} cannot carry the {handshakeResponseBytes}-byte session handshake response.");
+            }
+
             if ((uint)(TransportChannelCount - 1) >= 64u)
             {
                 throw new InvalidOperationException("Transport channel count must be between 1 and 64.");
@@ -146,10 +188,26 @@ namespace Ludots.Core.Networking.Configuration
                 throw new InvalidOperationException("Tick P99 budget must be greater than or equal to P95 budget.");
             }
 
-            ValidateCommandSchemas();
+            if (!string.Equals(ActiveFaultProfile, "normal", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(ActiveFaultProfile, "unstable", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Networking ActiveFaultProfile must be 'normal' or 'unstable'; got '{ActiveFaultProfile}'.");
+            }
 
             NormalConnection.Validate(nameof(NormalConnection));
             UnstableConnection.Validate(nameof(UnstableConnection));
+
+            bool metricsRequired = AcceptanceMode ||
+                NormalConnection.HasInjection ||
+                UnstableConnection.HasInjection ||
+                string.Equals(ActiveFaultProfile, "unstable", StringComparison.OrdinalIgnoreCase);
+            if (metricsRequired || MetricsSampleCapacity != 0)
+            {
+                RequirePositive(MetricsSampleCapacity, nameof(MetricsSampleCapacity));
+            }
+
+            ValidateCommandSchemas();
         }
 
         private void ValidateCommandSchemas()
@@ -240,6 +298,12 @@ namespace Ludots.Core.Networking.Configuration
         public int JitterMs { get; set; }
         public int PacketLossPermille { get; set; }
         public int ReorderPermille { get; set; }
+
+        public bool HasInjection =>
+            RoundTripLatencyMs > 0 ||
+            JitterMs > 0 ||
+            PacketLossPermille > 0 ||
+            ReorderPermille > 0;
 
         public void Validate(string owner)
         {

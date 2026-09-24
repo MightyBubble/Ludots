@@ -9,7 +9,8 @@ namespace Ludots.Tests.Networking;
 public sealed class AuthoritativeSessionRegistryTests
 {
     private static readonly ProtocolVersion Protocol = new(1, 0);
-    private static readonly ContentFingerprint Content = ContentFingerprintBuilder.FromCanonicalBytes("rts_duel_v1"u8);
+    private static readonly ContentIdentityManifest RequiredContent = ContentIdentityTestFixtures.CreateManifest("rts_duel_v1");
+    private static readonly ContentFingerprint Content = RequiredContent.Aggregate;
     private static readonly SessionEpoch Epoch = new(1);
 
     [Test]
@@ -69,6 +70,26 @@ public sealed class AuthoritativeSessionRegistryTests
                 out SessionHandshakeResponse contentReject),
             Is.False);
         Assert.That(contentReject.RejectReason, Is.EqualTo(HandshakeRejectReason.ContentMismatch));
+    }
+
+    [Test]
+    public void ContentMismatch_WithCategoryDigests_ReportsFirstDifferingCategory()
+    {
+        var registry = CreateRegistry(seatCapacity: 2);
+        ContentIdentityManifest other = ContentIdentityTestFixtures.CreateManifest("other_content");
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(2),
+                new SessionHandshakeRequest(
+                    Protocol,
+                    other.Aggregate,
+                    categoryDigests: ContentIdentityTestFixtures.CategoryDigests(other)),
+                currentTick: 1,
+                out SessionHandshakeResponse contentReject),
+            Is.False);
+        Assert.That(contentReject.RejectReason, Is.EqualTo(HandshakeRejectReason.ContentMismatch));
+        Assert.That(contentReject.MismatchDetail.Category, Is.EqualTo(ContentIdentityCategory.Protocol));
+        Assert.That(contentReject.MismatchDetail.HasItemKey, Is.False);
     }
 
     [Test]
@@ -209,18 +230,18 @@ public sealed class AuthoritativeSessionRegistryTests
     }
 
     [Test]
-    public void EmptyContentFingerprint_IsRejectedByConstructor()
+    public void EmptyRequiredContent_IsRejectedByConstructor()
     {
         Assert.That(
-            () => new AuthoritativeSessionRegistry(2, Epoch, Protocol, ContentFingerprint.Empty, 30, 90),
-            Throws.ArgumentException.With.Property("ParamName").EqualTo("requiredContentFingerprint"));
+            () => new AuthoritativeSessionRegistry(2, Epoch, Protocol, null!, 30, 90),
+            Throws.ArgumentNullException.With.Property("ParamName").EqualTo("requiredContent"));
     }
 
     [Test]
     public void EmptySessionEpoch_IsRejectedByConstructor()
     {
         Assert.That(
-            () => new AuthoritativeSessionRegistry(2, SessionEpoch.Empty, Protocol, Content, 30, 90),
+            () => new AuthoritativeSessionRegistry(2, SessionEpoch.Empty, Protocol, RequiredContent, 30, 90),
             Throws.ArgumentException.With.Property("ParamName").EqualTo("sessionEpoch"));
     }
 
@@ -558,10 +579,11 @@ public sealed class AuthoritativeSessionRegistryTests
         int seatCapacity,
         uint reconnectWindowTicks = 30,
         SessionEpoch? sessionEpoch = null) =>
-        new(seatCapacity, sessionEpoch ?? Epoch, Protocol, Content, reconnectWindowTicks, readyCountdownTicks: 90);
+        new(seatCapacity, sessionEpoch ?? Epoch, Protocol, RequiredContent, reconnectWindowTicks, readyCountdownTicks: 90);
 
-    private static SessionHandshakeRequest JoinRequest() => new(Protocol, Content);
+    private static SessionHandshakeRequest JoinRequest() =>
+        new(Protocol, Content, categoryDigests: ContentIdentityTestFixtures.CategoryDigests(RequiredContent));
 
     private static SessionHandshakeRequest ReconnectRequest(ReconnectToken token, SessionEpoch epoch) =>
-        new(Protocol, Content, token, epoch);
+        new(Protocol, Content, token, epoch, ContentIdentityTestFixtures.CategoryDigests(RequiredContent));
 }

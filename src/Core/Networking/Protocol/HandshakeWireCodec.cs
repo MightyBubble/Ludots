@@ -9,10 +9,12 @@ namespace Ludots.Core.Networking.Protocol
     public static class HandshakeWireCodec
     {
         public const int RequestSizeInBytes =
-            2 + 2 + ContentFingerprint.ByteLength + 8 + 8 + 8;
+            2 + 2 + ContentFingerprint.ByteLength
+            + (ContentIdentityManifest.CategoryCount * ContentFingerprint.ByteLength)
+            + 8 + 8 + 8;
 
         public const int ResponseSizeInBytes =
-            1 + 1 + 2 + 4 + 4 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8;
+            1 + 1 + 2 + 4 + 4 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8 + 8;
 
         public static NetworkWireCodecStatus TryEncodeRequest(
             in SessionHandshakeRequest request,
@@ -21,6 +23,11 @@ namespace Ludots.Core.Networking.Protocol
         {
             bytesWritten = 0;
             if (!request.IsWellFormed)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
+            if (request.CategoryDigests.IsEmpty)
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
@@ -40,6 +47,13 @@ namespace Ludots.Core.Networking.Protocol
             Span<byte> fingerprint = destination.Slice(offset, ContentFingerprint.ByteLength);
             request.ContentFingerprint.CopyTo(fingerprint);
             offset += ContentFingerprint.ByteLength;
+
+            for (int i = 0; i < ContentIdentityManifest.CategoryCount; i++)
+            {
+                Span<byte> categoryBytes = destination.Slice(offset, ContentFingerprint.ByteLength);
+                request.CategoryDigests[i].CopyTo(categoryBytes);
+                offset += ContentFingerprint.ByteLength;
+            }
 
             if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, request.ReconnectToken.Low) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, request.ReconnectToken.High) ||
@@ -75,6 +89,24 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.MalformedLength;
             }
 
+            Span<ContentFingerprint> categoryScratch = stackalloc ContentFingerprint[ContentIdentityManifest.CategoryCount];
+            Span<byte> categoryBytes = stackalloc byte[ContentFingerprint.ByteLength];
+            for (int i = 0; i < ContentIdentityManifest.CategoryCount; i++)
+            {
+                if (!NetworkWireBinary.TryReadBytes(source, ref offset, categoryBytes))
+                {
+                    return NetworkWireCodecStatus.MalformedLength;
+                }
+
+                ContentFingerprint categoryDigest = ContentFingerprint.FromBytes(categoryBytes);
+                if (categoryDigest.IsEmpty)
+                {
+                    return NetworkWireCodecStatus.InvalidInput;
+                }
+
+                categoryScratch[i] = categoryDigest;
+            }
+
             if (!NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenLow) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenHigh) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch))
@@ -98,7 +130,8 @@ namespace Ludots.Core.Networking.Protocol
                 version,
                 ContentFingerprint.FromBytes(fingerprintBytes),
                 new ReconnectToken(tokenLow, tokenHigh),
-                new SessionEpoch(epoch));
+                new SessionEpoch(epoch),
+                new ContentCategoryDigestTable(categoryScratch));
             return NetworkWireCodecStatus.Success;
         }
 
@@ -118,7 +151,8 @@ namespace Ludots.Core.Networking.Protocol
                 if (response.RejectReason != HandshakeRejectReason.None ||
                     !response.Seat.IsValid ||
                     response.ReconnectToken.IsEmpty ||
-                    response.SessionEpoch.IsEmpty)
+                    response.SessionEpoch.IsEmpty ||
+                    response.MismatchDetail.Category != ContentIdentityCategory.None)
                 {
                     return NetworkWireCodecStatus.InvalidInput;
                 }
@@ -133,10 +167,30 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidInput;
             }
 
+            ushort reserved = 0;
+            ulong itemKeyHash = 0;
+            if (!response.Accepted && response.RejectReason == HandshakeRejectReason.ContentMismatch)
+            {
+                if (response.MismatchDetail.Category != ContentIdentityCategory.None)
+                {
+                    if (!ContentIdentityManifest.IsKnownCategory(response.MismatchDetail.Category))
+                    {
+                        return NetworkWireCodecStatus.InvalidInput;
+                    }
+
+                    reserved = (ushort)response.MismatchDetail.Category;
+                    itemKeyHash = ContentIdentityManifest.HashItemKey(response.MismatchDetail.ItemKey);
+                }
+            }
+            else if (response.MismatchDetail.Category != ContentIdentityCategory.None)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
             int offset = 0;
             if (!NetworkWireBinary.TryWriteByte(destination, ref offset, response.Accepted ? (byte)1 : (byte)0) ||
                 !NetworkWireBinary.TryWriteByte(destination, ref offset, (byte)response.RejectReason) ||
-                !NetworkWireBinary.TryWriteUInt16(destination, ref offset, 0) ||
+                !NetworkWireBinary.TryWriteUInt16(destination, ref offset, reserved) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, response.Accepted ? response.Seat.Slot : -1) ||
                 !NetworkWireBinary.TryWriteUInt32(destination, ref offset, response.Accepted ? response.Seat.Generation : 0) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, response.Accepted ? response.PlayerId.Value : 0) ||
@@ -152,7 +206,8 @@ namespace Ludots.Core.Networking.Protocol
             response.ContentFingerprint.CopyTo(fingerprint);
             offset += ContentFingerprint.ByteLength;
 
-            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.SessionEpoch.Value))
+            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.SessionEpoch.Value) ||
+                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, itemKeyHash))
             {
                 return NetworkWireCodecStatus.BufferTooSmall;
             }
@@ -191,14 +246,10 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidEnum;
             }
 
-            if (reserved != 0)
-            {
-                return NetworkWireCodecStatus.InvalidInput;
-            }
-
             Span<byte> fingerprintBytes = stackalloc byte[ContentFingerprint.ByteLength];
             if (!NetworkWireBinary.TryReadBytes(source, ref offset, fingerprintBytes) ||
-                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch))
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch) ||
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong itemKeyHash))
             {
                 return NetworkWireCodecStatus.MalformedLength;
             }
@@ -222,7 +273,7 @@ namespace Ludots.Core.Networking.Protocol
 
             if (accepted)
             {
-                if (rejectByte != (byte)HandshakeRejectReason.None)
+                if (rejectByte != (byte)HandshakeRejectReason.None || reserved != 0 || itemKeyHash != 0)
                 {
                     return NetworkWireCodecStatus.InvalidEnum;
                 }
@@ -255,8 +306,50 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidInput;
             }
 
+            var rejectReason = (HandshakeRejectReason)rejectByte;
+            if (rejectReason == HandshakeRejectReason.ContentMismatch)
+            {
+                ContentMismatchDetail detail = default;
+                if (reserved != 0)
+                {
+                    var category = (ContentIdentityCategory)reserved;
+                    if (!ContentIdentityManifest.IsKnownCategory(category))
+                    {
+                        return NetworkWireCodecStatus.InvalidInput;
+                    }
+
+                    // Wire carries ItemKeyHash only; ItemKey string is not reconstructed.
+                    _ = itemKeyHash;
+                    detail = new ContentMismatchDetail(category, string.Empty);
+                    response = SessionHandshakeResponse.Reject(
+                        rejectReason,
+                        version,
+                        fingerprint,
+                        sessionEpoch,
+                        detail);
+                    return NetworkWireCodecStatus.Success;
+                }
+
+                if (itemKeyHash != 0)
+                {
+                    return NetworkWireCodecStatus.InvalidInput;
+                }
+
+                response = SessionHandshakeResponse.Reject(
+                    rejectReason,
+                    version,
+                    fingerprint,
+                    sessionEpoch);
+                return NetworkWireCodecStatus.Success;
+            }
+
+            if (reserved != 0 || itemKeyHash != 0)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
             response = SessionHandshakeResponse.Reject(
-                (HandshakeRejectReason)rejectByte,
+                rejectReason,
                 version,
                 fingerprint,
                 sessionEpoch);

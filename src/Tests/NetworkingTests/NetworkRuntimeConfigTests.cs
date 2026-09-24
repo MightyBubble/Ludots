@@ -35,6 +35,10 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.MaxServerOutboundBytesPerSecondPerClient, Is.EqualTo(256 * 1024));
             Assert.That(config.TickP95BudgetMicroseconds, Is.EqualTo(26_700));
             Assert.That(config.TickP99BudgetMicroseconds, Is.EqualTo(31_000));
+            Assert.That(config.ActiveFaultProfile, Is.EqualTo("normal"));
+            Assert.That(config.AcceptanceMode, Is.False);
+            Assert.That(config.MetricsSampleCapacity, Is.EqualTo(512));
+            Assert.That(config.ResolveActiveFaultProfile(), Is.SameAs(config.NormalConnection));
         });
     }
 
@@ -116,6 +120,9 @@ public sealed class NetworkRuntimeConfigTests
         MaxServerOutboundBytesPerSecondPerClient = 256 * 1024,
         TickP95BudgetMicroseconds = 26_700,
         TickP99BudgetMicroseconds = 31_000,
+        ActiveFaultProfile = "normal",
+        AcceptanceMode = false,
+        MetricsSampleCapacity = 512,
         CommandSchemas =
         {
             new NetworkCommandSchemaConfig

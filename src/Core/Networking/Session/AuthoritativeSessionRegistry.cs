@@ -21,7 +21,7 @@ namespace Ludots.Core.Networking.Session
 
         private readonly SessionEpoch _sessionEpoch;
         private readonly ProtocolVersion _requiredProtocolVersion;
-        private readonly ContentFingerprint _requiredContentFingerprint;
+        private readonly ContentIdentityManifest _requiredContent;
         private readonly uint _reconnectWindowTicks;
         private readonly uint _readyCountdownTicks;
 
@@ -45,7 +45,7 @@ namespace Ludots.Core.Networking.Session
             int seatCapacity,
             SessionEpoch sessionEpoch,
             ProtocolVersion requiredProtocolVersion,
-            ContentFingerprint requiredContentFingerprint,
+            ContentIdentityManifest requiredContent,
             uint reconnectWindowTicks,
             uint readyCountdownTicks)
         {
@@ -64,9 +64,14 @@ namespace Ludots.Core.Networking.Session
                 throw new ArgumentException("Required protocol version must be well-formed.", nameof(requiredProtocolVersion));
             }
 
-            if (requiredContentFingerprint.IsEmpty)
+            if (requiredContent == null)
             {
-                throw new ArgumentException("Required content fingerprint must be non-empty.", nameof(requiredContentFingerprint));
+                throw new ArgumentNullException(nameof(requiredContent));
+            }
+
+            if (requiredContent.Aggregate.IsEmpty)
+            {
+                throw new ArgumentException("Required content identity aggregate must be non-empty.", nameof(requiredContent));
             }
 
             if (readyCountdownTicks == 0)
@@ -76,7 +81,7 @@ namespace Ludots.Core.Networking.Session
 
             _sessionEpoch = sessionEpoch;
             _requiredProtocolVersion = requiredProtocolVersion;
-            _requiredContentFingerprint = requiredContentFingerprint;
+            _requiredContent = requiredContent;
             _reconnectWindowTicks = reconnectWindowTicks;
             _readyCountdownTicks = readyCountdownTicks;
 
@@ -103,7 +108,9 @@ namespace Ludots.Core.Networking.Session
 
         public ProtocolVersion RequiredProtocolVersion => _requiredProtocolVersion;
 
-        public ContentFingerprint RequiredContentFingerprint => _requiredContentFingerprint;
+        public ContentIdentityManifest RequiredContent => _requiredContent;
+
+        public ContentFingerprint RequiredContentFingerprint => _requiredContent.Aggregate;
 
         public uint ReconnectWindowTicks => _reconnectWindowTicks;
 
@@ -133,9 +140,10 @@ namespace Ludots.Core.Networking.Session
                 return false;
             }
 
-            if (request.ContentFingerprint != _requiredContentFingerprint)
+            if (request.ContentFingerprint != _requiredContent.Aggregate)
             {
-                response = Reject(HandshakeRejectReason.ContentMismatch);
+                ContentCategoryDigestTable clientCategories = request.CategoryDigests;
+                response = RejectContentMismatch(in clientCategories);
                 return false;
             }
 
@@ -375,7 +383,7 @@ namespace Ludots.Core.Networking.Session
                 GetSeatBinding(seat),
                 token,
                 _requiredProtocolVersion,
-                _requiredContentFingerprint,
+                _requiredContent.Aggregate,
                 _sessionEpoch);
             return true;
         }
@@ -408,7 +416,7 @@ namespace Ludots.Core.Networking.Session
                 GetSeatBinding(seat),
                 rotated,
                 _requiredProtocolVersion,
-                _requiredContentFingerprint,
+                _requiredContent.Aggregate,
                 _sessionEpoch);
             return true;
         }
@@ -417,8 +425,34 @@ namespace Ludots.Core.Networking.Session
             SessionHandshakeResponse.Reject(
                 reason,
                 _requiredProtocolVersion,
-                _requiredContentFingerprint,
+                _requiredContent.Aggregate,
                 _sessionEpoch);
+
+        private SessionHandshakeResponse RejectContentMismatch(in ContentCategoryDigestTable clientCategoryDigests)
+        {
+            if (!clientCategoryDigests.IsEmpty)
+            {
+                ReadOnlySpan<ContentFingerprint> required = _requiredContent.CategoryDigests;
+                for (int i = 0; i < ContentIdentityManifest.CategoryCount; i++)
+                {
+                    if (clientCategoryDigests[i] == required[i])
+                    {
+                        continue;
+                    }
+
+                    // Category digests alone cannot item-diff; ItemKey stays empty.
+                    var detail = new ContentMismatchDetail(ContentIdentityManifest.CategoryAt(i), string.Empty);
+                    return SessionHandshakeResponse.Reject(
+                        HandshakeRejectReason.ContentMismatch,
+                        _requiredProtocolVersion,
+                        _requiredContent.Aggregate,
+                        _sessionEpoch,
+                        detail);
+                }
+            }
+
+            return Reject(HandshakeRejectReason.ContentMismatch);
+        }
 
         private bool TryFindEmptySeat(out int seat)
         {

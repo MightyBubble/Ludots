@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Diagnostics.CodeAnalysis;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
@@ -25,10 +26,12 @@ namespace Ludots.Core.Networking.Runtime
         private readonly IClientDatagramPort _datagrams;
         private readonly IClientConnectionControlPort _connectionControl;
         private readonly ProtocolVersion _protocolVersion;
-        private readonly ContentFingerprint _contentFingerprint;
+        private readonly ContentIdentityManifest _contentIdentity;
+        private readonly ContentCategoryDigestTable _categoryDigests;
         private readonly IClientSessionCredentialPort _credentials;
         private readonly IClientReplicationBridgeFactory _replicationFactory;
         private readonly NetworkCommandAdmissionResultBuffer _admissions;
+        private readonly ClientCommandStageFeedbackBuffer _stageFeedback;
         private readonly INetworkRuntimeObserver _observer;
         private readonly CommandFragmentEncoder _commandEncoder;
         private readonly SnapshotFragmentReassembler _snapshotReassembler;
@@ -64,10 +67,11 @@ namespace Ludots.Core.Networking.Runtime
             IClientConnectionControlPort connectionControl,
             float reconnectRetrySeconds,
             ProtocolVersion protocolVersion,
-            ContentFingerprint contentFingerprint,
+            ContentIdentityManifest contentIdentity,
             IClientSessionCredentialPort credentials,
             IClientReplicationBridgeFactory replicationFactory,
             NetworkCommandAdmissionResultBuffer admissions,
+            ClientCommandStageFeedbackBuffer stageFeedback,
             INetworkRuntimeObserver observer)
         {
             if (!protocolVersion.IsWellFormed)
@@ -75,9 +79,14 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentException("Protocol version must be well-formed.", nameof(protocolVersion));
             }
 
-            if (contentFingerprint.IsEmpty)
+            if (contentIdentity == null)
             {
-                throw new ArgumentException("Content fingerprint must be non-empty.", nameof(contentFingerprint));
+                throw new ArgumentNullException(nameof(contentIdentity));
+            }
+
+            if (contentIdentity.Aggregate.IsEmpty)
+            {
+                throw new ArgumentException("Content identity aggregate must be non-empty.", nameof(contentIdentity));
             }
 
             _capacity = capacity;
@@ -92,10 +101,12 @@ namespace Ludots.Core.Networking.Runtime
             _reconnectRetrySeconds = reconnectRetrySeconds;
             _reconnectElapsedSeconds = reconnectRetrySeconds;
             _protocolVersion = protocolVersion;
-            _contentFingerprint = contentFingerprint;
+            _contentIdentity = contentIdentity;
+            _categoryDigests = new ContentCategoryDigestTable(contentIdentity.CategoryDigests);
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _replicationFactory = replicationFactory ?? throw new ArgumentNullException(nameof(replicationFactory));
             _admissions = admissions ?? throw new ArgumentNullException(nameof(admissions));
+            _stageFeedback = stageFeedback ?? throw new ArgumentNullException(nameof(stageFeedback));
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
             if (NetworkWireEnvelope.SizeInBytes + RoomControlWireCodec.GetSnapshotPayloadSize(capacity.ConnectionCapacity) >
                 capacity.MaxDatagramPayloadBytes)
@@ -132,6 +143,7 @@ namespace Ludots.Core.Networking.Runtime
         public NetworkRuntimeFault LastFault => _lastFault;
         public bool HasRoomSnapshot => _hasRoomSnapshot;
         public NetworkRoomSnapshotHeader LatestRoomSnapshot => _roomSnapshot;
+        public IClientCommandStageFeedbackPort StageFeedback => _stageFeedback;
 
         public bool TryCopyRoomSeats(Span<NetworkRoomSeatSnapshot> destination, out int seatCount)
         {
@@ -381,7 +393,12 @@ namespace Ludots.Core.Networking.Runtime
 
             SessionEpoch epoch = load == ClientCredentialLoadStatus.Loaded ? stored.SessionEpoch : SessionEpoch.Empty;
             ReconnectToken token = load == ClientCredentialLoadStatus.Loaded ? stored.ReconnectToken : ReconnectToken.Empty;
-            var request = new SessionHandshakeRequest(_protocolVersion, _contentFingerprint, token, epoch);
+            var request = new SessionHandshakeRequest(
+                _protocolVersion,
+                _contentIdentity.Aggregate,
+                token,
+                epoch,
+                _categoryDigests);
             NetworkWireCodecStatus encoded = HandshakeWireCodec.TryEncodeRequest(in request, _payloadBuffer, out int payloadBytes);
             if (encoded != NetworkWireCodecStatus.Success)
             {
@@ -518,7 +535,7 @@ namespace Ludots.Core.Networking.Runtime
             {
                 return response.RejectReason == HandshakeRejectReason.None &&
                     response.ProtocolVersion == _protocolVersion &&
-                    response.ContentFingerprint == _contentFingerprint &&
+                    response.ContentFingerprint == _contentIdentity.Aggregate &&
                     response.Seat.IsValid &&
                     !response.ReconnectToken.IsEmpty &&
                     !response.SessionEpoch.IsEmpty;
@@ -538,9 +555,9 @@ namespace Ludots.Core.Networking.Runtime
                     response.ProtocolVersion != _protocolVersion,
                 HandshakeRejectReason.ContentMismatch =>
                     response.ProtocolVersion == _protocolVersion &&
-                    response.ContentFingerprint != _contentFingerprint,
+                    response.ContentFingerprint != _contentIdentity.Aggregate,
                 _ => response.ProtocolVersion == _protocolVersion &&
-                    response.ContentFingerprint == _contentFingerprint,
+                    response.ContentFingerprint == _contentIdentity.Aggregate,
             };
         }
 
@@ -621,8 +638,73 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, NetworkWireKind.CommandAdmissionResult);
             }
 
+            if (!_admissions.TryRead(out NetworkCommandAdmissionOutcome drained))
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, NetworkWireKind.CommandAdmissionResult);
+            }
+
+            if (TryMapAdmissionToStageFeedback(in drained, out ClientCommandStageFeedback feedback) &&
+                !_stageFeedback.TryWrite(in feedback))
+            {
+                Fail(NetworkRuntimeFaultCode.ClientStageFeedbackCapacityExceeded, NetworkWireKind.CommandAdmissionResult);
+            }
+
             _observer.OnClientAdmission(in outcome);
         }
+
+        private static bool TryMapAdmissionToStageFeedback(
+            in NetworkCommandAdmissionOutcome outcome,
+            out ClientCommandStageFeedback feedback)
+        {
+            if (IsRejectResult(outcome.Result))
+            {
+                feedback = new ClientCommandStageFeedback(
+                    outcome.ClientBatchSequence,
+                    ClientCommandStage.Rejected,
+                    outcome.Result,
+                    outcome.Stage);
+                return true;
+            }
+
+            if (outcome.Stage == OrderAdmissionStage.GlobalIntake &&
+                outcome.Result == OrderSubmitResult.Queued)
+            {
+                feedback = new ClientCommandStageFeedback(
+                    outcome.ClientBatchSequence,
+                    ClientCommandStage.ServerAccepted,
+                    outcome.Result,
+                    outcome.Stage);
+                return true;
+            }
+
+            if (outcome.Stage == OrderAdmissionStage.EntityIntake)
+            {
+                ClientCommandStage stage = outcome.Result switch
+                {
+                    OrderSubmitResult.Activated => ClientCommandStage.Activated,
+                    OrderSubmitResult.Queued => ClientCommandStage.EntityQueued,
+                    OrderSubmitResult.Pending => ClientCommandStage.EntityPending,
+                    _ => ClientCommandStage.Rejected,
+                };
+                feedback = new ClientCommandStageFeedback(
+                    outcome.ClientBatchSequence,
+                    stage,
+                    outcome.Result,
+                    outcome.Stage);
+                return true;
+            }
+
+            // NetworkScheduled and other NetworkIntake acceptances stay at Sending until GlobalIntake.
+            feedback = default;
+            return false;
+        }
+
+        private static bool IsRejectResult(OrderSubmitResult result) =>
+            result is not (
+                OrderSubmitResult.Activated or
+                OrderSubmitResult.Queued or
+                OrderSubmitResult.Pending or
+                OrderSubmitResult.NetworkScheduled);
 
         private void ProcessRoomSnapshot(ReadOnlySpan<byte> payload)
         {

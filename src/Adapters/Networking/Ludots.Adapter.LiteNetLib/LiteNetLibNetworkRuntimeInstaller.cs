@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Hosting;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
@@ -27,13 +28,6 @@ public static class LiteNetLibNetworkRuntimeInstaller
         config.Validate();
         host.Validate();
 
-        if (!ContentFingerprint.TryParseHex(bootstrap.PlanFingerprint, out ContentFingerprint contentFingerprint) ||
-            contentFingerprint.IsEmpty)
-        {
-            throw new InvalidOperationException(
-                "Networked launch requires a non-empty 64-character launcher plan fingerprint.");
-        }
-
         NetworkProcessRole role = host.ResolveRole();
         var projectors = new ReplicationSchemaProjectorRegistry(config.ReplicationSchemaCapacity);
         var appliers = new ClientReplicationSchemaApplierRegistry(config.ReplicationSchemaCapacity);
@@ -42,12 +36,64 @@ public static class LiteNetLibNetworkRuntimeInstaller
         engine.SetService(CoreServiceKeys.ClientReplicationSchemaAppliers, appliers);
         engine.SetService(CoreServiceKeys.NetworkRuntimeStateObserver, observer);
 
+        NetworkAdapterMetricsSampler? metrics = null;
+        AcceptanceBudgetEnforcer? enforcer = null;
+        NetworkAcceptanceProofService? proof = null;
+        bool needsMetrics = config.RequiresAdapterMetricsOrFaultWrap() ||
+            !string.IsNullOrWhiteSpace(host.ProofPath);
+        if (needsMetrics)
+        {
+            int sampleCapacity = config.MetricsSampleCapacity > 0
+                ? config.MetricsSampleCapacity
+                : throw new InvalidOperationException(
+                    "MetricsSampleCapacity must be positive when acceptance, fault injection, or proof writing is enabled.");
+            metrics = new NetworkAdapterMetricsSampler(config.PlayerCapacity, sampleCapacity);
+            engine.SetService(LiteNetLibServiceKeys.NetworkAdapterMetrics, metrics);
+            if (config.AcceptanceMode)
+            {
+                enforcer = new AcceptanceBudgetEnforcer(config, metrics);
+            }
+
+            if (!string.IsNullOrWhiteSpace(host.ProofPath))
+            {
+                string proofPath = Path.IsPathRooted(host.ProofPath)
+                    ? Path.GetFullPath(host.ProofPath)
+                    : Path.GetFullPath(Path.Combine(runtimeBaseDirectory, host.ProofPath));
+                proof = new NetworkAcceptanceProofService(
+                    proofPath,
+                    role,
+                    host.ProofIntervalMilliseconds,
+                    metrics,
+                    observer,
+                    engine,
+                    enforcer);
+                engine.SetService(LiteNetLibServiceKeys.NetworkAcceptanceProof, proof);
+            }
+        }
+
+        uint faultSeed = host.ParseFaultInjectionSeed();
         string baseDirectory = Path.GetFullPath(runtimeBaseDirectory);
+        NetworkAdapterMetricsSampler? metricsCapture = metrics;
+        AcceptanceBudgetEnforcer? enforcerCapture = enforcer;
+        NetworkAcceptanceProofService? proofCapture = proof;
         var deferred = new DeferredNetworkRuntimePort(
             role,
-            () => role == NetworkProcessRole.AuthoritativeServer
-                ? ComposeServer(engine, config, host, contentFingerprint, projectors, observer)
-                : ComposeClient(engine, config, host, contentFingerprint, appliers, observer, baseDirectory));
+            () =>
+            {
+                INetworkRuntimePort runtime = role == NetworkProcessRole.AuthoritativeServer
+                    ? ComposeServer(engine, config, host, projectors, observer, faultSeed, metricsCapture)
+                    : ComposeClient(engine, config, host, appliers, observer, baseDirectory, faultSeed, metricsCapture);
+                if (metricsCapture != null || proofCapture != null || enforcerCapture != null)
+                {
+                    runtime = new InstrumentedNetworkRuntimePort(
+                        runtime,
+                        proofCapture,
+                        metricsCapture,
+                        enforcerCapture);
+                }
+
+                return runtime;
+            });
         engine.ConfigureNetworkRuntime(role, deferred);
     }
 
@@ -55,9 +101,10 @@ public static class LiteNetLibNetworkRuntimeInstaller
         GameEngine engine,
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
-        ContentFingerprint contentFingerprint,
         ReplicationSchemaProjectorRegistry projectors,
-        NetworkRuntimeStateObserver observer)
+        NetworkRuntimeStateObserver observer,
+        uint faultInjectionSeed,
+        NetworkAdapterMetricsSampler? metrics)
     {
         if (projectors.Count == 0)
         {
@@ -65,11 +112,14 @@ public static class LiteNetLibNetworkRuntimeInstaller
         }
 
         projectors.Freeze();
+        ContentIdentityManifest contentIdentity = ContentIdentityManifestBuilder.Build(engine, config);
+        engine.SetService(CoreServiceKeys.ContentIdentityManifest, contentIdentity);
         NetworkEntityTable entities = Require(engine, CoreServiceKeys.NetworkEntityTable);
         KnowledgeProjectionStore knowledge = Require(engine, CoreServiceKeys.KnowledgeProjectionStore);
         NetworkCommandIngress commands = Require(engine, CoreServiceKeys.NetworkCommandIngress);
         NetworkGameplayCommandGate gameplayCommandGate = Require(engine, CoreServiceKeys.NetworkGameplayCommandGate);
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
+        OrderAdmissionResultBuffer entityAdmissions = Require(engine, CoreServiceKeys.EntityOrderAdmissionResults);
         var mapSession = engine.CurrentMapSession ??
             throw new InvalidOperationException("Authoritative networking requires the startup map before accepting connections.");
         var controllers = new AuthoritativeSeatControllerRegistry(
@@ -84,7 +134,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
             config.PlayerCapacity,
             sessionEpoch,
             protocol,
-            contentFingerprint,
+            contentIdentity,
             checked((uint)(config.ReconnectWindowSeconds * config.SimulationTickRateHz)),
             checked((uint)config.ReadyCountdownTicks));
         var seatFactory = new AuthoritativeReplicationSeatRuntimeFactory(
@@ -94,10 +144,12 @@ public static class LiteNetLibNetworkRuntimeInstaller
             controllers,
             projectors,
             config);
-        LiteNetLibServerDatagramPort transport = LiteNetLibTransportFactory.CreateServer(
+        ILiteNetLibServerTransport transport = LiteNetLibTransportFactory.CreateServer(
             config,
             host.Port,
-            host.ConnectionKey);
+            host.ConnectionKey,
+            faultInjectionSeed,
+            metrics);
         return new AuthoritativeServerNetworkRuntime(
             in capacity,
             transport,
@@ -107,6 +159,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
             commands,
             gameplayCommandGate,
             admissions,
+            entityAdmissions,
             controllers,
             entities,
             seatFactory.CreateAll(),
@@ -117,10 +170,11 @@ public static class LiteNetLibNetworkRuntimeInstaller
         GameEngine engine,
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
-        ContentFingerprint contentFingerprint,
         ClientReplicationSchemaApplierRegistry appliers,
         NetworkRuntimeStateObserver observer,
-        string runtimeBaseDirectory)
+        string runtimeBaseDirectory,
+        uint faultInjectionSeed,
+        NetworkAdapterMetricsSampler? metrics)
     {
         if (appliers.Count == 0)
         {
@@ -128,17 +182,23 @@ public static class LiteNetLibNetworkRuntimeInstaller
         }
 
         appliers.Freeze();
+        ContentIdentityManifest contentIdentity = ContentIdentityManifestBuilder.Build(engine, config);
+        engine.SetService(CoreServiceKeys.ContentIdentityManifest, contentIdentity);
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
+        var stageFeedback = new ClientCommandStageFeedbackBuffer(config.NetworkAdmissionResultCapacity);
+        engine.SetService(CoreServiceKeys.ClientCommandStageFeedbackPort, (IClientCommandStageFeedbackPort)stageFeedback);
         var capacity = NetworkRuntimeCapacity.FromConfig(config);
         var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
         string credentialPath = Path.IsPathRooted(host.CredentialPath)
             ? Path.GetFullPath(host.CredentialPath)
             : Path.GetFullPath(Path.Combine(runtimeBaseDirectory, host.CredentialPath));
-        LiteNetLibClientDatagramPort transport = LiteNetLibTransportFactory.CreateClient(
+        ILiteNetLibClientTransport transport = LiteNetLibTransportFactory.CreateClient(
             config,
             host.Host,
             host.Port,
-            host.ConnectionKey);
+            host.ConnectionKey,
+            faultInjectionSeed,
+            metrics);
         NetworkCommandSchemaRegistry commandSchemas = Require(engine, CoreServiceKeys.NetworkCommandSchemaRegistry);
         var runtime = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -147,10 +207,11 @@ public static class LiteNetLibNetworkRuntimeInstaller
             transport,
             config.ClientReconnectRetryMilliseconds / 1000f,
             protocol,
-            contentFingerprint,
+            contentIdentity,
             new AtomicFileClientSessionCredentialPort(credentialPath),
             new ClientReplicationBridgeFactory(engine.World, config.NetworkEntityCapacity, appliers),
             admissions,
+            stageFeedback,
             new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
         engine.SetService(
             CoreServiceKeys.ReplicatedClientCommandPort,
@@ -158,6 +219,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
                 engine.World,
                 runtime,
                 commandSchemas,
+                stageFeedback,
                 config.MaxActorsPerCommandBatch));
         engine.SetService(CoreServiceKeys.ReplicatedClientRoomControlPort, (IReplicatedClientRoomControlPort)runtime);
         return runtime;

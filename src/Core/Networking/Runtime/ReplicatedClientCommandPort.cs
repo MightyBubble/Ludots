@@ -40,6 +40,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly World _world;
         private readonly ReplicatedClientNetworkRuntime _runtime;
         private readonly NetworkCommandSchemaRegistry _schemas;
+        private readonly ClientCommandStageFeedbackBuffer _stageFeedback;
         private readonly NetworkCommandWireEntry[] _entries;
         private ulong _boundSessionEpoch;
         private ulong _nextBatchSequence = 1;
@@ -48,11 +49,13 @@ namespace Ludots.Core.Networking.Runtime
             World world,
             ReplicatedClientNetworkRuntime runtime,
             NetworkCommandSchemaRegistry schemas,
+            ClientCommandStageFeedbackBuffer stageFeedback,
             int maxActorsPerBatch)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _schemas = schemas ?? throw new ArgumentNullException(nameof(schemas));
+            _stageFeedback = stageFeedback ?? throw new ArgumentNullException(nameof(stageFeedback));
             if (!schemas.IsFrozen)
             {
                 throw new InvalidOperationException("Replicated client command schemas must be frozen before submission composition.");
@@ -132,6 +135,17 @@ namespace Ludots.Core.Networking.Runtime
             if (!_runtime.TrySubmitCommand(in header, _entries.AsSpan(0, orders.Length)))
             {
                 return ReplicatedClientCommandSubmitResult.TransportRejected;
+            }
+
+            var sending = new ClientCommandStageFeedback(
+                header.ClientBatchSequence,
+                ClientCommandStage.Sending,
+                OrderSubmitResult.NetworkScheduled,
+                OrderAdmissionStage.NetworkIntake);
+            if (!_stageFeedback.TryWrite(in sending))
+            {
+                throw new InvalidOperationException(
+                    $"Client command stage feedback capacity {_stageFeedback.Capacity} is exhausted.");
             }
 
             _nextBatchSequence = _nextBatchSequence == ulong.MaxValue

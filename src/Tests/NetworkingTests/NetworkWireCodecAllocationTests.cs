@@ -12,13 +12,19 @@ namespace Ludots.Tests.Networking;
 public sealed class NetworkWireCodecAllocationTests
 {
     private static readonly ProtocolVersion Protocol = new(1, 0);
-    private static readonly ContentFingerprint Content = ContentFingerprintBuilder.FromCanonicalBytes("wire_0alloc"u8);
+    private static readonly ContentIdentityManifest RequiredContent = ContentIdentityTestFixtures.CreateManifest("wire_0alloc");
+    private static readonly ContentFingerprint Content = RequiredContent.Aggregate;
     private static readonly SessionEpoch Epoch = new(1);
 
     [Test]
     public void SteadyStateEncodeDecode_10000Operations_AllocatesZeroManagedBytes()
     {
-        var request = new SessionHandshakeRequest(Protocol, Content, new ReconnectToken(1, 2), Epoch);
+        var request = new SessionHandshakeRequest(
+            Protocol,
+            Content,
+            new ReconnectToken(1, 2),
+            Epoch,
+            ContentIdentityTestFixtures.CategoryDigests(RequiredContent));
         var responseSeat = new SessionSeatBinding(0, 1, new PlayerId(1));
         SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
             in responseSeat,
@@ -40,6 +46,7 @@ public sealed class NetworkWireCodecAllocationTests
             1,
             1,
             1,
+            OrderAdmissionStage.GlobalIntake,
             OrderSubmitResult.Queued,
             isReplay: false);
         var ack = new NetworkSnapshotAcknowledgement(1, 1, 10);

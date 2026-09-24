@@ -38,6 +38,8 @@ namespace Ludots.Core.Networking.Runtime
         SeatControllerUnavailable = 21,
         SessionContractViolation = 22,
         ConnectionAttemptRejected = 23,
+        EntityAdmissionCorrelationMissing = 24,
+        ClientStageFeedbackCapacityExceeded = 25,
     }
 
     public readonly struct NetworkRuntimeFault

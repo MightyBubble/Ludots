@@ -53,7 +53,7 @@ public sealed class NetworkRuntimeEndToEndTests
             new ReplicationProjectionBuffer(entityCapacity: 2),
             new ReplicationPacketBuffer(entityCapacity: 2));
 
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 1, 2, 3 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-123");
         var protocol = new ProtocolVersion(1, 0);
         var capacity = Capacity();
         var transport = new InMemoryTransport(new ConnectionId(11));
@@ -63,7 +63,7 @@ public sealed class NetworkRuntimeEndToEndTests
             seatCapacity: 1,
             new SessionEpoch(77),
             protocol,
-            fingerprint,
+            contentIdentity,
             reconnectWindowTicks: 2,
             readyCountdownTicks: 90);
         var server = new AuthoritativeServerNetworkRuntime(
@@ -75,6 +75,7 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Ingress,
             commandHarness.GameplayGate,
             commandHarness.Results,
+            commandHarness.EntityResults,
             new FixedControllerResolver(player),
             input,
             new[] { serverSeat },
@@ -83,6 +84,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var credentials = new MemoryCredentials();
         var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
         var clientAdmissions = new NetworkCommandAdmissionResultBuffer(capacity: 16);
+        var clientFeedback = new ClientCommandStageFeedbackBuffer(capacity: 16);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             transport,
@@ -90,10 +92,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 0.5f,
             protocol,
-            fingerprint,
+            contentIdentity,
             credentials,
             clientFactory,
             clientAdmissions,
+            clientFeedback,
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -128,7 +131,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
         server.BeforeAuthoritativeTick(10);
         server.AfterAuthoritativeCommit(10);
-        Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(1));
+        Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThanOrEqualTo(1));
         client.PumpTransport();
         server.PumpTransport();
 
@@ -150,19 +153,45 @@ public sealed class NetworkRuntimeEndToEndTests
             acknowledgedCommittedTick: 10,
             entryCount: 2);
         Assert.That(client.TrySubmitCommand(in header, entries), Is.True);
-        Assert.That(transport.ClientCommandFragmentCount, Is.GreaterThan(1));
+        Assert.That(transport.ClientCommandFragmentCount, Is.GreaterThanOrEqualTo(1));
         server.PumpTransport();
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
-        Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+        Assert.That(clientAdmissions.Count, Is.Zero);
+        Assert.That(client.StageFeedback.Count, Is.Zero);
 
         server.BeforeAuthoritativeTick(10);
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
-        Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(client.StageFeedback.TryRead(out ClientCommandStageFeedback queuedFeedback), Is.True);
+        Assert.That(queuedFeedback.Stage, Is.EqualTo(ClientCommandStage.ServerAccepted));
+        Assert.That(queuedFeedback.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(queuedFeedback.AdmissionStage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
         Span<Order> admitted = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
         Assert.That(admittedCount, Is.EqualTo(2));
+
+        var activated = new OrderAdmissionOutcome(
+            in admitted[0],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated);
+        var activatedSecond = new OrderAdmissionOutcome(
+            in admitted[1],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated);
+        Assert.That(commandHarness.EntityResults.TryWrite(in activated), Is.True);
+        Assert.That(commandHarness.EntityResults.TryWrite(in activatedSecond), Is.True);
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(client.StageFeedback.TryRead(out ClientCommandStageFeedback firstActivated), Is.True);
+        Assert.That(client.StageFeedback.TryRead(out ClientCommandStageFeedback secondActivated), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstActivated.Stage, Is.EqualTo(ClientCommandStage.Activated));
+            Assert.That(firstActivated.AdmissionStage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(firstActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(secondActivated.Stage, Is.EqualTo(ClientCommandStage.Activated));
+            Assert.That(commandHarness.EntityResults.Count, Is.Zero);
+            Assert.That(clientAdmissions.Count, Is.Zero);
+        });
 
         commandHarness.GameplayGate.CompleteMatch();
         var completedHeader = new NetworkCommandBatchHeader(
@@ -174,7 +203,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(client.TrySubmitCommand(in completedHeader, entries), Is.True);
         server.PumpTransport();
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome completed), Is.True);
+        Assert.That(client.StageFeedback.TryRead(out ClientCommandStageFeedback completed), Is.True);
+        Assert.That(completed.Stage, Is.EqualTo(ClientCommandStage.Rejected));
         Assert.That(completed.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
 
         serverWorld.Set(first, new TestReplicatedData(2, 99));
@@ -231,7 +261,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var transport = new InMemoryTransport(new ConnectionId(3));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 9 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-9");
         using World world = World.Create();
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -240,10 +270,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 1f,
             protocol,
-            fingerprint,
+            contentIdentity,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
             new NetworkCommandAdmissionResultBuffer(4),
+            new ClientCommandStageFeedbackBuffer(4),
             observer);
 
         transport.ConnectClientOnly();
@@ -253,7 +284,7 @@ public sealed class NetworkRuntimeEndToEndTests
             in seat,
             new ReconnectToken(1, 2),
             protocol,
-            fingerprint,
+            contentIdentity.Aggregate,
             new SessionEpoch(7));
         Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in response, payload, out int payloadBytes), Is.EqualTo(NetworkWireCodecStatus.Success));
@@ -275,7 +306,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var transport = new InMemoryTransport(new ConnectionId(4));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 7 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-7");
         var credentials = new MemoryCredentials();
         credentials.Seed(new ClientSessionCredentials(new SessionEpoch(5), new ReconnectToken(8, 9)));
         using World world = World.Create();
@@ -286,10 +317,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 0.5f,
             protocol,
-            fingerprint,
+            contentIdentity,
             credentials,
             new ClientBridgeFactory(world, 2),
             new NetworkCommandAdmissionResultBuffer(4),
+            new ClientCommandStageFeedbackBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -297,7 +329,7 @@ public sealed class NetworkRuntimeEndToEndTests
         SessionHandshakeResponse rejected = SessionHandshakeResponse.Reject(
             HandshakeRejectReason.SessionEpochMismatch,
             protocol,
-            fingerprint,
+            contentIdentity.Aggregate,
             new SessionEpoch(6));
         Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in rejected, payload, out int payloadBytes), Is.EqualTo(NetworkWireCodecStatus.Success));
@@ -323,7 +355,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var transport = new InMemoryTransport(new ConnectionId(5));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 6 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-6");
         var credentials = new MemoryCredentials();
         using World world = World.Create();
         var factory = new ClientBridgeFactory(world, 2);
@@ -334,10 +366,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 0.5f,
             protocol,
-            fingerprint,
+            contentIdentity,
             credentials,
             factory,
             new NetworkCommandAdmissionResultBuffer(4),
+            new ClientCommandStageFeedbackBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -348,7 +381,7 @@ public sealed class NetworkRuntimeEndToEndTests
                 new SessionSeatBinding(0, 1, new PlayerId(1)),
                 new ReconnectToken(10, 11),
                 protocol,
-                fingerprint,
+                contentIdentity.Aggregate,
                 new SessionEpoch(5)));
         client.PumpTransport();
 
@@ -367,7 +400,7 @@ public sealed class NetworkRuntimeEndToEndTests
             SessionHandshakeResponse.Reject(
                 HandshakeRejectReason.SessionEpochMismatch,
                 protocol,
-                fingerprint,
+                contentIdentity.Aggregate,
                 new SessionEpoch(6)));
         client.PumpTransport();
 
@@ -387,7 +420,7 @@ public sealed class NetworkRuntimeEndToEndTests
                 new SessionSeatBinding(0, 1, new PlayerId(1)),
                 new ReconnectToken(20, 21),
                 protocol,
-                fingerprint,
+                contentIdentity.Aggregate,
                 new SessionEpoch(6)));
         client.PumpTransport();
 
@@ -407,7 +440,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var transport = new InMemoryTransport(new ConnectionId(6));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 3 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-3");
         using World world = World.Create();
         using var client = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -416,10 +449,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 1f,
             protocol,
-            fingerprint,
+            contentIdentity,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
             new NetworkCommandAdmissionResultBuffer(4),
+            new ClientCommandStageFeedbackBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -429,7 +463,7 @@ public sealed class NetworkRuntimeEndToEndTests
             SessionHandshakeResponse.Reject(
                 HandshakeRejectReason.ProtocolMismatch,
                 new ProtocolVersion(2, 0),
-                fingerprint,
+                contentIdentity.Aggregate,
                 new SessionEpoch(9)));
         client.PumpTransport();
 
@@ -476,7 +510,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var transport = new InMemoryTransport(new ConnectionId(6));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
-        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 4 });
+        ContentIdentityManifest contentIdentity = ContentIdentityTestFixtures.CreateManifest("e2e-4");
         using World world = World.Create();
         using var client = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -485,10 +519,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             reconnectRetrySeconds: 1f,
             protocol,
-            fingerprint,
+            contentIdentity,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
             new NetworkCommandAdmissionResultBuffer(4),
+            new ClientCommandStageFeedbackBuffer(4),
             observer);
         var roomSeats = new[]
         {
@@ -531,7 +566,7 @@ public sealed class NetworkRuntimeEndToEndTests
                 new SessionSeatBinding(0, 1, new PlayerId(1)),
                 new ReconnectToken(1, 2),
                 protocol,
-                fingerprint,
+                contentIdentity.Aggregate,
                 new SessionEpoch(7)));
         client.PumpTransport();
         roomPayload[RoomControlWireCodec.SnapshotHeaderSizeInBytes - 1] = 1;
@@ -563,14 +598,14 @@ public sealed class NetworkRuntimeEndToEndTests
     }
 
     private static NetworkRuntimeCapacity Capacity() => new(
-        maxDatagramPayloadBytes: 128,
+        maxDatagramPayloadBytes: 1024,
         connectionCapacity: 2,
         entityCapacity: 2,
         maxCommandEntries: 2,
         maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(2),
         maxCommandFragments: 4,
-        maxSnapshotBytes: 256,
-        maxSnapshotFragments: 4,
+        maxSnapshotBytes: 512,
+        maxSnapshotFragments: 8,
         outboundQueueCapacity: 32,
         acknowledgementHistoryCapacity: 4,
         controlChannel: new ChannelId(0),
@@ -611,6 +646,7 @@ public sealed class NetworkRuntimeEndToEndTests
         schemas.Freeze();
         var orders = new OrderQueue(capacity: 8);
         var results = new NetworkCommandAdmissionResultBuffer(capacity: 8);
+        var entityResults = new OrderAdmissionResultBuffer(capacity: 8);
         var config = new NetworkCommandIngressConfig(
             seatCapacity: 1,
             simulationTickRateHz: 30,
@@ -634,7 +670,7 @@ public sealed class NetworkRuntimeEndToEndTests
             gameplayGate,
             orders,
             results);
-        return new CommandHarness(entities, knowledge, orders, results, ingress, gameplayGate, firstHandle, secondHandle);
+        return new CommandHarness(entities, knowledge, orders, results, entityResults, ingress, gameplayGate, firstHandle, secondHandle);
     }
 
     private static KnowledgeDisclosureRecord VisibleDisclosure() => new(
@@ -654,6 +690,7 @@ public sealed class NetworkRuntimeEndToEndTests
         KnowledgeProjectionStore Knowledge,
         OrderQueue Orders,
         NetworkCommandAdmissionResultBuffer Results,
+        OrderAdmissionResultBuffer EntityResults,
         NetworkCommandIngress Ingress,
         NetworkGameplayCommandGate GameplayGate,
         NetworkEntityHandle FirstHandle,

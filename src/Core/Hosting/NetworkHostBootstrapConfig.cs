@@ -17,6 +17,14 @@ namespace Ludots.Core.Hosting
 
         public string CredentialPath { get; set; } = string.Empty;
 
+        /// <summary>Deterministic fault-injection PRNG seed (parsed as uint).</summary>
+        public string FaultInjectionSeed { get; set; } = "0";
+
+        /// <summary>When set, adapter writes NetworkRuntimeProofDocument JSON periodically.</summary>
+        public string ProofPath { get; set; } = string.Empty;
+
+        public int ProofIntervalMilliseconds { get; set; } = 500;
+
         public NetworkProcessRole ResolveRole()
         {
             return ProcessRole switch
@@ -26,6 +34,17 @@ namespace Ludots.Core.Hosting
                 _ => throw new InvalidOperationException(
                     $"Unknown network processRole '{ProcessRole}'. Expected authoritativeServer or replicatedClient."),
             };
+        }
+
+        public uint ParseFaultInjectionSeed()
+        {
+            if (!uint.TryParse(FaultInjectionSeed, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out uint seed))
+            {
+                throw new InvalidOperationException(
+                    $"Network host faultInjectionSeed must be a uint; got '{FaultInjectionSeed}'.");
+            }
+
+            return seed;
         }
 
         public void Validate()
@@ -40,6 +59,14 @@ namespace Ludots.Core.Hosting
             if (string.IsNullOrWhiteSpace(ConnectionKey))
             {
                 throw new InvalidOperationException("Network host connectionKey is required.");
+            }
+
+            _ = ParseFaultInjectionSeed();
+
+            if (ProofIntervalMilliseconds <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Network host proofIntervalMilliseconds must be positive; got {ProofIntervalMilliseconds}.");
             }
 
             if (role == NetworkProcessRole.AuthoritativeServer)

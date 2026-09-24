@@ -26,6 +26,7 @@ namespace Ludots.Core.Networking.Commands
             int actorCount,
             int orderId,
             int admissionBatchId,
+            OrderAdmissionStage stage,
             OrderSubmitResult result,
             bool isReplay)
         {
@@ -37,9 +38,7 @@ namespace Ludots.Core.Networking.Commands
             ActorCount = actorCount;
             OrderId = orderId;
             AdmissionBatchId = admissionBatchId;
-            Stage = result is OrderSubmitResult.Queued or OrderSubmitResult.QueueFull
-                ? OrderAdmissionStage.GlobalIntake
-                : OrderAdmissionStage.NetworkIntake;
+            Stage = stage;
             Result = result;
             IsReplay = isReplay;
         }
@@ -66,6 +65,7 @@ namespace Ludots.Core.Networking.Commands
                 ActorCount,
                 OrderId,
                 AdmissionBatchId,
+                Stage,
                 Result,
                 isReplay: true);
         }

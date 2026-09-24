@@ -28,6 +28,7 @@ try
     };
 
     using var engine = bootstrap.Engine;
+    engine.TryGetService(LiteNetLibServiceKeys.NetworkAcceptanceProof, out NetworkAcceptanceProofService? proof);
     engine.Start();
     ThrowIfLifecycleFailed(engine, "startup");
     engine.LoadStartupMap();
@@ -38,7 +39,14 @@ try
         long now = Stopwatch.GetTimestamp();
         float deltaSeconds = (float)((now - previous) / (double)Stopwatch.Frequency);
         previous = now;
+        long tickStart = Stopwatch.GetTimestamp();
         engine.Tick(deltaSeconds);
+        if (proof != null)
+        {
+            ulong microseconds = (ulong)((Stopwatch.GetTimestamp() - tickStart) * 1_000_000.0 / Stopwatch.Frequency);
+            proof.ObserveFullTickMicroseconds(microseconds);
+        }
+
         Thread.Sleep(1);
     }
 }

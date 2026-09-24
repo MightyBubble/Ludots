@@ -6,9 +6,7 @@ using Ludots.Core.Networking.Transport;
 namespace Ludots.Adapter.LiteNetLib;
 
 public sealed class LiteNetLibClientDatagramPort :
-    IClientDatagramPort,
-    IClientConnectionEventPort,
-    IClientConnectionControlPort,
+    ILiteNetLibClientTransport,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;

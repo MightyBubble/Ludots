@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
@@ -22,6 +23,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkGameplayCommandGate _gameplayCommandGate;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
+        private readonly OrderAdmissionResultBuffer _entityResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInputPort _replicationInput;
         private readonly AuthoritativeReplicationSeatRuntime[] _replicationSeats;
@@ -50,6 +52,16 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkRoomSeatSnapshot[] _roomSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
+        private readonly bool[] _entityCorrelationActive;
+        private readonly int[] _entityCorrelationBatchIds;
+        private readonly int[] _entityCorrelationSeatSlots;
+        private readonly uint[] _entityCorrelationSeatGenerations;
+        private readonly int[] _entityCorrelationPlayerIds;
+        private readonly ulong[] _entityCorrelationSequences;
+        private readonly int[] _entityCorrelationTargetTicks;
+        private readonly int[] _entityCorrelationActorCounts;
+        private readonly int[] _entityCorrelationOrderIds;
+        private readonly int[] _entityCorrelationRemaining;
 
         private readonly byte[] _receiveBuffer;
         private readonly byte[] _payloadBuffer;
@@ -73,6 +85,7 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandIngress commands,
             NetworkGameplayCommandGate gameplayCommandGate,
             NetworkCommandAdmissionResultBuffer commandResults,
+            OrderAdmissionResultBuffer entityResults,
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInputPort replicationInput,
             AuthoritativeReplicationSeatRuntime[] replicationSeats,
@@ -86,6 +99,7 @@ namespace Ludots.Core.Networking.Runtime
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _gameplayCommandGate = gameplayCommandGate ?? throw new ArgumentNullException(nameof(gameplayCommandGate));
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
+            _entityResults = entityResults ?? throw new ArgumentNullException(nameof(entityResults));
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInput = replicationInput ?? throw new ArgumentNullException(nameof(replicationInput));
             _replicationSeats = replicationSeats ?? throw new ArgumentNullException(nameof(replicationSeats));
@@ -153,6 +167,17 @@ namespace Ludots.Core.Networking.Runtime
             int pendingAdmissionCapacity = checked(commandResults.Capacity * sessions.SeatCapacity);
             _pendingAdmissions = new NetworkCommandAdmissionOutcome[pendingAdmissionCapacity];
             _pendingAdmissionActive = new bool[pendingAdmissionCapacity];
+            int correlationCapacity = Math.Max(entityResults.Capacity, commandResults.Capacity);
+            _entityCorrelationActive = new bool[correlationCapacity];
+            _entityCorrelationBatchIds = new int[correlationCapacity];
+            _entityCorrelationSeatSlots = new int[correlationCapacity];
+            _entityCorrelationSeatGenerations = new uint[correlationCapacity];
+            _entityCorrelationPlayerIds = new int[correlationCapacity];
+            _entityCorrelationSequences = new ulong[correlationCapacity];
+            _entityCorrelationTargetTicks = new int[correlationCapacity];
+            _entityCorrelationActorCounts = new int[correlationCapacity];
+            _entityCorrelationOrderIds = new int[correlationCapacity];
+            _entityCorrelationRemaining = new int[correlationCapacity];
             _receiveBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.ResponseSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
@@ -174,6 +199,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             FlushAdmissionResults();
+            DrainEntityAdmissionResults();
             while (_datagrams.TryReceive(
                 _receiveBuffer,
                 out int bytesReceived,
@@ -182,6 +208,7 @@ namespace Ludots.Core.Networking.Runtime
             {
                 ProcessDatagram(connection, channel, _receiveBuffer.AsSpan(0, bytesReceived));
                 FlushAdmissionResults();
+                DrainEntityAdmissionResults();
             }
 
             FlushPendingAdmissions();
@@ -202,6 +229,7 @@ namespace Ludots.Core.Networking.Runtime
             PublishRoomSnapshotIfChanged();
             _commands.DrainScheduled(checked((int)executingTick));
             FlushAdmissionResults();
+            DrainEntityAdmissionResults();
             FlushPendingAdmissions();
         }
 
@@ -875,24 +903,149 @@ namespace Ludots.Core.Networking.Runtime
         {
             while (_commandResults.TryRead(out NetworkCommandAdmissionOutcome outcome))
             {
-                int free = -1;
-                for (int i = 0; i < _pendingAdmissionActive.Length; i++)
+                if (outcome.Stage == OrderAdmissionStage.GlobalIntake &&
+                    outcome.Result == OrderSubmitResult.Queued)
                 {
-                    if (!_pendingAdmissionActive[i])
-                    {
-                        free = i;
-                        break;
-                    }
+                    RecordEntityAdmissionCorrelation(in outcome);
                 }
 
-                if (free < 0)
-                {
-                    Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: _commandResults.Count);
-                }
-
-                _pendingAdmissions[free] = outcome;
-                _pendingAdmissionActive[free] = true;
+                EnqueuePendingAdmission(in outcome);
             }
+        }
+
+        private void DrainEntityAdmissionResults()
+        {
+            while (_entityResults.TryRead(out OrderAdmissionOutcome entityOutcome))
+            {
+                // Local/AI intake shares EntityOrderAdmissionResults. Only network-correlated
+                // GlobalIntake Queued batches are bridged to clients; other rows are drained so the
+                // fixed buffer cannot fill, without pretending they were networked commands.
+                if (!TryFindEntityCorrelation(entityOutcome.AdmissionBatchId, out int correlationIndex))
+                {
+                    continue;
+                }
+
+                if (entityOutcome.AdmissionBatchSize > 0 &&
+                    _entityCorrelationRemaining[correlationIndex] == _entityCorrelationActorCounts[correlationIndex] &&
+                    entityOutcome.AdmissionBatchSize != _entityCorrelationActorCounts[correlationIndex])
+                {
+                    _entityCorrelationRemaining[correlationIndex] = entityOutcome.AdmissionBatchSize;
+                    _entityCorrelationActorCounts[correlationIndex] = entityOutcome.AdmissionBatchSize;
+                }
+
+                var seat = new NetworkCommandSeat(
+                    _entityCorrelationSeatSlots[correlationIndex],
+                    _entityCorrelationSeatGenerations[correlationIndex],
+                    _entityCorrelationPlayerIds[correlationIndex]);
+                var bridged = new NetworkCommandAdmissionOutcome(
+                    in seat,
+                    _entityCorrelationSequences[correlationIndex],
+                    _entityCorrelationTargetTicks[correlationIndex],
+                    _entityCorrelationActorCounts[correlationIndex],
+                    entityOutcome.OrderId != 0 ? entityOutcome.OrderId : _entityCorrelationOrderIds[correlationIndex],
+                    entityOutcome.AdmissionBatchId,
+                    OrderAdmissionStage.EntityIntake,
+                    entityOutcome.Result,
+                    isReplay: false);
+                EnqueuePendingAdmission(in bridged);
+
+                int remaining = _entityCorrelationRemaining[correlationIndex] - 1;
+                if (remaining <= 0)
+                {
+                    _entityCorrelationActive[correlationIndex] = false;
+                    _entityCorrelationBatchIds[correlationIndex] = 0;
+                    _entityCorrelationRemaining[correlationIndex] = 0;
+                }
+                else
+                {
+                    _entityCorrelationRemaining[correlationIndex] = remaining;
+                }
+            }
+        }
+
+        private void EnqueuePendingAdmission(in NetworkCommandAdmissionOutcome outcome)
+        {
+            int free = -1;
+            for (int i = 0; i < _pendingAdmissionActive.Length; i++)
+            {
+                if (!_pendingAdmissionActive[i])
+                {
+                    free = i;
+                    break;
+                }
+            }
+
+            if (free < 0)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: _commandResults.Count);
+            }
+
+            _pendingAdmissions[free] = outcome;
+            _pendingAdmissionActive[free] = true;
+        }
+
+        private void RecordEntityAdmissionCorrelation(in NetworkCommandAdmissionOutcome outcome)
+        {
+            if (outcome.AdmissionBatchId <= 0 || outcome.ActorCount <= 0)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    detail: outcome.AdmissionBatchId);
+            }
+
+            if (TryFindEntityCorrelation(outcome.AdmissionBatchId, out _))
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    detail: outcome.AdmissionBatchId);
+            }
+
+            int free = -1;
+            for (int i = 0; i < _entityCorrelationActive.Length; i++)
+            {
+                if (!_entityCorrelationActive[i])
+                {
+                    free = i;
+                    break;
+                }
+            }
+
+            if (free < 0)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: outcome.AdmissionBatchId);
+            }
+
+            _entityCorrelationActive[free] = true;
+            _entityCorrelationBatchIds[free] = outcome.AdmissionBatchId;
+            _entityCorrelationSeatSlots[free] = outcome.SeatSlot;
+            _entityCorrelationSeatGenerations[free] = outcome.SeatGeneration;
+            _entityCorrelationPlayerIds[free] = outcome.PlayerId;
+            _entityCorrelationSequences[free] = outcome.ClientBatchSequence;
+            _entityCorrelationTargetTicks[free] = outcome.TargetTick;
+            _entityCorrelationActorCounts[free] = outcome.ActorCount;
+            _entityCorrelationOrderIds[free] = outcome.OrderId;
+            _entityCorrelationRemaining[free] = outcome.ActorCount;
+        }
+
+        private bool TryFindEntityCorrelation(int admissionBatchId, out int index)
+        {
+            if (admissionBatchId <= 0)
+            {
+                index = -1;
+                return false;
+            }
+
+            for (int i = 0; i < _entityCorrelationActive.Length; i++)
+            {
+                if (_entityCorrelationActive[i] && _entityCorrelationBatchIds[i] == admissionBatchId)
+                {
+                    index = i;
+                    return true;
+                }
+            }
+
+            index = -1;
+            return false;
         }
 
         private void FlushPendingAdmissions()

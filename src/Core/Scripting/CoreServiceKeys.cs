@@ -55,6 +55,7 @@ using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Persistence;
 using Ludots.Core.Presentation;
@@ -279,6 +280,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<INetworkRuntimePort> NetworkRuntimePort = new("NetworkRuntimePort");
         public static readonly ServiceKey<IReplicatedClientCommandPort> ReplicatedClientCommandPort = new("ReplicatedClientCommandPort");
         public static readonly ServiceKey<IReplicatedClientRoomControlPort> ReplicatedClientRoomControlPort = new("ReplicatedClientRoomControlPort");
+        public static readonly ServiceKey<IClientCommandStageFeedbackPort> ClientCommandStageFeedbackPort = new("ClientCommandStageFeedbackPort");
         public static readonly ServiceKey<NetworkCommandIngress> NetworkCommandIngress = new("NetworkCommandIngress");
         public static readonly ServiceKey<NetworkGameplayCommandGate> NetworkGameplayCommandGate = new("NetworkGameplayCommandGate");
         public static readonly ServiceKey<NetworkCommandSchemaRegistry> NetworkCommandSchemaRegistry = new("NetworkCommandSchemaRegistry");
@@ -289,6 +291,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NetworkRuntimeStateObserver> NetworkRuntimeStateObserver = new("NetworkRuntimeStateObserver");
         public static readonly ServiceKey<ReplicationSchemaProjectorRegistry> ReplicationSchemaProjectors = new("ReplicationSchemaProjectors");
         public static readonly ServiceKey<ClientReplicationSchemaApplierRegistry> ClientReplicationSchemaAppliers = new("ClientReplicationSchemaAppliers");
+        public static readonly ServiceKey<ContentIdentityManifest> ContentIdentityManifest = new("ContentIdentityManifest");
         public static readonly ServiceKey<IEntityCommandPanelCollectionQueryConfigRegistry> EntityCommandPanelCollectionQueryConfigRegistry =
             new("EntityCommandPanelCollectionQueryConfigRegistry");
 

@@ -125,6 +125,99 @@ namespace Ludots.Core.Networking.Session
     }
 
     /// <summary>
+    /// Fixed 8-slot category digest table for handshake wire payloads (value-type, no heap).
+    /// </summary>
+    public readonly struct ContentCategoryDigestTable : IEquatable<ContentCategoryDigestTable>
+    {
+        private readonly ContentFingerprint _c0;
+        private readonly ContentFingerprint _c1;
+        private readonly ContentFingerprint _c2;
+        private readonly ContentFingerprint _c3;
+        private readonly ContentFingerprint _c4;
+        private readonly ContentFingerprint _c5;
+        private readonly ContentFingerprint _c6;
+        private readonly ContentFingerprint _c7;
+
+        public ContentCategoryDigestTable(ReadOnlySpan<ContentFingerprint> digests)
+        {
+            if (digests.Length != ContentIdentityManifest.CategoryCount)
+            {
+                throw new ArgumentException(
+                    $"Category digest table requires exactly {ContentIdentityManifest.CategoryCount} digests.",
+                    nameof(digests));
+            }
+
+            for (int i = 0; i < digests.Length; i++)
+            {
+                if (digests[i].IsEmpty)
+                {
+                    throw new ArgumentException("Category digests must be non-empty.", nameof(digests));
+                }
+            }
+
+            _c0 = digests[0];
+            _c1 = digests[1];
+            _c2 = digests[2];
+            _c3 = digests[3];
+            _c4 = digests[4];
+            _c5 = digests[5];
+            _c6 = digests[6];
+            _c7 = digests[7];
+        }
+
+        public bool IsEmpty =>
+            _c0.IsEmpty && _c1.IsEmpty && _c2.IsEmpty && _c3.IsEmpty &&
+            _c4.IsEmpty && _c5.IsEmpty && _c6.IsEmpty && _c7.IsEmpty;
+
+        public ContentFingerprint this[int index] => index switch
+        {
+            0 => _c0,
+            1 => _c1,
+            2 => _c2,
+            3 => _c3,
+            4 => _c4,
+            5 => _c5,
+            6 => _c6,
+            7 => _c7,
+            _ => throw new ArgumentOutOfRangeException(nameof(index)),
+        };
+
+        public void CopyTo(Span<ContentFingerprint> destination)
+        {
+            if (destination.Length < ContentIdentityManifest.CategoryCount)
+            {
+                throw new ArgumentException("Destination is too small for category digests.", nameof(destination));
+            }
+
+            destination[0] = _c0;
+            destination[1] = _c1;
+            destination[2] = _c2;
+            destination[3] = _c3;
+            destination[4] = _c4;
+            destination[5] = _c5;
+            destination[6] = _c6;
+            destination[7] = _c7;
+        }
+
+        public bool Equals(ContentCategoryDigestTable other) =>
+            _c0 == other._c0 &&
+            _c1 == other._c1 &&
+            _c2 == other._c2 &&
+            _c3 == other._c3 &&
+            _c4 == other._c4 &&
+            _c5 == other._c5 &&
+            _c6 == other._c6 &&
+            _c7 == other._c7;
+
+        public override bool Equals(object? obj) => obj is ContentCategoryDigestTable other && Equals(other);
+
+        public override int GetHashCode() =>
+            HashCode.Combine(
+                HashCode.Combine(_c0, _c1, _c2, _c3),
+                HashCode.Combine(_c4, _c5, _c6, _c7));
+    }
+
+    /// <summary>
     /// Client handshake payload. Intentionally omits player identity; seats are server-assigned.
     /// </summary>
     public readonly struct SessionHandshakeRequest
@@ -133,12 +226,14 @@ namespace Ludots.Core.Networking.Session
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
             ReconnectToken reconnectToken = default,
-            SessionEpoch sessionEpoch = default)
+            SessionEpoch sessionEpoch = default,
+            ContentCategoryDigestTable categoryDigests = default)
         {
             ProtocolVersion = protocolVersion;
             ContentFingerprint = contentFingerprint;
             ReconnectToken = reconnectToken;
             SessionEpoch = sessionEpoch;
+            CategoryDigests = categoryDigests;
         }
 
         public ProtocolVersion ProtocolVersion { get; }
@@ -149,7 +244,36 @@ namespace Ludots.Core.Networking.Session
 
         public SessionEpoch SessionEpoch { get; }
 
-        public bool IsWellFormed => ProtocolVersion.IsWellFormed;
+        /// <summary>
+        /// Optional per-category digests. Empty means aggregate-only comparison on the server.
+        /// </summary>
+        public ContentCategoryDigestTable CategoryDigests { get; }
+
+        public bool IsWellFormed
+        {
+            get
+            {
+                if (!ProtocolVersion.IsWellFormed)
+                {
+                    return false;
+                }
+
+                if (CategoryDigests.IsEmpty)
+                {
+                    return true;
+                }
+
+                for (int i = 0; i < ContentIdentityManifest.CategoryCount; i++)
+                {
+                    if (CategoryDigests[i].IsEmpty)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
     }
 
     public readonly struct SessionHandshakeResponse
@@ -161,7 +285,8 @@ namespace Ludots.Core.Networking.Session
             ReconnectToken reconnectToken,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
-            SessionEpoch sessionEpoch)
+            SessionEpoch sessionEpoch,
+            ContentMismatchDetail mismatchDetail)
         {
             Accepted = accepted;
             RejectReason = rejectReason;
@@ -170,6 +295,7 @@ namespace Ludots.Core.Networking.Session
             ProtocolVersion = protocolVersion;
             ContentFingerprint = contentFingerprint;
             SessionEpoch = sessionEpoch;
+            MismatchDetail = mismatchDetail;
         }
 
         public bool Accepted { get; }
@@ -187,6 +313,11 @@ namespace Ludots.Core.Networking.Session
         public ContentFingerprint ContentFingerprint { get; }
 
         public SessionEpoch SessionEpoch { get; }
+
+        /// <summary>
+        /// Populated when <see cref="RejectReason"/> is <see cref="HandshakeRejectReason.ContentMismatch"/>.
+        /// </summary>
+        public ContentMismatchDetail MismatchDetail { get; }
 
         public static SessionHandshakeResponse Accept(
             in SessionSeatBinding seat,
@@ -217,7 +348,8 @@ namespace Ludots.Core.Networking.Session
                 reconnectToken,
                 protocolVersion,
                 contentFingerprint,
-                sessionEpoch);
+                sessionEpoch,
+                default);
         }
 
         public static SessionHandshakeResponse Reject(
@@ -239,7 +371,41 @@ namespace Ludots.Core.Networking.Session
                 ReconnectToken.Empty,
                 protocolVersion,
                 contentFingerprint,
-                sessionEpoch);
+                sessionEpoch,
+                default);
+        }
+
+        public static SessionHandshakeResponse Reject(
+            HandshakeRejectReason reason,
+            ProtocolVersion protocolVersion,
+            ContentFingerprint contentFingerprint,
+            SessionEpoch sessionEpoch,
+            ContentMismatchDetail mismatchDetail)
+        {
+            if (reason != HandshakeRejectReason.ContentMismatch)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(reason),
+                    "Mismatch detail requires ContentMismatch reject reason.");
+            }
+
+            if (mismatchDetail.Category == ContentIdentityCategory.None)
+            {
+                throw new ArgumentException(
+                    "Content mismatch detail requires a non-None category.",
+                    nameof(mismatchDetail));
+            }
+
+            SessionSeatBinding seat = default;
+            return new SessionHandshakeResponse(
+                accepted: false,
+                reason,
+                in seat,
+                ReconnectToken.Empty,
+                protocolVersion,
+                contentFingerprint,
+                sessionEpoch,
+                mismatchDetail);
         }
     }
 
