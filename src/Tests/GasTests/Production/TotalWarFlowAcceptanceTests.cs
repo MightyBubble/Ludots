@@ -74,10 +74,10 @@ namespace Ludots.Tests.GAS
                     is Ludots.Core.MassNavigation.Runtime.MassNavigationRuntimeBinding { IsReady: true };
                 return count >= 5 && navReady && CollectionCount(engine, commander, "case_e.selectable") >= 2;
             });
-            DragSelectBox(engine, backend, new Vector2(-2000f, -2000f), new Vector2(2000f, 2000f));
+            DragSelectBox(engine, backend, OnBoard(-2000f, -2000f), OnBoard(2000f, 2000f));
 
 
-            backend.SetMousePosition(new Vector2(800f, 0f));
+            backend.SetMousePosition(OnBoard(800f, 0f));
             backend.SetButton("<Mouse>/rightButton", true);
             engine.Tick(1f / 60f);
             backend.SetButton("<Mouse>/rightButton", false);
@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
 
             // ── 阶段二：战斗备置——右键空地 = 增援放置（SpawnTemplate）──
             int marinesBefore = CountMarines(engine);
-            backend.SetMousePosition(new Vector2(900f, 0f));
+            backend.SetMousePosition(OnBoard(900f, 0f));
             backend.SetButton("<Mouse>/rightButton", true);
             engine.Tick(1f / 60f);
             backend.SetButton("<Mouse>/rightButton", false);
@@ -151,7 +151,7 @@ namespace Ludots.Tests.GAS
             var towerPos = engine.World.Get<WorldPositionCm>(tower).Value;
             var towerScreen = Project(engine, towerPos);
             // 拖框选中三台 marine（2 台集结位 + 1 台增援位；狼/塔不在候选集，框住也无害）
-            DragSelectBox(engine, backend, new Vector2(-2000f, -2000f), new Vector2(2000f, 2000f));
+            DragSelectBox(engine, backend, OnBoard(-2000f, -2000f), OnBoard(2000f, 2000f));
             backend.SetMousePosition(towerScreen);
             backend.SetButton("<Mouse>/rightButton", true);
             engine.Tick(1f / 60f);
@@ -432,6 +432,10 @@ namespace Ludots.Tests.GAS
                 engine.Tick(1f / 60f);
             }
         }
+
+        private const float BoardCenterScreen = 10000f;
+
+        private static Vector2 OnBoard(float x, float y) => new(x + BoardCenterScreen, y + BoardCenterScreen);
 
         private static Vector2 Project(Ludots.Core.Engine.GameEngine engine, Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 world)
         {
