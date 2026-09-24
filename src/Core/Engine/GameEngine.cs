@@ -2498,7 +2498,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new MapEntityLifecycleObserverSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new ModTriggerResumeClockSystem(TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapTriggerResumeClockSystem(() => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
-            RegisterSystem(new RegionVolumeTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new RegionVolumeTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext, SpatialQueries), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new Ludots.Core.Gameplay.FieldRegions.FieldRegionMembershipSystem(World, () => MapSessions, entityCollectionStore, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);

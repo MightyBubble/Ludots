@@ -37,6 +37,20 @@ namespace Ludots.Core.Map
 
         public IReadOnlyDictionary<MapId, MapSession> All => _sessions;
 
+        public SessionEnumerable EnumerateSessions() => new SessionEnumerable(_sessions);
+
+        public readonly struct SessionEnumerable
+        {
+            private readonly Dictionary<MapId, MapSession> _sessions;
+
+            public SessionEnumerable(Dictionary<MapId, MapSession> sessions)
+            {
+                _sessions = sessions;
+            }
+
+            public Dictionary<MapId, MapSession>.Enumerator GetEnumerator() => _sessions.GetEnumerator();
+        }
+
         public bool HasPendingReturn => _focusStack.Count > 1;
 
         public MapSession CreateSession(MapId mapId, MapConfig mapConfig, MapContext parentContext = null)
