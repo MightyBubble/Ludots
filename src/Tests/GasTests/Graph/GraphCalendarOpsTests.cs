@@ -199,6 +199,27 @@ public sealed class GraphCalendarOpsTests
         Assert.That(CalendarProjection.TryDaysUntilPhase(festival, 0, "chunjie", out int insideChunjie), Is.True);
         Assert.That(insideChunjie, Is.EqualTo(0));
 
+        var months = new CalendarCycleDefinition(
+            "month",
+            30,
+            new[]
+            {
+                new CalendarPhaseDefinition("month.03", "三月", 10),
+                new CalendarPhaseDefinition("month.04", "四月", 10),
+                new CalendarPhaseDefinition("month.05", "五月", 10),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 0, "month.04", 5, out int beforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(beforeFifth, Is.EqualTo(14));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 5, out int insideBeforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideBeforeFifth, Is.EqualTo(2));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 14, "month.04", 5, out int onFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(onFifth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 19, "month.04", 5, out int afterFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(afterFifth, Is.EqualTo(25));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 0, out int insideMonth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideMonth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 11, out _), Is.EqualTo(CalendarDaysUntilStatus.DayExceedsPhase));
+
         InvalidOperationException missingPhase = Assert.Throws<InvalidOperationException>(() =>
             runtime.ReadDaysUntilPhase(CalendarId, "season", "month.04"))!;
         Assert.That(missingPhase.Message, Does.Contain("season"));
@@ -216,6 +237,25 @@ public sealed class GraphCalendarOpsTests
             new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
             new GraphControlFlowValueEdge("until", "value", "halt", "value")));
         Assert.That(result.ReturnInt, Is.EqualTo(90));
+
+        GraphSliceResult fifth = CompilePatchExecute(api, ScriptOf(
+            new GraphControlFlowNode
+            {
+                Id = "untilDay",
+                Op = nameof(GraphNodeOp.ReadCalendarDaysUntilPhase),
+                Calendar = CalendarId,
+                Cycle = "season",
+                Phase = "summer",
+                Day = 5,
+            },
+            new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            new GraphControlFlowValueEdge("untilDay", "value", "halt", "value")));
+        Assert.That(fifth.ReturnInt, Is.EqualTo(4));
+
+        InvalidOperationException tooLong = Assert.Throws<InvalidOperationException>(() =>
+            runtime.ReadDaysUntilPhase(CalendarId, "season", "summer", 100))!;
+        Assert.That(tooLong.Message, Does.Contain("summer"));
+        Assert.That(tooLong.Message, Does.Contain("100"));
 
         var disabled = new CalendarRuntime(null, new CalendarDefinitionRegistry());
         InvalidOperationException disabledError = Assert.Throws<InvalidOperationException>(() =>

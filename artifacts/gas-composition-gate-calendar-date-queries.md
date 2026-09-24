@@ -18,7 +18,7 @@
 |-----------|-----------------|----------|
 | 把已经登记的符号写成编号 | 0 | GraphNodeOp LoadConfigKey，运行时 GetId，未登记则失败并点名 |
 | 读周期相位在表里的位置 | 0 | GraphNodeOp ReadCalendarCyclePhaseIndex，与 Calendar.PhaseIndex 同一个 0 基序号 |
-| 读离某相位下一次开始还有几天 | 0 | GraphNodeOp ReadCalendarDaysUntilPhase，走周期定义，已经在该相位里是 0 |
+| 读离某相位下一次开始、或相位里第几天还有几天 | 0 | GraphNodeOp ReadCalendarDaysUntilPhase。不写 day 时已经在相位里是 0；写了 day 则覆盖进入前、目标日、目标日之后 |
 | 整数相减 | 0 | GraphNodeOp SubInt，和 AddInt 同一类端口与图种 |
 | 是不是某一天、是不是某年某月某日 | 2 | 上述节点与 CompareEqInt、AddInt、ConstInt 连线 |
 | 启用哪一份历、相位表 | 3 | Calendar/world.json + calendars.json |

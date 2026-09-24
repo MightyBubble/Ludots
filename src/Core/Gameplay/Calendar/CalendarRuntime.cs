@@ -134,17 +134,25 @@ namespace Ludots.Core.Gameplay.Calendar
             return CalendarProjection.PhaseIndex(cycle, DayIndex);
         }
 
-        public int ReadDaysUntilPhase(string calendarId, string cycleId, string phaseId)
+        public int ReadDaysUntilPhase(string calendarId, string cycleId, string phaseId, int dayInPhase = 0)
         {
             EnsureEnabled();
             CalendarCycleDefinition cycle = RequireCycleDefinition(calendarId, cycleId);
-            if (!CalendarProjection.TryDaysUntilPhase(cycle, DayIndex, phaseId, out int days))
+            CalendarDaysUntilStatus status = CalendarProjection.TryDaysUntilPhase(
+                cycle, DayIndex, phaseId, dayInPhase, out int days);
+            if (status == CalendarDaysUntilStatus.Found)
+            {
+                return days;
+            }
+
+            if (status == CalendarDaysUntilStatus.MissingPhase)
             {
                 throw new InvalidOperationException(
                     $"Calendar '{calendarId}' cycle '{cycleId}' has no phase '{phaseId}'.");
             }
 
-            return days;
+            throw new InvalidOperationException(
+                $"Calendar '{calendarId}' cycle '{cycleId}' phase '{phaseId}' does not contain day {dayInPhase}.");
         }
 
         /// <summary>

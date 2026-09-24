@@ -1214,8 +1214,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleReadCalendarDaysUntilPhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            string phaseId = RequireProgramSymbol(ref s, CalendarOpEncoding.SymbolIndex(ins.ImmF), "Calendar phase");
-            s.I[ins.Dst] = s.Api.ReadCalendarDaysUntilPhase(ins.Imm, phaseId);
+            string phaseId = RequireProgramSymbol(ref s, CalendarOpEncoding.UnpackPhaseSymbol(ins.ImmF), "Calendar phase");
+            s.I[ins.Dst] = s.Api.ReadCalendarDaysUntilPhase(
+                ins.Imm, phaseId, CalendarOpEncoding.UnpackPhaseDay(ins.ImmF));
         }
 
         private static void HandleSubInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

@@ -509,7 +509,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadConfigKey = 525,
         /// <summary>I[Dst] = 0-based phase slot. Imm packing matches ReadCalendarCyclePhase. Same number as Calendar.PhaseIndex.</summary>
         ReadCalendarCyclePhaseIndex = 526,
-        /// <summary>I[Dst] = whole days until the named phase next starts. 0 when already inside it. Imm packs cycle and calendar; ImmF holds the phase symbol index as raw bits.</summary>
+        /// <summary>I[Dst] = whole days until the named phase. Imm packs cycle and calendar. ImmF packs the phase symbol index and the optional 1-based day inside that phase (0 = phase start).</summary>
         ReadCalendarDaysUntilPhase = 527,
         /// <summary>I[Dst] = I[A] - I[B].</summary>
         SubInt = 528,

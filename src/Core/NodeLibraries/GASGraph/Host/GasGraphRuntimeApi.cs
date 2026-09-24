@@ -508,13 +508,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)));
         }
 
-        public int ReadCalendarDaysUntilPhase(int packedImm, string phaseId)
+        public int ReadCalendarDaysUntilPhase(int packedImm, string phaseId, int dayInPhase)
         {
             CalendarRuntime calendar = RequireCalendar();
             return calendar.ReadDaysUntilPhase(
                 ResolveCalendarId(calendar, CalendarOpEncoding.UnpackCalendar(packedImm)),
                 ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)),
-                phaseId);
+                phaseId,
+                dayInPhase);
         }
 
         public void ApplyCalendarStart(int dayIndex, int ticksIntoDay)

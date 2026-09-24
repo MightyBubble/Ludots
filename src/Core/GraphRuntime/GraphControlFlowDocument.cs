@@ -266,6 +266,11 @@ namespace Ludots.Core.GraphRuntime
         public string? Cycle { get; set; }
         /// <summary>Phase id for ReadCalendarDaysUntilPhase. Matched against that cycle's phase table.</summary>
         public string? Phase { get; set; }
+        /// <summary>
+        /// 1-based day inside the phase for ReadCalendarDaysUntilPhase.
+        /// 0 asks for the phase start. A positive day counts down to that day and wraps after it passes.
+        /// </summary>
+        public int Day { get; set; }
         /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
         public string? Symbol { get; set; }
         /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>

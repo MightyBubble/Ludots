@@ -122,7 +122,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 2026-09-20 历法订阅线（PR #1283 增量）：TriggerGraph entry 新增 `filters.payload` 通用载荷订阅——键按事件 schema 闭集校验（声明外/带空白/float/entity 拒绝），int 参数的字符串期望值编译成 ConfigKey id（幂等，装载/编译顺序无关），string 参数保留字符串相等；无 schema 的裸编译不支持 payload 过滤（诊断拒绝）。历法五个 `Calendar.*` 事件载荷全部为 int key id，图内 `LoadEntryPayloadInt` 直读相位/日历/日序。还开着的活：payload 期望符号正规化为「编译产符号、patch 期解析 id」（当前编译期 Register 幂等可接受）；Mod 域 entry 订阅全局订阅表派发的事件（如 `Calendar.*`）安装期 fail-closed 点名，等 Mod 域路由统一进全局表后放开；`varName` 专用过滤槽与 payload 机制语义重复，评估退役。
 
-历法当前值可以在图里直接读、直接写：日序、当天步数、千分比、昼夜相位、年份、周期相位、相位在表里的位置、周期内第几天、离某个相位开始还有几天；开局落定、往前拨日、改当天步数。已登记的符号用 `LoadConfigKey` 写成编号。日序相减用 `SubInt`。启用仍然只认 `Calendar/world.json`。`Calendar.*` 不是实体属性。合同在 [历法](calendar-system.md)。
+历法当前值可以在图里直接读、直接写：日序、当天步数、千分比、昼夜相位、年份、周期相位、相位在表里的位置、周期内第几天、离某个相位或相位里的某一天还有几天；开局落定、往前拨日、改当天步数。已登记的符号用 `LoadConfigKey` 写成编号。日序相减用 `SubInt`。启用仍然只认 `Calendar/world.json`。`Calendar.*` 不是实体属性。合同在 [历法](calendar-system.md)。
 
 时间流可以在图里直接读、直接拿令牌：整局和玩法步进的暂停、有效倍率、暂停令牌、变速令牌、放回令牌。一个人的快慢仍写 `time.scale_permille`，经 AttributeSink `Time.EntityScalePermille` 落到本地时钟。本地时钟在属性落地之后推进；同一拍里更早的系统，包括限时标签到期，看到的是上一拍的本地步数。合同在 [时间流图节点](time-flow-graph-nodes.md)。
 

@@ -127,7 +127,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 `LoadConfigKey` 把作者写的符号解析成同一个编号，只认装载时已经登记过的名字；没登记就失败并点名这个词，不会新造一个编号。过滤槽 `filters.payload` 里的字符串仍按原来的方式登记。`IntToText` 不能把编号变回 `summer`。
 
-`ReadCalendarDaysUntilPhase` 要写周期和相位名，历法可留空。它返回离该相位下一次开始还有几个整天；已经在这个相位里就是 0。这个周期的表上没有这个相位时失败，并点名周期和相位。四月初五这种「相位里的第几天」不写进这个节点：先问离 `month.04` 开始还有几天，再用 `AddInt` 加上相位内的偏移。
+`ReadCalendarDaysUntilPhase` 要写周期和相位名，历法可留空。不写 `day` 时，返回离该相位下一次开始还有几个整天；已经在这个相位里就是 0。写了 `day` 时，这个数是相位里的第几天（1 基）：还没进相位，就在进入后再数到这一天；已经在目标日，是 0；过了目标日，就数到下一次。这个周期的表上没有这个相位，或这一天比相位更长，都会失败并点名。
 
 问「是不是第 N 日」用 `ReadCalendarDayIndex`、`ConstInt`、`CompareEqInt`。`Calendar.DayAdvanced` 的过滤 `Calendar.DayIndex = N` 只在跨过这一天时触发，图里的读节点整天都答得了。问「是不是端午」比较 `ReadCalendarCyclePhase`（周期 `festival`）和 `LoadConfigKey`（符号 `duanwu`）。端午在表上只有一天，人在这个相位里就是端午当天。春节有五天，人在相位里是节日期间，第一天再比较 `ReadCalendarCycleDay == 1`。问「是不是第 1 年四月初五」分三路比较：`ReadCalendarYear == 1`（从日序 0 起的绝对年，1 基）、月份相位等于 `LoadConfigKey` 的 `month.04`、`ReadCalendarCycleDay == 5`（当前月相位里的第几天，1 基）。纪年里的第几年、年内第几天仍只在投影里，图上没有对应读节点。
 
@@ -169,6 +169,12 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 ```json
 { "op": "ReadCalendarDaysUntilPhase", "cycle": "festival", "phase": "duanwu" }
 ```
+
+```json
+{ "op": "ReadCalendarDaysUntilPhase", "cycle": "month", "phase": "month.04", "day": 5 }
+```
+
+`day` 是四月里的第 5 天。不写 `day` 只问相位什么时候开始。
 
 ```json
 { "op": "ReadCalendarCyclePhaseIndex", "cycle": "season" }
@@ -300,6 +306,16 @@ Feature: 世界日子按历法走
     Then 已经在端午里得到 0
     And 还没到得到整日数
     And 这个周期的表上没有这个相位时失败并点名周期和相位
+
+  Scenario: 问离四月初五还有几天
+    Given 月份周期里四月有初五
+    When 今天还在三月，作者问四月的第 5 天还有几天
+    Then 得到进入四月后再数到初五的整天数
+    When 今天是四月初三
+    Then 得到 2
+    When 今天已经过了四月初五
+    Then 得到离下一次四月初五的整天数
+    And 这一天比该相位更长时失败并点名相位和天数
 
   Scenario: 开局日子还没落定时可以改开局
     Given 世界历法已启用
