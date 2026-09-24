@@ -17,8 +17,11 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Physics2D.Ticking;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
+using Ludots.UI;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -114,6 +117,36 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(completedState.DrawnPolygonVertices, Is.EqualTo(0));
         }
 
+        [Test]
+        public void RootMod_LoadedMap_EmitsVisiblePhysics2DShowcasePrimitives()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = CreateEngine(repoRoot);
+            var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as CapabilityStandardPhysics2DShowcaseRuntime
+                ?? throw new InvalidOperationException("Capability-standard Physics2D showcase runtime missing.");
+
+            engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+            engine.Tick(1f / 60f);
+
+            PrimitiveDrawBuffer primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            Assert.That(runtime.IsActive, Is.True);
+            Assert.That(primitives.Count, Is.GreaterThanOrEqualTo(12),
+                "Physics2D showcase must emit baseline world primitives on the first rendered frame so Raylib never opens as an empty scene.");
+            UIRoot uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+                ?? throw new InvalidOperationException("UIRoot missing.");
+            Assert.That(uiRoot.Scene?.FindByElementId("capability-standard-physics2d-panel"), Is.Not.Null,
+                "Physics2D showcase must mount its own control panel; suppressing the UIRoot makes Raylib look blank even when primitives exist.");
+
+            runtime.SpawnDynamicBatch();
+            engine.Tick(1f / 60f);
+
+            CapabilityStandardPhysics2DShowcasePanelState state = runtime.CapturePanelState(engine);
+            Assert.That(state.DynamicBodies, Is.GreaterThanOrEqualTo(1000));
+            Assert.That(primitives.Count, Is.GreaterThanOrEqualTo(1004),
+                "Spawned dynamic Physics2D bodies must be converted into adapter-facing primitive proxies.");
+        }
+
         private static GameEngine CreateEngine(string repoRoot)
         {
             string assetsRoot = Path.Combine(repoRoot, "assets");
@@ -121,6 +154,9 @@ namespace Ludots.Tests.GAS.Production
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.SetService(CoreServiceKeys.UIRoot, new UIRoot(new SkiaUiRenderer()));
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
             InstallInput(engine);
             engine.Start();
             return engine;

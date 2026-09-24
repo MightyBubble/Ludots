@@ -46,7 +46,7 @@ internal sealed class CapabilityStandardPhysics2DShowcaseRuntime : IBenchmarkSce
     public bool IsActive => _activeEngine != null && IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
     public bool SupportsScatterControl => IsActive;
     public bool IsCleanPerformanceScene => false;
-    public bool SuppressHostDiagnosticUi => IsActive;
+    public bool SuppressHostDiagnosticUi => false;
     public bool SuppressHostDebugGuides => false;
     public CapabilityStandardPhysics2DShowcaseConfig ActiveConfig => _config
         ?? throw new InvalidOperationException("Physics2D showcase config has not been loaded.");
@@ -268,6 +268,17 @@ internal sealed class CapabilityStandardPhysics2DShowcaseRuntime : IBenchmarkSce
     {
         _polygonVertices.Clear();
         _lastAction = "Cleared polygon draft.";
+    }
+
+    public int CopyPolygonDraftVertices(Span<WorldCmInt2> destination)
+    {
+        int count = Math.Min(destination.Length, _polygonVertices.Count);
+        for (int i = 0; i < count; i++)
+        {
+            destination[i] = _polygonVertices[i];
+        }
+
+        return count;
     }
 
     public void CompletePolygonObstacle()
