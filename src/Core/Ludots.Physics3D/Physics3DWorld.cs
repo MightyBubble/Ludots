@@ -481,9 +481,47 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         float maximumDistanceCm,
         in LayerMask queryLayer,
         Span<Physics3DRaycastHit> hits)
+        => Raycast(originCm, direction, maximumDistanceCm, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int Raycast(
+        Vector3 originCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DRaycastHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.Raycast(originCm, direction, maximumDistanceCm, queryLayer, hits);
+        return _queries.Raycast(originCm, direction, maximumDistanceCm, filter, hits);
+    }
+
+    public bool RaycastClosest(
+        Vector3 originCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DRaycastHit hit)
+    {
+        ThrowIfDisposed();
+        return _queries.RaycastClosest(originCm, direction, maximumDistanceCm, filter, out hit);
+    }
+
+    public bool RaycastAny(
+        Vector3 originCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ThrowIfDisposed();
+        return _queries.RaycastAny(originCm, direction, maximumDistanceCm, filter);
+    }
+
+    public void RaycastClosestBatch(
+        ReadOnlySpan<Physics3DRaycastQuery> requests,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DBatchedRaycastClosestResult> results)
+    {
+        ThrowIfDisposed();
+        _queries.RaycastClosestBatch(requests, filter, results);
     }
 
     public int BoxCast(
@@ -494,9 +532,44 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         float maximumDistanceCm,
         in LayerMask queryLayer,
         Span<Physics3DShapeCastHit> hits)
+        => BoxCast(centerCm, sizeCm, orientation, direction, maximumDistanceCm, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int BoxCast(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DShapeCastHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.BoxCast(centerCm, sizeCm, orientation, direction, maximumDistanceCm, queryLayer, hits);
+        return _queries.BoxCast(centerCm, sizeCm, orientation, direction, maximumDistanceCm, filter, hits);
+    }
+
+    public bool BoxCastClosest(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        ThrowIfDisposed();
+        return _queries.BoxCastClosest(centerCm, sizeCm, orientation, direction, maximumDistanceCm, filter, out hit);
+    }
+
+    public bool BoxCastAny(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ThrowIfDisposed();
+        return _queries.BoxCastAny(centerCm, sizeCm, orientation, direction, maximumDistanceCm, filter);
     }
 
     public int SphereCast(
@@ -506,9 +579,41 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         float maximumDistanceCm,
         in LayerMask queryLayer,
         Span<Physics3DShapeCastHit> hits)
+        => SphereCast(centerCm, radiusCm, direction, maximumDistanceCm, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int SphereCast(
+        Vector3 centerCm,
+        float radiusCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DShapeCastHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.SphereCast(centerCm, radiusCm, direction, maximumDistanceCm, queryLayer, hits);
+        return _queries.SphereCast(centerCm, radiusCm, direction, maximumDistanceCm, filter, hits);
+    }
+
+    public bool SphereCastClosest(
+        Vector3 centerCm,
+        float radiusCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        ThrowIfDisposed();
+        return _queries.SphereCastClosest(centerCm, radiusCm, direction, maximumDistanceCm, filter, out hit);
+    }
+
+    public bool SphereCastAny(
+        Vector3 centerCm,
+        float radiusCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ThrowIfDisposed();
+        return _queries.SphereCastAny(centerCm, radiusCm, direction, maximumDistanceCm, filter);
     }
 
     public int CapsuleCast(
@@ -520,9 +625,78 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         float maximumDistanceCm,
         in LayerMask queryLayer,
         Span<Physics3DShapeCastHit> hits)
+        => CapsuleCast(
+            centerCm,
+            radiusCm,
+            cylinderLengthCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            new Physics3DQueryFilter(queryLayer),
+            hits);
+
+    public int CapsuleCast(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DShapeCastHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.CapsuleCast(centerCm, radiusCm, cylinderLengthCm, orientation, direction, maximumDistanceCm, queryLayer, hits);
+        return _queries.CapsuleCast(
+            centerCm,
+            radiusCm,
+            cylinderLengthCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter,
+            hits);
+    }
+
+    public bool CapsuleCastClosest(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        ThrowIfDisposed();
+        return _queries.CapsuleCastClosest(
+            centerCm,
+            radiusCm,
+            cylinderLengthCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter,
+            out hit);
+    }
+
+    public bool CapsuleCastAny(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ThrowIfDisposed();
+        return _queries.CapsuleCastAny(
+            centerCm,
+            radiusCm,
+            cylinderLengthCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter);
     }
 
     public int OverlapBox(
@@ -531,9 +705,17 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         Quaternion orientation,
         in LayerMask queryLayer,
         Span<Physics3DOverlapHit> hits)
+        => OverlapBox(centerCm, sizeCm, orientation, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int OverlapBox(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.OverlapBox(centerCm, sizeCm, orientation, queryLayer, hits);
+        return _queries.OverlapBox(centerCm, sizeCm, orientation, filter, hits);
     }
 
     public int OverlapSphere(
@@ -541,9 +723,16 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         float radiusCm,
         in LayerMask queryLayer,
         Span<Physics3DOverlapHit> hits)
+        => OverlapSphere(centerCm, radiusCm, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int OverlapSphere(
+        Vector3 centerCm,
+        float radiusCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.OverlapSphere(centerCm, radiusCm, queryLayer, hits);
+        return _queries.OverlapSphere(centerCm, radiusCm, filter, hits);
     }
 
     public int OverlapCapsule(
@@ -553,9 +742,18 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         Quaternion orientation,
         in LayerMask queryLayer,
         Span<Physics3DOverlapHit> hits)
+        => OverlapCapsule(centerCm, radiusCm, cylinderLengthCm, orientation, new Physics3DQueryFilter(queryLayer), hits);
+
+    public int OverlapCapsule(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits)
     {
         ThrowIfDisposed();
-        return _queries.OverlapCapsule(centerCm, radiusCm, cylinderLengthCm, orientation, queryLayer, hits);
+        return _queries.OverlapCapsule(centerCm, radiusCm, cylinderLengthCm, orientation, filter, hits);
     }
 
     public void Step()

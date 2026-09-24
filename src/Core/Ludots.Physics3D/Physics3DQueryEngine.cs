@@ -6,7 +6,6 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using Ludots.Core.Layers;
 
@@ -29,16 +28,17 @@ internal sealed class Physics3DQueryEngine
         Vector3 originCm,
         Vector3 direction,
         float maximumDistanceCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DRaycastHit> hits)
     {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
         ValidateLinearQuery(originCm, direction, maximumDistanceCm);
         Vector3 normalizedDirection = Vector3.Normalize(direction);
         fixed (Physics3DRaycastHit* hitPointer = hits)
         {
             var collector = new RayHitCollector(
                 _bodies,
-                queryLayer,
+                prepared,
                 originCm,
                 normalizedDirection,
                 hitPointer,
@@ -53,13 +53,86 @@ internal sealed class Physics3DQueryEngine
         }
     }
 
+    public bool RaycastClosest(
+        Vector3 originCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DRaycastHit hit)
+    {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        ValidateLinearQuery(originCm, direction, maximumDistanceCm);
+        Vector3 normalizedDirection = Vector3.Normalize(direction);
+        var collector = new ClosestRayHitCollector(_bodies, prepared, originCm, normalizedDirection);
+        _simulation.RayCast(originCm, normalizedDirection, maximumDistanceCm, ref collector);
+        hit = collector.Hit;
+        return collector.HasHit;
+    }
+
+    public bool RaycastAny(
+        Vector3 originCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        ValidateLinearQuery(originCm, direction, maximumDistanceCm);
+        Vector3 normalizedDirection = Vector3.Normalize(direction);
+        var collector = new AnyRayHitCollector(_bodies, prepared);
+        _simulation.RayCast(originCm, normalizedDirection, maximumDistanceCm, ref collector);
+        return collector.HasHit;
+    }
+
+    public unsafe void RaycastClosestBatch(
+        ReadOnlySpan<Physics3DRaycastQuery> requests,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DBatchedRaycastClosestResult> results)
+    {
+        if (requests.Length != results.Length)
+        {
+            throw new ArgumentException(
+                $"RaycastClosestBatch requires equal request/result lengths (requests={requests.Length}, results={results.Length}).",
+                nameof(results));
+        }
+
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        results.Clear();
+        if (requests.Length == 0)
+        {
+            return;
+        }
+
+        fixed (Physics3DBatchedRaycastClosestResult* resultPointer = results)
+        {
+            var handler = new BatchedClosestRayHitHandler(_bodies, prepared, resultPointer, results.Length);
+            var batcher = new SimulationRayBatcher<BatchedClosestRayHitHandler>(_pool, _simulation, handler, requests.Length);
+            try
+            {
+                for (int i = 0; i < requests.Length; i++)
+                {
+                    Physics3DRaycastQuery request = requests[i];
+                    ValidateLinearQuery(request.OriginCm, request.Direction, request.MaximumDistanceCm);
+                    Vector3 origin = request.OriginCm;
+                    Vector3 direction = Vector3.Normalize(request.Direction);
+                    batcher.Add(ref origin, ref direction, request.MaximumDistanceCm, i);
+                }
+
+                batcher.Flush();
+            }
+            finally
+            {
+                batcher.Dispose();
+            }
+        }
+    }
+
     public int BoxCast(
         Vector3 centerCm,
         Vector3 sizeCm,
         Quaternion orientation,
         Vector3 direction,
         float maximumDistanceCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DShapeCastHit> hits)
     {
         ValidateBoxSize(sizeCm);
@@ -69,8 +142,46 @@ internal sealed class Physics3DQueryEngine
             orientation,
             direction,
             maximumDistanceCm,
-            queryLayer,
+            filter,
             hits);
+    }
+
+    public bool BoxCastClosest(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        ValidateBoxSize(sizeCm);
+        return SweepClosest(
+            new Box(sizeCm.X, sizeCm.Y, sizeCm.Z),
+            centerCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter,
+            out hit);
+    }
+
+    public bool BoxCastAny(
+        Vector3 centerCm,
+        Vector3 sizeCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ValidateBoxSize(sizeCm);
+        return SweepAny(
+            new Box(sizeCm.X, sizeCm.Y, sizeCm.Z),
+            centerCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter);
     }
 
     public int SphereCast(
@@ -78,7 +189,7 @@ internal sealed class Physics3DQueryEngine
         float radiusCm,
         Vector3 direction,
         float maximumDistanceCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DShapeCastHit> hits)
     {
         Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
@@ -88,8 +199,44 @@ internal sealed class Physics3DQueryEngine
             Quaternion.Identity,
             direction,
             maximumDistanceCm,
-            queryLayer,
+            filter,
             hits);
+    }
+
+    public bool SphereCastClosest(
+        Vector3 centerCm,
+        float radiusCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
+        return SweepClosest(
+            new Sphere(radiusCm),
+            centerCm,
+            Quaternion.Identity,
+            direction,
+            maximumDistanceCm,
+            filter,
+            out hit);
+    }
+
+    public bool SphereCastAny(
+        Vector3 centerCm,
+        float radiusCm,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
+        return SweepAny(
+            new Sphere(radiusCm),
+            centerCm,
+            Quaternion.Identity,
+            direction,
+            maximumDistanceCm,
+            filter);
     }
 
     public int CapsuleCast(
@@ -99,7 +246,7 @@ internal sealed class Physics3DQueryEngine
         Quaternion orientation,
         Vector3 direction,
         float maximumDistanceCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DShapeCastHit> hits)
     {
         ValidateCapsule(radiusCm, cylinderLengthCm);
@@ -109,15 +256,59 @@ internal sealed class Physics3DQueryEngine
             orientation,
             direction,
             maximumDistanceCm,
-            queryLayer,
+            filter,
             hits);
     }
 
+    public bool CapsuleCastClosest(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+    {
+        ValidateCapsule(radiusCm, cylinderLengthCm);
+        return SweepClosest(
+            new Capsule(radiusCm, cylinderLengthCm),
+            centerCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter,
+            out hit);
+    }
+
+    public bool CapsuleCastAny(
+        Vector3 centerCm,
+        float radiusCm,
+        float cylinderLengthCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+    {
+        ValidateCapsule(radiusCm, cylinderLengthCm);
+        return SweepAny(
+            new Capsule(radiusCm, cylinderLengthCm),
+            centerCm,
+            orientation,
+            direction,
+            maximumDistanceCm,
+            filter);
+    }
+
+    /// <summary>
+    /// Overlap hits are ordered by ascending <see cref="Physics3DBodyId.Slot"/> after collection.
+    /// Capacity overflow throws <see cref="Physics3DCapacityExceededException"/> and never returns a silent truncated set.
+    /// </summary>
     public int OverlapBox(
         Vector3 centerCm,
         Vector3 sizeCm,
         Quaternion orientation,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DOverlapHit> hits)
     {
         ValidateBoxSize(sizeCm);
@@ -125,18 +316,18 @@ internal sealed class Physics3DQueryEngine
             new Box(sizeCm.X, sizeCm.Y, sizeCm.Z),
             centerCm,
             orientation,
-            queryLayer,
+            filter,
             hits);
     }
 
     public int OverlapSphere(
         Vector3 centerCm,
         float radiusCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DOverlapHit> hits)
     {
         Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
-        return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, queryLayer, hits);
+        return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, filter, hits);
     }
 
     public int OverlapCapsule(
@@ -144,7 +335,7 @@ internal sealed class Physics3DQueryEngine
         float radiusCm,
         float cylinderLengthCm,
         Quaternion orientation,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DOverlapHit> hits)
     {
         ValidateCapsule(radiusCm, cylinderLengthCm);
@@ -152,7 +343,7 @@ internal sealed class Physics3DQueryEngine
             new Capsule(radiusCm, cylinderLengthCm),
             centerCm,
             orientation,
-            queryLayer,
+            filter,
             hits);
     }
 
@@ -162,16 +353,17 @@ internal sealed class Physics3DQueryEngine
         Quaternion orientation,
         Vector3 direction,
         float maximumDistanceCm,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DShapeCastHit> hits)
         where TShape : unmanaged, IConvexShape
     {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
         ValidateLinearQuery(centerCm, direction, maximumDistanceCm);
         Quaternion normalizedOrientation = Physics3DValidation.NormalizeOrientation(orientation, nameof(orientation));
         Vector3 normalizedDirection = Vector3.Normalize(direction);
         fixed (Physics3DShapeCastHit* hitPointer = hits)
         {
-            var collector = new SweepHitCollector(_bodies, queryLayer, centerCm, hitPointer, hits.Length);
+            var collector = new SweepHitCollector(_bodies, prepared, centerCm, hitPointer, hits.Length);
             _simulation.Sweep(
                 shape,
                 new RigidPose(centerCm, normalizedOrientation),
@@ -188,14 +380,65 @@ internal sealed class Physics3DQueryEngine
         }
     }
 
+    private bool SweepClosest<TShape>(
+        TShape shape,
+        Vector3 centerCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter,
+        out Physics3DShapeCastHit hit)
+        where TShape : unmanaged, IConvexShape
+    {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        ValidateLinearQuery(centerCm, direction, maximumDistanceCm);
+        Quaternion normalizedOrientation = Physics3DValidation.NormalizeOrientation(orientation, nameof(orientation));
+        Vector3 normalizedDirection = Vector3.Normalize(direction);
+        var collector = new ClosestSweepHitCollector(_bodies, prepared, centerCm);
+        _simulation.Sweep(
+            shape,
+            new RigidPose(centerCm, normalizedOrientation),
+            new BodyVelocity(normalizedDirection, Vector3.Zero),
+            maximumDistanceCm,
+            _pool,
+            ref collector);
+        hit = collector.Hit;
+        return collector.HasHit;
+    }
+
+    private bool SweepAny<TShape>(
+        TShape shape,
+        Vector3 centerCm,
+        Quaternion orientation,
+        Vector3 direction,
+        float maximumDistanceCm,
+        in Physics3DQueryFilter filter)
+        where TShape : unmanaged, IConvexShape
+    {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        ValidateLinearQuery(centerCm, direction, maximumDistanceCm);
+        Quaternion normalizedOrientation = Physics3DValidation.NormalizeOrientation(orientation, nameof(orientation));
+        Vector3 normalizedDirection = Vector3.Normalize(direction);
+        var collector = new AnySweepHitCollector(_bodies, prepared);
+        _simulation.Sweep(
+            shape,
+            new RigidPose(centerCm, normalizedOrientation),
+            new BodyVelocity(normalizedDirection, Vector3.Zero),
+            maximumDistanceCm,
+            _pool,
+            ref collector);
+        return collector.HasHit;
+    }
+
     private unsafe int Overlap<TShape>(
         TShape shape,
         Vector3 centerCm,
         Quaternion orientation,
-        in LayerMask queryLayer,
+        in Physics3DQueryFilter filter,
         Span<Physics3DOverlapHit> hits)
         where TShape : unmanaged, IConvexShape
     {
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
         Physics3DValidation.RequireFinite(centerCm, nameof(centerCm));
         Quaternion normalizedOrientation = Physics3DValidation.NormalizeOrientation(orientation, nameof(orientation));
         var pose = new RigidPose(centerCm, normalizedOrientation);
@@ -204,14 +447,14 @@ internal sealed class Physics3DQueryEngine
         maximum += centerCm;
         fixed (Physics3DOverlapHit* hitPointer = hits)
         {
-            var callbacks = new OverlapCallbacks(_bodies, hitPointer, hits.Length);
+            var callbacks = new OverlapCallbacks(_bodies, prepared, hitPointer, hits.Length);
             var enumerator = new OverlapCandidateEnumerator<TShape>(
                 _simulation,
                 _pool,
                 _bodies,
                 shape,
                 pose,
-                queryLayer,
+                prepared,
                 callbacks);
             _simulation.BroadPhase.GetOverlaps(minimum, maximum, ref enumerator);
             enumerator.Flush(out int count, out bool overflowed);
@@ -220,8 +463,27 @@ internal sealed class Physics3DQueryEngine
                 throw new Physics3DCapacityExceededException("overlap hits", hits.Length);
             }
 
+            // Overlap results are unordered: append-only collection avoids O(n^2) insertion.
             return count;
         }
+    }
+
+    private PreparedQueryFilter PrepareFilter(in Physics3DQueryFilter filter)
+    {
+        // IncludeSensors is rejected at Physics3DQueryFilter construction; keep the invariant explicit here.
+        if (filter.IncludeSensors)
+        {
+            throw new NotSupportedException(
+                "Physics3D sensors are not implemented; Physics3DQueryFilter.IncludeSensors must be false until sensor colliders exist.");
+        }
+
+        int ignoredSlot = -1;
+        if (filter.IgnoredBody.IsValid)
+        {
+            ignoredSlot = _bodies.RequireSlot(filter.IgnoredBody);
+        }
+
+        return new PreparedQueryFilter(filter.LayerMask, ignoredSlot);
     }
 
     private static void ValidateLinearQuery(Vector3 origin, Vector3 direction, float maximumDistance)
@@ -249,10 +511,36 @@ internal sealed class Physics3DQueryEngine
         Physics3DValidation.RequireFiniteNonNegative(cylinderLengthCm, nameof(cylinderLengthCm));
     }
 
+    private readonly struct PreparedQueryFilter
+    {
+        public PreparedQueryFilter(LayerMask queryLayer, int ignoredSlot)
+        {
+            QueryLayer = queryLayer;
+            IgnoredSlot = ignoredSlot;
+        }
+
+        public LayerMask QueryLayer { get; }
+        public int IgnoredSlot { get; }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Allow(Physics3DBodyStore bodies, CollidableReference collidable)
+        {
+            int slot = bodies.RequireSlot(collidable);
+            if (IgnoredSlot >= 0 && slot == IgnoredSlot)
+            {
+                return false;
+            }
+
+            LayerMask queryLayer = QueryLayer;
+            LayerMask targetLayer = bodies.GetLayer(slot);
+            return LayerMask.Test(in queryLayer, in targetLayer);
+        }
+    }
+
     private unsafe struct RayHitCollector : IRayHitHandler
     {
         private readonly Physics3DBodyStore _bodies;
-        private readonly LayerMask _queryLayer;
+        private readonly PreparedQueryFilter _filter;
         private readonly Vector3 _origin;
         private readonly Vector3 _direction;
         private readonly Physics3DRaycastHit* _hits;
@@ -260,14 +548,14 @@ internal sealed class Physics3DQueryEngine
 
         public RayHitCollector(
             Physics3DBodyStore bodies,
-            LayerMask queryLayer,
+            PreparedQueryFilter filter,
             Vector3 origin,
             Vector3 direction,
             Physics3DRaycastHit* hits,
             int capacity)
         {
             _bodies = bodies;
-            _queryLayer = queryLayer;
+            _filter = filter;
             _origin = origin;
             _direction = direction;
             _hits = hits;
@@ -279,12 +567,7 @@ internal sealed class Physics3DQueryEngine
         public int Count { get; private set; }
         public bool Overflowed { get; private set; }
 
-        public bool AllowTest(CollidableReference collidable)
-        {
-            int slot = _bodies.RequireSlot(collidable);
-            return LayerMask.Test(in _queryLayer, in _bodies.GetLayer(slot));
-        }
-
+        public bool AllowTest(CollidableReference collidable) => _filter.Allow(_bodies, collidable);
         public bool AllowTest(CollidableReference collidable, int childIndex) => AllowTest(collidable);
 
         public void OnRayHit(
@@ -332,23 +615,172 @@ internal sealed class Physics3DQueryEngine
         }
     }
 
+    private struct ClosestRayHitCollector : IRayHitHandler
+    {
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+        private readonly Vector3 _origin;
+        private readonly Vector3 _direction;
+
+        public ClosestRayHitCollector(
+            Physics3DBodyStore bodies,
+            PreparedQueryFilter filter,
+            Vector3 origin,
+            Vector3 direction)
+        {
+            _bodies = bodies;
+            _filter = filter;
+            _origin = origin;
+            _direction = direction;
+            HasHit = false;
+            Hit = default;
+        }
+
+        public bool HasHit { get; private set; }
+        public Physics3DRaycastHit Hit { get; private set; }
+
+        public bool AllowTest(CollidableReference collidable) => _filter.Allow(_bodies, collidable);
+        public bool AllowTest(CollidableReference collidable, int childIndex) => AllowTest(collidable);
+
+        public void OnRayHit(
+            in RayData ray,
+            ref float maximumT,
+            float t,
+            in Vector3 normal,
+            CollidableReference collidable,
+            int childIndex)
+        {
+            if (!AllowTest(collidable))
+            {
+                return;
+            }
+
+            int slot = _bodies.RequireSlot(collidable);
+            if (HasHit &&
+                (t > Hit.DistanceCm || (t == Hit.DistanceCm && slot >= Hit.Body.Slot)))
+            {
+                return;
+            }
+
+            maximumT = t;
+            Hit = new Physics3DRaycastHit(
+                _bodies.GetId(slot),
+                _bodies.GetEntity(slot),
+                _origin + _direction * t,
+                normal,
+                t);
+            HasHit = true;
+        }
+    }
+
+    private struct AnyRayHitCollector : IRayHitHandler
+    {
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+
+        public AnyRayHitCollector(Physics3DBodyStore bodies, PreparedQueryFilter filter)
+        {
+            _bodies = bodies;
+            _filter = filter;
+            HasHit = false;
+        }
+
+        public bool HasHit { get; private set; }
+
+        public bool AllowTest(CollidableReference collidable)
+            => !HasHit && _filter.Allow(_bodies, collidable);
+
+        public bool AllowTest(CollidableReference collidable, int childIndex) => AllowTest(collidable);
+
+        public void OnRayHit(
+            in RayData ray,
+            ref float maximumT,
+            float t,
+            in Vector3 normal,
+            CollidableReference collidable,
+            int childIndex)
+        {
+            if (HasHit || !AllowTest(collidable))
+            {
+                return;
+            }
+
+            HasHit = true;
+            maximumT = 0f;
+        }
+    }
+
+    private unsafe struct BatchedClosestRayHitHandler : IRayHitHandler
+    {
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+        private readonly Physics3DBatchedRaycastClosestResult* _results;
+        private readonly int _capacity;
+
+        public BatchedClosestRayHitHandler(
+            Physics3DBodyStore bodies,
+            PreparedQueryFilter filter,
+            Physics3DBatchedRaycastClosestResult* results,
+            int capacity)
+        {
+            _bodies = bodies;
+            _filter = filter;
+            _results = results;
+            _capacity = capacity;
+        }
+
+        public bool AllowTest(CollidableReference collidable) => _filter.Allow(_bodies, collidable);
+        public bool AllowTest(CollidableReference collidable, int childIndex) => AllowTest(collidable);
+
+        public void OnRayHit(
+            in RayData ray,
+            ref float maximumT,
+            float t,
+            in Vector3 normal,
+            CollidableReference collidable,
+            int childIndex)
+        {
+            if ((uint)ray.Id >= (uint)_capacity || !AllowTest(collidable))
+            {
+                return;
+            }
+
+            int slot = _bodies.RequireSlot(collidable);
+            ref Physics3DBatchedRaycastClosestResult current = ref _results[ray.Id];
+            if (current.Hit &&
+                (t > current.Value.DistanceCm || (t == current.Value.DistanceCm && slot >= current.Value.Body.Slot)))
+            {
+                return;
+            }
+
+            maximumT = t;
+            var hit = new Physics3DRaycastHit(
+                _bodies.GetId(slot),
+                _bodies.GetEntity(slot),
+                ray.Origin + ray.Direction * t,
+                normal,
+                t);
+            current = new Physics3DBatchedRaycastClosestResult(hit: true, hit);
+        }
+    }
+
     private unsafe struct SweepHitCollector : ISweepHitHandler
     {
         private readonly Physics3DBodyStore _bodies;
-        private readonly LayerMask _queryLayer;
+        private readonly PreparedQueryFilter _filter;
         private readonly Vector3 _start;
         private readonly Physics3DShapeCastHit* _hits;
         private readonly int _capacity;
 
         public SweepHitCollector(
             Physics3DBodyStore bodies,
-            LayerMask queryLayer,
+            PreparedQueryFilter filter,
             Vector3 start,
             Physics3DShapeCastHit* hits,
             int capacity)
         {
             _bodies = bodies;
-            _queryLayer = queryLayer;
+            _filter = filter;
             _start = start;
             _hits = hits;
             _capacity = capacity;
@@ -359,12 +791,7 @@ internal sealed class Physics3DQueryEngine
         public int Count { get; private set; }
         public bool Overflowed { get; private set; }
 
-        public bool AllowTest(CollidableReference collidable)
-        {
-            int slot = _bodies.RequireSlot(collidable);
-            return LayerMask.Test(in _queryLayer, in _bodies.GetLayer(slot));
-        }
-
+        public bool AllowTest(CollidableReference collidable) => _filter.Allow(_bodies, collidable);
         public bool AllowTest(CollidableReference collidable, int child) => AllowTest(collidable);
 
         public void OnHit(
@@ -389,6 +816,11 @@ internal sealed class Physics3DQueryEngine
             CollidableReference collidable,
             bool startedOverlapping)
         {
+            if (!AllowTest(collidable))
+            {
+                return;
+            }
+
             if (Count >= _capacity)
             {
                 Overflowed = true;
@@ -422,15 +854,136 @@ internal sealed class Physics3DQueryEngine
         }
     }
 
+    private struct ClosestSweepHitCollector : ISweepHitHandler
+    {
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+        private readonly Vector3 _start;
+
+        public ClosestSweepHitCollector(Physics3DBodyStore bodies, PreparedQueryFilter filter, Vector3 start)
+        {
+            _bodies = bodies;
+            _filter = filter;
+            _start = start;
+            HasHit = false;
+            Hit = default;
+        }
+
+        public bool HasHit { get; private set; }
+        public Physics3DShapeCastHit Hit { get; private set; }
+
+        public bool AllowTest(CollidableReference collidable) => _filter.Allow(_bodies, collidable);
+        public bool AllowTest(CollidableReference collidable, int child) => AllowTest(collidable);
+
+        public void OnHit(
+            ref float maximumT,
+            float t,
+            in Vector3 hitLocation,
+            in Vector3 hitNormal,
+            CollidableReference collidable)
+        {
+            Consider(t, hitLocation, hitNormal, collidable, startedOverlapping: false, ref maximumT);
+        }
+
+        public void OnHitAtZeroT(ref float maximumT, CollidableReference collidable)
+        {
+            Consider(0f, _start, Vector3.Zero, collidable, startedOverlapping: true, ref maximumT);
+        }
+
+        private void Consider(
+            float distance,
+            in Vector3 position,
+            in Vector3 normal,
+            CollidableReference collidable,
+            bool startedOverlapping,
+            ref float maximumT)
+        {
+            if (!AllowTest(collidable))
+            {
+                return;
+            }
+
+            int slot = _bodies.RequireSlot(collidable);
+            if (HasHit &&
+                (distance > Hit.DistanceCm || (distance == Hit.DistanceCm && slot >= Hit.Body.Slot)))
+            {
+                return;
+            }
+
+            maximumT = distance;
+            Hit = new Physics3DShapeCastHit(
+                _bodies.GetId(slot),
+                _bodies.GetEntity(slot),
+                position,
+                normal,
+                distance,
+                startedOverlapping);
+            HasHit = true;
+        }
+    }
+
+    private struct AnySweepHitCollector : ISweepHitHandler
+    {
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+
+        public AnySweepHitCollector(Physics3DBodyStore bodies, PreparedQueryFilter filter)
+        {
+            _bodies = bodies;
+            _filter = filter;
+            HasHit = false;
+        }
+
+        public bool HasHit { get; private set; }
+
+        public bool AllowTest(CollidableReference collidable)
+            => !HasHit && _filter.Allow(_bodies, collidable);
+
+        public bool AllowTest(CollidableReference collidable, int child) => AllowTest(collidable);
+
+        public void OnHit(
+            ref float maximumT,
+            float t,
+            in Vector3 hitLocation,
+            in Vector3 hitNormal,
+            CollidableReference collidable)
+        {
+            if (HasHit || !AllowTest(collidable))
+            {
+                return;
+            }
+
+            HasHit = true;
+            maximumT = 0f;
+        }
+
+        public void OnHitAtZeroT(ref float maximumT, CollidableReference collidable)
+        {
+            if (HasHit || !AllowTest(collidable))
+            {
+                return;
+            }
+
+            HasHit = true;
+            maximumT = 0f;
+        }
+    }
+
     private unsafe struct OverlapCallbacks : ICollisionCallbacks
     {
         private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
         private readonly Physics3DOverlapHit* _hits;
         private readonly int _capacity;
 
-        public OverlapCallbacks(Physics3DBodyStore bodies, Physics3DOverlapHit* hits, int capacity)
+        public OverlapCallbacks(
+            Physics3DBodyStore bodies,
+            PreparedQueryFilter filter,
+            Physics3DOverlapHit* hits,
+            int capacity)
         {
             _bodies = bodies;
+            _filter = filter;
             _hits = hits;
             _capacity = capacity;
             Count = 0;
@@ -461,22 +1014,18 @@ internal sealed class Physics3DQueryEngine
 
         private void Add(int slot)
         {
+            if (_filter.IgnoredSlot >= 0 && slot == _filter.IgnoredSlot)
+            {
+                return;
+            }
+
             if (Count >= _capacity)
             {
                 Overflowed = true;
                 return;
             }
 
-            var hit = new Physics3DOverlapHit(_bodies.GetId(slot), _bodies.GetEntity(slot));
-            int insertIndex = Count;
-            while (insertIndex > 0 && _hits[insertIndex - 1].Body.Slot > slot)
-            {
-                _hits[insertIndex] = _hits[insertIndex - 1];
-                insertIndex--;
-            }
-
-            _hits[insertIndex] = hit;
-            Count++;
+            _hits[Count++] = new Physics3DOverlapHit(_bodies.GetId(slot), _bodies.GetEntity(slot));
         }
     }
 
@@ -487,7 +1036,7 @@ internal sealed class Physics3DQueryEngine
         private readonly Physics3DBodyStore _bodies;
         private readonly TShape _queryShape;
         private readonly RigidPose _queryPose;
-        private readonly LayerMask _queryLayer;
+        private readonly PreparedQueryFilter _filter;
         private CollisionBatcher<OverlapCallbacks> _batcher;
 
         public OverlapCandidateEnumerator(
@@ -496,14 +1045,14 @@ internal sealed class Physics3DQueryEngine
             Physics3DBodyStore bodies,
             TShape queryShape,
             RigidPose queryPose,
-            LayerMask queryLayer,
+            PreparedQueryFilter filter,
             OverlapCallbacks callbacks)
         {
             _simulation = simulation;
             _bodies = bodies;
             _queryShape = queryShape;
             _queryPose = queryPose;
-            _queryLayer = queryLayer;
+            _filter = filter;
             _batcher = new CollisionBatcher<OverlapCallbacks>(
                 pool,
                 simulation.Shapes,
@@ -514,12 +1063,12 @@ internal sealed class Physics3DQueryEngine
 
         public bool LoopBody(CollidableReference collidable)
         {
-            int slot = _bodies.RequireSlot(collidable);
-            if (!LayerMask.Test(in _queryLayer, in _bodies.GetLayer(slot)))
+            if (!_filter.Allow(_bodies, collidable))
             {
                 return true;
             }
 
+            int slot = _bodies.RequireSlot(collidable);
             GetPoseAndShape(collidable, out RigidPose targetPose, out TypedIndex targetShape);
             _simulation.Shapes[targetShape.Type].GetShapeData(targetShape.Index, out void* targetShapeData, out _);
             TShape queryShape = _queryShape;

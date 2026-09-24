@@ -195,6 +195,53 @@ public struct Physics3DBodyState
     public bool Awake;
 }
 
+/// <summary>
+/// Immutable spatial-query filter for Physics3D.
+/// <see cref="IncludeSensors"/> is reserved: constructing with includeSensors=true throws
+/// because sensors are not represented in the current body model (no silent ignore).
+/// </summary>
+public readonly struct Physics3DQueryFilter
+{
+    public Physics3DQueryFilter(in LayerMask layerMask)
+        : this(layerMask, ignoredBody: default, includeSensors: false)
+    {
+    }
+
+    public Physics3DQueryFilter(in LayerMask layerMask, Physics3DBodyId ignoredBody)
+        : this(layerMask, ignoredBody, includeSensors: false)
+    {
+    }
+
+    public Physics3DQueryFilter(in LayerMask layerMask, Physics3DBodyId ignoredBody, bool includeSensors)
+    {
+        if (includeSensors)
+        {
+            throw new NotSupportedException(
+                "Physics3D sensors are not implemented; Physics3DQueryFilter.IncludeSensors must be false until sensor colliders exist.");
+        }
+
+        LayerMask = layerMask;
+        IgnoredBody = ignoredBody;
+        IncludeSensors = false;
+    }
+
+    public LayerMask LayerMask { get; }
+
+    /// <summary>
+    /// Optional body excluded from hits. Invalid id means no body is ignored.
+    /// A valid but stale id fails at query time (no silent ignore).
+    /// </summary>
+    public Physics3DBodyId IgnoredBody { get; }
+
+    /// <summary>
+    /// Sensor-inclusion flag reserved for a future sensor collider feature.
+    /// Always false for constructible filters today.
+    /// </summary>
+    public bool IncludeSensors { get; }
+
+    public static Physics3DQueryFilter FromLayer(in LayerMask layerMask) => new(layerMask);
+}
+
 public readonly struct Physics3DRaycastHit
 {
     public Physics3DRaycastHit(
@@ -254,6 +301,39 @@ public readonly struct Physics3DOverlapHit
 
     public Physics3DBodyId Body { get; }
     public Entity Entity { get; }
+}
+
+/// <summary>
+/// One ray entry for <see cref="IPhysics3DWorld.RaycastClosestBatch"/>.
+/// </summary>
+public readonly struct Physics3DRaycastQuery
+{
+    public Physics3DRaycastQuery(Vector3 originCm, Vector3 direction, float maximumDistanceCm)
+    {
+        OriginCm = originCm;
+        Direction = direction;
+        MaximumDistanceCm = maximumDistanceCm;
+    }
+
+    public Vector3 OriginCm { get; }
+    public Vector3 Direction { get; }
+    public float MaximumDistanceCm { get; }
+}
+
+/// <summary>
+/// Closest-hit result aligned 1:1 with a <see cref="Physics3DRaycastQuery"/> batch index.
+/// When <see cref="Hit"/> is false, <see cref="Value"/> is undefined.
+/// </summary>
+public readonly struct Physics3DBatchedRaycastClosestResult
+{
+    public Physics3DBatchedRaycastClosestResult(bool hit, in Physics3DRaycastHit value)
+    {
+        Hit = hit;
+        Value = value;
+    }
+
+    public bool Hit { get; }
+    public Physics3DRaycastHit Value { get; }
 }
 
 public readonly struct Physics3DContactEvent
