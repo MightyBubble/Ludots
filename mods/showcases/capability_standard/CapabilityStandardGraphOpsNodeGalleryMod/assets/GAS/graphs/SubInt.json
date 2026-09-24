@@ -1,0 +1,63 @@
+[
+  {
+    "id": "showcase.graph_op.SubInt",
+    "kind": "Script",
+    "entry": "targetDay",
+    "nodes": [
+      {
+        "id": "targetDay",
+        "op": "ConstInt",
+        "intValue": 360
+      },
+      {
+        "id": "today",
+        "op": "ReadCalendarDayIndex"
+      },
+      {
+        "id": "featured",
+        "op": "SubInt"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "targetDay",
+        "fromPort": "next",
+        "to": "today"
+      },
+      {
+        "from": "today",
+        "fromPort": "next",
+        "to": "featured"
+      },
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "targetDay",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "a"
+      },
+      {
+        "from": "today",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "b"
+      },
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

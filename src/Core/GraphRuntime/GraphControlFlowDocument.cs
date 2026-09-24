@@ -260,10 +260,14 @@ namespace Ludots.Core.GraphRuntime
         public string? ActivityId { get; set; }
         /// <summary>Task definition id symbol for OfferTask (Imm: string symbol; resolved against the registry at execution time).</summary>
         public string? TaskId { get; set; }
-        /// <summary>Calendar id for ReadCalendarYear / ReadCalendarCycle* / ReadCalendarCycleDay. Omit to use the active calendar.</summary>
+        /// <summary>Calendar id for ReadCalendarYear / ReadCalendarCycle* . Omit to use the active calendar.</summary>
         public string? Calendar { get; set; }
-        /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay.</summary>
+        /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay / ReadCalendarCyclePhaseIndex / ReadCalendarDaysUntilPhase.</summary>
         public string? Cycle { get; set; }
+        /// <summary>Phase id for ReadCalendarDaysUntilPhase. Matched against that cycle's phase table.</summary>
+        public string? Phase { get; set; }
+        /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
+        public string? Symbol { get; set; }
         /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
         public string? Domain { get; set; }
         public float RadiusCm { get; set; }

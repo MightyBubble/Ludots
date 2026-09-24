@@ -505,6 +505,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         AcquireTimeFlowScale = 523,
         /// <summary>Release pause or scale token I[A]. A token that is not active fails closed.</summary>
         ReleaseTimeFlowToken = 524,
+        /// <summary>I[Dst] = ConfigKey id of symbols[Imm]. GetId only; an unregistered name fails and names the word.</summary>
+        LoadConfigKey = 525,
+        /// <summary>I[Dst] = 0-based phase slot. Imm packing matches ReadCalendarCyclePhase. Same number as Calendar.PhaseIndex.</summary>
+        ReadCalendarCyclePhaseIndex = 526,
+        /// <summary>I[Dst] = whole days until the named phase next starts. 0 when already inside it. Imm packs cycle and calendar; ImmF holds the phase symbol index as raw bits.</summary>
+        ReadCalendarDaysUntilPhase = 527,
+        /// <summary>I[Dst] = I[A] - I[B].</summary>
+        SubInt = 528,
 
     }
 

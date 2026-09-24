@@ -316,6 +316,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarYear:
                 case GraphNodeOp.ReadCalendarCyclePhase:
                 case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
                     ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.ReadTimeFlowPaused:
@@ -751,6 +754,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarYear:
                 case GraphNodeOp.ReadCalendarCyclePhase:
                 case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
                     EmitCalendarNode(
                         node,
                         op.NodeOp,

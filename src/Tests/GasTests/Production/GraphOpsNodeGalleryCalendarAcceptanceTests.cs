@@ -4,6 +4,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Calendar;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -130,6 +131,46 @@ public sealed class GraphOpsNodeGalleryCalendarAcceptanceTests
         Assert.That(calendar.DayIndex, Is.EqualTo(day));
         Assert.That(runtime.Metrics.Detail, Does.Contain(ticks.ToString()));
         Assert.That(runtime.Metrics.Detail, Does.Contain("第"));
+    }
+
+    [Test]
+    public void LoadConfigKey_ShowsTheRegisteredSummerId()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = BindAndTick("LoadConfigKey");
+        int summer = ConfigKeyRegistry.GetId("summer");
+        Assert.That(summer, Is.Not.EqualTo(ConfigKeyRegistry.InvalidId));
+        Assert.That(runtime.Metrics.Detail, Does.Contain(summer.ToString()));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("编号"));
+    }
+
+    [Test]
+    public void ReadCalendarCyclePhaseIndex_ShowsTheSeasonSlot()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = BindAndTick("ReadCalendarCyclePhaseIndex");
+        CalendarRuntime calendar = LiveCalendar();
+        int index = calendar.ReadCyclePhaseIndex(calendar.ActiveCalendarId, "season");
+        Assert.That(runtime.Metrics.Detail, Does.Contain(index.ToString()));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("季节表位置"));
+    }
+
+    [Test]
+    public void ReadCalendarDaysUntilPhase_ShowsDaysUntilAutumn()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = BindAndTick("ReadCalendarDaysUntilPhase");
+        CalendarRuntime calendar = LiveCalendar();
+        int days = calendar.ReadDaysUntilPhase(calendar.ActiveCalendarId, "season", "autumn");
+        Assert.That(runtime.Metrics.Detail, Does.Contain(days.ToString()));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("离秋天"));
+    }
+
+    [Test]
+    public void SubInt_ShowsDaysUntilDayThreeSixty()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = BindAndTick("SubInt");
+        CalendarRuntime calendar = LiveCalendar();
+        int days = 360 - calendar.DayIndex;
+        Assert.That(runtime.Metrics.Detail, Does.Contain(days.ToString()));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("还差"));
     }
 
     private static GraphOpsNodeGalleryRuntime BindAndTick(string op)

@@ -27,5 +27,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static int UnpackCycle(int imm) => imm & MaxKeyId;
 
         public static int UnpackCalendar(int imm) => (imm >> 16) & MaxKeyId;
+
+        /// <summary>
+        /// ReadCalendarDaysUntilPhase 的相位符号下标放在 ImmF 的原始位上。
+        /// A/B/C 在补丁前要留给历法符号，补丁后 Imm 已被周期和历法编号占满。
+        /// </summary>
+        public static float SymbolIndexBits(int symbolIndex) => BitConverter.Int32BitsToSingle(symbolIndex);
+
+        public static int SymbolIndex(float bits) => BitConverter.SingleToInt32Bits(bits);
     }
 }

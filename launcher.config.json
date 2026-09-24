@@ -2656,6 +2656,38 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod",
         "projectPath": "CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadConfigKey",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigKeyEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadConfigKeyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarCyclePhaseIndex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCyclePhaseIndexEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarCyclePhaseIndexEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarDaysUntilPhase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDaysUntilPhaseEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarDaysUntilPhaseEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubIntEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

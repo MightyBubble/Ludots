@@ -190,6 +190,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.AddInt:
+                case GraphNodeOp.SubInt:
                 case GraphNodeOp.CompareLtInt:
                 case GraphNodeOp.CompareEqInt:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -823,6 +824,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarYear:
                 case GraphNodeOp.ReadCalendarCyclePhase:
                 case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
                 case GraphNodeOp.ApplyCalendarStart:
                 case GraphNodeOp.SetCalendarDayIndex:
                 case GraphNodeOp.SetCalendarTicksIntoDay:
@@ -1151,6 +1155,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.AddInt:
+                case GraphNodeOp.SubInt:
                 case GraphNodeOp.CompareLtInt:
                 case GraphNodeOp.CompareEqInt:
                     instruction.A = ResolveValueInput(
@@ -2065,6 +2070,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarYear:
                 case GraphNodeOp.ReadCalendarCyclePhase:
                 case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
                 case GraphNodeOp.ApplyCalendarStart:
                 case GraphNodeOp.SetCalendarDayIndex:
                 case GraphNodeOp.SetCalendarTicksIntoDay:

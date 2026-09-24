@@ -709,6 +709,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
         }
 
+        /// <summary>packedImm is CalendarOpEncoding.Pack(cycleKeyId, calendarKeyId). Result is the 0-based phase slot.</summary>
+        int ReadCalendarCyclePhaseIndex(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>Whole days until phaseId next starts on the packed cycle. 0 when already inside that phase.</summary>
+        int ReadCalendarDaysUntilPhase(int packedImm, string phaseId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
         void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");

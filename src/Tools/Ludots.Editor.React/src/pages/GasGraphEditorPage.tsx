@@ -146,6 +146,8 @@ type GraphNodeConfig = {
   calendar?: string | null;
   cycle?: string | null;
   domain?: string | null;
+  phase?: string | null;
+  symbol?: string | null;
 };
 
 type GasNodeData = GraphNodeConfig & {
@@ -395,6 +397,8 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     calendar: n.calendar ?? undefined,
     cycle: n.cycle ?? undefined,
     domain: n.domain ?? undefined,
+    phase: n.phase ?? undefined,
+    symbol: n.symbol ?? undefined,
   });
 }
 

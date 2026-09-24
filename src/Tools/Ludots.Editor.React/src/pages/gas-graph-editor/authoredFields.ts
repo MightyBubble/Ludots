@@ -31,7 +31,9 @@ export type AuthoredFieldKey =
   | 'presentationSurface'
   | 'calendar'
   | 'domain'
-  | 'cycle';
+  | 'cycle'
+  | 'phase'
+  | 'symbol';
 
 export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType' | 'textKey';
 
@@ -90,6 +92,8 @@ const presentationSurface: AuthoredFieldSpec = {
 const calendar: AuthoredFieldSpec = { key: 'calendar', label: '历法 id，留空用当前主历', kind: 'string' };
 const domain: AuthoredFieldSpec = { key: 'domain', label: '时间域，例如 simulation', kind: 'string' };
 const cycle: AuthoredFieldSpec = { key: 'cycle', label: '周期 id', kind: 'string' };
+const phase: AuthoredFieldSpec = { key: 'phase', label: '相位 id', kind: 'string' };
+const symbol: AuthoredFieldSpec = { key: 'symbol', label: '已经登记过的符号', kind: 'string' };
 
 const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ConstInt: [intValue],
@@ -149,6 +153,9 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ReadCalendarYear: [calendar],
   ReadCalendarCyclePhase: [calendar, cycle],
   ReadCalendarCycleDay: [calendar, cycle],
+  ReadCalendarCyclePhaseIndex: [calendar, cycle],
+  ReadCalendarDaysUntilPhase: [calendar, cycle, phase],
+  LoadConfigKey: [symbol],
   ReadTimeFlowPaused: [domain],
   ReadTimeFlowScalePermille: [domain],
   AcquireTimeFlowPause: [domain],

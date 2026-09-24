@@ -70,6 +70,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.ReadCalendarCyclePhase:
                     case GraphNodeOp.ReadCalendarCycleDay:
+                    case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                    case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                        // Days-until keeps the phase symbol index in ImmF. Do not clear it here.
                         int cycleKey = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         int calendarKey = 0;
                         if ((ins.Flags & CalendarOpEncoding.CalendarAuthoredFlag) != 0)

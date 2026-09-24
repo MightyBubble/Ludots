@@ -3633,6 +3633,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadConfigKey_raylib",
+      "name": "Graph Op LoadConfigKey Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadConfigKey"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarCyclePhaseIndex_raylib",
+      "name": "Graph Op ReadCalendarCyclePhaseIndex Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarCyclePhaseIndex"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarDaysUntilPhase_raylib",
+      "name": "Graph Op ReadCalendarDaysUntilPhase Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarDaysUntilPhase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubInt_raylib",
+      "name": "Graph Op SubInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

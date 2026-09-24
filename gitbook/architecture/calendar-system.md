@@ -123,7 +123,58 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 存档域 `calendar`：`enabled`、`dayIndex`、`ticksIntoDay`、`activeCalendarId`。定义不存，以配置为准。恢复时 enabled / 主历必须和当前配置一致，否则失败。恢复不补发事件。
 
-图里读今天：Script、TriggerGraph、Query 用 `ReadCalendarEnabled`、`ReadCalendarDayIndex`、`ReadCalendarTicksIntoDay`、`ReadCalendarDayPermille`、`ReadCalendarDayPhase`、`ReadCalendarYear`、`ReadCalendarCyclePhase`、`ReadCalendarCycleDay`。年份和周期可以点名哪一份历，留空就是当前主历；周期节点必须写周期 id。写日子：`ApplyCalendarStart` 在开局还没提交时落下日序和当天步数，不发事件；提交后再写成同一个值是空操作，写成别的值失败。`SetCalendarDayIndex` 拨到一个不早于今天的绝对日，中间每一天走和时钟同一条跨日路径。`SetCalendarTicksIntoDay` 改当天已走步，范围是 `[0, ticksPerDay)`，昼夜相位变了发 `Calendar.DayPhaseChanged`，不翻日。启用历法仍然只认 `Calendar/world.json`。没有 `Calendar.*` 实体属性，面板值图用这些读节点。日期不进 `Clock.*`。事件载荷里的相位、日历、日序仍用 `LoadEntryPayloadInt`。代码侧 `Project` / `CaptureProgressSnapshot` 还在。
+图里读今天：Script、TriggerGraph、Query 用 `ReadCalendarEnabled`、`ReadCalendarDayIndex`、`ReadCalendarTicksIntoDay`、`ReadCalendarDayPermille`、`ReadCalendarDayPhase`、`ReadCalendarYear`、`ReadCalendarCyclePhase`、`ReadCalendarCycleDay`、`ReadCalendarCyclePhaseIndex`、`ReadCalendarDaysUntilPhase`。年份和周期可以点名哪一份历，留空就是当前主历；周期节点必须写周期 id。`ReadCalendarCyclePhase` 给出的是相位名字的编号，和事件载荷 `Calendar.PhaseId` 相同。`ReadCalendarCyclePhaseIndex` 给出的是该相位在这张周期表里的位置，从 0 起，和事件载荷 `Calendar.PhaseIndex` 相同。`solar360` 的季节表上春是 0、夏是 1、秋是 2、冬是 3。月份名仍是符号（`month.04`）。阴阳历会插入闰月相位，表上的第几格对不上四月。
+
+`LoadConfigKey` 把作者写的符号解析成同一个编号，只认装载时已经登记过的名字；没登记就失败并点名这个词，不会新造一个编号。过滤槽 `filters.payload` 里的字符串仍按原来的方式登记。`IntToText` 不能把编号变回 `summer`。
+
+`ReadCalendarDaysUntilPhase` 要写周期和相位名，历法可留空。它返回离该相位下一次开始还有几个整天；已经在这个相位里就是 0。这个周期的表上没有这个相位时失败，并点名周期和相位。四月初五这种「相位里的第几天」不写进这个节点：先问离 `month.04` 开始还有几天，再用 `AddInt` 加上相位内的偏移。
+
+问「是不是第 N 日」用 `ReadCalendarDayIndex`、`ConstInt`、`CompareEqInt`。`Calendar.DayAdvanced` 的过滤 `Calendar.DayIndex = N` 只在跨过这一天时触发，图里的读节点整天都答得了。问「是不是端午」比较 `ReadCalendarCyclePhase`（周期 `festival`）和 `LoadConfigKey`（符号 `duanwu`）。端午在表上只有一天，人在这个相位里就是端午当天。春节有五天，人在相位里是节日期间，第一天再比较 `ReadCalendarCycleDay == 1`。问「是不是第 1 年四月初五」分三路比较：`ReadCalendarYear == 1`（从日序 0 起的绝对年，1 基）、月份相位等于 `LoadConfigKey` 的 `month.04`、`ReadCalendarCycleDay == 5`（当前月相位里的第几天，1 基）。纪年里的第几年、年内第几天仍只在投影里，图上没有对应读节点。
+
+问「离第 360 日还有几天」用 `SubInt`：目标日序减去 `ReadCalendarDayIndex`。还没到是正数，就是今天是 0，已经过了是负数。得到的是整天。一天多少步在 `world.json`，图上读不到。
+
+写日子：`ApplyCalendarStart` 在开局还没提交时落下日序和当天步数，不发事件；提交后再写成同一个值是空操作，写成别的值失败。`SetCalendarDayIndex` 拨到一个不早于今天的绝对日，中间每一天走和时钟同一条跨日路径。`SetCalendarTicksIntoDay` 改当天已走步，范围是 `[0, ticksPerDay)`，昼夜相位变了发 `Calendar.DayPhaseChanged`，不翻日。启用历法仍然只认 `Calendar/world.json`。没有 `Calendar.*` 实体属性，面板值图用这些读节点。日期不进 `Clock.*`。事件载荷里的相位、日历、日序仍用 `LoadEntryPayloadInt`。代码侧 `Project` / `CaptureProgressSnapshot` 还在。
+
+标准连线：
+
+```json
+{ "op": "ReadCalendarDayIndex" }
+{ "op": "ConstInt", "intValue": 360 }
+{ "op": "CompareEqInt" }
+```
+
+```json
+{ "op": "ReadCalendarCyclePhase", "cycle": "festival" }
+{ "op": "LoadConfigKey", "symbol": "duanwu" }
+{ "op": "CompareEqInt" }
+```
+
+```json
+{ "op": "ReadCalendarYear" }
+{ "op": "ReadCalendarCyclePhase", "cycle": "month" }
+{ "op": "LoadConfigKey", "symbol": "month.04" }
+{ "op": "ReadCalendarCycleDay", "cycle": "month" }
+```
+
+年份与 `ConstInt` 1 比较，月份相位与 `month.04` 的编号比较，周期内第几天与 `ConstInt` 5 比较。
+
+```json
+{ "op": "ConstInt", "intValue": 360 }
+{ "op": "ReadCalendarDayIndex" }
+{ "op": "SubInt" }
+```
+
+`SubInt` 的 a 接目标日序，b 接今天。
+
+```json
+{ "op": "ReadCalendarDaysUntilPhase", "cycle": "festival", "phase": "duanwu" }
+```
+
+```json
+{ "op": "ReadCalendarCyclePhaseIndex", "cycle": "season" }
+```
+
+相位序号只用来和 `Calendar.PhaseIndex` 对齐，不用来判断是不是某一月、某一个节日。
 
 ## 4 场景
 
@@ -222,6 +273,33 @@ Feature: 世界日子按历法走
     Then 图给出和历法投影相同的日序
     And 年份是主历上的年份
     And 季节相位是当前季节
+
+  Scenario: 问今天是不是端午
+    Given 节日周期里端午只有一天
+    And 今天正走在端午相位里
+    When 作者把当前节日相位和已经登记的端午这个名字比较
+    Then 两边相同
+    And 相位在表里排第几格不能拿来当端午
+
+  Scenario: 问今天是不是第 1 年四月初五
+    Given 主历走到第 1 年四月的第 5 天
+    When 作者分别比较年份、四月这个相位名字、以及这个月里的第几天
+    Then 三样都对上
+    And 四月在月表里的第几格不参与这次比较
+
+  Scenario: 问离第 360 天还有几天
+    Given 今天的日序早于 360
+    When 作者用 360 减去今天的日序
+    Then 得到还差的整天数
+    And 已经过了这一天时得到负数
+    And 就是今天时得到 0
+
+  Scenario: 问离下一个端午还有几天
+    Given 节日周期里有端午相位
+    When 作者问离端午下一次开始还有几天
+    Then 已经在端午里得到 0
+    And 还没到得到整日数
+    And 这个周期的表上没有这个相位时失败并点名周期和相位
 
   Scenario: 开局日子还没落定时可以改开局
     Given 世界历法已启用

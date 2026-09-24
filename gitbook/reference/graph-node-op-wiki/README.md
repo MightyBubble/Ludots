@@ -267,12 +267,16 @@
 - [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
 - [点名派发待办活动](OfferActivity.md) — 图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。
 - [现在是哪一段昼夜](ReadCalendarDayPhase.md) — 读出当前昼夜相位的编号。
+- [离秋天还有几天](ReadCalendarDaysUntilPhase.md) — 数到秋季开始还要几天。已经在这一季里，结果是 0。
+- [离第 360 天还有几天](SubInt.md) — 用第 360 天减去今天，得到还差几天。
 - [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 - [调成两倍再收回](AcquireTimeFlowScale.md) — 给整局一张两倍令牌，马上放回。
 - [这一季叫什么](ReadCalendarCyclePhase.md) — 按季节周期读出当前相位编号。
+- [这一季排在第几格](ReadCalendarCyclePhaseIndex.md) — 按季节表读出当前这一季的位置，春是 0。
 - [这一季的第几天](ReadCalendarCycleDay.md) — 读出当前季节里的第几天。
+- [这个名字对应的编号](LoadConfigKey.md) — 把已经登记过的夏写成图里能比较的编号。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
 
 ## 订单与行为
