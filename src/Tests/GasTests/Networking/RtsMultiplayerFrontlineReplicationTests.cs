@@ -119,7 +119,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                engine.MapLoader.RequireComponentAuthoringContext()),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
 
@@ -165,7 +166,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                engine.MapLoader.RequireComponentAuthoringContext()),
             Throws.InvalidOperationException.With.Message.Contains(requiredComponent));
     }
 
@@ -188,7 +190,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                engine.MapLoader.RequireComponentAuthoringContext()),
             Throws.InvalidOperationException.With.Message.Contains("Box3D"));
     }
 
@@ -211,7 +214,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                engine.MapLoader.RequireComponentAuthoringContext()),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
 
@@ -281,7 +285,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         OwnershipResolver ownership = RequireOwnership(engine);
@@ -638,6 +643,63 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     }
 
     [Test]
+    [Description(
+        "Feature: Empty authoring context cannot fake formal core mirrors\n" +
+        "  Given a Frontline client template factory is built with ComponentAuthoringContext.Empty\n" +
+        "  When it tries to materialize the formal core template that declares AbilityStateBuffer\n" +
+        "  Then creation fails loudly for the missing AbilityDefinitionRegistry service")]
+    public void ClientApplier_EmptyAuthoringContext_FailsLoudlyForAbilityStateBufferCore()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate coreTemplate = engine.MapLoader.TemplateRegistry.GetAll()
+            .Single(template => template.Id == "rts_frontline_core");
+        Assert.That(coreTemplate.Components.ContainsKey("AbilityStateBuffer"), Is.True);
+
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireStableIds(engine),
+            ComponentAuthoringContext.Empty);
+        FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
+        var applier = new FrontlineCoreReplicationApplier(
+            in coreSpec,
+            templates,
+            config.Sides,
+            healthId,
+            crystalId,
+            runtime.TagBinder,
+            RequireOwnership(engine),
+            RequirePlayers(engine));
+        var values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(23000, 15000),
+            FrontlineReplicationPayload.PackFloats(800f, 55f),
+            FrontlineReplicationPayload.PackInts(config.Sides[1].TeamId, config.Sides[1].PlayerId),
+            coreSpec.SupportedValidBits);
+        var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(3, 1));
+        var state = new ReplicationMirrorState(coreSpec.SchemaId, revision: 7, in values);
+
+        Assert.That(
+            () => applier.Create(engine.World, in identity, in state),
+            Throws.InvalidOperationException.With.Message.Contains(
+                ComponentAuthoringServiceKeys.AbilityDefinitionRegistry));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Formal core mirrors keep authored train ability state\n" +
+        "  Given the client MapLoader has the engine-configured component authoring context\n" +
+        "  And the formal core template declares AbilityStateBuffer for train-infantry\n" +
+        "  When a southern command-core replication mirror is created\n" +
+        "  Then the mirror materializes with that AbilityStateBuffer slot intact")]
     public void ClientApplier_CreatesFormalSouthernMirrorAndAuthorsSouthernVisionScope()
     {
         using GameEngine engine = CreateStartedEngine();
@@ -647,13 +709,21 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        ComponentAuthoringContext authoringContext = engine.MapLoader.RequireComponentAuthoringContext();
+        Assert.That(
+            authoringContext.TryGet(
+                ComponentAuthoringServiceKeys.AbilityDefinitionRegistry,
+                out AbilityDefinitionRegistry _),
+            Is.True,
+            "Configured MapLoader authoring context must expose AbilityDefinitionRegistry.");
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            authoringContext);
         FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
         var applier = new FrontlineCoreReplicationApplier(
             in coreSpec,
@@ -909,7 +979,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         OwnershipResolver ownership = RequireOwnership(engine);
@@ -989,7 +1060,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         var applier = new FrontlineHarvesterReplicationApplier(
             in spec,
             templates,
@@ -1043,7 +1115,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         var harvesterApplier = new FrontlineHarvesterReplicationApplier(
@@ -1594,7 +1667,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
             config.ReadyCountdownTicks,
@@ -2045,7 +2119,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            engine.MapLoader.RequireComponentAuthoringContext());
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
             config.ReadyCountdownTicks,

@@ -2261,3 +2261,85 @@ Behavior remains in the existing runtime spawn request contract. No JSON schema 
 ### 8. Next variant test
 
 A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.
+
+---
+
+# Addendum — Client mirror authoring context wiring (2026-07-26)
+
+## Task summary
+
+Client Frontline replication mirrors failed to materialize because `FrontlineClientTemplateFactory` constructed `EntityBuilder` with `ComponentAuthoringContext.Empty`. Formal templates with `AbilityStateBuffer` require `AbilityDefinitionRegistry` via `EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity`, so mirror creation threw and the client scene stayed empty.
+
+Fix: expose MapLoader's single configured authoring context and pass it into the existing client template factory / `EntityBuilder` path. No new spawn, lifecycle, or service publication.
+
+## Judgment standard conclusion
+
+**PASS**
+
+Primary deliverable (A/B/C/D): **A** (wiring reuse of existing materialization SSOT; no new graph/enum)
+
+Reason: Reuse MapLoader-owned `ComponentAuthoringContext` + existing `EntityBuilder`. Forbidden: parallel spawn, `EntityLifecycleRuntimeServices`, duplicate `CoreServiceKeys.ComponentAuthoringContext`.
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: #709 client scene has no replicated gameplay entities (authoring context wiring)
+- **Date**: 2026-07-26
+- **Agent / Author**: Cursor Grok 4.5
+
+### 1. Core judgment
+
+Primary deliverable (A/B/C/D): A
+
+Conclusion: PASS
+
+Reason: Wire the engine-configured authoring context into client mirror materialization only; no new profile/enum/pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Formal template materialization | 0 (existing) | `EntityBuilder` + `ComponentRegistry` + `EntityRuntimeStatePlan` |
+| Client mirror creation | existing replication applier | `FrontlineClientTemplateFactory.Create` |
+| Authoring context SSOT | engine startup assembly | `GameEngine` -> `MapLoader.SetComponentAuthoringContext` -> `RequireComponentAuthoringContext` |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing client replication applier / Frontline Install path
+- Resolvers / Registries: `AbilityDefinitionRegistry` / `AbilityFormSetRegistry` via existing authoring context
+- Existing presets / graphs: formal `rts_frontline_*` templates (including AbilityStateBuffer)
+
+### 4. New Layer 0 ops
+
+N/A
+
+### 5. Transaction boundary
+
+No new transaction. Mirror Create still uses `EntityBuilder.Build`; authoring failure must throw (NO FALLBACK).
+
+### 6. Config SSOT
+
+Existing `Entities/templates.json` (Frontline formal templates). New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum
+- [x] No parallel materialization pipeline beside spawn
+- [x] No placement validation stuffed into lifecycle op
+- [x] No silent Empty fallback (`RequireComponentAuthoringContext` and `EnsureInstalled` fail loudly)
+
+### 8. Next variant test
+
+Gameplay variants still change graph wiring / effect steps. This fix only changes authoring-context wiring.
+
+## Reuse / add table
+
+| Kind | Item |
+|---|---|
+| Reuse | MapLoader-owned `ComponentAuthoringContext`; `EntityBuilder`; `EntityRuntimeStatePlan`; Frontline client template factory / appliers |
+| Add | `MapLoader.RequireComponentAuthoringContext()`; factory constructor wiring; regression tests; this addendum |
+| Forbid | Duplicate `CoreServiceKeys.ComponentAuthoringContext`; `EntityLifecycleRuntimeServices`; parallel spawn path; silent Empty |
+
+## Gate result
+
+**PASS** — implemented.

@@ -266,12 +266,14 @@ internal sealed class FrontlineClientTemplateFactory
         ReadOnlySpan<FrontlineReplicationSpec> specs,
         int matchStateSchemaId,
         EntityTemplateKeyRegistry templateKeys,
-        PresentationStableIdAllocator stableIds)
+        PresentationStableIdAllocator stableIds,
+        ComponentAuthoringContext authoringContext)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
         ArgumentNullException.ThrowIfNull(templateKeys);
         _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         ArgumentNullException.ThrowIfNull(templates);
+        ArgumentNullException.ThrowIfNull(authoringContext);
         if (specs.Length != 4)
         {
             throw new InvalidOperationException("RTS Frontline requires exactly four replication schema specifications.");
@@ -332,7 +334,7 @@ internal sealed class FrontlineClientTemplateFactory
                     $"RTS Frontline replication kind {(FrontlineReplicationKind)i} has no formal entity template.");
             }
         }
-        _builder = new EntityBuilder(_world, _templates);
+        _builder = new EntityBuilder(_world, _templates, authoringContext);
     }
 
     public Entity Create(World world, FrontlineReplicationKind kind)
@@ -1720,7 +1722,8 @@ internal static class FrontlineReplication
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            stableIds);
+            stableIds,
+            engine.MapLoader.RequireComponentAuthoringContext());
         OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
             ?? throw new InvalidOperationException("RTS Frontline client replication requires OwnershipResolver.");
         PlayerEntityLookup players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
