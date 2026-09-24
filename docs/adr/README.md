@@ -8,6 +8,7 @@
 *   [ADR-0002 统一 UI Runtime 与三前端写法](ADR-0002-unified-ui-runtime-and-authoring-models.md)
 *   [ADR-0003 Exchange Operation 与 Scope Key 身份模型](ADR-0003-exchange-operation-scope-key.md)
 *   [ADR-0004 时间体系：Entity-local 时间域与回合语义收敛](ADR-0004-time-system-entity-local-and-turn-semantics.md)
+*   [ADR-0005 Skia GPU 表面合同：Raylib 帧路径全 GPU 化与跨引擎适配接缝](ADR-0005-skia-gpu-surface-contract.md)
 
 ## 2 编写规则
 

@@ -68,6 +68,7 @@
   - [面板典型案例全设计](architecture/panel-case-designs.md)
   - [面板案例库 Wiki（门户「面板矩阵」一级 tab）](architecture/panel-cases/README.md)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
+  - [Skia GPU 覆盖层适配指南（Unity / Unreal 宿主）](architecture/skia-gpu-overlay-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [Mod 自定义组件](architecture/mod-custom-components.md)
   - [Mod Extensible Runtime](architecture/mod-extensible-runtime.md)

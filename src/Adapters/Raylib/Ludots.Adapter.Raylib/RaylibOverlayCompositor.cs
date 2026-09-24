@@ -18,8 +18,9 @@ namespace Ludots.Adapter.Raylib
         private readonly SkiaRasterLayer _uiLayer = new();
         private readonly SkiaRasterLayer _overlayLayer = new();
         private readonly SkiaOverlayRenderer _overlayRenderer = new();
-        private RaylibSkiaGpuOverlaySurface? _gpuUnderlaySurface;
-        private RaylibSkiaGpuOverlaySurface? _gpuTopOverlaySurface;
+        private RaylibSkiaGpuCanvasSurface? _gpuUnderlaySurface;
+        private RaylibSkiaGpuCanvasSurface? _gpuTopOverlaySurface;
+        private RaylibSkiaGpuCanvasSurface? _gpuUiSurface;
         private RaylibSkiaFramebufferOverlaySurface? _framebufferUnderlaySurface;
         private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
@@ -34,12 +35,14 @@ namespace Ludots.Adapter.Raylib
         private readonly PresentationOverlayLanePacer _underlayPacer = new(PresentationOverlayLayer.UnderUi);
         private readonly bool _useGpuDirectUnderlay;
         private readonly bool _useFramebufferDirectUnderlay;
+        private readonly bool _useGpuDirectUi;
 
         public RaylibOverlayCompositor(int width, int height)
         {
             _compositeRenderer = new RaylibSkiaRenderer(width, height);
             _useGpuDirectUnderlay = !ReadEnvBool("LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY");
             _useFramebufferDirectUnderlay = !ReadEnvBool("LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY");
+            _useGpuDirectUi = !ReadEnvBool("LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI");
             LogConfiguredOverlayBackend();
             Resize(width, height);
         }
@@ -54,6 +57,9 @@ namespace Ludots.Adapter.Raylib
             _underlayLayer.Resize(width, height);
             _uiLayer.Resize(width, height);
             _overlayLayer.Resize(width, height);
+            // 尺寸变化后 GPU 表面会重建为空白纹理，UI 必须在下一帧强制重渲，
+            // 否则干净的 IsDirty 门会继续展示空白缓存。
+            _uiHadContent = false;
         }
 
         public OverlayCompositeResult Render(
@@ -74,7 +80,8 @@ namespace Ludots.Adapter.Raylib
             bool hasUnderlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
             bool hasTopOverlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.TopMost);
             bool hasUiLayer = !suppressHostDiagnosticUi && drawSkiaUi && uiRoot.Scene != null;
-            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && !hasUiLayer;
+            bool gpuUiCompositor = _useGpuDirectUi;
+            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && (!hasUiLayer || gpuUiCompositor);
             bool orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && _useGpuDirectUnderlay;
             bool framebufferDirectTopOverlay = directTopOverlayComposite && _useFramebufferDirectUnderlay;
             bool gpuDirectTopOverlay = directTopOverlayComposite && !framebufferDirectTopOverlay;
@@ -86,7 +93,7 @@ namespace Ludots.Adapter.Raylib
             bool gpuDirectUnderlay = gpuOrFramebufferUnderlayEnabled && !framebufferDirectUnderlay;
             bool rasterDirectUnderlayComposite = hasUnderlay &&
                 !gpuOrFramebufferUnderlayEnabled &&
-                !hasUiLayer &&
+                (!hasUiLayer || gpuUiCompositor) &&
                 !rasterTopOverlay;
             bool directUnderlayComposite = gpuDirectUnderlay || framebufferDirectUnderlay || rasterDirectUnderlayComposite;
 
@@ -153,12 +160,39 @@ namespace Ludots.Adapter.Raylib
             if (refreshUiLayer)
             {
                 long uiRenderStart = Stopwatch.GetTimestamp();
-                _uiLayer.Clear();
-                if (hasUiLayer)
+                if (gpuUiCompositor)
                 {
-                    skiaRenderer.SetCanvas(_uiLayer.Canvas);
-                    uiRoot.Render();
-                    _uiLayer.SetHasContent(true);
+                    if (hasUiLayer)
+                    {
+                        _gpuUiSurface ??= new RaylibSkiaGpuCanvasSurface("UI compositor");
+                        if (!_gpuUiSurface.TryRender(
+                            _compositeRenderer.Width,
+                            _compositeRenderer.Height,
+                            surface =>
+                            {
+                                skiaRenderer.SetTarget(surface);
+                                uiRoot.Render();
+                            }))
+                        {
+                            throw new InvalidOperationException("Raylib Skia GPU UI compositor is required for this production path but could not render.");
+                        }
+                    }
+                    else
+                    {
+                        _gpuUiSurface?.Clear(_compositeRenderer.Width, _compositeRenderer.Height);
+                    }
+
+                    _uiLayer.SetHasContent(false);
+                }
+                else
+                {
+                    _uiLayer.Clear();
+                    if (hasUiLayer)
+                    {
+                        skiaRenderer.SetCanvas(_uiLayer.Canvas);
+                        uiRoot.Render();
+                        _uiLayer.SetHasContent(true);
+                    }
                 }
 
                 uiRenderMs = ElapsedMs(uiRenderStart);
@@ -177,13 +211,11 @@ namespace Ludots.Adapter.Raylib
                 {
                     if (hasTopOverlay)
                     {
-                        _gpuTopOverlaySurface ??= new RaylibSkiaGpuOverlaySurface();
+                        _gpuTopOverlaySurface ??= new RaylibSkiaGpuCanvasSurface("overlay");
                         if (!_gpuTopOverlaySurface.TryRender(
-                            scene!,
-                            _overlayRenderer,
-                            PresentationOverlayLayer.TopMost,
                             _compositeRenderer.Width,
-                            _compositeRenderer.Height))
+                            _compositeRenderer.Height,
+                            surface => _overlayRenderer.Render(scene!, surface.Canvas, PresentationOverlayLayer.TopMost)))
                         {
                             throw new InvalidOperationException("Raylib Skia GPU top overlay is required for this production path but could not render.");
                         }
@@ -219,9 +251,10 @@ namespace Ludots.Adapter.Raylib
             }
 
             bool rasterUnderlayInComposite = hasUnderlay && !gpuDirectUnderlay && !framebufferDirectUnderlay;
-            bool hasRasterCompositeContent = rasterUnderlayInComposite || hasUiLayer || rasterTopOverlay;
+            bool rasterUiInComposite = hasUiLayer && !gpuUiCompositor;
+            bool hasRasterCompositeContent = rasterUnderlayInComposite || rasterUiInComposite || rasterTopOverlay;
             bool refreshRasterComposite = (rasterUnderlayInComposite && underlayCanvasChanged) ||
-                refreshUiLayer ||
+                (refreshUiLayer && !gpuUiCompositor) ||
                 (refreshTopOverlay && rasterTopOverlay) ||
                 hasRasterCompositeContent != _compositeHadContent;
 
@@ -241,7 +274,7 @@ namespace Ludots.Adapter.Raylib
                     _underlayLayer.DrawTo(_compositeRenderer.Canvas);
                 }
 
-                if (hasUiLayer)
+                if (rasterUiInComposite)
                 {
                     _uiLayer.DrawTo(_compositeRenderer.Canvas);
                 }
@@ -264,9 +297,11 @@ namespace Ludots.Adapter.Raylib
             }
 
             bool drawCompositeTexture = _compositeHadContent && hasRasterCompositeContent;
+            bool drawGpuUiSurface = gpuUiCompositor && _uiHadContent && hasUiLayer;
             if (gpuDirectUnderlay ||
                 framebufferDirectUnderlay ||
                 drawCompositeTexture ||
+                drawGpuUiSurface ||
                 directTopOverlayComposite ||
                 orderedDirectOverlayComposite)
             {
@@ -280,9 +315,14 @@ namespace Ludots.Adapter.Raylib
                     _gpuUnderlaySurface?.Draw();
                 }
 
+                if (drawGpuUiSurface)
+                {
+                    _gpuUiSurface?.Draw();
+                }
+
                 if (drawCompositeTexture)
                 {
-                    // UI (and any raster TopMost) blit after GPU UnderUi HUD so a mounted
+                    // Raster UI (and any raster TopMost) blit after GPU UnderUi HUD so a mounted
                     // panel does not force the world HUD back onto the full-window raster path.
                     _compositeRenderer.Draw();
                 }
@@ -327,6 +367,8 @@ namespace Ludots.Adapter.Raylib
         public void Dispose()
         {
             _overlayRenderer.Dispose();
+            _gpuUiSurface?.Dispose();
+            _gpuUiSurface = null;
             _gpuTopOverlaySurface?.Dispose();
             _gpuTopOverlaySurface = null;
             _framebufferTopOverlaySurface?.Dispose();
@@ -357,8 +399,15 @@ namespace Ludots.Adapter.Raylib
             Log.Info(
                 in LogChannels.Presentation,
                 _useFramebufferDirectUnderlay
-                    ? "Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay"
-                    : "Skia overlay backend: GPU render-texture underlay with raster compositor for UI/top overlay");
+                    ? "Skia overlay backend: GPU direct framebuffer underlay"
+                    : "Skia overlay backend: GPU render-texture underlay");
+
+            if (!_useGpuDirectUi)
+            {
+                Log.Warn(
+                    in LogChannels.Presentation,
+                    "Skia GPU UI compositor disabled by LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI. UI panel layer falls back to raster texture upload.");
+            }
         }
 
         private void RenderUnderlay(
@@ -407,14 +456,12 @@ namespace Ludots.Adapter.Raylib
 
                 if (gpuDirectUnderlay)
                 {
-                    _gpuUnderlaySurface ??= new RaylibSkiaGpuOverlaySurface();
+                    _gpuUnderlaySurface ??= new RaylibSkiaGpuCanvasSurface("overlay");
+                    PresentationOverlayLanePacer.LaneRefreshPlan plan = refreshPlan;
                     if (!_gpuUnderlaySurface.TryRender(
-                        scene,
-                        _overlayRenderer,
-                        PresentationOverlayLayer.UnderUi,
-                        refreshPlan,
                         _compositeRenderer.Width,
-                        _compositeRenderer.Height))
+                        _compositeRenderer.Height,
+                        surface => _overlayRenderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, plan)))
                     {
                         throw new InvalidOperationException("Raylib Skia GPU underlay is required for this production path but could not render.");
                     }

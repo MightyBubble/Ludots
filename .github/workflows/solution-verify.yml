@@ -160,7 +160,10 @@ jobs:
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
             'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
             'FullyQualifiedName~PresentationRequestChannelTests',
-            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests',
+            'FullyQualifiedName~RaylibOverlayCompositor_DoesNotDirectDrawTopMostWhenUnderUiHudExists',
+            'FullyQualifiedName~RaylibOverlayCompositor_RendersUiLayerThroughGpuSurfaceByDefault',
+            'FullyQualifiedName~RaylibSkiaOverlay_UsesNativeGlInterfaceInsteadOfWindowsWgl'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal

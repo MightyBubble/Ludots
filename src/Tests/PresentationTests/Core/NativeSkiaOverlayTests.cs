@@ -355,8 +355,8 @@ public sealed class NativeSkiaOverlayTests
 
         Assert.That(
             source,
-            Does.Contain("hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && !hasUiLayer"),
-            "TopMost direct overlay must stay disabled while UnderUi HUD exists; otherwise minimap is drawn under world HUD.");
+            Does.Contain("hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && (!hasUiLayer || gpuUiCompositor)"),
+            "TopMost direct overlay must stay disabled while UnderUi HUD exists; a mounted panel only stays compatible when the UI layer itself is on the GPU compositor.");
         Assert.That(
             source,
             Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && _useGpuDirectUnderlay"),
@@ -384,8 +384,14 @@ public sealed class NativeSkiaOverlayTests
             "Adapters",
             "Raylib",
             "Ludots.Adapter.Raylib");
-        string glContext = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGlContext.cs"));
-        string gpuOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGpuOverlaySurface.cs"));
+        string renderDir = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering");
+        string glContext = File.ReadAllText(Path.Combine(renderDir, "RaylibSkiaGlContext.cs"));
+        string gpuOverlay = File.ReadAllText(Path.Combine(renderDir, "RaylibSkiaGpuCanvasSurface.cs"));
         string framebufferOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaFramebufferOverlaySurface.cs"));
 
         Assert.That(
@@ -395,6 +401,75 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(gpuOverlay, Does.Not.Contain("opengl32.dll"));
         Assert.That(framebufferOverlay, Does.Not.Contain("opengl32.dll"));
         Assert.That(glContext, Does.Not.Contain("opengl32.dll"));
+    }
+
+    [Test]
+    public void RaylibOverlayCompositor_RendersUiLayerThroughGpuSurfaceByDefault()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib",
+            "RaylibOverlayCompositor.cs"));
+        string gpuSurface = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibSkiaGpuCanvasSurface.cs"));
+
+        Assert.That(
+            source,
+            Does.Contain("_useGpuDirectUi = !ReadEnvBool(\"LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI\")"),
+            "UI panel layer must be GPU-driven by default with an explicit kill-switch (ADR-0005).");
+        Assert.That(
+            source,
+            Does.Contain("new RaylibSkiaGpuCanvasSurface(\"UI compositor\")"),
+            "UI layer must render through the shared GPU render-texture surface.");
+        Assert.That(
+            source,
+            Does.Contain("skiaRenderer.SetTarget(surface);"),
+            "GPU UI path must render directly into the target surface (no full-window CPU raster intermediate).");
+        Assert.That(
+            source,
+            Does.Contain("rasterUiInComposite = hasUiLayer && !gpuUiCompositor"),
+            "The raster composite must only own the UI layer when the GPU compositor is explicitly disabled.");
+        Assert.That(
+            source,
+            Does.Contain("(refreshUiLayer && !gpuUiCompositor)"),
+            "UI refresh must not trigger a raster composite upload while the GPU compositor owns the UI layer.");
+        Assert.That(
+            source,
+            Does.Contain("Raylib Skia GPU UI compositor is required for this production path but could not render."),
+            "Production GPU UI failure must throw instead of silently falling back to raster.");
+
+        int underlayDraw = source.IndexOf("_gpuUnderlaySurface?.Draw()", StringComparison.Ordinal);
+        int uiDraw = source.IndexOf("_gpuUiSurface?.Draw()", StringComparison.Ordinal);
+        int topDraw = source.IndexOf("_gpuTopOverlaySurface?.Draw()", StringComparison.Ordinal);
+        Assert.That(underlayDraw, Is.GreaterThanOrEqualTo(0));
+        Assert.That(uiDraw, Is.GreaterThan(underlayDraw), "GPU UI must draw after the UnderUi HUD render texture.");
+        Assert.That(topDraw, Is.GreaterThan(uiDraw), "TopMost must draw after the GPU UI layer.");
+
+        Assert.That(
+            gpuSurface,
+            Does.Contain("GPU Accelerated: True (Raylib Skia render-texture {purpose})"),
+            "The GPU surface must log its backend line for acceptance log assertions.");
+        Assert.That(
+            gpuSurface,
+            Does.Contain("_context.ResetContext(GRGlBackendState.All)"),
+            "Every GPU render batch must reset Skia's GL state cache after host mutations (adapter guide seam 2).");
+        Assert.That(
+            gpuSurface,
+            Does.Contain("_surface!.Flush(submit: true, synchronous: false)"),
+            "The surface must flush and submit before the host consumes the texture.");
+        Assert.That(
+            gpuSurface,
+            Does.Contain("GRSurfaceOrigin.BottomLeft"),
+            "GL render textures are bottom-left row order; a TopLeft Skia origin mirrors the whole layer vertically when combined with the negative-height host flip.");
     }
 
     [Test]

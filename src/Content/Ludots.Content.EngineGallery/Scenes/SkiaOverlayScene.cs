@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Ludots.Raylib.Render;
 using Raylib_cs;
@@ -7,10 +8,15 @@ using Ludots.Raylib.SceneKit;
 
 namespace Ludots.Content.EngineGallery.Scenes
 {
-    /// <summary>Skia 2D 覆盖层：3D 场景上叠 RaylibSkiaRenderer 合成 HUD，面板绘制走 SkiaRasterLayer 分层。</summary>
+    /// <summary>
+    /// Skia 2D 覆盖层：3D 场景上叠 GPU render-texture 直绘 HUD（默认）；
+    /// LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI=1 时回退 SkiaRasterLayer + 纹理上传。
+    /// </summary>
     [EngineSceneComponent("skia_overlay")]
     public sealed class SkiaOverlayScene : IEngineSceneComponent
     {
+        private static readonly bool GpuDisabled = ReadEnvBool("LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI");
+
         private readonly Queue<float> _frameMs = new();
         private readonly float[] _cubePhases = new float[8];
         private readonly GalleryLitProps _litProps = new();
@@ -19,6 +25,7 @@ namespace Ludots.Content.EngineGallery.Scenes
         private RaylibSkiaRenderer _skia = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private SkiaRasterLayer _panelLayer = new();
+        private RaylibSkiaGpuCanvasSurface? _gpuSurface;
         private SKTypeface? _typeface;
         private bool _disposed;
         public void Load()
@@ -27,6 +34,7 @@ namespace Ludots.Content.EngineGallery.Scenes
             _shadowMap = new RaylibDirectionalShadowMap();
             _skia = new RaylibSkiaRenderer(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _panelLayer.Resize(Rl.GetScreenWidth(), Rl.GetScreenHeight());
+            _gpuSurface = GpuDisabled ? null : new RaylibSkiaGpuCanvasSurface("gallery overlay");
             _typeface = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Normal) ?? SKTypeface.Default;
             for (int i = 0; i < _cubePhases.Length; i++)
             {
@@ -54,7 +62,14 @@ namespace Ludots.Content.EngineGallery.Scenes
             Rl.EndMode3D();
 
             DrawHud(deltaSeconds, t);
-            _skia.RenderToScreen();
+            if (_gpuSurface != null)
+            {
+                _gpuSurface.Draw();
+            }
+            else
+            {
+                _skia.RenderToScreen();
+            }
         }
 
         private void DrawSceneProps(float t)
@@ -100,9 +115,29 @@ namespace Ludots.Content.EngineGallery.Scenes
 
         private void DrawHud(float deltaSeconds, float t)
         {
+            if (_gpuSurface != null)
+            {
+                if (!_gpuSurface.TryRender(
+                        Rl.GetScreenWidth(),
+                        Rl.GetScreenHeight(),
+                        surface => DrawHudCanvas(surface.Canvas, deltaSeconds, t)))
+                {
+                    throw new InvalidOperationException("Engine gallery Skia GPU overlay is required for this production path but could not render.");
+                }
+
+                return;
+            }
+
             SKCanvas canvas = _panelLayer.Canvas;
             _panelLayer.Clear();
+            DrawHudCanvas(canvas, deltaSeconds, t);
+            _panelLayer.SetHasContent(true);
+            _skia.ClearTransparent();
+            _panelLayer.DrawTo(_skia.Canvas);
+        }
 
+        private void DrawHudCanvas(SKCanvas canvas, float deltaSeconds, float t)
+        {
             using (var backdrop = new SKPaint { Color = new SKColor(16, 20, 32, 205) })
             {
                 canvas.DrawRoundRect(24f, 24f, 430f, 210f, 14f, 14f, backdrop);
@@ -142,10 +177,6 @@ namespace Ludots.Content.EngineGallery.Scenes
                 canvas.DrawCircle(Rl.GetScreenWidth() - 120f, 120f, 64f + (MathF.Sin(t * 2f) * 3f), compassEdge);
                 canvas.DrawLine(Rl.GetScreenWidth() - 120f, 120f, Rl.GetScreenWidth() - 120f + (MathF.Cos(t) * 58f), 120f + (MathF.Sin(t) * 58f), compassEdge);
             }
-
-            _panelLayer.SetHasContent(true);
-            _skia.ClearTransparent();
-            _panelLayer.DrawTo(_skia.Canvas);
         }
 
         public void Dispose()
@@ -155,6 +186,8 @@ namespace Ludots.Content.EngineGallery.Scenes
                 return;
             }
 
+            _gpuSurface?.Dispose();
+            _gpuSurface = null;
             _panelLayer?.Dispose();
             _skia?.Dispose();
             _typeface?.Dispose();
@@ -164,6 +197,16 @@ namespace Ludots.Content.EngineGallery.Scenes
             _skia = null!;
             _shadowMap = null!;
             _disposed = true;
+        }
+
+        private static bool ReadEnvBool(string name)
+        {
+            string? value = Environment.GetEnvironmentVariable(name);
+            return value is not null &&
+                (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("on", StringComparison.OrdinalIgnoreCase));
         }
     }
 }
