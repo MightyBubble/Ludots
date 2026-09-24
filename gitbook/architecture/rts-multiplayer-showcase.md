@@ -92,7 +92,7 @@ Showcase 的正式交付形态必须同时包含：
 
 实现完成时，`showcase.registry.json` 中必须只有一个《双人前线》正式根条目，并完整填写 `binding`、`preset`、`docsPath`、`acceptanceTest`、`artifactDir`、`screenshot` 和 `status`。只有独立服务器与两个独立客户端的正式验收、截图和产物均存在后，条目才能标记为 `active`。
 
-现有 `rts_demo`、`rts_showcase` 条目没有完整的 binding、preset 与证据字段，三个训练条目也只有部分验收字段；新条目不得复制这种未收口状态。本设计任务不修改注册表、Launcher、Mod、Apps 或任何运行时代码。
+现有 `rts_demo`、`rts_showcase` 条目没有完整的 binding、preset 与证据字段，三个训练条目也只有部分验收字段；新条目不得复制这种未收口状态。正式《双人前线》条目必须同时登记 binding 与带 `processGroup` 的 preset，并且画廊启动提示优先使用 preset，确保玩家入口拉起 1 个权威对局 + 2 个客户端，而不是单个联网客户端。
 
 ## 3. 详情
 

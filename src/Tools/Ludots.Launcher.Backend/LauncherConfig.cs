@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Hosting;
 
 namespace Ludots.Launcher.Backend;
 
@@ -130,6 +131,42 @@ public sealed class LauncherPresetDefinition
 
     [JsonPropertyName("browserRuntime")]
     public BrowserRuntimeConfig? BrowserRuntime { get; set; }
+
+    [JsonPropertyName("processGroup")]
+    public LauncherProcessGroupDefinition? ProcessGroup { get; set; }
+}
+
+public sealed class LauncherProcessGroupDefinition
+{
+    [JsonPropertyName("host")]
+    public string Host { get; set; } = string.Empty;
+
+    [JsonPropertyName("port")]
+    public int Port { get; set; }
+
+    [JsonPropertyName("faultProfile")]
+    public string FaultProfile { get; set; } = NetworkHostBootstrapConfig.NormalFaultProfile;
+
+    [JsonPropertyName("processes")]
+    public List<LauncherProcessGroupMemberDefinition> Processes { get; set; } = new();
+}
+
+public sealed class LauncherProcessGroupMemberDefinition
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("adapterId")]
+    public string AdapterId { get; set; } = string.Empty;
+
+    [JsonPropertyName("processRole")]
+    public string ProcessRole { get; set; } = string.Empty;
+
+    [JsonPropertyName("clientInstanceId")]
+    public int ClientInstanceId { get; set; }
+
+    [JsonPropertyName("faultSeed")]
+    public int FaultSeed { get; set; }
 }
 
 public sealed class LauncherPreferences

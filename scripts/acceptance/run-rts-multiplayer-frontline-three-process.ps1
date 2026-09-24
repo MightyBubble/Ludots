@@ -940,69 +940,66 @@ function Remove-ClientCredential {
     return $finalEvidence
 }
 
-function New-RoleArtifacts {
+function Invoke-ProcessGroupPrepare {
     param(
-        [Parameter(Mandatory = $true)][string]$RoleDirectory,
-        [Parameter(Mandatory = $true)][string]$ProcessRole,
-        [Parameter(Mandatory = $true)][int]$ClientInstanceId,
-        [Parameter(Mandatory = $true)][int]$FaultSeed,
-        [AllowEmptyString()][Parameter(Mandatory = $true)][string]$CredentialPath,
-        [Parameter(Mandatory = $true)][string]$SourceGraphPath,
-        [Parameter(Mandatory = $true)]$Plan
+        [Parameter(Mandatory = $true)][string]$LauncherAssembly,
+        [Parameter(Mandatory = $true)][string]$Selector,
+        [Parameter(Mandatory = $true)][string]$AdapterId,
+        [Parameter(Mandatory = $true)][string]$OutputDirectory,
+        [Parameter(Mandatory = $true)][string]$HostAddress,
+        [Parameter(Mandatory = $true)][int]$Port,
+        [Parameter(Mandatory = $true)][string]$FaultProfile,
+        [Parameter(Mandatory = $true)][string]$ConnectionKey,
+        [Parameter(Mandatory = $true)][string]$StdoutPath,
+        [Parameter(Mandatory = $true)][string]$StderrPath
     )
 
-    New-Item -ItemType Directory -Path $RoleDirectory -Force | Out-Null
-    $graphPath = Join-Path $RoleDirectory "launcher.graph.json"
-    $bootstrapPath = Join-Path $RoleDirectory "launcher.runtime.json"
-    $graph = Get-Content -LiteralPath $SourceGraphPath -Raw | ConvertFrom-Json
-    $graph.selectors = @($graph.selectors)
-    $graph.rootModIds = @($graph.rootModIds)
-    $graph.orderedModIds = @($graph.orderedModIds)
-    $graph.plannedMods = @($graph.plannedMods)
-    foreach ($plannedMod in $graph.plannedMods) {
-        $plannedMod.bindingNames = @($plannedMod.bindingNames)
-    }
-    $graph.diagnostics.settings = @($graph.diagnostics.settings)
-    $graph.diagnostics.warnings = @($graph.diagnostics.warnings)
-    foreach ($setting in $graph.diagnostics.settings) {
-        $setting.contributions = @($setting.contributions)
-    }
-    if ($null -ne $graph.browserRuntime) {
-        $graph.browserRuntime.processSharedAssemblyNamePrefixes = @($graph.browserRuntime.processSharedAssemblyNamePrefixes)
-    }
-    $graph.runtimeArtifacts.graphArtifactPath = $graphPath
-    $graph.runtimeArtifacts.bootstrapArtifactPath = $bootstrapPath
-    Write-JsonFile -Value $graph -Path $graphPath
+    $dotnet = Get-DotnetCommand
+    Invoke-CheckedProcess -Name "prepare-process-group" -FilePath $dotnet `
+        -Arguments @(
+            "exec", "--roll-forward", "Major", $LauncherAssembly,
+            "prepare", "process-group", $Selector,
+            "--adapter", $AdapterId,
+            "--build", "never",
+            "--output", $OutputDirectory,
+            "--host", $HostAddress,
+            "--port", ([string]$Port),
+            "--fault-profile", $FaultProfile,
+            "--connection-key", $ConnectionKey,
+            "--json"
+        ) `
+        -WorkingDirectory $script:RepoRoot `
+        -StdoutPath $StdoutPath `
+        -StderrPath $StderrPath
 
-    $networkHost = [ordered]@{
-        ProcessRole = $ProcessRole
-        Host = if ($ProcessRole -eq "replicatedClient") { $script:HostAddressValue } else { "" }
-        Port = $script:PortValue
-        ConnectionKey = $script:ConnectionKeyValue
-        ClientInstanceId = $ClientInstanceId
-        CredentialPath = $CredentialPath
-        FaultProfile = $script:FaultProfileValue
-        FaultSeed = $FaultSeed
+    $artifacts = Get-Content -LiteralPath $StdoutPath -Raw | ConvertFrom-Json
+    if ($null -eq $artifacts -or $null -eq $artifacts.Roles -or @($artifacts.Roles).Count -lt 2) {
+        throw "Launcher prepare process-group did not return role artifacts."
     }
-    $bootstrap = [ordered]@{
-        LaunchGraphPath = "launcher.graph.json"
-        LaunchGraphFullPath = $graphPath
-        PlanSelectors = @($Plan.Selectors)
-        PlanRootModIds = @($Plan.RootModIds)
-        PlanOrderedModIds = @($Plan.OrderedModIds)
-        PlanFingerprint = $Plan.PlanFingerprint
-        PlanSchemaVersion = $Plan.SchemaVersion
-        PlanGeneratedAtUtc = $Plan.GeneratedAtUtc
-        BrowserRuntime = $Plan.BrowserRuntime
-        NetworkHost = $networkHost
-    }
-    Write-JsonFile -Value $bootstrap -Path $bootstrapPath
 
+    return $artifacts
+}
+
+function Resolve-PreparedRoleArtifact {
+    param(
+        [Parameter(Mandatory = $true)]$Artifacts,
+        [Parameter(Mandatory = $true)][string]$ProcessName
+    )
+
+    $matches = @($Artifacts.Roles | Where-Object { [string]$_.ProcessName -ceq $ProcessName })
+    if ($matches.Count -ne 1) {
+        throw "Prepared process-group artifacts must contain exactly one role named '$ProcessName'."
+    }
+
+    $role = $matches[0]
     return [pscustomobject]@{
-        ProcessRole = $ProcessRole
-        GraphPath = $graphPath
-        BootstrapPath = $bootstrapPath
-        CredentialPath = $CredentialPath
+        ProcessRole = [string]$role.ProcessRole
+        GraphPath = [string]$role.GraphPath
+        BootstrapPath = [string]$role.BootstrapPath
+        CredentialPath = [string]$role.CredentialPath
+        RoleDirectory = [string]$role.RoleDirectory
+        AdapterId = [string]$role.AdapterId
+        ProcessName = [string]$role.ProcessName
     }
 }
 
@@ -1957,19 +1954,27 @@ try {
         Get-FileEvidence -Path ([string]$plan.AppAssemblyPath)
     )
 
-    $serverRole = New-RoleArtifacts -RoleDirectory (Join-Path $artifactDirectoryValue "server") `
-        -ProcessRole "authoritativeServer" -ClientInstanceId 0 -FaultSeed $serverFaultSeedValue -CredentialPath "" `
-        -SourceGraphPath $sourceGraphEvidencePath -Plan $plan
-    $clientACredential = Join-Path $artifactDirectoryValue "client-a\session.credential"
-    $clientARole = New-RoleArtifacts -RoleDirectory (Join-Path $artifactDirectoryValue "client-a") `
-        -ProcessRole "replicatedClient" -ClientInstanceId ([int]$profile.clientInstanceIds[0]) `
-        -FaultSeed $clientOneFaultSeedValue `
-        -CredentialPath $clientACredential -SourceGraphPath $sourceGraphEvidencePath -Plan $plan
-    $clientBCredential = Join-Path $artifactDirectoryValue "client-b\session.credential"
-    $clientBRole = New-RoleArtifacts -RoleDirectory (Join-Path $artifactDirectoryValue "client-b") `
-        -ProcessRole "replicatedClient" -ClientInstanceId ([int]$profile.clientInstanceIds[1]) `
-        -FaultSeed $clientTwoFaultSeedValue `
-        -CredentialPath $clientBCredential -SourceGraphPath $sourceGraphEvidencePath -Plan $plan
+    $prepareJsonPath = Join-Path $artifactDirectoryValue "process-group-prepare.json"
+    $preparedArtifacts = Invoke-ProcessGroupPrepare `
+        -LauncherAssembly $launcherAssembly `
+        -Selector $selector `
+        -AdapterId ([string]$profile.adapterId) `
+        -OutputDirectory $artifactDirectoryValue `
+        -HostAddress $script:HostAddressValue `
+        -Port $script:PortValue `
+        -FaultProfile $script:FaultProfileValue `
+        -ConnectionKey $script:ConnectionKeyValue `
+        -StdoutPath $prepareJsonPath `
+        -StderrPath (Join-Path $logsDirectory "prepare-process-group.stderr.log")
+    if ([string]$preparedArtifacts.ContentPlanFingerprint -cne [string]$plan.PlanFingerprint) {
+        throw "Prepared process-group fingerprint differs from the resolved content plan."
+    }
+
+    $serverRole = Resolve-PreparedRoleArtifact -Artifacts $preparedArtifacts -ProcessName "server"
+    $clientARole = Resolve-PreparedRoleArtifact -Artifacts $preparedArtifacts -ProcessName "client-a"
+    $clientBRole = Resolve-PreparedRoleArtifact -Artifacts $preparedArtifacts -ProcessName "client-b"
+    $clientACredential = [string]$clientARole.CredentialPath
+    $clientBCredential = [string]$clientBRole.CredentialPath
     $expectedFaultInjectionByProcess = [ordered]@{}
     foreach ($processLaunch in @(
         [pscustomobject]@{ Name = "authoritative-server"; RoleArtifact = $serverRole; ExpectedRole = "authoritativeServer"; ExpectedSeed = $serverFaultSeedValue }
@@ -2018,9 +2023,9 @@ try {
 
     $server = Start-CapturedProcess -Name "authoritative-server" -FilePath $dotnet `
         -Arguments @("exec", "--roll-forward", "Major", $serverAssembly, $serverRole.BootstrapPath) `
-        -WorkingDirectory (Join-Path $artifactDirectoryValue "server") `
-        -StdoutPath (Join-Path $artifactDirectoryValue "server\stdout.log") `
-        -StderrPath (Join-Path $artifactDirectoryValue "server\stderr.log")
+        -WorkingDirectory $serverRole.RoleDirectory `
+        -StdoutPath (Join-Path $serverRole.RoleDirectory "stdout.log") `
+        -StderrPath (Join-Path $serverRole.RoleDirectory "stderr.log")
     $ownedProcesses.Add($server)
     Add-ManifestProcess -Manifest $manifest -OwnedProcess $server -ManifestPath $manifestPath
     Start-Sleep -Milliseconds ([int]$profile.interProcessDelayMilliseconds)
@@ -2028,9 +2033,9 @@ try {
 
     $clientA = Start-CapturedProcess -Name "client-a" -FilePath $dotnet `
         -Arguments @("exec", "--roll-forward", "Major", [string]$plan.AppAssemblyPath, $clientARole.BootstrapPath) `
-        -WorkingDirectory (Join-Path $artifactDirectoryValue "client-a") `
-        -StdoutPath (Join-Path $artifactDirectoryValue "client-a\stdout.log") `
-        -StderrPath (Join-Path $artifactDirectoryValue "client-a\stderr.log") `
+        -WorkingDirectory $clientARole.RoleDirectory `
+        -StdoutPath (Join-Path $clientARole.RoleDirectory "stdout.log") `
+        -StderrPath (Join-Path $clientARole.RoleDirectory "stderr.log") `
         -EnvironmentVariables $clientAScreenshotCapture.EnvironmentVariables
     $ownedProcesses.Add($clientA)
     Add-ManifestProcess -Manifest $manifest -OwnedProcess $clientA -ManifestPath $manifestPath
@@ -2039,9 +2044,9 @@ try {
 
     $clientB = Start-CapturedProcess -Name "client-b" -FilePath $dotnet `
         -Arguments @("exec", "--roll-forward", "Major", [string]$plan.AppAssemblyPath, $clientBRole.BootstrapPath) `
-        -WorkingDirectory (Join-Path $artifactDirectoryValue "client-b") `
-        -StdoutPath (Join-Path $artifactDirectoryValue "client-b\stdout.log") `
-        -StderrPath (Join-Path $artifactDirectoryValue "client-b\stderr.log") `
+        -WorkingDirectory $clientBRole.RoleDirectory `
+        -StdoutPath (Join-Path $clientBRole.RoleDirectory "stdout.log") `
+        -StderrPath (Join-Path $clientBRole.RoleDirectory "stderr.log") `
         -EnvironmentVariables $clientBScreenshotCapture.EnvironmentVariables
     $ownedProcesses.Add($clientB)
     Add-ManifestProcess -Manifest $manifest -OwnedProcess $clientB -ManifestPath $manifestPath

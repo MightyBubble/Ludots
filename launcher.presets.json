@@ -129,12 +129,40 @@
     },
     {
       "id": "rts_multiplayer_frontline_networked_raylib",
-      "name": "RTS Frontline Network Client",
+      "name": "RTS Frontline Networked Dual Client",
       "selectors": [
         "$rts_multiplayer_frontline_networked"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto"
+      "buildMode": "auto",
+      "processGroup": {
+        "host": "127.0.0.1",
+        "port": 27709,
+        "faultProfile": "normal",
+        "processes": [
+          {
+            "name": "server",
+            "adapterId": "dedicated-server",
+            "processRole": "authoritativeServer",
+            "clientInstanceId": 0,
+            "faultSeed": 70901
+          },
+          {
+            "name": "client-a",
+            "adapterId": "raylib",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 1,
+            "faultSeed": 70902
+          },
+          {
+            "name": "client-b",
+            "adapterId": "raylib",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 2,
+            "faultSeed": 70903
+          }
+        ]
+      }
     },
     {
       "id": "rts_multiplayer_frontline_three_process_uat_raylib",
@@ -144,7 +172,35 @@
         "$rts_multiplayer_frontline_three_process_uat"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto"
+      "buildMode": "auto",
+      "processGroup": {
+        "host": "127.0.0.1",
+        "port": 27777,
+        "faultProfile": "normal",
+        "processes": [
+          {
+            "name": "server",
+            "adapterId": "dedicated-server",
+            "processRole": "authoritativeServer",
+            "clientInstanceId": 0,
+            "faultSeed": 70901
+          },
+          {
+            "name": "client-a",
+            "adapterId": "raylib",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 1,
+            "faultSeed": 70902
+          },
+          {
+            "name": "client-b",
+            "adapterId": "raylib",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 2,
+            "faultSeed": 70903
+          }
+        ]
+      }
     },
     {
       "id": "capability_standard_participant_views_raylib",

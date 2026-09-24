@@ -43,9 +43,23 @@ try
                 return 1;
             }
 
-            Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
-            Console.WriteLine($"pid={result.Pid}");
-            Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            if (result.ProcessGroup != null)
+            {
+                Console.WriteLine($"processGroup={result.ProcessGroup.ArtifactDirectory}");
+                Console.WriteLine($"connectionKey={result.ProcessGroup.ConnectionKey}");
+                foreach (var process in result.ProcessGroup.Processes)
+                {
+                    Console.WriteLine(
+                        $"process={process.Name};role={process.ProcessRole};adapter={process.AdapterId};pid={process.Pid};bootstrap={process.BootstrapPath}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
+                Console.WriteLine($"pid={result.Pid}");
+                Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            }
+
             if (result.Plan != null)
             {
                 Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
@@ -56,6 +70,53 @@ try
             if (!string.IsNullOrWhiteSpace(result.Url))
             {
                 Console.WriteLine(result.Url);
+            }
+
+            return 0;
+        }
+        case "prepare" when command.Secondary == "process-group":
+        {
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            var processGroup = service.TryResolveProcessGroup(selectors)
+                ?? throw new InvalidOperationException(
+                    "prepare process-group requires a preset selector that declares processGroup.");
+            if (!string.IsNullOrWhiteSpace(command.HostAddress))
+            {
+                processGroup.Host = command.HostAddress.Trim();
+            }
+
+            if (command.Port is int portOverride)
+            {
+                processGroup.Port = portOverride;
+            }
+
+            if (!string.IsNullOrWhiteSpace(command.FaultProfile))
+            {
+                processGroup.FaultProfile = command.FaultProfile.Trim();
+            }
+
+            var outputDirectory = command.OutputDirectory
+                ?? throw new InvalidOperationException("prepare process-group requires --output <directory>.");
+            var resolve = service.Resolve(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var artifacts = service.MaterializeProcessGroupArtifacts(
+                resolve.Plan,
+                processGroup,
+                ResolveOutputPath(repoRoot, outputDirectory),
+                command.ConnectionKey);
+            if (command.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(artifacts, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"artifactDirectory={artifacts.ArtifactDirectory}");
+                Console.WriteLine($"connectionKey={artifacts.ConnectionKey}");
+                Console.WriteLine($"planFingerprint={artifacts.ContentPlanFingerprint}");
+                foreach (var role in artifacts.Roles)
+                {
+                    Console.WriteLine(
+                        $"role={role.ProcessName};processRole={role.ProcessRole};adapter={role.AdapterId};bootstrap={role.BootstrapPath};credential={role.CredentialPath}");
+                }
             }
 
             return 0;
@@ -533,12 +594,13 @@ Ludots launcher CLI
 
 Commands
   catalog
-  resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
-  build [selectors...] [--adapter raylib|web] [--build auto|always|never]
-  build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  resolve [selectors...] [--adapter raylib|web|dedicated-server] [--build auto|always|never] [--json]
+  build [selectors...] [--adapter raylib|web|dedicated-server] [--build auto|always|never]
+  build app [--adapter raylib|web|dedicated-server]
+  launch [selectors...] [--adapter raylib|web|dedicated-server] [--build auto|always|never] [--record <artifactDir>]
+  prepare process-group [selectors...] --output <directory> [--adapter raylib|web|dedicated-server] [--build auto|always|never] [--host <address>] [--port <port>] [--fault-profile normal|unstable] [--connection-key <key>] [--json]
   adapter list
-  adapter select --adapter raylib|web
+  adapter select --adapter raylib|web|dedicated-server
   workspace list
   workspace add --path <mod-root-parent>
   binding list
@@ -581,6 +643,11 @@ internal sealed class CliCommand
     public string? DirectoryPath { get; private set; }
     public string? ProjectPath { get; private set; }
     public string? RecordDirectory { get; private set; }
+    public string? OutputDirectory { get; private set; }
+    public string? HostAddress { get; private set; }
+    public int? Port { get; private set; }
+    public string? FaultProfile { get; private set; }
+    public string? ConnectionKey { get; private set; }
     public string? BindingTargetType { get; private set; }
     public string? BindingTargetValue { get; private set; }
     public LauncherBuildMode BuildMode { get; private set; } = LauncherBuildMode.Auto;
@@ -626,6 +693,21 @@ internal sealed class CliCommand
                     break;
                 case "--record" when index + 1 < args.Length:
                     command.RecordDirectory = args[++index].Trim();
+                    break;
+                case "--output" when index + 1 < args.Length:
+                    command.OutputDirectory = args[++index].Trim();
+                    break;
+                case "--host" when index + 1 < args.Length:
+                    command.HostAddress = args[++index].Trim();
+                    break;
+                case "--port" when index + 1 < args.Length:
+                    command.Port = int.Parse(args[++index].Trim());
+                    break;
+                case "--fault-profile" when index + 1 < args.Length:
+                    command.FaultProfile = args[++index].Trim();
+                    break;
+                case "--connection-key" when index + 1 < args.Length:
+                    command.ConnectionKey = args[++index].Trim();
                     break;
                 case "--target-type" when index + 1 < args.Length:
                     command.BindingTargetType = args[++index].Trim();
@@ -674,6 +756,7 @@ internal sealed class CliCommand
         {
             "mods" => secondary is "list",
             "build" => secondary is "app",
+            "prepare" => secondary is "process-group",
             "adapter" => secondary is "list" or "select",
             "workspace" => secondary is "list" or "add",
             "binding" => secondary is "list" or "set" or "delete",

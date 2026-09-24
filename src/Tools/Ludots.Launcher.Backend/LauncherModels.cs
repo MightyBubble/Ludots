@@ -7,6 +7,7 @@ public static class LauncherPlatformIds
 {
     public const string Raylib = "raylib";
     public const string Web = "web";
+    public const string DedicatedServer = "dedicated-server";
 }
 
 public sealed record LauncherPlatformProfile(
@@ -53,6 +54,7 @@ public sealed class LauncherPreset
     public string AdapterId { get; init; } = LauncherPlatformIds.Raylib;
     public string BuildMode { get; init; } = LauncherBuildMode.Auto.ToString().ToLowerInvariant();
     public BrowserRuntimeConfig? BrowserRuntime { get; init; }
+    public LauncherProcessGroupDefinition? ProcessGroup { get; init; }
     public List<string> ActiveModIds { get; init; } = new();
     public bool IncludeDependencies { get; init; } = true;
 }
@@ -107,4 +109,34 @@ public sealed record LauncherLaunchResult(
     int Pid,
     string Url,
     string BootstrapPath,
-    LauncherLaunchPlan? Plan);
+    LauncherLaunchPlan? Plan,
+    LauncherProcessGroupLaunchResult? ProcessGroup = null);
+
+public sealed record LauncherRoleArtifactPaths(
+    string ProcessName,
+    string ProcessRole,
+    string AdapterId,
+    string RoleDirectory,
+    string GraphPath,
+    string BootstrapPath,
+    string CredentialPath,
+    NetworkHostBootstrapConfig NetworkHost);
+
+public sealed record LauncherProcessGroupArtifacts(
+    string ArtifactDirectory,
+    string ConnectionKey,
+    string ContentPlanFingerprint,
+    IReadOnlyList<string> OrderedModIds,
+    IReadOnlyList<LauncherRoleArtifactPaths> Roles);
+
+public sealed record LauncherLaunchedProcessInfo(
+    string Name,
+    string ProcessRole,
+    string AdapterId,
+    int Pid,
+    string BootstrapPath);
+
+public sealed record LauncherProcessGroupLaunchResult(
+    string ArtifactDirectory,
+    string ConnectionKey,
+    IReadOnlyList<LauncherLaunchedProcessInfo> Processes);

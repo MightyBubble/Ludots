@@ -110,6 +110,26 @@ Product bootstrap must point to a launcher graph; runtime no longer treats `ModP
 
 Gameplay configuration remains under `ConfigPipeline` merge semantics and is separate from launch orchestration.
 
+## 3.1 Process-group launch topology
+
+Networked multiplayer presets may declare an optional `processGroup` topology:
+
+- shared `host`, `port`, and `faultProfile`
+- explicit `processes[]` with `name`, `adapterId`, `processRole`, `clientInstanceId`, and `faultSeed`
+- exactly one `authoritativeServer` and at least one `replicatedClient`
+- connection keys are generated at launch/prepare time and must never be stored in presets
+
+Launcher resolves and builds the Mod graph once, materializes role-local `launcher.graph.json` / `launcher.runtime.json` artifacts (including `NetworkHost`), starts the dedicated server before clients, and tracks the whole group for precise cleanup. Presets without `processGroup` keep the existing single-process launch path.
+
+Formal Showcase entries that declare both `binding` and `preset` must prefer the preset in gallery/CLI launch hints so process-group topology is not dropped.
+
+Evidence paths:
+
+- `src/Tools/Ludots.Launcher.Backend/LauncherProcessGroupValidation.cs`
+- `src/Tools/Ludots.Launcher.Backend/LauncherService.ProcessGroup.cs`
+- `src/Tests/ArchitectureTests/LauncherProcessGroupContractTests.cs`
+- `scripts/acceptance/run-rts-multiplayer-frontline-three-process.ps1`
+
 ## 4. Adapter Descriptor Contract
 
 Adapters are modeled as descriptors, not only hardcoded app project paths.

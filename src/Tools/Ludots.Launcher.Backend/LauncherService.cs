@@ -9,13 +9,17 @@ using Ludots.Core.Modding;
 
 namespace Ludots.Launcher.Backend;
 
-public sealed class LauncherService
+public sealed partial class LauncherService
 {
     private const int LaunchGraphSchemaVersion = 1;
     private static readonly JsonSerializerOptions BootstrapJsonWriteOptions = new() { WriteIndented = true };
     private static readonly JsonSerializerOptions GraphJsonWriteOptions = new()
     {
         WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+    private static readonly JsonSerializerOptions GraphJsonReadOptions = new()
+    {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
@@ -394,7 +398,21 @@ public sealed class LauncherService
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var presets = LoadPresets();
+        var processGroup = TryResolveProcessGroup(resolvedSelectors, presets);
+        if (processGroup != null)
+        {
+            return await LaunchProcessGroupAsync(
+                resolvedSelectors,
+                processGroup,
+                adapterId,
+                buildMode,
+                config,
+                presets,
+                groupKey: null);
+        }
+
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), presets);
         var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
@@ -1185,6 +1203,15 @@ public sealed class LauncherService
                 Path.Combine(_repoRoot, "src", "Client", "Web"),
                 Path.Combine(_repoRoot, "src", "Client", "Web", "dist"),
                 "http://localhost:5200",
+                "launcher.runtime.json"),
+            new LauncherPlatformProfile(
+                LauncherPlatformIds.DedicatedServer,
+                "Dedicated Server",
+                Path.Combine(_repoRoot, "src", "Apps", "DedicatedServer", "Ludots.App.DedicatedServer", "Ludots.App.DedicatedServer.csproj"),
+                Path.Combine(_repoRoot, "src", "Apps", "DedicatedServer", "Ludots.App.DedicatedServer", "bin", "Release", "net8.0"),
+                string.Empty,
+                string.Empty,
+                string.Empty,
                 "launcher.runtime.json")
         };
     }
@@ -1208,12 +1235,19 @@ public sealed class LauncherService
 
     private static LauncherAdapterDescriptor BuildAdapterDescriptor(LauncherPlatformProfile profile)
     {
-        var isWeb = string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase);
+        var hostKind = string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase)
+            ? "web"
+            : string.Equals(profile.Id, LauncherPlatformIds.DedicatedServer, StringComparison.OrdinalIgnoreCase)
+                ? "dedicated-server"
+                : "desktop";
+        var buildPipeline = string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase)
+            ? "dotnet+npm"
+            : "dotnet";
         return new LauncherAdapterDescriptor(
             profile.Id,
             profile.Name,
-            isWeb ? "web" : "desktop",
-            isWeb ? "dotnet+npm" : "dotnet",
+            hostKind,
+            buildPipeline,
             "launcher.runtime.v1",
             profile.AppProjectPath,
             profile.OutputDirectory,
@@ -1456,6 +1490,9 @@ public sealed class LauncherService
                 AdapterId = string.IsNullOrWhiteSpace(preset.AdapterId) ? ResolveSelectedAdapterId(config, LoadPreferences()) : preset.AdapterId!,
                 BuildMode = NormalizeBuildMode(preset.BuildMode),
                 BrowserRuntime = preset.BrowserRuntime,
+                ProcessGroup = preset.ProcessGroup == null
+                    ? null
+                    : LauncherProcessGroupValidation.Clone(preset.ProcessGroup),
                 ActiveModIds = activeModIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 IncludeDependencies = true
             });
@@ -1727,25 +1764,44 @@ public sealed class LauncherService
         return projectPath;
     }
 
-    private string WriteRuntimeBootstrap(LauncherLaunchPlan plan)
+    private string WriteRuntimeBootstrap(LauncherLaunchPlan plan, NetworkHostBootstrapConfig? networkHost = null)
     {
         var graphPath = WriteLaunchGraphDocument(plan);
         Directory.CreateDirectory(plan.AppOutputDirectory);
-        var graphRelativePath = Path.GetRelativePath(plan.AppOutputDirectory, graphPath).Replace('\\', '/');
-        var json = JsonSerializer.Serialize(new
+        WriteRuntimeBootstrapDocument(plan, graphPath, plan.BootstrapArtifactPath, networkHost);
+        return plan.BootstrapArtifactPath;
+    }
+
+    private void WriteRuntimeBootstrapDocument(
+        LauncherLaunchPlan plan,
+        string graphPath,
+        string bootstrapPath,
+        NetworkHostBootstrapConfig? networkHost)
+    {
+        var bootstrapDirectory = Path.GetDirectoryName(bootstrapPath);
+        if (!string.IsNullOrWhiteSpace(bootstrapDirectory))
+        {
+            Directory.CreateDirectory(bootstrapDirectory);
+        }
+
+        var graphRelativePath = Path.GetRelativePath(
+                bootstrapDirectory ?? plan.AppOutputDirectory,
+                graphPath)
+            .Replace('\\', '/');
+        var bootstrap = new AppBootstrapConfig
         {
             LaunchGraphPath = graphRelativePath,
             LaunchGraphFullPath = graphPath,
-            PlanSelectors = plan.Selectors,
-            PlanRootModIds = plan.RootModIds,
-            PlanOrderedModIds = plan.OrderedModIds,
+            PlanSelectors = plan.Selectors.ToList(),
+            PlanRootModIds = plan.RootModIds.ToList(),
+            PlanOrderedModIds = plan.OrderedModIds.ToList(),
             PlanFingerprint = plan.PlanFingerprint,
             PlanSchemaVersion = plan.SchemaVersion,
             PlanGeneratedAtUtc = plan.GeneratedAtUtc,
-            BrowserRuntime = plan.BrowserRuntime
-        }, BootstrapJsonWriteOptions);
-        File.WriteAllText(plan.BootstrapArtifactPath, json);
-        return plan.BootstrapArtifactPath;
+            BrowserRuntime = plan.BrowserRuntime,
+            NetworkHost = networkHost
+        };
+        File.WriteAllText(bootstrapPath, JsonSerializer.Serialize(bootstrap, BootstrapJsonWriteOptions));
     }
 
     private string WriteLaunchGraphDocument(LauncherLaunchPlan plan)
@@ -1781,41 +1837,7 @@ public sealed class LauncherService
 
     private void ReplacePreviousActiveProcess(LauncherLaunchPlan plan)
     {
-        var recordPath = GetActiveProcessRecordPath(plan.AdapterId);
-        var record = ReadActiveProcessRecord(recordPath);
-        if (record == null)
-        {
-            return;
-        }
-
-        if (!PathsEqual(record.AppAssemblyPath, plan.AppAssemblyPath))
-        {
-            DeleteActiveProcessRecord(recordPath);
-            return;
-        }
-
-        try
-        {
-            using var process = Process.GetProcessById(record.Pid);
-            if (process.HasExited || !StartTimeMatches(process, record.StartedAtUtcTicks))
-            {
-                DeleteActiveProcessRecord(recordPath);
-                return;
-            }
-
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit(5000);
-        }
-        catch (ArgumentException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        finally
-        {
-            DeleteActiveProcessRecord(recordPath);
-        }
+        ReplacePreviousActiveProcess(plan.AdapterId, plan.AppAssemblyPath);
     }
 
     private void PersistActiveProcess(LauncherLaunchPlan plan, string bootstrapPath, Process process)

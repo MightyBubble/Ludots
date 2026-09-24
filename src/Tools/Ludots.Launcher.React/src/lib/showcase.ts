@@ -51,15 +51,16 @@ export async function fetchShowcaseRegistry(): Promise<ShowcaseRegistry | null> 
 
 /**
  * Best-effort launch hint for a showcase entry, following the unified CLI
- * selector grammar (RFC-0001): `$binding` or `preset:<id>`.
+ * selector grammar (RFC-0001): prefer `preset:<id>` when both preset and
+ * binding exist so networked process-group topology is not dropped.
  */
 export function launchHint(entry: ShowcaseEntry): string | null {
-  if (entry.binding) {
-    return `ludots launch $${entry.binding} --adapter raylib`;
-  }
-
   if (entry.preset) {
     return `ludots launch preset:${entry.preset}`;
+  }
+
+  if (entry.binding) {
+    return `ludots launch $${entry.binding} --adapter raylib`;
   }
 
   return null;
