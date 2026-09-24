@@ -3,8 +3,8 @@
   "boundsCm": {
     "minX": 0,
     "minZ": 0,
-    "maxX": 20000,
-    "maxZ": 20000
+    "maxX": 20010,
+    "maxZ": 20010
   },
   "width": 2048,
   "height": 2048,
@@ -15,7 +15,7 @@
     "rgb": "deterministic TriAreaIds palette"
   },
   "sourceTileCount": 16,
-  "triangleCount": 604,
+  "triangleCount": 1569,
   "blockedWaterPixelCount": 0,
-  "contentHash": "sha256:2dd42bec8465a32507818203f7283fae36b1a8856bc8ed3947580385697d1245"
+  "contentHash": "sha256:cc3fac90bdb8daae88a9985bcfcfd2142c6aaba4c8ca4ac3ccdbbd6d215314a4"
 }

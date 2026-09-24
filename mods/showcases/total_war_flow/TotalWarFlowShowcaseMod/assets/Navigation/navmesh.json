@@ -5,7 +5,8 @@
     {
       "id": "tw.agent",
       "maxClimbCm": 40,
-      "maxSlopeDeg": 45
+      "maxSlopeDeg": 45,
+      "cellSizeCm": 15
     }
   ],
   "layers": [

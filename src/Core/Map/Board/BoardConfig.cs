@@ -84,6 +84,8 @@ namespace Ludots.Core.Map.Board
         /// </summary>
         public bool TerrainProjectAsRamp { get; set; }
 
+        public NavBakePolicy NavBakePolicy { get; set; }
+
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
         /// <summary>
@@ -143,6 +145,7 @@ namespace Ludots.Core.Map.Board
                 StructureAwareNavigation = StructureAwareNavigation,
                 TerrainHeightStepCm = TerrainHeightStepCm,
                 TerrainProjectAsRamp = TerrainProjectAsRamp,
+                NavBakePolicy = NavBakePolicy?.Clone(),
                 TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
                 TransportNetwork = TransportNetwork?.Clone(),
             };

@@ -20,7 +20,10 @@
    "HeightCells": 200,
    "GridCellSizeCm": 100,
    "TerrainHeightStepCm": 250,
-   "TerrainProjectAsRamp": true
+   "TerrainProjectAsRamp": true,
+   "NavBakePolicy": {
+    "HeightSource": "continuous-heightmap"
+   }
   }
  ],
  "DefaultCamera": {
@@ -35,7 +38,8 @@
   "showcase",
   "input",
   "total-war",
-  "context-flow"
+  "context-flow",
+  "Feature.NavMesh:On"
  ],
  "HeartbeatIntervalTicks": 6,
  "ContinuousHeightmapAsset": "assets/terrain/tw_hills.height",
