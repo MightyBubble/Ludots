@@ -19,6 +19,8 @@ namespace Ludots.Tests.Gas.Graph
     /// Headless Stopwatch evidence for region-volume evaluation on a tens-of-km map:
     /// 320 city rings and 10K units. Prints the partition-filtered tick against a
     /// full precise pass over every unit, plus a small fight and an all-mover tick.
+    /// The all-mover tick pairs each trip with rings along that trip, and must stay
+    /// well under the full precise pass.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -115,6 +117,8 @@ namespace Ludots.Tests.Gas.Graph
                 "A tick where nobody enters or leaves must not allocate.");
             Assert.That(stationaryMedian * 2, Is.LessThan(fullMedian),
                 "Standing units must be cheaper through the partition than a precise test of every unit against every ring.");
+            Assert.That(allMovers[MeasuredTicks / 2] * 4, Is.LessThan(fullMedian),
+                "When every unit moves, pairing each trip with the rings along its path must stay well under a precise test of every unit against every ring.");
         }
 
         private static double[] MeasureSystem(

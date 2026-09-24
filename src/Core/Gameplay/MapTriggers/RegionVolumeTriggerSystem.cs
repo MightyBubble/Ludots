@@ -30,7 +30,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// - Candidate filter: the map's spatial partition answers who is standing
     ///   inside the volume's box. Entities the partition does not contain are
     ///   still read directly. A mover whose travel segment meets the box is
-    ///   read even when the sampled position lies outside it.
+    ///   read even when the sampled position lies outside it. The partition
+    ///   keeps one cell per entity, so that meeting test is an X-interval
+    ///   sweep over the travelers and the rings: a tick where the whole army
+    ///   moves does not compare every traveler with every ring.
     /// - The per-tick scan is an inline chunk job into reused columns. Enter
     ///   and exit events run after those jobs return, so the scan itself does
     ///   not record structural commands. A tick with no crossing allocates nothing.
@@ -86,6 +89,21 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<Entity> _exitBuffer = new List<Entity>();
         private readonly List<Entity> _silentRemovalBuffer = new List<Entity>();
         private Entity[] _broadphaseBuffer = new Entity[InitialBroadphaseCapacity];
+        private VolumeRuntimeState[] _sweepVolumes = Array.Empty<VolumeRuntimeState>();
+        private WorldAabbCm[] _sweepBounds = Array.Empty<WorldAabbCm>();
+        private SweepEndpoint[] _sweepEndpoints = Array.Empty<SweepEndpoint>();
+        private double[] _moverMinY = Array.Empty<double>();
+        private double[] _moverMaxY = Array.Empty<double>();
+        private int[] _activeVolumes = Array.Empty<int>();
+        private int[] _activeVolumeSlot = Array.Empty<int>();
+        private int[] _activeMovers = Array.Empty<int>();
+        private int[] _activeMoverSlot = Array.Empty<int>();
+        private int[] _travelMover = Array.Empty<int>();
+        private int[] _travelNext = Array.Empty<int>();
+        private int _sweepVolumeCount;
+        private int _activeVolumeCount;
+        private int _activeMoverCount;
+        private int _travelHitCount;
 
         public RegionVolumeTriggerSystem(
             World world,
@@ -120,15 +138,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 MapSession session = sessionPair.Value;
                 if (session.State != MapSessionState.Active) continue;
                 SyncVolumeStates(session);
-                bool collected = false;
+                if (!PrepareVolumes(session.MapId))
+                {
+                    continue;
+                }
+
+                CollectCandidates(session.MapId);
+                PairTravelers();
                 foreach (KeyValuePair<Entity, VolumeRuntimeState> pair in _states)
                 {
                     if (pair.Value.MapId != session.MapId || pair.Value.Orphaned) continue;
-                    if (!collected)
-                    {
-                        CollectCandidates(session.MapId);
-                        collected = true;
-                    }
                     EvaluateVolume(session, pair.Value);
                 }
             }
@@ -187,7 +206,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // The partition records the cell an entity occupies now. Padding keeps
             // a unit standing on a cell edge inside the query. The travel-segment
             // pass covers a crossing that ends outside that box.
-            WorldAabbCm bounds = ToBroadphaseBounds(volume.Shape, volume.Anchor);
+            WorldAabbCm bounds = volume.TickBounds;
             int count = QueryCandidates(in bounds);
             for (int i = 0; i < count; i++)
             {
@@ -211,16 +230,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             }
 
-            for (int i = 0; i < _movers.Count; i++)
+            for (int node = volume.TravelHead; node >= 0; node = _travelNext[node])
             {
-                Entity entity = _movers.EntityAt(i);
-                if (_considered.Contains(entity) || !_movers.SegmentOverlaps(i, in bounds))
+                int mover = _travelMover[node];
+                Entity entity = _movers.EntityAt(mover);
+                if (_considered.Contains(entity) || !_movers.SegmentOverlaps(mover, in bounds))
                 {
                     continue;
                 }
 
                 _considered.Add(entity);
-                Consider(session, volume, _movers.At(i));
+                Consider(session, volume, _movers.At(mover));
             }
 
             _exitBuffer.Clear();
@@ -392,15 +412,264 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private static bool SegmentOverlapsBox(Fix64Vec2 start, Fix64Vec2 end, in WorldAabbCm box)
         {
+            SegmentBounds(start, end, out double minX, out double minY, out double maxX, out double maxY);
+            return maxX >= box.Left && minX <= box.Right && maxY >= box.Top && minY <= box.Bottom;
+        }
+
+        private static void SegmentBounds(
+            Fix64Vec2 start,
+            Fix64Vec2 end,
+            out double minX,
+            out double minY,
+            out double maxX,
+            out double maxY)
+        {
             double ax = start.X.ToDouble();
             double ay = start.Y.ToDouble();
             double bx = end.X.ToDouble();
             double by = end.Y.ToDouble();
-            double minX = Math.Min(ax, bx);
-            double maxX = Math.Max(ax, bx);
-            double minY = Math.Min(ay, by);
-            double maxY = Math.Max(ay, by);
-            return maxX >= box.Left && minX <= box.Right && maxY >= box.Top && minY <= box.Bottom;
+            minX = Math.Min(ax, bx);
+            maxX = Math.Max(ax, bx);
+            minY = Math.Min(ay, by);
+            maxY = Math.Max(ay, by);
+        }
+
+        private bool PrepareVolumes(MapId mapId)
+        {
+            _sweepVolumeCount = 0;
+            _travelHitCount = 0;
+            bool any = false;
+            foreach (KeyValuePair<Entity, VolumeRuntimeState> pair in _states)
+            {
+                VolumeRuntimeState volume = pair.Value;
+                if (volume.MapId != mapId || volume.Orphaned)
+                {
+                    continue;
+                }
+
+                any = true;
+                volume.TravelHead = -1;
+                if (_sweepVolumeCount == _sweepVolumes.Length)
+                {
+                    GrowSweepVolumes();
+                }
+
+                WorldAabbCm bounds = ToBroadphaseBounds(volume.Shape, volume.Anchor);
+                volume.TickBounds = bounds;
+                _sweepVolumes[_sweepVolumeCount] = volume;
+                _sweepBounds[_sweepVolumeCount] = bounds;
+                _sweepVolumeCount++;
+            }
+
+            return any;
+        }
+
+        private void PairTravelers()
+        {
+            int moverCount = _movers.Count;
+            if (moverCount == 0 || _sweepVolumeCount == 0)
+            {
+                return;
+            }
+
+            EnsureMoverScratch(moverCount);
+            int endpointCount = (_sweepVolumeCount + moverCount) * 2;
+            if (endpointCount > _sweepEndpoints.Length)
+            {
+                Grow(ref _sweepEndpoints, endpointCount);
+            }
+
+            int endpoint = 0;
+            for (int i = 0; i < _sweepVolumeCount; i++)
+            {
+                WorldAabbCm box = _sweepBounds[i];
+                _sweepEndpoints[endpoint++] = new SweepEndpoint(box.Left, i, SweepEndpointKind.VolumeStart);
+                _sweepEndpoints[endpoint++] = new SweepEndpoint(box.Right, i, SweepEndpointKind.VolumeEnd);
+            }
+
+            for (int i = 0; i < moverCount; i++)
+            {
+                _movers.SegmentBounds(i, out double minX, out double minY, out double maxX, out double maxY);
+                _moverMinY[i] = minY;
+                _moverMaxY[i] = maxY;
+                _sweepEndpoints[endpoint++] = new SweepEndpoint(minX, i, SweepEndpointKind.MoverStart);
+                _sweepEndpoints[endpoint++] = new SweepEndpoint(maxX, i, SweepEndpointKind.MoverEnd);
+            }
+
+            Array.Sort(_sweepEndpoints, 0, endpoint);
+            _activeVolumeCount = 0;
+            _activeMoverCount = 0;
+            for (int i = 0; i < endpoint; i++)
+            {
+                SweepEndpoint item = _sweepEndpoints[i];
+                switch (item.Kind)
+                {
+                    case SweepEndpointKind.VolumeStart:
+                        RecordVolumeAgainstActiveMovers(item.Index);
+                        ActivateVolume(item.Index);
+                        break;
+                    case SweepEndpointKind.MoverStart:
+                        RecordMoverAgainstActiveVolumes(item.Index);
+                        ActivateMover(item.Index);
+                        break;
+                    case SweepEndpointKind.VolumeEnd:
+                        DeactivateVolume(item.Index);
+                        break;
+                    default:
+                        DeactivateMover(item.Index);
+                        break;
+                }
+            }
+
+            if (_activeVolumeCount != 0 || _activeMoverCount != 0)
+            {
+                throw new InvalidOperationException("Region volume travel sweep left an interval active.");
+            }
+        }
+
+        private void RecordVolumeAgainstActiveMovers(int volume)
+        {
+            WorldAabbCm box = _sweepBounds[volume];
+            for (int i = 0; i < _activeMoverCount; i++)
+            {
+                int mover = _activeMovers[i];
+                if (_moverMaxY[mover] >= box.Top && _moverMinY[mover] <= box.Bottom)
+                {
+                    PushTravelHit(volume, mover);
+                }
+            }
+        }
+
+        private void RecordMoverAgainstActiveVolumes(int mover)
+        {
+            double minY = _moverMinY[mover];
+            double maxY = _moverMaxY[mover];
+            for (int i = 0; i < _activeVolumeCount; i++)
+            {
+                int volume = _activeVolumes[i];
+                WorldAabbCm box = _sweepBounds[volume];
+                if (maxY >= box.Top && minY <= box.Bottom)
+                {
+                    PushTravelHit(volume, mover);
+                }
+            }
+        }
+
+        private void PushTravelHit(int volume, int mover)
+        {
+            if (_travelHitCount == _travelMover.Length)
+            {
+                int next = Math.Max(64, _travelMover.Length * 2);
+                Grow(ref _travelMover, next);
+                Grow(ref _travelNext, next);
+            }
+
+            int node = _travelHitCount++;
+            VolumeRuntimeState state = _sweepVolumes[volume];
+            _travelMover[node] = mover;
+            _travelNext[node] = state.TravelHead;
+            state.TravelHead = node;
+        }
+
+        private void ActivateVolume(int volume)
+        {
+            if (_activeVolumeSlot[volume] != -1)
+            {
+                throw new InvalidOperationException("Region volume travel sweep activated a ring that was already open.");
+            }
+
+            _activeVolumeSlot[volume] = _activeVolumeCount;
+            _activeVolumes[_activeVolumeCount++] = volume;
+        }
+
+        private void DeactivateVolume(int volume)
+        {
+            int slot = _activeVolumeSlot[volume];
+            if ((uint)slot >= (uint)_activeVolumeCount)
+            {
+                throw new InvalidOperationException("Region volume travel sweep closed a ring that was not open.");
+            }
+
+            int last = --_activeVolumeCount;
+            int moved = _activeVolumes[last];
+            _activeVolumes[slot] = moved;
+            _activeVolumeSlot[moved] = slot;
+            _activeVolumeSlot[volume] = -1;
+        }
+
+        private void ActivateMover(int mover)
+        {
+            if (_activeMoverSlot[mover] != -1)
+            {
+                throw new InvalidOperationException("Region volume travel sweep activated a traveler that was already open.");
+            }
+
+            _activeMoverSlot[mover] = _activeMoverCount;
+            _activeMovers[_activeMoverCount++] = mover;
+        }
+
+        private void DeactivateMover(int mover)
+        {
+            int slot = _activeMoverSlot[mover];
+            if ((uint)slot >= (uint)_activeMoverCount)
+            {
+                throw new InvalidOperationException("Region volume travel sweep closed a traveler that was not open.");
+            }
+
+            int last = --_activeMoverCount;
+            int moved = _activeMovers[last];
+            _activeMovers[slot] = moved;
+            _activeMoverSlot[moved] = slot;
+            _activeMoverSlot[mover] = -1;
+        }
+
+        private void GrowSweepVolumes()
+        {
+            int n = Math.Max(64, _sweepVolumes.Length * 2);
+            int oldSlots = _activeVolumeSlot.Length;
+            Array.Resize(ref _sweepVolumes, n);
+            Array.Resize(ref _sweepBounds, n);
+            Array.Resize(ref _activeVolumes, n);
+            Array.Resize(ref _activeVolumeSlot, n);
+            for (int i = oldSlots; i < n; i++)
+            {
+                _activeVolumeSlot[i] = -1;
+            }
+        }
+
+        private void EnsureMoverScratch(int moverCount)
+        {
+            if (moverCount <= _moverMinY.Length)
+            {
+                return;
+            }
+
+            int n = Math.Max(64, _moverMinY.Length);
+            while (n < moverCount)
+            {
+                n *= 2;
+            }
+
+            int oldSlots = _activeMoverSlot.Length;
+            Array.Resize(ref _moverMinY, n);
+            Array.Resize(ref _moverMaxY, n);
+            Array.Resize(ref _activeMovers, n);
+            Array.Resize(ref _activeMoverSlot, n);
+            for (int i = oldSlots; i < n; i++)
+            {
+                _activeMoverSlot[i] = -1;
+            }
+        }
+
+        private static void Grow<T>(ref T[] array, int needed)
+        {
+            int n = Math.Max(64, array.Length);
+            while (n < needed)
+            {
+                n *= 2;
+            }
+
+            Array.Resize(ref array, n);
         }
 
         private void OnVolumeEntityDestroyed(in Entity entity)
@@ -517,6 +786,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public bool SegmentOverlaps(int index, in WorldAabbCm box)
             {
                 return SegmentOverlapsBox(_previous[index], _positions[index], in box);
+            }
+
+            public void SegmentBounds(int index, out double minX, out double minY, out double maxX, out double maxY)
+            {
+                RegionVolumeTriggerSystem.SegmentBounds(_previous[index], _positions[index], out minX, out minY, out maxX, out maxY);
             }
 
             public TrackedEntity At(int index)
@@ -727,6 +1001,39 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
+        private enum SweepEndpointKind : byte
+        {
+            VolumeStart = 0,
+            MoverStart = 1,
+            VolumeEnd = 2,
+            MoverEnd = 3,
+        }
+
+        private readonly struct SweepEndpoint : IComparable<SweepEndpoint>
+        {
+            public readonly double X;
+            public readonly int Index;
+            public readonly SweepEndpointKind Kind;
+
+            public SweepEndpoint(double x, int index, SweepEndpointKind kind)
+            {
+                X = x;
+                Index = index;
+                Kind = kind;
+            }
+
+            public int CompareTo(SweepEndpoint other)
+            {
+                int order = X.CompareTo(other.X);
+                if (order != 0)
+                {
+                    return order;
+                }
+
+                return Kind - other.Kind;
+            }
+        }
+
         private readonly struct TrackedEntity
         {
             public readonly Entity Entity;
@@ -775,6 +1082,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public EventSchema? ExitSchema { get; set; }
             public RegionVolumePayloadEntry[]? Payload { get; set; }
             public bool Orphaned { get; set; }
+            public int TravelHead { get; set; } = -1;
+            public WorldAabbCm TickBounds { get; set; }
             public HashSet<Entity> Inside { get; } = new HashSet<Entity>();
 
             public void Refresh(
