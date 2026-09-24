@@ -142,7 +142,7 @@ PathRequest.AgentTypeId
 | 所需能力 | 归属 | 已有与剩余 |
 |---|---|---|
 | per-Agent cost 编译和查询 | Pathing / Query | 主线 AutoPathService 已有 |
-| 纯 NavMesh 入口保留 AgentTypeId | GameEngine / Pathing | 主线仍绑定首 Agent；本地 #1402 分支有候选修复 |
+| 纯 NavMesh 入口保留 AgentTypeId | GameEngine / Pathing | 纯 NavMesh 会话的 Auto 请求按兵种走 `AutoPathService`。节点图和 NavMesh 同时在场时，显式 NavMesh 域仍用首个兵种的 adapter |
 | 分类去 Cost 与中立归属 | Map/Terrain | #372；旧 #1006 分支有去 Cost/分类投影片段 |
 | 运行中矩阵编辑与策略版本 | Pathing / Editor | 尚需明确应用时机和路径失效 |
 | 逐段 Agent 成本诊断 | Query / Presentation | 待作者可读接口 |
@@ -207,7 +207,7 @@ Feature: 区域分类与 Agent 通行代价正交
 | #412 | closed，已并入 #372/#1342/#1345 | 关闭表示范围整合，不代表全部代码已进 main |
 | 主线 PathingConfig / AutoPathService | 已有每 Agent 的 areaCosts 与编译/查询消费 | 复用，不能列为从零开发 |
 | 主线 LogicTerrainCell / NavMeshBakeConfig.Areas | 仍含 Cost 字段 | 现有残留，不是目标 schema；按 #372 清理 |
-| 主线 GameEngine 纯 NavMesh 入口 | CreateDefaultNavMeshPathService 取 AgentTypes[0]，注册单 query adapter | 补逐请求 AgentTypeId 选择，不能宣称所有入口已正交 |
+| 主线 GameEngine 纯 NavMesh 入口 | 无节点图时用 `AutoPathService`，按 `AgentTypeId` 选兵种、代价表和 PreferMesh / Direct。有节点图时，显式 NavMesh 域仍走 `CreateDefaultNavMeshPathService` 的首个兵种 | 双兵种不同代价的实机演示、路径缓存隔离仍未验收 |
 | 本地 codex/issue-1402-route-init，5bd22c9e4e；codex/issue-1402，1d2eb4a2ec | 已有纯 NavMesh Auto 请求按 AgentTypeId 选择的代码与回归，未在 main | 按当前 API 提取；现有分支测试不等于双 Agent 成本实机验收 |
 | 本地/远端 codex/terr-399-merge-main，f81f2b240d / PR #1006 | 分支 Map/Fields/LogicTerrainField.cs 已去 Cost，80ddd77b7a 有分类投影；PR closed 且未合并 | 只提取分类/去 Cost 合同，旧持久化和 CDT 整包不回迁 |
 | codex/nav-bake-policy | 仍保留 LogicTerrainCell.Cost | 不能把它当作 cost 正交已完成的分支 |
@@ -216,7 +216,7 @@ Feature: 区域分类与 Agent 通行代价正交
 |---|---|---|
 | 编辑器 | #479 展示 Agent × area 矩阵，明确当前 Agent 行 | 修改一行只影响一种策略 |
 | 工具 | #372/#1345 分类不写 cost；输出策略/几何各自指纹 | 单改矩阵不重烘焙 |
-| Runtime | 补纯 NavMesh 请求身份接线、隔离策略和路径缓存 | 同几何不同 Agent 走不同路 |
+| Runtime | 纯 NavMesh 的 Auto 请求已按兵种接线。路径缓存隔离、同几何不同代价的双队演示仍未做 | 同几何不同 Agent 走不同路 |
 | Showcase | 双 Agent 主循环与相同行消融 | 正式输入、真实到达、几何 hash 不变 |
 
 主线证据：

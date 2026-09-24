@@ -436,7 +436,7 @@ UAT 证据至少包括：启动 preset、Agent Bridge `/health` 两次且 `pumpC
 - 真实 NavTileStore overlay、N 开关、后台障碍重烤和生产帧 NavMesh pass 已进入 main。
 - Agent Bridge 已有导航空间探针和查询工具。
 - 此前导航专项审计记录为架构回归 91/91 通过（本次文档修改未重跑运行时测试）；`.height` 单瓦片烘焙及走性 PNG 导出通过。
-- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表；`LogicTerrainCell.Cost`、`NavMeshBakeConfig.Areas[].Cost` 仍是待清理残留。纯 NavMesh 引导仍用首个 Agent 的 query adapter，不能宣称所有入口都按请求身份选择策略，详见 [区域代价现状](navmesh-features/area-costs.md)。
+- `PathingConfig` 与 `AutoPathService` 已按 Agent 编译区域代价表；`LogicTerrainCell.Cost`、`NavMeshBakeConfig.Areas[].Cost` 仍是待清理残留。只有 NavMesh 的地图，Auto 请求按兵种选择策略。节点图和 NavMesh 同时在场时，显式 NavMesh 域仍用首个兵种的 query adapter，详见 [区域代价现状](navmesh-features/area-costs.md)。
 - 当前配置仍由 `NavMeshBakeConfig` 的 `mode/algorithm/profiles/layers/areas/runtimeIncremental` 主导，`NavBakeContext` 仍直接接收 `LogicTerrainField`。
 - 多板 registry、board 身份路径、非零 origin、两轴 tile 尺寸和完整 source snapshot 尚未达到目标合同。
 - 此前审计的运行时 4 个场景中 2 个通过、2 个失败（本次未重跑）：一个未在固定 tick 窗口内等到 revision，另一个路径绕行通过但小队未全部抵达。

@@ -24,7 +24,7 @@
 | 14. [NavMesh 真实调试显示](navmesh-debug-view.md) | 真实三角形、边界、瓦片拾取 | 真实 Raylib 显示已入主线；交互检查待补 | 5 |
 | 15. [NavMesh Link](navmesh-links.md) | 非连续连接与动作交接 | 尚未实现，不可玩 | 3 |
 | 16. [烘焙源接入](source-and-semantics.md) | 高度/grid/hex 统一输入 | 命名/高度场直灌已入主线；源合同待收敛 | 3 |
-| 17. [区域分类与 Agent 通行代价](area-costs.md) | area × Agent 代价矩阵 | 主线矩阵已有；去 Cost 和纯 NavMesh 接线有未合分支 | 3 |
+| 17. [区域分类与 Agent 通行代价](area-costs.md) | area × Agent 代价矩阵 | 矩阵已有；纯 NavMesh 的 Auto 请求已按兵种选择。去 Cost 和双队代价演示未收口 | 3 |
 | 18. [水面导航语义](water-semantics.md) | 水深、吃水和船宽 | 水域阻挡片段已有；水深/吃水链未收口 | 3 |
 | 19. [NavTile 产物与 Manifest](artifacts-and-manifest.md) | 持久产物、身份与冷加载 | .ntil/Store 已有；Manifest 与冷启动待补 | 5 |
 | 20. [查询结果与失败诊断](query-diagnostics.md) | 失败原因和修复动作 | 粗状态已有；详细原因与作者动作待补 | 6 |
