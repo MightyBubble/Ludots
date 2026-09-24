@@ -123,6 +123,139 @@ namespace Ludots.Core.Gameplay.Calendar
                 $"Calendar cycle '{cycle.Id}' could not resolve day offset {offset}.");
         }
 
+        public static int PhaseIndex(CalendarCycleDefinition cycle, int dayIndex)
+        {
+            ArgumentNullException.ThrowIfNull(cycle);
+            if (dayIndex < 0)
+            {
+                throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
+            }
+
+            int offset = dayIndex % cycle.LengthDays;
+            int cursor = 0;
+            IReadOnlyList<CalendarPhaseDefinition> phases = cycle.Phases;
+            for (int i = 0; i < phases.Count; i++)
+            {
+                int next = cursor + phases[i].LengthDays;
+                if (offset < next)
+                {
+                    return i;
+                }
+
+                cursor = next;
+            }
+
+            throw new InvalidOperationException(
+                $"Calendar cycle '{cycle.Id}' could not resolve day offset {offset}.");
+        }
+
+        /// <summary>
+        /// 不写相位内第几天：已经在该相位里是 0，否则取下一次进入起点的整日数。
+        /// 同一相位名出现多次时取最近的一次。找不到该相位返回 false。
+        /// </summary>
+        public static bool TryDaysUntilPhase(
+            CalendarCycleDefinition cycle,
+            int dayIndex,
+            string phaseId,
+            out int days)
+            => TryDaysUntilPhase(cycle, dayIndex, phaseId, 0, out days) == CalendarDaysUntilStatus.Found;
+
+        /// <summary>
+        /// dayInPhase 为 0 时问相位起点。为正时问该相位里的第几天（1 基）：
+        /// 起点之前加上这段偏移，已经在目标日是 0，过了目标日就数到下一次。
+        /// </summary>
+        public static CalendarDaysUntilStatus TryDaysUntilPhase(
+            CalendarCycleDefinition cycle,
+            int dayIndex,
+            string phaseId,
+            int dayInPhase,
+            out int days)
+        {
+            ArgumentNullException.ThrowIfNull(cycle);
+            if (dayIndex < 0)
+            {
+                throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
+            }
+
+            if (string.IsNullOrWhiteSpace(phaseId))
+            {
+                throw new InvalidOperationException("Calendar phase id is required.");
+            }
+
+            if (dayInPhase < 0)
+            {
+                throw new InvalidOperationException(
+                    "Calendar day within a phase must be >= 1, or 0 to ask for the phase start.");
+            }
+
+            days = 0;
+            int offset = dayIndex % cycle.LengthDays;
+            int cursor = 0;
+            int best = -1;
+            bool found = false;
+            bool fits = false;
+            IReadOnlyList<CalendarPhaseDefinition> phases = cycle.Phases;
+            for (int i = 0; i < phases.Count; i++)
+            {
+                CalendarPhaseDefinition phase = phases[i];
+                int next = cursor + phase.LengthDays;
+                if (string.Equals(phase.Id, phaseId, StringComparison.Ordinal))
+                {
+                    found = true;
+                    if (dayInPhase == 0)
+                    {
+                        fits = true;
+                        if (offset >= cursor && offset < next)
+                        {
+                            days = 0;
+                            return CalendarDaysUntilStatus.Found;
+                        }
+
+                        int delta = offset < cursor
+                            ? cursor - offset
+                            : cycle.LengthDays - offset + cursor;
+                        if (best < 0 || delta < best)
+                        {
+                            best = delta;
+                        }
+                    }
+                    else if (dayInPhase <= phase.LengthDays)
+                    {
+                        fits = true;
+                        int anchor = cursor + dayInPhase - 1;
+                        if (offset == anchor)
+                        {
+                            days = 0;
+                            return CalendarDaysUntilStatus.Found;
+                        }
+
+                        int delta = offset < anchor
+                            ? anchor - offset
+                            : cycle.LengthDays - offset + anchor;
+                        if (best < 0 || delta < best)
+                        {
+                            best = delta;
+                        }
+                    }
+                }
+
+                cursor = next;
+            }
+
+            if (!found)
+            {
+                return CalendarDaysUntilStatus.MissingPhase;
+            }
+
+            if (!fits || best < 0)
+            {
+                return CalendarDaysUntilStatus.DayExceedsPhase;
+            }
+
+            days = best;
+            return CalendarDaysUntilStatus.Found;
+        }
+
         public static CalendarDayPhaseDefinition ResolveDayPhase(
             IReadOnlyList<CalendarDayPhaseDefinition> phases,
             int ticksIntoDay,

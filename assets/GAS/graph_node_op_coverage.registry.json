@@ -2801,7 +2801,9 @@
     {
       "op": "RelationshipEnsureLink",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipEnsureLink",
       "status": "covered",
@@ -2862,7 +2864,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipGetMetric",
@@ -2885,8 +2889,10 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipHasFlag",
@@ -2911,8 +2917,10 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipHasLink",
@@ -3009,7 +3017,9 @@
     {
       "op": "RelationshipRemoveLink",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipRemoveLink",
       "status": "covered",
@@ -4272,6 +4282,81 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryTimeFlowAcceptanceTests.ReleaseTimeFlowToken_ReleasesThePauseItJustTook"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadConfigKey",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadConfigKey",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.LoadConfigKey_ShowsTheRegisteredSummerId"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarCyclePhaseIndex",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarCyclePhaseIndex",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarCyclePhaseIndex_ShowsTheSeasonSlot"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarDaysUntilPhase",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarDaysUntilPhase",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarDaysUntilPhase_ShowsDaysUntilAutumn"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SubInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SubInt",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.SubInt_ShowsDaysUntilDayThreeSixty"
       ],
       "codegenStatus": "covered"
     }

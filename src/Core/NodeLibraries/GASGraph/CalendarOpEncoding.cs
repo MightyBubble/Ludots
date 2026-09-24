@@ -27,5 +27,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static int UnpackCycle(int imm) => imm & MaxKeyId;
 
         public static int UnpackCalendar(int imm) => (imm >> 16) & MaxKeyId;
+
+        /// <summary>
+        /// ReadCalendarDaysUntilPhase 把相位符号下标放在低 16 位、相位内第几天放在高 16 位，再存进 ImmF 的原始位。
+        /// 第几天为 0 表示问相位起点。A/B/C 在补丁前要留给历法符号。
+        /// </summary>
+        public static float PackPhaseAddress(int symbolIndex, int dayInPhase)
+        {
+            if ((uint)symbolIndex > MaxKeyId || (uint)dayInPhase > MaxKeyId)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar phase address out of range (symbol={symbolIndex}, day={dayInPhase}).");
+            }
+
+            return BitConverter.Int32BitsToSingle(symbolIndex | (dayInPhase << 16));
+        }
+
+        public static int UnpackPhaseSymbol(float bits) => BitConverter.SingleToInt32Bits(bits) & MaxKeyId;
+
+        public static int UnpackPhaseDay(float bits) => (BitConverter.SingleToInt32Bits(bits) >> 16) & MaxKeyId;
     }
 }

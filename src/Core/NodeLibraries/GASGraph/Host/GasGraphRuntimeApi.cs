@@ -500,6 +500,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)));
         }
 
+        public int ReadCalendarCyclePhaseIndex(int packedImm)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            return calendar.ReadCyclePhaseIndex(
+                ResolveCalendarId(calendar, CalendarOpEncoding.UnpackCalendar(packedImm)),
+                ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)));
+        }
+
+        public int ReadCalendarDaysUntilPhase(int packedImm, string phaseId, int dayInPhase)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            return calendar.ReadDaysUntilPhase(
+                ResolveCalendarId(calendar, CalendarOpEncoding.UnpackCalendar(packedImm)),
+                ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)),
+                phaseId,
+                dayInPhase);
+        }
+
         public void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
         {
             RequireCalendar().ApplyInitialState(dayIndex, ticksIntoDay);
@@ -2110,55 +2128,119 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(EnsureRelationshipLink));
-            RejectNonTransactionalEffectSideEffect(nameof(EnsureRelationshipLink));
-            RequireRelationshipRuntime().EnsureLink(source, target, typeId);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.IsActive == true)
+            {
+                _effectSideEffects.StageRelationshipEnsureLink(runtime, source, target, typeId);
+                return;
+            }
+
+            runtime.EnsureLink(source, target, typeId);
         }
         public void RemoveRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(RemoveRelationshipLink));
-            RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
-            RequireRelationshipRuntime().RemoveLink(source, target, typeId);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.IsActive == true)
+            {
+                _effectSideEffects.StageRelationshipRemoveLink(runtime, source, target, typeId);
+                return;
+            }
+
+            runtime.RemoveLink(source, target, typeId);
         }
         public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
-            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
-            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.IsActive == true)
+            {
+                return _effectSideEffects.StageRelationshipSetMetric(runtime, source, target, typeId, metricId, value);
+            }
+
+            return runtime.SetMetric(source, target, typeId, metricId, value);
         }
         public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
-            RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
-            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.IsActive == true)
+            {
+                return _effectSideEffects.StageRelationshipAddMetric(runtime, source, target, typeId, metricId, delta);
+            }
+
+            return runtime.AddMetric(source, target, typeId, metricId, delta);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
-            => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
+        {
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.TryReadRelationshipMetric(runtime, source, target, metricId, typeId, out short staged) == true)
+            {
+                return staged;
+            }
+
+            return runtime.GetMetric(source, target, typeId, metricId);
+        }
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
-            => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
+        {
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.TryReadRelationshipFlag(runtime, source, target, flagId, typeId, out bool staged) == true)
+            {
+                return staged;
+            }
+
+            return runtime.HasFlag(source, target, typeId, flagId);
+        }
         public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
-            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
-            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.IsActive == true)
+            {
+                _effectSideEffects.StageRelationshipSetFlag(runtime, source, target, typeId, flagId, enabled);
+                return;
+            }
+
+            runtime.SetFlag(source, target, typeId, flagId, enabled);
         }
         public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            int count = RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer, out int dropped);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            int count = runtime.CollectOutgoing(source, typeId, buffer, out int dropped);
+            _effectSideEffects?.AdjustRelationshipOutgoing(runtime, source, typeId, buffer, ref count, ref dropped);
             return new RelationshipQueryResult(count, dropped);
         }
         public RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            int count = RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer, out int dropped);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            int count = runtime.CollectIncoming(target, typeId, buffer, out int dropped);
+            _effectSideEffects?.AdjustRelationshipIncoming(runtime, target, typeId, buffer, ref count, ref dropped);
             return new RelationshipQueryResult(count, dropped);
         }
         public RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            int count = RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer, out int dropped);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.HasPendingRelationshipLinks == true)
+            {
+                int stagedCount = runtime.CollectOutgoing(first, typeId, buffer, out int stagedDropped);
+                _effectSideEffects.AdjustRelationshipOutgoing(runtime, first, typeId, buffer, ref stagedCount, ref stagedDropped);
+                _effectSideEffects.KeepRelationshipMutual(runtime, second, typeId, buffer, ref stagedCount);
+                return new RelationshipQueryResult(stagedCount, stagedDropped);
+            }
+
+            int count = runtime.CollectMutual(first, second, typeId, buffer, out int dropped);
             return new RelationshipQueryResult(count, dropped);
         }
         public RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            int count = RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer, out int dropped);
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.HasPendingRelationshipLinks == true)
+            {
+                _effectSideEffects.RebuildRelationshipBetweenPair(runtime, source, target, typeId, buffer, out int stagedCount, out int stagedDropped);
+                return new RelationshipQueryResult(stagedCount, stagedDropped);
+            }
+
+            int count = runtime.CollectBetweenPair(source, target, typeId, buffer, out int dropped);
             return new RelationshipQueryResult(count, dropped);
         }
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
@@ -2183,7 +2265,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         // ── Topology predicates (RFC-0065 PROV-4b / DEC-5) ──
 
         public bool HasRelationshipLink(Entity source, Entity target, int typeId)
-            => RequireRelationshipRuntime().HasLink(source, target, typeId);
+        {
+            RelationshipRuntime runtime = RequireRelationshipRuntime();
+            if (_effectSideEffects?.TryReadRelationshipHasLink(runtime, source, target, typeId, out bool staged) == true)
+            {
+                return staged;
+            }
+
+            return runtime.HasLink(source, target, typeId);
+        }
 
         public Entity ResolveControlDomain(Entity target)
             => RequireControlDomains().TryResolveControlDomain(target, out Entity domainRep) ? domainRep : Entity.Null;

@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Relationships;
@@ -193,7 +194,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RelationshipSetMetric or
                 GraphNodeOp.RelationshipAddMetric or
                 GraphNodeOp.RelationshipSetFlag
-                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, description),
+                    => EffectOperationMetadata.GasTransactional(description),
 
                 GraphNodeOp.BeginLifecycleTransaction
                     => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, description),
@@ -218,6 +219,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RandomFloat01 or
                 GraphNodeOp.WeightedPick or
                 GraphNodeOp.AddInt or
+                GraphNodeOp.SubInt or
                 GraphNodeOp.CompareGtFloat or
                 GraphNodeOp.CompareLtInt or
                 GraphNodeOp.CompareEqInt or
@@ -379,6 +381,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ReadCalendarYear or
                 GraphNodeOp.ReadCalendarCyclePhase or
                 GraphNodeOp.ReadCalendarCycleDay or
+                GraphNodeOp.ReadCalendarCyclePhaseIndex or
+                GraphNodeOp.ReadCalendarDaysUntilPhase or
+                GraphNodeOp.LoadConfigKey or
                 GraphNodeOp.ApplyCalendarStart or
                 GraphNodeOp.SetCalendarDayIndex or
                 GraphNodeOp.SetCalendarTicksIntoDay or
@@ -1014,6 +1019,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.AcquireTimeFlowPause, HandleAcquireTimeFlowPause, "AcquireTimeFlowPause graph opcode.");
             Register(GraphNodeOp.AcquireTimeFlowScale, HandleAcquireTimeFlowScale, "AcquireTimeFlowScale graph opcode.");
             Register(GraphNodeOp.ReleaseTimeFlowToken, HandleReleaseTimeFlowToken, "ReleaseTimeFlowToken graph opcode.");
+            Register(GraphNodeOp.LoadConfigKey, HandleLoadConfigKey, "LoadConfigKey graph opcode.");
+            Register(GraphNodeOp.ReadCalendarCyclePhaseIndex, HandleReadCalendarCyclePhaseIndex, "ReadCalendarCyclePhaseIndex graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDaysUntilPhase, HandleReadCalendarDaysUntilPhase, "ReadCalendarDaysUntilPhase graph opcode.");
+            Register(GraphNodeOp.SubInt, HandleSubInt, "SubInt graph opcode.");
         }
 
         // ── Value Ops ──
@@ -1184,6 +1193,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleReleaseTimeFlowToken(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.ReleaseTimeFlowToken(s.I[ins.A]);
+        }
+
+        private static void HandleLoadConfigKey(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string symbol = RequireProgramSymbol(ref s, ins.Imm, "Config key");
+            int id = ConfigKeyRegistry.GetId(symbol);
+            if (id == ConfigKeyRegistry.InvalidId)
+            {
+                throw new InvalidOperationException($"Config key '{symbol}' is not registered.");
+            }
+
+            s.I[ins.Dst] = id;
+        }
+
+        private static void HandleReadCalendarCyclePhaseIndex(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarCyclePhaseIndex(ins.Imm);
+        }
+
+        private static void HandleReadCalendarDaysUntilPhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string phaseId = RequireProgramSymbol(ref s, CalendarOpEncoding.UnpackPhaseSymbol(ins.ImmF), "Calendar phase");
+            s.I[ins.Dst] = s.Api.ReadCalendarDaysUntilPhase(
+                ins.Imm, phaseId, CalendarOpEncoding.UnpackPhaseDay(ins.ImmF));
+        }
+
+        private static void HandleSubInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.I[ins.A] - s.I[ins.B];
+        }
+
+        private static string RequireProgramSymbol(ref GraphExecutionState s, int symbolIndex, string role)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    $"{role} symbol requires a registered graph program. graphId={s.CurrentGraphId}.");
+            }
+
+            string[] symbols = registration.Symbols;
+            if ((uint)symbolIndex >= (uint)symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"{role} symbol index {symbolIndex} is outside the symbol table of graph {s.CurrentGraphId}.");
+            }
+
+            string symbol = symbols[symbolIndex];
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                throw new InvalidOperationException(
+                    $"{role} symbol index {symbolIndex} is empty on graph {s.CurrentGraphId}.");
+            }
+
+            return symbol;
         }
 
         private static string RequireTimeFlowDomain(ref GraphExecutionState s, int symbolIndex)
@@ -2073,7 +2137,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleSubmitAssignedOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.Api.SubmitAssignedOrder(s.Caster, s.E[ins.A], ins.Imm, s.I[ins.B], s.I[ins.C]);
+            Entity target = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
+            s.Api.SubmitAssignedOrder(s.Caster, target, ins.Imm, s.I[ins.B], s.I[ins.C]);
         }
 
         private static void HandleCompleteActiveOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

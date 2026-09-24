@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -122,6 +124,324 @@ public sealed class GraphCalendarOpsTests
         Assert.That(error.Message, Does.Contain("Requested dayIndex=2"));
         api.ApplyCalendarStart(1, 0);
         Assert.That(api.ReadCalendarDayIndex(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void LoadConfigKey_ResolvesRegisteredNameAndRejectsUnknown()
+    {
+        (_, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        int summer = ConfigKeyRegistry.GetId("summer");
+        Assert.That(summer, Is.Not.EqualTo(ConfigKeyRegistry.InvalidId));
+
+        GraphSliceResult known = CompilePatchExecute(api, ScriptOf(
+            new GraphControlFlowNode { Id = "key", Op = nameof(GraphNodeOp.LoadConfigKey), Symbol = "summer" },
+            new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            new GraphControlFlowValueEdge("key", "value", "halt", "value")));
+        Assert.That(known.ReturnInt, Is.EqualTo(summer));
+
+        const string missing = "not-registered-phase-zz";
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            CompilePatchExecute(api, ScriptOf(
+                new GraphControlFlowNode { Id = "key", Op = nameof(GraphNodeOp.LoadConfigKey), Symbol = missing },
+                new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+                new GraphControlFlowValueEdge("key", "value", "halt", "value"))))!;
+        Assert.That(error.Message, Does.Contain(missing));
+        Assert.That(ConfigKeyRegistry.GetId(missing), Is.EqualTo(ConfigKeyRegistry.InvalidId));
+    }
+
+    [Test]
+    public void ReadCalendarCyclePhaseIndex_MatchesThePhaseTableSlot()
+    {
+        (CalendarRuntime runtime, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        int index = runtime.ReadCyclePhaseIndex(CalendarId, "season");
+        Assert.That(index, Is.EqualTo(1));
+        Assert.That(runtime.Project(CalendarId).Cycles.Single(cycle => cycle.CycleId == "season").PhaseIndex, Is.EqualTo(index));
+
+        GraphSliceResult result = CompilePatchExecute(api, ScriptOf(
+            new GraphControlFlowNode
+            {
+                Id = "slot",
+                Op = nameof(GraphNodeOp.ReadCalendarCyclePhaseIndex),
+                Calendar = CalendarId,
+                Cycle = "season",
+            },
+            new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            new GraphControlFlowValueEdge("slot", "value", "halt", "value")));
+        Assert.That(result.ReturnInt, Is.EqualTo(index));
+
+        var disabled = new CalendarRuntime(null, new CalendarDefinitionRegistry());
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            disabled.ReadCyclePhaseIndex(CalendarId, "season"))!;
+        Assert.That(error.Message, Does.Contain("Calendar is not enabled"));
+    }
+
+    [Test]
+    public void ReadCalendarDaysUntilPhase_CountsWholeDaysUntilThePhaseStarts()
+    {
+        (CalendarRuntime runtime, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        Assert.That(runtime.ReadDaysUntilPhase(CalendarId, "season", "summer"), Is.EqualTo(0));
+        Assert.That(runtime.ReadDaysUntilPhase(CalendarId, "season", "autumn"), Is.EqualTo(90));
+        Assert.That(runtime.ReadDaysUntilPhase(CalendarId, "season", "spring"), Is.EqualTo(270));
+
+        var festival = new CalendarCycleDefinition(
+            "festival",
+            10,
+            new[]
+            {
+                new CalendarPhaseDefinition("chunjie", "春节", 5),
+                new CalendarPhaseDefinition("ordinary", "平", 4),
+                new CalendarPhaseDefinition("duanwu", "端午", 1),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(festival, 0, "duanwu", out int untilDuanwu), Is.True);
+        Assert.That(untilDuanwu, Is.EqualTo(9));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(festival, 8, "duanwu", out int dayBefore), Is.True);
+        Assert.That(dayBefore, Is.EqualTo(1));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(festival, 9, "duanwu", out int inside), Is.True);
+        Assert.That(inside, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(festival, 0, "chunjie", out int insideChunjie), Is.True);
+        Assert.That(insideChunjie, Is.EqualTo(0));
+
+        var months = new CalendarCycleDefinition(
+            "month",
+            30,
+            new[]
+            {
+                new CalendarPhaseDefinition("month.03", "三月", 10),
+                new CalendarPhaseDefinition("month.04", "四月", 10),
+                new CalendarPhaseDefinition("month.05", "五月", 10),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 0, "month.04", 5, out int beforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(beforeFifth, Is.EqualTo(14));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 5, out int insideBeforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideBeforeFifth, Is.EqualTo(2));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 14, "month.04", 5, out int onFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(onFifth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 19, "month.04", 5, out int afterFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(afterFifth, Is.EqualTo(25));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 0, out int insideMonth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideMonth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(months, 12, "month.04", 11, out _), Is.EqualTo(CalendarDaysUntilStatus.DayExceedsPhase));
+
+        InvalidOperationException missingPhase = Assert.Throws<InvalidOperationException>(() =>
+            runtime.ReadDaysUntilPhase(CalendarId, "season", "month.04"))!;
+        Assert.That(missingPhase.Message, Does.Contain("season"));
+        Assert.That(missingPhase.Message, Does.Contain("month.04"));
+
+        GraphSliceResult result = CompilePatchExecute(api, ScriptOf(
+            new GraphControlFlowNode
+            {
+                Id = "until",
+                Op = nameof(GraphNodeOp.ReadCalendarDaysUntilPhase),
+                Calendar = CalendarId,
+                Cycle = "season",
+                Phase = "autumn",
+            },
+            new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            new GraphControlFlowValueEdge("until", "value", "halt", "value")));
+        Assert.That(result.ReturnInt, Is.EqualTo(90));
+
+        GraphSliceResult fifth = CompilePatchExecute(api, ScriptOf(
+            new GraphControlFlowNode
+            {
+                Id = "untilDay",
+                Op = nameof(GraphNodeOp.ReadCalendarDaysUntilPhase),
+                Calendar = CalendarId,
+                Cycle = "season",
+                Phase = "summer",
+                Day = 5,
+            },
+            new GraphControlFlowNode { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            new GraphControlFlowValueEdge("untilDay", "value", "halt", "value")));
+        Assert.That(fifth.ReturnInt, Is.EqualTo(4));
+
+        InvalidOperationException tooLong = Assert.Throws<InvalidOperationException>(() =>
+            runtime.ReadDaysUntilPhase(CalendarId, "season", "summer", 100))!;
+        Assert.That(tooLong.Message, Does.Contain("summer"));
+        Assert.That(tooLong.Message, Does.Contain("100"));
+
+        var disabled = new CalendarRuntime(null, new CalendarDefinitionRegistry());
+        InvalidOperationException disabledError = Assert.Throws<InvalidOperationException>(() =>
+            disabled.ReadDaysUntilPhase(CalendarId, "season", "autumn"))!;
+        Assert.That(disabledError.Message, Does.Contain("Calendar is not enabled"));
+    }
+
+    [Test]
+    public void ReadCalendarDaysUntilPhase_JsonDayAndDuplicatePhaseNames()
+    {
+        (_, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        JsonSerializerOptions json = StrictJsonOptions.CreateCamelCase(includeFields: true);
+        GraphControlFlowDocument authored = JsonSerializer.Deserialize<GraphControlFlowDocument>(
+            """
+            {
+              "id": "Graph.Tests.CalendarDate.JsonDay",
+              "kind": "Script",
+              "entry": "untilDay",
+              "nodes": [
+                {
+                  "id": "untilDay",
+                  "op": "ReadCalendarDaysUntilPhase",
+                  "calendar": "calendar.graph.test",
+                  "cycle": "season",
+                  "phase": "summer",
+                  "day": 5
+                },
+                { "id": "halt", "op": "HaltReturnInt" }
+              ],
+              "controlEdges": [ { "from": "untilDay", "fromPort": "next", "to": "halt" } ],
+              "valueEdges": [ { "from": "untilDay", "fromPort": "value", "to": "halt", "toPort": "value" } ]
+            }
+            """,
+            json)!;
+        Assert.That(authored.Nodes[0].Day, Is.EqualTo(5));
+        Assert.That(CompilePatchExecute(api, authored).ReturnInt, Is.EqualTo(4));
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<GraphControlFlowDocument>(
+            """
+            {
+              "id": "Graph.Tests.CalendarDate.WrongDayField",
+              "kind": "Script",
+              "entry": "untilDay",
+              "nodes": [
+                {
+                  "id": "untilDay",
+                  "op": "ReadCalendarDaysUntilPhase",
+                  "cycle": "season",
+                  "phase": "summer",
+                  "Day": 5
+                },
+                { "id": "halt", "op": "HaltReturnInt" }
+              ],
+              "controlEdges": [ { "from": "untilDay", "fromPort": "next", "to": "halt" } ],
+              "valueEdges": [ { "from": "untilDay", "fromPort": "value", "to": "halt", "toPort": "value" } ]
+            }
+            """,
+            json));
+
+        var twice = new CalendarCycleDefinition(
+            "festival",
+            20,
+            new[]
+            {
+                new CalendarPhaseDefinition("duanwu", "端午", 1),
+                new CalendarPhaseDefinition("gap", "间", 9),
+                new CalendarPhaseDefinition("duanwu", "端午", 1),
+                new CalendarPhaseDefinition("rest", "余", 9),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 0, "duanwu", out int onFirst), Is.True);
+        Assert.That(onFirst, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 1, "duanwu", out int towardSecond), Is.True);
+        Assert.That(towardSecond, Is.EqualTo(9));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 11, "duanwu", out int wrapToFirst), Is.True);
+        Assert.That(wrapToFirst, Is.EqualTo(9));
+
+        var leap = new CalendarCycleDefinition(
+            "month",
+            28,
+            new[]
+            {
+                new CalendarPhaseDefinition("month.03", "三月", 8),
+                new CalendarPhaseDefinition("month.04", "短四月", 3),
+                new CalendarPhaseDefinition("month.04", "四月", 10),
+                new CalendarPhaseDefinition("month.05", "五月", 7),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 9, "month.04", out int insideShort), Is.True);
+        Assert.That(insideShort, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 0, "month.04", 5, out int beforeLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(beforeLongFifth, Is.EqualTo(15));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 9, "month.04", 5, out int insideShortBeforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideShortBeforeFifth, Is.EqualTo(6));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 15, "month.04", 5, out int onLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(onLongFifth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 16, "month.04", 5, out int afterLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(afterLongFifth, Is.EqualTo(27));
+    }
+
+    [Test]
+    public void SubInt_SubtractsAndQueryRejectsIt()
+    {
+        (_, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        GraphSliceResult ahead = CompilePatchExecute(api, Subtract(360, 90));
+        Assert.That(ahead.ReturnInt, Is.EqualTo(270));
+        GraphSliceResult past = CompilePatchExecute(api, Subtract(10, 90));
+        Assert.That(past.ReturnInt, Is.EqualTo(-80));
+
+        GraphControlFlowCompileResult query = GraphControlFlowCompiler.Compile(
+            new GraphControlFlowDocument
+            {
+                Id = "Graph.Tests.SubIntQuery",
+                Kind = "Query",
+                Entry = "sub",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "sub", Op = nameof(GraphNodeOp.SubInt) },
+                },
+            },
+            eventSchemas: null,
+            enums: null);
+        Assert.That(query.Diagnostics, Is.Not.Empty);
+        Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Query, GraphNodeOp.SubInt), Is.False);
+        Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.SubInt), Is.True);
+        Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Query, GraphNodeOp.LoadConfigKey), Is.True);
+        Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Query, GraphNodeOp.ReadCalendarCyclePhaseIndex), Is.True);
+        Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Query, GraphNodeOp.ReadCalendarDaysUntilPhase), Is.True);
+    }
+
+    private static GraphControlFlowDocument Subtract(int left, int right)
+    {
+        return new GraphControlFlowDocument
+        {
+            Id = "Graph.Tests.SubInt",
+            Kind = "Script",
+            Entry = "left",
+            Nodes = new List<GraphControlFlowNode>
+            {
+                new() { Id = "left", Op = nameof(GraphNodeOp.ConstInt), IntValue = left },
+                new() { Id = "right", Op = nameof(GraphNodeOp.ConstInt), IntValue = right },
+                new() { Id = "sub", Op = nameof(GraphNodeOp.SubInt) },
+                new() { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) },
+            },
+            ControlEdges = new List<GraphControlFlowEdge>
+            {
+                new("left", "next", "right"),
+                new("right", "next", "sub"),
+                new("sub", "next", "halt"),
+            },
+            ValueEdges = new List<GraphControlFlowValueEdge>
+            {
+                new("left", "value", "sub", "a"),
+                new("right", "value", "sub", "b"),
+                new("sub", "value", "halt", "value"),
+            },
+        };
+    }
+
+    private static GraphControlFlowDocument ScriptOf(
+        GraphControlFlowNode featured,
+        GraphControlFlowNode halt,
+        GraphControlFlowValueEdge value)
+    {
+        return new GraphControlFlowDocument
+        {
+            Id = "Graph.Tests.CalendarDate." + featured.Op,
+            Kind = "Script",
+            Entry = featured.Id,
+            Nodes = new List<GraphControlFlowNode> { featured, halt },
+            ControlEdges = new List<GraphControlFlowEdge>
+            {
+                new(featured.Id, "next", halt.Id),
+            },
+            ValueEdges = new List<GraphControlFlowValueEdge> { value },
+        };
+    }
+
+    private static GraphSliceResult CompilePatchExecute(GasGraphRuntimeApi api, GraphControlFlowDocument document)
+    {
+        GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(document, eventSchemas: null, enums: null);
+        Assert.That(compiled.Diagnostics, Is.Empty, string.Join(Environment.NewLine, compiled.Diagnostics));
+        GraphProgramPackage package = compiled.Package!.Value;
+        GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, new ThrowingSymbolResolver());
+        GraphKindOperationPolicy.ValidateProgram(GraphKind.Script, package.Program, GasGraphOpHandlerTable.Instance);
+        return Execute(api, package);
     }
 
     private static GraphControlFlowDocument CreateReadDocument()

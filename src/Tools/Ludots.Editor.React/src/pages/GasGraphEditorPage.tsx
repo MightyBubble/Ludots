@@ -146,6 +146,9 @@ type GraphNodeConfig = {
   calendar?: string | null;
   cycle?: string | null;
   domain?: string | null;
+  phase?: string | null;
+  symbol?: string | null;
+  day?: number | null;
 };
 
 type GasNodeData = GraphNodeConfig & {
@@ -395,6 +398,9 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     calendar: n.calendar ?? undefined,
     cycle: n.cycle ?? undefined,
     domain: n.domain ?? undefined,
+    phase: n.phase ?? undefined,
+    symbol: n.symbol ?? undefined,
+    day: n.day ? n.day : undefined,
   });
 }
 
@@ -1191,7 +1197,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         data.next = String(value).trim() === '' ? null : String(value).trim();
       } else if (field === 'boolValue') {
         data.boolValue = Boolean(value);
-      } else if (field === 'intValue' || field === 'teamId' || field === 'graphId') {
+      } else if (field === 'intValue' || field === 'teamId' || field === 'graphId' || field === 'day') {
         const parsed = Number.parseInt(String(value), 10);
         data[field] = Number.isInteger(parsed) ? parsed : 0;
       } else if (field === 'floatValue' || field === 'panelZOrder') {

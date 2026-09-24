@@ -1,0 +1,35 @@
+[
+  {
+    "id": "showcase.graph_op.ReadCalendarDaysUntilPhase",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      {
+        "id": "featured",
+        "op": "ReadCalendarDaysUntilPhase",
+        "calendar": "calendar.solar360",
+        "cycle": "season",
+        "phase": "autumn"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -127,6 +127,34 @@ namespace Ludots.Core.Gameplay.Calendar
             return RequireCycle(calendarId, cycleId).DayInPhase;
         }
 
+        public int ReadCyclePhaseIndex(string calendarId, string cycleId)
+        {
+            EnsureEnabled();
+            CalendarCycleDefinition cycle = RequireCycleDefinition(calendarId, cycleId);
+            return CalendarProjection.PhaseIndex(cycle, DayIndex);
+        }
+
+        public int ReadDaysUntilPhase(string calendarId, string cycleId, string phaseId, int dayInPhase = 0)
+        {
+            EnsureEnabled();
+            CalendarCycleDefinition cycle = RequireCycleDefinition(calendarId, cycleId);
+            CalendarDaysUntilStatus status = CalendarProjection.TryDaysUntilPhase(
+                cycle, DayIndex, phaseId, dayInPhase, out int days);
+            if (status == CalendarDaysUntilStatus.Found)
+            {
+                return days;
+            }
+
+            if (status == CalendarDaysUntilStatus.MissingPhase)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar '{calendarId}' cycle '{cycleId}' has no phase '{phaseId}'.");
+            }
+
+            throw new InvalidOperationException(
+                $"Calendar '{calendarId}' cycle '{cycleId}' phase '{phaseId}' does not contain day {dayInPhase}.");
+        }
+
         /// <summary>
         /// 开局落定：在日子还没被提交前，把日序和当天步数换成作者给的开局值，不发事件。
         /// 请求与当前值相同（包括已经提交过）是空操作。提交之后再写成别的值会失败。
@@ -459,6 +487,26 @@ namespace Ludots.Core.Gameplay.Calendar
             }
 
             return projections;
+        }
+
+        private CalendarCycleDefinition RequireCycleDefinition(string calendarId, string cycleId)
+        {
+            if (string.IsNullOrWhiteSpace(cycleId))
+            {
+                throw new InvalidOperationException("Calendar cycle id is required.");
+            }
+
+            CalendarDefinition calendar = _registry.Require(calendarId);
+            IReadOnlyList<CalendarCycleDefinition> cycles = calendar.Cycles;
+            for (int i = 0; i < cycles.Count; i++)
+            {
+                if (string.Equals(cycles[i].Id, cycleId, StringComparison.Ordinal))
+                {
+                    return cycles[i];
+                }
+            }
+
+            throw new InvalidOperationException($"Calendar '{calendarId}' has no cycle '{cycleId}'.");
         }
 
         private CalendarCycleSnapshot RequireCycle(string calendarId, string cycleId)
