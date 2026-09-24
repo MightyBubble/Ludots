@@ -11,6 +11,9 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
         public List<NavAreaCostConfig> Areas { get; set; } = new List<NavAreaCostConfig>();
 
+        /// <summary>非连续表面之间的合法连接。空表示该地图没有任何跨表面连接。</summary>
+        public List<NavLinkConfig> Links { get; set; } = new List<NavLinkConfig>();
+
         /// <summary>Per-map nav tile grids keyed by map id then board name (#1567: nav-owned home).</summary>
         public Dictionary<string, NavMapNavBoardsConfig> Maps { get; set; } = new Dictionary<string, NavMapNavBoardsConfig>();
         public NavRuntimeIncrementalConfig RuntimeIncremental { get; set; } = new NavRuntimeIncrementalConfig();
