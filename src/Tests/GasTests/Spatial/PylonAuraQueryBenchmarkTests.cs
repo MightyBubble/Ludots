@@ -11,8 +11,9 @@ using NUnit.Framework;
 namespace GasTests;
 
 /// <summary>
-/// 16km map, 320 pylon-sized radius queries. Prints the cost of one full pulse
-/// and of the busiest tick after the same first-tick spread EffectLifetimeSystem uses.
+/// 16km map radius-query cost for 320 pylon circles, and for 320 non-overlapping
+/// city circles placed by hard-core Poisson (hundreds of meters apart, tens of meters across).
+/// Prints one full pulse and the busiest tick after EffectLifetimeSystem's first-tick spread.
 /// </summary>
 [TestFixture]
 public sealed class PylonAuraQueryBenchmarkTests
@@ -30,6 +31,10 @@ public sealed class PylonAuraQueryBenchmarkTests
     private const int WarmupTicks = 8;
     private const int MeasuredTicks = 40;
     private const int TemplateId = 1;
+    private const int CityCount = 320;
+    private const int CityRadiusCm = 4_000;
+    private const int CityMinSeparationCm = 40_000;
+    private const int CityPlacementSeed = 3202409;
 
     private static readonly (int X, int Y)[] LocalOffsets =
     {
@@ -43,6 +48,25 @@ public sealed class PylonAuraQueryBenchmarkTests
         (-400, -100),
     };
 
+    private static readonly (int X, int Y)[] CityOccupantOffsets =
+    {
+        (1_200, 0),
+        (-1_200, 0),
+        (0, 1_200),
+        (0, -1_200),
+        (2_200, 800),
+        (-2_200, 800),
+        (2_200, -800),
+        (-2_200, -800),
+        (800, 2_800),
+        (-800, 2_800),
+        (800, -2_800),
+        (-800, -2_800),
+        (3_000, 1_500),
+        (-3_000, 1_500),
+        (1_500, -3_000),
+    };
+
     [Test]
     public void SixteenKmMap_320PylonAuras_PrintsRadiusQueryCost()
     {
@@ -53,7 +77,7 @@ public sealed class PylonAuraQueryBenchmarkTests
         service.SetPositionProvider(entity => world.Get<WorldPositionCm>(entity).Value.ToWorldCmInt2());
 
         Aura[] auras = PlaceSpreadAuras(world, partition);
-        int background = PlaceBackground(world, partition, auras);
+        int background = PlaceBackground(world, partition, auras, RadiusCm);
         var buffer = new Entity[256];
         var centers = new WorldCmInt2[auras.Length];
         for (int i = 0; i < auras.Length; i++)
@@ -95,8 +119,8 @@ public sealed class PylonAuraQueryBenchmarkTests
 
         Assert.That(filled, Is.EqualTo(busiestCount));
 
-        Measure pulse = MeasureQueries(service, centers, buffer);
-        Measure busiest = MeasureQueries(service, busiestCenters, buffer);
+        Measure pulse = MeasureQueries(service, centers, buffer, RadiusCm);
+        Measure busiest = MeasureQueries(service, busiestCenters, buffer, RadiusCm);
         Measure stacked = MeasureStackedCrowd(buffer);
 
         TestContext.Out.WriteLine(
@@ -111,6 +135,48 @@ public sealed class PylonAuraQueryBenchmarkTests
         Assert.That(pulse.HitSum, Is.EqualTo((1 + LocalOffsets.Length) * AuraCount * MeasuredTicks));
         Assert.That(busiest.HitSum, Is.EqualTo((1 + LocalOffsets.Length) * busiestCount * MeasuredTicks));
         Assert.That(stacked.HitSum, Is.EqualTo(StackedCrowd * AuraCount * MeasuredTicks));
+    }
+
+    [Test]
+    public void SixteenKmMap_320PoissonCities_PrintsRadiusQueryCost()
+    {
+        using World world = World.Create();
+        var spec = new WorldSizeSpec(new WorldAabbCm(0, 0, MapExtentCm, MapExtentCm), CellSizeCm);
+        var partition = new ChunkedGridSpatialPartitionWorld(ChunkSizeCells);
+        var service = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
+        service.SetPositionProvider(entity => world.Get<WorldPositionCm>(entity).Value.ToWorldCmInt2());
+
+        Aura[] cities = PlacePoissonCities(world, partition, out int placementAttempts);
+        int nearestMinCm = NearestNeighborMinCm(cities);
+        int nearestMedianCm = NearestNeighborMedianCm(cities);
+        Assert.That(nearestMinCm, Is.GreaterThanOrEqualTo(CityMinSeparationCm));
+        Assert.That(nearestMinCm, Is.GreaterThan(CityRadiusCm * 2));
+
+        int background = PlaceBackground(world, partition, cities, CityRadiusCm);
+        var buffer = new Entity[256];
+        var centers = new WorldCmInt2[cities.Length];
+        int occupants = 1 + CityOccupantOffsets.Length;
+        for (int i = 0; i < cities.Length; i++)
+        {
+            centers[i] = cities[i].Center;
+            SpatialQueryResult result = service.QueryRadius(centers[i], CityRadiusCm, buffer);
+            Assert.That(result.Count, Is.EqualTo(occupants), $"city {i} hit count");
+            Assert.That(result.Dropped, Is.EqualTo(0), $"city {i} dropped");
+        }
+
+        (int busiestTick, WorldCmInt2[] busiestCenters) = BusiestTick(cities);
+        Measure pulse = MeasureQueries(service, centers, buffer, CityRadiusCm);
+        Measure busiest = MeasureQueries(service, busiestCenters, buffer, CityRadiusCm);
+
+        TestContext.Out.WriteLine(
+            $"16km hard-core Poisson {CityCount} cities radius={CityRadiusCm}cm minSeparation={CityMinSeparationCm}cm nearestMin={nearestMinCm}cm nearestMedian={nearestMedianCm}cm occupants={occupants} background={background} placementAttempts={placementAttempts}");
+        TestContext.Out.WriteLine(
+            $"full pulse {CityCount} queries: median={pulse.MedianMs:F4}ms p95={pulse.P95Ms:F4}ms alloc/iter={pulse.AllocatedBytesPerIteration}");
+        TestContext.Out.WriteLine(
+            $"busiest tick {busiestCenters.Length}/{CityCount} (period {PeriodTicks}, tick {busiestTick}): median={busiest.MedianMs:F4}ms p95={busiest.P95Ms:F4}ms alloc/iter={busiest.AllocatedBytesPerIteration}");
+
+        Assert.That(pulse.HitSum, Is.EqualTo(occupants * CityCount * MeasuredTicks));
+        Assert.That(busiest.HitSum, Is.EqualTo(occupants * busiestCenters.Length * MeasuredTicks));
     }
 
     private static Aura[] PlaceSpreadAuras(World world, ChunkedGridSpatialPartitionWorld partition)
@@ -138,32 +204,6 @@ public sealed class PylonAuraQueryBenchmarkTests
         return auras;
     }
 
-    private static int PlaceBackground(World world, ChunkedGridSpatialPartitionWorld partition, Aura[] auras)
-    {
-        int placed = 0;
-        int columns = 50;
-        int step = MapExtentCm / columns;
-        for (int i = 0; i < BackgroundCount; i++)
-        {
-            int x = (i % columns) * step + step / 4;
-            int y = (i / columns) * step + step / 4;
-            if (x < 0 || y < 0 || x >= MapExtentCm || y >= MapExtentCm)
-            {
-                continue;
-            }
-
-            if (NearAnyAura(auras, x, y))
-            {
-                continue;
-            }
-
-            AddEntity(world, partition, x, y);
-            placed++;
-        }
-
-        return placed;
-    }
-
     private static Measure MeasureStackedCrowd(Entity[] buffer)
     {
         using World world = World.Create();
@@ -187,14 +227,14 @@ public sealed class PylonAuraQueryBenchmarkTests
 
         var centers = new WorldCmInt2[AuraCount];
         Array.Fill(centers, center);
-        return MeasureQueries(service, centers, buffer);
+        return MeasureQueries(service, centers, buffer, RadiusCm);
     }
 
-    private static Measure MeasureQueries(SpatialQueryService service, WorldCmInt2[] centers, Entity[] buffer)
+    private static Measure MeasureQueries(SpatialQueryService service, WorldCmInt2[] centers, Entity[] buffer, int radiusCm)
     {
         for (int tick = 0; tick < WarmupTicks; tick++)
         {
-            QueryAll(service, centers, buffer);
+            QueryAll(service, centers, buffer, radiusCm);
         }
 
         var samples = new double[MeasuredTicks];
@@ -203,7 +243,7 @@ public sealed class PylonAuraQueryBenchmarkTests
         for (int tick = 0; tick < MeasuredTicks; tick++)
         {
             long start = Stopwatch.GetTimestamp();
-            hitSum += QueryAll(service, centers, buffer);
+            hitSum += QueryAll(service, centers, buffer, radiusCm);
             samples[tick] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
         }
 
@@ -216,12 +256,12 @@ public sealed class PylonAuraQueryBenchmarkTests
             hitSum);
     }
 
-    private static int QueryAll(SpatialQueryService service, WorldCmInt2[] centers, Entity[] buffer)
+    private static int QueryAll(SpatialQueryService service, WorldCmInt2[] centers, Entity[] buffer, int radiusCm)
     {
         int hits = 0;
         for (int i = 0; i < centers.Length; i++)
         {
-            SpatialQueryResult result = service.QueryRadius(centers[i], RadiusCm, buffer);
+            SpatialQueryResult result = service.QueryRadius(centers[i], radiusCm, buffer);
             if (result.Dropped != 0)
             {
                 throw new InvalidOperationException(
@@ -234,9 +274,198 @@ public sealed class PylonAuraQueryBenchmarkTests
         return hits;
     }
 
-    private static bool NearAnyAura(Aura[] auras, int x, int y)
+    private static int PlaceBackground(World world, ChunkedGridSpatialPartitionWorld partition, Aura[] auras, int radiusCm)
     {
-        long limit = (long)RadiusCm * RadiusCm;
+        int placed = 0;
+        int columns = 50;
+        int step = MapExtentCm / columns;
+        for (int i = 0; i < BackgroundCount; i++)
+        {
+            int x = (i % columns) * step + step / 4;
+            int y = (i / columns) * step + step / 4;
+            if (x < 0 || y < 0 || x >= MapExtentCm || y >= MapExtentCm)
+            {
+                continue;
+            }
+
+            if (NearAnyAura(auras, x, y, radiusCm))
+            {
+                continue;
+            }
+
+            AddEntity(world, partition, x, y);
+            placed++;
+        }
+
+        return placed;
+    }
+
+    private static Aura[] PlacePoissonCities(World world, ChunkedGridSpatialPartitionWorld partition, out int placementAttempts)
+    {
+        var rng = new Random(CityPlacementSeed);
+        var accepted = new WorldCmInt2[CityCount];
+        long minSeparationSq = (long)CityMinSeparationCm * CityMinSeparationCm;
+        int count = 0;
+        placementAttempts = 0;
+        while (count < CityCount)
+        {
+            placementAttempts++;
+            if (placementAttempts > 200_000)
+            {
+                throw new InvalidOperationException(
+                    $"Hard-core Poisson placement stopped at {count}/{CityCount} cities after {placementAttempts} attempts.");
+            }
+
+            int x = rng.Next(CityRadiusCm, MapExtentCm - CityRadiusCm);
+            int y = rng.Next(CityRadiusCm, MapExtentCm - CityRadiusCm);
+            bool separated = true;
+            for (int i = 0; i < count; i++)
+            {
+                long dx = x - accepted[i].X;
+                long dy = y - accepted[i].Y;
+                if (dx * dx + dy * dy < minSeparationSq)
+                {
+                    separated = false;
+                    break;
+                }
+            }
+
+            if (!separated)
+            {
+                continue;
+            }
+
+            accepted[count++] = new WorldCmInt2(x, y);
+        }
+
+        var cities = new Aura[CityCount];
+        for (int i = 0; i < CityCount; i++)
+        {
+            int x = accepted[i].X;
+            int y = accepted[i].Y;
+            Entity city = AddEntity(world, partition, x, y);
+            for (int occupant = 0; occupant < CityOccupantOffsets.Length; occupant++)
+            {
+                AddEntity(
+                    world,
+                    partition,
+                    x + CityOccupantOffsets[occupant].X,
+                    y + CityOccupantOffsets[occupant].Y);
+            }
+
+            cities[i] = new Aura(accepted[i], city);
+        }
+
+        return cities;
+    }
+
+    private static (int Tick, WorldCmInt2[] Centers) BusiestTick(Aura[] auras)
+    {
+        int[] tickCounts = new int[PeriodTicks + 1];
+        for (int i = 0; i < auras.Length; i++)
+        {
+            tickCounts[FirstPeriodTick(auras[i].Pylon)]++;
+        }
+
+        int busiestTick = 1;
+        int busiestCount = tickCounts[1];
+        for (int tick = 2; tick <= PeriodTicks; tick++)
+        {
+            if (tickCounts[tick] > busiestCount)
+            {
+                busiestCount = tickCounts[tick];
+                busiestTick = tick;
+            }
+        }
+
+        var centers = new WorldCmInt2[busiestCount];
+        int filled = 0;
+        for (int i = 0; i < auras.Length; i++)
+        {
+            if (FirstPeriodTick(auras[i].Pylon) != busiestTick)
+            {
+                continue;
+            }
+
+            centers[filled++] = auras[i].Center;
+        }
+
+        if (filled != busiestCount)
+        {
+            throw new InvalidOperationException($"Busiest tick filled {filled}, expected {busiestCount}.");
+        }
+
+        return (busiestTick, centers);
+    }
+
+    private static int NearestNeighborMinCm(Aura[] cities)
+    {
+        int min = int.MaxValue;
+        for (int i = 0; i < cities.Length; i++)
+        {
+            int nearest = NearestOtherCm(cities, i);
+            if (nearest < min)
+            {
+                min = nearest;
+            }
+        }
+
+        return min;
+    }
+
+    private static int NearestNeighborMedianCm(Aura[] cities)
+    {
+        var nearest = new int[cities.Length];
+        for (int i = 0; i < cities.Length; i++)
+        {
+            nearest[i] = NearestOtherCm(cities, i);
+        }
+
+        Array.Sort(nearest);
+        return nearest[cities.Length / 2];
+    }
+
+    private static int NearestOtherCm(Aura[] cities, int index)
+    {
+        long bestSq = long.MaxValue;
+        for (int other = 0; other < cities.Length; other++)
+        {
+            if (other == index)
+            {
+                continue;
+            }
+
+            long dx = cities[index].Center.X - cities[other].Center.X;
+            long dy = cities[index].Center.Y - cities[other].Center.Y;
+            long distSq = dx * dx + dy * dy;
+            if (distSq < bestSq)
+            {
+                bestSq = distSq;
+            }
+        }
+
+        return IntegerSqrt(bestSq);
+    }
+
+    private static int IntegerSqrt(long value)
+    {
+        int root = (int)Math.Sqrt(value);
+        while ((long)(root + 1) * (root + 1) <= value)
+        {
+            root++;
+        }
+
+        while ((long)root * root > value)
+        {
+            root--;
+        }
+
+        return root;
+    }
+
+    private static bool NearAnyAura(Aura[] auras, int x, int y, int radiusCm)
+    {
+        long limit = (long)radiusCm * radiusCm;
         for (int i = 0; i < auras.Length; i++)
         {
             long dx = x - auras[i].Center.X;
