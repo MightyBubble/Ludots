@@ -9,6 +9,8 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
@@ -25,6 +27,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// - Eligible mover: MapEntity + WorldPositionCm, not SuspendedTag, not
     ///   PresentationDestroyPending, and — when the volume declares a tag filter —
     ///   carrying at least one of the declared GameplayTags (any-of).
+    /// - Candidate filter: the map's spatial partition answers who is standing
+    ///   inside the volume's box. Entities the partition does not contain are
+    ///   still read directly. A mover whose travel segment meets the box is
+    ///   read even when the sampled position lies outside it.
     /// - Dead movers leave the inside-set silently: death is not a crossing.
     /// - Boundary positions count as inside; a mover that stops matching the tag
     ///   filter (or loses its position/map components) counts as an exit.
@@ -35,32 +41,47 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// </summary>
     public sealed class RegionVolumeTriggerSystem : BaseSystem<World, float>
     {
+        private const int BroadphaseExtentPadCm = 1;
+        private const int InitialBroadphaseCapacity = 64;
+
         private readonly Func<MapSessionManager?> _sessions;
         private readonly TriggerManager _triggerManager;
         private readonly Func<ScriptContext> _contextFactory;
+        private readonly ISpatialQueryService _spatialQueries;
         private readonly Dictionary<Entity, VolumeRuntimeState> _states = new Dictionary<Entity, VolumeRuntimeState>();
         private readonly List<VolumeRuntimeState> _orphanScratch = new List<VolumeRuntimeState>();
         private readonly QueryDescription _volumeQuery = new QueryDescription()
             .WithAll<MapEntity, RegionVolumeCm, WorldPositionCm>();
-        private readonly QueryDescription _trackedQuery = new QueryDescription()
+        private readonly QueryDescription _unindexedQuery = new QueryDescription()
             .WithAll<MapEntity, WorldPositionCm>()
+            .WithNone<SpatialCellRef, SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private readonly QueryDescription _inactiveMembershipQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, SpatialCellRef>()
             .WithNone<SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
-        private readonly List<TrackedEntity> _trackedBuffer = new List<TrackedEntity>();
+        private readonly QueryDescription _moverQuery = new QueryDescription()
+            .WithAll<MapEntity, WorldPositionCm, PreviousWorldPositionCm>()
+            .WithNone<SuspendedTag, PresentationDestroyPending, RegionVolumeCm>();
+        private readonly List<TrackedEntity> _directBuffer = new List<TrackedEntity>();
+        private readonly List<TrackedEntity> _moverBuffer = new List<TrackedEntity>();
+        private readonly HashSet<Entity> _considered = new HashSet<Entity>();
         private readonly HashSet<Entity> _matchedBuffer = new HashSet<Entity>();
         private readonly List<Entity> _exitBuffer = new List<Entity>();
         private readonly List<Entity> _silentRemovalBuffer = new List<Entity>();
+        private Entity[] _broadphaseBuffer = new Entity[InitialBroadphaseCapacity];
         private static readonly List<string> EmptyTags = new List<string>();
 
         public RegionVolumeTriggerSystem(
             World world,
             Func<MapSessionManager?> sessions,
             TriggerManager triggerManager,
-            Func<ScriptContext> contextFactory)
+            Func<ScriptContext> contextFactory,
+            ISpatialQueryService spatialQueries)
             : base(world)
         {
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
             _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+            _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
         }
 
         public override void Initialize()
@@ -88,7 +109,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     if (pair.Value.MapId != session.MapId || pair.Value.Orphaned) continue;
                     if (!collected)
                     {
-                        CollectTrackedEntities(session.MapId);
+                        CollectCandidates(session.MapId);
                         collected = true;
                     }
                     EvaluateVolume(session, pair.Value);
@@ -125,14 +146,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private void CollectTrackedEntities(MapId mapId)
+        private void CollectCandidates(MapId mapId)
         {
-            _trackedBuffer.Clear();
-            foreach (ref var chunk in World.Query(in _trackedQuery))
+            _directBuffer.Clear();
+            _moverBuffer.Clear();
+            AppendDirect(in _unindexedQuery, mapId, rejectActiveMembership: false);
+            AppendDirect(in _inactiveMembershipQuery, mapId, rejectActiveMembership: true);
+            AppendMovers(mapId);
+        }
+
+        private void AppendDirect(in QueryDescription query, MapId mapId, bool rejectActiveMembership)
+        {
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref var entityFirst = ref chunk.Entity(0);
                 var mapEntities = chunk.GetSpan<MapEntity>();
                 var positions = chunk.GetSpan<WorldPositionCm>();
+                var memberships = rejectActiveMembership ? chunk.GetSpan<SpatialCellRef>() : default;
 
                 foreach (var index in chunk)
                 {
@@ -141,52 +171,95 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         continue;
                     }
 
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
-                    bool hasPrevious = World.TryGet(entity, out PreviousWorldPositionCm previous);
-                    _trackedBuffer.Add(new TrackedEntity(
-                        entity,
-                        positions[index].Value,
-                        previous.Value,
-                        hasPrevious,
-                        tags,
-                        hasTags));
+                    if (rejectActiveMembership && memberships[index].State == SpatialMembershipState.Active)
+                    {
+                        continue;
+                    }
+
+                    _directBuffer.Add(ReadTracked(Unsafe.Add(ref entityFirst, index), positions[index].Value));
                 }
             }
+        }
+
+        private void AppendMovers(MapId mapId)
+        {
+            foreach (ref var chunk in World.Query(in _moverQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var mapEntities = chunk.GetSpan<MapEntity>();
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                var previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
+
+                foreach (var index in chunk)
+                {
+                    if (mapEntities[index].MapId != mapId)
+                    {
+                        continue;
+                    }
+
+                    Fix64Vec2 position = positions[index].Value;
+                    Fix64Vec2 previous = previousPositions[index].Value;
+                    if (previous == position)
+                    {
+                        continue;
+                    }
+
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
+                    _moverBuffer.Add(new TrackedEntity(entity, position, previous, true, tags, hasTags));
+                }
+            }
+        }
+
+        private TrackedEntity ReadTracked(Entity entity, Fix64Vec2 position)
+        {
+            bool hasTags = World.TryGet<GameplayTagContainer>(entity, out GameplayTagContainer tags);
+            bool hasPrevious = World.TryGet(entity, out PreviousWorldPositionCm previous);
+            return new TrackedEntity(entity, position, previous.Value, hasPrevious, tags, hasTags);
         }
 
         private void EvaluateVolume(MapSession session, VolumeRuntimeState volume)
         {
             _matchedBuffer.Clear();
-            for (int i = 0; i < _trackedBuffer.Count; i++)
+            _considered.Clear();
+
+            // The partition records the cell an entity occupies now. Padding keeps
+            // a unit standing on a cell edge inside the query. The travel-segment
+            // pass covers a crossing that ends outside that box.
+            WorldAabbCm bounds = ToBroadphaseBounds(volume.Shape, volume.Anchor);
+            int count = QueryCandidates(in bounds);
+            for (int i = 0; i < count; i++)
             {
-                TrackedEntity tracked = _trackedBuffer[i];
-                if (volume.HasTagFilter && (!tracked.HasTags || !tracked.Tags.Intersects(volume.TagFilter)))
+                if (!TryReadTracked(_broadphaseBuffer[i], volume.MapId, out TrackedEntity tracked))
                 {
                     continue;
                 }
 
-                if (!volume.Shape.Contains(tracked.Position, volume.Anchor))
+                if (_considered.Add(tracked.Entity))
                 {
-                    // Swept crossing (#1475): a mover whose travel segment passed
-                    // through the volume between waves still reports the crossing as
-                    // an enter+exit pair, without joining the occupancy inside-set.
-                    if (tracked.HasPreviousPosition &&
-                        !volume.Inside.Contains(tracked.Entity) &&
-                        volume.Shape.IntersectsPath(tracked.PreviousPosition, tracked.Position, volume.Anchor))
-                    {
-                        FireVolumeEvent(session, volume, entering: true, tracked.Entity);
-                        FireVolumeEvent(session, volume, entering: false, tracked.Entity);
-                    }
+                    Consider(session, volume, tracked);
+                }
+            }
 
+            for (int i = 0; i < _directBuffer.Count; i++)
+            {
+                TrackedEntity tracked = _directBuffer[i];
+                if (_considered.Add(tracked.Entity))
+                {
+                    Consider(session, volume, tracked);
+                }
+            }
+
+            for (int i = 0; i < _moverBuffer.Count; i++)
+            {
+                TrackedEntity tracked = _moverBuffer[i];
+                if (_considered.Contains(tracked.Entity) || !SegmentOverlapsBox(tracked.PreviousPosition, tracked.Position, in bounds))
+                {
                     continue;
                 }
 
-                _matchedBuffer.Add(tracked.Entity);
-                if (volume.Inside.Add(tracked.Entity))
-                {
-                    FireVolumeEvent(session, volume, entering: true, tracked.Entity);
-                }
+                _considered.Add(tracked.Entity);
+                Consider(session, volume, tracked);
             }
 
             _exitBuffer.Clear();
@@ -229,6 +302,137 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 volume.Inside.Remove(entity);
                 FireVolumeEvent(session, volume, entering: false, entity);
             }
+        }
+
+        private void Consider(MapSession session, VolumeRuntimeState volume, TrackedEntity tracked)
+        {
+            if (volume.HasTagFilter && (!tracked.HasTags || !tracked.Tags.Intersects(volume.TagFilter)))
+            {
+                return;
+            }
+
+            if (!volume.Shape.Contains(tracked.Position, volume.Anchor))
+            {
+                // Swept crossing (#1475): a mover whose travel segment passed
+                // through the volume between waves still reports the crossing as
+                // an enter+exit pair, without joining the occupancy inside-set.
+                if (tracked.HasPreviousPosition &&
+                    !volume.Inside.Contains(tracked.Entity) &&
+                    volume.Shape.IntersectsPath(tracked.PreviousPosition, tracked.Position, volume.Anchor))
+                {
+                    FireVolumeEvent(session, volume, entering: true, tracked.Entity);
+                    FireVolumeEvent(session, volume, entering: false, tracked.Entity);
+                }
+
+                return;
+            }
+
+            _matchedBuffer.Add(tracked.Entity);
+            if (volume.Inside.Add(tracked.Entity))
+            {
+                FireVolumeEvent(session, volume, entering: true, tracked.Entity);
+            }
+        }
+
+        private bool TryReadTracked(Entity entity, MapId mapId, out TrackedEntity tracked)
+        {
+            tracked = default;
+            if (!World.IsAlive(entity))
+            {
+                return false;
+            }
+
+            if (!World.TryGet(entity, out MapEntity mapEntity) || mapEntity.MapId != mapId)
+            {
+                return false;
+            }
+
+            if (!World.TryGet(entity, out WorldPositionCm position))
+            {
+                return false;
+            }
+
+            if (World.Has<SuspendedTag>(entity) ||
+                World.Has<PresentationDestroyPending>(entity) ||
+                World.Has<RegionVolumeCm>(entity))
+            {
+                return false;
+            }
+
+            tracked = ReadTracked(entity, position.Value);
+            return true;
+        }
+
+        private int QueryCandidates(in WorldAabbCm bounds)
+        {
+            SpatialQueryResult result = _spatialQueries.QueryAabb(in bounds, _broadphaseBuffer);
+            if (!result.Overflowed)
+            {
+                return result.Count;
+            }
+
+            long needed = (long)result.Count + result.Dropped;
+            if (needed <= _broadphaseBuffer.Length || needed > int.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "Region volume broadphase dropped hits that the buffer should already hold.");
+            }
+
+            _broadphaseBuffer = new Entity[(int)needed];
+            result = _spatialQueries.QueryAabb(in bounds, _broadphaseBuffer);
+            if (result.Overflowed)
+            {
+                throw new InvalidOperationException(
+                    "Region volume broadphase dropped hits after the buffer grew to the reported count.");
+            }
+
+            return result.Count;
+        }
+
+        private static WorldAabbCm ToBroadphaseBounds(in RegionVolumeShape shape, Fix64Vec2 anchor)
+        {
+            shape.GetWorldExtents(anchor, out double minX, out double minY, out double maxX, out double maxY);
+            long minXi = IntegralCentimeter(minX - BroadphaseExtentPadCm, ceiling: false);
+            long minYi = IntegralCentimeter(minY - BroadphaseExtentPadCm, ceiling: false);
+            long maxXi = IntegralCentimeter(maxX + BroadphaseExtentPadCm, ceiling: true);
+            long maxYi = IntegralCentimeter(maxY + BroadphaseExtentPadCm, ceiling: true);
+            long width = maxXi - minXi;
+            long height = maxYi - minYi;
+            if (width < 0 || height < 0 || width > int.MaxValue || height > int.MaxValue)
+            {
+                throw new InvalidOperationException("Region volume extents do not fit an integer centimeter box.");
+            }
+
+            return new WorldAabbCm((int)minXi, (int)minYi, (int)width, (int)height);
+        }
+
+        private static long IntegralCentimeter(double value, bool ceiling)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                throw new InvalidOperationException("Region volume extents are not finite.");
+            }
+
+            double integral = ceiling ? Math.Ceiling(value) : Math.Floor(value);
+            if (integral < int.MinValue || integral > int.MaxValue)
+            {
+                throw new InvalidOperationException("Region volume extents do not fit integer centimeters.");
+            }
+
+            return (long)integral;
+        }
+
+        private static bool SegmentOverlapsBox(Fix64Vec2 start, Fix64Vec2 end, in WorldAabbCm box)
+        {
+            double ax = start.X.ToDouble();
+            double ay = start.Y.ToDouble();
+            double bx = end.X.ToDouble();
+            double by = end.Y.ToDouble();
+            double minX = Math.Min(ax, bx);
+            double maxX = Math.Max(ax, bx);
+            double minY = Math.Min(ay, by);
+            double maxY = Math.Max(ay, by);
+            return maxX >= box.Left && minX <= box.Right && maxY >= box.Top && minY <= box.Bottom;
         }
 
         private void OnVolumeEntityDestroyed(in Entity entity)

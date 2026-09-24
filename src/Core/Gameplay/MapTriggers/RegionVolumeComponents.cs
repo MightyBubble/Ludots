@@ -1,3 +1,4 @@
+using System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
@@ -33,6 +34,85 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public Fix64Vec2 SegmentA;
         public Fix64Vec2 SegmentB;
         public Fix64 HalfThickness;
+
+        /// <summary>
+        /// World-space extents of the shape. The caller widens this to a query box;
+        /// a missing polygon is not an empty area.
+        /// </summary>
+        public void GetWorldExtents(
+            Fix64Vec2 anchor,
+            out double minX,
+            out double minY,
+            out double maxX,
+            out double maxY)
+        {
+            double ax = anchor.X.ToDouble();
+            double ay = anchor.Y.ToDouble();
+            switch (Kind)
+            {
+                case RegionVolumeShapeKind.Circle:
+                {
+                    double radius = Radius.ToDouble();
+                    minX = ax - radius;
+                    maxX = ax + radius;
+                    minY = ay - radius;
+                    maxY = ay + radius;
+                    return;
+                }
+
+                case RegionVolumeShapeKind.Rect:
+                {
+                    double halfWidth = HalfWidth.ToDouble();
+                    double halfHeight = HalfHeight.ToDouble();
+                    minX = ax - halfWidth;
+                    maxX = ax + halfWidth;
+                    minY = ay - halfHeight;
+                    maxY = ay + halfHeight;
+                    return;
+                }
+
+                case RegionVolumeShapeKind.Polygon:
+                {
+                    Fix64Vec2[] points = PolygonPoints ?? throw new InvalidOperationException(
+                        "Region volume polygon has no vertices.");
+                    if (points.Length == 0)
+                    {
+                        throw new InvalidOperationException("Region volume polygon has no vertices.");
+                    }
+
+                    minX = maxX = ax + points[0].X.ToDouble();
+                    minY = maxY = ay + points[0].Y.ToDouble();
+                    for (int i = 1; i < points.Length; i++)
+                    {
+                        double x = ax + points[i].X.ToDouble();
+                        double y = ay + points[i].Y.ToDouble();
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+
+                    return;
+                }
+
+                case RegionVolumeShapeKind.Segment:
+                {
+                    double thickness = HalfThickness.ToDouble();
+                    double x0 = ax + SegmentA.X.ToDouble();
+                    double y0 = ay + SegmentA.Y.ToDouble();
+                    double x1 = ax + SegmentB.X.ToDouble();
+                    double y1 = ay + SegmentB.Y.ToDouble();
+                    minX = Math.Min(x0, x1) - thickness;
+                    maxX = Math.Max(x0, x1) + thickness;
+                    minY = Math.Min(y0, y1) - thickness;
+                    maxY = Math.Max(y0, y1) + thickness;
+                    return;
+                }
+
+                default:
+                    throw new InvalidOperationException($"Region volume shape {(byte)Kind} has no extents.");
+            }
+        }
 
         public bool Contains(Fix64Vec2 worldPoint, Fix64Vec2 anchor)
         {
