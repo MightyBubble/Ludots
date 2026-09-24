@@ -160,6 +160,7 @@ public sealed class MapLoadLifecycleOrderingTests
                     "presentationEventStreamCapacity": 16,
                     "presentationOwnerChangeCapacity": 16,
                     "presenterCommandCapacity": 16,
+                    "presenterTimerCapacity": 16,
                     "primitiveDrawBufferCapacity": 16,
                     "visualSnapshotBufferCapacity": 16,
                     "visualProxyBufferCapacity": 16,

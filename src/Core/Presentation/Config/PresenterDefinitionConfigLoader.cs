@@ -908,6 +908,7 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.WorldHudEnded => TagRegistry.Register(key),
                 PresentationEventKind.WorldSplineUpdated => TagRegistry.Register(key),
                 PresentationEventKind.WorldSplineEnded => TagRegistry.Register(key),
+                PresentationEventKind.TimerExpired => PresenterTimerNameRegistry.Register(key),
                 _ => throw new InvalidOperationException($"Presentation event kind '{kind}' does not support string key '{key}'."),
             };
         }
@@ -985,7 +986,81 @@ namespace Ludots.Core.Presentation.Config
                 TargetBehaviorSlot = commandKind is PresenterCommandKind.ActivateBehavior or PresenterCommandKind.DeactivateBehavior
                     ? ParseRequiredBehaviorSlot(obj["targetBehaviorSlot"], "Presenter command targetBehaviorSlot")
                     : ParseOptionalBehaviorSlot(obj["targetBehaviorSlot"], "Presenter command targetBehaviorSlot"),
+                TimerNameId = ParseCommandTimerNameId(obj, commandKind, context),
+                TimerDurationSeconds = ParseCommandTimerDurationSeconds(obj, commandKind, context),
+                TimerDurationRangeSeconds = ParseCommandTimerDurationRangeSeconds(obj, commandKind, context),
             };
+        }
+
+        private static int ParseCommandTimerNameId(JsonObject obj, PresenterCommandKind commandKind, string context)
+        {
+            JsonNode? node = obj["timerName"];
+            if (commandKind is not (PresenterCommandKind.TimerSet or PresenterCommandKind.TimerKill))
+            {
+                if (node != null)
+                {
+                    throw new InvalidOperationException($"{context}.timerName is only valid for TimerSet and TimerKill commands.");
+                }
+
+                return 0;
+            }
+
+            string name = ParseRequiredSemanticString(node, $"{context}.timerName");
+            if (commandKind == PresenterCommandKind.TimerKill && string.Equals(name, "*", StringComparison.Ordinal))
+            {
+                return PresenterTimerNameRegistry.AllTimersId;
+            }
+
+            return PresenterTimerNameRegistry.Register(name);
+        }
+
+        private static float ParseCommandTimerDurationSeconds(JsonObject obj, PresenterCommandKind commandKind, string context)
+        {
+            JsonNode? node = obj["durationSeconds"];
+            if (commandKind != PresenterCommandKind.TimerSet)
+            {
+                if (node != null)
+                {
+                    throw new InvalidOperationException($"{context}.durationSeconds is only valid for TimerSet commands.");
+                }
+
+                return 0f;
+            }
+
+            float duration = ParseRequiredFiniteFloat(node, $"{context}.durationSeconds");
+            if (duration <= 0f)
+            {
+                throw new InvalidOperationException($"{context}.durationSeconds must be > 0.");
+            }
+
+            return duration;
+        }
+
+        private static float ParseCommandTimerDurationRangeSeconds(JsonObject obj, PresenterCommandKind commandKind, string context)
+        {
+            JsonNode? node = obj["durationRangeSeconds"];
+            if (commandKind != PresenterCommandKind.TimerSet)
+            {
+                if (node != null)
+                {
+                    throw new InvalidOperationException($"{context}.durationRangeSeconds is only valid for TimerSet commands.");
+                }
+
+                return 0f;
+            }
+
+            if (node == null)
+            {
+                return 0f;
+            }
+
+            float range = ParseRequiredFiniteFloat(node, $"{context}.durationRangeSeconds");
+            if (range < 0f)
+            {
+                throw new InvalidOperationException($"{context}.durationRangeSeconds must be >= 0.");
+            }
+
+            return range;
         }
 
         private PresenterCommand ParseExtensionPresenterCommand(JsonObject obj, string kindText, string context)
@@ -1084,6 +1159,8 @@ namespace Ludots.Core.Presentation.Config
                 PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerSet => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.TimerKill => PerformerCommandRouteStrategy.ExistingInstances,
                 PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
                 _ => throw new InvalidOperationException($"Unsupported presenter command kind '{commandKind}'."),
             };

@@ -9,6 +9,7 @@
     "presentationEventStreamCapacity": 65536,
     "presentationOwnerChangeCapacity": 65536,
     "presenterCommandCapacity": 262144,
+    "presenterTimerCapacity": 16384,
     "primitiveDrawBufferCapacity": 131072,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,

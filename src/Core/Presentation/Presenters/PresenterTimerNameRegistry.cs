@@ -1,0 +1,48 @@
+using System;
+using Ludots.Core.Registry;
+
+namespace Ludots.Core.Presentation.Presenters
+{
+    public static class PresenterTimerNameRegistry
+    {
+        public const int AllTimersId = -1;
+
+        private static StringIntRegistry _ids = CreateRegistry();
+
+        public static int Register(string name) => _ids.Register(Canonicalize(name));
+
+        public static int GetId(string name) => string.IsNullOrWhiteSpace(name) ? 0 : _ids.GetId(Canonicalize(name));
+
+        public static string GetName(int id) => _ids.GetName(id);
+
+        public static void Clear()
+        {
+            _ids = CreateRegistry();
+        }
+
+        private static StringIntRegistry CreateRegistry()
+        {
+            return new StringIntRegistry(
+                capacity: 128,
+                startId: 1,
+                invalidId: 0,
+                comparer: StringComparer.Ordinal);
+        }
+
+        private static string Canonicalize(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Presenter timer name must not be null or whitespace.", nameof(name));
+            }
+
+            string trimmed = name.Trim();
+            if (!string.Equals(name, trimmed, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Presenter timer name must not include leading or trailing whitespace.", nameof(name));
+            }
+
+            return name;
+        }
+    }
+}
