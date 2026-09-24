@@ -82,7 +82,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     /// <summary>
     /// 窗口取消路径的幂等最小清理：只摘除 displaced 标记与紧凑表项。
-    /// 不唤醒、不标脏——取消场景里实体要么已死（标脏会让实体同步撞上死实体），
+    /// 不唤醒、不标脏——取消场景里实体要么已死（没有可回写的位姿），
     /// 要么整个求解器即将被结构重建重置。未标记（已被重建清除）返回 false，
     /// 这是并发生命周期事件的合法结果；正常交还请走 <see cref="ClearAgentDisplaced"/>。
     /// </summary>
@@ -178,10 +178,10 @@ public sealed partial class MassNavigationFlowSolverState
                     $"MassNavigationFlow cannot sync displaced agent {index} because no tracked agent entity is registered.");
             }
 
+            // 位移窗口可能比单位活得长一帧：绑定重扫会摘掉窗口，这一拍先跳过已阵亡单位。
             if (!world.IsAlive(entity))
             {
-                throw new InvalidOperationException(
-                    $"MassNavigationFlow cannot sync displaced agent {index} because tracked entity {entity.Id} is not alive.");
+                continue;
             }
 
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
