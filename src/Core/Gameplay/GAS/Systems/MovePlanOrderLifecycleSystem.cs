@@ -46,7 +46,8 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
     }
 
     private bool IsMoveOrder(int orderTypeId) =>
-        orderTypeId == _moveOrderTypeId || orderTypeId == _secondaryMoveOrderTypeId;
+        orderTypeId == _moveOrderTypeId ||
+        (_secondaryMoveOrderTypeId > 0 && orderTypeId == _secondaryMoveOrderTypeId);
 
     public override void Update(in float dt)
     {

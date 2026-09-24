@@ -22,7 +22,8 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
     private readonly int _secondaryMoveOrderTypeId;
 
     private bool IsMoveOrder(int orderTypeId) =>
-        orderTypeId == _moveOrderTypeId || orderTypeId == _secondaryMoveOrderTypeId;
+        orderTypeId == _moveOrderTypeId ||
+        (_secondaryMoveOrderTypeId > 0 && orderTypeId == _secondaryMoveOrderTypeId);
     public MovePlanOrderProjectionSystem(World world, int moveOrderTypeId)
         : this(world, moveOrderTypeId, secondaryMoveOrderTypeId: 0)
     {
