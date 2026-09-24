@@ -42,10 +42,9 @@ namespace Ludots.Core.Physics2D.Systems
 
                 bool isASleeping = pair.IsSleepingA != 0;
                 bool isBSleeping = pair.IsSleepingB != 0;
-                if (isASleeping && isBSleeping) return;
-
-                ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
-                ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
+                bool writesA = pair.MassA.IsDynamic && !isASleeping;
+                bool writesB = pair.MassB.IsDynamic && !isBSleeping;
+                if (!writesA && !writesB) return;
 
                 // 全定点数冲量计算
                 var normalImpulseVector = pair.Normal * pair.AccumulatedNormalImpulse0;
@@ -53,14 +52,23 @@ namespace Ludots.Core.Physics2D.Systems
                 var tangentImpulseVector = tangent * pair.AccumulatedTangentImpulse0;
                 var totalImpulse = normalImpulseVector + tangentImpulseVector;
 
-                if (pair.MassA.IsDynamic && !isASleeping)
+                // Velocity2D 与 BuildPhysicsWorldSystem2D 的快照同合同:缺失视为零速,不回写(授权管线之外的实体可能不带该组件)。
+                if (writesA)
                 {
-                    velocityA.Linear = velocityA.Linear - totalImpulse * pair.MassA.InverseMass;
+                    ref var velocityA = ref World.TryGetRef<Velocity2D>(pair.EntityA, out bool hasVelocityA);
+                    if (hasVelocityA)
+                    {
+                        velocityA.Linear = velocityA.Linear - totalImpulse * pair.MassA.InverseMass;
+                    }
                 }
 
-                if (pair.MassB.IsDynamic && !isBSleeping)
+                if (writesB)
                 {
-                    velocityB.Linear = velocityB.Linear + totalImpulse * pair.MassB.InverseMass;
+                    ref var velocityB = ref World.TryGetRef<Velocity2D>(pair.EntityB, out bool hasVelocityB);
+                    if (hasVelocityB)
+                    {
+                        velocityB.Linear = velocityB.Linear + totalImpulse * pair.MassB.InverseMass;
+                    }
                 }
             }
         }
