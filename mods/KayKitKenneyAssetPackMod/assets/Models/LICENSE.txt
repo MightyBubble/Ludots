@@ -1,0 +1,17 @@
+Assets in this directory are sourced from CC0-licensed packs.
+
+KayKit packs by Kay Lousberg (CC0-1.0):
+- KayKit Medieval Hexagon Pack 1.0
+  https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
+- KayKit Character Pack Adventures 1.0
+  https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+
+Kenney packs by Kenney Vleugels (CC0-1.0):
+- Kenney Prototype Kit
+  https://github.com/kenneynl/kenney-prototype-kit
+- Kenney Mini Town Kit
+  https://github.com/kenneynl/kenney-mini-town-kit
+
+All assets are free to use in any project, including commercially, with no attribution required.
+
+Import script: scripts/import-kaykit-kenney-assets.ps1

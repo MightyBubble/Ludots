@@ -1,0 +1,9 @@
+{
+  "name": "KayKitKenneyAssetPackMod",
+  "version": "1.0.0",
+  "description": "Built-in CC0 model asset library for KayKit and Kenney open-game-art packs. Pure resource mod; run scripts/import-kaykit-kenney-assets.ps1 to populate assets/Models.",
+  "priority": 0,
+  "dependencies": {},
+  "author": "Ludots Team",
+  "tags": ["assets", "models", "kaykit", "kenney", "cc0"]
+}

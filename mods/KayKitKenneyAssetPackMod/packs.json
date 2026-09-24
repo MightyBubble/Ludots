@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "packs": [
+    {
+      "id": "kaykit-medieval-hexagon",
+      "name": "KayKit Medieval Hexagon Pack 1.0",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0/archive/refs/heads/main.zip",
+      "sourceUrlFallback": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0/archive/refs/heads/master.zip",
+      "targetDir": "assets/Models/KayKit/MedievalHexagon"
+    },
+    {
+      "id": "kaykit-character-adventures",
+      "name": "KayKit Character Pack Adventures 1.0",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/archive/refs/heads/main.zip",
+      "sourceUrlFallback": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/archive/refs/heads/master.zip",
+      "targetDir": "assets/Models/KayKit/CharacterAdventures"
+    },
+    {
+      "id": "kenney-prototype-kit",
+      "name": "Kenney Prototype Kit",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://github.com/kenneynl/kenney-prototype-kit/archive/refs/heads/main.zip",
+      "sourceUrlFallback": "https://github.com/kenneynl/kenney-prototype-kit/archive/refs/heads/master.zip",
+      "targetDir": "assets/Models/Kenney/PrototypeKit"
+    },
+    {
+      "id": "kenney-mini-town-kit",
+      "name": "Kenney Mini Town Kit",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://github.com/kenneynl/kenney-mini-town-kit/archive/refs/heads/main.zip",
+      "sourceUrlFallback": "https://github.com/kenneynl/kenney-mini-town-kit/archive/refs/heads/master.zip",
+      "targetDir": "assets/Models/Kenney/MiniTownKit"
+    }
+  ]
+}

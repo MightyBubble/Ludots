@@ -224,6 +224,14 @@
         "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
         "projectPath": "CombatStanceShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "kaykit_kenney_asset_pack",
+      "target": {
+        "type": "path",
+        "value": "mods/KayKitKenneyAssetPackMod",
+        "projectPath": null
+      }
     }
   ],
   "adapters": {
