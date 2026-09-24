@@ -324,6 +324,11 @@ public sealed class MassNavigationSolverSemantics
         RequirePositive(DirectionEpsilonSq, nameof(DirectionEpsilonSq));
         RequirePositive(NormalizationEpsilonSq, nameof(NormalizationEpsilonSq));
         RequirePositive(InverseSqrtMinValue, nameof(InverseSqrtMinValue));
+        if (InverseSqrtMinValue > DirectionEpsilonSq || InverseSqrtMinValue > NormalizationEpsilonSq)
+        {
+            throw new System.InvalidOperationException(
+                "MassNavigation steering semantics requires inverseSqrtMinValue <= directionEpsilonSq and normalizationEpsilonSq.");
+        }
         RequirePositive(EntitySyncPositionEpsilonSq, nameof(EntitySyncPositionEpsilonSq));
         RequirePositive(EntitySyncVelocityEpsilonSq, nameof(EntitySyncVelocityEpsilonSq));
         RequirePositive(FacingVelocityEpsilonSq, nameof(FacingVelocityEpsilonSq));

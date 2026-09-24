@@ -252,6 +252,23 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
+        if (requestId <= 0 || agentIndex < 0 ||
+            !world.TryGet(agent, out MassNavigationAgentIndex boundIndex) ||
+            boundIndex.Value != agentIndex ||
+            !simulation.AgentState.TryGetAgentEntity(agentIndex, out Entity boundAgent) ||
+            boundAgent != agent)
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.InvalidRequest,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 5,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
+
         if (!TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType))
         {
             return new MassNavigationRouteSinkResult(
@@ -274,6 +291,20 @@ public sealed class MassNavigationRouteExecutionSink
                 default,
                 waypointCount: 0,
                 errorCode: 3,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
+
+        int maxExpandedCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.RouteMaxExpandedPerRequest;
+        if (maxExpanded <= 0 || maxExpanded > maxExpandedCapacity)
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.InvalidRequest,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 6,
                 orderToken: requestId,
                 agentIndex: agentIndex);
         }

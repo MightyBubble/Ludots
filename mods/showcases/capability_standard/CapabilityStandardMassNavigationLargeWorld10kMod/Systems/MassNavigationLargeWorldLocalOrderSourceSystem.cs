@@ -47,7 +47,10 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
             return;
         }
 
-        Entity actor = _helper.GetControlledActor();
+        // Input attribution binds the sole seat rep via the InputMod helper: this showcase
+        // has no single player-owned avatar, so CommandSource-primary resolution can
+        // never supply an actor here. The helper owns seat access; it is not exposed here.
+        Entity actor = _helper.ResolveSoleSeatActor();
         if (_helper.TryBindSoleSeatActor(_mapping, actor))
         {
             _mapping.Update(dt);

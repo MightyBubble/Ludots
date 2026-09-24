@@ -79,8 +79,8 @@ public sealed partial class MassNavigationFlowSolverState
         out int cell)
     {
         int i2 = index << 1;
-        int cellX = (int)(positionsCm[i2] * invHashCell);
-        int cellY = (int)(positionsCm[i2 + 1] * invHashCell);
+        int cellX = (int)MathF.Floor(positionsCm[i2] * invHashCell);
+        int cellY = (int)MathF.Floor(positionsCm[i2 + 1] * invHashCell);
         if ((uint)cellX > (uint)hashWidthMinusOne || (uint)cellY > (uint)hashHeightMinusOne)
         {
             cell = -1;

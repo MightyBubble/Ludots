@@ -30,6 +30,10 @@ namespace Ludots.Core.Physics2D.Systems
             .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState, ManifestationMotion2D>()
             .WithNone<CompoundObstacle2D>();
 
+        private static readonly QueryDescription _facingSingleQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, FacingDirection, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>()
+            .WithNone<CompoundObstacle2D, ManifestationObstacleBridge2DDirty, ManifestationMotion2D>();
+
         private static readonly QueryDescription _newCompoundQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CompoundObstacle2D>()
             .WithNone<CompoundObstacle2DState>();
@@ -39,6 +43,10 @@ namespace Ludots.Core.Physics2D.Systems
 
         private static readonly QueryDescription _movingCompoundQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CompoundObstacle2D, CompoundObstacle2DState, ManifestationMotion2D>();
+
+        private static readonly QueryDescription _facingCompoundQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, FacingDirection, CompoundObstacle2D, CompoundObstacle2DState>()
+            .WithNone<ManifestationObstacleBridge2DDirty, ManifestationMotion2D>();
 
         private readonly ShapeDataStorage2D _shapeStorage;
 
@@ -64,6 +72,11 @@ namespace Ludots.Core.Physics2D.Systems
                 MaterializeSingle(entity, in worldPosition, in intent, removeDirty: false);
             });
 
+            World.Query(in _facingSingleQuery, (Entity entity, ref WorldPositionCm worldPosition, ref ManifestationObstacleIntent2D intent) =>
+            {
+                MaterializeSingle(entity, in worldPosition, in intent, removeDirty: false);
+            });
+
             World.Query(in _newCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
             {
                 MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: false);
@@ -75,6 +88,11 @@ namespace Ludots.Core.Physics2D.Systems
             });
 
             World.Query(in _movingCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
+            {
+                MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: false);
+            });
+
+            World.Query(in _facingCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
             {
                 MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: false);
             });

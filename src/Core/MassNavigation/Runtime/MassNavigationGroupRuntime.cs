@@ -613,7 +613,29 @@ internal sealed class MassNavigationGroupRuntime
 
             group.CenterX = centerX;
             group.CenterY = centerY;
-            group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
+            bool allMembersArrived = true;
+            float arrivedRadiusSq = simulation.Semantics.Group.ArrivedRadiusCm * simulation.Semantics.Group.ArrivedRadiusCm;
+            for (int i = 0; i < group.MemberCount; i++)
+            {
+                int unitIndex = group.MemberIndices[i];
+                if ((uint)unitIndex >= (uint)simulation.UnitCount)
+                {
+                    allMembersArrived = false;
+                    break;
+                }
+
+                Vector2 memberTarget = simulation.WorldToLocalCm(new Vector2(
+                    group.MemberOrderTargetWorldX[i], group.MemberOrderTargetWorldY[i]));
+                float dx = memberTarget.X - simulation.GetPositionX(unitIndex);
+                float dy = memberTarget.Y - simulation.GetPositionY(unitIndex);
+                if ((dx * dx) + (dy * dy) > arrivedRadiusSq || !simulation.IsUnitSettled(unitIndex))
+                {
+                    allMembersArrived = false;
+                    break;
+                }
+            }
+
+            group.Arrived = allMembersArrived && distance < simulation.Semantics.Group.ArrivedRadiusCm;
         }
 
         ActiveGroupCount = CountActiveGroups();

@@ -22,6 +22,33 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
         _runtimeProvider = runtimeProvider ?? throw new System.ArgumentNullException(nameof(runtimeProvider));
     }
 
+    public void PreflightPoseAuthorityTransition(World world, Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
+    {
+        if (!world.Has<MassNavigationAgentIndex>(entity))
+        {
+            return;
+        }
+
+        MassNavigationSimulationRuntime simulation = _runtimeProvider()
+            ?? throw new System.InvalidOperationException(
+                $"MassNavigation pose-authority bridge received a {from}->{to} transition for agent entity {entity.Id} without an active navigation runtime.");
+        int agentIndex = world.Get<MassNavigationAgentIndex>(entity).Value;
+        if ((uint)agentIndex >= (uint)simulation.MassNavigationFlow.UnitCount ||
+            !simulation.AgentState.TryGetAgentEntity(agentIndex, out Entity boundEntity) ||
+            boundEntity != entity)
+        {
+            throw new System.InvalidOperationException(
+                $"MassNavigation pose-authority bridge cannot commit transition for entity {entity.Id}: agent index {agentIndex} is not bound to this entity.");
+        }
+
+        if (from == PoseAuthorityKind.Displacement && to == PoseAuthorityKind.Nav &&
+            !world.Has<WorldPositionCm>(entity))
+        {
+            throw new System.InvalidOperationException(
+                $"MassNavigation pose-authority bridge requires WorldPositionCm before handing back entity {entity.Id}.");
+        }
+    }
+
     public void OnPoseAuthorityCommitted(World world, Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
     {
         if (!world.Has<MassNavigationAgentIndex>(entity))

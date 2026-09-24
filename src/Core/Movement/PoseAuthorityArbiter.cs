@@ -14,6 +14,7 @@ namespace Ludots.Core.Movement
     /// </summary>
     public interface IPoseAuthorityTransitionListener
     {
+        void PreflightPoseAuthorityTransition(World world, Entity entity, PoseAuthorityKind from, PoseAuthorityKind to);
         void OnPoseAuthorityCommitted(World world, Entity entity, PoseAuthorityKind from, PoseAuthorityKind to);
 
         /// <summary>
@@ -419,6 +420,15 @@ namespace Ludots.Core.Movement
                     {
                         throw new InvalidOperationException(
                             $"PoseAuthorityArbiter cannot commit {transition.From}->{transition.To} for entity {transition.Entity.Id}: current pose authority is {authority.Value}.");
+                    }
+
+                    for (int listenerIndex = 0; listenerIndex < _listeners.Count; listenerIndex++)
+                    {
+                        _listeners[listenerIndex].PreflightPoseAuthorityTransition(
+                            world,
+                            transition.Entity,
+                            transition.From,
+                            transition.To);
                     }
 
                     commandBuffer.Set(transition.Entity, new PoseAuthority { Value = transition.To });

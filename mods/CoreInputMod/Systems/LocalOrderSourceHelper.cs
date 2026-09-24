@@ -405,6 +405,18 @@ namespace CoreInputMod.Systems
                 : default;
         }
 
+        /// <summary>
+        /// Resolves the sole seat's possessed representative as the input-attribution actor.
+        /// Unlike <see cref="GetControlledActor"/>, this does NOT require a command source to
+        /// already be established: it reads straight from the local seat binding, so it is valid
+        /// before any selection/collection exists. Used by showcases without a single
+        /// player-owned avatar, where CommandSource-primary resolution can never supply an actor.
+        /// </summary>
+        public Entity ResolveSoleSeatActor()
+        {
+            return _context.GetSolePossessedRepOrNull();
+        }
+
         private T RequireService<T>(string key) where T : class
         {
             if (!_globals.TryGetValue(key, out object? serviceObj) || serviceObj is not T service)
@@ -424,31 +436,7 @@ namespace CoreInputMod.Systems
         /// </summary>
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
-            owner = Entity.Null;
-            if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
-                !_world.IsAlive(subject))
-            {
-                return false;
-            }
-
-            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context))
-            {
-                if (context.ContextEntity == Entity.Null || !_world.IsAlive(context.ContextEntity))
-                {
-                    // Mounted-but-invalidated context is the pre-reclaim window; fail closed
-                    // instead of routing through the steady-state rep's collections.
-                    owner = Entity.Null;
-                    return false;
-                }
-
-                owner = context.ContextEntity;
-                return true;
-            }
-
-            // Replicated clients never mount InteractionContextInstance; the sole possessed
-            // seat rep is the command-source owner there (no silent fallback for hosts).
-            owner = subject;
-            return true;
+            return _context.TryGetCommandSourceOwner(out owner);
         }
 
         private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)

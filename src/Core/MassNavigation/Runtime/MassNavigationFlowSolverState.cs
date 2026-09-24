@@ -365,8 +365,8 @@ public sealed partial class MassNavigationFlowSolverState
 
         UnitCount = checked(unitsPerTeam * teamIds.Length);
         EnsureCapacity(UnitCount);
-        InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
         ClearRuntimeObstacles();
+        InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
@@ -380,8 +380,8 @@ public sealed partial class MassNavigationFlowSolverState
     {
         UnitCount = agentSeeds.Length;
         EnsureCapacity(UnitCount);
-        InitializeTeams(agentSeeds);
         ClearRuntimeObstacles();
+        InitializeTeams(agentSeeds);
         InitializeUnits(agentSeeds);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
@@ -507,11 +507,14 @@ public sealed partial class MassNavigationFlowSolverState
             _teams[index] != teamId ||
             _layerCategoryMasks[index] != categoryMask ||
             _layerInteractionMasks[index] != interactionMask;
-        _teams[index] = teamId;
-        if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+        if (!_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
         {
-            _teamRuntimeIndices[index] = teamStateIndex;
+            throw new InvalidOperationException(
+                $"MassNavigationFlow runtime profile agent index {index} references unknown team id {teamId}.");
         }
+
+        _teams[index] = teamId;
+        _teamRuntimeIndices[index] = teamStateIndex;
 
         _navMasses[index] = navMass;
         _visualScales[index] = visualScale;
@@ -1054,12 +1057,9 @@ public sealed partial class MassNavigationFlowSolverState
         bool forceRefreshObstacles,
         Action<double>? observeFlowFieldRebuild)
     {
-        bool refreshObstacles = _flowDirty || forceRefreshObstacles;
-        bool refreshCrowd = _flowDirty || forceRefreshCrowd;
-        bool refreshFlow = _flowDirty || forceRefreshFlow;
-        tuning.ForceRefreshFlow = false;
-        tuning.ForceRefreshCrowd = false;
-        tuning.ForceRefreshObstacles = false;
+        bool refreshObstacles = _flowDirty || forceRefreshObstacles || tuning.ForceRefreshObstacles;
+        bool refreshCrowd = _flowDirty || forceRefreshCrowd || tuning.ForceRefreshCrowd;
+        bool refreshFlow = _flowDirty || forceRefreshFlow || tuning.ForceRefreshFlow;
         if (!refreshObstacles && !refreshCrowd && !refreshFlow)
         {
             return false;
