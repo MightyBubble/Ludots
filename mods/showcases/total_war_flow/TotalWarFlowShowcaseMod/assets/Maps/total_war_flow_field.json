@@ -19,8 +19,8 @@
    "WidthCm": 20000,
    "HeightCm": 20000,
    "Anchor": {
-    "LocalXCm": 10000,
-    "LocalYCm": 10000,
+    "LocalXCm": 0,
+    "LocalYCm": 0,
     "WorldXCm": 0,
     "WorldYCm": 0
    },
@@ -32,8 +32,8 @@
   }
  ],
  "DefaultCamera": {
-  "TargetXCm": 0,
-  "TargetYCm": 0,
+  "TargetXCm": 10000,
+  "TargetYCm": 10000,
   "Yaw": 0,
   "Pitch": 58,
   "DistanceCm": 16000,
@@ -55,8 +55,8 @@
   {
    "template": "tw_commander",
    "instanceId": "tw-commander",
-   "PositionXCm": 0,
-   "PositionYCm": 0,
+   "PositionXCm": 10000,
+   "PositionYCm": 10000,
    "Overrides": {
     "PlayerIdentity": {
      "PlayerId": 1
@@ -69,8 +69,8 @@
   {
    "template": "tw_marine",
    "instanceId": "tw-marine-1",
-   "PositionXCm": -300,
-   "PositionYCm": 100,
+   "PositionXCm": 9700,
+   "PositionYCm": 10100,
    "Overrides": {
     "Team": {
      "Id": 1
@@ -80,8 +80,8 @@
   {
    "template": "tw_marine",
    "instanceId": "tw-marine-2",
-   "PositionXCm": -300,
-   "PositionYCm": -100,
+   "PositionXCm": 9700,
+   "PositionYCm": 9900,
    "Overrides": {
     "Team": {
      "Id": 1
@@ -91,20 +91,20 @@
   {
    "template": "ballista_wolf",
    "instanceId": "wolf_1",
-   "PositionXCm": 400,
-   "PositionYCm": 0
+   "PositionXCm": 10400,
+   "PositionYCm": 10000
   },
   {
    "template": "ballista_tower",
    "instanceId": "tower_1",
-   "PositionXCm": 400,
-   "PositionYCm": 600
+   "PositionXCm": 10400,
+   "PositionYCm": 10600
   },
   {
    "Template": "ballista_team_anchor",
    "InstanceId": "tw-hostiles-anchor",
-   "PositionXCm": 2000,
-   "PositionYCm": 2000,
+   "PositionXCm": 12000,
+   "PositionYCm": 12000,
    "Overrides": {
     "Name": {
      "Value": "Hostiles Anchor"

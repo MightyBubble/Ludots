@@ -4277,6 +4277,12 @@ namespace Ludots.Core.Engine
                         $"Map '{mapId}' board '{b.Name}' nav declaration needs positive tileWorldWidthCm/tileWorldHeightCm in Navigation/navmesh.json maps.{mapId}.boards (nav-owned granularity, #1346).");
                 }
 
+                if (b.TopologyOriginXCm != 0 || b.TopologyOriginYCm != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{b.Name}' topology origin is ({b.TopologyOriginXCm},{b.TopologyOriginYCm})cm and cannot join navigation yet; nav tiles are enumerated from the Ludots origin until per-board nav tile addressing lands.");
+                }
+
                 // The bake pipeline still tiles by terrain chunk (#1346 bake-side regridding
                 // pending); a declared size that disagrees produces baked artifacts on a
                 // different grid than runtime enumerates, exploding deep in tile URI
@@ -4304,25 +4310,6 @@ namespace Ludots.Core.Engine
             var participatingBoards = mapConfig.Boards
                 .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var g) && g != null)
                 .ToList();
-            int navOriginXcm = int.MaxValue;
-            int navOriginYcm = int.MaxValue;
-            for (int i = 0; i < participatingBoards.Count; i++)
-            {
-                var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
-                navOriginXcm = Math.Min(navOriginXcm, aabb.Left);
-                navOriginYcm = Math.Min(navOriginYcm, aabb.Top);
-            }
-
-            for (int i = 0; i < participatingBoards.Count; i++)
-            {
-                var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
-                if (aabb.Left != navOriginXcm || aabb.Top != navOriginYcm)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{participatingBoards[i].Name}' topology origin is ({aabb.Left},{aabb.Top})cm and cannot join navigation yet; nav tiles are enumerated from the shared corner ({navOriginXcm},{navOriginYcm})cm until each board has its own tile origin.");
-                }
-            }
-
             int widthChunks = participatingBoards
                 .Select(b => CeilDiv(b.ResolveExtent().WidthCm, TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
                 .DefaultIfEmpty(0)
@@ -4366,7 +4353,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm, navOriginXcm, navOriginYcm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
