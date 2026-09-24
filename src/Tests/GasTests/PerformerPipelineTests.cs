@@ -417,7 +417,7 @@ namespace Ludots.Tests.Presentation
             _globals = new System.Collections.Generic.Dictionary<string, object>();
             _renderDebug = new RenderDebugState();
             _globals[CoreServiceKeys.RenderDebugState.Name] = _renderDebug;
-            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines);
+            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, new SlashRibbonBuffer(), _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines);
         }
 
         [TearDown]

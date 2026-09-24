@@ -49,7 +49,19 @@ namespace ChampionSkillSandboxMod.Runtime
             overlay.AddText(x + 16, y + 126, BuildMoveSpeedSummary(engine.World, selected), 13, SelectionPanelText, stableId: 43105, dirtySerial: 1);
             overlay.AddText(x + 16, y + 150, BuildControlStateSummary(engine.World, selected, tagOps), 13, SelectionPanelText, stableId: 43106, dirtySerial: 1);
             overlay.AddText(x + 16, y + 174, BuildOrderAndExecSummary(engine.World, selected), 13, SelectionPanelText, stableId: 43107, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 198, "Runner auto-loops between lanes. Caster auto-casts a 20-tick spell that silence blocks and stun interrupts.", 12, SelectionPanelHint, stableId: 43108, dirtySerial: 1);
+            overlay.AddText(x + 16, y + 198, BuildAutomationSummary(engine), 12, SelectionPanelHint, stableId: 43108, dirtySerial: 1);
+        }
+
+        private static string BuildAutomationSummary(GameEngine engine)
+        {
+            bool casterAutoPulseEnabled = !(
+                engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ControlCasterAutoPulseEnabledKey, out object? enabledObj) &&
+                enabledObj is bool enabled &&
+                !enabled);
+
+            return casterAutoPulseEnabled
+                ? "Runner auto-loops between lanes. Caster auto-casts a 20-tick spell that silence blocks and stun interrupts."
+                : "Runner auto-loops between lanes. Caster auto-cast is disabled for deterministic validation.";
         }
 
         private static string BuildControlTagSummary(World world, Entity entity, TagOps? tagOps)

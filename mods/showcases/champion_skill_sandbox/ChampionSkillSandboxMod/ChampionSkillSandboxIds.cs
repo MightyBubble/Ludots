@@ -44,6 +44,7 @@ namespace ChampionSkillSandboxMod
         public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
         public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
         public const string ContextActionSummaryKey = "ChampionSkillSandbox.ContextActionSummary";
+        public const string ControlCasterAutoPulseEnabledKey = "ChampionSkillSandbox.Control.CasterAutoPulseEnabled";
         public const string SelectionIndicatorPerformerKey = "champion_skill_sandbox.selection_indicator";
         public const string HoverIndicatorPerformerKey = "champion_skill_sandbox.hover_indicator";
         public const string ResolvedIndicatorPerformerKey = "champion_skill_sandbox.resolved_indicator";

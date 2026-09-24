@@ -86,7 +86,7 @@
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Target Dummy A" },
-        "WorldPositionCm": { "Value": { "X": 1960, "Y": 680 } }
+        "WorldPositionCm": { "Value": { "X": 1880, "Y": 900 } }
       }
     },
     {

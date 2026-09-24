@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -174,24 +175,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         bbEntities.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out targetEntity);
                     }
 
-                    if (GameplayControlStateResolver.IsCastBlocked(World, actor))
-                    {
-                        if (_orderTypeRegistry != null)
-                        {
-                            OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
-                        }
-                        _presentationEvents?.Publish(new GasPresentationEvent
-                        {
-                            Kind = GasPresentationEventKind.CastFailed,
-                            Actor = actor,
-                            Target = targetEntity,
-                            AbilitySlot = slotIndex,
-                            AbilityId = slot.AbilityId,
-                            FailReason = AbilityCastFailReason.BlockedByTag
-                        });
-                        continue;
-                    }
-
                     AbilityDefinition abilityDef = default;
                     bool hasAbilityDef = slot.AbilityId > 0 &&
                         _abilityDefinitions != null &&
@@ -213,6 +196,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         actorTags.HasTag(abilityDef.ToggleSpec.ToggleTagId))
                     {
                         DeactivateToggle(actor, in abilityDef.ToggleSpec, slotIndex, slot.AbilityId, targetEntity);
+                        continue;
+                    }
+
+                    if (GameplayControlStateResolver.IsCastBlocked(World, actor))
+                    {
+                        if (_orderTypeRegistry != null)
+                        {
+                            OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
+                        }
+                        _presentationEvents?.Publish(new GasPresentationEvent
+                        {
+                            Kind = GasPresentationEventKind.CastFailed,
+                            Actor = actor,
+                            Target = targetEntity,
+                            AbilitySlot = slotIndex,
+                            AbilityId = slot.AbilityId,
+                            FailReason = AbilityCastFailReason.BlockedByTag
+                        });
                         continue;
                     }
 
@@ -321,6 +322,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             targetPosCm = orderTargetPosCm;
                             hasTargetPos = true;
                         }
+                    }
+
+                    // Directional skills that snap to an entity target should execute toward the
+                    // resolved entity position instead of a potentially drifted screen->ground point.
+                    if (hasAbilityDef &&
+                        abilityDef.HasInputBindingOverride &&
+                        abilityDef.InputBindingOverride.HasSelectionType &&
+                        abilityDef.InputBindingOverride.SelectionType == Ludots.Core.Input.Orders.OrderSelectionType.Direction &&
+                        World.IsAlive(targetEntity) &&
+                        World.Has<WorldPositionCm>(targetEntity))
+                    {
+                        targetPosCm = World.Get<WorldPositionCm>(targetEntity).Value;
+                        hasTargetPos = true;
                     }
 
                     if (hasActivationPrecondition)

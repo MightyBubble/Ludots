@@ -22,28 +22,28 @@
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Branch Dummy Front" },
-        "WorldPositionCm": { "Value": { "X": 1440, "Y": 920 } }
+        "WorldPositionCm": { "Value": { "X": 1390, "Y": 920 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Branch Dummy Left" },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 840 } }
+        "WorldPositionCm": { "Value": { "X": 1450, "Y": 850 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Branch Dummy Right" },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 1000 } }
+        "WorldPositionCm": { "Value": { "X": 1450, "Y": 990 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_brute",
       "Overrides": {
         "Name": { "Value": "Branch Brute Ender" },
-        "WorldPositionCm": { "Value": { "X": 1560, "Y": 920 } }
+        "WorldPositionCm": { "Value": { "X": 1540, "Y": 920 } }
       }
     }
   ]

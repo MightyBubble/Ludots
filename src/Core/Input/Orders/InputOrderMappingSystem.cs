@@ -196,6 +196,8 @@ namespace Ludots.Core.Input.Orders
         private VectorAimPhase _vectorAimPhase;
         private Vector3 _vectorAimOrigin;
         private bool _isVectorAiming;
+        private bool _suppressSelectionThisFrame;
+        private bool _suppressCommandUntilRelease;
 
         /// <summary>
         /// Change global interaction mode at runtime.
@@ -217,6 +219,9 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>Whether the current aiming interaction is a two-phase vector aim.</summary>
         public bool IsVectorAiming => _isVectorAiming;
+
+        /// <summary>Whether this frame's confirm click was consumed by the aiming flow and selection should be suppressed.</summary>
+        public bool SuppressSelectionThisFrame => _suppressSelectionThisFrame;
 
         /// <summary>The ActionId of the mapping being aimed (valid only when IsAiming).</summary>
         public string AimingActionId => _aimingActionId;
@@ -289,6 +294,11 @@ namespace Ludots.Core.Input.Orders
         {
             if (_orderSubmitHandler == null) return;
             if (_orderTypeKeyResolver == null) return;
+            _suppressSelectionThisFrame = false;
+            if (_suppressCommandUntilRelease && !_input.IsDown(CommandActionId))
+            {
+                _suppressCommandUntilRelease = false;
+            }
             if (dt > 0f)
             {
                 _elapsedSeconds += dt;
@@ -311,6 +321,12 @@ namespace Ludots.Core.Input.Orders
             // 2. Process all mappings
             foreach (var (actionId, mapping) in _mappingsByActionId)
             {
+                if (_suppressCommandUntilRelease &&
+                    string.Equals(actionId, CommandActionId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out var resolvedActor);
 
                 // Held+StartEnd is handled separately via press/release detection
@@ -592,6 +608,11 @@ namespace Ludots.Core.Input.Orders
                 // Cancel: right-click or ESC
                 if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
                 {
+                    if (_input.PressedThisFrame(CommandActionId))
+                    {
+                        _suppressCommandUntilRelease = true;
+                    }
+
                     ExitAimingState();
                     return;
                 }
@@ -604,6 +625,7 @@ namespace Ludots.Core.Input.Orders
             // AimCast: Confirm by left-click
             if (_input.PressedThisFrame(ConfirmActionId))
             {
+                _suppressSelectionThisFrame = true;
                 // Build order using current cursor/selection
                 if (TryBuildOrderSmartCast(_aimingMapping, out var order))
                 {
@@ -616,6 +638,11 @@ namespace Ludots.Core.Input.Orders
             // Cancel: right-click or ESC
             if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
             {
+                if (_input.PressedThisFrame(CommandActionId))
+                {
+                    _suppressCommandUntilRelease = true;
+                }
+
                 ExitAimingState();
                 return;
             }
@@ -649,6 +676,11 @@ namespace Ludots.Core.Input.Orders
             // Cancel: right-click or ESC at any phase
             if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
             {
+                if (_input.PressedThisFrame(CommandActionId))
+                {
+                    _suppressCommandUntilRelease = true;
+                }
+
                 ExitAimingState();
                 return;
             }
@@ -669,6 +701,7 @@ namespace Ludots.Core.Input.Orders
                     // Confirm origin with left-click
                     if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
                     {
+                        _suppressSelectionThisFrame = true;
                         _vectorAimOrigin = cursorPos;
                         _vectorAimPhase = VectorAimPhase.Direction;
                     }
@@ -684,6 +717,7 @@ namespace Ludots.Core.Input.Orders
                     // Confirm direction with left-click -> build and submit vector order
                     if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
                     {
+                        _suppressSelectionThisFrame = true;
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))
                         {
                             SubmitOrder(_aimingMapping!, in order);
@@ -768,7 +802,24 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entity)
             {
-                if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
+                if (_groundPositionProvider != null &&
+                    _groundPositionProvider(out var cursorWorldCm) &&
+                    TryResolveCursorTarget(actor, mapping, cursorWorldCm, out var cursorTarget))
+                {
+                    order.Target = cursorTarget;
+                }
+                else if (TryResolveHoveredEntity(out var hovered))
+                {
+                    order.Target = hovered;
+                }
+                else if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                         mapping.AutoTargetRangeCm > 0 &&
+                         _autoTargetProvider != null &&
+                         _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out var autoTarget))
+                {
+                    order.Target = autoTarget;
+                }
+                else if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
                 {
                     order.Target = target;
                 }
@@ -884,7 +935,13 @@ namespace Ludots.Core.Input.Orders
             switch (mapping.SelectionType)
             {
                 case OrderSelectionType.Entity:
-                    if (TryResolveHoveredEntity(out var hovered))
+                    if (_groundPositionProvider != null &&
+                             _groundPositionProvider(out var cursorWorldCm) &&
+                             TryResolveCursorTarget(actor, mapping, cursorWorldCm, out var cursorTarget))
+                    {
+                        order.Target = cursorTarget;
+                    }
+                    else if (TryResolveHoveredEntity(out var hovered))
                     {
                         order.Target = hovered;
                     }
@@ -914,9 +971,9 @@ namespace Ludots.Core.Input.Orders
                             {
                                 order.Target = hoveredTarget;
                             }
-                            else if (TryResolveCursorTarget(actor, mapping, groundPos, out var cursorTarget))
+                            else if (TryResolveCursorTarget(actor, mapping, groundPos, out var positionCursorTarget))
                             {
-                                order.Target = cursorTarget;
+                                order.Target = positionCursorTarget;
                             }
                             else if (mapping.AutoTargetRangeCm > 0 &&
                                      _autoTargetProvider != null &&
@@ -1058,7 +1115,24 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entity)
             {
-                if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
+                if (_groundPositionProvider != null &&
+                         _groundPositionProvider(out var cursorWorldCm) &&
+                         TryResolveCursorTarget(actor, mapping, cursorWorldCm, out var cursorTarget))
+                {
+                    order.Target = cursorTarget;
+                }
+                else if (TryResolveHoveredEntity(out var hovered))
+                {
+                    order.Target = hovered;
+                }
+                else if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                         mapping.AutoTargetRangeCm > 0 &&
+                         _autoTargetProvider != null &&
+                         _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out var autoTarget))
+                {
+                    order.Target = autoTarget;
+                }
+                else if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
                 {
                     order.Target = target;
                 }
@@ -1186,7 +1260,16 @@ namespace Ludots.Core.Input.Orders
                 return true;
             }
 
-            return TryResolveCursorTarget(actor, mapping, cursorWorldCm, out target);
+            if (TryResolveCursorTarget(actor, mapping, cursorWorldCm, out target))
+            {
+                return true;
+            }
+
+            return mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                   mapping.AutoTargetRangeCm > 0 &&
+                   _autoTargetProvider != null &&
+                   _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target) &&
+                   target != Entity.Null;
         }
         
         private OrderSubmitMode DetermineSubmitMode(ModifierSubmitBehavior behavior)

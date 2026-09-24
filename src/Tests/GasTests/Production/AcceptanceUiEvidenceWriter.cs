@@ -78,6 +78,11 @@ internal static class AcceptanceUiEvidenceWriter
             File.Delete(file);
         }
 
+        foreach (string file in Directory.GetFiles(screensDir, "*.svg"))
+        {
+            File.Delete(file);
+        }
+
         foreach (string fileName in new[] { "trace.jsonl", "battle-report.md", "path.mmd", "5w1h.md" })
         {
             string path = Path.Combine(artifactDir, fileName);

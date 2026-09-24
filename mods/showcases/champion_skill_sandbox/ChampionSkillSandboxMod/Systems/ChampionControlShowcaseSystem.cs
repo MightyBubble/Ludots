@@ -100,8 +100,12 @@ namespace ChampionSkillSandboxMod.Systems
                 SubmitRunnerMove(runner, runnerPosition);
             }
 
+            bool casterAutoPulseEnabled = !(_engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ControlCasterAutoPulseEnabledKey, out object? enabledObj) &&
+                                           enabledObj is bool enabled &&
+                                           !enabled);
             if (hero != Entity.Null &&
                 caster != Entity.Null &&
+                casterAutoPulseEnabled &&
                 !casterHasOrder &&
                 !_engine.World.Has<AbilityExecInstance>(caster) &&
                 ((_tick + caster.Id) % 72) == 0)

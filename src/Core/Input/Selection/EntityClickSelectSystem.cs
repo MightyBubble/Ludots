@@ -210,7 +210,7 @@ namespace Ludots.Core.Input.Selection
         {
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
-                   mapping.IsAiming;
+                   (mapping.IsAiming || mapping.SuppressSelectionThisFrame);
         }
 
         private bool TryGetPointerButtonState(string actionId, out PointerButtonState state)

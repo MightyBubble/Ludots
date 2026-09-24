@@ -22,6 +22,7 @@
       "Template": "champion_control_showcase_runner",
       "Overrides": {
         "Name": { "Value": "Control Runner" },
+        "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 2300, "Y": 1060 } }
       }
     },
@@ -29,6 +30,7 @@
       "Template": "champion_control_showcase_caster",
       "Overrides": {
         "Name": { "Value": "Control Caster" },
+        "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 2760, "Y": 820 } }
       }
     }

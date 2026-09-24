@@ -6,6 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
@@ -80,8 +81,14 @@ namespace Ludots.Tests.GAS.Production
             Entity caster = FindEntityByName(engine.World, "Control Caster");
 
             Assert.That(engine.World.Has<AbilityStateBuffer>(marshal), Is.True);
+            Assert.That(engine.World.TryGet(marshal, out PlayerOwner marshalOwner), Is.True);
+            Assert.That(marshalOwner.PlayerId, Is.EqualTo(1));
             Assert.That(engine.World.Has<GameplayTagContainer>(runner), Is.True);
+            Assert.That(engine.World.TryGet(runner, out PlayerOwner runnerOwner), Is.True);
+            Assert.That(runnerOwner.PlayerId, Is.EqualTo(1));
             Assert.That(engine.World.Has<AbilityStateBuffer>(caster), Is.True);
+            Assert.That(engine.World.TryGet(caster, out PlayerOwner casterOwner), Is.True);
+            Assert.That(casterOwner.PlayerId, Is.EqualTo(1));
 
             var slots = new EntityCommandPanelSlotView[8];
             int count = ResolveGasPanelSource(engine).CopySlots(marshal, 0, slots);

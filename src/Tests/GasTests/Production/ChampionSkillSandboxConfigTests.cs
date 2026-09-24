@@ -49,7 +49,6 @@ namespace Ludots.Tests.GAS.Production
         private const string MusouHitConfirmMapId = "champion_musou_hit_confirm_showcase";
         private const string MusouBranchHeroName = "Musou Branch Alpha";
         private const string MusouHitHeroName = "Musou Confirm Alpha";
-        private const string ActionModeId = "ChampionSkillSandbox.Mode.Action";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
         private const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         private const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
@@ -453,6 +452,23 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
             Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
 
+            var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
+            int geomancerBeamId = AbilityIdRegistry.GetId("Ability.Champion.Geomancer.PrismaticBeam");
+            Assert.That(geomancerBeamId, Is.GreaterThan(0));
+            Assert.That(abilities.TryGet(geomancerBeamId, out var geomancerBeam), Is.True);
+            Assert.That(geomancerBeam.HasInputBindingOverride, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.HasSelectionType, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.SelectionType, Is.EqualTo(OrderSelectionType.Direction));
+            Assert.That(geomancerBeam.InputBindingOverride.HasCursorTargetPolicy, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+            Assert.That(geomancerBeam.InputBindingOverride.HasCursorTargetRangeCm, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.CursorTargetRangeCm, Is.EqualTo(920));
+            Assert.That(geomancerBeam.InputBindingOverride.HasAutoTargetPolicy, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+            Assert.That(geomancerBeam.InputBindingOverride.HasAutoTargetRangeCm, Is.True);
+            Assert.That(geomancerBeam.InputBindingOverride.AutoTargetRangeCm, Is.EqualTo(920));
+
             var garenSlots = new EntityCommandPanelSlotView[8];
             int garenCount = source.CopySlots(FindEntityByName(engine.World, "Garen Courage"), 0, garenSlots);
             Assert.That(garenCount, Is.EqualTo(4));
@@ -664,19 +680,19 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
             Tick(engine, 1);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[9].Active, Is.True);
+            Assert.That(buttons[10].Active, Is.True);
             Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
             Tick(engine, 1);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[7].Active, Is.True);
+            Assert.That(buttons[8].Active, Is.True);
             Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.LolId);
             Tick(engine, 1);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[8].Active, Is.True);
+            Assert.That(buttons[9].Active, Is.True);
             Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
 
             InputOrderMapping? command = mapping.GetMapping("Command");
@@ -1031,8 +1047,16 @@ namespace Ludots.Tests.GAS.Production
                 performers,
                 projectileEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlast",
                 bindingEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
-                hitEffectKey: null,
+                hitEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastHit",
                 projectilePerformerKey: "champion_skill_sandbox.projectile.jayce_q");
+            AssertEzrealProjectileEffect(
+                effects,
+                effectKey: "Effect.Champion.Jayce.Cannon.ShockBlast",
+                expectedHitEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastHit",
+                expectedTravelMode: ProjectileTravelMode.Direction,
+                expectedImpactPolicy: ProjectileImpactPolicy.DestroyOnFirstHit,
+                expectedRelationFilter: RelationshipFilter.Hostile,
+                expectedMaxHitCount: 1);
             AssertProjectileEffect(
                 effects,
                 projectileBindings,

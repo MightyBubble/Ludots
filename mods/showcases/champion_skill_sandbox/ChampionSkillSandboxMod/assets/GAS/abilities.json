@@ -278,6 +278,13 @@
     },
     "indicator": { "shape": "Line", "range": 920, "radius": 80, "showRangeCircle": true, "validColor": "#78E2FF77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.R"] },
+    "input": {
+      "selectionType": "Direction",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 920,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 920
+    },
     "presentation": {
       "displayName": "Prismatic Beam",
       "iconGlyph": "R",
@@ -347,6 +354,9 @@
     },
     "indicator": { "shape": "Line", "range": 880, "radius": 90, "showRangeCircle": true, "validColor": "#67D4FF77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.Q"] },
+    "input": {
+      "selectionType": "Direction"
+    },
     "presentation": {
       "displayName": "Shock Blast",
       "iconGlyph": "Q",
@@ -691,6 +701,13 @@
     },
     "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#69C9FF77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.Q"] },
+    "input": {
+      "selectionType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 760
+    },
     "presentation": {
       "displayName": "Crippling Shot",
       "iconGlyph": "Q",
@@ -714,6 +731,13 @@
     },
     "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#F0C96A77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.W"] },
+    "input": {
+      "selectionType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 760
+    },
     "presentation": {
       "displayName": "Hush Seal",
       "iconGlyph": "W",
@@ -737,6 +761,13 @@
     },
     "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#8EE48A77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.E"] },
+    "input": {
+      "selectionType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 760
+    },
     "presentation": {
       "displayName": "Iron Snare",
       "iconGlyph": "E",
@@ -760,6 +791,13 @@
     },
     "indicator": { "shape": "Circle", "range": 760, "radius": 130, "showRangeCircle": true, "validColor": "#FF8C6A77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.R"] },
+    "input": {
+      "selectionType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 760
+    },
     "presentation": {
       "displayName": "Shock Jail",
       "iconGlyph": "R",
@@ -783,6 +821,13 @@
     },
     "indicator": { "shape": "Circle", "range": 760, "radius": 140, "showRangeCircle": true, "validColor": "#B88DFF77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Caster.Q"] },
+    "input": {
+      "selectionType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetRangeCm": 760
+    },
     "presentation": {
       "displayName": "Arc Pulse",
       "iconGlyph": "Q",
@@ -987,6 +1032,7 @@
       }
     }
   },
+  {
     "id": "Ability.Champion.MusouBranch.Square1",
     "exec": {
       "clockId": "FixedFrame",

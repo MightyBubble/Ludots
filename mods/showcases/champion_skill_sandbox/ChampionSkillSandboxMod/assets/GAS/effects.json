@@ -338,7 +338,14 @@
       "speed": 1900,
       "range": 880,
       "arcHeight": 0,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve"
+      "hitEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit",
+      "presentationEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -737,6 +744,7 @@
       { "attribute": "Health", "op": "Add", "value": -28.0 }
     ]
   },
+  {
     "id": "Effect.Champion.MusouBranch.Source.Stage1Window",
     "tags": ["Effect.Champion.Melee", "Effect.Champion.ComboWindow"],
     "presetType": "Buff",

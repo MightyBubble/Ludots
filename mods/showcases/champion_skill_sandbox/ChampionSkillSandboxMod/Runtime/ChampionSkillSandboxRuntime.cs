@@ -444,8 +444,9 @@ namespace ChampionSkillSandboxMod.Runtime
             if (!ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) ||
                 !ChampionSkillSandboxIds.IsSandboxMode(activeModeId))
             {
-                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, ChampionSkillSandboxIds.ActionModeId);
-                activeModeId = ChampionSkillSandboxIds.ActionModeId;
+                string defaultModeId = ResolveDefaultModeId(engine.CurrentMapSession?.MapId.Value);
+                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, defaultModeId);
+                activeModeId = defaultModeId;
             }
 
             if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping &&
@@ -454,6 +455,18 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 mapping.SetInteractionMode(interactionMode);
             }
+        }
+
+        private static string ResolveDefaultModeId(string? mapId)
+        {
+            if (ChampionSkillSandboxIds.IsControlMap(mapId) ||
+                ChampionSkillSandboxIds.IsMusouBranchMap(mapId) ||
+                ChampionSkillSandboxIds.IsMusouHitConfirmMap(mapId))
+            {
+                return ChampionSkillSandboxIds.SmartCastModeId;
+            }
+
+            return ChampionSkillSandboxIds.ActionModeId;
         }
 
         private static bool TryResolveInteractionMode(string activeModeId, out InteractionModeType interactionMode)

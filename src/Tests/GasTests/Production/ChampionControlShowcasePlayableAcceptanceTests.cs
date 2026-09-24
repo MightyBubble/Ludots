@@ -9,16 +9,29 @@ using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
@@ -38,11 +51,9 @@ namespace Ludots.Tests.GAS.Production
         private const float WorldMaxX = 3200f;
         private const float WorldMinY = 720f;
         private const float WorldMaxY = 1180f;
-        private const int MarshalSlowSlot = 0;
-        private const int MarshalSilenceSlot = 1;
-        private const int MarshalRootSlot = 2;
-        private const int MarshalStunSlot = 3;
-        private const int CasterArcPulseSlot = 0;
+        private const string ControlCasterAutoPulseEnabledKey = "ChampionSkillSandbox.Control.CasterAutoPulseEnabled";
+        private const string HeadlessCameraKey = "Tests.ChampionControlShowcase.HeadlessCamera";
+        private const string TestInputBackendKey = "Tests.ChampionControlShowcase.InputBackend";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -55,6 +66,26 @@ namespace Ludots.Tests.GAS.Production
             "EntityCommandPanelMod",
             "ChampionSkillSandboxMod"
         };
+        private static readonly Vector2[] HoverProbeOffsets =
+        {
+            Vector2.Zero,
+            new Vector2(0f, -24f),
+            new Vector2(0f, 24f),
+            new Vector2(-24f, 0f),
+            new Vector2(24f, 0f),
+            new Vector2(-36f, -36f),
+            new Vector2(36f, -36f),
+            new Vector2(-36f, 36f),
+            new Vector2(36f, 36f),
+            new Vector2(0f, -48f),
+            new Vector2(0f, 48f),
+            new Vector2(-48f, 0f),
+            new Vector2(48f, 0f),
+            new Vector2(-64f, -24f),
+            new Vector2(64f, -24f),
+            new Vector2(-64f, 24f),
+            new Vector2(64f, 24f)
+        };
 
         [Test]
         public void ChampionControlShowcase_PlayableAcceptance_WritesArtifactsAndScreens()
@@ -62,28 +93,21 @@ namespace Ludots.Tests.GAS.Production
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-control-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
-            Directory.CreateDirectory(screensDir);
+            AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
             var timeline = new List<string>();
             var snapshots = new List<ControlShowcaseSnapshot>();
-            var captureFrames = new List<CaptureFrame>();
+            var captureFrames = new List<UiAcceptanceEvidenceFrame>();
             var frameTimesMs = new List<double>();
 
             using var engine = CreateEngine();
+            engine.GlobalContext[ControlCasterAutoPulseEnabledKey] = false;
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
-            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
-                ?? throw new InvalidOperationException("OrderQueue missing.");
-            var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
-                ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
-            var gameConfig = engine.GetService(CoreServiceKeys.GameConfig)
-                ?? throw new InvalidOperationException("GameConfig missing.");
-
-            int moveToOrderTypeId = gameConfig.Constants.OrderTypeIds["moveTo"];
-            int castAbilityOrderTypeId = gameConfig.Constants.OrderTypeIds["castAbility"];
-            var planner = new CompositeOrderPlanner(engine.World, orderQueue, abilities, castAbilityOrderTypeId, moveToOrderTypeId);
+            var backend = GetInputBackend(engine);
 
             LoadMap(engine, ControlMapId, frameTimesMs);
+            TickUntil(engine, frameTimesMs, () => engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) != null, 24);
 
             Entity marshal = FindEntityByName(engine.World, "Control Marshal");
             Entity runner = FindEntityByName(engine.World, "Control Runner");
@@ -93,27 +117,57 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 1, "loaded", "Control showcase booted with the marshal selected.");
             timeline.Add("[T+001] Control showcase loaded | marshal selected | overlay exposes Q slow / W silence / E root / R stun");
 
-            SubmitMoveOrder(orderQueue, runner, 2, moveToOrderTypeId, new Vector2(3140f, 1060f));
+            IssueMoveOrder(engine, backend, runner, new Vector2(3140f, 1060f), frameTimesMs);
             Vector2 runnerBaselineStart = ReadPosition(engine.World, "Control Runner");
             Tick(engine, 24, frameTimesMs);
             float baselineRunnerTravel = Vector2.Distance(runnerBaselineStart, ReadPosition(engine.World, "Control Runner"));
             Assert.That(baselineRunnerTravel, Is.GreaterThan(60f));
+            SubmitStopOrder(engine, runner);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !HasOutstandingOrders(engine.World, runner),
+                24,
+                () => BuildControlCastDebugSummary(engine, marshal, runner));
 
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, marshal, runner, 1, MarshalSlowSlot), Is.True);
-            Tick(engine, 2, frameTimesMs);
+            CastSkillAtTarget(engine, backend, marshal, "<Keyboard>/q", runner, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(engine, runner, "Status.Slowed"),
+                12,
+                () => BuildControlCastDebugSummary(engine, marshal, runner));
             SelectEntity(engine, runner, frameTimesMs);
+            IssueMoveOrder(engine, backend, runner, new Vector2(2180f, 1060f), frameTimesMs);
             Vector2 runnerSlowStart = ReadPosition(engine.World, "Control Runner");
-            Tick(engine, 24, frameTimesMs);
+            Tick(engine, 12, frameTimesMs);
             float slowRunnerTravel = Vector2.Distance(runnerSlowStart, ReadPosition(engine.World, "Control Runner"));
             (float runnerSlowCurrent, float runnerSlowBase) = ReadMoveSpeed(engine.World, runner);
-            Assert.That(HasEffectiveTag(engine, runner, "Status.Slowed"), Is.True);
+            Assert.That(
+                HasEffectiveTag(engine, runner, "Status.Slowed"),
+                Is.True,
+                BuildControlCastDebugSummary(engine, marshal, runner));
             Assert.That(runnerSlowCurrent, Is.LessThan(runnerSlowBase));
             Assert.That(slowRunnerTravel, Is.LessThan(baselineRunnerTravel * 0.8f));
+            SubmitStopOrder(engine, runner);
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 2, "slow", "Marshal Q applies a heavy slow through the MoveSpeed chain and preserves movement.");
             timeline.Add($"[T+002] Marshal Q -> Runner | Slow | MoveSpeed {runnerSlowBase:0}->{runnerSlowCurrent:0} | travel {baselineRunnerTravel:0.#}cm -> {slowRunnerTravel:0.#}cm");
 
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, marshal, runner, 1, MarshalRootSlot), Is.True);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedFrameBudget(
+                engine,
+                frameTimesMs,
+                () => !HasEffectiveTag(engine, runner, "Status.Slowed"),
+                120,
+                () => BuildControlRecoveryDebugSummary(engine, runner));
+            CastSkillAtTarget(engine, backend, marshal, "<Keyboard>/e", runner, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(engine, runner, "Status.Rooted"),
+                12,
+                () => BuildControlCastDebugSummary(engine, marshal, runner));
+            SelectEntity(engine, runner, frameTimesMs);
+            IssueMoveOrder(engine, backend, runner, new Vector2(3140f, 1060f), frameTimesMs);
             Vector2 runnerRootStart = ReadPosition(engine.World, "Control Runner");
             Tick(engine, 18, frameTimesMs);
             Vector2 runnerRootEnd = ReadPosition(engine.World, "Control Runner");
@@ -125,15 +179,35 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 3, "root", "Marshal E projects move-block through the control-state sink.");
             timeline.Add("[T+003] Marshal E -> Runner | Root | MoveBlocked active | control sink drives nav max speed to 0");
 
-            TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(engine, runner, "Status.Rooted"), 180);
-            SubmitMoveOrder(orderQueue, runner, 2, moveToOrderTypeId, new Vector2(2180f, 1060f));
+            TickUntilFixedFrameBudget(
+                engine,
+                frameTimesMs,
+                () => !HasEffectiveTag(engine, runner, "Status.Rooted"),
+                90,
+                () => BuildControlRecoveryDebugSummary(engine, runner));
+            SelectEntity(engine, runner, frameTimesMs);
+            IssueMoveOrder(engine, backend, runner, new Vector2(2180f, 1060f), frameTimesMs);
             Vector2 runnerRecoverStart = ReadPosition(engine.World, "Control Runner");
             Tick(engine, 24, frameTimesMs);
             float runnerRecoverTravel = Vector2.Distance(runnerRecoverStart, ReadPosition(engine.World, "Control Runner"));
             Assert.That(runnerRecoverTravel, Is.GreaterThan(40f));
+            SubmitStopOrder(engine, runner);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !HasOutstandingOrders(engine.World, runner),
+                24,
+                () => BuildControlRecoveryDebugSummary(engine, runner));
 
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, marshal, runner, 1, MarshalStunSlot), Is.True);
-            Tick(engine, 2, frameTimesMs);
+            CastSkillAtTarget(engine, backend, marshal, "<Keyboard>/r", runner, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(engine, runner, "Status.Stunned"),
+                12,
+                () => BuildControlCastDebugSummary(engine, marshal, runner));
+            SelectEntity(engine, runner, frameTimesMs);
+            IssueMoveOrder(engine, backend, runner, new Vector2(3140f, 1060f), frameTimesMs);
             Vector2 runnerStunStart = ReadPosition(engine.World, "Control Runner");
             Tick(engine, 18, frameTimesMs);
             Vector2 runnerStunEnd = ReadPosition(engine.World, "Control Runner");
@@ -146,22 +220,44 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 4, "stun_runner", "Marshal R blocks action and movement through the shared reusable mod.");
             timeline.Add("[T+004] Marshal R -> Runner | Stun | ActionBlocked=1 | movement and action both gated");
 
+            TickUntilFixedFrameBudget(
+                engine,
+                frameTimesMs,
+                () => !HasEffectiveTag(engine, runner, "Status.Stunned"),
+                120,
+                () => BuildControlRecoveryDebugSummary(engine, runner));
             TickUntil(engine, frameTimesMs, () => !HasAbilityExec(engine.World, caster), 48);
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, caster, marshal, 2, CasterArcPulseSlot), Is.True);
             float marshalHealthBeforeBaselineCast = ReadHealth(engine.World, "Control Marshal");
-            TickUntil(engine, frameTimesMs, () => ReadHealth(engine.World, "Control Marshal") < marshalHealthBeforeBaselineCast, 80);
+            CastSkillAtTarget(engine, backend, caster, "<Keyboard>/q", marshal, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasAbilityExec(engine.World, caster),
+                24,
+                () => BuildArcPulseDebugSummary(engine, caster, marshal));
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Control Marshal") < marshalHealthBeforeBaselineCast,
+                80,
+                () => BuildArcPulseDebugSummary(engine, caster, marshal));
             float marshalHealthAfterBaselineCast = ReadHealth(engine.World, "Control Marshal");
             Assert.That(marshalHealthAfterBaselineCast, Is.EqualTo(marshalHealthBeforeBaselineCast - 10f).Within(0.001f));
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 5, "baseline_cast", "Caster baseline cast lands before control gates are applied.");
             timeline.Add($"[T+005] Caster -> Marshal | Arc Pulse hit | HP {marshalHealthBeforeBaselineCast:0}->{marshalHealthAfterBaselineCast:0}");
 
             TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(engine, caster, "Cooldown.ControlShowcase.Caster.Q"), 180);
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, marshal, caster, 1, MarshalSilenceSlot), Is.True);
-            Tick(engine, 2, frameTimesMs);
+            CastSkillAtTarget(engine, backend, marshal, "<Keyboard>/w", caster, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(engine, caster, "Status.Silenced"),
+                12,
+                () => BuildControlCastDebugSummary(engine, marshal, caster));
             SelectEntity(engine, caster, frameTimesMs);
             float marshalHealthBeforeSilence = ReadHealth(engine.World, "Control Marshal");
-            _ = SubmitCastOrder(planner, castAbilityOrderTypeId, caster, marshal, 2, CasterArcPulseSlot);
-            Tick(engine, 8, frameTimesMs);
+            CastSkillAtTarget(engine, backend, caster, "<Keyboard>/q", marshal, frameTimesMs);
+            Tick(engine, 4, frameTimesMs);
             GameplayControlState silencedCasterState = GameplayControlStateResolver.GetOrDefault(engine.World, caster);
             Assert.That(HasEffectiveTag(engine, caster, "Status.Silenced"), Is.True);
             Assert.That(HasAbilityExec(engine.World, caster), Is.False);
@@ -172,29 +268,42 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 6, "silence", "Marshal W projects action-block without affecting movement.");
             timeline.Add("[T+006] Marshal W -> Caster | Silence | cast startup rejected before exec starts");
 
-            TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(engine, caster, "Status.Silenced"), 240);
+            TickUntilFixedFrameBudget(engine, frameTimesMs, () => !HasEffectiveTag(engine, caster, "Status.Silenced"), 108);
             TickUntil(engine, frameTimesMs, () => !HasAbilityExec(engine.World, caster), 48);
             TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(engine, caster, "Cooldown.ControlShowcase.Caster.Q"), 180);
 
+            CastSkillAtTarget(engine, backend, caster, "<Keyboard>/q", marshal, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasAbilityExec(engine.World, caster),
+                24,
+                () => BuildArcPulseDebugSummary(engine, caster, marshal));
             float marshalHealthBeforeStunInterrupt = ReadHealth(engine.World, "Control Marshal");
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, caster, marshal, 2, CasterArcPulseSlot), Is.True);
-            TickUntil(engine, frameTimesMs, () => HasAbilityExec(engine.World, caster), 24);
-            Tick(engine, 6, frameTimesMs);
-            Assert.That(SubmitCastOrder(planner, castAbilityOrderTypeId, marshal, caster, 1, MarshalStunSlot), Is.True);
-            Tick(engine, 2, frameTimesMs);
-            Tick(engine, 24, frameTimesMs);
+            CastSkillAtTarget(engine, backend, marshal, "<Keyboard>/r", caster, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(engine, caster, "Status.Stunned"),
+                12,
+                () => BuildControlCastDebugSummary(engine, marshal, caster));
+            Tick(engine, 18, frameTimesMs);
             GameplayControlState stunnedCasterState = GameplayControlStateResolver.GetOrDefault(engine.World, caster);
             Assert.That(HasEffectiveTag(engine, caster, "Status.Stunned"), Is.True);
             Assert.That(HasAbilityExec(engine.World, caster), Is.False);
             Assert.That(ReadHealth(engine.World, "Control Marshal"), Is.EqualTo(marshalHealthBeforeStunInterrupt).Within(0.001f));
             Assert.That(stunnedCasterState.ActionBlocked, Is.EqualTo((byte)1));
             CaptureSnapshot(engine, overlay, snapshots, captureFrames, screensDir, 7, "stun_interrupt", "Marshal R interrupts an active cast and blocks follow-up action.");
-            timeline.Add("[T+007] Marshal R -> Caster | Stun mid-cast | active exec interrupted before Arc Pulse damage resolves");
+            timeline.Add("[T+007] Caster starts Arc Pulse -> Marshal R interrupts mid-cast | active exec cancelled before damage resolves");
 
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs, baselineRunnerTravel, slowRunnerTravel, runnerRecoverTravel));
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
-            WriteTimelineSvg(captureFrames, Path.Combine(screensDir, "timeline.svg"));
+            AcceptanceUiEvidenceWriter.WriteTimelineSheet(
+                captureFrames,
+                screensDir,
+                Path.Combine(screensDir, "timeline.png"),
+                "Champion control showcase acceptance evidence timeline");
         }
 
         private static GameEngine CreateEngine()
@@ -206,6 +315,24 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
             InstallUi(engine);
+            var view = new StubViewController(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.ViewController, view);
+            var cameraAdapter = new StubCameraAdapter();
+            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
+
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, timingDiagnostics);
+            engine.RegisterPresentationSystem(culling);
+            engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
+            engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
+                cameraPresenter,
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
             engine.Start();
             return engine;
         }
@@ -213,7 +340,7 @@ namespace Ludots.Tests.GAS.Production
         private static void InstallInput(GameEngine engine)
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            var backend = new NullInputBackend();
+            var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
@@ -223,6 +350,8 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
+            backend.SetMousePosition(new Vector2(960f, 540f));
+            engine.GlobalContext[TestInputBackendKey] = backend;
         }
 
         private static void InstallUi(GameEngine engine)
@@ -249,11 +378,17 @@ namespace Ludots.Tests.GAS.Production
                 long t0 = Stopwatch.GetTimestamp();
                 engine.SetService(CoreServiceKeys.UiCaptured, false);
                 engine.Tick(DeltaTime);
+                UpdateHeadlessCamera(engine);
                 frameTimesMs.Add((Stopwatch.GetTimestamp() - t0) * 1000d / Stopwatch.Frequency);
             }
         }
 
-        private static void TickUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
+        private static void TickUntil(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            Func<bool> predicate,
+            int maxFrames,
+            Func<string>? failureMessageFactory = null)
         {
             for (int i = 0; i < maxFrames; i++)
             {
@@ -265,7 +400,36 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 1, frameTimesMs);
             }
 
-            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
+            string failureMessage = failureMessageFactory?.Invoke() ?? "No diagnostic details captured.";
+            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames. {failureMessage}");
+        }
+
+        private static void TickUntilFixedFrameBudget(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            Func<bool> predicate,
+            int maxFixedFrames,
+            Func<string>? failureMessageFactory = null)
+        {
+            int startFixedFrame = ReadClock(engine, ClockDomainId.FixedFrame);
+            int maxRenderFrames = maxFixedFrames * 6 + 30;
+            for (int i = 0; i < maxRenderFrames; i++)
+            {
+                if (predicate())
+                {
+                    return;
+                }
+
+                if (ReadClock(engine, ClockDomainId.FixedFrame) - startFixedFrame >= maxFixedFrames)
+                {
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            string failureMessage = failureMessageFactory?.Invoke() ?? "No diagnostic details captured.";
+            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFixedFrames} fixed frames. {failureMessage}");
         }
 
         private static void SelectEntity(GameEngine engine, Entity target, List<double> frameTimesMs)
@@ -273,7 +437,12 @@ namespace Ludots.Tests.GAS.Production
             SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime missing.");
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!engine.World.IsAlive(owner))
+            if (engine.World.TryGet(target, out PlayerOwner targetOwner) && targetOwner.PlayerId == 1)
+            {
+                owner = target;
+                engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            }
+            else if (!engine.World.IsAlive(owner))
             {
                 owner = target;
                 engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
@@ -285,37 +454,206 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 1, frameTimesMs);
         }
 
-        private static bool SubmitCastOrder(CompositeOrderPlanner planner, int castAbilityOrderTypeId, Entity actor, Entity target, int playerId, int slotIndex)
+        private static TestInputBackend GetInputBackend(GameEngine engine)
         {
-            var order = new Order
-            {
-                OrderTypeId = castAbilityOrderTypeId,
-                PlayerId = playerId,
-                Actor = actor,
-                Target = target,
-                SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs { I0 = slotIndex }
-            };
-            return planner.TrySubmit(in order);
+            return engine.GlobalContext[TestInputBackendKey] as TestInputBackend
+                ?? throw new InvalidOperationException("Control showcase test input backend is missing.");
         }
 
-        private static void SubmitMoveOrder(OrderQueue orderQueue, Entity actor, int playerId, int moveToOrderTypeId, Vector2 targetWorldCm)
+        private static void CastSkillAtTarget(
+            GameEngine engine,
+            TestInputBackend backend,
+            Entity actor,
+            string buttonPath,
+            Entity target,
+            List<double> frameTimesMs)
         {
-            var order = new Order
+            SelectEntity(engine, actor, frameTimesMs);
+            string targetName = GetEntityName(engine.World, target);
+            Vector2 targetScreen = GetGroundScreenFromWorld(engine, ReadPosition(engine.World, targetName));
+            if (TryFindHoverScreenPoint(engine, backend, targetName, GetEntityScreen(engine, target), frameTimesMs, out Vector2 hoveredPoint))
             {
-                OrderTypeId = moveToOrderTypeId,
-                PlayerId = playerId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
+                targetScreen = hoveredPoint;
+            }
+            SetMouseWorld(engine, backend, targetScreen, frameTimesMs);
+            PressButton(engine, backend, buttonPath, frameTimesMs);
+        }
+
+        private static void IssueMoveOrder(
+            GameEngine engine,
+            TestInputBackend backend,
+            Entity actor,
+            Vector2 targetWorldCm,
+            List<double> frameTimesMs)
+        {
+            SelectEntity(engine, actor, frameTimesMs);
+            RightClickWorld(engine, backend, GetGroundScreenFromWorld(engine, targetWorldCm), frameTimesMs);
+        }
+
+        private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
+        {
+            backend.SetButton(path, true);
+            Tick(engine, 2, frameTimesMs);
+            backend.SetButton(path, false);
+            Tick(engine, 2, frameTimesMs);
+        }
+
+        private static void RightClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        {
+            SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", true);
+            Tick(engine, 2, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", false);
+            Tick(engine, 2, frameTimesMs);
+        }
+
+        private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        {
+            backend.SetMousePosition(screenPosition);
+            Tick(engine, 1, frameTimesMs);
+        }
+
+        private static void UpdateHeadlessCamera(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(HeadlessCameraKey, out object? runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                return;
+            }
+
+            float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+        }
+
+        private static Vector2 GetEntityScreen(GameEngine engine, Entity entity)
+        {
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            if (engine.World.TryGet(entity, out VisualTransform transform))
+            {
+                return projector.WorldToScreen(transform.Position);
+            }
+
+            ref var position = ref engine.World.Get<WorldPositionCm>(entity);
+            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+        }
+
+        private static Vector2 GetGroundScreenFromWorld(GameEngine engine, Vector2 worldCm)
+        {
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            return projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+        }
+
+        private static Vector2 FindHoverScreenPoint(
+            GameEngine engine,
+            TestInputBackend backend,
+            string entityName,
+            Vector2 projectedScreenPoint,
+            List<double> frameTimesMs)
+        {
+            if (TryFindHoverScreenPoint(engine, backend, entityName, projectedScreenPoint, frameTimesMs, out Vector2 matchedPoint))
+            {
+                return matchedPoint;
+            }
+
+            Vector2 groundProjectedPoint = GetGroundScreenFromWorld(engine, ReadPosition(engine.World, entityName));
+            if (Vector2.Distance(groundProjectedPoint, projectedScreenPoint) > 1f &&
+                TryFindHoverScreenPoint(engine, backend, entityName, groundProjectedPoint, frameTimesMs, out matchedPoint))
+            {
+                return matchedPoint;
+            }
+
+            Assert.Fail(
+                $"Failed to find hover point for '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}) and ground point ({groundProjectedPoint.X:0.0},{groundProjectedPoint.Y:0.0}).");
+            return default;
+        }
+
+        private static bool TryFindHoverScreenPoint(
+            GameEngine engine,
+            TestInputBackend backend,
+            string entityName,
+            Vector2 projectedScreenPoint,
+            List<double> frameTimesMs,
+            out Vector2 matchedPoint)
+        {
+            const int hoverSearchRounds = 6;
+            for (int round = 0; round < hoverSearchRounds; round++)
+            {
+                for (int i = 0; i < HoverProbeOffsets.Length; i++)
                 {
-                    Spatial = new OrderSpatial
+                    Vector2 liveProjectedPoint = projectedScreenPoint;
+                    Vector2 refreshedPoint = GetEntityScreen(engine, FindEntityByName(engine.World, entityName));
+                    if (!float.IsNaN(refreshedPoint.X) &&
+                        !float.IsInfinity(refreshedPoint.X) &&
+                        !float.IsNaN(refreshedPoint.Y) &&
+                        !float.IsInfinity(refreshedPoint.Y))
                     {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetWorldCm.X, 0f, targetWorldCm.Y)
+                        liveProjectedPoint = refreshedPoint;
+                    }
+
+                    Vector2 candidate = liveProjectedPoint + HoverProbeOffsets[i];
+                    backend.SetMousePosition(candidate);
+                    Tick(engine, 1, frameTimesMs);
+                    if (string.Equals(ReadHoveredEntityName(engine), entityName, StringComparison.Ordinal))
+                    {
+                        matchedPoint = candidate;
+                        return true;
                     }
                 }
+            }
+
+            matchedPoint = default;
+            return false;
+        }
+
+        private static string ReadHoveredEntityName(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
+                   hoveredObj is Entity hovered &&
+                   hovered != Entity.Null &&
+                   engine.World.TryGet(hovered, out Name name)
+                ? name.Value
+                : string.Empty;
+        }
+
+        private static string GetEntityName(World world, Entity entity)
+        {
+            return world.TryGet(entity, out Name name)
+                ? name.Value
+                : $"Entity#{entity.Id}";
+        }
+
+        private static float ReadDistance(World world, Entity a, Entity b)
+        {
+            if (!world.TryGet(a, out WorldPositionCm aPosition) || !world.TryGet(b, out WorldPositionCm bPosition))
+            {
+                return float.PositiveInfinity;
+            }
+
+            var aWorld = aPosition.ToWorldCmInt2();
+            var bWorld = bPosition.ToWorldCmInt2();
+            Vector2 pa = new(aWorld.X, aWorld.Y);
+            Vector2 pb = new(bWorld.X, bWorld.Y);
+            return Vector2.Distance(pa, pb);
+        }
+
+        private static bool HasOutstandingOrders(World world, Entity entity)
+        {
+            return world.TryGet(entity, out OrderBuffer orders) &&
+                   (orders.HasActive || orders.HasPending || orders.HasQueued);
+        }
+
+        private static void SubmitStopOrder(GameEngine engine, Entity actor)
+        {
+            OrderQueue orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("OrderQueue missing.");
+            var order = new Order
+            {
+                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["stop"],
+                PlayerId = 1,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate
             };
 
             Assert.That(orderQueue.TryEnqueueAssigned(ref order), Is.True);
@@ -325,7 +663,7 @@ namespace Ludots.Tests.GAS.Production
             GameEngine engine,
             ScreenOverlayBuffer overlay,
             List<ControlShowcaseSnapshot> snapshots,
-            List<CaptureFrame> captureFrames,
+            List<UiAcceptanceEvidenceFrame> captureFrames,
             string screensDir,
             int frameIndex,
             string step,
@@ -340,28 +678,32 @@ namespace Ludots.Tests.GAS.Production
                 step,
                 note,
                 GetSelectedEntityName(engine),
-                ReadOverlayLines(overlay),
+                ReadOverlayEvidenceLines(overlay, GetSelectedEntityName(engine)),
                 ReadActorSnapshot(engine, marshal),
                 ReadActorSnapshot(engine, runner),
                 ReadActorSnapshot(engine, caster));
             snapshots.Add(snapshot);
 
-            string fileName = $"{frameIndex:000}.svg";
-            WriteSnapshotSvg(snapshot, Path.Combine(screensDir, fileName));
-            captureFrames.Add(new CaptureFrame(frameIndex, step, fileName));
+            string fileName = $"{frameIndex:000}_{step}.png";
+            AcceptanceStageEvidenceWriter.WriteFrame(
+                BuildControlEvidenceFrame(snapshot),
+                Path.Combine(screensDir, fileName));
+            captureFrames.Add(BuildControlTimelineFrame(snapshot, fileName));
         }
 
         private static ActorSnapshot ReadActorSnapshot(GameEngine engine, Entity entity)
         {
             string name = engine.World.TryGet(entity, out Name actorName) ? actorName.Value : $"Entity#{entity.Id}";
             Vector2 position = ReadPosition(engine.World, name);
+            (float health, float maxHealth) = ReadHealthState(engine.World, name);
             (float currentMoveSpeed, float baseMoveSpeed) = ReadMoveSpeed(engine.World, entity);
             GameplayControlState controlState = GameplayControlStateResolver.GetOrDefault(engine.World, entity);
             return new ActorSnapshot(
                 name,
                 position.X,
                 position.Y,
-                ReadHealth(engine.World, name),
+                health,
+                maxHealth,
                 currentMoveSpeed,
                 baseMoveSpeed,
                 ReadTagSummary(engine, entity),
@@ -379,9 +721,14 @@ namespace Ludots.Tests.GAS.Production
                 : string.Empty;
         }
 
-        private static IReadOnlyList<string> ReadOverlayLines(ScreenOverlayBuffer overlay)
+        private static IReadOnlyList<string> ReadOverlayEvidenceLines(ScreenOverlayBuffer overlay, string selectedEntity)
         {
             var lines = new List<string>(8);
+            if (!string.IsNullOrWhiteSpace(selectedEntity))
+            {
+                lines.Add($"Selected {selectedEntity}");
+            }
+
             foreach (ref readonly var item in overlay.GetSpan())
             {
                 if (item.Kind != ScreenOverlayItemKind.Text)
@@ -392,11 +739,33 @@ namespace Ludots.Tests.GAS.Production
                 string? text = overlay.GetString(item.StringId);
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    lines.Add(text);
+                    string trimmed = text.Trim();
+                    if (trimmed.StartsWith("Selected ", StringComparison.Ordinal) ||
+                        trimmed.StartsWith("Mode ", StringComparison.Ordinal) ||
+                        trimmed.Contains("Melee Context Showcase", StringComparison.Ordinal) ||
+                        trimmed.Contains("Duelist Alpha", StringComparison.Ordinal) ||
+                        trimmed.Contains("Hover a dummy", StringComparison.Ordinal) ||
+                        trimmed.Contains("Click Duelist Alpha", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (trimmed.Contains("Control Showcase", StringComparison.Ordinal) ||
+                        trimmed.Contains("Q slow", StringComparison.Ordinal) ||
+                        trimmed.Contains("W silence", StringComparison.Ordinal) ||
+                        trimmed.Contains("E root", StringComparison.Ordinal) ||
+                        trimmed.Contains("R stun", StringComparison.Ordinal) ||
+                        trimmed.StartsWith("Tags ", StringComparison.Ordinal))
+                    {
+                        lines.Add(trimmed);
+                    }
                 }
             }
 
-            return lines;
+            return lines
+                .Distinct(StringComparer.Ordinal)
+                .Take(6)
+                .ToArray();
         }
 
         private static string ReadTagSummary(GameEngine engine, Entity entity)
@@ -446,6 +815,262 @@ namespace Ludots.Tests.GAS.Production
                 : "Idle";
         }
 
+        private static string BuildControlRecoveryDebugSummary(GameEngine engine, Entity entity)
+        {
+            string name = engine.World.TryGet(entity, out Name actorName) ? actorName.Value : $"Entity#{entity.Id}";
+            (float currentMoveSpeed, float baseMoveSpeed) = ReadMoveSpeed(engine.World, entity);
+            GameplayControlState controlState = GameplayControlStateResolver.GetOrDefault(engine.World, entity);
+            string tags = ReadTagSummary(engine, entity);
+            string effects = ReadActiveEffectSummary(engine.World, entity);
+            string clocks = ReadClockSummary(engine);
+            string orders = ReadOrderBufferSummary(engine.World, entity);
+            return $"Entity={name}; Tags={tags}; MoveSpeed={currentMoveSpeed:0.#}/{baseMoveSpeed:0.#}; MoveBlocked={controlState.IsMoveBlocked()}; ActionBlocked={controlState.ActionBlocked != 0}; Clocks={clocks}; ActiveEffects={effects}; Orders={orders}";
+        }
+
+        private static string BuildArcPulseDebugSummary(GameEngine engine, Entity caster, Entity marshal)
+        {
+            ActorSnapshot casterSnapshot = ReadActorSnapshot(engine, caster);
+            ActorSnapshot marshalSnapshot = ReadActorSnapshot(engine, marshal);
+            return $"Clocks={ReadClockSummary(engine)}; Caster={FormatActorSnapshot(casterSnapshot)}; Marshal={FormatActorSnapshot(marshalSnapshot)}; CasterOrders={ReadOrderBufferSummary(engine.World, caster)}; CasterBlackboard={ReadCastBlackboardSummary(engine.World, caster)}; CasterSlots={ReadAbilitySlotSummary(engine.World, caster)}; RecentCastEvents={ReadRecentCastEventSummary(engine, caster)}";
+        }
+
+        private static string BuildControlCastDebugSummary(GameEngine engine, Entity actor, Entity target)
+        {
+            ActorSnapshot actorSnapshot = ReadActorSnapshot(engine, actor);
+            ActorSnapshot targetSnapshot = ReadActorSnapshot(engine, target);
+            string lastOrder = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? orderObj)
+                ? orderObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string lastGround = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastGroundWorldCm", out object? groundObj)
+                ? groundObj?.ToString() ?? "<null>"
+                : "<missing>";
+            return $"Clocks={ReadClockSummary(engine)}; Hovered={ReadHoveredEntityName(engine)}; Selected={GetSelectedEntityName(engine)}; Local={ReadLocalPlayerName(engine)}; LastGround={lastGround}; LastOrder={lastOrder}; Actor={FormatActorSnapshot(actorSnapshot)}; Target={FormatActorSnapshot(targetSnapshot)}; AutoTargets={ReadAutoTargetCandidateSummary(engine, actor, 760)}; ActorOrders={ReadOrderBufferSummary(engine.World, actor)}; ActorBlackboard={ReadCastBlackboardSummary(engine.World, actor)}; ActorSlots={ReadAbilitySlotSummary(engine.World, actor)}; RecentCastEvents={ReadRecentCastEventSummary(engine, actor)}";
+        }
+
+        private static string ReadOrderBufferSummary(World world, Entity entity)
+        {
+            if (!world.TryGet(entity, out OrderBuffer orders))
+            {
+                return "(missing)";
+            }
+
+            string active = orders.HasActive
+                ? $"active[type={orders.ActiveOrder.Order.OrderTypeId},id={orders.ActiveOrder.Order.OrderId},slot={orders.ActiveOrder.Order.Args.I0},target={orders.ActiveOrder.Order.Target.Id},mode={orders.ActiveOrder.Order.SubmitMode}]"
+                : "active=(none)";
+            string pending = orders.HasPending
+                ? $"pending[type={orders.PendingOrder.Order.OrderTypeId},slot={orders.PendingOrder.Order.Args.I0},target={orders.PendingOrder.Order.Target.Id}]"
+                : "pending=(none)";
+            string queued = orders.HasQueued
+                ? string.Join(
+                    ",",
+                    Enumerable.Range(0, orders.QueuedCount)
+                        .Select(index =>
+                        {
+                            QueuedOrder queuedOrder = orders.GetQueued(index);
+                            return $"q{index}[type={queuedOrder.Order.OrderTypeId},slot={queuedOrder.Order.Args.I0},target={queuedOrder.Order.Target.Id},mode={queuedOrder.Order.SubmitMode}]";
+                        }))
+                : "(none)";
+            return $"{active}; {pending}; queued={queued}";
+        }
+
+        private static string ReadCastBlackboardSummary(World world, Entity entity)
+        {
+            string slot = world.TryGet(entity, out BlackboardIntBuffer ints) && ints.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex)
+                ? slotIndex.ToString()
+                : "(missing)";
+            string target = world.TryGet(entity, out BlackboardEntityBuffer entities) && entities.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out Entity targetEntity)
+                ? targetEntity.Id.ToString()
+                : "(missing)";
+            string position = "(missing)";
+            if (world.TryGet(entity, out BlackboardSpatialBuffer spatial))
+            {
+                int pointCount = spatial.GetPointCount(OrderBlackboardKeys.Cast_TargetPosition);
+                if (pointCount > 0 &&
+                    spatial.TryGetPointAt(OrderBlackboardKeys.Cast_TargetPosition, pointCount - 1, out Vector3 point))
+                {
+                    position = $"{point.X:0.#},{point.Z:0.#} ({pointCount}pt)";
+                }
+            }
+
+            return $"slot={slot}; target={target}; pos={position}";
+        }
+
+        private static string ReadAbilitySlotSummary(World world, Entity entity)
+        {
+            if (!world.TryGet(entity, out AbilityStateBuffer abilities))
+            {
+                return "(missing)";
+            }
+
+            bool hasForm = world.Has<AbilityFormSlotBuffer>(entity);
+            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(entity) : default;
+            bool hasItemGranted = world.Has<ItemGrantedSlotBuffer>(entity);
+            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? world.Get<ItemGrantedSlotBuffer>(entity) : default;
+            bool hasGranted = world.Has<GrantedSlotBuffer>(entity);
+            GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(entity) : default;
+
+            return string.Join(
+                ",",
+                Enumerable.Range(0, abilities.Count)
+                    .Select(index =>
+                    {
+                        AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, index);
+                        return $"slot{index}[ability={slot.AbilityId},template={slot.TemplateEntityId}]";
+                    }));
+        }
+
+        private static string ReadRecentCastEventSummary(GameEngine engine, Entity actor)
+        {
+            PresentationEventStream? stream = engine.GetService(CoreServiceKeys.PresentationEventStream);
+            if (stream == null || stream.Count == 0)
+            {
+                return "(none)";
+            }
+
+            var matches = new List<string>(6);
+            ReadOnlySpan<PresentationEvent> events = stream.GetSpan();
+            for (int i = events.Length - 1; i >= 0 && matches.Count < 6; i--)
+            {
+                ref readonly PresentationEvent evt = ref events[i];
+                if (evt.Source != actor ||
+                    (evt.Kind != PresentationEventKind.CastCommitted && evt.Kind != PresentationEventKind.CastFailed))
+                {
+                    continue;
+                }
+
+                string payload = evt.Kind == PresentationEventKind.CastFailed
+                    ? ((AbilityCastFailReason)evt.PayloadB).ToString()
+                    : $"ability={evt.PayloadB}";
+                matches.Add($"tick={evt.LogicTickStamp}:{evt.Kind}[slot={evt.PayloadA},{payload}]");
+            }
+
+            return matches.Count == 0 ? "(none)" : string.Join(", ", matches);
+        }
+
+        private static string ReadActiveEffectSummary(World world, Entity entity)
+        {
+            if (!world.TryGet(entity, out ActiveEffectContainer activeEffects) || activeEffects.Count == 0)
+            {
+                return "(none)";
+            }
+
+            int rootTemplateId = EffectTemplateIdRegistry.GetId("Effect.Control.Common.Root");
+            int slowTemplateId = EffectTemplateIdRegistry.GetId("Effect.Control.Common.Slow.Heavy");
+            int silenceTemplateId = EffectTemplateIdRegistry.GetId("Effect.Control.Common.Silence");
+            int stunTemplateId = EffectTemplateIdRegistry.GetId("Effect.Control.Common.Stun");
+            var parts = new List<string>(activeEffects.Count);
+            for (int i = 0; i < activeEffects.Count; i++)
+            {
+                Entity effectEntity = activeEffects.GetEntity(i);
+                if (!world.IsAlive(effectEntity) ||
+                    !world.TryGet(effectEntity, out GameplayEffect effect) ||
+                    !world.TryGet(effectEntity, out EffectContext context))
+                {
+                    continue;
+                }
+
+                string templateLabel = "Unknown";
+                if (world.TryGet(effectEntity, out EffectTemplateRef templateRef))
+                {
+                    templateLabel = templateRef.TemplateId switch
+                    {
+                        var id when id == rootTemplateId => "Root",
+                        var id when id == slowTemplateId => "HeavySlow",
+                        var id when id == silenceTemplateId => "Silence",
+                        var id when id == stunTemplateId => "Stun",
+                        _ => $"Template#{templateRef.TemplateId}"
+                    };
+                }
+
+                int stackCount = world.TryGet(effectEntity, out EffectStack stack) ? stack.Count : 1;
+                parts.Add(
+                    $"{templateLabel}[state={effect.State},remaining={effect.RemainingTicks},expiresAt={effect.ExpiresAtTick},target={context.Target.Id},stacks={stackCount}]");
+            }
+
+            return parts.Count == 0 ? "(none)" : string.Join("; ", parts);
+        }
+
+        private static string ReadClockSummary(GameEngine engine)
+        {
+            string fixedFrame = "?";
+            string step = "?";
+            if (engine.GetService(CoreServiceKeys.Clock) is IClock clock)
+            {
+                fixedFrame = clock.Now(ClockDomainId.FixedFrame).ToString();
+                step = clock.Now(ClockDomainId.Step).ToString();
+            }
+
+            string mode = "?";
+            string scale = "?";
+            string stepEveryFixed = "?";
+            if (engine.GetService(CoreServiceKeys.GasClockStepPolicy) is GasClockStepPolicy policy)
+            {
+                mode = policy.Mode.ToString();
+                scale = policy.ScalePermille.ToString();
+                stepEveryFixed = policy.StepEveryFixedTicks.ToString();
+            }
+
+            return $"fixed={fixedFrame},step={step},mode={mode},scale={scale},stepEveryFixed={stepEveryFixed}";
+        }
+
+        private static int ReadClock(GameEngine engine, ClockDomainId domain)
+        {
+            return engine.GetService(CoreServiceKeys.Clock) is IClock clock
+                ? clock.Now(domain)
+                : 0;
+        }
+
+        private static string FormatActorSnapshot(ActorSnapshot snapshot)
+        {
+            return $"{snapshot.Name}[pos={snapshot.PositionX:0.#},{snapshot.PositionY:0.#},hp={snapshot.Health:0.#},move={snapshot.MoveSpeedCurrent:0.#}/{snapshot.MoveSpeedBase:0.#},tags={snapshot.Tags},moveBlocked={snapshot.MoveBlocked},actionBlocked={snapshot.ActionBlocked},exec={snapshot.HasExec},execState={snapshot.ExecState}]";
+        }
+
+        private static string ReadLocalPlayerName(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                   localObj is Entity local &&
+                   engine.World.TryGet(local, out Name name)
+                ? name.Value
+                : string.Empty;
+        }
+
+        private static string ReadAutoTargetCandidateSummary(GameEngine engine, Entity actor, int rangeCm)
+        {
+            var spatial = engine.GetService(CoreServiceKeys.SpatialQueryService);
+            if (spatial == null || !engine.World.TryGet(actor, out WorldPositionCm actorPosition))
+            {
+                return "(unavailable)";
+            }
+
+            int actorTeam = engine.World.TryGet(actor, out Team actorTeamComponent) ? actorTeamComponent.Id : 0;
+            Span<Entity> candidates = stackalloc Entity[32];
+            var result = spatial.QueryRadius(actorPosition.ToWorldCmInt2(), rangeCm, candidates);
+            if (result.Count <= 0)
+            {
+                return "(none)";
+            }
+
+            var parts = new List<string>(result.Count);
+            for (int i = 0; i < result.Count; i++)
+            {
+                Entity candidate = candidates[i];
+                if (!engine.World.IsAlive(candidate) || candidate == actor || !engine.World.TryGet(candidate, out WorldPositionCm candidatePosition))
+                {
+                    continue;
+                }
+
+                string name = engine.World.TryGet(candidate, out Name candidateName) ? candidateName.Value : $"Entity#{candidate.Id}";
+                int team = engine.World.TryGet(candidate, out Team candidateTeam) ? candidateTeam.Id : 0;
+                float distance = Vector2.Distance(
+                    new Vector2(actorPosition.Value.X.ToFloat(), actorPosition.Value.Y.ToFloat()),
+                    new Vector2(candidatePosition.Value.X.ToFloat(), candidatePosition.Value.Y.ToFloat()));
+                bool hostile = RelationshipFilterUtil.Passes(RelationshipFilter.Hostile, actorTeam, team);
+                parts.Add($"{name}[team={team},dist={distance:0.#},hostile={hostile}]");
+            }
+
+            return parts.Count == 0 ? "(none)" : string.Join(", ", parts);
+        }
+
         private static (float Current, float Base) ReadMoveSpeed(World world, Entity entity)
         {
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
@@ -467,11 +1092,16 @@ namespace Ludots.Tests.GAS.Production
 
         private static float ReadHealth(World world, string entityName)
         {
+            return ReadHealthState(world, entityName).Current;
+        }
+
+        private static (float Current, float Max) ReadHealthState(World world, string entityName)
+        {
             Entity entity = FindEntityByName(world, entityName);
             int healthId = AttributeRegistry.GetId("Health");
             Assert.That(healthId, Is.GreaterThanOrEqualTo(0));
             Assert.That(world.TryGet(entity, out AttributeBuffer attributes), Is.True);
-            return attributes.GetCurrent(healthId);
+            return (attributes.GetCurrent(healthId), attributes.GetBase(healthId));
         }
 
         private static Entity FindEntityByName(World world, string entityName)
@@ -488,6 +1118,53 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Entity '{entityName}' should exist on {ControlMapId}.");
             return found;
+        }
+
+        private static StageEvidenceFrame BuildControlEvidenceFrame(ControlShowcaseSnapshot snapshot)
+        {
+            IReadOnlyList<string> summaryLines = new[]
+            {
+                snapshot.Note,
+                $"Runner {snapshot.Runner.MoveSpeedCurrent:0.#}/{snapshot.Runner.MoveSpeedBase:0.#} | moveBlocked={snapshot.Runner.MoveBlocked}",
+                $"Caster exec {(snapshot.Caster.HasExec ? snapshot.Caster.ExecState : "Idle")} | actionBlocked={snapshot.Caster.ActionBlocked}"
+            };
+            IReadOnlyList<string> detailLines = new[]
+            {
+                $"{snapshot.Marshal.Name} | HP {snapshot.Marshal.Health:0}/{snapshot.Marshal.MaxHealth:0} | Tags {snapshot.Marshal.Tags}",
+                $"{snapshot.Runner.Name} | HP {snapshot.Runner.Health:0}/{snapshot.Runner.MaxHealth:0} | Tags {snapshot.Runner.Tags}",
+                $"{snapshot.Caster.Name} | HP {snapshot.Caster.Health:0}/{snapshot.Caster.MaxHealth:0} | Tags {snapshot.Caster.Tags}"
+            }.Concat(snapshot.OverlayLines.Take(10).Select(line => $"Overlay | {TrimForPaint(line, 68)}")).ToArray();
+            IReadOnlyList<StageEvidenceActor> actors = new[]
+            {
+                new StageEvidenceActor(snapshot.Marshal.Name, snapshot.Marshal.PositionX, snapshot.Marshal.PositionY, snapshot.Marshal.Health, snapshot.Marshal.MaxHealth, "ally", string.Equals(snapshot.Marshal.Name, snapshot.SelectedEntity, StringComparison.Ordinal), $"HP {snapshot.Marshal.Health:0}/{snapshot.Marshal.MaxHealth:0} | {snapshot.Marshal.Tags}"),
+                new StageEvidenceActor(snapshot.Runner.Name, snapshot.Runner.PositionX, snapshot.Runner.PositionY, snapshot.Runner.Health, snapshot.Runner.MaxHealth, "support", string.Equals(snapshot.Runner.Name, snapshot.SelectedEntity, StringComparison.Ordinal), $"HP {snapshot.Runner.Health:0}/{snapshot.Runner.MaxHealth:0} | {snapshot.Runner.Tags}"),
+                new StageEvidenceActor(snapshot.Caster.Name, snapshot.Caster.PositionX, snapshot.Caster.PositionY, snapshot.Caster.Health, snapshot.Caster.MaxHealth, "enemy", string.Equals(snapshot.Caster.Name, snapshot.SelectedEntity, StringComparison.Ordinal), $"HP {snapshot.Caster.Health:0}/{snapshot.Caster.MaxHealth:0} | {snapshot.Caster.Tags}")
+            };
+
+            return new StageEvidenceFrame(
+                "Champion Control Showcase",
+                snapshot.Step,
+                snapshot.Note,
+                snapshot.SelectedEntity,
+                "Control Buffs",
+                $"Headless evidence | frame {snapshot.FrameIndex:000} | overlay lines {snapshot.OverlayLines.Count}",
+                summaryLines,
+                detailLines,
+                actors);
+        }
+
+        private static UiAcceptanceEvidenceFrame BuildControlTimelineFrame(ControlShowcaseSnapshot snapshot, string fileName)
+        {
+            return new UiAcceptanceEvidenceFrame(
+                snapshot.Step,
+                fileName,
+                $"{snapshot.FrameIndex:000}",
+                $"{snapshot.SelectedEntity} selected",
+                snapshot.Note,
+                $"marshal={snapshot.Marshal.Tags}",
+                $"runner={snapshot.Runner.Tags}",
+                $"caster={snapshot.Caster.Tags}",
+                snapshot.OverlayLines.Take(6).ToArray());
         }
 
         private static void WriteSnapshotSvg(ControlShowcaseSnapshot snapshot, string path)
@@ -555,7 +1232,7 @@ namespace Ludots.Tests.GAS.Production
             string svg = $$"""
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, 140 + frames.Count * 36)}}" viewBox="0 0 1600 {{Math.Max(240, 140 + frames.Count * 36)}}">
   <rect width="1600" height="{{Math.Max(240, 140 + frames.Count * 36)}}" fill="#081018" />
-  <text x="40" y="56" fill="#ffffff" font-size="30" font-family="Consolas, monospace">Champion control showcase screenshot timeline</text>
+  <text x="40" y="56" fill="#ffffff" font-size="30" font-family="Consolas, monospace">Champion control showcase evidence timeline</text>
   {{lines}}
 </svg>
 """;
@@ -604,13 +1281,14 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Map: `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Maps/champion_control_showcase.json`");
             sb.AppendLine("- Clock profile: fixed `1/60s`");
             sb.AppendLine("- Initial entities: `Control Marshal`, `Control Runner`, `Control Caster`");
-            sb.AppendLine("- Evidence images: `artifacts/acceptance/champion-control-showcase/screens/*.svg`, `artifacts/acceptance/champion-control-showcase/screens/timeline.svg`");
+            sb.AppendLine("- Evidence images: `artifacts/acceptance/champion-control-showcase/screens/*.png`, `artifacts/acceptance/champion-control-showcase/screens/timeline.png`");
+            sb.AppendLine("- Evidence note: PNGs are headless runtime evidence cards rendered from acceptance snapshots.");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
-            sb.AppendLine("1. Load the playable control showcase map and verify the overlay and marshal loadout.");
+            sb.AppendLine("1. Load the playable control showcase map and verify the control state and marshal loadout.");
             sb.AppendLine("2. Drive the runner through the real move-order path, then fire the marshal's Q/E/R control skills through cast orders.");
             sb.AppendLine("3. Submit a real hostile cast from the caster, then fire the marshal's W/R control skills to prove startup rejection and active-cast interrupt.");
-            sb.AppendLine("4. Write trace, path, battle report, and screenshot frames for human review.");
+            sb.AppendLine("4. Write trace, path, battle report, and evidence frames for human review.");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (string entry in timeline)
@@ -631,7 +1309,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- total_actions: {timeline.Count}");
-            sb.AppendLine($"- screenshot_captures: {snapshots.Count}");
+            sb.AppendLine($"- evidence_captures: {snapshots.Count}");
             sb.AppendLine("- reusable_effects_proven: slow, silence, root, stun");
             sb.AppendLine("- sink_projection_proven: move-block and action-block");
             sb.AppendLine("- cast_gate_reuse_proven: silence startup rejection, stun interrupt");
@@ -658,7 +1336,7 @@ namespace Ludots.Tests.GAS.Production
                 "    J --> K[Apply Stun mid-cast -> exec interrupted]",
                 "    K --> L{Marshal HP unchanged after stun?}",
                 "    L -->|no| Y[Fail: stun did not interrupt active cast]",
-                "    L -->|yes| M[Write trace, battle report, path, SVG timeline]"
+                "    L -->|yes| M[Write trace, battle report, path, PNG timeline]"
             }) + Environment.NewLine;
         }
 
@@ -715,18 +1393,65 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private sealed record ControlShowcaseSnapshot(int FrameIndex, string Step, string Note, string SelectedEntity, IReadOnlyList<string> OverlayLines, ActorSnapshot Marshal, ActorSnapshot Runner, ActorSnapshot Caster);
-        private sealed record ActorSnapshot(string Name, float PositionX, float PositionY, float Health, float MoveSpeedCurrent, float MoveSpeedBase, string Tags, bool MoveBlocked, bool ActionBlocked, bool HasExec, string ExecState);
+        private sealed record ActorSnapshot(string Name, float PositionX, float PositionY, float Health, float MaxHealth, float MoveSpeedCurrent, float MoveSpeedBase, string Tags, bool MoveBlocked, bool ActionBlocked, bool HasExec, string ExecState);
         private sealed record CaptureFrame(int FrameIndex, string Step, string FileName);
 
-        private sealed class NullInputBackend : IInputBackend
+        private sealed class TestInputBackend : IInputBackend
         {
+            private readonly Dictionary<string, bool> _buttons = new(StringComparer.Ordinal);
+            private Vector2 _mousePosition;
+
+            public void SetButton(string path, bool isDown)
+            {
+                _buttons[path] = isDown;
+            }
+
+            public void SetMousePosition(Vector2 position)
+            {
+                _mousePosition = position;
+            }
+
             public float GetAxis(string devicePath) => 0f;
-            public bool GetButton(string devicePath) => false;
-            public Vector2 GetMousePosition() => Vector2.Zero;
+            public bool GetButton(string devicePath) => _buttons.TryGetValue(devicePath, out bool isDown) && isDown;
+            public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private sealed class StubViewController : IViewController
+        {
+            public StubViewController(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+        }
+
+        private sealed class HeadlessCameraRuntime
+        {
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            {
+                CameraPresenter = cameraPresenter;
+                PresentationFrameSetup = presentationFrameSetup;
+            }
+
+            public CameraPresenter CameraPresenter { get; }
+            public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
+        }
+
+        private sealed class StubCameraAdapter : ICameraAdapter
+        {
+            public CameraRenderState3D LastState { get; private set; }
+
+            public void UpdateCamera(in CameraRenderState3D state)
+            {
+                LastState = state;
+            }
         }
     }
 }

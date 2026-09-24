@@ -306,6 +306,11 @@ namespace CoreInputMod.Systems
                     overrideMapping.CastModeOverride = inputOverride.CastModeOverride;
                 }
 
+                if (inputOverride.HasSelectionType)
+                {
+                    overrideMapping.SelectionType = inputOverride.SelectionType;
+                }
+
                 if (inputOverride.HasAutoTargetPolicy)
                 {
                     overrideMapping.AutoTargetPolicy = inputOverride.AutoTargetPolicy;
@@ -314,6 +319,16 @@ namespace CoreInputMod.Systems
                 if (inputOverride.HasAutoTargetRangeCm)
                 {
                     overrideMapping.AutoTargetRangeCm = inputOverride.AutoTargetRangeCm;
+                }
+
+                if (inputOverride.HasCursorTargetPolicy)
+                {
+                    overrideMapping.CursorTargetPolicy = inputOverride.CursorTargetPolicy;
+                }
+
+                if (inputOverride.HasCursorTargetRangeCm)
+                {
+                    overrideMapping.CursorTargetRangeCm = inputOverride.CursorTargetRangeCm;
                 }
 
                 return true;

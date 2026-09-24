@@ -30,14 +30,14 @@
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Confirm Dummy Front" },
-        "WorldPositionCm": { "Value": { "X": 1550, "Y": 920 } }
+        "WorldPositionCm": { "Value": { "X": 1490, "Y": 920 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_brute",
       "Overrides": {
         "Name": { "Value": "Confirm Brute Finisher" },
-        "WorldPositionCm": { "Value": { "X": 1710, "Y": 920 } }
+        "WorldPositionCm": { "Value": { "X": 1650, "Y": 920 } }
       }
     }
   ]

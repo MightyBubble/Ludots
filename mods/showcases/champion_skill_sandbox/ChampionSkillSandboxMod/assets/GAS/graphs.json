@@ -36,6 +36,7 @@
       { "id": "primed", "op": "HasTag", "tag": "State.Champion.Duelist.Target.ComboPrimed", "inputs": [ "target" ] }
     ]
   },
+  {
     "id": "Graph.Champion.MusouBranch.RemoveStage1Window",
     "kind": "Effect",
     "entry": "target",
