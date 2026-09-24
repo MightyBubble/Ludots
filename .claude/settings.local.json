@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/001_AI/LudotsProd_pr129_impl/**)",
+      "Bash(find src/Core/Presentation -name \"PerformerGroundingUtility*\" -o -name \"PerformerBehaviorSystem*\" -o -name \"GlobalEventBridgeSystem*\" -o -name \"PerformerParamBlackboard*\" -o -name \"BehaviorSlot*\" -o -name \"AssetKind*\" -o -name \"PerformerScopeTagRegistry*\")",
+      "Bash(grep -rn \"class PerformerBehaviorSystem\\\\|class GlobalEventBridgeSystem\\\\|class PerformerGroundingUtility\" src/)",
+      "Bash(dotnet build *)",
+      "Bash(git *)",
+      "Bash(dotnet test *)",
+      "WebSearch",
+      "Bash(cp -r \"/c/001_AI/LudotsProd/mods/showcases/performer_blacksmith\" \"/c/001_AI/LudotsProd_pr129_impl/mods/showcases/\")",
+      "Bash(cp -r \"/c/001_AI/LudotsProd/mods/fixtures/performer_schema_reference\" \"/c/001_AI/LudotsProd_pr129_impl/mods/fixtures/\")",
+      "Bash(cp \"/c/001_AI/LudotsProd/gitbook/architecture/performer-blacksmith-showcase.md\" \"/c/001_AI/LudotsProd_pr129_impl/gitbook/architecture/\")",
+      "Bash(curl -sI https://github.com)",
+      "Read(//c/001_AI/**)",
+      "Bash(curl -L --connect-timeout 30 --max-time 300 -o KayKit-Medieval-Hexagon.zip \"https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0/archive/refs/heads/main.zip\")"
+    ]
+  }
+}

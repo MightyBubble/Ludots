@@ -96,7 +96,7 @@ namespace Ludots.Client.Raylib.Rendering
                     TemplateId = 0,
                     RenderPath = VisualRenderPath.InstancedStaticMesh,
                     Mobility = VisualMobility.Static,
-                    Flags = PrimitiveFlags.None,
+                    Flags = VisualRuntimeFlags.Visible,
                     Visibility = VisualVisibility.Visible,
                 };
 
