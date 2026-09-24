@@ -19,7 +19,7 @@ Add a browser-backed UI runtime contract split into two assemblies:
 1. `Ludots.UI.Browser`
    - Platform-neutral browser contracts and Ludots UI canvas integration.
    - Frame, dirty rect, viewport, navigation, input, resource resolver, lifecycle, and message bridge types.
-   - Provider identity and capability contracts for the two built-in providers: CEF and Ultralight.
+   - Provider identity and capability contracts for the built-in providers: CEF and Ultralight. The `Cef` engine kind covers the Windows CefSharp provider and the Linux CefNet provider.
    - BCL-only packaged web app resource resolver for local `index.html` / JS / CSS / WASM assets.
    - Browser canvas content that routes pointer, keyboard, focus, viewport resize, and alpha hit-test through `UiScene`.
    - May depend on platform-neutral `Ludots.UI`; no Skia, CEF native, Ultralight native, Raylib, UE5, or commercial engine dependency.
@@ -35,10 +35,11 @@ Concrete CEF and Ultralight implementations are browser engine provider assembli
 
 Formal built-in provider assemblies:
 
-- `Ludots.UI.Browser.Cef`: full Chromium compatibility baseline.
+- `Ludots.UI.Browser.Cef`: full Chromium compatibility baseline on Windows (CefSharp).
+- `Ludots.UI.Browser.CefLinux`: Chromium compatibility baseline on Linux (CefNet binding + CEF linux-x64 natives).
 - `Ludots.UI.Browser.Ultralight`: lightweight game UI provider for Ludots-owned web bundles.
 
-No provider outside CEF and Ultralight is part of the formal Core provider set for this architecture.
+No provider outside Cef, CefLinux, and Ultralight is part of the formal Core provider set for this architecture.
 
 Existing `Ludots.WebUI` bridge abstractions remain as the Mod-facing event facade. They should be implemented on top of `IBrowserMessageBridge` when a browser surface is used, rather than becoming a parallel browser runtime.
 
@@ -77,7 +78,7 @@ Constraints:
 - Engine adapters must own native browser process lifecycle and platform input conversion.
 - CEF provider bootstrap is Ludots host/runtime infrastructure. Application Mods may request or require browser runtime capability and consume `IBrowserRuntime`, but they must not package, locate, initialize, register, or unload CEF.
 - Engine adapters that add a direct texture path must keep input and alpha hit-test routed through `BrowserSurfaceCanvasContent` / `UIRoot`; direct rendering must not become a second interaction system.
-- CEF is the compatibility baseline for arbitrary web apps; Ultralight is a lightweight provider, not a Chromium-equivalent compatibility promise.
+- CEF is the compatibility baseline for arbitrary web apps; Ultralight is a lightweight provider, not a Chromium-equivalent compatibility promise. The Chromium baseline splits by host OS: `cef` serves Windows and `ceflinux` serves Linux; both report `BrowserEngineKind.Cef` and the `BrowserEngineCapabilityProfiles.Cef` capability set.
 - CEF process lifetime is not a per-runtime-owner lifecycle. `IBrowserRuntime.DisposeAsync`, mod unload, and editor play-session teardown release Ludots-owned surfaces but must not call `Cef.Shutdown()`. Any explicit CEF shutdown hook must be host-owned and terminal.
 - CEF custom scheme handler state must be process-stable across host ALC reloads. A scheme handler registered during the first editor session must be able to resolve surfaces created by later sessions in the same process.
 - Host adapters that load a Ludots-owned browser provider assembly from `browserRuntime.providerAssemblyPath` must use `Ludots.UI.Browser.BrowserRuntimeProviderLoader`. This is a host bootstrap responsibility, not a Mod responsibility, and must not hardcode CefSharp assembly names, load the provider into the default ALC, or fall back to the Mod load plan.

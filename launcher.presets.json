@@ -393,6 +393,20 @@
       }
     },
     {
+      "id": "browser_react_flow_ceflinux_raylib",
+      "name": "Browser React Flow CEF Linux Raylib",
+      "selectors": [
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ceflinux"
+      }
+    },
+    {
       "id": "browser_minimap_composited_overlay_cef_raylib",
       "name": "Browser Minimap Composited Overlay CEF Raylib",
       "selectors": [

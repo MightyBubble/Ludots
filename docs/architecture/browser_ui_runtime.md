@@ -7,7 +7,7 @@ This document defines Ludots' browser-backed UI runtime boundary. It exists for 
 Goals:
 
 - Run arbitrary web applications inside Ludots through a browser surface abstraction.
-- Keep browser engine choice platform-neutral while limiting built-in providers to CEF and Ultralight.
+- Keep browser engine choice platform-neutral while limiting built-in providers to the CEF kind (Windows and Linux providers) and Ultralight.
 - Reuse the existing Ludots UI runtime as the host composition layer instead of creating another UI tree.
 - Keep pointer, keyboard, focus, and alpha hit-test semantics routed through Ludots UI.
 - Allow platform adapters to render browser frames directly as native textures when performance matters.
@@ -44,7 +44,7 @@ Ludots keeps this shape but removes UE-specific ownership. The Ludots boundary i
 |------|----------------|
 | `IBrowserRuntime` | Creates browser surfaces from a viewport and optional resource resolver. |
 | `BrowserRuntimeInfo` | Identifies the concrete provider and its capabilities. |
-| `BrowserEngineKind` | Formal built-in provider identity: `Cef` or `Ultralight`. |
+| `BrowserEngineKind` | Formal built-in engine identity: `Cef` or `Ultralight`. The `Cef` kind covers the Windows CefSharp provider and the Linux CefNet provider. |
 | `BrowserEngineCapabilityProfiles` | Canonical capability profiles for CEF and Ultralight. |
 | `IBrowserSurface` | Owns one browser view: navigation, resize, input, latest frame, frame events, lifecycle. |
 | `IBrowserMessageBridge` | Web-to-host messages and host-to-web script/message calls. |
@@ -156,10 +156,11 @@ Formal built-in providers:
 
 | Provider | Assembly | Role |
 |----------|----------|------|
-| CEF | `Ludots.UI.Browser.Cef` | Full Chromium compatibility path. Use when arbitrary web apps, Chrome-equivalent APIs, WebGL, and maximum web compatibility matter. |
+| CEF (Windows) | `Ludots.UI.Browser.Cef` | Full Chromium compatibility path on Windows. Use when arbitrary web apps, Chrome-equivalent APIs, WebGL, and maximum web compatibility matter. |
+| CEF (Linux) | `Ludots.UI.Browser.CefLinux` | Chromium compatibility path on Linux hosts (CefNet binding + CEF linux-x64 natives). Same `Cef` engine kind and capability profile as the Windows provider. |
 | Ultralight | `Ludots.UI.Browser.Ultralight` | Lightweight game UI path. Use when Ludots controls the web bundle and wants a smaller, game-oriented runtime. |
 
-CEF remains the compatibility baseline. Ultralight is a first-class optional provider, but it must not be documented as Chrome-equivalent. Provider-specific native handles, callbacks, and package layout stay inside provider assemblies.
+CEF remains the compatibility baseline; on Linux the `ceflinux` provider carries that baseline. Ultralight is a first-class optional provider, but it must not be documented as Chrome-equivalent. Provider-specific native handles, callbacks, and package layout stay inside provider assemblies.
 
 ### 7.1 CEF Process Lifetime
 

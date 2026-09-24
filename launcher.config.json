@@ -2681,6 +2681,17 @@
       "hostTypeName": "Ludots.UI.Browser.Ultralight.UltralightBrowserRuntimeHost",
       "useCollectibleLoadContext": true,
       "processSharedAssemblyNamePrefixes": []
+    },
+    {
+      "id": "ceflinux",
+      "projectPath": "src/Libraries/Ludots.UI.Browser.CefLinux/Ludots.UI.Browser.CefLinux.csproj",
+      "packageRootPath": "BrowserRuntime/ceflinux",
+      "assemblyPath": "BrowserRuntime/ceflinux/Ludots.UI.Browser.CefLinux.dll",
+      "hostTypeName": "Ludots.UI.Browser.CefLinux.CefLinuxBrowserRuntimeHost",
+      "useCollectibleLoadContext": false,
+      "processSharedAssemblyNamePrefixes": [
+        "CefNet"
+      ]
     }
   ],
   "projectHints": []
