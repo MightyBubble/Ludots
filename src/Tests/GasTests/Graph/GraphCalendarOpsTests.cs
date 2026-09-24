@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -261,6 +263,97 @@ public sealed class GraphCalendarOpsTests
         InvalidOperationException disabledError = Assert.Throws<InvalidOperationException>(() =>
             disabled.ReadDaysUntilPhase(CalendarId, "season", "autumn"))!;
         Assert.That(disabledError.Message, Does.Contain("Calendar is not enabled"));
+    }
+
+    [Test]
+    public void ReadCalendarDaysUntilPhase_JsonDayAndDuplicatePhaseNames()
+    {
+        (_, GasGraphRuntimeApi api) = CreateBoundApi(startDayIndex: 90);
+        JsonSerializerOptions json = StrictJsonOptions.CreateCamelCase(includeFields: true);
+        GraphControlFlowDocument authored = JsonSerializer.Deserialize<GraphControlFlowDocument>(
+            """
+            {
+              "id": "Graph.Tests.CalendarDate.JsonDay",
+              "kind": "Script",
+              "entry": "untilDay",
+              "nodes": [
+                {
+                  "id": "untilDay",
+                  "op": "ReadCalendarDaysUntilPhase",
+                  "calendar": "calendar.graph.test",
+                  "cycle": "season",
+                  "phase": "summer",
+                  "day": 5
+                },
+                { "id": "halt", "op": "HaltReturnInt" }
+              ],
+              "controlEdges": [ { "from": "untilDay", "fromPort": "next", "to": "halt" } ],
+              "valueEdges": [ { "from": "untilDay", "fromPort": "value", "to": "halt", "toPort": "value" } ]
+            }
+            """,
+            json)!;
+        Assert.That(authored.Nodes[0].Day, Is.EqualTo(5));
+        Assert.That(CompilePatchExecute(api, authored).ReturnInt, Is.EqualTo(4));
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<GraphControlFlowDocument>(
+            """
+            {
+              "id": "Graph.Tests.CalendarDate.WrongDayField",
+              "kind": "Script",
+              "entry": "untilDay",
+              "nodes": [
+                {
+                  "id": "untilDay",
+                  "op": "ReadCalendarDaysUntilPhase",
+                  "cycle": "season",
+                  "phase": "summer",
+                  "Day": 5
+                },
+                { "id": "halt", "op": "HaltReturnInt" }
+              ],
+              "controlEdges": [ { "from": "untilDay", "fromPort": "next", "to": "halt" } ],
+              "valueEdges": [ { "from": "untilDay", "fromPort": "value", "to": "halt", "toPort": "value" } ]
+            }
+            """,
+            json));
+
+        var twice = new CalendarCycleDefinition(
+            "festival",
+            20,
+            new[]
+            {
+                new CalendarPhaseDefinition("duanwu", "端午", 1),
+                new CalendarPhaseDefinition("gap", "间", 9),
+                new CalendarPhaseDefinition("duanwu", "端午", 1),
+                new CalendarPhaseDefinition("rest", "余", 9),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 0, "duanwu", out int onFirst), Is.True);
+        Assert.That(onFirst, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 1, "duanwu", out int towardSecond), Is.True);
+        Assert.That(towardSecond, Is.EqualTo(9));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(twice, 11, "duanwu", out int wrapToFirst), Is.True);
+        Assert.That(wrapToFirst, Is.EqualTo(9));
+
+        var leap = new CalendarCycleDefinition(
+            "month",
+            28,
+            new[]
+            {
+                new CalendarPhaseDefinition("month.03", "三月", 8),
+                new CalendarPhaseDefinition("month.04", "短四月", 3),
+                new CalendarPhaseDefinition("month.04", "四月", 10),
+                new CalendarPhaseDefinition("month.05", "五月", 7),
+            });
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 9, "month.04", out int insideShort), Is.True);
+        Assert.That(insideShort, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 0, "month.04", 5, out int beforeLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(beforeLongFifth, Is.EqualTo(15));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 9, "month.04", 5, out int insideShortBeforeFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(insideShortBeforeFifth, Is.EqualTo(6));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 15, "month.04", 5, out int onLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(onLongFifth, Is.EqualTo(0));
+        Assert.That(CalendarProjection.TryDaysUntilPhase(leap, 16, "month.04", 5, out int afterLongFifth), Is.EqualTo(CalendarDaysUntilStatus.Found));
+        Assert.That(afterLongFifth, Is.EqualTo(27));
     }
 
     [Test]
