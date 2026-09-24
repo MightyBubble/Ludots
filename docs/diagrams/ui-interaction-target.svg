@@ -1,0 +1,808 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1080pt" height="878.4pt" viewBox="0 0 1080 878.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-20T12:06:31.581042</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 878.4 
+L 1080 878.4 
+L 1080 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 53.28 309.6 
+L 774.72 309.6 
+Q 784.8 309.6 784.8 319.68 
+L 784.8 407.52 
+Q 784.8 417.6 774.72 417.6 
+L 53.28 417.6 
+Q 43.2 417.6 43.2 407.52 
+L 43.2 319.68 
+Q 43.2 309.6 53.28 309.6 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f1edf3; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="54.72" y="325.592109" transform="rotate(-0 54.72 325.592109)">UI context 门控（挂 rep 实体）</text>
+   </g>
+   <g id="patch_3">
+    <path d="M 243.36 108 
+L 505.44 108 
+Q 511.2 108 511.2 113.76 
+L 511.2 181.44 
+Q 511.2 187.2 505.44 187.2 
+L 243.36 187.2 
+Q 237.6 187.2 237.6 181.44 
+L 237.6 113.76 
+Q 237.6 108 243.36 108 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 545.76 108 
+L 800.64 108 
+Q 806.4 108 806.4 113.76 
+L 806.4 181.44 
+Q 806.4 187.2 800.64 187.2 
+L 545.76 187.2 
+Q 540 187.2 540 181.44 
+L 540 113.76 
+Q 540 108 545.76 108 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 826.56 108 
+L 1038.24 108 
+Q 1044 108 1044 113.76 
+L 1044 181.44 
+Q 1044 187.2 1038.24 187.2 
+L 826.56 187.2 
+Q 820.8 187.2 820.8 181.44 
+L 820.8 113.76 
+Q 820.8 108 826.56 108 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 293.76 216 
+L 786.24 216 
+Q 792 216 792 221.76 
+L 792 275.04 
+Q 792 280.8 786.24 280.8 
+L 293.76 280.8 
+Q 288 280.8 288 275.04 
+L 288 221.76 
+Q 288 216 293.76 216 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 77.76 338.4 
+L 411.84 338.4 
+Q 417.6 338.4 417.6 344.16 
+L 417.6 397.44 
+Q 417.6 403.2 411.84 403.2 
+L 77.76 403.2 
+Q 72 403.2 72 397.44 
+L 72 344.16 
+Q 72 338.4 77.76 338.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 444.96 338.4 
+L 764.64 338.4 
+Q 770.4 338.4 770.4 344.16 
+L 770.4 397.44 
+Q 770.4 403.2 764.64 403.2 
+L 444.96 403.2 
+Q 439.2 403.2 439.2 397.44 
+L 439.2 344.16 
+Q 439.2 338.4 444.96 338.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 840.96 302.4 
+L 1045.44 302.4 
+Q 1051.2 302.4 1051.2 308.16 
+L 1051.2 419.04 
+Q 1051.2 424.8 1045.44 424.8 
+L 840.96 424.8 
+Q 835.2 424.8 835.2 419.04 
+L 835.2 308.16 
+Q 835.2 302.4 840.96 302.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #eceef0; stroke: #828a92; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 279.36 446.4 
+L 800.64 446.4 
+Q 806.4 446.4 806.4 452.16 
+L 806.4 519.84 
+Q 806.4 525.6 800.64 525.6 
+L 279.36 525.6 
+Q 273.6 525.6 273.6 519.84 
+L 273.6 452.16 
+Q 273.6 446.4 279.36 446.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #eaf2f1; stroke: #76a09c; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 279.36 554.4 
+L 800.64 554.4 
+Q 806.4 554.4 806.4 560.16 
+L 806.4 613.44 
+Q 806.4 619.2 800.64 619.2 
+L 279.36 619.2 
+Q 273.6 619.2 273.6 613.44 
+L 273.6 560.16 
+Q 273.6 554.4 279.36 554.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 279.36 655.2 
+L 800.64 655.2 
+Q 806.4 655.2 806.4 660.96 
+L 806.4 721.44 
+Q 806.4 727.2 800.64 727.2 
+L 279.36 727.2 
+Q 273.6 727.2 273.6 721.44 
+L 273.6 660.96 
+Q 273.6 655.2 279.36 655.2 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f5f0e8; stroke: #b39b7d; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_2">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="374.4" y="135.026797" transform="rotate(-0 374.4 135.026797)">面板按钮</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="374.4" y="151.820906" transform="rotate(-0 374.4 151.820906)">markup / compose 皮 Button 控件</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="374.4" y="165.461063" transform="rotate(-0 374.4 165.461063)">命中 → PanelEventDispatcher.FireFromSeat</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="673.2" y="135.026797" transform="rotate(-0 673.2 135.026797)">手柄焦点 + 确认</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="673.2" y="151.841625" transform="rotate(-0 673.2 151.841625)">dpad / 摇杆挪焦点（View 状态）</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="673.2" y="165.500906" transform="rotate(-0 673.2 165.500906)">确认键才产语义动作（payload 带 focusId）</text>
+   </g>
+   <g id="text_8">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="932.4" y="135.026797" transform="rotate(-0 932.4 135.026797)">键鼠 hover + 点击</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="932.4" y="151.811344" transform="rotate(-0 932.4 151.811344)">指点 payload（位置）</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="932.4" y="165.481781" transform="rotate(-0 932.4 165.481781)">与按键 payload 在图内归一</text>
+   </g>
+   <g id="text_11">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="540" y="236.560469" transform="rotate(-0 540 236.560469)">语义动作（eventId 即 action id · 归因 seat）</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="253.352062" transform="rotate(-0 540 253.352062)">default_input.json 同一张表（source: panel）</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="267.041625" transform="rotate(-0 540 267.041625)">准入 = 面板可见三轴 + 活跃 context bindings</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="244.8" y="358.960469" transform="rotate(-0 244.8 358.960469)">UI context profile（定义 · 静）</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="244.8" y="375.740906" transform="rotate(-0 244.8 375.740906)">bindings 门控 UI 动作</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="244.8" y="389.420906" transform="rotate(-0 244.8 389.420906)">指针路由声明（输入语义归状态定义）</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="604.8" y="358.911641" transform="rotate(-0 604.8 358.911641)">InteractionContextInstance（实例 · 实体上）</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="604.8" y="375.771187" transform="rotate(-0 604.8 375.771187)">唯一交互状态：菜单开着 = 它活着</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="604.8" y="389.420906" transform="rotate(-0 604.8 389.420906)">定义文件里禁止出现激活边</text>
+   </g>
+   <g id="text_20">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="943.2" y="344.223906" transform="rotate(-0 943.2 344.223906)">宿主（Raylib / Web）</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="943.2" y="360.980906" transform="rotate(-0 943.2 360.980906)">只读投影：查该 seat 活跃链</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="943.2" y="374.660906" transform="rotate(-0 943.2 374.660906)">最顶层声明指针路由的 context</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="943.2" y="388.232531" transform="rotate(-0 943.2 388.232531)">UiCaptured / UiWheelCaptured 退役</text>
+   </g>
+   <g id="text_24">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="540" y="466.630146" transform="rotate(-0 540 466.630146)">图（Controller）</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="483.752062" transform="rotate(-0 540 483.752062)">打开菜单 = ActivateContext(ui.menu) + ShowPanel（两个现网 op）</text>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="497.381062" transform="rotate(-0 540 497.381062)">事件消费图（A 支）：写对话选择 / 设置值</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="511.121625" transform="rotate(-0 540 511.121625)">浏览器控件汇入同一事件桥，不开第二准入路</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="540" y="574.935078" transform="rotate(-0 540 574.935078)">落账（单写者）</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="591.740906" transform="rotate(-0 540 591.740906)">对话选择 · 设置值 · 集合</text>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="605.411344" transform="rotate(-0 540 605.411344)">context 退 → scope 整组清，面板无孤儿</text>
+   </g>
+   <g id="text_31">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="540" y="675.772187" transform="rotate(-0 540 675.772187)">面板（View · 只订阅）</text>
+   </g>
+   <g id="text_32">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="692.540906" transform="rotate(-0 540 692.540906)">订阅 ContextActivated / 集合成员事件</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="706.241625" transform="rotate(-0 540 706.241625)">按 scheme 重渲染：焦点环 / 轮盘 / hover</text>
+   </g>
+   <g id="text_34">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="719.891344" transform="rotate(-0 540 719.891344)">模板不声明交互拓扑，scope 由实例绑定传入</text>
+   </g>
+   <g id="line2d_1">
+    <path d="M 374.4 187.2 
+L 374.4 208.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 374.4 208.8 
+L 374.4 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 374.4 201.6 
+L 540 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 540 201.6 
+L 540 194.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 540 194.4 
+L 540 216 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 673.2 187.2 
+L 673.2 208.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 673.2 208.8 
+L 673.2 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 673.2 201.6 
+L 540 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 540 201.6 
+L 540 194.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_10">
+    <path d="M 540 194.4 
+L 540 216 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_11">
+    <path d="M 932.4 187.2 
+L 932.4 208.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_12">
+    <path d="M 932.4 208.8 
+L 932.4 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 932.4 201.6 
+L 540 201.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 540 201.6 
+L 540 194.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_15">
+    <path d="M 540 194.4 
+L 540 216 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_16">
+    <path d="M 540 280.8 
+L 540 302.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_17">
+    <path d="M 540 302.4 
+L 540 295.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_18">
+    <path d="M 540 295.2 
+L 414 295.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_19">
+    <path d="M 414 295.2 
+L 414 288 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_20">
+    <path d="M 414 288 
+L 414 309.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_21">
+    <path d="M 417.6 370.8 
+L 439.2 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_22">
+    <path d="M 439.2 370.8 
+L 428.4 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_23">
+    <path d="M 428.4 370.8 
+L 428.4 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_24">
+    <path d="M 428.4 370.8 
+L 417.6 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_25">
+    <path d="M 417.6 370.8 
+L 439.2 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_26">
+    <path d="M 770.4 370.8 
+L 792 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_27">
+    <path d="M 792 370.8 
+L 802.8 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_28">
+    <path d="M 802.8 370.8 
+L 802.8 363.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_29">
+    <path d="M 802.8 363.6 
+L 813.6 363.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_30">
+    <path d="M 813.6 363.6 
+L 835.2 363.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_31">
+    <path d="M 414 417.6 
+L 414 439.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_32">
+    <path d="M 414 439.2 
+L 414 432 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_33">
+    <path d="M 414 432 
+L 540 432 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_34">
+    <path d="M 540 432 
+L 540 424.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_35">
+    <path d="M 540 424.8 
+L 540 446.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_36">
+    <path d="M 540 525.6 
+L 540 547.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_37">
+    <path d="M 540 547.2 
+L 540 540 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_38">
+    <path d="M 540 540 
+L 540 540 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_39">
+    <path d="M 540 540 
+L 540 532.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_40">
+    <path d="M 540 532.8 
+L 540 554.4 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_41">
+    <path d="M 540 619.2 
+L 540 640.8 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_42">
+    <path d="M 540 640.8 
+L 540 637.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_43">
+    <path d="M 540 637.2 
+L 540 637.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_44">
+    <path d="M 540 637.2 
+L 540 633.6 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_45">
+    <path d="M 540 633.6 
+L 540 655.2 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 562.40154 444.405938 
+Q 564.380739 419.152742 583.843909 405.130834 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 578.546457 405.989324 
+L 583.843909 405.130834 
+L 581.35223 409.88389 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 540 196.40127 
+Q 540 205.202994 540 214.004719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 209.204719 
+L 540 214.004719 
+L 537.6 209.204719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 540 196.40127 
+Q 540 205.202994 540 214.004719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 209.204719 
+L 540 214.004719 
+L 537.6 209.204719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 540 196.40127 
+Q 540 205.202994 540 214.004719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 209.204719 
+L 540 214.004719 
+L 537.6 209.204719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 414 290.00127 
+Q 414 298.802994 414 307.604719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 416.4 302.804719 
+L 414 307.604719 
+L 411.6 302.804719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 419.60127 370.8 
+Q 428.402994 370.8 437.204719 370.8 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 432.404719 368.4 
+L 437.204719 370.8 
+L 432.404719 373.2 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 815.60127 363.6 
+Q 824.402994 363.6 833.204719 363.6 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 828.404719 361.2 
+L 833.204719 363.6 
+L 828.404719 366 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 540 426.80127 
+Q 540 435.602994 540 444.404719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 439.604719 
+L 540 444.404719 
+L 537.6 439.604719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 540 534.80127 
+Q 540 543.602994 540 552.404719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 547.604719 
+L 540 552.404719 
+L 537.6 547.604719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 540 635.60127 
+Q 540 644.402994 540 653.204719 
+" clip-path="url(#pddf77b2466)" style="fill: none"/>
+    <path d="M 542.4 648.404719 
+L 540 653.204719 
+L 537.6 648.404719 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #8a94a3"/>
+   </g>
+   <g id="text_35">
+    <text style="font-weight: 700; font-size: 20px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #181b20" x="540" y="41.226875" transform="rotate(-0 540 41.226875)">UI 交互链目标态：打开 UI = 激活 context，面板只是哑视图</text>
+   </g>
+   <g id="text_36">
+    <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="69.135" transform="rotate(-0 540 69.135)">统一收口阶段 1/2（#1585 / #1586）· 输入状态与 UI 无关 · 手柄热插拔不乱</text>
+   </g>
+   <g id="text_37">
+    <g id="patch_23">
+     <path d="M 467.5 303.041118 
+L 486.5 303.041118 
+Q 489.16 303.041118 489.16 300.381118 
+L 489.16 290.018882 
+Q 489.16 287.358882 486.5 287.358882 
+L 467.5 287.358882 
+Q 464.84 287.358882 464.84 290.018882 
+L 464.84 300.381118 
+Q 464.84 303.041118 467.5 303.041118 
+z
+" style="fill: #ffffff; opacity: 0.92"/>
+    </g>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="477" y="297.973647" transform="rotate(-0 477 297.973647)">门控</text>
+   </g>
+   <g id="text_38">
+    <g id="patch_24">
+     <path d="M 399.9 378.632212 
+L 456.9 378.632212 
+Q 459.56 378.632212 459.56 375.972212 
+L 459.56 365.627788 
+Q 459.56 362.967788 456.9 362.967788 
+L 399.9 362.967788 
+Q 397.24 362.967788 397.24 365.627788 
+L 397.24 375.972212 
+Q 397.24 378.632212 399.9 378.632212 
+z
+" style="fill: #ffffff; opacity: 0.92"/>
+    </g>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="428.4" y="373.564741" transform="rotate(-0 428.4 373.564741)">实例引用定义</text>
+   </g>
+   <g id="text_39">
+    <g id="patch_25">
+     <path d="M 762.2 378.599556 
+L 800.2 378.599556 
+Q 802.86 378.599556 802.86 375.939556 
+L 802.86 365.660444 
+Q 802.86 363.000444 800.2 363.000444 
+L 762.2 363.000444 
+Q 759.54 363.000444 759.54 365.660444 
+L 759.54 375.939556 
+Q 759.54 378.599556 762.2 378.599556 
+z
+" style="fill: #ffffff; opacity: 0.92"/>
+    </g>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="781.2" y="373.532085" transform="rotate(-0 781.2 373.532085)">只读投影</text>
+   </g>
+   <g id="text_40">
+    <g id="patch_26">
+     <path d="M 530.5 637.813657 
+L 549.5 637.813657 
+Q 552.16 637.813657 552.16 635.153657 
+L 552.16 624.846343 
+Q 552.16 622.186343 549.5 622.186343 
+L 530.5 622.186343 
+Q 527.84 622.186343 527.84 624.846343 
+L 527.84 635.153657 
+Q 527.84 637.813657 530.5 637.813657 
+z
+" style="fill: #ffffff; opacity: 0.92"/>
+    </g>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="540" y="632.746187" transform="rotate(-0 540 632.746187)">订阅</text>
+   </g>
+   <g id="text_41">
+    <g id="patch_27">
+     <path d="M 559.525 429.603618 
+L 578.525 429.603618 
+Q 581.185 429.603618 581.185 426.943618 
+L 581.185 416.581382 
+Q 581.185 413.921382 578.525 413.921382 
+L 559.525 413.921382 
+Q 556.865 413.921382 556.865 416.581382 
+L 556.865 426.943618 
+Q 556.865 429.603618 559.525 429.603618 
+z
+" style="fill: #ffffff; opacity: 0.92"/>
+    </g>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="569.025" y="424.536147" transform="rotate(-0 569.025 424.536147)">激活</text>
+   </g>
+   <g id="text_42">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="50.4" y="778.382969" transform="rotate(-0 50.4 778.382969)">热插拔：换 scheme 只重解析「键 → 语义」表；context 实例不动 —— 菜单还开着、选中还在，面板按新 scheme 重画一遍</text>
+   </g>
+   <g id="text_43">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="50.4" y="800.002266" transform="rotate(-0 50.4 800.002266)">MVC 分工：Model = 世界状态（对话进度/集合/属性）；View = 面板；Controller = 图 + context 激活。输入路由只读实体状态，不读 UI 可见性</text>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="50.4" y="821.554766" transform="rotate(-0 50.4 821.554766)">忘了 ActivateContext 的面板 = 可见但按钮全哑（UI 动作不在 bindings）—— 失败可观察，不需要引擎发明配对校验</text>
+   </g>
+   <g id="patch_28">
+    <path d="M 36 95.04 
+L 187.2 95.04 
+Q 194.4 95.04 194.4 102.24 
+L 194.4 267.84 
+Q 194.4 275.04 187.2 275.04 
+L 36 275.04 
+Q 28.8 275.04 28.8 267.84 
+L 28.8 102.24 
+Q 28.8 95.04 36 95.04 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #ffffff; stroke: #dfe3e9; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_45">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #23272e" x="41.76" y="112.442578" transform="rotate(-0 41.76 112.442578)">角色</text>
+   </g>
+   <g id="patch_29">
+    <path d="M 45.36 125.64 
+L 58.32 125.64 
+Q 61.92 125.64 61.92 129.24 
+L 61.92 136.44 
+Q 61.92 140.04 58.32 140.04 
+L 45.36 140.04 
+Q 41.76 140.04 41.76 136.44 
+L 41.76 129.24 
+Q 41.76 125.64 45.36 125.64 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="135.818021" transform="rotate(-0 67.68 135.818021)">刺激（View 侧）</text>
+   </g>
+   <g id="patch_30">
+    <path d="M 45.36 149.4 
+L 58.32 149.4 
+Q 61.92 149.4 61.92 153 
+L 61.92 160.2 
+Q 61.92 163.8 58.32 163.8 
+L 45.36 163.8 
+Q 41.76 163.8 41.76 160.2 
+L 41.76 153 
+Q 41.76 149.4 45.36 149.4 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_47">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="159.578021" transform="rotate(-0 67.68 159.578021)">门控（实体状态）</text>
+   </g>
+   <g id="patch_31">
+    <path d="M 45.36 173.16 
+L 58.32 173.16 
+Q 61.92 173.16 61.92 176.76 
+L 61.92 183.96 
+Q 61.92 187.56 58.32 187.56 
+L 45.36 187.56 
+Q 41.76 187.56 41.76 183.96 
+L 41.76 176.76 
+Q 41.76 173.16 45.36 173.16 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #eaf2f1; stroke: #76a09c; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_48">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="183.208828" transform="rotate(-0 67.68 183.208828)">图（Controller）</text>
+   </g>
+   <g id="patch_32">
+    <path d="M 45.36 196.92 
+L 58.32 196.92 
+Q 61.92 196.92 61.92 200.52 
+L 61.92 207.72 
+Q 61.92 211.32 58.32 211.32 
+L 45.36 211.32 
+Q 41.76 211.32 41.76 207.72 
+L 41.76 200.52 
+Q 41.76 196.92 45.36 196.92 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_49">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="207.073318" transform="rotate(-0 67.68 207.073318)">落账</text>
+   </g>
+   <g id="patch_33">
+    <path d="M 45.36 220.68 
+L 58.32 220.68 
+Q 61.92 220.68 61.92 224.28 
+L 61.92 231.48 
+Q 61.92 235.08 58.32 235.08 
+L 45.36 235.08 
+Q 41.76 235.08 41.76 231.48 
+L 41.76 224.28 
+Q 41.76 220.68 45.36 220.68 
+z
+" clip-path="url(#pddf77b2466)" style="fill: #f5f0e8; stroke: #b39b7d; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_50">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="230.788693" transform="rotate(-0 67.68 230.788693)">面板 View</text>
+   </g>
+   <g id="line2d_46">
+    <path d="M 41.76 251.64 
+L 61.92 251.64 
+" clip-path="url(#pddf77b2466)" style="fill: none; stroke-dasharray: 8,6.4; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.6"/>
+   </g>
+   <g id="text_51">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="254.61324" transform="rotate(-0 67.68 254.61324)">只读投影（虚线）</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pddf77b2466">
+   <rect x="0" y="0" width="1080" height="878.4"/>
+  </clipPath>
+ </defs>
+</svg>
