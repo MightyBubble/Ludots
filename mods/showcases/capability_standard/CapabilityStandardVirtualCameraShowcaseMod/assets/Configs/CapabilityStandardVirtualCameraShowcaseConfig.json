@@ -1,0 +1,64 @@
+{
+  "mapId": "capability_standard_virtual_camera",
+  "debugPanel": {
+    "enabled": true,
+    "initialVisible": true,
+    "x": 16,
+    "y": 88,
+    "width": 570,
+    "fontSize": 13,
+    "lineHeight": 17,
+    "toggleActionId": "CapabilityStandard.VirtualCamera.Debug.Toggle",
+    "nextActionId": "CapabilityStandard.VirtualCamera.Debug.Next",
+    "previousActionId": "CapabilityStandard.VirtualCamera.Debug.Previous",
+    "increaseActionId": "CapabilityStandard.VirtualCamera.Debug.Increase",
+    "decreaseActionId": "CapabilityStandard.VirtualCamera.Debug.Decrease",
+    "adjustments": [
+      {
+        "id": "yaw",
+        "displayName": "Yaw",
+        "field": "Yaw",
+        "step": 5,
+        "min": 0,
+        "max": 360
+      },
+      {
+        "id": "pitch",
+        "displayName": "Pitch",
+        "field": "Pitch",
+        "step": 2,
+        "min": -55,
+        "max": 76
+      },
+      {
+        "id": "distance",
+        "displayName": "Distance",
+        "field": "DistanceCm",
+        "step": 50,
+        "min": 0,
+        "max": 20000
+      },
+      {
+        "id": "fov",
+        "displayName": "FOV",
+        "field": "FovYDeg",
+        "step": 2,
+        "min": 20,
+        "max": 110
+      }
+    ]
+  },
+  "impulseDemo": {
+    "enabled": true,
+    "triggerActionId": "CapabilityStandard.VirtualCamera.Impulse.Trigger",
+    "innerRadiusCm": 0,
+    "radiusCm": 2800,
+    "durationSeconds": 0.75,
+    "frequencyHz": 12,
+    "phaseRadians": 1.5707964,
+    "positionAmplitudeCm": 42,
+    "yawAmplitudeDeg": 1.2,
+    "pitchAmplitudeDeg": 1.6,
+    "falloff": "SmoothStep"
+  }
+}

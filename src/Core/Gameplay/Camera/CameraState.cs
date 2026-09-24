@@ -57,6 +57,10 @@ namespace Ludots.Core.Gameplay.Camera
 
         public float ImpulsePitchOffsetDeg { get; set; }
 
+        public Vector3 CameraCollisionPositionOffsetCm { get; set; } = Vector3.Zero;
+
+        public float CameraCollisionCorrectionCm { get; set; }
+
         /// <summary>
         /// True when camera is following a target entity (pan behaviors should skip).
         /// </summary>

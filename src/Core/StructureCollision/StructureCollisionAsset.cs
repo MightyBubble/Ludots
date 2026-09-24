@@ -496,6 +496,19 @@ namespace Ludots.Core.StructureCollision
                    heightCm <= Surfaces.MaxHeightCm[surfaceIndex];
         }
 
+        public bool ContainsSurfaceVolumePoint(int surfaceIndex, float worldXCm, float worldZCm, float heightCm)
+        {
+            if ((uint)surfaceIndex >= (uint)Surfaces.Count ||
+                !float.IsFinite(heightCm) ||
+                heightCm < Surfaces.MinHeightCm[surfaceIndex] ||
+                heightCm > Surfaces.MaxHeightCm[surfaceIndex])
+            {
+                return false;
+            }
+
+            return TryContainsShapePoint(Surfaces.ShapeRefs[surfaceIndex], worldXCm, worldZCm);
+        }
+
         public int GetPrimaryChunkForSurface(int surfaceIndex)
         {
             if ((uint)surfaceIndex >= (uint)SurfaceChunkStart.Length)

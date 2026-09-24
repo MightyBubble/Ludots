@@ -89,6 +89,13 @@ namespace Ludots.Core.Gameplay.Camera
                         EnableGrabDrag = config.EnableGrabDrag,
                         ConfineTargetToWorldBounds = config.ConfineTargetToWorldBounds,
                         ConfinePaddingCm = config.ConfinePaddingCm,
+                        ConfineCameraToWorldBounds = config.ConfineCameraToWorldBounds,
+                        AvoidCameraGroundPenetration = config.AvoidCameraGroundPenetration,
+                        CameraGroundClearanceCm = config.CameraGroundClearanceCm,
+                        AvoidCameraStructureObstruction = config.AvoidCameraStructureObstruction,
+                        CameraObstructionProbeStepCm = config.CameraObstructionProbeStepCm,
+                        CameraObstructionClearanceCm = config.CameraObstructionClearanceCm,
+                        CameraObstructionTargetRadiusCm = config.CameraObstructionTargetRadiusCm,
                         RotateMode = rotateMode,
                         RotateDegPerPixel = config.RotateDegPerPixel,
                         RotateRequiresHold = config.RotateRequiresHold ?? true,
@@ -163,6 +170,7 @@ namespace Ludots.Core.Gameplay.Camera
             ValidateFov(config);
             ValidateOptionalVector3(config.Id, nameof(config.RigPivotOffsetCm), config.RigPivotOffsetCm);
             ValidateOptionalVector3(config.Id, nameof(config.RigCameraOffsetCm), config.RigCameraOffsetCm);
+            ValidateCameraCollision(config);
             ValidateFinite(config.Id, nameof(config.DefaultBlendDuration), config.DefaultBlendDuration);
             if (config.DefaultBlendDuration < 0f)
             {
@@ -397,6 +405,37 @@ namespace Ludots.Core.Gameplay.Camera
             ValidateFinitePositive(config.Id, nameof(config.ZoomCmPerWheel), config.ZoomCmPerWheel);
         }
 
+        private static void ValidateCameraCollision(VirtualCameraDefinitionConfig config)
+        {
+            ValidateFinite(config.Id, nameof(config.ConfinePaddingCm), config.ConfinePaddingCm);
+            if (config.ConfinePaddingCm < 0f)
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' confinePaddingCm must be >= 0.");
+            }
+
+            ValidateFinite(config.Id, nameof(config.CameraGroundClearanceCm), config.CameraGroundClearanceCm);
+            if (config.AvoidCameraGroundPenetration && config.CameraGroundClearanceCm <= 0f)
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' enables ground penetration avoidance and must declare cameraGroundClearanceCm > 0.");
+            }
+
+            ValidateFinite(config.Id, nameof(config.CameraObstructionProbeStepCm), config.CameraObstructionProbeStepCm);
+            ValidateFinite(config.Id, nameof(config.CameraObstructionClearanceCm), config.CameraObstructionClearanceCm);
+            ValidateFinite(config.Id, nameof(config.CameraObstructionTargetRadiusCm), config.CameraObstructionTargetRadiusCm);
+            if (config.AvoidCameraStructureObstruction)
+            {
+                if (config.CameraObstructionProbeStepCm <= 0f ||
+                    config.CameraObstructionClearanceCm < 0f ||
+                    config.CameraObstructionTargetRadiusCm < 0f)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Virtual camera '{config.Id}' enables structure obstruction avoidance and must declare valid obstruction probe, clearance, and target radius values.");
+                }
+            }
+        }
+
         private static void ValidateFinite(string cameraId, string propertyName, float value)
         {
             if (!float.IsFinite(value))
@@ -469,6 +508,13 @@ namespace Ludots.Core.Gameplay.Camera
             public bool EnableGrabDrag { get; set; }
             public bool ConfineTargetToWorldBounds { get; set; }
             public float ConfinePaddingCm { get; set; }
+            public bool ConfineCameraToWorldBounds { get; set; }
+            public bool AvoidCameraGroundPenetration { get; set; }
+            public float CameraGroundClearanceCm { get; set; }
+            public bool AvoidCameraStructureObstruction { get; set; }
+            public float CameraObstructionProbeStepCm { get; set; } = 25f;
+            public float CameraObstructionClearanceCm { get; set; } = 35f;
+            public float CameraObstructionTargetRadiusCm { get; set; } = 100f;
             public CameraRotateMode? RotateMode { get; set; }
             public float RotateDegPerPixel { get; set; } = 0.28f;
             public bool? RotateRequiresHold { get; set; }

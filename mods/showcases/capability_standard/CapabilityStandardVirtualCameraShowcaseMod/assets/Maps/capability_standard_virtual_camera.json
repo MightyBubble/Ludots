@@ -1,6 +1,7 @@
 {
   "Id": "capability_standard_virtual_camera",
   "VisualHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.vhtm",
+  "StructureCollisionAsset": "assets/StructureCollision/capability_standard_virtual_camera_obstructions.scoll.json",
   "Tags": [
     "capability_standard",
     "capability_standard.virtual_camera",
@@ -27,14 +28,16 @@
       "Overrides": {
         "Name": { "Value": "CapabilityStandardCameraNorthWest" },
         "Team": { "Id": 1 },
-        "WorldPositionCm": { "Value": { "X": 800, "Y": 600 } }
+        "WorldPositionCm": { "Value": { "X": 800, "Y": 600 } },
+        "CommandSourceSelectableState": { "IsEnabled": false }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
         "Name": { "Value": "CapabilityStandardCameraSouthEast" },
-        "WorldPositionCm": { "Value": { "X": 7600, "Y": 4600 } }
+        "WorldPositionCm": { "Value": { "X": 7600, "Y": 4600 } },
+        "CommandSourceSelectableState": { "IsEnabled": false }
       }
     }
   ],

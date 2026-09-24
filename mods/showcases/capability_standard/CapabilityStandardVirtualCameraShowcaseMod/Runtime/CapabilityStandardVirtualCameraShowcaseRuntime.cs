@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
+using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
 
@@ -48,6 +50,7 @@ internal sealed class CapabilityStandardVirtualCameraShowcaseRuntime
         RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId);
         RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.TpsModeId);
         RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.FpsModeId);
+        EnsureDefaultCommandSource(engine);
 
         engine.GlobalContext[CapabilityStandardVirtualCameraShowcaseIds.RuntimeStateKey] =
             new CapabilityStandardVirtualCameraShowcaseState(
@@ -107,6 +110,30 @@ internal sealed class CapabilityStandardVirtualCameraShowcaseRuntime
 
         throw new InvalidOperationException(
             $"Capability standard virtual camera showcase requires view mode '{modeId}'.");
+    }
+
+    private static void EnsureDefaultCommandSource(GameEngine engine)
+    {
+        Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (localPlayer == Entity.Null || !engine.World.IsAlive(localPlayer))
+        {
+            throw new InvalidOperationException(
+                "Capability standard virtual camera showcase requires a live LocalPlayerEntity before publishing the command source.");
+        }
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Capability standard virtual camera showcase requires EntityCollectionStore.");
+
+        Span<Entity> members = stackalloc Entity[1] { localPlayer };
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            localPlayer,
+            localPlayer,
+            "Virtual camera avatar",
+            "Default local avatar command source");
+        collections.Replace(localPlayer, descriptor, members, localPlayer);
     }
 }
 

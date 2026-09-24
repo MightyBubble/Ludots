@@ -169,6 +169,18 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualCameraForward_MatchesLogicCameraForwardOnGroundPlane()
+        {
+            AssertVector3(WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(0f, 0f), new Vector3(0f, 0f, 1f));
+            AssertVector3(WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(90f, 0f), new Vector3(-1f, 0f, 0f));
+
+            Vector3 pitched = WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(0f, 30f);
+            Assert.That(pitched.Y, Is.GreaterThan(0f));
+            Assert.That(pitched.X, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(pitched.Z, Is.EqualTo(MathF.Cos(MathF.PI / 6f)).Within(0.0001f));
+        }
+
+        [Test]
         public void MapProjection_UsesSingleWorldPlaneBasis()
         {
             WorldPlane2D.WorldToMapNormalizedUnclipped(

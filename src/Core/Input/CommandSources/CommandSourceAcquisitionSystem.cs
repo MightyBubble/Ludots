@@ -298,18 +298,14 @@ namespace Ludots.Core.Input.CommandSources
 
         private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, CommandSourceAcquisitionMode mode)
         {
-            CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
-                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
-            string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "commandSource.acquisition.collectionKey");
-            var descriptor = EntityCollectionDescriptor.Create(
-                collectionKey,
-                EntityCollectionSourceKind.UiAcquisition,
-                EntityCollectionRoleKind.AcquisitionPreview,
-                owner,
-                hits.Length > 0 ? hits[0] : Entity.Null,
-                string.IsNullOrWhiteSpace(acquisition.Title) ? "Command acquisition" : acquisition.Title,
-                $"{mode} | {hits.Length} entities");
-            _entityCollections.Replace(owner, descriptor, hits);
+            PublishAcquisitionPreview(owner, hits, mode);
+
+            if (mode == CommandSourceAcquisitionMode.Replace &&
+                hits.Length == 0 &&
+                !_config.ClearCommandSourceOnEmptyReplace)
+            {
+                return;
+            }
 
             switch (mode)
             {
@@ -328,6 +324,22 @@ namespace Ludots.Core.Input.CommandSources
                 default:
                     throw new InvalidOperationException($"Unsupported command-source acquisition mode '{mode}'.");
             }
+        }
+
+        private void PublishAcquisitionPreview(Entity owner, ReadOnlySpan<Entity> hits, CommandSourceAcquisitionMode mode)
+        {
+            CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
+                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
+            string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "commandSource.acquisition.collectionKey");
+            var descriptor = EntityCollectionDescriptor.Create(
+                collectionKey,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.AcquisitionPreview,
+                owner,
+                hits.Length > 0 ? hits[0] : Entity.Null,
+                string.IsNullOrWhiteSpace(acquisition.Title) ? "Command acquisition" : acquisition.Title,
+                $"{mode} | {hits.Length} entities");
+            _entityCollections.Replace(owner, descriptor, hits);
         }
 
         private void PublishMergedCommandSource(Entity owner, ReadOnlySpan<Entity> hits, CommandSourceAcquisitionMode mode)

@@ -16,6 +16,8 @@ namespace Ludots.Core.Gameplay.Camera
         public Vector3 ImpulsePositionOffsetCm;
         public float ImpulseYawOffsetDeg;
         public float ImpulsePitchOffsetDeg;
+        public Vector3 CameraCollisionPositionOffsetCm;
+        public float CameraCollisionCorrectionCm;
         public CameraRigKind RigKind;
         public int ZoomLevel;
         public bool IsFollowing;
@@ -35,6 +37,8 @@ namespace Ludots.Core.Gameplay.Camera
                 ImpulsePositionOffsetCm = state.ImpulsePositionOffsetCm,
                 ImpulseYawOffsetDeg = state.ImpulseYawOffsetDeg,
                 ImpulsePitchOffsetDeg = state.ImpulsePitchOffsetDeg,
+                CameraCollisionPositionOffsetCm = state.CameraCollisionPositionOffsetCm,
+                CameraCollisionCorrectionCm = state.CameraCollisionCorrectionCm,
                 RigKind = state.RigKind,
                 ZoomLevel = state.ZoomLevel,
                 IsFollowing = state.IsFollowing
@@ -54,6 +58,8 @@ namespace Ludots.Core.Gameplay.Camera
             state.ImpulsePositionOffsetCm = ImpulsePositionOffsetCm;
             state.ImpulseYawOffsetDeg = ImpulseYawOffsetDeg;
             state.ImpulsePitchOffsetDeg = ImpulsePitchOffsetDeg;
+            state.CameraCollisionPositionOffsetCm = CameraCollisionPositionOffsetCm;
+            state.CameraCollisionCorrectionCm = CameraCollisionCorrectionCm;
             state.RigKind = RigKind;
             state.ZoomLevel = ZoomLevel;
             state.IsFollowing = IsFollowing;
@@ -74,6 +80,8 @@ namespace Ludots.Core.Gameplay.Camera
                 ImpulsePositionOffsetCm = Vector3.Lerp(from.ImpulsePositionOffsetCm, to.ImpulsePositionOffsetCm, t),
                 ImpulseYawOffsetDeg = LerpScalar(from.ImpulseYawOffsetDeg, to.ImpulseYawOffsetDeg, t),
                 ImpulsePitchOffsetDeg = LerpScalar(from.ImpulsePitchOffsetDeg, to.ImpulsePitchOffsetDeg, t),
+                CameraCollisionPositionOffsetCm = Vector3.Lerp(from.CameraCollisionPositionOffsetCm, to.CameraCollisionPositionOffsetCm, t),
+                CameraCollisionCorrectionCm = LerpScalar(from.CameraCollisionCorrectionCm, to.CameraCollisionCorrectionCm, t),
                 RigKind = to.RigKind,
                 ZoomLevel = to.ZoomLevel,
                 IsFollowing = to.IsFollowing

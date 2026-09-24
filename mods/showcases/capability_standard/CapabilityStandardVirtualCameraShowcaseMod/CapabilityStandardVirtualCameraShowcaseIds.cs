@@ -26,6 +26,12 @@ public static class CapabilityStandardVirtualCameraShowcaseIds
     public const string RotateHoldActionId = "CapabilityStandard.VirtualCamera.RotateHold";
     public const string LookActionId = "CapabilityStandard.VirtualCamera.Look";
     public const string AvatarMoveActionId = "CapabilityStandard.VirtualCamera.AvatarMove";
+    public const string DebugPanelToggleActionId = "CapabilityStandard.VirtualCamera.Debug.Toggle";
+    public const string DebugPanelNextActionId = "CapabilityStandard.VirtualCamera.Debug.Next";
+    public const string DebugPanelPreviousActionId = "CapabilityStandard.VirtualCamera.Debug.Previous";
+    public const string DebugPanelIncreaseActionId = "CapabilityStandard.VirtualCamera.Debug.Increase";
+    public const string DebugPanelDecreaseActionId = "CapabilityStandard.VirtualCamera.Debug.Decrease";
+    public const string ImpulseActionId = "CapabilityStandard.VirtualCamera.Impulse.Trigger";
     public const string RotateLeftActionId = "CapabilityStandard.VirtualCamera.RotateLeft";
     public const string RotateRightActionId = "CapabilityStandard.VirtualCamera.RotateRight";
     public const string ZoomActionId = "CapabilityStandard.VirtualCamera.Zoom";

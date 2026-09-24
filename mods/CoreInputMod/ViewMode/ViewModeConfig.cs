@@ -9,6 +9,7 @@ namespace CoreInputMod.ViewMode
         public string FollowCollectionKey { get; set; } = "";
         public string InputContextId { get; set; } = "";
         public string InteractionMode { get; set; } = "";
+        public string MouseCaptureMode { get; set; } = "None";
         public string[]? SkillBarKeyLabels { get; set; }
         public bool SkillBarEnabled { get; set; } = true;
         public string SwitchActionId { get; set; } = "";

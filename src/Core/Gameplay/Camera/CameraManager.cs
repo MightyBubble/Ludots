@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.StructureCollision;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
@@ -24,6 +25,8 @@ namespace Ludots.Core.Gameplay.Camera
         private string _controllerCameraId = string.Empty;
         private Func<WorldAabbCm>? _targetBoundsProvider;
         private Func<IVisualHeightmap?>? _visualHeightmapProvider;
+        private Func<StructureCollisionAsset?>? _structureCollisionProvider;
+        private Func<StructureCollisionRuntimeState?>? _structureCollisionRuntimeProvider;
 
         /// <summary>
         /// The current fixed-step logic state of the camera.
@@ -55,12 +58,16 @@ namespace Ludots.Core.Gameplay.Camera
             CameraBehaviorInputState behaviorInput,
             Presentation.Camera.IViewController view,
             Func<WorldAabbCm>? targetBoundsProvider = null,
-            Func<IVisualHeightmap?>? visualHeightmapProvider = null)
+            Func<IVisualHeightmap?>? visualHeightmapProvider = null,
+            Func<StructureCollisionAsset?>? structureCollisionProvider = null,
+            Func<StructureCollisionRuntimeState?>? structureCollisionRuntimeProvider = null)
         {
             _behaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
             _runtimeContext = new CameraBehaviorContext(_behaviorInput, view ?? throw new ArgumentNullException(nameof(view)));
             _targetBoundsProvider = targetBoundsProvider;
             _visualHeightmapProvider = visualHeightmapProvider;
+            _structureCollisionProvider = structureCollisionProvider;
+            _structureCollisionRuntimeProvider = structureCollisionRuntimeProvider;
             InvalidateController();
             CopyState(State, PreviousState);
         }
@@ -109,8 +116,11 @@ namespace Ludots.Core.Gameplay.Camera
                 return;
             }
 
+            ClearCameraCollisionState();
             ApplyActiveVirtualCameraBoundsAndHeight();
             VirtualCameraBrain.ApplyToState(State, _behaviorInput, 0f);
+            ApplyWorldBoundsAndHeightToState(VirtualCameraBrain.ActiveDefinition);
+            ApplyCameraCollisionState(VirtualCameraBrain.ActiveDefinition);
             CopyState(State, PreviousState);
             FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
         }
@@ -199,17 +209,20 @@ namespace Ludots.Core.Gameplay.Camera
         public void Update(float dt)
         {
             CopyState(State, PreviousState);
+            ClearCameraCollisionState();
 
             if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
             {
                 FollowTargetPositionCm = null;
                 ClearImpulseState();
+                ClearCameraCollisionState();
                 return;
             }
 
             ApplyActiveVirtualCameraBoundsAndHeight();
             VirtualCameraBrain.ApplyToState(State, _behaviorInput, dt);
             var activeDefinition = VirtualCameraBrain.ActiveDefinition;
+            ApplyWorldBoundsAndHeightToState(activeDefinition);
             bool allowsUserInput = VirtualCameraBrain.AllowsInput;
 
             bool runtimeStateNeedsCapture = false;
@@ -241,6 +254,7 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             ApplyImpulseState(dt);
+            ApplyCameraCollisionState(activeDefinition);
             FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
         }
 
@@ -265,6 +279,179 @@ namespace Ludots.Core.Gameplay.Camera
             State.ImpulsePositionOffsetCm = Vector3.Zero;
             State.ImpulseYawOffsetDeg = 0f;
             State.ImpulsePitchOffsetDeg = 0f;
+        }
+
+        private void ClearCameraCollisionState()
+        {
+            State.CameraCollisionPositionOffsetCm = Vector3.Zero;
+            State.CameraCollisionCorrectionCm = 0f;
+        }
+
+        private void ApplyCameraCollisionState(VirtualCameraDefinition? definition)
+        {
+            if (definition == null ||
+                (!definition.ConfineCameraToWorldBounds &&
+                 !definition.AvoidCameraStructureObstruction &&
+                 !definition.AvoidCameraGroundPenetration))
+            {
+                ClearCameraCollisionState();
+                return;
+            }
+
+            ClearCameraCollisionState();
+            CameraRenderState3D render = CameraViewportUtil.StateToRenderState(State);
+            Vector3 desiredPosition = render.Position;
+            Vector3 adjustedPosition = desiredPosition;
+
+            if (definition.ConfineCameraToWorldBounds)
+            {
+                adjustedPosition = ResolveCameraWorldBoundsConfine(definition, adjustedPosition);
+            }
+
+            if (definition.AvoidCameraStructureObstruction)
+            {
+                adjustedPosition = ResolveStructureObstruction(definition, render.Target, adjustedPosition);
+            }
+
+            if (definition.AvoidCameraGroundPenetration)
+            {
+                adjustedPosition = ResolveGroundClearance(definition, adjustedPosition);
+            }
+
+            Vector3 adjustmentMeters = adjustedPosition - desiredPosition;
+            if (adjustmentMeters.LengthSquared() <= 0.0000001f)
+            {
+                ClearCameraCollisionState();
+                return;
+            }
+
+            State.CameraCollisionPositionOffsetCm = WorldUnits.MToCm(adjustmentMeters);
+            State.CameraCollisionCorrectionCm = Vector3.Distance(desiredPosition, adjustedPosition) * WorldUnits.CmPerMeter;
+        }
+
+        private Vector3 ResolveCameraWorldBoundsConfine(VirtualCameraDefinition definition, Vector3 positionMeters)
+        {
+            if (_targetBoundsProvider == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' enables camera world confine, but no target bounds provider is configured.");
+            }
+
+            WorldAabbCm bounds = _targetBoundsProvider();
+            Vector2 positionCm = WorldPlane2D.VisualMetersToLogicCm(in positionMeters);
+            float clampedX = Math.Clamp(positionCm.X, bounds.Left, bounds.Right);
+            float clampedY = Math.Clamp(positionCm.Y, bounds.Top, bounds.Bottom);
+            if (MathF.Abs(clampedX - positionCm.X) <= 0.001f &&
+                MathF.Abs(clampedY - positionCm.Y) <= 0.001f)
+            {
+                return positionMeters;
+            }
+
+            return new Vector3(
+                WorldUnits.CmToM(clampedX),
+                positionMeters.Y,
+                WorldUnits.CmToM(clampedY));
+        }
+
+        private Vector3 ResolveGroundClearance(VirtualCameraDefinition definition, Vector3 positionMeters)
+        {
+            IVisualHeightmap heightmap = RequireVisualHeightmap(definition);
+            Vector2 positionCm = WorldPlane2D.VisualMetersToLogicCm(in positionMeters);
+            if (!heightmap.TrySampleHeightCm(
+                    positionCm.X,
+                    positionCm.Y,
+                    out float groundHeightCm,
+                    definition.TargetHeightLayerIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' could not sample VisualHeightmap camera ground clearance at ({positionCm.X}, {positionCm.Y}) cm on layer {definition.TargetHeightLayerIndex}.");
+            }
+
+            float minHeightMeters = WorldUnits.CmToM(groundHeightCm + definition.CameraGroundClearanceCm);
+            if (positionMeters.Y >= minHeightMeters)
+            {
+                return positionMeters;
+            }
+
+            return new Vector3(positionMeters.X, minHeightMeters, positionMeters.Z);
+        }
+
+        private Vector3 ResolveStructureObstruction(
+            VirtualCameraDefinition definition,
+            Vector3 targetMeters,
+            Vector3 desiredPositionMeters)
+        {
+            StructureCollisionAsset asset = RequireStructureCollisionAsset(definition);
+            StructureCollisionRuntimeState? runtimeState = _structureCollisionRuntimeProvider?.Invoke();
+            Vector3 boom = desiredPositionMeters - targetMeters;
+            float boomLengthMeters = boom.Length();
+            if (!float.IsFinite(boomLengthMeters) || boomLengthMeters <= 0.0001f)
+            {
+                return desiredPositionMeters;
+            }
+
+            Vector3 direction = boom / boomLengthMeters;
+            float stepMeters = WorldUnits.CmToM(definition.CameraObstructionProbeStepCm);
+            float clearanceMeters = WorldUnits.CmToM(definition.CameraObstructionClearanceCm);
+            float targetRadiusMeters = WorldUnits.CmToM(definition.CameraObstructionTargetRadiusCm);
+            float startMeters = Math.Clamp(targetRadiusMeters, 0f, boomLengthMeters);
+
+            for (float distanceMeters = startMeters; distanceMeters <= boomLengthMeters; distanceMeters += stepMeters)
+            {
+                Vector3 sample = targetMeters + (direction * distanceMeters);
+                if (!IsStructureObstructionPoint(asset, runtimeState, sample))
+                {
+                    continue;
+                }
+
+                float resolvedDistance = Math.Clamp(distanceMeters - clearanceMeters, startMeters, boomLengthMeters);
+                return targetMeters + (direction * resolvedDistance);
+            }
+
+            Vector3 finalSample = desiredPositionMeters;
+            if (IsStructureObstructionPoint(asset, runtimeState, finalSample))
+            {
+                float resolvedDistance = Math.Clamp(boomLengthMeters - clearanceMeters, startMeters, boomLengthMeters);
+                return targetMeters + (direction * resolvedDistance);
+            }
+
+            return desiredPositionMeters;
+        }
+
+        private static bool IsStructureObstructionPoint(
+            StructureCollisionAsset asset,
+            StructureCollisionRuntimeState? runtimeState,
+            Vector3 pointMeters)
+        {
+            Vector2 pointCm = WorldPlane2D.VisualMetersToLogicCm(in pointMeters);
+            if (!asset.TryGetChunkIndex(pointCm.X, pointCm.Y, out int chunkIndex))
+            {
+                return false;
+            }
+
+            StructureChunkIndexEntry chunk = asset.Chunks[chunkIndex];
+            float heightCm = pointMeters.Y * WorldUnits.CmPerMeter;
+            int end = chunk.BlockerStart + chunk.BlockerCount;
+            for (int i = chunk.BlockerStart; i < end; i++)
+            {
+                int surfaceIndex = asset.ChunkBlockerIndices[i];
+                if (runtimeState != null && !runtimeState.IsSurfaceEnabled(surfaceIndex))
+                {
+                    continue;
+                }
+
+                if ((asset.Surfaces.Flags[surfaceIndex] & StructureSurfaceFlags.BlocksVision) == 0)
+                {
+                    continue;
+                }
+
+                if (asset.ContainsSurfaceVolumePoint(surfaceIndex, pointCm.X, pointCm.Y, heightCm))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool UpdatePlatformManagedCamera(VirtualCameraDefinition definition, float dt, bool allowsUserInput)
@@ -347,7 +534,8 @@ namespace Ludots.Core.Gameplay.Camera
             candidate.TargetCm = ClampTargetToBounds(candidate.TargetCm, in bounds);
             bool changed = Vector2.DistanceSquared(candidate.TargetCm, state.TargetCm) > TargetConfineEpsilonSq;
 
-            if (definition.TargetHeightMode == VirtualCameraTargetHeightMode.VisualHeightmap)
+            if (definition.TargetHeightMode == VirtualCameraTargetHeightMode.VisualHeightmap &&
+                UsesVisualHeightmapLookFootprintConfine(definition))
             {
                 candidate.TargetHeightCm = ResolveTargetHeight(definition, candidate.TargetCm);
                 if (TryResolveVisualHeightmapFootprintConfine(
@@ -365,16 +553,20 @@ namespace Ludots.Core.Gameplay.Camera
             return changed;
         }
 
+        private static bool UsesVisualHeightmapLookFootprintConfine(VirtualCameraDefinition definition)
+        {
+            return definition.RigKind == CameraRigKind.Orbit ||
+                   definition.RigKind == CameraRigKind.TopDown;
+        }
+
         private void ApplyWorldBoundsAndHeightToState(VirtualCameraDefinition? definition)
         {
-            State.TargetHeightCm = ResolveTargetHeight(definition, State.TargetCm);
             CameraStateSnapshot snapshot = CameraStateSnapshot.FromState(State);
-            if (!TryResolveWorldBoundsConfine(definition, in snapshot, out Vector2 clamped))
+            if (TryResolveWorldBoundsConfine(definition, in snapshot, out Vector2 clamped))
             {
-                return;
+                State.TargetCm = clamped;
             }
 
-            State.TargetCm = clamped;
             State.TargetHeightCm = ResolveTargetHeight(definition, State.TargetCm);
         }
 
@@ -387,13 +579,12 @@ namespace Ludots.Core.Gameplay.Camera
                 return;
             }
 
-            runtimeState.TargetHeightCm = ResolveTargetHeight(definition, runtimeState.TargetCm);
             if (TryResolveWorldBoundsConfine(definition, in runtimeState, out Vector2 clampedTargetCm))
             {
                 runtimeState.TargetCm = clampedTargetCm;
-                runtimeState.TargetHeightCm = ResolveTargetHeight(definition, runtimeState.TargetCm);
             }
 
+            runtimeState.TargetHeightCm = ResolveTargetHeight(definition, runtimeState.TargetCm);
             VirtualCameraBrain.ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = definition.Id,
@@ -637,6 +828,18 @@ namespace Ludots.Core.Gameplay.Camera
             return heightmap;
         }
 
+        private StructureCollisionAsset RequireStructureCollisionAsset(VirtualCameraDefinition definition)
+        {
+            StructureCollisionAsset? asset = _structureCollisionProvider?.Invoke();
+            if (asset == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' enables structure obstruction avoidance, but no focused map structure collision asset service is bound.");
+            }
+
+            return asset;
+        }
+
         private static Vector2 ClampTargetToBounds(Vector2 targetCm, in WorldAabbCm bounds)
         {
             return new Vector2(
@@ -706,6 +909,8 @@ namespace Ludots.Core.Gameplay.Camera
             destination.ImpulsePositionOffsetCm = source.ImpulsePositionOffsetCm;
             destination.ImpulseYawOffsetDeg = source.ImpulseYawOffsetDeg;
             destination.ImpulsePitchOffsetDeg = source.ImpulsePitchOffsetDeg;
+            destination.CameraCollisionPositionOffsetCm = source.CameraCollisionPositionOffsetCm;
+            destination.CameraCollisionCorrectionCm = source.CameraCollisionCorrectionCm;
             destination.IsFollowing = source.IsFollowing;
         }
     }

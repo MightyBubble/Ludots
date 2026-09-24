@@ -7,6 +7,7 @@ namespace Ludots.Core.Input.CommandSources
         public int MutationApplyBudgetPerFrame { get; set; } = 4096;
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
+        public bool ClearCommandSourceOnEmptyReplace { get; set; } = true;
         public CommandSourceTargetFilterConfig? TargetFilter { get; set; }
         public string[] MovePathPreviewOrderTypeKeys { get; set; } = System.Array.Empty<string>();
         public CommandSourceAcquisitionCollectionConfig Acquisition { get; set; } = new();

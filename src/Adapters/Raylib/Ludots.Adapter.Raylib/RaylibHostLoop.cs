@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
+using Ludots.Client.Raylib.Input;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
 using Ludots.Core.Diagnostics;
@@ -162,6 +163,7 @@ namespace Ludots.Adapter.Raylib
             // targetFps = 0 leaves VSync/FPS uncapped; values below 0 use the host default.
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
+            bool mouseCaptureApplied = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
 
             var terrainRenderer = new RaylibTerrainRenderer
@@ -409,13 +411,13 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
-                        engine.SetService(
-                            CoreServiceKeys.UiCaptured,
-                            ShouldCaptureWorldPointer(
-                                uiCaptured,
-                                uiWheelCaptured,
-                                uiInputHandled));
+                        bool worldPointerCaptured = ShouldCaptureWorldPointer(
+                            uiCaptured,
+                            uiWheelCaptured,
+                            uiInputHandled);
+                        engine.SetService(CoreServiceKeys.UiCaptured, worldPointerCaptured);
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
+                        mouseCaptureApplied = ApplyMouseCaptureRequest(engine, worldPointerCaptured, mouseCaptureApplied);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
@@ -742,11 +744,56 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
+                if (mouseCaptureApplied)
+                {
+                    ReleaseMouseCapture(engine);
+                }
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
                 visualHeightmapRenderer.Dispose();
                 engine.Dispose();
             }
+        }
+
+        private static bool ApplyMouseCaptureRequest(GameEngine engine, bool worldPointerCaptured, bool captureApplied)
+        {
+            MouseCaptureRequest request = engine.GetService(CoreServiceKeys.MouseCaptureRequest) ?? MouseCaptureRequest.None;
+            bool shouldCapture = request.Capture && !worldPointerCaptured;
+            if (shouldCapture == captureApplied)
+            {
+                return captureApplied;
+            }
+
+            if (shouldCapture)
+            {
+                if (engine.GetService(CoreServiceKeys.InputBackend) is not RaylibInputBackend raylibInput)
+                {
+                    throw new InvalidOperationException("Raylib mouse capture requires RaylibInputBackend.");
+                }
+
+                if (request.HideCursor)
+                {
+                    RaylibCursorNative.HideCursor();
+                }
+
+                RaylibCursorNative.DisableCursor();
+                raylibInput.SetMouseCaptured(request.UseRelativeDelta);
+                return true;
+            }
+
+            ReleaseMouseCapture(engine);
+            return false;
+        }
+
+        private static void ReleaseMouseCapture(GameEngine engine)
+        {
+            if (engine.GetService(CoreServiceKeys.InputBackend) is RaylibInputBackend raylibInput)
+            {
+                raylibInput.SetMouseCaptured(false);
+            }
+
+            RaylibCursorNative.EnableCursor();
+            RaylibCursorNative.ShowCursor();
         }
 
         private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)

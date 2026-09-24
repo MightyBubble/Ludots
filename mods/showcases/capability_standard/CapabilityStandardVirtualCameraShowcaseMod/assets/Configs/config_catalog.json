@@ -1,4 +1,5 @@
 [
+  { "Path": "CapabilityStandardVirtualCameraShowcaseConfig.json", "Policy": "Replace" },
   { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Input/action_attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
 ]

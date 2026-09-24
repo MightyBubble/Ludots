@@ -11,6 +11,12 @@
     { "id": "CapabilityStandard.VirtualCamera.RotateHold", "name": "CapabilityStandard_VirtualCamera_RotateHold", "type": "Button" },
     { "id": "CapabilityStandard.VirtualCamera.Look", "name": "CapabilityStandard_VirtualCamera_Look", "type": "Axis2D" },
     { "id": "CapabilityStandard.VirtualCamera.AvatarMove", "name": "CapabilityStandard_VirtualCamera_AvatarMove", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.Debug.Toggle", "name": "CapabilityStandard_VirtualCamera_Debug_Toggle", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Debug.Next", "name": "CapabilityStandard_VirtualCamera_Debug_Next", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Debug.Previous", "name": "CapabilityStandard_VirtualCamera_Debug_Previous", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Debug.Increase", "name": "CapabilityStandard_VirtualCamera_Debug_Increase", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Debug.Decrease", "name": "CapabilityStandard_VirtualCamera_Debug_Decrease", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Impulse.Trigger", "name": "CapabilityStandard_VirtualCamera_Impulse_Trigger", "type": "Button" },
     { "id": "CapabilityStandard.VirtualCamera.RotateLeft", "name": "CapabilityStandard_VirtualCamera_RotateLeft", "type": "Button" },
     { "id": "CapabilityStandard.VirtualCamera.RotateRight", "name": "CapabilityStandard_VirtualCamera_RotateRight", "type": "Button" },
     { "id": "CapabilityStandard.VirtualCamera.Zoom", "name": "CapabilityStandard_VirtualCamera_Zoom", "type": "Axis1D" }
@@ -25,6 +31,12 @@
         { "actionId": "CapabilityStandardVirtualCameraHeightmapMode", "path": "<Keyboard>/f6" },
         { "actionId": "CapabilityStandardVirtualCameraTpsMode", "path": "<Keyboard>/f7" },
         { "actionId": "CapabilityStandardVirtualCameraFpsMode", "path": "<Keyboard>/f8" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Toggle", "path": "<Keyboard>/f9" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Next", "path": "<Keyboard>/pagedown" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Previous", "path": "<Keyboard>/pageup" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Increase", "path": "<Keyboard>/equal" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Decrease", "path": "<Keyboard>/minus" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Impulse.Trigger", "path": "<Keyboard>/r" },
         {
           "actionId": "CapabilityStandard.VirtualCamera.Move",
           "compositeType": "Vector2",
@@ -61,6 +73,51 @@
       ]
     },
     {
+      "id": "CapabilityStandard.VirtualCamera.ThirdPersonControls",
+      "name": "Capability Standard Virtual Camera Third Person Controls",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "CapabilityStandardVirtualCameraMode", "path": "<Keyboard>/f5" },
+        { "actionId": "CapabilityStandardVirtualCameraHeightmapMode", "path": "<Keyboard>/f6" },
+        { "actionId": "CapabilityStandardVirtualCameraTpsMode", "path": "<Keyboard>/f7" },
+        { "actionId": "CapabilityStandardVirtualCameraFpsMode", "path": "<Keyboard>/f8" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Toggle", "path": "<Keyboard>/f9" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Next", "path": "<Keyboard>/pagedown" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Previous", "path": "<Keyboard>/pageup" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Increase", "path": "<Keyboard>/equal" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Decrease", "path": "<Keyboard>/minus" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Impulse.Trigger", "path": "<Keyboard>/r" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.AvatarMove",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            { "type": "Invert", "parameters": [{ "name": "Y", "value": 1 }] }
+          ]
+        },
+        { "actionId": "CapabilityStandard.VirtualCamera.RotateHold", "path": "<Mouse>/RightButton" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+          ]
+        }
+      ]
+    },
+    {
       "id": "CapabilityStandard.VirtualCamera.AvatarControls",
       "name": "Capability Standard Virtual Camera Avatar Controls",
       "priority": 130,
@@ -69,6 +126,12 @@
         { "actionId": "CapabilityStandardVirtualCameraHeightmapMode", "path": "<Keyboard>/f6" },
         { "actionId": "CapabilityStandardVirtualCameraTpsMode", "path": "<Keyboard>/f7" },
         { "actionId": "CapabilityStandardVirtualCameraFpsMode", "path": "<Keyboard>/f8" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Toggle", "path": "<Keyboard>/f9" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Next", "path": "<Keyboard>/pagedown" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Previous", "path": "<Keyboard>/pageup" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Increase", "path": "<Keyboard>/equal" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Debug.Decrease", "path": "<Keyboard>/minus" },
+        { "actionId": "CapabilityStandard.VirtualCamera.Impulse.Trigger", "path": "<Keyboard>/r" },
         {
           "actionId": "CapabilityStandard.VirtualCamera.AvatarMove",
           "compositeType": "Vector2",

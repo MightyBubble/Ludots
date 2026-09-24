@@ -4,9 +4,11 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 
@@ -14,8 +16,6 @@ namespace CapabilityStandardVirtualCameraShowcaseMod.Systems;
 
 internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<float>
 {
-    private const float DefaultMoveSpeedCmPerSecond = 600f;
-
     private readonly GameEngine _engine;
     private readonly int _moveXAttributeId;
     private readonly int _moveYAttributeId;
@@ -47,8 +47,8 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
             return;
         }
 
-        Entity localPlayer = ResolveLocalPlayer();
-        ref AttributeBuffer attributes = ref ResolveAttributes(localPlayer);
+        Entity controlledEntity = ResolveCommandSourcePrimary();
+        ref AttributeBuffer attributes = ref ResolveAttributes(controlledEntity);
         Vector2 moveIntent = new(
             attributes.GetCurrent(_moveXAttributeId),
             attributes.GetCurrent(_moveYAttributeId));
@@ -59,26 +59,22 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
         }
 
         moveIntent = WorldPlane2D.NormalizeOrDefault(moveIntent, Vector2.Zero);
-        Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(_engine.GameSession.Camera.State.Yaw, moveIntent);
+        Vector2 move = MoveInputToAvatarDirection(_engine.GameSession.Camera.State, moveIntent);
         if (move.LengthSquared() <= 0.000001f)
         {
             return;
         }
 
         float speedCmPerSecond = ResolveMoveSpeedCmPerSecond(in attributes);
-        if (speedCmPerSecond <= 0f)
-        {
-            return;
-        }
 
-        ref WorldPositionCm position = ref _engine.World.Get<WorldPositionCm>(localPlayer);
+        ref WorldPositionCm position = ref _engine.World.Get<WorldPositionCm>(controlledEntity);
         Vector2 current = position.Value.ToVector2();
         Vector2 next = ClampToWorldBounds(current + (move * speedCmPerSecond * dt));
         position = WorldPositionCm.FromCm((int)MathF.Round(next.X), (int)MathF.Round(next.Y));
-        UpdateFacing(localPlayer, move);
+        UpdateFacing(controlledEntity, move);
     }
 
-    private Entity ResolveLocalPlayer()
+    private Entity ResolveCommandSourcePrimary()
     {
         if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
             localObj is not Entity localPlayer ||
@@ -89,36 +85,69 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
                 "Capability standard virtual camera showcase requires a live LocalPlayerEntity avatar.");
         }
 
-        if (!_engine.World.Has<WorldPositionCm>(localPlayer))
+        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? collectionsObj) ||
+            collectionsObj is not EntityCollectionStore collections)
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires WorldPositionCm.");
+                "Capability standard virtual camera showcase avatar movement requires EntityCollectionStore.");
         }
 
-        if (!_engine.World.Has<FacingDirection>(localPlayer))
+        if (!EntityCollectionContextRuntime.TryGetPrimary(
+                _engine.World,
+                collections,
+                localPlayer,
+                EntityCollectionKeys.CommandSource,
+                out Entity controlledEntity))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires FacingDirection.");
+                "Capability standard virtual camera showcase avatar movement requires a command source primary entity.");
         }
 
-        return localPlayer;
+        if (!_engine.World.Has<WorldPositionCm>(controlledEntity))
+        {
+            throw new InvalidOperationException(
+                "Capability standard virtual camera showcase command source primary requires WorldPositionCm.");
+        }
+
+        if (!_engine.World.Has<FacingDirection>(controlledEntity))
+        {
+            throw new InvalidOperationException(
+                "Capability standard virtual camera showcase command source primary requires FacingDirection.");
+        }
+
+        return controlledEntity;
     }
 
-    private ref AttributeBuffer ResolveAttributes(Entity localPlayer)
+    private ref AttributeBuffer ResolveAttributes(Entity controlledEntity)
     {
-        if (!_engine.World.Has<AttributeBuffer>(localPlayer))
+        if (!_engine.World.Has<AttributeBuffer>(controlledEntity))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires AttributeBuffer.");
+                "Capability standard virtual camera showcase command source primary requires AttributeBuffer.");
         }
 
-        return ref _engine.World.Get<AttributeBuffer>(localPlayer);
+        return ref _engine.World.Get<AttributeBuffer>(controlledEntity);
     }
 
     private float ResolveMoveSpeedCmPerSecond(in AttributeBuffer attributes)
     {
         float configured = attributes.GetCurrent(_moveSpeedAttributeId);
-        return configured > 0f ? configured : DefaultMoveSpeedCmPerSecond;
+        if (!float.IsFinite(configured) || configured <= 0f)
+        {
+            throw new InvalidOperationException(
+                "Capability standard virtual camera showcase command source primary requires positive MoveSpeed.");
+        }
+
+        return configured;
+    }
+
+    private static Vector2 MoveInputToAvatarDirection(CameraState cameraState, Vector2 move)
+    {
+        Vector2 cameraForward = WorldPlane2D.CameraForwardFromYawDegrees(cameraState.Yaw);
+        Vector2 cameraRight = WorldPlane2D.CameraScreenRightFromYawDegrees(cameraState.Yaw);
+
+        Vector2 direction = (cameraForward * move.Y) + (cameraRight * move.X);
+        return WorldPlane2D.NormalizeOrDefault(direction, Vector2.Zero);
     }
 
     private Vector2 ClampToWorldBounds(Vector2 positionCm)

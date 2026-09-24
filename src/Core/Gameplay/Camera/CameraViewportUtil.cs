@@ -200,10 +200,14 @@ namespace Ludots.Core.Gameplay.Camera
                 WorldUnits.CmToM(state.ImpulsePositionOffsetCm.X),
                 WorldUnits.CmToM(state.ImpulsePositionOffsetCm.Y),
                 WorldUnits.CmToM(state.ImpulsePositionOffsetCm.Z));
+            Vector3 collisionOffset = new(
+                WorldUnits.CmToM(state.CameraCollisionPositionOffsetCm.X),
+                WorldUnits.CmToM(state.CameraCollisionPositionOffsetCm.Y),
+                WorldUnits.CmToM(state.CameraCollisionPositionOffsetCm.Z));
 
             desiredPos = firstPerson
-                ? targetPos + socketOffset + impulseOffset
-                : targetPos + targetToCameraOffset + socketOffset + impulseOffset;
+                ? targetPos + socketOffset + impulseOffset + collisionOffset
+                : targetPos + targetToCameraOffset + socketOffset + impulseOffset + collisionOffset;
 
             if (cameraDebug is { Enabled: true })
             {

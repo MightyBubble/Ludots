@@ -14,7 +14,8 @@ namespace Ludots.Core.Input.Attributes
     public enum InputActionAttributeTargetKind : byte
     {
         LocalPlayerEntity = 0,
-        CameraBehaviorInput = 1
+        CameraBehaviorInput = 1,
+        CommandSourcePrimaryEntity = 2
     }
 
     public readonly struct InputActionAttributeBindingEntry

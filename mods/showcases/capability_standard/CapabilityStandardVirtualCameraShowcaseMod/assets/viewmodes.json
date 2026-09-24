@@ -6,6 +6,7 @@
     "FollowTargetKind": "None",
     "InputContextId": "CapabilityStandard.VirtualCamera.Controls",
     "InteractionMode": "SmartCast",
+    "MouseCaptureMode": "None",
     "SkillBarEnabled": false,
     "SwitchActionId": "CapabilityStandardVirtualCameraMode"
   },
@@ -16,6 +17,7 @@
     "FollowTargetKind": "None",
     "InputContextId": "CapabilityStandard.VirtualCamera.Controls",
     "InteractionMode": "SmartCast",
+    "MouseCaptureMode": "None",
     "SkillBarEnabled": false,
     "SwitchActionId": "CapabilityStandardVirtualCameraHeightmapMode"
   },
@@ -24,8 +26,9 @@
     "DisplayName": "Capability Third Person",
     "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.TPS",
     "FollowTargetKind": "LocalPlayer",
-    "InputContextId": "CapabilityStandard.VirtualCamera.AvatarControls",
+    "InputContextId": "CapabilityStandard.VirtualCamera.ThirdPersonControls",
     "InteractionMode": "SmartCast",
+    "MouseCaptureMode": "LockedHidden",
     "SkillBarEnabled": false,
     "SwitchActionId": "CapabilityStandardVirtualCameraTpsMode"
   },
@@ -36,6 +39,7 @@
     "FollowTargetKind": "LocalPlayer",
     "InputContextId": "CapabilityStandard.VirtualCamera.AvatarControls",
     "InteractionMode": "SmartCast",
+    "MouseCaptureMode": "LockedHidden",
     "SkillBarEnabled": false,
     "SwitchActionId": "CapabilityStandardVirtualCameraFpsMode"
   }

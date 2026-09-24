@@ -34,6 +34,13 @@ namespace Ludots.Core.Gameplay.Camera
         public bool EnableGrabDrag { get; set; }
         public bool ConfineTargetToWorldBounds { get; set; }
         public float ConfinePaddingCm { get; set; }
+        public bool ConfineCameraToWorldBounds { get; set; }
+        public bool AvoidCameraGroundPenetration { get; set; }
+        public float CameraGroundClearanceCm { get; set; }
+        public bool AvoidCameraStructureObstruction { get; set; }
+        public float CameraObstructionProbeStepCm { get; set; } = 25f;
+        public float CameraObstructionClearanceCm { get; set; } = 35f;
+        public float CameraObstructionTargetRadiusCm { get; set; } = 100f;
         public CameraRotateMode RotateMode { get; set; } = CameraRotateMode.Both;
         public float RotateDegPerPixel { get; set; } = 0.28f;
         public bool RotateRequiresHold { get; set; } = true;

@@ -3353,7 +3353,9 @@ namespace Ludots.Core.Engine
                     behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
-                    () => GetService(CoreServiceKeys.VisualHeightmap));
+                    () => GetService(CoreServiceKeys.VisualHeightmap),
+                    () => GetService(CoreServiceKeys.StructureCollisionAsset),
+                    () => GetService(CoreServiceKeys.StructureCollisionRuntimeState));
             }
         }
 

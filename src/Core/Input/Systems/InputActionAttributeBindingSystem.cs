@@ -5,7 +5,9 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Attributes;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
@@ -91,10 +93,52 @@ namespace Ludots.Core.Input.Systems
                     entity = ResolveCameraBehaviorInputCarrier();
                     return true;
 
+                case InputActionAttributeTargetKind.CommandSourcePrimaryEntity:
+                    entity = ResolveCommandSourcePrimary();
+                    return true;
+
                 default:
                     throw new InvalidOperationException(
                         $"Unsupported input action attribute target '{target}'.");
             }
+        }
+
+        private Entity ResolveCommandSourcePrimary()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) ||
+                ownerObj is not Entity owner ||
+                owner == Entity.Null ||
+                !World.IsAlive(owner))
+            {
+                throw new InvalidOperationException(
+                    "InputActionAttributeBindingSystem target CommandSourcePrimaryEntity requires a live LocalPlayerEntity collection owner.");
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||
+                storeObj is not EntityCollectionStore collections)
+            {
+                throw new InvalidOperationException(
+                    "InputActionAttributeBindingSystem target CommandSourcePrimaryEntity requires EntityCollectionStore.");
+            }
+
+            if (!EntityCollectionContextRuntime.TryGetPrimary(
+                World,
+                collections,
+                owner,
+                EntityCollectionKeys.CommandSource,
+                out Entity entity))
+            {
+                throw new InvalidOperationException(
+                    "InputActionAttributeBindingSystem target CommandSourcePrimaryEntity requires a primary CommandSource entity.");
+            }
+
+            if (!World.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    "InputActionAttributeBindingSystem target CommandSourcePrimaryEntity resolved a dead entity.");
+            }
+
+            return entity;
         }
 
         private Entity ResolveCameraBehaviorInputCarrier()

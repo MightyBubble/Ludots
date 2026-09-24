@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-07-13T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraBootstrapMod",
+    "VirtualCameraShotsMod",
+    "CapabilityStandardVirtualCameraShowcaseMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "CameraBootstrapMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraBootstrapMod"
+    },
+    {
+      "id": "VirtualCameraShotsMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/VirtualCameraShotsMod"
+    },
+    {
+      "id": "CapabilityStandardVirtualCameraShowcaseMod",
+      "rootPath": "../../../../../../../mods/showcases/capability_standard/CapabilityStandardVirtualCameraShowcaseMod"
+    }
+  ]
+}

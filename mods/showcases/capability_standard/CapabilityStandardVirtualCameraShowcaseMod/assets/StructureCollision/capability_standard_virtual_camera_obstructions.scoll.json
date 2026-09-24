@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "revision": 1,
+  "coordinateScale": 1,
+  "worldBounds": { "xcm": 0, "zcm": 0, "widthCm": 10000, "heightCm": 10000 },
+  "chunkSizeCm": 1000,
+  "layers": [
+    { "id": "ground", "value": 0 }
+  ],
+  "agentMasks": [
+    { "id": "all", "bits": 1 }
+  ],
+  "shapes": [
+    {
+      "id": "camera_obstruction_wall",
+      "kind": "WallSegment",
+      "segmentAXCm": 650,
+      "segmentAZCm": 1120,
+      "segmentBXCm": 1900,
+      "segmentBZCm": 1120,
+      "segmentHalfWidthCm": 70,
+      "minHeightCm": 0,
+      "maxHeightCm": 360
+    }
+  ],
+  "surfaces": [
+    {
+      "id": 7001,
+      "kind": "Wall",
+      "shapeId": "camera_obstruction_wall",
+      "layerId": "ground",
+      "agentMaskId": "all",
+      "flags": [ "BlocksVision" ],
+      "sourcePrefabId": 7001,
+      "sourcePartId": 1
+    }
+  ]
+}

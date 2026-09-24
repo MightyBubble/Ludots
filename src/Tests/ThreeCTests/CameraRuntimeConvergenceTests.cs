@@ -15,6 +15,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.StructureCollision;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -822,6 +823,148 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void CameraManager_TargetConfine_ClampsBeforeVisualHeightmapSampling()
+        {
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 10000, 10000),
+                    sampleColumns: 33,
+                    sampleRows: 33,
+                    new short[33 * 33]));
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "OutOfBoundsHeightmap",
+                Priority = 0,
+                RigKind = CameraRigKind.ThirdPerson,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(-2500f, 12500f),
+                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightOffsetCm = 100f,
+                DistanceCm = 700f,
+                Pitch = 16f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                ConfineTargetToWorldBounds = true
+            });
+
+            manager.ConfigureRuntime(
+                new CameraBehaviorInputState(),
+                new StubViewController(),
+                targetBoundsProvider: () => new WorldAabbCm(0, 0, 10000, 10000),
+                visualHeightmapProvider: () => heightmap);
+            manager.ActivateVirtualCamera("OutOfBoundsHeightmap", blendDurationSeconds: 0f);
+
+            Assert.DoesNotThrow(() => manager.Update(0.016f));
+            Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(0f, 10000f)));
+            Assert.That(manager.State.TargetHeightCm, Is.EqualTo(100f).Within(0.001f));
+        }
+
+        [Test]
+        public void CameraManager_FollowTargetConfine_ClampsBeforeVisualHeightmapSampling()
+        {
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 10000, 10000),
+                    sampleColumns: 33,
+                    sampleRows: 33,
+                    new short[33 * 33]));
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "OutOfBoundsFollowHeightmap",
+                Priority = 0,
+                RigKind = CameraRigKind.ThirdPerson,
+                TargetSource = VirtualCameraTargetSource.FollowTarget,
+                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightOffsetCm = 100f,
+                DistanceCm = 700f,
+                Pitch = 16f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                ConfineTargetToWorldBounds = true
+            });
+            var target = new StaticFollowTarget { PositionCm = new Vector2(-2500f, 12500f) };
+
+            manager.ConfigureRuntime(
+                new CameraBehaviorInputState(),
+                new StubViewController(),
+                targetBoundsProvider: () => new WorldAabbCm(0, 0, 10000, 10000),
+                visualHeightmapProvider: () => heightmap);
+            manager.ActivateVirtualCamera("OutOfBoundsFollowHeightmap", blendDurationSeconds: 0f, followTarget: target);
+
+            Assert.DoesNotThrow(() => manager.Update(0.016f));
+            Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(0f, 10000f)));
+            Assert.That(manager.State.TargetHeightCm, Is.EqualTo(100f).Within(0.001f));
+        }
+
+        [Test]
+        public void CameraManager_GroundClearance_LiftsCameraAboveVisualHeightmap()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "GroundClearance",
+                Priority = 0,
+                RigKind = CameraRigKind.ThirdPerson,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(1000f, 1000f),
+                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightOffsetCm = 100f,
+                DistanceCm = 650f,
+                Pitch = -25f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                AvoidCameraGroundPenetration = true,
+                CameraGroundClearanceCm = 45f
+            });
+
+            manager.ConfigureRuntime(
+                new CameraBehaviorInputState(),
+                new StubViewController(),
+                visualHeightmapProvider: () => new TestHeightmap(0f));
+            manager.ActivateVirtualCamera("GroundClearance", blendDurationSeconds: 0f);
+            manager.Update(0.016f);
+
+            CameraRenderState3D render = CameraViewportUtil.StateToRenderState(manager.State);
+            Assert.That(render.Position.Y, Is.GreaterThanOrEqualTo(0.449f));
+            Assert.That(manager.State.CameraCollisionCorrectionCm, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void CameraManager_StructureObstruction_PullsThirdPersonCameraIn()
+        {
+            StructureCollisionAsset asset = CreateCameraWallAsset();
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "StructureObstruction",
+                Priority = 0,
+                RigKind = CameraRigKind.ThirdPerson,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(1000f, 1000f),
+                TargetHeightMode = VirtualCameraTargetHeightMode.Flat,
+                TargetHeightOffsetCm = 150f,
+                DistanceCm = 650f,
+                Pitch = 10f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                AvoidCameraStructureObstruction = true,
+                CameraObstructionProbeStepCm = 20f,
+                CameraObstructionClearanceCm = 35f,
+                CameraObstructionTargetRadiusCm = 80f
+            });
+
+            manager.ConfigureRuntime(
+                new CameraBehaviorInputState(),
+                new StubViewController(),
+                structureCollisionProvider: () => asset,
+                structureCollisionRuntimeProvider: () => new StructureCollisionRuntimeState(asset));
+            manager.ActivateVirtualCamera("StructureObstruction", blendDurationSeconds: 0f);
+            manager.Update(0.016f);
+
+            CameraRenderState3D render = CameraViewportUtil.StateToRenderState(manager.State);
+            Assert.That(manager.State.CameraCollisionCorrectionCm, Is.GreaterThan(0f));
+            Assert.That(Vector3.Distance(render.Position, render.Target), Is.LessThan(6.5f));
+        }
+
+        [Test]
         public void CameraManager_TargetConfine_DoesNotCorruptBlendDestination()
         {
             var manager = CreateManagerWithRegistry(
@@ -1097,6 +1240,47 @@ namespace Ludots.Tests.ThreeC
 
             manager.SetVirtualCameraRegistry(registry);
             return manager;
+        }
+
+        private static StructureCollisionAsset CreateCameraWallAsset()
+        {
+            var header = new StructureCollisionHeader(
+                version: 1,
+                new WorldAabbCm(0, 0, 3000, 3000),
+                chunkSizeCm: 1000,
+                revision: 1,
+                coordinateScale: 1f);
+            var layers = new[] { new StructureLayerDefinition("ground", 0) };
+            var masks = new[] { new StructureAgentMaskDefinition("all", 1) };
+            var shapes = new[]
+            {
+                new StructureShapeDefinition
+                {
+                    Id = "camera_wall",
+                    Kind = StructureShapeKind.WallSegment,
+                    SegmentAXCm = 500f,
+                    SegmentAZCm = 1300f,
+                    SegmentBXCm = 1500f,
+                    SegmentBZCm = 1300f,
+                    SegmentHalfWidthCm = 80f,
+                    MinHeightCm = 0f,
+                    MaxHeightCm = 320f
+                }
+            };
+            var surfaces = new[]
+            {
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 7001,
+                    Kind = StructureSurfaceKind.Wall,
+                    Flags = StructureSurfaceFlags.BlocksVision,
+                    LayerId = 0,
+                    AgentMask = 1,
+                    ShapeId = "camera_wall"
+                }
+            };
+
+            return StructureCollisionAssetBuilder.Build(header, layers, masks, shapes, surfaces);
         }
     }
 }

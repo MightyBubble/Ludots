@@ -8,6 +8,8 @@ namespace Ludots.Client.Raylib.Input
     {
         private bool _imeEnabled = false;
         private string _charBuffer = "";
+        private bool _mouseCaptured;
+        private Vector2 _capturedMousePosition;
 
         public float GetAxis(string devicePath)
         {
@@ -39,6 +41,17 @@ namespace Ludots.Client.Raylib.Input
 
         public Vector2 GetMousePosition()
         {
+            if (_mouseCaptured)
+            {
+                if (!Raylib_cs.Raylib.IsWindowFocused())
+                {
+                    return new Vector2(float.NaN, float.NaN);
+                }
+
+                _capturedMousePosition += RaylibCursorNative.GetMouseDelta();
+                return _capturedMousePosition;
+            }
+
             if (!Raylib_cs.Raylib.IsWindowFocused())
             {
                 // Report an invalid pointer position while the game window is unfocused
@@ -52,6 +65,17 @@ namespace Ludots.Client.Raylib.Input
         public float GetMouseWheel()
         {
             return Raylib_cs.Raylib.GetMouseWheelMove();
+        }
+
+        public void SetMouseCaptured(bool captured)
+        {
+            if (_mouseCaptured == captured)
+            {
+                return;
+            }
+
+            _mouseCaptured = captured;
+            _capturedMousePosition = Vector2.Zero;
         }
 
         public void EnableIME(bool enable)

@@ -7,6 +7,9 @@
   "worldWidthInMacroTiles": 2,
   "worldHeightInMacroTiles": 2,
   "gridCellSizeCm": 100,
+  "commandSource": {
+    "clearCommandSourceOnEmptyReplace": false
+  },
   "presentation": {
     "performerInstanceCapacity": 256,
     "presentationEventStreamCapacity": 256,

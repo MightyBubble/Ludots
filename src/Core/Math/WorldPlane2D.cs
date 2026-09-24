@@ -196,9 +196,9 @@ namespace Ludots.Core.Mathematics
         {
             float cosPitch = MathF.Cos(pitchRad);
             return Vector3.Normalize(new Vector3(
-                cosPitch * MathF.Sin(yawRad),
+                -cosPitch * MathF.Sin(yawRad),
                 MathF.Sin(pitchRad),
-                -cosPitch * MathF.Cos(yawRad)));
+                cosPitch * MathF.Cos(yawRad)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

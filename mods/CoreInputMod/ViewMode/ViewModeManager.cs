@@ -5,8 +5,8 @@ using CoreInputMod.Systems;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.ViewMode
@@ -116,6 +116,7 @@ namespace CoreInputMod.ViewMode
             _activeIndex = -1;
             _globals.Remove(ActiveModeIdKey);
             _globals.Remove(SkillBarOverlaySystem.SkillBarKeyLabelsKey);
+            _globals[CoreServiceKeys.MouseCaptureRequest.Name] = MouseCaptureRequest.None;
             _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
         }
 
@@ -140,6 +141,7 @@ namespace CoreInputMod.ViewMode
             }
 
             ApplyInteractionMode(next);
+            ApplyMouseCapture(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
         }
@@ -220,6 +222,31 @@ namespace CoreInputMod.ViewMode
             {
                 mapping.SetInteractionMode(interactionMode);
             }
+        }
+
+        private void ApplyMouseCapture(ViewModeConfig mode)
+        {
+            _globals[CoreServiceKeys.MouseCaptureRequest.Name] = ResolveMouseCaptureRequest(mode);
+        }
+
+        private static MouseCaptureRequest ResolveMouseCaptureRequest(ViewModeConfig mode)
+        {
+            string captureMode = string.IsNullOrWhiteSpace(mode.MouseCaptureMode)
+                ? "None"
+                : mode.MouseCaptureMode.Trim();
+
+            return captureMode switch
+            {
+                "None" => MouseCaptureRequest.None,
+                "LockedHidden" => new MouseCaptureRequest
+                {
+                    Capture = true,
+                    HideCursor = true,
+                    UseRelativeDelta = true
+                },
+                _ => throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' declared unsupported MouseCaptureMode '{mode.MouseCaptureMode}'.")
+            };
         }
 
         private static InteractionModeType RequireInteractionMode(ViewModeConfig mode)
