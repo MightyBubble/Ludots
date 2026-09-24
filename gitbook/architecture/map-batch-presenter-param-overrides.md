@@ -27,7 +27,7 @@
 
 模板上没有的组件，以及上面名单以外的组件，离开这条路径，改走 `EntityBuilder`。`PresenterParamOverrides` 仍然只能走批量路径，所以它可以和名单内的覆盖写在同一条布阵上；和会离开这条路径的覆盖写在一起时，加载直接失败。
 
-地图批量生成把摆放编号写进同一行原型，和 `Name`、`Team` 一起在填充时写入。这一行里的实体都带这个编号组件；地图没写 `instanceId` 时值为空。生成之后不再逐个补组件。实体信息标题不在地图字段里，写在 `EntityInfo/insight_profiles.json`。
+地图批量生成把摆放编号写进同一行原型，和 `Name`、`Team` 一起在填充时写入。这一行里的实体都带这个编号组件；地图没写 `instanceId` 时值为空。生成之后不再逐个补组件。某一份摆放如果写了 `entityInfo.titleToken`，这一行才带上标题文案槽；没写的那一行不带这个组件。模板共用标题仍在 `EntityInfo/insight_profiles.json` 的 `titleToken`，档案不记录摆放编号。
 
 ## Validation
 

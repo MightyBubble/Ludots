@@ -153,7 +153,90 @@ namespace Ludots.Tests.GAS
             });
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
-            Assert.That(ex.Message, Does.Contain("insight_profiles.json"));
+            Assert.That(ex.Message, Does.Contain("entityInfo.titleToken"));
+        }
+
+        [Test]
+        public void MapInstance_EntityInfoTitle_BindsRootAndChildWithoutChangingSystemName()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_title" };
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "camp.harbor",
+                Template = "name.camp",
+                EntityInfo = new EntityInfoPlacement { TitleToken = "camp.harbor.title" },
+                OverridePaths = new List<EntityPathNameOverride>
+                {
+                    new EntityPathNameOverride
+                    {
+                        Path = "hq",
+                        EntityInfo = new EntityInfoPlacement { TitleToken = "camp.harbor.hq.title" },
+                    },
+                    new EntityPathNameOverride
+                    {
+                        Path = "radio.coil",
+                        EntityInfo = new EntityInfoPlacement { TitleToken = "camp.harbor.coil.title" },
+                    },
+                },
+            });
+
+            MapLoadEntityIndex index = loader.LoadEntitiesAndIndex(map);
+            Entity root = RequireInstance(index, "camp.harbor");
+            Entity hq = RequirePath(index, "camp.harbor.hq");
+            Entity coil = RequirePath(index, "camp.harbor.radio.coil");
+            Entity guard = RequirePath(index, "camp.harbor.guard");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<Name>(root).Value, Is.EqualTo("Camp"));
+                Assert.That(world.Get<Name>(hq).Value, Is.EqualTo("Shared Tent"));
+                Assert.That(world.Get<Name>(coil).Value, Is.EqualTo("Coil"));
+                Assert.That(world.Get<EntityInfoTitleToken>(root).Value, Is.EqualTo("camp.harbor.title"));
+                Assert.That(world.Get<EntityInfoTitleToken>(hq).Value, Is.EqualTo("camp.harbor.hq.title"));
+                Assert.That(world.Get<EntityInfoTitleToken>(coil).Value, Is.EqualTo("camp.harbor.coil.title"));
+                Assert.That(world.Has<EntityInfoTitleToken>(guard), Is.False);
+            });
+        }
+
+        [Test]
+        public void MapInstance_EntityInfoTitle_DoesNotLandOnUnboundBatchRow()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, """
+            [
+              { "id": "title.unit", "components": {
+                  "Name": { "Value": "Unit" },
+                  "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+                  "FacingDirection": { "AngleRad": 0 }
+              } }
+            ]
+            """);
+            var map = new MapConfig { Id = "title_batch" };
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "unit.liu",
+                Template = "title.unit",
+                EntityInfo = new EntityInfoPlacement { TitleToken = "unit.liu.title" },
+            });
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "unit.shared",
+                Template = "title.unit",
+            });
+
+            MapLoadEntityIndex index = loader.LoadEntitiesAndIndex(map);
+            Entity named = RequireInstance(index, "unit.liu");
+            Entity shared = RequireInstance(index, "unit.shared");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<Name>(named).Value, Is.EqualTo("Unit"));
+                Assert.That(world.Get<Name>(shared).Value, Is.EqualTo("Unit"));
+                Assert.That(world.Get<EntityInfoTitleToken>(named).Value, Is.EqualTo("unit.liu.title"));
+                Assert.That(world.Has<EntityInfoTitleToken>(shared), Is.False);
+            });
         }
 
         [Test]

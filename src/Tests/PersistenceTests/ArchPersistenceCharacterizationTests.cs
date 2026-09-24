@@ -374,6 +374,17 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void EntityInfoTitleTokenRoundTrips()
+    {
+        using World world = World.Create();
+        world.Create(new EntityInfoTitleToken { Value = "hero.liu.title" });
+
+        using World restored = CoreRoundTrip(world);
+        Entity entity = FindSingle<EntityInfoTitleToken>(restored);
+        Assert.That(restored.Get<EntityInfoTitleToken>(entity).Value, Is.EqualTo("hero.liu.title"));
+    }
+
+    [Test]
     public void ArchBinarySerializerRejectsComponentArrayPayloadWhenSerializedTypeContractDiffersFromSignature()
     {
         using World world = World.Create();

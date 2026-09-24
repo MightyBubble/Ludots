@@ -34,6 +34,7 @@ namespace Ludots.Core.Config
         PresenterRootBootstrapHandled = 1 << 4,
         PresentationOwnerHasPresenterPayload = 1 << 5,
         PlacedInstanceId = 1 << 6,
+        EntityInfoTitleToken = 1 << 7,
     }
 
     internal sealed class TemplateEntityBatchSpawner
@@ -203,6 +204,11 @@ namespace Ludots.Core.Config
                 signature += Component<PlacedInstanceId>.Signature;
             }
 
+            if ((features & TemplateBatchSpawnFeatures.EntityInfoTitleToken) != 0)
+            {
+                signature += Component<EntityInfoTitleToken>.Signature;
+            }
+
             long createStart = Stopwatch.GetTimestamp();
             _world.Create(_scratchEntities.AsSpan(0, requests.Length), signature, requests.Length);
             LastWorldCreateMs = ElapsedMs(createStart);
@@ -350,6 +356,7 @@ namespace Ludots.Core.Config
             bool includeBootstrapHandled = (features & TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled) != 0;
             bool includeOwnerPayload = (features & TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload) != 0;
             bool includePlacedInstanceId = (features & TemplateBatchSpawnFeatures.PlacedInstanceId) != 0;
+            bool includeEntityInfoTitle = (features & TemplateBatchSpawnFeatures.EntityInfoTitleToken) != 0;
             bool includeDynamicHeightSampling = descriptor.HasDynamicHeightSampling;
             int batchIndex = 0;
             int chunkIndex = slot.ChunkIndex;
@@ -390,6 +397,7 @@ namespace Ludots.Core.Config
                 Span<PlayerOwner> playerOwners = descriptor.HasPlayerOwner ? chunk.GetSpan<PlayerOwner>() : default;
                 Span<MapEntity> mapEntities = includeMapEntity ? chunk.GetSpan<MapEntity>() : default;
                 Span<PlacedInstanceId> placedInstanceIds = includePlacedInstanceId ? chunk.GetSpan<PlacedInstanceId>() : default;
+                Span<EntityInfoTitleToken> entityInfoTitles = includeEntityInfoTitle ? chunk.GetSpan<EntityInfoTitleToken>() : default;
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
                 Span<SpatialCellRef> spatialRefs = includeSpatialCellRef ? chunk.GetSpan<SpatialCellRef>() : default;
@@ -495,6 +503,11 @@ namespace Ludots.Core.Config
                     if (includePlacedInstanceId)
                     {
                         placedInstanceIds[componentIndex] = new PlacedInstanceId { Value = request.PlacedInstanceIdValue };
+                    }
+
+                    if (includeEntityInfoTitle)
+                    {
+                        entityInfoTitles[componentIndex] = new EntityInfoTitleToken { Value = request.EntityInfoTitleToken };
                     }
 
                     if (includeStableId)
@@ -612,7 +625,8 @@ namespace Ludots.Core.Config
                 PlayerOwner playerOwnerOverride = default,
                 bool hasAttributeOverride = false,
                 AttributeSeed[]? attributeSeeds = null,
-                string placedInstanceId = null)
+                string placedInstanceId = null,
+                string entityInfoTitleToken = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -632,6 +646,7 @@ namespace Ludots.Core.Config
                 HasAttributeOverride = hasAttributeOverride;
                 AttributeSeeds = attributeSeeds;
                 PlacedInstanceIdValue = placedInstanceId;
+                EntityInfoTitleToken = entityInfoTitleToken;
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -669,6 +684,8 @@ namespace Ludots.Core.Config
             internal AttributeSeed[] AttributeSeeds { get; }
 
             public string PlacedInstanceIdValue { get; }
+
+            public string EntityInfoTitleToken { get; }
         }
 
         internal static TemplateBatchSpawnRequest CreatePlacementRequest(
@@ -681,7 +698,8 @@ namespace Ludots.Core.Config
             in MapEntity mapEntity,
             ParamDefault[] presenterParamOverrides,
             IReadOnlyDictionary<string, JsonNode> overrides,
-            string placedInstanceId)
+            string placedInstanceId,
+            string entityInfoTitleToken = null)
         {
             bool hasName = false;
             Name name = default;
@@ -734,7 +752,8 @@ namespace Ludots.Core.Config
                 playerOwnerOverride: playerOwner,
                 hasAttributeOverride: hasAttributes,
                 attributeSeeds: attributeSeeds,
-                placedInstanceId: placedInstanceId);
+                placedInstanceId: placedInstanceId,
+                entityInfoTitleToken: entityInfoTitleToken);
         }
 
         private static Name ParseMergedName(string context, EntityTemplate template, JsonNode overrideNode)

@@ -518,15 +518,11 @@ public sealed class EntityInfoPanelServiceTests
                     Actions = Array.Empty<EntityInsightActionProfile>(),
                 },
             },
-            new Dictionary<int, int> { [templateKeyId] = 0 },
-            new Dictionary<string, EntityInsightInstanceTitle>
-            {
-                ["hero.liu"] = new EntityInsightInstanceTitle(0, catalog.GetTokenId("tests.entityinfo.title")),
-            });
+            new Dictionary<int, int> { [templateKeyId] = 0 });
         var service = new EntityInfoPanelService(profileCatalog, catalog, localeSelection, templates: templates);
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
-            new PlacedInstanceId { Value = "hero.liu" },
+            new EntityInfoTitleToken { Value = "tests.entityinfo.title" },
             new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
 
         EntityInfoPanelHandle panel = service.Open(new EntityInfoPanelRequest(
@@ -548,42 +544,17 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_InstanceTitle_RejectsForeignTemplate()
+    public void Refresh_MapTitleToken_UnknownTokenFails()
     {
         using var world = World.Create();
-        const int ownedTemplateKeyId = 701;
-        const int foreignTemplateKeyId = 702;
         PresentationTextCatalog catalog = CreateBilingualTitleCatalog();
-        var profileCatalog = new EntityInsightProfileCatalog(
-            new[]
-            {
-                new EntityInsightProfile
-                {
-                    Id = "tests.entityinfo.locale",
-                    TemplateKeyIds = new[] { ownedTemplateKeyId },
-                    AccentColorHex = "#000000",
-                    SurfaceColorHex = "#111111",
-                    GenreGlyph = "H",
-                    PortraitGlyph = "P",
-                    GenreLabelTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
-                    SubtitleTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
-                    BodyTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
-                    Badges = Array.Empty<EntityInsightBadgeProfile>(),
-                    Stats = Array.Empty<EntityInsightStatProfile>(),
-                    Tips = Array.Empty<EntityInsightTipProfile>(),
-                    Actions = Array.Empty<EntityInsightActionProfile>(),
-                },
-            },
-            new Dictionary<int, int> { [ownedTemplateKeyId] = 0 },
-            new Dictionary<string, EntityInsightInstanceTitle>
-            {
-                ["hero.liu"] = new EntityInsightInstanceTitle(0, catalog.GetTokenId("tests.entityinfo.title")),
-            });
-        var service = new EntityInfoPanelService(profileCatalog, catalog, new PresentationTextLocaleSelection(catalog));
+        var service = new EntityInfoPanelService(
+            EntityInsightProfileCatalog.Empty,
+            catalog,
+            new PresentationTextLocaleSelection(catalog));
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
-            new PlacedInstanceId { Value = "hero.liu" },
-            new EntityTemplateKeyRef { TemplateKeyId = foreignTemplateKeyId });
+            new EntityInfoTitleToken { Value = "missing.token" });
         service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.InsightBrief,
             EntityInfoPanelSurface.Ui,
@@ -593,7 +564,7 @@ public sealed class EntityInfoPanelServiceTests
             true));
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Refresh(world, new Dictionary<string, object>()))!;
-        Assert.That(ex.Message, Does.Contain("does not belong to this entity's template"));
+        Assert.That(ex.Message, Does.Contain("missing.token"));
     }
 
     [Test]

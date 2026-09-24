@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Gameplay.MapTriggers;
@@ -180,7 +181,13 @@ namespace Ludots.Core.Config
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
         /// <summary>
-        /// 路径级组件差异。实体信息标题不写在这里，写在 EntityInfo/insight_profiles.json 的 instances。
+        /// 这一份摆放要盖过模板档案标题时写的文案槽。档案本身不记录摆放编号。
+        /// </summary>
+        [JsonPropertyName("entityInfo")]
+        public EntityInfoPlacement EntityInfo { get; set; }
+
+        /// <summary>
+        /// 路径级组件差异还没装载。子实体的标题文案槽可以写在对应 path 的 entityInfo 上。
         /// </summary>
         [JsonPropertyName("overridePaths")]
         public List<EntityPathNameOverride> OverridePaths { get; set; }
@@ -196,6 +203,15 @@ namespace Ludots.Core.Config
         public bool? Delete { get; set; }
     }
 
+    public sealed class EntityInfoPlacement
+    {
+        [JsonPropertyName("titleToken")]
+        public string TitleToken { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> Extra { get; set; }
+    }
+
     public sealed class EntityPathNameOverride
     {
         [JsonPropertyName("path")]
@@ -203,6 +219,9 @@ namespace Ludots.Core.Config
 
         [JsonPropertyName("set")]
         public Dictionary<string, JsonNode> Set { get; set; }
+
+        [JsonPropertyName("entityInfo")]
+        public EntityInfoPlacement EntityInfo { get; set; }
     }
 
     public class EntityRelationAuthoring

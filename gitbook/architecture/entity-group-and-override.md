@@ -88,7 +88,7 @@ overrides 只有一个封闭开放集（5 种），一律按**绝对 localId 路
 
 两者都是"这个实例的一份差异"，区别只是**命中的目标是谁**（自身 vs 后代）。这是同一套差别账的两个抽屉，不是第二套模板类型、不是双轨。
 
-这五种路径操作还没进地图装载。实例只要写了 `overridePaths`，装载直接失败，并指到 `EntityInfo/insight_profiles.json`。玩家看到的标题写在那份实体信息档案里：模板可以写 `titleToken`，单个摆放在 `instances` 里按摆放编号再写一条。词在多语言表。系统身份仍是 `Name`。只带 `Name`、没有别的组件的同一层子实体一次生成；这次生成只填模板 `Name` 和子节点自己的 `overrides.Name`。
+这五种路径操作还没进地图装载。`overridePaths` 里写了 `set` 或其他组件差异，装载直接失败。玩家看到的标题，模板共用的那条仍在实体信息档案的 `titleToken`。某一份摆放要单独起名，由地图在这份摆放上写 `entityInfo.titleToken`；子实体写在对应 path 的 `entityInfo.titleToken`，path 是不含 instanceId 的 localId 链。档案不记录摆放编号。词在多语言表。系统身份仍是 `Name`。只带 `Name`、没有别的组件、也没有单独标题的同一层子实体一次生成；这次生成只填模板 `Name` 和子节点自己的 `overrides.Name`。
 
 ### 5a. 改字段（Property modification，deep-merge）
 

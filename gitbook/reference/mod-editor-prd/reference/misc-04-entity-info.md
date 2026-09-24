@@ -5,7 +5,7 @@
 ## 1. 现状快照
 
 - 表 `EntityInfo/insight_profiles.json`：目录在引擎 config_catalog 声明（ArrayById、AllowEmpty）；**loader 实现在 mod 内**（EntityInfoPanelsMod/Insight，D5）。
-- 字段：id、templateIds（互斥校验：跨档案重复抛错）、accentColorHex/surfaceColorHex、genreGlyph/portraitGlyph、可选 titleToken、instances（instanceId + titleToken）、genreLabelToken/subtitleToken/bodyToken（token 必须解析）、badges/stats/tips/actions。
+- 字段：id、templateIds（互斥校验：跨档案重复抛错）、accentColorHex/surfaceColorHex、genreGlyph/portraitGlyph、可选 titleToken、genreLabelToken/subtitleToken/bodyToken（token 必须解析）、badges/stats/tips/actions。摆放自己的标题在地图 `entityInfo.titleToken`，不进档案。
 - GAS 联动：stats.source=attribute 按名解析 AttributeRegistry，未知抛错；source 另有 constant；display 三值（current/currentOverBase/constant）；actions.ability 引用能力 id。
 - 样例：GenreInfoShowcaseMod 三档案（4X/MOBA/RTS）。
 

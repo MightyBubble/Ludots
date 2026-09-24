@@ -82,20 +82,26 @@ public sealed class EntityInsightProfileLoaderTests
     }
 
     [Test]
-    public void Load_StoresProfileTitleAndInstanceTitles()
+    public void Load_StoresProfileTitle_AndRejectsInstanceList()
     {
         LoadedInsight loaded = Load(HappyProfiles());
 
         Assert.That(loaded.Insight.TryGetProfileByTemplateKey(loaded.HeroKeyId, out EntityInsightProfile hero), Is.True);
         Assert.That(hero.TitleTokenId, Is.EqualTo(loaded.Text.GetTokenId("hero.shared.title")));
-        Assert.That(loaded.Insight.TryGetInstanceTitle("hero.liu", out EntityInsightInstanceTitle liu), Is.True);
-        Assert.That(liu.TokenId, Is.EqualTo(loaded.Text.GetTokenId("hero.liu.title")));
-        Assert.That(loaded.Insight.ProfileOwnsTemplate(liu.ProfileIndex, loaded.HeroKeyId), Is.True);
-        Assert.That(loaded.Insight.TryGetInstanceTitle("hero.guan", out EntityInsightInstanceTitle guan), Is.True);
-        Assert.That(guan.TokenId, Is.EqualTo(loaded.Text.GetTokenId("hero.guan.title")));
         Assert.That(loaded.Insight.TryGetProfileByTemplateKey(loaded.ScoutKeyId, out EntityInsightProfile scout), Is.True);
         Assert.That(scout.TitleTokenId, Is.EqualTo(0));
-        Assert.That(loaded.Insight.TryGetInstanceTitle("scout.1", out _), Is.False);
+    }
+
+    [Test]
+    public void Load_InstancesKey_Fails()
+    {
+        string profiles = HappyProfiles().Replace(
+            "\"titleToken\": \"hero.shared.title\",",
+            "\"titleToken\": \"hero.shared.title\", \"instances\": [],",
+            StringComparison.Ordinal);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => Load(profiles))!;
+        Assert.That(ex.Message, Does.Contain("cannot list instances"));
+        Assert.That(ex.Message, Does.Contain("entityInfo.titleToken"));
     }
 
     [Test]
@@ -108,42 +114,7 @@ public sealed class EntityInsightProfileLoaderTests
     }
 
     [Test]
-    public void Load_DuplicateInstanceId_Fails()
-    {
-        string profiles = HappyProfiles().Replace(
-            """{ "instanceId": "hero.guan", "titleToken": "hero.guan.title" }""",
-            """{ "instanceId": "hero.liu", "titleToken": "hero.guan.title" }""",
-            StringComparison.Ordinal);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => Load(profiles))!;
-        Assert.That(ex.Message, Does.Contain("reuses instance"));
-        Assert.That(ex.Message, Does.Contain("hero.liu"));
-    }
-
-    [Test]
-    public void Load_UnsupportedInstanceProperty_Fails()
-    {
-        string profiles = HappyProfiles().Replace(
-            """{ "instanceId": "hero.liu", "titleToken": "hero.liu.title" }""",
-            """{ "instanceId": "hero.liu", "titleToken": "hero.liu.title", "displayName": "Liu Bei" }""",
-            StringComparison.Ordinal);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => Load(profiles))!;
-        Assert.That(ex.Message, Does.Contain("unsupported property"));
-        Assert.That(ex.Message, Does.Contain("displayName"));
-    }
-
-    [Test]
-    public void Load_UntrimmedInstanceId_Fails()
-    {
-        string profiles = HappyProfiles().Replace(
-            """{ "instanceId": "hero.liu", "titleToken": "hero.liu.title" }""",
-            """{ "instanceId": " hero.liu ", "titleToken": "hero.liu.title" }""",
-            StringComparison.Ordinal);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => Load(profiles))!;
-        Assert.That(ex.Message, Does.Contain("must be trimmed"));
-    }
-
-    [Test]
-    public void Refresh_LoadedInstanceTitle_FollowsActiveLocale()
+    public void Refresh_MapTitleToken_FollowsActiveLocale()
     {
         LoadedInsight loaded = Load(HappyProfiles());
         var localeSelection = new PresentationTextLocaleSelection(loaded.Text);
@@ -151,7 +122,7 @@ public sealed class EntityInsightProfileLoaderTests
         using var world = World.Create();
         Entity liu = world.Create(
             new Name { Value = "Template Hero" },
-            new PlacedInstanceId { Value = "hero.liu" },
+            new EntityInfoTitleToken { Value = "hero.liu.title" },
             new EntityTemplateKeyRef { TemplateKeyId = loaded.HeroKeyId });
         Entity shared = world.Create(
             new Name { Value = "Template Hero" },
@@ -233,10 +204,6 @@ public sealed class EntityInsightProfileLoaderTests
             "tips": [ { "glyph": "T", "textToken": "hero.tip" } ],
             "actions": [
               { "ability": "{{AbilityKey}}", "glyph": "A", "titleToken": "hero.action.title", "bodyToken": "hero.action.body" }
-            ],
-            "instances": [
-              { "instanceId": "hero.liu", "titleToken": "hero.liu.title" },
-              { "instanceId": "hero.guan", "titleToken": "hero.guan.title" }
             ]
           },
           {
