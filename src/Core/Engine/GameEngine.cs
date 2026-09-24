@@ -4320,15 +4320,6 @@ namespace Ludots.Core.Engine
             var participatingBoards = mapConfig.Boards
                 .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var g) && g != null)
                 .ToList();
-            int navOriginXcm = int.MaxValue;
-            int navOriginYcm = int.MaxValue;
-            for (int i = 0; i < participatingBoards.Count; i++)
-            {
-                var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
-                navOriginXcm = Math.Min(navOriginXcm, aabb.Left);
-                navOriginYcm = Math.Min(navOriginYcm, aabb.Top);
-            }
-
             int widthChunks = participatingBoards
                 .Select(b => CeilDiv(b.ResolveExtent().WidthCm, TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
                 .DefaultIfEmpty(0)
@@ -4372,7 +4363,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm, navOriginXcm, navOriginYcm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

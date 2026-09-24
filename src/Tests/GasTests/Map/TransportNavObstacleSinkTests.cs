@@ -218,8 +218,8 @@ namespace Ludots.Tests.GAS
             Assert.That(tower, Is.Not.Null);
             Assert.That(obstacles.Obstacles, Has.Count.EqualTo(1));
             Assert.That(tower!.Kind, Is.EqualTo(NavObstacleKind.Circle));
-            Assert.That(tower.Center.Xcm, Is.EqualTo(400));
-            Assert.That(tower.Center.Zcm, Is.EqualTo(600));
+            Assert.That(tower.Center.Xcm, Is.EqualTo(10400));
+            Assert.That(tower.Center.Zcm, Is.EqualTo(10600));
             Assert.That(tower.RadiusCm, Is.EqualTo(500));
         }
 

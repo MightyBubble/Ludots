@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "boundsCm": {
-    "minX": -10000,
-    "minZ": -10000,
-    "maxX": 10000,
-    "maxZ": 10000
+    "minX": 0,
+    "minZ": 0,
+    "maxX": 20000,
+    "maxZ": 20000
   },
   "width": 2048,
   "height": 2048,
