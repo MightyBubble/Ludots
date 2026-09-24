@@ -17,7 +17,7 @@ insight_profiles 的加载、互斥匹配与 GAS/本地化对接合同；能力 
 
 - 模板键 → 档案是单射；匹配不到模板 = 无面板（非错误）。
 - 数值条展示在渲染时读当前属性快照；常量条恒定。
-- 档案可以写可选的 `titleToken`。档案写了 `instances` 就加载失败。某一份摆放的标题在地图 `entityInfo.titleToken`，子实体在 `overridePaths[].entityInfo.titleToken`。面板按当前语言取地图绑的槽，没有再用档案标题，都没写时读 `Name`。地图槽未登记时打开面板失败。
+- 档案可以写可选的 `titleToken`。某一份摆放的标题在地图 `entityInfo.titleToken`，子实体在 `overridePaths[].entityInfo.titleToken`。面板按当前语言取地图绑的槽，没有再用档案标题，都没写时读 `Name`。地图槽未登记时打开面板失败。
 
 ## 4. 迁移与治理
 

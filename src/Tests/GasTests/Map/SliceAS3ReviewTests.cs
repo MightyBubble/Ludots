@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS
             });
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
-            Assert.That(ex.Message, Does.Contain("entityInfo.titleToken"));
+            Assert.That(ex.Message, Does.Contain("is not loaded"));
         }
 
         [Test]

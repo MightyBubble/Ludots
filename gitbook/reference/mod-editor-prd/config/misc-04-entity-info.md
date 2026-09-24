@@ -89,7 +89,6 @@ EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解�
 | source/display 枚举外值 | 加载失败 |
 | 能力引用未注册 | 加载失败 |
 | `titleToken` 未登记，或写了空串 | 加载失败，指明档案与 token |
-| 档案写了 `instances` | 加载失败。档案是模板表，摆放标题写在地图的 `entityInfo.titleToken` |
 | 地图 `entityInfo.titleToken` 未登记 | 打开面板失败，不改用 `Name` |
 | `overridePaths` 写了 `set`，或 path 对不上子实体 | 地图装载失败 |
 
