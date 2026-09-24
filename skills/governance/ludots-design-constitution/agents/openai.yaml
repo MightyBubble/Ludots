@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots Design Constitution"
+  short_description: "Design and document systems per Ludots constitution (SSOT, no fallback, no duplication, layering, structure-over-discipline)"
+  default_prompt: "Use $ludots-design-constitution when designing a new Ludots subsystem, writing a 面向新人的设计文档, or reviewing configuration structure. Load references, follow the design-decision workflow, respect architecture red lines, and check anti-patterns before output."
