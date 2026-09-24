@@ -30,8 +30,11 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BlacksmithScaleTypedChannels_UseLessResidentMemoryThanFatRequestArray()
+        public void BlacksmithScaleRequestStorage_UsesAtMostOneTenthOfFixedLegacyRequestTableBytes()
         {
+            const int legacyRequestCount = 2_097_152;
+            const int legacyRequestSizeBytes = 680;
+            const long legacyRequestTableBytes = (long)legacyRequestCount * legacyRequestSizeBytes;
             var presentationConfig = new PresentationRuntimeConfig
             {
                 VisualProxyBufferCapacity = 1_048_576,
@@ -39,6 +42,7 @@ namespace Ludots.Tests.Presentation
                 WorldHudCapacity = 1_048_576,
                 SplineRibbonCapacity = 65_536,
                 PresenterInstanceCapacity = 1_048_576,
+                PresentationRequestCapacity = 245_760,
             };
             var capacities = PresentationRequestChannelCapacities.From(presentationConfig);
 
@@ -52,8 +56,39 @@ namespace Ludots.Tests.Presentation
                 + (long)Unsafe.SizeOf<Entity>() * capacities.ClearTransient
                 + (long)Unsafe.SizeOf<PresentationRequestOp>() * capacities.TotalOperationCapacity;
 
-            long fatBytes = (long)Unsafe.SizeOf<PresentationRequest>() * 2_097_152;
-            Assert.That(typedBytes, Is.LessThan(fatBytes));
+            Assert.That(typedBytes, Is.EqualTo(139_198_464L));
+            Assert.That(
+                typedBytes,
+                Is.LessThanOrEqualTo(legacyRequestTableBytes / 10),
+                $"Typed request channels reserve {typedBytes:N0} bytes; the fixed legacy request-table ceiling is {legacyRequestTableBytes / 10:N0} bytes. This assertion does not cover whole-engine presentation preallocation.");
+        }
+
+        [Test]
+        public void From_UsesPresentationRequestCapacityAsThePerFrameRequestCeiling()
+        {
+            var presentationConfig = new PresentationRuntimeConfig
+            {
+                VisualProxyBufferCapacity = 1_048_576,
+                GroundOverlayCapacity = 65_536,
+                WorldHudCapacity = 1_048_576,
+                SplineRibbonCapacity = 65_536,
+                PresenterInstanceCapacity = 1_048_576,
+                PresentationRequestCapacity = 245_760,
+            };
+
+            PresentationRequestChannelCapacities capacities = PresentationRequestChannelCapacities.From(presentationConfig);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(capacities.VisualProxy, Is.EqualTo(245_760));
+                Assert.That(capacities.GroundOverlay, Is.EqualTo(65_536));
+                Assert.That(capacities.WorldHud, Is.EqualTo(245_760));
+                Assert.That(capacities.SplineRibbon, Is.EqualTo(65_536));
+                Assert.That(capacities.SurfaceSource, Is.EqualTo(245_760));
+                Assert.That(capacities.Removal, Is.EqualTo(245_760));
+                Assert.That(capacities.ClearTransient, Is.EqualTo(245_760));
+                Assert.That(capacities.TotalOperationCapacity, Is.EqualTo(245_760));
+            });
         }
 
         [Test]
@@ -86,6 +121,91 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PeakCounts_SurviveClearUntilExplicitlyReset()
+        {
+            var requests = new PresentationRequestBuffer(8);
+            requests.Add(PresentationRequest.RemoveGroundOverlay(Entity.Null, 7));
+            requests.Add(PresentationRequest.FromWorldHud(
+                Entity.Null,
+                new WorldHudItem { StableId = 8, Kind = WorldHudItemKind.Bar },
+                LODLevel.High));
+
+            requests.Clear();
+
+            Assert.That(requests.Count, Is.EqualTo(0));
+            Assert.That(requests.PeakCounts.Removal, Is.EqualTo(1));
+            Assert.That(requests.PeakCounts.WorldHud, Is.EqualTo(1));
+            Assert.That(requests.PeakCounts.Total, Is.EqualTo(2));
+
+            requests.ResetPeakCounts();
+
+            Assert.That(requests.PeakCounts, Is.EqualTo(default(PresentationRequestPeakCounts)));
+        }
+
+        [Test]
+        [Category("benchmark")]
+        public void Flush_100kEntityHudBarAndText_ProjectsAll200kRequestsWithinAuthoredCapacity()
+        {
+            const int entityCount = 100_000;
+            const int requestCount = entityCount * 2;
+            World world = World.Create();
+            try
+            {
+                var requests = new PresentationRequestBuffer(new PresentationRequestChannelCapacities(
+                    visualProxy: 1,
+                    groundOverlay: 1,
+                    worldHud: requestCount,
+                    splineRibbon: 1,
+                    surfaceSource: 1,
+                    removal: 1,
+                    clearTransient: 1,
+                    operation: requestCount));
+                var overlays = new GroundOverlayBuffer(1);
+                var worldHud = new WorldHudBatchBuffer(requestCount);
+                using var flush = new PresentationRequestFlushSystem(
+                    world,
+                    requests,
+                    new MeshAssetRegistry(),
+                    new StableDrawCache(),
+                    new PrimitiveDrawBuffer(1),
+                    overlays,
+                    worldHud,
+                    new SplineRibbonBuffer(1),
+                    new PrimitiveDrawBuffer(1),
+                    new PresentationVisualProxyBuffer(1),
+                    new SkinnedVisualBatchBuffer(1));
+
+                for (int i = 0; i < entityCount; i++)
+                {
+                    int stableId = (i * 2) + 1;
+                    requests.Add(PresentationRequest.FromWorldHud(
+                        Entity.Null,
+                        new WorldHudItem { StableId = stableId, Kind = WorldHudItemKind.Bar },
+                        LODLevel.High));
+                    requests.Add(PresentationRequest.FromWorldHud(
+                        Entity.Null,
+                        new WorldHudItem { StableId = stableId + 1, Kind = WorldHudItemKind.Text },
+                        LODLevel.High));
+                }
+
+                Assert.That(requests.PeakCounts.WorldHud, Is.EqualTo(requestCount));
+                Assert.That(requests.PeakCounts.Total, Is.EqualTo(requestCount));
+
+                flush.Update(1f / 60f);
+
+                Assert.That(requests.Count, Is.EqualTo(0));
+                Assert.That(requests.PeakCounts.WorldHud, Is.EqualTo(requestCount));
+                Assert.That(requests.PeakCounts.Total, Is.EqualTo(requestCount));
+                Assert.That(worldHud.Count, Is.EqualTo(requestCount));
+                Assert.That(worldHud.DroppedTotal, Is.EqualTo(0));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void Add_OverflowsTheFilledChannel_WithoutBlockingOtherChannels()
         {
             var requests = new PresentationRequestBuffer(new PresentationRequestChannelCapacities(
@@ -95,7 +215,8 @@ namespace Ludots.Tests.Presentation
                 splineRibbon: 1,
                 surfaceSource: 1,
                 removal: 1,
-                clearTransient: 1));
+                clearTransient: 1,
+                operation: 7));
 
             requests.Add(PresentationRequest.FromVisualProxy(
                 Entity.Null,
@@ -113,6 +234,33 @@ namespace Ludots.Tests.Presentation
                 LODLevel.High));
             Assert.That(requests.Count, Is.EqualTo(2));
             Assert.That(requests.GetSpan()[1].Kind, Is.EqualTo(PresentationRequestKind.GroundOverlay));
+        }
+
+        [Test]
+        public void Add_OverflowsThePerFrameRequestCeiling_WhenTargetChannelStillHasRoom()
+        {
+            var requests = new PresentationRequestBuffer(new PresentationRequestChannelCapacities(
+                visualProxy: 2,
+                groundOverlay: 2,
+                worldHud: 2,
+                splineRibbon: 2,
+                surfaceSource: 2,
+                removal: 2,
+                clearTransient: 2,
+                operation: 1));
+
+            requests.Add(PresentationRequest.FromVisualProxy(
+                Entity.Null,
+                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 }));
+
+            InvalidOperationException overflow = Assert.Throws<InvalidOperationException>(() =>
+                requests.Add(PresentationRequest.FromGroundOverlay(
+                    Entity.Null,
+                    new GroundOverlayItem { StableId = 8 },
+                    LODLevel.High)));
+
+            Assert.That(overflow.Message, Does.Contain("kind=GroundOverlay"));
+            Assert.That(requests.Count, Is.EqualTo(1));
         }
 
         [Test]

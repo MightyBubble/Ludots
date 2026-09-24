@@ -11,7 +11,8 @@ namespace Ludots.Core.Presentation.Requests
             int splineRibbon,
             int surfaceSource,
             int removal,
-            int clearTransient)
+            int clearTransient,
+            int operation)
         {
             VisualProxy = RequirePositive(visualProxy, nameof(visualProxy));
             GroundOverlay = RequirePositive(groundOverlay, nameof(groundOverlay));
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Requests
             SurfaceSource = RequirePositive(surfaceSource, nameof(surfaceSource));
             Removal = RequirePositive(removal, nameof(removal));
             ClearTransient = RequirePositive(clearTransient, nameof(clearTransient));
+            TotalOperationCapacity = RequirePositive(operation, nameof(operation));
         }
 
         public int VisualProxy { get; }
@@ -30,8 +32,7 @@ namespace Ludots.Core.Presentation.Requests
         public int Removal { get; }
         public int ClearTransient { get; }
 
-        public int TotalOperationCapacity =>
-            checked(VisualProxy + GroundOverlay + WorldHud + SplineRibbon + SurfaceSource + Removal + ClearTransient);
+        public int TotalOperationCapacity { get; }
 
         public static PresentationRequestChannelCapacities From(Ludots.Core.Presentation.PresentationRuntimeConfig config)
         {
@@ -40,14 +41,16 @@ namespace Ludots.Core.Presentation.Requests
             int hud = config.WorldHudCapacity;
             int ribbon = config.SplineRibbonCapacity;
             int instances = config.PresenterInstanceCapacity;
+            int requests = RequirePositive(config.PresentationRequestCapacity, nameof(config.PresentationRequestCapacity));
             return new PresentationRequestChannelCapacities(
-                visualProxy: config.VisualProxyBufferCapacity,
-                groundOverlay: overlay,
-                worldHud: hud,
-                splineRibbon: ribbon,
-                surfaceSource: instances,
-                removal: checked(overlay + hud + ribbon + instances),
-                clearTransient: instances);
+                visualProxy: Math.Min(config.VisualProxyBufferCapacity, requests),
+                groundOverlay: Math.Min(overlay, requests),
+                worldHud: Math.Min(hud, requests),
+                splineRibbon: Math.Min(ribbon, requests),
+                surfaceSource: Math.Min(instances, requests),
+                removal: requests,
+                clearTransient: Math.Min(instances, requests),
+                operation: requests);
         }
 
         public static PresentationRequestChannelCapacities Uniform(int capacityPerChannel)
@@ -59,7 +62,8 @@ namespace Ludots.Core.Presentation.Requests
                 splineRibbon: capacityPerChannel,
                 surfaceSource: capacityPerChannel,
                 removal: capacityPerChannel,
-                clearTransient: capacityPerChannel);
+                clearTransient: capacityPerChannel,
+                operation: capacityPerChannel);
         }
 
         private static int RequirePositive(int value, string name)

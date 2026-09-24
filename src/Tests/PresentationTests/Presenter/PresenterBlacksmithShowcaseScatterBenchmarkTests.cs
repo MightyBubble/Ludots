@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -108,6 +109,16 @@ namespace Ludots.Tests.Presentation
         {
             using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             var hudProjection = PresenterBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+            var requests = engine.GetService(CoreServiceKeys.PresentationRequestBuffer)
+                ?? throw new InvalidOperationException("PresentationRequestBuffer missing.");
+            var instancedBatchRequests = engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer)
+                ?? throw new InvalidOperationException("InstancedBatchRequestBuffer missing.");
+            var instancedBatchOperations = engine.GetService(CoreServiceKeys.InstancedBatchOperationBuffer)
+                ?? throw new InvalidOperationException("InstancedBatchOperationBuffer missing.");
+            Assert.That(requests.Capacity, Is.EqualTo(245_760));
+            Assert.That(instancedBatchRequests.Capacity, Is.EqualTo(1));
+            Assert.That(instancedBatchOperations.Capacity, Is.EqualTo(1));
+            requests.ResetPeakCounts();
 
             engine.LoadMap(PresenterBlacksmithShowcaseIds.ScatterHudTextBenchmarkMapId);
 
@@ -122,6 +133,19 @@ namespace Ludots.Tests.Presentation
             InitializationPhaseResult init = WaitForInitialization(engine, hudProjection);
             Assert.That(init.QueueCountAfterSettle, Is.EqualTo(0));
             Assert.That(init.StableFramesReached, Is.True);
+
+            PresentationRequestPeakCounts initializationPeak = requests.PeakCounts;
+            Assert.That(initializationPeak.Total, Is.LessThanOrEqualTo(requests.Capacity));
+            Assert.That(initializationPeak.WorldHud, Is.GreaterThan(0));
+
+            requests.ResetPeakCounts();
+            PresenterBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 8);
+            PresentationRequestPeakCounts steadyPeak = requests.PeakCounts;
+            Assert.That(steadyPeak.Total, Is.LessThanOrEqualTo(requests.Capacity));
+            Assert.That(instancedBatchRequests.Count, Is.EqualTo(0));
+            Assert.That(instancedBatchOperations.Count, Is.EqualTo(0));
+            TestContext.Out.WriteLine(
+                $"Presentation request peaks: initialization={initializationPeak}, steady={steadyPeak}, capacity={requests.Capacity}");
 
             CountHudTextBenchmark(
                 engine,
@@ -305,6 +329,13 @@ namespace Ludots.Tests.Presentation
             using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             var hudProjection = PresenterBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
             PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+            var requests = engine.GetService(CoreServiceKeys.PresentationRequestBuffer)
+                ?? throw new InvalidOperationException("PresentationRequestBuffer missing.");
+            var instancedBatchRequests = engine.GetService(CoreServiceKeys.InstancedBatchRequestBuffer)
+                ?? throw new InvalidOperationException("InstancedBatchRequestBuffer missing.");
+            var instancedBatchOperations = engine.GetService(CoreServiceKeys.InstancedBatchOperationBuffer)
+                ?? throw new InvalidOperationException("InstancedBatchOperationBuffer missing.");
+            requests.ResetPeakCounts();
 
             int queued = PresenterBlacksmithShowcaseTestHarness.EnqueueScatter(
                 engine,
@@ -315,6 +346,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(queued, Is.EqualTo(29999));
 
             PresenterBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 90);
+
+            PresentationRequestPeakCounts peak = requests.PeakCounts;
+            Assert.That(peak.Total, Is.LessThanOrEqualTo(requests.Capacity));
+            Assert.That(instancedBatchRequests.Count, Is.EqualTo(0));
+            Assert.That(instancedBatchOperations.Count, Is.EqualTo(0));
+            TestContext.Out.WriteLine($"30k blacksmith presentation request peak: {peak}, capacity={requests.Capacity}");
 
             var effectQueue = engine.GetService(CoreServiceKeys.EffectRequestQueue)
                 ?? throw new InvalidOperationException("EffectRequestQueue missing.");

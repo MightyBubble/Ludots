@@ -23,6 +23,7 @@ namespace Ludots.Core.Presentation.Requests
         private int _removalCount;
         private int _clearTransientCount;
         private int _opCount;
+        private PresentationRequestPeakCounts _peakCounts;
 
         public PresentationRequestBuffer(int capacity = 131072)
             : this(PresentationRequestChannelCapacities.Uniform(capacity))
@@ -44,6 +45,16 @@ namespace Ludots.Core.Presentation.Requests
         public int Count => _opCount;
 
         public int Capacity => _ops.Length;
+
+        internal PresentationRequestPeakCounts PeakCounts => new(
+            Math.Max(_peakCounts.VisualProxy, _visualProxyCount),
+            Math.Max(_peakCounts.GroundOverlay, _groundOverlayCount),
+            Math.Max(_peakCounts.WorldHud, _worldHudCount),
+            Math.Max(_peakCounts.SplineRibbon, _splineRibbonCount),
+            Math.Max(_peakCounts.SurfaceSource, _surfaceSourceCount),
+            Math.Max(_peakCounts.Removal, _removalCount),
+            Math.Max(_peakCounts.ClearTransient, _clearTransientCount),
+            Math.Max(_peakCounts.Total, _opCount));
 
         internal ReadOnlySpan<PresentationRequestOp> Ops => _ops.AsSpan(0, _opCount);
 
@@ -116,6 +127,7 @@ namespace Ludots.Core.Presentation.Requests
 
         public void Clear()
         {
+            _peakCounts = PeakCounts;
             _visualProxyCount = 0;
             _groundOverlayCount = 0;
             _worldHudCount = 0;
@@ -124,6 +136,19 @@ namespace Ludots.Core.Presentation.Requests
             _removalCount = 0;
             _clearTransientCount = 0;
             _opCount = 0;
+        }
+
+        internal void ResetPeakCounts()
+        {
+            _peakCounts = new PresentationRequestPeakCounts(
+                _visualProxyCount,
+                _groundOverlayCount,
+                _worldHudCount,
+                _splineRibbonCount,
+                _surfaceSourceCount,
+                _removalCount,
+                _clearTransientCount,
+                _opCount);
         }
 
         internal ref readonly GroundOverlayChannelItem GroundOverlayAt(int slot) => ref _groundOverlays[slot];
