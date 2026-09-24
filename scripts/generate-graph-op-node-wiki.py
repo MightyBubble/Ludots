@@ -334,6 +334,11 @@ FAMILY_USE_CASES = {
     "activity": "地图事件发生后把一次拍板摆到玩家面前：补给超限、过境商队、归属通报这类 CK3 弹层的调度入口。",
 }
 
+# 描述表仍列出这些端口（编辑器要画引脚），但编译期允许不接。边界句由生成器写出，避免手改 wiki 被下一次生成抹掉。
+OPTIONAL_TARGET_BOUNDARY = {
+    "SubmitAssignedOrder": "目标口可以不接。不接时这道令没有实体目标，落点仍由 a、b 给出。",
+}
+
 
 def scene_section(op: str, doc: dict, detail: str, graph_path: Path, has_media: bool) -> str:
     seq = node_sequence(doc, op)
@@ -373,6 +378,8 @@ def boundary_section(op: str, driver: str, desc: dict) -> str:
         lines.append("imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。")
     if desc["dst"] == "dst 填派发预设目的位":
         lines.append("dst 写派发预设位，取值来自 `assets/GAS/target_dispatch_presets.json`。")
+    if op in OPTIONAL_TARGET_BOUNDARY:
+        lines.append(OPTIONAL_TARGET_BOUNDARY[op])
     lines.append("同类用法：{use}".format(use=FAMILY_USE_CASES.get(driver, "见手册分册的场景节。")))
     body = "\n".join(f"- {l}" for l in lines)
     return f"""## 边界与更多用法

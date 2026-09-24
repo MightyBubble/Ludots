@@ -384,6 +384,102 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void SubmitAssignedOrder_WithoutTarget_CompilesAndRegistersAbsentSentinel()
+        {
+            GraphControlFlowDocument cfg = AssignedOrderDocument(includeTarget: false, includeA: true, includeB: true);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+            That(diags, Is.Empty);
+            That(pkg.HasValue, Is.True);
+
+            GraphInstruction submit = Array.Find(
+                pkg!.Value.Program,
+                static instruction => instruction.Op == (ushort)GraphNodeOp.SubmitAssignedOrder);
+            That(submit.A, Is.EqualTo(byte.MaxValue));
+            That(submit.B, Is.LessThan(GraphVmLimits.MaxFloatRegisters));
+            That(submit.C, Is.LessThan(GraphVmLimits.MaxFloatRegisters));
+
+            GraphIdRegistry.Clear();
+            int graphId = GraphIdRegistry.Register("test.brain.submit.no-target");
+            var programs = new GraphProgramRegistry();
+            programs.Register(
+                graphId,
+                pkg.Value.Program,
+                GraphKind.Script,
+                GraphInstructionSourceMap.Empty,
+                pkg.Value.Symbols);
+        }
+
+        [Test]
+        public void SubmitAssignedOrder_WithoutCoordinates_FailsValidation()
+        {
+            var (_, _, missingA) = GraphControlFlowCompiler.CompileWithOutputs(
+                AssignedOrderDocument(includeTarget: false, includeA: false, includeB: true));
+            That(missingA.Count, Is.GreaterThan(0));
+
+            var (_, _, missingB) = GraphControlFlowCompiler.CompileWithOutputs(
+                AssignedOrderDocument(includeTarget: false, includeA: true, includeB: false));
+            That(missingB.Count, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void SubmitAssignedOrder_AbsentTarget_EnqueuesNullTargetWithSpatialArgs()
+        {
+            using var world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            api.BindOrderPipeline(orders, orderTypes);
+
+            Entity actor = world.Create(new PlayerOwner { PlayerId = 4 });
+            Execute(
+                world, api, actor, actor,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.SubmitAssignedOrder, A = byte.MaxValue, B = 1, C = 2, Imm = 101 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
+                },
+                seedInt: (1, 650),
+                seedInt2: (2, 520));
+
+            That(orders.TryDequeue(out Order outbound), Is.True);
+            That(outbound.Actor, Is.EqualTo(actor));
+            That(outbound.PlayerId, Is.EqualTo(4));
+            That(outbound.OrderTypeId, Is.EqualTo(101));
+            That(outbound.Target, Is.EqualTo(Entity.Null));
+            That(outbound.Args.Spatial.WorldCm.X, Is.EqualTo(650f));
+            That(outbound.Args.Spatial.WorldCm.Z, Is.EqualTo(520f));
+        }
+
+        [Test]
+        public void SubmitAssignedOrder_WiredDeadTarget_KeepsThatEntity()
+        {
+            using var world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            api.BindOrderPipeline(orders, orderTypes);
+
+            Entity actor = world.Create(new PlayerOwner { PlayerId = 4 });
+            Entity corpse = world.Create();
+            world.Destroy(corpse);
+
+            Execute(
+                world, api, actor, actor,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.SubmitAssignedOrder, A = 0, B = 1, C = 2, Imm = 101 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
+                },
+                seedEntity: (0, corpse),
+                seedInt: (1, 10),
+                seedInt2: (2, 20));
+
+            That(orders.TryDequeue(out Order outbound), Is.True);
+            That(outbound.Target, Is.EqualTo(corpse));
+            That(outbound.Target, Is.Not.EqualTo(Entity.Null));
+        }
+
+        [Test]
         public void KindPolicy_RejectsOrderActionOpsOutsideScriptHosts()
         {
             var submitProgram = new GraphInstruction[] { new() { Op = (ushort)GraphNodeOp.SubmitAssignedOrder, A = 0, B = 1, C = 2, Imm = 101 } };
@@ -573,6 +669,54 @@ namespace Ludots.Tests.GAS
                 ClearQueueOnActivate = true,
             });
             return registry;
+        }
+
+        private static GraphControlFlowDocument AssignedOrderDocument(bool includeTarget, bool includeA, bool includeB)
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.Brain.Submit.OptionalTarget",
+                Kind = "Script",
+                Entry = "entry",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "entry", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "self", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "px", Op = "ConstInt", IntValue = 650 },
+                    new GraphControlFlowNode { Id = "py", Op = "ConstInt", IntValue = 520 },
+                    new GraphControlFlowNode { Id = "submit", Op = "SubmitAssignedOrder", OrderType = "moveTo" },
+                    new GraphControlFlowNode { Id = "halt", Op = "HaltReturnInt" },
+                },
+                ControlEdges =
+                {
+                    new("entry", GraphControlFlowPorts.Next, "self"),
+                    new("self", GraphControlFlowPorts.Next, "px"),
+                    new("px", GraphControlFlowPorts.Next, "py"),
+                    new("py", GraphControlFlowPorts.Next, "submit"),
+                    new("submit", GraphControlFlowPorts.Next, "halt"),
+                },
+            };
+            if (includeTarget)
+            {
+                cfg.ValueEdges.Add(new("self", GraphControlFlowPorts.Value, "submit", GraphControlFlowPorts.Target));
+            }
+
+            if (includeA)
+            {
+                cfg.ValueEdges.Add(new("px", GraphControlFlowPorts.Value, "submit", GraphControlFlowPorts.A));
+                cfg.ValueEdges.Add(new("px", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value));
+            }
+            else
+            {
+                cfg.ValueEdges.Add(new("py", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value));
+            }
+
+            if (includeB)
+            {
+                cfg.ValueEdges.Add(new("py", GraphControlFlowPorts.Value, "submit", GraphControlFlowPorts.B));
+            }
+
+            return cfg;
         }
 
         private static OrderBuffer ActiveOrder(int orderId, int orderTypeId, Entity target) => new()
