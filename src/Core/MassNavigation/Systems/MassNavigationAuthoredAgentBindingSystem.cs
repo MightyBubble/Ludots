@@ -468,10 +468,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private long ComputeEntityAuthoringHash(Entity entity, in MassNavigationAgent agent, Entity domainRep)
     {
         long entityHash = 1469598103934665603L;
-        entityHash = Mix(entityHash, entity.Id);
+        entityHash = MassNavigationEntityIdentityHash.Mix(entityHash, entity);
         entityHash = Mix(entityHash, agent.ProfileId);
-        entityHash = Mix(entityHash, domainRep.Id);
-        entityHash = Mix(entityHash, domainRep.Version);
+        entityHash = MassNavigationEntityIdentityHash.Mix(entityHash, domainRep);
         if (_engine.World.TryGet(entity, out EntityLayer layer))
         {
             entityHash = Mix(entityHash, layer.Value.Category);

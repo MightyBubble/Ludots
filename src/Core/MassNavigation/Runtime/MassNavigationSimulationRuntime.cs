@@ -8,7 +8,6 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
-using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
@@ -94,8 +93,6 @@ public readonly record struct MassNavigationSolverRuntimeConfigSnapshot(
 
 public sealed class MassNavigationSimulationRuntime
 {
-    public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
-
     private MassNavigationDomainStanceProjection? _domainStanceProjection;
     private int[] _teamIds = Array.Empty<int>();
     private int _frameIndex;
@@ -1064,6 +1061,7 @@ public sealed class MassNavigationSimulationRuntime
             allowExistingRuntimeBinding: false);
         int profileId = agent.ProfileId;
         world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
+        MassNavigationBlackboardWriter.SetAgentLocomotionSpeed(world, entity, 0f);
         world.Add(entity, new MassNavigationAgentProfile
         {
             ProfileId = profileId,
@@ -1206,11 +1204,6 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         return false;
-    }
-
-    public static int ResolveAgentLocomotionSpeedParamKey()
-    {
-        return PresenterParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
     }
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)

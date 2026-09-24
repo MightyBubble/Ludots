@@ -2,19 +2,15 @@ using System;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Core.MassNavigation.Systems;
+namespace Ludots.Core.Presentation.MassNavigation;
 
-/// <summary>
-/// Discloses every spawned mass-navigation agent (MassNavigationAgent + index, no pending
-/// presentation destroy) as LiveVisible to the local observer of the startup map, with the HUD
-/// attribute mask derived from the scenario's agent presenter definitions.
-/// </summary>
 public static class MassNavigationObserverDisclosure
 {
     private static readonly QueryDescription AgentQuery = new QueryDescription()
@@ -96,7 +92,7 @@ public static class MassNavigationObserverDisclosure
                        StringComparison.Ordinal);
         }
 
-        private static bool TryResolveSimulation(GameEngine engine, out Runtime.MassNavigationSimulationRuntime simulation)
+        private static bool TryResolveSimulation(GameEngine engine, out MassNavigationSimulationRuntime simulation)
         {
             return MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out simulation);
         }

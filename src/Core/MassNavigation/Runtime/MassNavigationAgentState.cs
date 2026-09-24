@@ -8,10 +8,10 @@ namespace Ludots.Core.MassNavigation.Runtime;
 internal sealed class MassNavigationAgentState
 {
     private readonly System.Collections.Generic.List<Entity> _spawnedEntities;
-    private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds;
+    private readonly System.Collections.Generic.HashSet<Entity> _spawnedEntitySet;
     private readonly System.Collections.Generic.List<Entity> _allAgents;
     private readonly System.Collections.Generic.List<Entity> _controllableAgents;
-    private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId;
+    private readonly System.Collections.Generic.Dictionary<Entity, int> _controllableIndexByEntity;
     private int _boundAgentCount;
     private int _controllableAgentSlotCount;
 
@@ -23,10 +23,10 @@ internal sealed class MassNavigationAgentState
         }
 
         _spawnedEntities = new System.Collections.Generic.List<Entity>(agentCapacity);
-        _spawnedEntityIds = new System.Collections.Generic.HashSet<int>(agentCapacity);
+        _spawnedEntitySet = new System.Collections.Generic.HashSet<Entity>(agentCapacity);
         _allAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
         _controllableAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
-        _controllableIndexByEntityId = new System.Collections.Generic.Dictionary<int, int>(agentCapacity);
+        _controllableIndexByEntity = new System.Collections.Generic.Dictionary<Entity, int>(agentCapacity);
     }
 
     public IReadOnlyList<Entity> SpawnedEntities => _spawnedEntities;
@@ -34,7 +34,7 @@ internal sealed class MassNavigationAgentState
     public IReadOnlyList<Entity> ControllableAgentSlots => _controllableAgents;
     public int TotalAgents => _allAgents.Count;
     public int ControllableAgentSlotCount => _controllableAgentSlotCount;
-    public int ControllableAgentCount => _controllableIndexByEntityId.Count;
+    public int ControllableAgentCount => _controllableIndexByEntity.Count;
     public bool HasBoundAgents(int expectedCount)
     {
         if (expectedCount < 0)
@@ -51,10 +51,10 @@ internal sealed class MassNavigationAgentState
     public void Reset()
     {
         _spawnedEntities.Clear();
-        _spawnedEntityIds.Clear();
+        _spawnedEntitySet.Clear();
         _allAgents.Clear();
         _controllableAgents.Clear();
-        _controllableIndexByEntityId.Clear();
+        _controllableIndexByEntity.Clear();
         _boundAgentCount = 0;
         _controllableAgentSlotCount = 0;
         BlockerCount = 0;
@@ -75,7 +75,7 @@ internal sealed class MassNavigationAgentState
 
     public bool TryGetControllableIndex(Entity entity, out int index)
     {
-        return _controllableIndexByEntityId.TryGetValue(entity.Id, out index);
+        return _controllableIndexByEntity.TryGetValue(entity, out index);
     }
 
     public bool TryGetControllableEntity(int agentIndex, out Entity entity)
@@ -159,7 +159,7 @@ internal sealed class MassNavigationAgentState
         }
 
         _controllableAgents[agentIndex] = entity;
-        _controllableIndexByEntityId[entity.Id] = agentIndex;
+        _controllableIndexByEntity[entity] = agentIndex;
         _controllableAgentSlotCount++;
     }
 
@@ -220,7 +220,7 @@ internal sealed class MassNavigationAgentState
 
     private void TrackSpawnedEntity(Entity entity)
     {
-        if (_spawnedEntityIds.Add(entity.Id))
+        if (_spawnedEntitySet.Add(entity))
         {
             _spawnedEntities.Add(entity);
         }

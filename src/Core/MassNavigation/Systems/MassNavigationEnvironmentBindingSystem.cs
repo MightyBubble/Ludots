@@ -94,7 +94,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 MassNavigationFlowObstacleProjection blocker = blockers[index];
                 WorldPositionCm position = positions[index];
                 blockerCount += blocker.PieceCount;
-                hash = Mix(hash, entity.Id);
+                hash = MassNavigationEntityIdentityHash.Mix(hash, entity);
                 hash = Mix(hash, blocker.PieceCount);
                 hash = Mix(hash, blocker.ShapeSignature);
                 hash = Mix(hash, blocker.PoseSignature);
@@ -119,7 +119,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 WorldPositionCm position = positions[index];
                 markerCount++;
-                hash = Mix(hash, entity.Id);
+                hash = MassNavigationEntityIdentityHash.Mix(hash, entity);
                 hash = Mix(hash, position.Value.X.GetHashCode());
                 hash = Mix(hash, position.Value.Y.GetHashCode());
             }

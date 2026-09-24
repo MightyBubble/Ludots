@@ -1,19 +1,15 @@
 using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.MassNavigation;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardMassNavigationLargeWorld10kMod;
 
 public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 {
-    private const string ObserverVisibilitySystemInstalledKey =
-        "CapabilityStandardMassNavigationLargeWorld10k.ObserverVisibilitySystemInstalled";
-    private IModContext? _context;
-
     public void OnLoad(IModContext context)
     {
         context.Log("[CapabilityStandardMassNavigationLargeWorld10kMod] Loaded");
@@ -34,7 +30,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
             return Task.CompletedTask;
         }
 
-        EnsureObserverVisibilitySystem(engine);
+        EnsureMassNavigationObserverDisclosure(engine);
         bool mapFocused = CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
         if (!mapFocused)
@@ -53,16 +49,8 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         return Task.CompletedTask;
     }
 
-    private static void EnsureObserverVisibilitySystem(GameEngine engine)
+    private static void EnsureMassNavigationObserverDisclosure(GameEngine engine)
     {
-        if (engine.GlobalContext.ContainsKey(ObserverVisibilitySystemInstalledKey))
-        {
-            return;
-        }
-
-        engine.RegisterSystem(
-            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
-            SystemGroup.RuntimeEntityBinding);
-        engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
+        MassNavigationPresentationAdapterInstaller.EnsureLocalObserverDisclosure(engine);
     }
 }
