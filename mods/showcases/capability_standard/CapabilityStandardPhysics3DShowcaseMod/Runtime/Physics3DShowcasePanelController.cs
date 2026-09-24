@@ -277,13 +277,43 @@ internal sealed class Physics3DShowcasePanelController
 
         if (state.Scene == Physics3DShowcaseScene.ScannerRange)
         {
-            return Section("Scan results", Metric("hits", state.QuerySummary));
+            return BuildScannerEvidence(state);
         }
 
         return Section(
             "Station evidence",
             Metric("contacts", state.ContactSummary),
             Metric("constraints", state.Constraints.ToString()));
+    }
+
+    private static UiElementBuilder BuildScannerEvidence(Physics3DShowcasePanelState state)
+    {
+        // Structured fields only — never parse QuerySummary for layout.
+        return Ui.Column(
+                Section(
+                    "Direction scans",
+                    Metric("ray", FormatCastEvidence(state.RayCastHits, state.RayCastFirstDistanceCm)),
+                    Metric("box", FormatCastEvidence(state.BoxCastHits, state.BoxCastFirstDistanceCm)),
+                    Metric("sphere", FormatCastEvidence(state.SphereCastHits, state.SphereCastFirstDistanceCm)),
+                    Metric("capsule", FormatCastEvidence(state.CapsuleCastHits, state.CapsuleCastFirstDistanceCm))),
+                Section(
+                    "Overlap scans",
+                    Metric("box", FormatOverlapEvidence(state.BoxOverlapHits)),
+                    Metric("sphere", FormatOverlapEvidence(state.SphereOverlapHits)),
+                    Metric("capsule", FormatOverlapEvidence(state.CapsuleOverlapHits))))
+            .Gap(10f);
+    }
+
+    private static string FormatCastEvidence(int hits, float firstDistanceCm)
+    {
+        return hits <= 0
+            ? "0 hits · no contact"
+            : $"{hits} hits · nearest {firstDistanceCm:0} cm";
+    }
+
+    private static string FormatOverlapEvidence(int hits)
+    {
+        return hits == 1 ? "1 hit" : $"{hits} hits";
     }
 
     private static UiElementBuilder BuildWheelLabEvidence(Physics3DShowcasePanelState state)

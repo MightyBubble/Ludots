@@ -259,12 +259,25 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
 
         IPhysics3DWorld world = RequirePhysicsWorld();
         Physics3DSimulationSystem simulation = RequireSimulation();
-        string querySummary = _scene == Physics3DShowcaseScene.ScannerRange
-            ? $"Ray {_queryHitCounts[0]} @ {FirstQueryDistanceCm(0):0}cm | " +
-              $"Box {_queryHitCounts[1]} @ {FirstQueryDistanceCm(1):0}cm | " +
-              $"Sphere {_queryHitCounts[2]} @ {FirstQueryDistanceCm(2):0}cm | " +
-              $"Capsule {_queryHitCounts[3]} @ {FirstQueryDistanceCm(3):0}cm | " +
-              $"Overlap {_queryHitCounts[4]}/{_queryHitCounts[5]}/{_queryHitCounts[6]}"
+        bool scannerActive = _scene == Physics3DShowcaseScene.ScannerRange;
+        int rayCastHits = scannerActive ? _queryHitCounts[0] : 0;
+        float rayCastFirstDistanceCm = scannerActive ? FirstQueryDistanceCm(0) : 0f;
+        int boxCastHits = scannerActive ? _queryHitCounts[1] : 0;
+        float boxCastFirstDistanceCm = scannerActive ? FirstQueryDistanceCm(1) : 0f;
+        int sphereCastHits = scannerActive ? _queryHitCounts[2] : 0;
+        float sphereCastFirstDistanceCm = scannerActive ? FirstQueryDistanceCm(2) : 0f;
+        int capsuleCastHits = scannerActive ? _queryHitCounts[3] : 0;
+        float capsuleCastFirstDistanceCm = scannerActive ? FirstQueryDistanceCm(3) : 0f;
+        int boxOverlapHits = scannerActive ? _queryHitCounts[4] : 0;
+        int sphereOverlapHits = scannerActive ? _queryHitCounts[5] : 0;
+        int capsuleOverlapHits = scannerActive ? _queryHitCounts[6] : 0;
+        // Acceptance-log overview only. The Scanner panel must bind structured fields above.
+        string querySummary = scannerActive
+            ? $"Ray {rayCastHits} @ {rayCastFirstDistanceCm:0}cm | " +
+              $"Box {boxCastHits} @ {boxCastFirstDistanceCm:0}cm | " +
+              $"Sphere {sphereCastHits} @ {sphereCastFirstDistanceCm:0}cm | " +
+              $"Capsule {capsuleCastHits} @ {capsuleCastFirstDistanceCm:0}cm | " +
+              $"Overlap {boxOverlapHits}/{sphereOverlapHits}/{capsuleOverlapHits}"
             : "Enter Scanner Range to inspect seven visible scan paths.";
         string contactSummary = $"Begin {_contactBeginCount} · Stay {_contactStayCount} · End {_contactEndCount}";
         string replaySummary = _replayStatus switch
@@ -305,6 +318,17 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             ReplayStatus: _replayStatus,
             ReplayCursor: _replayCursor,
             ReplaySteps: ActiveConfig.ReplaySteps,
+            RayCastHits: rayCastHits,
+            RayCastFirstDistanceCm: rayCastFirstDistanceCm,
+            BoxCastHits: boxCastHits,
+            BoxCastFirstDistanceCm: boxCastFirstDistanceCm,
+            SphereCastHits: sphereCastHits,
+            SphereCastFirstDistanceCm: sphereCastFirstDistanceCm,
+            CapsuleCastHits: capsuleCastHits,
+            CapsuleCastFirstDistanceCm: capsuleCastFirstDistanceCm,
+            BoxOverlapHits: boxOverlapHits,
+            SphereOverlapHits: sphereOverlapHits,
+            CapsuleOverlapHits: capsuleOverlapHits,
             QuerySummary: querySummary,
             ContactSummary: contactSummary,
             ReplaySummary: replaySummary,

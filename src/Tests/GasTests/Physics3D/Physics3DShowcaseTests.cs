@@ -102,6 +102,98 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_ScannerRange_Scenario_PanelExposesEveryScanPathResult()
+    {
+        // Given a new player enters Scanner Range where seven scan beams face the same targets.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 1_200,
+            benchmarkPresets: new[] { 100, 200, 500, 1_000 },
+            replaySteps: 30);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(1_300, 256));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+        harness.Step();
+
+        // When the lab panel captures the live scan evidence for the first screen.
+        Physics3DShowcasePanelState panel = harness.Runtime.CapturePanelState();
+
+        // Then each direction cast shows its own hit count and nearest contact distance,
+        // and each overlap shows its own hit count, without collapsing seven paths into one truncated line.
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.Scene, Is.EqualTo(Physics3DShowcaseScene.ScannerRange));
+            Assert.That(panel.RayCastHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(0)));
+            Assert.That(panel.BoxCastHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(1)));
+            Assert.That(panel.SphereCastHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(2)));
+            Assert.That(panel.CapsuleCastHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(3)));
+            Assert.That(panel.BoxOverlapHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(4)));
+            Assert.That(panel.SphereOverlapHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(5)));
+            Assert.That(panel.CapsuleOverlapHits, Is.EqualTo(harness.Runtime.GetQueryHitCount(6)));
+
+            Assert.That(panel.RayCastHits, Is.GreaterThan(0), "Ray cast must still reach the authored targets.");
+            Assert.That(panel.BoxCastHits, Is.GreaterThan(0), "Box cast must still reach the authored targets.");
+            Assert.That(panel.SphereCastHits, Is.GreaterThan(0), "Sphere cast must still reach the authored targets.");
+            Assert.That(panel.CapsuleCastHits, Is.GreaterThan(0), "Capsule cast must still reach the authored targets.");
+            Assert.That(panel.BoxOverlapHits, Is.GreaterThan(0), "Box overlap must still cover the authored targets.");
+            Assert.That(panel.SphereOverlapHits, Is.GreaterThan(0), "Sphere overlap must still cover the authored targets.");
+            Assert.That(panel.CapsuleOverlapHits, Is.GreaterThan(0), "Capsule overlap must still cover the authored targets.");
+
+            AssertNearestCastDistance(panel.RayCastHits, panel.RayCastFirstDistanceCm, harness, queryIndex: 0);
+            AssertNearestCastDistance(panel.BoxCastHits, panel.BoxCastFirstDistanceCm, harness, queryIndex: 1);
+            AssertNearestCastDistance(panel.SphereCastHits, panel.SphereCastFirstDistanceCm, harness, queryIndex: 2);
+            AssertNearestCastDistance(panel.CapsuleCastHits, panel.CapsuleCastFirstDistanceCm, harness, queryIndex: 3);
+        });
+    }
+
+    [Test]
+    public void Feature_ScannerRange_Scenario_PanelDoesNotFeedOneLineQuerySummaryIntoUi()
+    {
+        // Given Scanner Range already exposes structured cast and overlap evidence on the panel state.
+        // When the reactive panel builds the first-screen scan exhibit,
+        // Then it binds those structured fields and never feeds the old one-line QuerySummary into Scan results.
+        string controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "capability_standard",
+            "CapabilityStandardPhysics3DShowcaseMod",
+            "Runtime",
+            "Physics3DShowcasePanelController.cs");
+        string controllerSource = File.ReadAllText(controllerPath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controllerSource, Does.Contain("BuildScannerEvidence"));
+            Assert.That(controllerSource, Does.Contain("state.RayCastHits"));
+            Assert.That(controllerSource, Does.Contain("state.BoxCastHits"));
+            Assert.That(controllerSource, Does.Contain("state.SphereCastHits"));
+            Assert.That(controllerSource, Does.Contain("state.CapsuleCastHits"));
+            Assert.That(controllerSource, Does.Contain("state.RayCastFirstDistanceCm"));
+            Assert.That(controllerSource, Does.Contain("state.BoxCastFirstDistanceCm"));
+            Assert.That(controllerSource, Does.Contain("state.SphereCastFirstDistanceCm"));
+            Assert.That(controllerSource, Does.Contain("state.CapsuleCastFirstDistanceCm"));
+            Assert.That(controllerSource, Does.Contain("state.BoxOverlapHits"));
+            Assert.That(controllerSource, Does.Contain("state.SphereOverlapHits"));
+            Assert.That(controllerSource, Does.Contain("state.CapsuleOverlapHits"));
+            Assert.That(controllerSource, Does.Not.Contain("Metric(\"hits\", state.QuerySummary)"));
+            Assert.That(controllerSource, Does.Not.Contain("state.QuerySummary)"));
+        });
+    }
+
+    private static void AssertNearestCastDistance(
+        int hits,
+        float panelFirstDistanceCm,
+        ShowcaseHarness harness,
+        int queryIndex)
+    {
+        Assert.That(
+            harness.Runtime.TryGetQueryHitVisual(queryIndex, 0, out Physics3DShowcaseQueryHitVisual firstHit),
+            Is.True,
+            $"Scanner path {queryIndex} must expose its nearest hit for the panel.");
+        Assert.That(hits, Is.GreaterThan(0));
+        Assert.That(panelFirstDistanceCm, Is.EqualTo(firstHit.DistanceCm).Within(0.01f));
+    }
+
+    [Test]
     public void PlatformStation_PlayerStartsSupportedThenMovesAndJumps()
     {
         Physics3DShowcaseConfig config = CreateShowcaseConfig(
