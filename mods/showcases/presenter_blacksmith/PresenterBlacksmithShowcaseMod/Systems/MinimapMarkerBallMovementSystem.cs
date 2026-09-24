@@ -22,7 +22,8 @@ namespace PresenterBlacksmithShowcaseMod.Systems
         private const string MovementTurnPeriodMetadataKey = "minimapMarkerMovementTurnPeriodSeconds";
 
         private static readonly QueryDescription MarkerQuery = new QueryDescription()
-            .WithAll<MinimapMarkerBallMovementTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>();
+            .WithAll<MinimapMarkerBallMovementTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>()
+            .WithNone<SuspendedTag>();
 
         private readonly GameEngine _engine;
         private string _configuredMapId = string.Empty;
@@ -103,7 +104,8 @@ namespace PresenterBlacksmithShowcaseMod.Systems
 
         private bool ShouldRunForFocusedMap()
         {
-            return HasRequiredMovementMetadata();
+            return _engine.GetService(CoreServiceKeys.MapLoadStatus).Succeeded &&
+                   HasRequiredMovementMetadata();
         }
 
         private void EnsureConfiguredForFocusedMap()
