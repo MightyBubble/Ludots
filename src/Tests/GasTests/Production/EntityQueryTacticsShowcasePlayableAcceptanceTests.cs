@@ -101,10 +101,12 @@ namespace Ludots.Tests.GAS.Production
             string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
             DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
             AssertCollectionCount(engine, owner, config.Collections.UiBox, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
+            Assert.That(ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count, Is.EqualTo(0),
+                "ui box acquisition must not reach command semantics before the commit action");
+            Assert.That(ReadCollectionSnapshot(engine, owner, config.Collections.FormationPrimary, required: false).Count, Is.EqualTo(0),
+                "formation snapshot follows the committed command source, not the ui box");
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote both the UI acquisition collection and the authoritative command source.");
+            timeline.Add("[T+002] Player dragged a friendly box; the showcase-owned select graph wrote the UI acquisition collection while command semantics stayed reserved for the commit action.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);

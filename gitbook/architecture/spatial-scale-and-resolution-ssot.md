@@ -61,17 +61,17 @@ Out of scope：
 
 | 名称 | cells | cm | owner | 用途 | 是否可配 | 约束 |
 |---|---:|---:|---|---|---|---|
-| `Cell` / `CellCm` | 1 | `CellCm`，默认 100 | `SpatialScaleDefaults.CellCm`，board 配置字段仍为 `GridCellSizeCm` | sim 原子单位、board 世界尺寸、bake cm 换算、默认 flow/hash cell | 是，当前经 `BoardConfig.GridCellSizeCm` 与 MassNavigationFlow solver 配置显式给出 | 必须 > 0；后续所有派生值必须是整数倍或显式说明 |
-| `HexEdgeLengthCm` | hex 边长，非 cell 派生 | 默认 400 | `SpatialScaleDefaults.DefaultHexEdgeLengthCm`，board 配置字段为 `HexEdgeLengthCm` | HexGrid board 的 hex 轴长、world position / AOI / render layout | 是，仅 HexGrid board 生效 | 必须 > 0；不影响 Grid / NodeGraph board |
+| `Cell` / `CellCm` | 1 | `CellCm`，默认 100 | `SpatialScaleDefaults.CellCm`，板配置写 `Boards[].Grid.CellSizeCm` | sim 原子单位、板内格子、bake cm 换算、默认 flow/hash cell | 是，当前经 `BoardConfig.Grid.CellSizeCm` 与 MassNavigationFlow solver 配置显式给出 | 必须 > 0；后续所有派生值必须是整数倍或显式说明 |
+| `HexEdgeLengthCm` | hex 边长，非 cell 派生 | 默认 400 | `SpatialScaleDefaults.DefaultHexEdgeLengthCm`，板配置写 `Boards[].Hex.EdgeLengthCm` | HexGrid board 的 hex 轴长、world position / AOI / render layout | 是，仅 Hex / HexGrid board 生效 | 必须 > 0；不影响 Grid / NodeGraph board |
 | `PartitionChunk` | `PartitionChunkCells`，默认 64 | `PartitionChunkCells * CellCm` | `BoardConfig.ChunkSizeCells` / `SpatialScaleDefaults.PartitionChunkCells`；#1567 目标态归 `World.Tuning.PartitionChunkCells`，分区是世界层预算，不挂板 | 空间分区、AOI、query backend | 是 | 必须 > 0 且为 2 的幂 |
 | `TerrainChunk` | `TerrainChunkCells`，固定 64 | `TerrainChunkCells * CellCm` 的逻辑足迹；hex bake 还会乘 hex metric | `VertexChunk.ChunkSize` / `SpatialScaleDefaults.TerrainChunkCells` | 逻辑地形块；当前等于 NavTile 足迹 | 否 | 当前固定 64；grid/hex 共用抽象在 #286 落地 |
 | `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`)；#1567 目标态解除与 `TerrainChunk` 的焊接，颗粒度见 `NavTileGranularity` | navmesh 产物 tile 足迹 | 否 | 现状只作为 `TerrainChunk` 的用途；#1567 切 3 后此行废止，由 navmesh.json 显式声明取代 |
 | `NavTileGranularity`（#1567 目标态） | 由声明值与世界 cm 决定 | `tileWorldWidthCm` × `tileWorldHeightCm` | `Navigation/navmesh.json` 每板寻址条目 | nav 烘焙/重烤的瓦片颗粒度预算，独立于板与地形块 | 是 | 必须 > 0；不从 `CellSizeCm × ChunkSizeCells` 推导；hex 两轴（如 44340×38400）由此表达 |
 | `TerrainPage`（地形数据页） | `TerrainPageCells` = `MapTile.Size` = 256 | `TerrainPageCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.TerrainPageCells` | 世界层 IO/寻址地形数据页；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `TerrainPageCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费；#1567 目标态容量归 `World.Tuning` | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由分区推导；禁止私有 loader fallback |
-| `WorldExtent` | 根板 `WidthCells × CellSizeCm` / boot `WidthCm / CellCm` | cm 直构 | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧地形数据页数量键 fail-fast，无别名兼容 |
-| `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无地形数据页对齐 | 是 | 必须 > 0；hex 计量 `WidthHexes`/`HeightHexes` 已落地（切 2：两轴同声明、优先于格子数，AABB 为 `HexMetrics.FootprintWorldCm` 保守足迹；未声明时仍借 `GridCellSizeCm`，存量零漂移） |
-| `BoardOrigin`（#1567 切 2b 已放开） | —— | `OriginXCm` / `OriginYCm` | map JSON `Boards[]` | 板在根板坐标系（host world frame）的摆放；卫星板格子/hex 坐标系以 origin 为 min-corner，世界坐标入口减板 origin 换算一次 | 是 | 缺省 = 居中（legacy 格子系锚世界 0，零漂移）；根板禁声明 origin（根板锚定世界）；锚定板越出根板范围加载期 fail-fast；锚定板暂不得参与 nav（每板瓦片寻址落地前 fail-fast） |
+| `WorldExtent` | 根板 `floor(WidthCm / CellSizeCm)` / boot `WidthCm / CellCm` | 根板 `WidthCm` / `HeightCm` | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧地形数据页数量键加载即失败，无别名兼容 |
+| `BoardExtent` | `floor(WidthCm / CellSizeCm)` | `WidthCm` / `HeightCm` | map JSON `Boards[]` | 板的厘米矩形。格数是矩形除以 `Grid.CellSizeCm` 向下取整，余数留在局部坐标大的一侧 | 是 | 宽高必须盖住至少一格；六边形板另写 `Hex.EdgeLengthCm`，只保留能放进矩形的整圈 |
+| `BoardAnchor` | —— | `Anchor.LocalXCm/LocalYCm` 与 `Anchor.WorldXCm/WorldYCm` | map JSON `Boards[]` | 板上一个点在 Ludots 世界的位置。`Local` 从铺格子的角量起，`World` 是 Ludots 厘米。格子角的世界坐标 = `World − Local` | 是 | 根板 `World` 必须是 `(0, 0)`，这是 Ludots 原点；矩形必须落在根板内；拓扑原点不在 Ludots 原点的板暂不参与导航 |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassNavigationFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassNavigationFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
 | `AvoidanceHashCell` | `separationHashCellSizeCm / CellCm` 或 `hardResolveHashCellSizeCm / CellCm` | separation 默认 100；hard-resolve 默认 50 | MassNavigationFlow solver / `SpatialScaleDefaults.Avoidance*HashCellCm` | 分离邻居哈希、硬解析候选哈希 | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
@@ -92,8 +92,8 @@ Out of scope：
 - `TerrainPage`（地形数据页）：256-cell IO/寻址地形数据页。owner 是 `MapTile.Size`，常量模块只引用它；#1567 目标态为世界层派生值，不是 authoring 词汇。
 - `StreamingChunk`：流式加载块。不要用 `chunk` 裸词。
 - `WorldExtent`：世界范围 authoring/计算概念。`WorldExtentSpec` 产出 `WorldSizeSpec`（仅引擎 boot 占位）；host world 由根板锚定，地图可以无板。
-- `BoardExtent`（#1567）：板业务区域范围，格子数 × 拓扑度量派生，不参与世界对齐。
-- `BoardOrigin`（#1567）：板在世界坐标系的摆放，缺省居中于世界；世界坐标在入口换算一次，见 `gitbook/navmesh-features/board-addressing.md`。
+- `BoardExtent`：板的厘米矩形。格数是矩形除以 `Grid.CellSizeCm` 向下取整。
+- `BoardAnchor`：板上一个点在 Ludots 世界的位置。格子角 = `Anchor.World − Anchor.Local`。根板 `World` 为 `(0, 0)`。见 `gitbook/navmesh-features/board-addressing.md`。
 - `NavTileGranularity`（#1567）：nav 瓦片颗粒度，navmesh.json 显式两轴世界尺寸，独立于 `TerrainChunk` 与板。
 - `FlowWindow` + `FlowCell`：MassNavigationFlow 执行层滑窗与流场分辨率。
 - `AvoidanceHashCell`：MassNavigationFlow 分离/硬解析哈希 cell。
@@ -127,7 +127,7 @@ Out of scope：
 | `BoardConfig.ChunkSizeCells` | `World.Tuning.PartitionChunkCells` | 切 4：预算归世界层，缺省由引擎按世界尺寸推导 |
 | `BoardConfig.LoadedChunkCapacity` | `World.Tuning.LoadedChunkCapacity` | 切 4：同上 |
 | `BoardConfig.NavTileGrid`（含 `OriginXcm/Zcm`、`widthChunks/heightChunks`、`chunkSizeCells`、`cellSizeCm`） | `Navigation/navmesh.json` 每板寻址条目（`source` + `tileWorldWidthCm/HeightCm`） | 切 3（依赖 PR #1484 合入）：迁出 BoardConfig，颗粒度显式化 |
-| 板恒居中（无 origin 字段） | `Boards[].OriginXCm/OriginYCm`（缺省居中） | 切 2：板摆放语义显式化 |
+| 板恒居中（无 origin 字段），以及 `OriginXCm` / `OriginYCm` | `Boards[].Anchor` | 格子角钉在作者写的点上。根板 `World` 为 `(0, 0)`。没写过原点的存量图，格子角留在 Ludots `(0, 0)` |
 | `GameConfig.WorldWidthInMacroTiles` 三件套 | map `World` 节 | 切 1：升格迁入，消灭双真相源 |
 
 ## User Story
@@ -157,15 +157,16 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 
 | 配置项 | 目标概念 | 单位 | 范围 / 约束 | 归属 |
 |---|---|---|---|---|
-| `BoardConfig.GridCellSizeCm` | `CellCm` | cm | > 0 | board authoring |
-| `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | > 0；仅 HexGrid 生效 | HexGrid board authoring |
-| `BoardConfig.WidthInMacroTiles` | `WidthInMacroTiles`（#1567 切 1 前） | macro tiles | 旧键 `WidthInTiles` fail-fast | board/world extent authoring |
-| `BoardConfig.HeightInMacroTiles` | `HeightInMacroTiles`（#1567 切 1 前） | macro tiles | 旧键 `HeightInTiles` fail-fast | board/world extent authoring |
+| `BoardConfig.GridCellSizeCm` | `CellCm` | cm | > 0 | 运行时读取；JSON 写 `Boards[].Grid.CellSizeCm` |
+| `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | > 0；仅 Hex / HexGrid | 运行时读取；JSON 写 `Boards[].Hex.EdgeLengthCm` |
+| `WidthInMacroTiles` / `WidthCells` | 历史键 | —— | 出现即加载失败 | 现行写法 `Boards[].WidthCm` |
+| `HeightInMacroTiles` / `HeightCells` | 历史键 | —— | 出现即加载失败 | 现行写法 `Boards[].HeightCm` |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells`（#1567 切 4 前） | cells | > 0 且 2 的幂 | spatial partition |
 | map `RootBoard`（#1567） | host world 锚定 | 板名 | 缺省第一块板；必须匹配存在的板 | world authoring |
-| `Boards[].WidthCells/HeightCells`（#1567 目标态） | `BoardExtent` | cells | > 0 | Grid board authoring（切 1 引入） |
-| `Boards[].WidthHexes/HeightHexes`（#1567 目标态） | `BoardExtent` | hexes | > 0 | HexGrid board authoring（切 2 引入） |
-| `Boards[].OriginXCm/OriginYCm`（#1567 目标态） | `BoardOrigin` | cm | 缺省居中；越出世界 fail-fast | board 摆放（切 2 引入） |
+| `Boards[].WidthCm` / `HeightCm` | `BoardExtent` | cm | 宽高必须盖住至少一格 | 板的厘米矩形 |
+| `Boards[].Grid.CellSizeCm` | `CellCm` | cm | > 0 | 格数 = 矩形 ÷ 边长，向下取整 |
+| `Boards[].Hex.EdgeLengthCm` | `HexEdgeLengthCm` | cm | > 0；仅 Hex / HexGrid | 能放进矩形的整圈六边形 |
+| `Boards[].Anchor` | `BoardAnchor` | cm | 根板 `World` 为 `(0, 0)`；卫星矩形必须落在根板内 | 格子角 = `World − Local` |
 | navmesh.json `tileWorldWidthCm/HeightCm`（#1567 目标态） | `NavTileGranularity` | cm | > 0；不从板推导 | nav authoring（切 3 引入） |
 | map `Tuning.PartitionChunkCells` / `LoadedChunkCapacity`（#1567 切 4 已落地） | `PartitionChunk` / streaming 容量 | cells / 个 | 可空；声明后为唯一预算，冲突的板级字段 fail-fast，容量回填未声明的板 | map 级预算；显式写默认值当前与未声明不可区分，歧义消除随切 4b |
 | `MassNavigationFlowSolverConfig.fieldWidthCm` / `fieldHeightCm` | `FlowWindow` | cm | > 0；被 FlowCell/hash cell 整除 | MassNavigationFlow solver |
@@ -179,12 +180,12 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 
 | 改动 | 预期行为 | 自动化钉死 |
 |---|---|---|
-| 修改 `CellCm` 或 board `GridCellSizeCm` | board `WorldSizeSpec.Bounds` 按相同 macro tile 数成比例变化 | #283 尺度 contract |
+| 修改板的 `Grid.CellSizeCm` | 厘米矩形不变，格数按除法向下取整变化 | 板范围 contract |
 | 修改 `PartitionChunkCells` 或 `ChunkSizeCells` | spatial query/AOI 分区粒度变化，世界范围不变化 | 现有 spatial partition tests + #283 补充 |
 | 修改 `FlowCellSizeCm` | MassNavigationFlow grid 宽高按 `FieldWidthCm / FlowCellSizeCm` 改变 | 现有 `MassNavigationFlowSolverStateConfigurationTests` + #288 补充 |
 | 在 board/bake/MassNavigationFlow 代码内联 `256` / `64` / `100` | 不允许 | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号 |
 | 修改 map `World.WidthCm/HeightCm`（#1567 切 1 后） | 世界边界、越界校验、minimap 全图按声明变化；地形数据页数为派生值 | #1567 切 1 contract：World 派生链 + 全 mod 扫描 |
-| 修改 `Boards[].OriginXCm/OriginYCm`（#1567 切 2 后） | 板世界 AABB 与局部↔世界换算随摆放变化，世界范围不变化 | #1567 切 2 contract：非零 origin 寻址（接 board-addressing.md 验收） |
+| 修改 `Boards[].Anchor` | 格子角移到 `World − Local`，矩形跟着走。根板世界范围仍是根板自己的厘米矩形 | 锚点 contract：根板 `World` 必须是 `(0, 0)`；拓扑原点不在 Ludots 原点的板暂不参与导航 |
 | 修改 navmesh.json `tileWorldWidthCm/HeightCm`（#1567 切 3 后） | nav 瓦片颗粒度与重烤预算变化，板范围与地形块不变 | #1567 切 3 contract |
 
 ## 合并 / 复用

@@ -151,5 +151,14 @@
     "mode": "Override",
     "scale": 1.0,
     "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.Time.EntityScalePermille",
+    "attribute": "time.scale_permille",
+    "sink": "Time.EntityScalePermille",
+    "channel": 0,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "None"
   }
 ]

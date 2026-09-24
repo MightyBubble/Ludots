@@ -3,9 +3,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>CapabilityStandardGraphOpReadCalendarCycleDayEntryMod</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
   </ItemGroup>
 </Project>

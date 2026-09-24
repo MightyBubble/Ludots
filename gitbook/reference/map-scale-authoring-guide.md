@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图用自己的 `World` 节；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 已在切 2b 放开：卫星板声明世界系 min-corner 摆放（缺省仍居中），根板禁用；锚定板参与导航等每板瓦片寻址落地后再开放。旧键对照见文末[迁移对照](#迁移对照1567)。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图用自己的 `World` 节；预算挂 map 级 `Tuning`。板的范围写厘米矩形，格子只写 `Grid.CellSizeCm`，格数由矩形除以格子边长向下取整。摆放写 `Anchor`：`Local` 是从铺格子那个角量起的厘米，`World` 是这个点在 Ludots 世界里的厘米。根板的 `Anchor.World` 必须是 `(0, 0)`，这就是 Ludots 原点。拓扑原点不在 Ludots 原点的板，要等每板导航寻址落地后才能进导航。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
@@ -13,16 +13,16 @@
 | 域 | 你在问什么 | 主要配置 | 不要混用 |
 |---|---|---|---|
 | 世界 | 世界到底多大，坐标能走到哪里 | map `World.WidthCm` / `World.HeightCm` | 世界尺寸是唯一的，不由任何板决定；不要拿 `FlowWindow` 或板范围当世界大小 |
-| 板 | 世界上有几块业务区域，各是什么拓扑、多大、摆在哪 | `Boards[].SpatialType`、`WidthCells`/`WidthHexes`、`CellSizeCm`/`HexEdgeLengthCm`、`OriginXCm`/`OriginYCm` | 板是业务区域（战棋区、hex 港口、路网层），不是性能分区；分区块数不是板的属性 |
+| 板 | 世界上有几块业务区域，各是什么拓扑、多大、摆在哪 | `Boards[].SpatialType`、`WidthCm`/`HeightCm`、`Anchor`、`Grid.CellSizeCm`、`Hex.EdgeLengthCm` | 板是业务区域（战棋区、hex 港口、路网层），不是性能分区；分区块数不是板的属性 |
 | 导航 | 可行走网从哪来、瓦片多粗 | `Navigation/navmesh.json`：source（.height/.grid/.hex）、`tileWorldWidthCm`/`tileWorldHeightCm`、profiles/layers | 瓦片颗粒度是 nav 自己的预算，不从板或地形块推导 |
 | 运行精度 | 单位移动、避障、路径、表现更新多细 | `MassNavigationConfig.json` solver/cadence/agent profiles、`Navigation/agent_profiles.json`、`Navigation/pathing.json` | `FlowCell` 默认可等于 `CellCm`，但不是 board cell 的别名 |
 
 核心公式（#1567 目标态）：
 
 ```text
-hostWorld     = 根板范围                        # RootBoard 指定，缺省第一块板；无板图无世界
-boardWidthCm  = WidthCells * CellSizeCm        # 板：格子数 × 格边
-boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里，缺省居中
+hostWorld     = 根板厘米矩形                     # RootBoard 指定，缺省第一块板
+topologyOrigin = Anchor.World - Anchor.Local   # 铺格子那个角在 Ludots 世界的位置
+cellCount     = floor(WidthCm / CellSizeCm)    # 除不尽的厘米留在局部坐标大的一侧
 ```
 
 作者请求的米数是编辑器 UI 的输入；JSON 里存的是分配后的尺寸，磁盘即运行时真相。地形数据页（page = 256 cells）是世界 IO 的内部寻址单位，由引擎从世界尺寸派生，作者不需要知道它。
@@ -35,9 +35,10 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
 |---|---|---|
 | `assets/Maps/<map>.json` | `RootBoard` | host world 根板指定，缺省第一块板 |
 | `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定板拓扑 |
-| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `GridCellSizeCm` | Grid 板范围与格边 |
-| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `HexEdgeLengthCm`；或 `Boards[].WidthHexes` / `HeightHexes`（hex 板首选，两轴同声明、优先于格子数，世界 AABB 为保守 hex 足迹） | Hex 板范围与 hex 边长 |
-| `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
+| `assets/Maps/<map>.json` | `Boards[].WidthCm` / `HeightCm` | 板的厘米矩形 |
+| `assets/Maps/<map>.json` | `Boards[].Grid.CellSizeCm` | 方格边长；格数是矩形除边长向下取整 |
+| `assets/Maps/<map>.json` | `Boards[].Hex.EdgeLengthCm` | 六边形边长；能放进矩形的整圈六边形留下 |
+| `assets/Maps/<map>.json` | `Boards[].Anchor` | `Local` 从铺格子的角量起，`World` 是 Ludots 坐标；根板 `World` 为 `(0, 0)` |
 | `assets/Maps/<map>.json` | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | map 级分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
 | `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
 | `assets/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
@@ -58,7 +59,7 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
 
 1. 定世界：这个世界多大？玩家活动范围是 50m、500m、5km 还是整个大陆？写 `World.WidthCm` / `World.HeightCm`。
 2. 定玩家尺度：同屏看到什么量级的对抗？由此定 Grid 板的 `CellSizeCm`（1 cell 是 1m、2m、5m 还是更粗）或 Hex 板的 `HexEdgeLengthCm`。越小越精细，cells 总数越大。
-3. 摆板：世界上需要几块业务区域？每块什么拓扑、多少格子、origin 在哪？战棋区、hex 港口、战略路网各一块板；对齐世界格是配置选择，不是系统要求。
+3. 摆板：世界上需要几块业务区域？每块什么拓扑、矩形多大、格子角钉在 Ludots 的哪一点？战棋区、hex 港口、战略路网各一块板。
 4. 定导航：从哪张源数据烘焙（.height 直采或某板的 .grid/.hex）？瓦片颗粒度多大？agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
 5. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
 6. 定执行窗口：MassNavigationFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
@@ -86,9 +87,10 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 400,
-      "HeightCells": 400,
-      "GridCellSizeCm": 100
+      "WidthCm": 40000,
+      "HeightCm": 40000,
+      "Grid": { "CellSizeCm": 100 },
+      "Anchor": { "LocalXCm": 0, "LocalYCm": 0, "WorldXCm": 0, "WorldYCm": 0 }
     }
   ]
 }
@@ -137,9 +139,10 @@ MassNavigationFlow 起点：
     {
       "Name": "strategic",
       "SpatialType": "NodeGraph",
-      "WidthCells": 64,
-      "HeightCells": 64,
-      "GridCellSizeCm": 100
+      "WidthCm": 6400,
+      "HeightCm": 6400,
+      "Grid": { "CellSizeCm": 100 },
+      "Anchor": { "LocalXCm": 0, "LocalYCm": 0, "WorldXCm": 0, "WorldYCm": 0 }
     }
   ]
 }
@@ -185,9 +188,10 @@ Board 起点（#1567 目标态）：
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 400,
-      "HeightCells": 400,
-      "GridCellSizeCm": 100
+      "WidthCm": 40000,
+      "HeightCm": 40000,
+      "Grid": { "CellSizeCm": 100 },
+      "Anchor": { "LocalXCm": 0, "LocalYCm": 0, "WorldXCm": 0, "WorldYCm": 0 }
     }
   ]
 }
@@ -222,7 +226,7 @@ Runtime incremental 起点：
 ## 必须遵守的边界
 
 - host world 由根板锚定（`RootBoard`，缺省第一块板）；无板图沿用 game.json `world`。
-- 板范围 = 格子数 × 拓扑度量；卫星板越出根板范围在加载期 fail-fast；声明 origin 的卫星板把板内格子系原点钉在该 min-corner（居中板保持 legacy 格子系锚世界 0）。
+- 板的范围是厘米矩形。格数是 `WidthCm / Grid.CellSizeCm` 向下取整，除不尽的厘米留在局部坐标大的一侧，不新开一格。卫星板必须整块落在根板矩形里，越界在加载期失败。格子角的世界坐标是 `Anchor.World − Anchor.Local`。根板的 `Anchor.World` 必须是 `(0, 0)`，这是 Ludots 原点。拓扑原点不在 Ludots 原点的板还不能进导航。
 - 一图一张 nav 网格：同图多板在 `Navigation/navmesh.json` 声明的瓦片尺寸必须一致（两轴分别比较），混合粒度加载期 fail-fast——按板粒度寻址是 #1567 切 2 后续。瓦片与板尺寸两轴独立，非正方形（板、世界、瓦片）均为一等公民。
 - nav 瓦片颗粒度在 `Navigation/navmesh.json` 显式声明；不要从板的 cell/chunk 推导，也不要把 `PartitionChunk` 当 navmesh tile。
 - `PartitionChunk` 只用于世界层空间分区/AOI；`TerrainChunk` 是逻辑地形块，两者都不是 nav 瓦片尺度。
@@ -238,14 +242,14 @@ Runtime incremental 起点：
 
 | 现状键 | 目标键 | 迁移动作 |
 |---|---|---|
-| `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` + `GridCellSizeCm` | `Boards[].WidthCells/HeightCells` + 根板锚定 host world | 机器迁移：地形数据页数 × 256 = 格子数；host world 由根板（`RootBoard`，缺省首板）锚定 |
-| 板恒居中（无 origin 字段） | `Boards[].OriginXCm` / `OriginYCm` | 迁移期缺省居中，等价现状 |
-| `Boards[].WidthInMacroTiles` × 256 / `GridCellSizeCm` 个 cell | `Boards[].WidthCells` / `HeightCells` | 板范围改为格子数直写 |
+| `Boards[].WidthInMacroTiles` / `HeightInMacroTiles`、`WidthCells` / `HeightCells`、`GridCellSizeCm` | `Boards[].WidthCm` / `HeightCm` + `Grid.CellSizeCm` | 范围改写厘米矩形。格数 = 矩形 ÷ 格子边长，向下取整。host world 由根板（`RootBoard`，缺省首板）锚定 |
+| 板恒居中，或 `Boards[].OriginXCm` / `OriginYCm` | `Boards[].Anchor` | 四个厘米数。根板 `World` 为 `(0, 0)`。没写过原点的存量图，格子角留在 Ludots `(0, 0)`，矩形从这一点向局部坐标增大的方向铺开 |
+| `Boards[].WidthHexes` / `HeightHexes`、`HexEdgeLengthCm` | `Boards[].WidthCm` / `HeightCm` + `Hex.EdgeLengthCm` | 六边形个数改为矩形里能放下的整圈 |
 | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` | map `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 切 4 迁入 map 级，缺省可推导（4b） |
 | `Boards[].NavTileGrid`（含 `originXcm/originZcm`、`widthChunks/heightChunks`） | `Navigation/navmesh.json` `maps.<mapId>.boards.<name>` 条目 | 已迁移；板级出现即 fail-fast |
 | game.json `gridCellSizeCm` / `worldWidthInMacroTiles` / `worldHeightInMacroTiles` | game.json `world`（仅 boot 占位）+ 根板 | 升格迁移；运行时 host world 出自根板，boot 占位只在进图前生效 |
 
-旧键在新键生效后加载即 fail-fast 并指向新键（沿用 #283 的 `RejectLegacyWorldExtentKeys` 模式），不提供别名兼容。存量 67 张图的迁移由脚本按上表规则完成，迁移后世界边界、板行为、导航与迁移前一致（#1567 切 1 验收）。
+旧键在新键生效后加载即失败并指向新键，不提供别名兼容。没写过原点的存量图，格子角仍在 Ludots `(0, 0)`；矩形从这一点向局部坐标增大的方向铺开。原先落在旧居中范围里的坐标，按根板半宽、半高平移进这张矩形，人和镜头还站在原来的相对位置上。
 
 ## 推荐阅读顺序
 

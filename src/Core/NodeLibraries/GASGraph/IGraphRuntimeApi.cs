@@ -576,6 +576,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             return 0;
         }
+
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
+        {
+            return FilterScreenRegionEntities(entities, count, in rect, seatId);
+        }
+
+        int FilterCommandSourceSelectable(Span<Entity> candidates, int count)
+        {
+            return 0;
+        }
         /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
         /// order. Separate contract from the input-side command-intent buffer.
         void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
@@ -654,6 +664,89 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void OfferTask(string taskId, Entity scopeHost)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+        }
+
+        /// <summary>True when Calendar/world.json enabled the live calendar.</summary>
+        bool ReadCalendarEnabled()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayIndex()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarTicksIntoDay()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPermille()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPhase()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>calendarKeyId 0 reads the active calendar.</summary>
+        int ReadCalendarYear(int calendarKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>packedImm is CalendarOpEncoding.Pack(cycleKeyId, calendarKeyId).</summary>
+        int ReadCalendarCyclePhase(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarCycleDay(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarDayIndex(int dayIndex)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarTicksIntoDay(int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        bool ReadTimeFlowPaused(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int ReadTimeFlowScalePermille(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowPause(string domainName, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowScale(string domainName, int scalePermille, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        void ReleaseTimeFlowToken(int tokenValue)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
         }
 
         /// <summary>

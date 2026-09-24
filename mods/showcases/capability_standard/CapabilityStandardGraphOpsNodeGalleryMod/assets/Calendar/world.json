@@ -1,0 +1,28 @@
+{
+  "tickSource": "Step",
+  "ticksPerDay": 1000000,
+  "startDayIndex": 90,
+  "activeCalendarId": "calendar.solar360",
+  "dayPhases": [
+    {
+      "id": "night",
+      "label": "夜",
+      "startPermille": 0
+    },
+    {
+      "id": "dawn",
+      "label": "晓",
+      "startPermille": 250
+    },
+    {
+      "id": "day",
+      "label": "昼",
+      "startPermille": 500
+    },
+    {
+      "id": "dusk",
+      "label": "暮",
+      "startPermille": 750
+    }
+  ]
+}

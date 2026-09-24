@@ -5,8 +5,8 @@
       {
         "id": "central",
         "label": "Central",
-        "centerXCm": 0,
-        "centerYCm": 0,
+        "centerXCm": 3200000,
+        "centerYCm": 3200000,
         "widthCm": 10000,
         "heightCm": 10000
       }

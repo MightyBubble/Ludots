@@ -127,8 +127,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 ref readonly GraphInstruction instruction = ref program[i];
                 GraphNodeOp op = (GraphNodeOp)instruction.Op;
-                if (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
-                    descriptor.DstRole == GraphOperandRole.DstRegister)
+                // ScreenRegionToEntities 的 Dst 在查询方言承载可选 tolerance 浮点寄存器：
+                // byte.MaxValue 表示"未接线"（宽容为 0），不是寄存器引用。
+                bool dstIsOptionalAbsent = instruction.Dst == byte.MaxValue &&
+                    op is GraphNodeOp.ScreenRegionToEntities;
+                if (!dstIsOptionalAbsent &&
+                    (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
+                     descriptor.DstRole == GraphOperandRole.DstRegister))
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
                 }

@@ -1193,7 +1193,6 @@ namespace Ludots.Tests.Presentation
         {
             Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ref InteractionContextInstance context = ref engine.World.Get<InteractionContextInstance>(player);
-            var collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             Assert.That(context.ContextEntity, Is.EqualTo(player));
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
@@ -1585,8 +1584,7 @@ namespace Ludots.Tests.Presentation
                 string diagnostics = DescribeEntityCommandState(engine, entity);
                 Assert.That(engine.World.IsAlive(entity), Is.True, diagnostics);
                 Assert.That(controlDomains.IsControllableBy(localPlayer, entity), Is.True, diagnostics);
-                Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, diagnostics);
-                Assert.That(engine.World.Has<Team>(entity), Is.False, diagnostics);
+                AssertProjectedParticipant(engine, entity, localPlayer, diagnostics);
             }
         }
 
@@ -1598,19 +1596,20 @@ namespace Ludots.Tests.Presentation
 
             int totalAgents = 0;
             int controllableAgents = 0;
-            int legacyIdentityMirrors = 0;
+            int missingProjection = 0;
             var query = new QueryDescription().WithAll<MassNavigationAgent>();
             engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _) =>
             {
                 totalAgents++;
-                if (controlDomains.IsControllableBy(localPlayer, entity))
+                bool controllable = controlDomains.IsControllableBy(localPlayer, entity);
+                if (controllable)
                 {
                     controllableAgents++;
                 }
 
-                if (engine.World.Has<PlayerOwner>(entity) || engine.World.Has<Team>(entity))
+                if (!engine.World.Has<PlayerOwner>(entity) || !engine.World.Has<Team>(entity))
                 {
-                    legacyIdentityMirrors++;
+                    missingProjection++;
                 }
             });
 
@@ -1620,9 +1619,19 @@ namespace Ludots.Tests.Presentation
                 Is.EqualTo(simulation.AgentsPerTeam),
                 "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
             Assert.That(
-                legacyIdentityMirrors,
+                missingProjection,
                 Is.Zero,
-                "MassNavigation agents must not mirror ownership or membership into PlayerOwner/Team components.");
+                "MassNavigation agents project PlayerOwner and Team from their ownership and membership edges.");
+        }
+
+        private static void AssertProjectedParticipant(GameEngine engine, Entity entity, Entity localPlayer, string diagnostics)
+        {
+            Assert.That(engine.World.TryGet(localPlayer, out PlayerIdentity identity), Is.True, diagnostics);
+            Assert.That(engine.World.TryGet(localPlayer, out Team localTeam), Is.True, diagnostics);
+            Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True, diagnostics);
+            Assert.That(owner.PlayerId, Is.EqualTo(identity.PlayerId), diagnostics);
+            Assert.That(engine.World.TryGet(entity, out Team team), Is.True, diagnostics);
+            Assert.That(team.Id, Is.EqualTo(localTeam.Id), diagnostics);
         }
 
         private static string DescribeEntityCommandState(GameEngine engine, Entity entity)

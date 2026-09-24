@@ -155,7 +155,7 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
-                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(4096);
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(8192);
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -335,7 +335,7 @@ namespace Ludots.Tests.GAS
                 abilities.AddAbility(7001);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
-                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(4096);
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(8192);
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,

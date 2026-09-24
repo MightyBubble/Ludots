@@ -16,6 +16,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.TypedCollections;
 using Ludots.Core.Map;
+using Ludots.Core.TransportNetwork;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Systems;
@@ -253,6 +254,7 @@ namespace Ludots.Core.Engine
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
         private readonly MassNavigationRuntime _massNavigationRuntime = new();
+        private readonly Dictionary<MapId, TransportNetworkMapRuntime> _transportNetworkRuntimes = new();
 
         // Multithreading
         private JobScheduler _jobScheduler;
@@ -897,6 +899,11 @@ namespace Ludots.Core.Engine
             int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
             int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
             var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
+            ownershipResolver.BindIdentityProjection(World);
+            relationshipRuntime.BindParticipantIdentityProjection(
+                ownershipResolver,
+                ownsRelationshipTypeId,
+                memberOfRelationshipTypeId);
             var controlDomainQuery = new ControlDomainQuery(
                 World,
                 relationshipRuntime,
@@ -941,7 +948,7 @@ namespace Ludots.Core.Engine
             var componentAuthoringContext = new ComponentAuthoringContext();
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
+            AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry(graphHandlers);
             // Enums load before events: custom event params may annotate enumType
             // against this catalog, and graph compilation resolves enum-bound sugar through it.
@@ -1646,11 +1653,13 @@ namespace Ludots.Core.Engine
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
-            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
+            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy);
             var calendarRegistry = new CalendarDefinitionRegistry();
             CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
                 .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
             var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
+            gasGraphApi.BindCalendarRuntime(calendarRuntime);
+            gasGraphApi.BindTimeFlow(_timeFlow);
             // Calendar.* schema 声明为 Global scope：走全局订阅表派发（地图挂的全局触发
             // 听得到），并带订阅探针——没人听的日子事件连投影 diff 都不算。
             CalendarSystem? calendarSystem = calendarRuntime.IsEnabled
@@ -2311,7 +2320,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
-            RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             if (calendarSystem != null)
             {
                 RegisterSystem(calendarSystem, SystemGroup.InputCollection);
@@ -2399,7 +2407,10 @@ namespace Ludots.Core.Engine
                 presenterRuntime,
                 presenterDefinitions,
                 componentAuthoringContext,
-                entityTriggerGraphMounts: EntityTriggerGraphMounts);
+                entityTriggerGraphMounts: EntityTriggerGraphMounts,
+                ownership: ownershipResolver,
+                relationships: relationshipRuntime,
+                memberOfTypeId: memberOfRelationshipTypeId);
             var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
             RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
@@ -2479,6 +2490,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
@@ -2943,6 +2955,7 @@ namespace Ludots.Core.Engine
                 }
 
                 LoadNavForMap(mapId, mapConfig);
+                LoadTransportNetworkForSession(session, mapConfig);
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
@@ -3006,6 +3019,7 @@ namespace Ludots.Core.Engine
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             _massNavigationRuntime.HandleMapUnloaded(this, mid);
+            UnloadTransportNetworkForMap(mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
 
@@ -3117,6 +3131,8 @@ namespace Ludots.Core.Engine
                 LoadBoardTerrainData(session, mapConfig);
                 LoadNavForMap(innerMapId, mapConfig);
             }
+
+            LoadTransportNetworkForSession(session, mapConfig);
             LoadPathingForSession(session);
 
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
@@ -3177,6 +3193,7 @@ namespace Ludots.Core.Engine
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
+                UnloadTransportNetworkForMap(innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
             }
@@ -4260,12 +4277,6 @@ namespace Ludots.Core.Engine
                         $"Map '{mapId}' board '{b.Name}' nav declaration needs positive tileWorldWidthCm/tileWorldHeightCm in Navigation/navmesh.json maps.{mapId}.boards (nav-owned granularity, #1346).");
                 }
 
-                if (b.OriginXCm.HasValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{b.Name}' is placement-anchored and cannot join navigation yet; nav tiles are enumerated in the root board frame until per-board nav tile addressing lands (#1567 slice 2 follow-up).");
-                }
-
                 // The bake pipeline still tiles by terrain chunk (#1346 bake-side regridding
                 // pending); a declared size that disagrees produces baked artifacts on a
                 // different grid than runtime enumerates, exploding deep in tile URI
@@ -4300,6 +4311,16 @@ namespace Ludots.Core.Engine
                 var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
                 navOriginXcm = Math.Min(navOriginXcm, aabb.Left);
                 navOriginYcm = Math.Min(navOriginYcm, aabb.Top);
+            }
+
+            for (int i = 0; i < participatingBoards.Count; i++)
+            {
+                var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
+                if (aabb.Left != navOriginXcm || aabb.Top != navOriginYcm)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{participatingBoards[i].Name}' topology origin is ({aabb.Left},{aabb.Top})cm and cannot join navigation yet; nav tiles are enumerated from the shared corner ({navOriginXcm},{navOriginYcm})cm until each board has its own tile origin.");
+                }
             }
 
             int widthChunks = participatingBoards
@@ -4419,6 +4440,30 @@ namespace Ludots.Core.Engine
             }
 
             return new NavObstacleSet();
+        }
+
+        internal void LoadTransportNetworkForSession(MapSession session, MapConfig mapConfig)
+        {
+            UnloadTransportNetworkForMap(session.MapId);
+            if (!TransportNetworkMapRuntime.AnyBoardDeclares(mapConfig))
+            {
+                return;
+            }
+
+            var payloads = GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry)
+                ?? throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' declares a board transport network but SurfaceSourcePayloadRegistry is unavailable.");
+            var runtime = new TransportNetworkMapRuntime(payloads);
+            runtime.Install(session, mapConfig, ConfigPipeline, ConfigCatalog, ConfigConflictReport);
+            _transportNetworkRuntimes[session.MapId] = runtime;
+        }
+
+        internal void UnloadTransportNetworkForMap(MapId mapId)
+        {
+            if (_transportNetworkRuntimes.Remove(mapId, out TransportNetworkMapRuntime runtime))
+            {
+                runtime.Dispose();
+            }
         }
 
         private void ClearNavServices()

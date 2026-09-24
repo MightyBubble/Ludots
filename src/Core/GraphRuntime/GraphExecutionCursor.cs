@@ -43,10 +43,14 @@ namespace Ludots.Core.GraphRuntime
         public bool IsSuspended =>
             Status is GraphExecutionStatus.Yielded or GraphExecutionStatus.BudgetSuspended;
 
-        public void Reset()
+        public void Reset() => Reset(startPc: 0);
+
+        /// <summary>Restarts the cursor at <paramref name="startPc"/> while keeping the retained
+        /// target-snapshot buffer, so repeated runs do not re-allocate the suspend store.</summary>
+        public void Reset(int startPc)
         {
             TargetCount = 0;
-            Pc = 0;
+            Pc = startPc;
             LastInstructionPc = -1;
             Steps = 0;
             CallStackCount = 0;

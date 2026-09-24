@@ -395,12 +395,15 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             int requestedEntityCount = cleanHudTextScatter || meshOnlyScatter || meshHudBarScatter || meshHudTextScatter
                 ? clampedTotal
                 : clampedTotal - 1;
+            (float centerXCm, float centerYCm) = BoardCenterCm(engine);
             int queued = CapabilityStandardStaticPresenter30kScatterPlanner.EnqueueTemplateScatter(
                 spawnQueue,
                 engine.CurrentMapSession?.MapId ?? default,
                 templateId,
                 requestedEntityCount,
                 scatter.Seed,
+                centerXCm,
+                centerYCm,
                 scatter.MinRadiusCm,
                 scatter.MaxRadiusCm,
                 scatter.JitterCm);
@@ -682,15 +685,24 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                     $"metadata.{MetadataSectionKey}.{MeshBenchmarkScatterMaxRadiusMetadataKey} must be greater than {MeshBenchmarkScatterMinRadiusMetadataKey}.");
             }
 
+            (float centerXCm, float centerYCm) = BoardCenterCm(engine);
             return CapabilityStandardStaticPresenter30kScatterPlanner.EnqueueTemplateScatter(
                 queue,
                 engine.CurrentMapSession?.MapId ?? default,
                 CapabilityStandardStaticPresenter30kIds.MeshBenchmarkTemplateId,
                 count,
                 seed,
+                centerXCm,
+                centerYCm,
                 minRadiusCm,
                 maxRadiusCm,
                 jitterCm);
+        }
+
+        private static (float X, float Y) BoardCenterCm(GameEngine engine)
+        {
+            WorldAabbCm bounds = engine.WorldSizeSpec.Bounds;
+            return (bounds.Left + (bounds.Width * 0.5f), bounds.Top + (bounds.Height * 0.5f));
         }
 
         private static int EnqueueDynamicWorkerBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)

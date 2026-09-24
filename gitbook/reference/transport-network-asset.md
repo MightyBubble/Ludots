@@ -10,7 +10,19 @@ Every mod that owns a transport network asset must declare it in `assets/config_
 { "Path": "TransportNetwork/transport_network.json", "Policy": "Replace" }
 ```
 
-The asset is a complete topology source. It is not deep-merged and does not extend another asset.
+The asset is a complete topology source. It is not deep-merged and does not extend another asset. It does not name a map.
+
+## Board binding
+
+A NodeGraph board binds one catalog asset. That binding is the only place a network is attached to a map.
+
+```json
+"TransportNetwork": {
+  "AssetPath": "TransportNetwork/transport_network.json"
+}
+```
+
+`AssetPath` is required and catalog-relative. A leading slash or a rooted path fails load. Grid and hex boards that declare `TransportNetwork` fail load. Omitting the object means the board has no transport network. On map load the engine bakes the named asset into that board's graph chunks and ribbon payloads.
 
 ## Root Fields
 

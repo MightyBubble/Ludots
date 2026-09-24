@@ -558,6 +558,9 @@ public sealed class FrontlineRuntime : IGameplayAdvanceGate
         engine.InsertSystemBeforeRequired<OrderBufferSystem>(
             new FrontlinePreMatchOrderGateSystem(engine.World, this, orderBufferSystem),
             SystemGroup.AbilityActivation);
+        engine.InsertSystemBeforeRequired<AbilityEndOrderSystem>(
+            new FrontlinePreMatchOrderGateSystem(engine.World, this, orderBufferSystem),
+            SystemGroup.AbilityActivation);
         _tagBinder = new FrontlineTagBinder(Config, tagOps);
         // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);

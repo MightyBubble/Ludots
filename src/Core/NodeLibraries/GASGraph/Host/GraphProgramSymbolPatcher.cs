@@ -60,6 +60,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.OfferTask:
                         _ = ResolveSymbol(symbols, ins.Imm);
                         break;
+                    case GraphNodeOp.ReadCalendarYear:
+                        if ((ins.Flags & CalendarOpEncoding.CalendarAuthoredFlag) != 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                            ins.Flags = 0;
+                        }
+
+                        break;
+                    case GraphNodeOp.ReadCalendarCyclePhase:
+                    case GraphNodeOp.ReadCalendarCycleDay:
+                        int cycleKey = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        int calendarKey = 0;
+                        if ((ins.Flags & CalendarOpEncoding.CalendarAuthoredFlag) != 0)
+                        {
+                            int symbolIndex = ins.B | (ins.C << 8);
+                            calendarKey = ConfigKeyRegistry.Register(ResolveSymbol(symbols, symbolIndex));
+                        }
+
+                        ins.Imm = CalendarOpEncoding.Pack(cycleKey, calendarKey);
+                        ins.Flags = 0;
+                        ins.B = 0;
+                        ins.C = 0;
+                        break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
                     case GraphNodeOp.ModifyAttributeSet:

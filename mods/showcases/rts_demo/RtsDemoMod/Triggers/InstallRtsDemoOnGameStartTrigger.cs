@@ -43,6 +43,9 @@ namespace RtsDemoMod.Triggers
             TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
             TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
 
+            var saveParticipants = engine.GetService(CoreServiceKeys.SaveParticipants);
+            saveParticipants?.Register(new Runtime.RtsSelectionSaveParticipant(engine));
+
             bool hasLocalPresentation =
                 engine.GetService(CoreServiceKeys.NetworkProcessRole) != NetworkProcessRole.AuthoritativeServer;
             if (hasLocalPresentation)

@@ -12,19 +12,34 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 256,
-      "HeightCells": 256,
-      "GridCellSizeCm": 100,
-      "DataFile": "nav_editor_grid.grid"
+      "DataFile": "nav_editor_grid.grid",
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     },
     {
       "Name": "board_2",
       "SpatialType": "Grid",
-      "WidthCells": 4096,
-      "HeightCells": 4096,
-      "GridCellSizeCm": 100,
-      "HexEdgeLengthCm": 100,
-      "DataFile": "nav_editor_grid_board_2.grid"
+      "DataFile": "nav_editor_grid_board_2.grid",
+      "WidthCm": 409600,
+      "HeightCm": 409600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [],

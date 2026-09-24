@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(IndicatorModeId);
             Tick(engine, 1, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
             Tick(engine, 1, frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
@@ -361,14 +361,15 @@ namespace Ludots.Tests.GAS.Production
                 () => EntityExists(engine.World, "Runic Beacon"),
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Runic Beacon", "Geomancer Alpha");
-            Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetEntityScreen(engine, "Runic Beacon"), frameTimesMs);
+            Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Runic Beacon")), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Runic Beacon"));
             LeftClickScreen(engine, backend, beaconHoverPoint, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
                 () => string.Equals(GetSelectedEntityName(engine), "Runic Beacon", StringComparison.Ordinal),
-                maxFrames: 12);
+                maxFrames: 12,
+                describeFailure: () => $"selected={GetSelectedEntityName(engine)} || triggerErrors={engine.TriggerManager.Errors.Count} || hovered={ReadHoveredEntityName(engine)}");
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Spawned summon should be formally selectable.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "summon_beacon_selected");
             timeline.Add("[T+013] Geomancer Alpha.Cast(Runic Beacon) -> summon spawned | hover-selectable | owner-parent link copied");
@@ -421,7 +422,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Stone Pillar", "Geomancer Alpha");
             AssertBlockerManifestationBridge(engine.World, "Stone Pillar");
-            Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetEntityScreen(engine, "Stone Pillar"), frameTimesMs);
+            Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Stone Pillar")), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Stone Pillar"));
             LeftClickScreen(engine, backend, pillarHoverPoint, frameTimesMs);
             TickUntil(
@@ -851,7 +852,7 @@ namespace Ludots.Tests.GAS.Production
                 healthAfterQ,
                 Is.EqualTo(healthBeforeQ - 27f).Within(0.001f),
                 $"{BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
-            Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, "Ezreal Q should consume the W mark.");
+            Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, $"{BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")}");
 
             TickUntil(
                 engine,
@@ -968,7 +969,14 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.AuthorityCamera(),
+                engine.SpatialQueries,
+                view,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
+                timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
@@ -1016,7 +1024,7 @@ namespace Ludots.Tests.GAS.Production
             if (!engine.World.IsAlive(owner))
             {
                 owner = target;
-                ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
+                ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1, "seat.0");
             }
 
             Span<Entity> next = stackalloc Entity[1];
@@ -1048,7 +1056,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1, "seat.0");
         }
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
@@ -1916,7 +1924,7 @@ namespace Ludots.Tests.GAS.Production
                 return point;
             }
 
-            Assert.Fail(
+Assert.Fail(
                 $"Failed to hover '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}). Samples: {samples}");
             return projectedScreenPoint;
         }
@@ -1930,7 +1938,7 @@ namespace Ludots.Tests.GAS.Production
             var samples = new List<string>();
             foreach (string candidateName in GetPreferredHoverCandidates(engine.World, excludedEntityName))
             {
-                Vector2 projectedScreenPoint = GetEntityScreen(engine, candidateName);
+                Vector2 projectedScreenPoint = GetGroundScreenFromWorld(engine, ReadPosition(engine.World, candidateName));
                 if (TryFindHoverScreenPoint(engine, backend, candidateName, projectedScreenPoint, frameTimesMs, out Vector2 point, out string candidateSamples))
                 {
                     return (candidateName, point);
@@ -1953,6 +1961,11 @@ namespace Ludots.Tests.GAS.Production
             out string samples)
         {
             var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
+            // hover 重算由 PointerMoved 驱动：指针若已停在探测点上，零偏移探测不产生移动事件，
+            // hover 集合停留在上一次结果。先挪到屏幕中心（远离 10px 边缘滚动带，避免相机被 pan 走），
+            // 保证首个探测点必然是一次指针移动。
+            backend.SetMousePosition(new Vector2(960f, 540f));
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             for (int i = 0; i < HoverProbeOffsets.Length; i++)
             {
                 Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
@@ -2655,12 +2668,38 @@ namespace Ludots.Tests.GAS.Production
             string localOrderSource = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LocalOrderSource", out var localOrderSourceObj)
                 ? localOrderSourceObj?.ToString() ?? "<null>"
                 : "<missing>";
+            string activationResult = "<none>";
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
+                mappingObj is InputOrderMappingSystem mappingSystem)
+            {
+                var last = mappingSystem.LastActivationResult;
+                activationResult = $"{last.State} actor={last.Actor.Id}:{last.Actor.Version} rejection={last.Rejection}";
+            }
+            string seatState;
+            try
+            {
+                Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+                var world = engine.World;
+                string ctx = world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance inst)
+                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} contextId={inst.ContextId} intent={inst.CommandIntentProfileId} source={inst.Source}"
+                    : "ctx=<none>";
+                string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView v)
+                    ? $"view owner={v.Owner.Id} key={v.Key} count={v.Count} primary={v.PrimaryEntity.Id}"
+                    : "view=<none>";
+                seatState = $"rep={rep.Id}:{rep.Version} alive={world.IsAlive(rep)} {ctx} {view}";
+            }
+            catch (Exception ex)
+            {
+                seatState = $"probe-error={ex.GetType().Name}";
+            }
 
             return string.Join(" || ",
                 $"actor={actorName}",
                 $"actorPos=({actorPosition.X:0.##},{actorPosition.Y:0.##})",
                 $"targetScreen=({targetScreen.X:0.##},{targetScreen.Y:0.##})",
                 BuildInputActionDiagnostics(engine, "Command"),
+                $"activation={activationResult}",
+                $"seat={seatState}",
                 $"rightClickPressFrame={pressFrame}",
                 $"localOrderSource={localOrderSource}",
                 BuildAbilityDiagnostics(engine, actorName),
@@ -2924,6 +2963,7 @@ namespace Ludots.Tests.GAS.Production
                 : 0;
 
             bool hasActiveMarkEffect = false;
+            string markCancelState = "no-mark-effect";
             int activeEffectCount = 0;
             if (world.Has<ActiveEffectContainer>(entity))
             {
@@ -2940,6 +2980,9 @@ namespace Ludots.Tests.GAS.Production
                     if (world.Get<EffectTemplateRef>(effectEntity).TemplateId == wMarkEffectTemplateId)
                     {
                         hasActiveMarkEffect = true;
+                        markCancelState = world.Has<GameplayEffect>(effectEntity)
+                            ? $"markCancelRequested={world.Get<GameplayEffect>(effectEntity).CancelRequested}"
+                            : "markCancelRequested=<no-component>";
                         break;
                     }
                 }
@@ -2984,7 +3027,7 @@ namespace Ludots.Tests.GAS.Production
                 }
             }
 
-            return $"wMark=tag:{EntityHasTag(world, entityName, "State.Champion.Ezreal.WMark")},count:{tagCount},effect:{hasActiveMarkEffect},activeEffects:{activeEffectCount},listeners:{listenerCount},wildcards:{wildcardListenerCount},listenQ:{listensQ},listenE:{listensE},listenR:{listensR},samples:[{string.Join(";", listenerSamples)}]";
+            return $"wMark=tag:{EntityHasTag(world, entityName, "State.Champion.Ezreal.WMark")},count:{tagCount},effect:{hasActiveMarkEffect},{markCancelState},activeEffects:{activeEffectCount},listeners:{listenerCount},wildcards:{wildcardListenerCount},listenQ:{listensQ},listenE:{listensE},listenR:{listensR},samples:[{string.Join(";", listenerSamples)}]";
         }
 
         private static string BuildGasPresentationDiagnostics(GameEngine engine)

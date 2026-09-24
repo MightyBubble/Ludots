@@ -86,8 +86,13 @@ namespace Ludots.Tests.GAS.Production
 
             var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
                 ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
-            Assert.That(engine.World.Has<InteractionContextInstance>(localPlayer), Is.False,
-                "steady state is the absence of mounted interaction state on the local rep.");
+            Assert.That(engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance mountedBattleContext), Is.True,
+                "steady state mounts the template-declared battle context on the local rep.");
+            Assert.That(
+                contextProfiles.ProfileIdRegistry.GetName(mountedBattleContext.ContextId),
+                Is.EqualTo("interaction.context.interaction.battle"));
+            Assert.That(mountedBattleContext.Source, Is.EqualTo(InteractionContextInstanceSource.TemplateSpawn),
+                "the base mount comes from the spawn template's initialInteractionContext.");
             Assert.That(engine.World.TryGet<InteractionPref>(localPlayer, out InteractionPref localPlayerPref), Is.True,
                 "map binding must seed the player InteractionPref from Input/interaction_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)

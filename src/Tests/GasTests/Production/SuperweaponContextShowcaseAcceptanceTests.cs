@@ -144,9 +144,13 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.False);
             Assert.That(
-                engine.World.Has<InteractionContextInstance>(state.SolePossessedRep),
-                Is.False,
+                engine.World.TryGet<InteractionContextInstance>(state.SolePossessedRep, out InteractionContextInstance steadyAnchor),
+                Is.True,
                 "confirming the ability must release the entity-mounted context back to the steady-state anchor.");
+            Assert.That(steadyAnchor.Source, Is.EqualTo(InteractionContextInstanceSource.TemplateSpawn));
+            Assert.That(
+                contextProfiles.ProfileIdRegistry.GetName(steadyAnchor.ContextId),
+                Is.EqualTo("interaction.context.interaction.battle"));
 
             var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
                 ?? throw new InvalidOperationException("CollectionApplier service is missing.");

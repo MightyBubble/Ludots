@@ -1081,6 +1081,12 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/TagEffectArchitectureTests.CreateUnitScatter.json");
             var phaseExecutor = new EffectPhaseExecutor(
                 new GraphProgramRegistry(),
                 presetTypes,
@@ -1089,33 +1095,27 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
             graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
-            using var application = new EffectApplicationSystem(
+            var tagOps = new TagOps(
+                new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
+                new TagRuleRegistry(),
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+            var requests = new EffectRequestQueue();
+            using var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                 world,
+                requests,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
-                spawnRequests: spawnRequests,
                 phaseExecutor: phaseExecutor,
-                graphApi: graphApi);
+                graphApi: graphApi,
+                tagOps: tagOps,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                spawnRequests: spawnRequests);
 
-            Entity firstEffect = GameplayEffectFactory.CreateEffect(
-                world,
-                rootId: 11,
-                source,
-                source,
-                durationTicks: 0,
-                lifetimeKind: EffectLifetimeKind.Instant);
-            world.Add(firstEffect, new EffectTemplateRef { TemplateId = 2302 });
-            Entity secondEffect = GameplayEffectFactory.CreateEffect(
-                world,
-                rootId: 12,
-                source,
-                source,
-                durationTicks: 0,
-                lifetimeKind: EffectLifetimeKind.Instant);
-            world.Add(secondEffect, new EffectTemplateRef { TemplateId = 2302 });
+            requests.Publish(new EffectRequest { RootId = 11, Source = source, Target = source, TemplateId = 2302 });
+            requests.Publish(new EffectRequest { RootId = 12, Source = source, Target = source, TemplateId = 2302 });
 
-            application.Update(0f);
+            proposal.Update(0f);
 
             That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
             That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);

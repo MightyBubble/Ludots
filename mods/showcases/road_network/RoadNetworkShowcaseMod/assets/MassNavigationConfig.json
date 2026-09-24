@@ -10,8 +10,8 @@
       {
         "id": "road_core",
         "label": "Road Core",
-        "centerXCm": 0,
-        "centerYCm": 0,
+        "centerXCm": 25600,
+        "centerYCm": 25600,
         "widthCm": 50000,
         "heightCm": 50000
       }

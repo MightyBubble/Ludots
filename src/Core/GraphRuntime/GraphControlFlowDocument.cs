@@ -260,6 +260,12 @@ namespace Ludots.Core.GraphRuntime
         public string? ActivityId { get; set; }
         /// <summary>Task definition id symbol for OfferTask (Imm: string symbol; resolved against the registry at execution time).</summary>
         public string? TaskId { get; set; }
+        /// <summary>Calendar id for ReadCalendarYear / ReadCalendarCycle* / ReadCalendarCycleDay. Omit to use the active calendar.</summary>
+        public string? Calendar { get; set; }
+        /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay.</summary>
+        public string? Cycle { get; set; }
+        /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
+        public string? Domain { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
@@ -357,6 +363,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Source = "source";
         public const string Min = "min";
         public const string Max = "max";
+        public const string Tolerance = "tolerance";
         public const string A = "a";
         public const string B = "b";
         public const string C = "c";

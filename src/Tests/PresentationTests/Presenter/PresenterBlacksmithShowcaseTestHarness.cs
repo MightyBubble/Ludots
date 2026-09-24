@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
@@ -85,6 +86,7 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < frames; i++)
             {
+                RebindHeadlessCulling(engine);
                 engine.Tick(1f / 60f);
                 UpdateHeadlessCamera(engine);
             }
@@ -111,6 +113,7 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < frames; i++)
             {
+                RebindHeadlessCulling(engine);
                 engine.Tick(1f / 60f);
                 UpdateHeadlessCamera(engine);
                 hudProjection.Update(1f / 60f);
@@ -127,11 +130,14 @@ namespace Ludots.Tests.Presentation
             var queue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
                 ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
 
+            WorldAabbCm bounds = engine.WorldSizeSpec.Bounds;
             return PresenterBlacksmithScatterPlanner.EnqueueScatter(
                 queue,
                 engine.CurrentMapSession?.MapId ?? default,
                 Math.Max(0, totalBuildings - 1),
                 seed,
+                bounds.Left + (bounds.Width * 0.5f),
+                bounds.Top + (bounds.Height * 0.5f),
                 minRadiusCm,
                 maxRadiusCm);
         }
@@ -195,7 +201,10 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.PresenterBlacksmith.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup),
+                culling,
+                view,
+                cameraPresenterBoundCamera: engine.AuthorityCamera());
         }
 
         internal static UIRoot InstallHeadlessUi(GameEngine engine, float width = 1280f, float height = 720f)
@@ -214,16 +223,47 @@ namespace Ludots.Tests.Presentation
             return uiRoot;
         }
 
+        private static void RebindHeadlessCulling(GameEngine engine)
+        {
+            if (!TryGetHeadlessCamera(engine, out HeadlessCameraRuntime runtime))
+            {
+                return;
+            }
+
+            // 地图加载会把作者取景写到当时的呈现相机上。无头夹具若还拿着启动时那台相机，
+            // 裁剪就停在原点，棋盘中心的人全部落在画面外。
+            CameraManager authority = engine.AuthorityCamera();
+            if (ReferenceEquals(runtime.CullingCamera, authority))
+            {
+                return;
+            }
+
+            runtime.Culling.RebindPresentBinding(authority, runtime.View);
+            runtime.CullingCamera = authority;
+        }
+
         private static void UpdateHeadlessCamera(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue("Tests.PresenterBlacksmith.HeadlessCamera", out object? runtimeObj) ||
-                runtimeObj is not HeadlessCameraRuntime runtime)
+            if (!TryGetHeadlessCamera(engine, out HeadlessCameraRuntime runtime))
             {
                 return;
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
             runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
+        }
+
+        private static bool TryGetHeadlessCamera(GameEngine engine, out HeadlessCameraRuntime runtime)
+        {
+            if (engine.GlobalContext.TryGetValue("Tests.PresenterBlacksmith.HeadlessCamera", out object? runtimeObj) &&
+                runtimeObj is HeadlessCameraRuntime resolved)
+            {
+                runtime = resolved;
+                return true;
+            }
+
+            runtime = null!;
+            return false;
         }
 
         private sealed class NullInputBackend : IInputBackend
@@ -253,15 +293,29 @@ namespace Ludots.Tests.Presentation
 
         private sealed class HeadlessCameraRuntime
         {
-            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            public HeadlessCameraRuntime(
+                CameraPresenter cameraPresenter,
+                PresentationFrameSetupSystem? presentationFrameSetup,
+                CameraCullingSystem culling,
+                IViewController view,
+                CameraManager cameraPresenterBoundCamera)
             {
                 CameraPresenter = cameraPresenter;
                 PresentationFrameSetup = presentationFrameSetup;
+                Culling = culling;
+                View = view;
+                CullingCamera = cameraPresenterBoundCamera;
             }
 
             public CameraPresenter CameraPresenter { get; }
 
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
+
+            public CameraCullingSystem Culling { get; }
+
+            public IViewController View { get; }
+
+            public CameraManager CullingCamera { get; set; }
         }
     }
 }

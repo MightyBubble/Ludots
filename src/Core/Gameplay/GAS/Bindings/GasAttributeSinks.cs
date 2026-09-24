@@ -6,6 +6,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
     {
         public const string ForceInput2D = "Physics.ForceInput2D";
         public const string CameraBehaviorInput = "Camera.BehaviorInput";
+        public const string EntityScalePermille = "Time.EntityScalePermille";
     }
 
     public static class GasAttributeSinks
@@ -15,6 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
             CameraBehaviorInputState? cameraBehaviorInput = null)
         {
             sinks.Register(GasSinkNames.ForceInput2D, new ForceInput2DSink());
+            sinks.Register(GasSinkNames.EntityScalePermille, new EntityLocalTimeScaleSink());
             if (cameraBehaviorInput != null)
             {
                 sinks.Register(

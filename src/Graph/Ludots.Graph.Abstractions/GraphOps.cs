@@ -450,6 +450,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         QueryFilterKnowledgeVisible = 485,
 
         /// <summary>
+        /// TargetList := candidates that are command-source selectable now: CommandSourceSelectableTag
+        /// present and CommandSourceSelectableState, when present, enabled. Candidates order preserved;
+        /// viewer-independent. Restores the selectable gate the retired CommandSourceAcquisitionSystem
+        /// enforced for click and box acquisition.
+        /// </summary>
+        QueryFilterSelectable = 487,
+
+        /// <summary>
         /// Submit one engage intent into the order pipeline's per-tick submission buffer
         /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B] =
         /// the engage target entity (required). Imm = engage profile key symbol resolved to
@@ -460,6 +468,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// continuation — the op never routes inline.
         /// </summary>
         SubmitEngageBatch = 486,
+
+        // ── World calendar reads and writes (509-519). Enabling the calendar stays
+        // in Calendar/world.json. These ops read the live projection and write the
+        // opening date or move the day forward through CalendarRuntime. ──
+
+        /// <summary>B[Dst] = 1 when the world calendar is enabled, else 0. Does not throw when disabled.</summary>
+        ReadCalendarEnabled = 509,
+        /// <summary>I[Dst] = world day index. Fails closed when the calendar is disabled.</summary>
+        ReadCalendarDayIndex = 510,
+        /// <summary>I[Dst] = steps already consumed inside the current day.</summary>
+        ReadCalendarTicksIntoDay = 511,
+        /// <summary>I[Dst] = progress through the current day, in thousandths.</summary>
+        ReadCalendarDayPermille = 512,
+        /// <summary>I[Dst] = ConfigKey id of the current day-phase.</summary>
+        ReadCalendarDayPhase = 513,
+        /// <summary>I[Dst] = projected year. Imm = calendar key id after patch; 0 = active calendar.</summary>
+        ReadCalendarYear = 514,
+        /// <summary>I[Dst] = ConfigKey id of a cycle's current phase. Imm packs cycle key (low) and calendar key (high, 0 = active).</summary>
+        ReadCalendarCyclePhase = 515,
+        /// <summary>I[Dst] = 1-based day inside a cycle's current phase. Imm packing matches ReadCalendarCyclePhase.</summary>
+        ReadCalendarCycleDay = 516,
+        /// <summary>Place the opening day index (I[A]) and ticks into the day (I[B]) once, without replaying events. Same values after the opening is committed are a no-op.</summary>
+        ApplyCalendarStart = 517,
+        /// <summary>Move the world day index forward to I[A]. Backward fails closed. Each crossed day fires the same events as the clock.</summary>
+        SetCalendarDayIndex = 518,
+        /// <summary>Set ticks into the current day to I[A], in [0, ticksPerDay). A day-phase change fires Calendar.DayPhaseChanged.</summary>
+        SetCalendarTicksIntoDay = 519,
+        /// <summary>B[Dst] = domain named by symbols[Imm] is paused. Effective scale includes the parent domain.</summary>
+        ReadTimeFlowPaused = 520,
+        /// <summary>I[Dst] = effective scale permille of the domain named by symbols[Imm]. 1000 is normal speed. 0 is paused.</summary>
+        ReadTimeFlowScalePermille = 521,
+        /// <summary>I[Dst] = pause token on the domain named by symbols[Imm]. Owner is the running graph id.</summary>
+        AcquireTimeFlowPause = 522,
+        /// <summary>I[Dst] = scale token. Domain is symbols[Imm]. Scale permille is I[A], and must be &gt; 0.</summary>
+        AcquireTimeFlowScale = 523,
+        /// <summary>Release pause or scale token I[A]. A token that is not active fails closed.</summary>
+        ReleaseTimeFlowToken = 524,
 
     }
 

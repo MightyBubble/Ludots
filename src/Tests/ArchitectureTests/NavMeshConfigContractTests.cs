@@ -452,9 +452,9 @@ namespace Ludots.Tests.Architecture
                         new BoardConfig
                         {
                             Name = "default",
-                            WidthCells = effectiveTerrain.WidthChunks * SpatialScaleDefaults.TerrainChunkCells,
-                            HeightCells = effectiveTerrain.HeightChunks * SpatialScaleDefaults.TerrainChunkCells,
-                            GridCellSizeCm = 250
+                            WidthCm = effectiveTerrain.WidthChunks * SpatialScaleDefaults.TerrainChunkCells * 250,
+                            HeightCm = effectiveTerrain.HeightChunks * SpatialScaleDefaults.TerrainChunkCells * 250,
+                            Grid = new BoardGridAuthoring { CellSizeCm = 250 }
                         }
                     }
                 });

@@ -569,11 +569,7 @@ namespace Ludots.Core.GraphRuntime
 
         private static void ValidateProgramLength(GraphInstruction[] program)
         {
-            if (program.Length == 0)
-            {
-                throw new ArgumentException("Graph program must contain at least one instruction.", nameof(program));
-            }
-
+            // Emptiness fails closed through GraphKindOperationPolicy.ValidateHasHalt (MissingHalt), the coded error contract.
             if (program.Length > GraphVmRuntimeLimits.MaxInstructions)
             {
                 throw new ArgumentOutOfRangeException(

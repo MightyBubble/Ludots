@@ -2,6 +2,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
@@ -27,11 +28,12 @@ namespace Ludots.Tests.GAS
             var attributes = new AttributeBuffer();
             attributes.SetBase(timeScaleId, 2000f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
+            LandScale(world, timeScaleId);
 
             var globalClock = new DiscreteClock();
             var policy = new GasClockStepPolicy(stepEveryFixedTicks: 2);
             var globalSystem = new GasClockSystem(globalClock, policy);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
+            var localSystem = new EntityLocalClockSystem(world, policy);
 
             for (int i = 0; i < 4; i++)
             {
@@ -51,11 +53,12 @@ namespace Ludots.Tests.GAS
             var attributes = new AttributeBuffer();
             attributes.SetBase(timeScaleId, 1000f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
+            LandScale(world, timeScaleId);
 
             var globalClock = new DiscreteClock();
             var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1, mode: GasStepMode.Manual);
             var globalSystem = new GasClockSystem(globalClock, policy);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
+            var localSystem = new EntityLocalClockSystem(world, policy);
 
             globalSystem.Update(0.016f);
             localSystem.Update(0.016f);
@@ -76,11 +79,12 @@ namespace Ludots.Tests.GAS
             var attributes = new AttributeBuffer();
             attributes.SetBase(timeScaleId, 0f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
+            LandScale(world, timeScaleId);
 
             var globalClock = new DiscreteClock();
             var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
             var globalSystem = new GasClockSystem(globalClock, policy);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
+            var localSystem = new EntityLocalClockSystem(world, policy);
 
             for (int i = 0; i < 3; i++)
             {
@@ -99,10 +103,7 @@ namespace Ludots.Tests.GAS
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             world.Create(new EntityLocalClock());
 
-            var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
-
-            InvalidOperationException? error = Throws<InvalidOperationException>(() => localSystem.Update(0.016f));
+            InvalidOperationException? error = Throws<InvalidOperationException>(() => LandScale(world, timeScaleId));
 
             That(error!.Message, Does.Contain("AttributeBuffer.time.scale_permille"));
         }
@@ -114,10 +115,7 @@ namespace Ludots.Tests.GAS
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             world.Create(new EntityLocalClock(), new AttributeBuffer());
 
-            var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
-
-            InvalidOperationException? error = Throws<InvalidOperationException>(() => localSystem.Update(0.016f));
+            InvalidOperationException? error = Throws<InvalidOperationException>(() => LandScale(world, timeScaleId));
 
             That(error!.Message, Does.Contain("AttributeBuffer.time.scale_permille"));
         }
@@ -131,10 +129,7 @@ namespace Ludots.Tests.GAS
             attributes.SetBase(timeScaleId, TimeFlowService.MaxScalePermille + 1f);
             world.Create(new EntityLocalClock(), attributes);
 
-            var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
-            var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
-
-            InvalidOperationException? error = Throws<InvalidOperationException>(() => localSystem.Update(0.016f));
+            InvalidOperationException? error = Throws<InvalidOperationException>(() => LandScale(world, timeScaleId));
 
             That(error!.Message, Does.Contain($"<= {TimeFlowService.MaxScalePermille}"));
         }
@@ -194,6 +189,52 @@ namespace Ludots.Tests.GAS
             world.Get<EntityLocalClock>(entity).LocalStep = 2;
             system.Update(0.016f);
             That(world.Get<GameplayTagContainer>(entity).HasTag(42), Is.False);
+        }
+
+        [Test]
+        public void EntityLocalClockSystem_ThrowsWhenScaleHasNotLanded()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create(new EntityLocalClock());
+            var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
+            var localSystem = new EntityLocalClockSystem(world, policy);
+
+            InvalidOperationException? error = Throws<InvalidOperationException>(() => localSystem.Update(0.016f));
+
+            That(error!.Message, Does.Contain(GasSinkNames.EntityScalePermille));
+            That(error.Message, Does.Contain(entity.Id.ToString()));
+        }
+
+        [Test]
+        public void EntityLocalTimeScaleSink_RejectsPulseReset()
+        {
+            var sink = new EntityLocalTimeScaleSink();
+
+            InvalidOperationException? error = Throws<InvalidOperationException>(() =>
+                sink.ValidatePolicy(
+                    AttributeBindingMode.Override,
+                    AttributeBindingResetPolicy.ResetToZeroPerLogicFrame,
+                    1f,
+                    "Bind.Time.EntityScalePermille",
+                    "GAS/attribute_bindings.json"));
+
+            That(error!.Message, Does.Contain("resetPolicy None"));
+        }
+
+        private static void LandScale(World world, int attributeId)
+        {
+            var sink = new EntityLocalTimeScaleSink();
+            var entries = new[]
+            {
+                new AttributeBindingEntry(
+                    attributeId,
+                    sinkId: 0,
+                    channel: 0,
+                    AttributeBindingMode.Override,
+                    AttributeBindingResetPolicy.None,
+                    scale: 1f)
+            };
+            sink.Apply(world, entries, 0, 1);
         }
     }
 }

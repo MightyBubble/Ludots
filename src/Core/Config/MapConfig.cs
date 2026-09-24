@@ -180,6 +180,12 @@ namespace Ludots.Core.Config
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
         /// <summary>
+        /// 路径级组件差异。实体信息标题不写在这里，写在 EntityInfo/insight_profiles.json 的 instances。
+        /// </summary>
+        [JsonPropertyName("overridePaths")]
+        public List<EntityPathNameOverride> OverridePaths { get; set; }
+
+        /// <summary>
         /// 实例对外关系 authoring 段：from 即本实例，to 为绝对 instanceId 或组内可寻址路径。
         /// 跨 mod 合并按 (to, type) 后写赢；__delete 删边（合并层消化）。物化发生在地图装载站。
         /// </summary>
@@ -188,6 +194,15 @@ namespace Ludots.Core.Config
         /// <summary>跨 mod 合并墓碑：与资产层 ConfigMerger 同键；只认 __delete，不引入 Disabled。</summary>
         [JsonPropertyName("__delete")]
         public bool? Delete { get; set; }
+    }
+
+    public sealed class EntityPathNameOverride
+    {
+        [JsonPropertyName("path")]
+        public string Path { get; set; }
+
+        [JsonPropertyName("set")]
+        public Dictionary<string, JsonNode> Set { get; set; }
     }
 
     public class EntityRelationAuthoring

@@ -419,12 +419,15 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             int requestedEntityCount = cleanHudTextScatter || meshOnlyScatter || meshHudBarScatter || meshHudTextScatter
                 ? clampedTotal
                 : clampedTotal - 1;
+            (float centerXCm, float centerYCm) = BoardCenterCm(engine);
             int queued = PresenterBlacksmithScatterPlanner.EnqueueTemplateScatter(
                 spawnQueue,
                 engine.CurrentMapSession?.MapId ?? default,
                 templateId,
                 requestedEntityCount,
                 scatter.Seed,
+                centerXCm,
+                centerYCm,
                 scatter.MinRadiusCm,
                 scatter.MaxRadiusCm,
                 scatter.JitterCm);
@@ -706,15 +709,24 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                     $"metadata.{MetadataSectionKey}.{MeshBenchmarkScatterMaxRadiusMetadataKey} must be greater than {MeshBenchmarkScatterMinRadiusMetadataKey}.");
             }
 
+            (float centerXCm, float centerYCm) = BoardCenterCm(engine);
             return PresenterBlacksmithScatterPlanner.EnqueueTemplateScatter(
                 queue,
                 engine.CurrentMapSession?.MapId ?? default,
                 PresenterBlacksmithShowcaseIds.MeshBenchmarkTemplateId,
                 count,
                 seed,
+                centerXCm,
+                centerYCm,
                 minRadiusCm,
                 maxRadiusCm,
                 jitterCm);
+        }
+
+        private static (float X, float Y) BoardCenterCm(GameEngine engine)
+        {
+            WorldAabbCm bounds = engine.WorldSizeSpec.Bounds;
+            return (bounds.Left + (bounds.Width * 0.5f), bounds.Top + (bounds.Height * 0.5f));
         }
 
         private static int EnqueueDynamicWorkerBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)

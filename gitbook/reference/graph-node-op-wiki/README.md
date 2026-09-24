@@ -72,6 +72,7 @@
 - [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
 - [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
 - [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
+- [可选筛只留能点的](QueryFilterSelectable.md) — 名单过一道可选门：带可选标记且开关打开的留下，关掉的当场划掉，顺序不变。
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
 - [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
 - [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
@@ -235,27 +236,43 @@
 
 > 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
 
+- [一天过了千分之几](ReadCalendarDayPermille.md) — 把今天的进度读成千分比。
+- [今天走到哪](ReadCalendarDayIndex.md) — 读出当前日序，字幕报出这个数。
+- [今天过了多少步](ReadCalendarTicksIntoDay.md) — 读出今天已经走了多少步。
+- [今年是第几年](ReadCalendarYear.md) — 按主历读出年份。
+- [停一下再放开](AcquireTimeFlowPause.md) — 拿一张整局暂停，马上放回。
 - [写死一句字幕](ConstText.md) — 作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。
 - [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 - [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
+- [历法开没开](ReadCalendarEnabled.md) — 先看这局有没有启用历法，开了才能读日子。
 - [句子送进对话框](SinkPresentationText.md) — 图里写好「字幕到了」，指定对话框通道，口吐出同样一句。
 - [叫另一张图来帮忙算](InvokeScript.md) — 主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
 - [士气指针](ReadMapVarFloat.md) — 士气存在地图变量里，指针一动读数就到。
 - [士气补给](WriteMapVarFloat.md) — 一次补给写回士气变量，地图记得这份涨幅。
 - [左右两段字接成一句](ConcatText.md) — 左边「左」、右边「右」并进同一句；字幕口吐出「左右」。
 - [开局战绩上墙](ReadMapVarInt.md) — 地图变量记得每一场胜利，开局张口就报数。
+- [开局日子落定](ApplyCalendarStart.md) — 在日子还没被作者改过时，把读到的日序和当天步数写回开局。
 - [战绩加一](WriteMapVarInt.md) — 赢一场就写回地图变量，战绩板自己会涨。
 - [把 3 抄一份到结果槽](MoveInt.md) — 左边格子里的 3 原样不动，右边结果格里多出一份 3。
 - [把小数念成字](FloatToText.md) — 小数 1.5 先变成文字，再送进字幕口。
 - [把整数念成字](IntToText.md) — 数字 7 先变成文字，再送进字幕口。
+- [把日子往前拨一天](SetCalendarDayIndex.md) — 读出今天，加一天，写回去。不能往回拨。
+- [把暂停放回去](ReleaseTimeFlowToken.md) — 先拿一张整局暂停，再放回这张令牌。
+- [把钟拨回刚读到的这一拍](SetCalendarTicksIntoDay.md) — 读出今天已走的步数，再写回去。
 - [按文案键出字幕](LoadTextKey.md) — 作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。
+- [整局停没停](ReadTimeFlowPaused.md) — 先看整局模拟有没有被暂停。
+- [整局现在多少](ReadTimeFlowScalePermille.md) — 读出整局的有效倍率，一千是原速。
 - [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 - [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
 - [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
 - [点名派发待办活动](OfferActivity.md) — 图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。
+- [现在是哪一段昼夜](ReadCalendarDayPhase.md) — 读出当前昼夜相位的编号。
 - [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
+- [调成两倍再收回](AcquireTimeFlowScale.md) — 给整局一张两倍令牌，马上放回。
+- [这一季叫什么](ReadCalendarCyclePhase.md) — 按季节周期读出当前相位编号。
+- [这一季的第几天](ReadCalendarCycleDay.md) — 读出当前季节里的第几天。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
 
 ## 订单与行为

@@ -49,7 +49,19 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "rts_duel_v1_flat.vtxm"
+      "DataFile": "rts_duel_v1_flat.vtxm",
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [

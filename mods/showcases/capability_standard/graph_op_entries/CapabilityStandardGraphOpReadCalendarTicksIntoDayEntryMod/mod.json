@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp ReadCalendarTicksIntoDay player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

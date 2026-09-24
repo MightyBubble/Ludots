@@ -26,10 +26,11 @@ namespace GasTests
                     {
                       "name": "default",
                       "spatialType": "Hex",
-                      "widthCells": 32768,
-                      "heightCells": 16384,
-                      "gridCellSizeCm": 200,
-                      "hexEdgeLengthCm": 900
+                      "widthCm": 6553600,
+                      "heightCm": 3276800,
+                      "grid": { "cellSizeCm": 200 },
+                      "hex": { "edgeLengthCm": 900 },
+                      "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 }
                     }
                   ]
                 }
@@ -112,7 +113,7 @@ namespace GasTests
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy"));
 
                 Assert.That(ex!.Message, Does.Contain("legacy key 'widthInTiles'"));
-                Assert.That(ex.Message, Does.Contain("WidthCells"));
+                Assert.That(ex.Message, Does.Contain("WidthCm"));
             }
             finally
             {
@@ -131,7 +132,7 @@ namespace GasTests
                   "id": "tuned",
                   "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } }
                   ]
                 }
                 """);
@@ -153,7 +154,7 @@ namespace GasTests
                   "id": "parent",
                   "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } }
                   ]
                 }
                 """);
@@ -182,7 +183,7 @@ namespace GasTests
                   "id": "conflict",
                   "tuning": { "loadedChunkCapacity": 64 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "loadedChunkCapacity": 32 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 }, "loadedChunkCapacity": 32 }
                   ]
                 }
                 """);
@@ -204,7 +205,7 @@ namespace GasTests
                   "id": "oddpart",
                   "tuning": { "partitionChunkCells": 48 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } }
                   ]
                 }
                 """);
@@ -226,7 +227,7 @@ namespace GasTests
                   "id": "partconflict",
                   "tuning": { "loadedChunkCapacity": 64, "partitionChunkCells": 128 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "chunkSizeCells": 32 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 }, "chunkSizeCells": 32 }
                   ]
                 }
                 """);
@@ -248,8 +249,8 @@ namespace GasTests
                   "id": "oversize",
                   "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
-                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 },
-                    { "name": "default", "widthCells": 1024, "heightCells": 256, "gridCellSizeCm": 100 }
+                    { "name": "root", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } },
+                    { "name": "default", "widthCm": 102400, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } }
                   ]
                 }
                 """);
@@ -275,7 +276,7 @@ namespace GasTests
                   "tuning": { "loadedChunkCapacity": 16 },
                   "rootBoard": "ghost",
                   "boards": [
-                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                    { "name": "root", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 } }
                   ]
                 }
                 """);
@@ -290,7 +291,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardOriginAxesMismatch_Throws()
+        public void LoadMap_WhenBoardUsesLegacyOriginKey_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -302,9 +303,9 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "widthCells": 256,
-                      "heightCells": 256,
-                      "gridCellSizeCm": 100,
+                      "widthCm": 25600,
+                      "heightCm": 25600,
+                      "grid": { "cellSizeCm": 100 },
                       "originXCm": 1000
                     }
                   ]
@@ -312,7 +313,8 @@ namespace GasTests
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("halforigin"));
-                Assert.That(ex!.Message, Does.Contain("OriginXCm and OriginYcm together"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'originXCm'"));
+                Assert.That(ex.Message, Does.Contain("Anchor"));
             }
             finally
             {
@@ -321,7 +323,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardDeclaresNonZeroOrigin_FailsClosedUntilSlice2b()
+        public void LoadMap_WhenRootAnchorWorldLeavesLudotsOrigin_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -333,18 +335,17 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "widthCells": 256,
-                      "heightCells": 256,
-                      "gridCellSizeCm": 100,
-                      "originXCm": 1000,
-                      "originYCm": 2000
+                      "widthCm": 25600,
+                      "heightCm": 25600,
+                      "grid": { "cellSizeCm": 100 },
+                      "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 1000, "worldYCm": 2000 }
                     }
                   ]
                 }
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("placed"));
-                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+                Assert.That(ex!.Message, Does.Contain("Anchor.World must be (0, 0)"));
             }
             finally
             {
@@ -353,7 +354,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardDeclaresZeroOriginAlsoFailsClosed()
+        public void LoadMap_WhenBoardUsesLegacyZeroOriginKeys_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -363,13 +364,13 @@ namespace GasTests
                   "id": "zeroplace",
                   "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
-                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "originXCm": 0, "originYCm": 0 }
+                    { "name": "default", "widthCm": 25600, "heightCm": 25600, "grid": { "cellSizeCm": 100 }, "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 }, "originXCm": 0, "originYCm": 0 }
                   ]
                 }
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("zeroplace"));
-                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'originXCm'"));
             }
             finally { TryDelete(tempRoot); }
         }
@@ -387,9 +388,10 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "widthCells": 512,
-                      "heightCells": 512,
-                      "gridCellSizeCm": 100
+                      "widthCm": 51200,
+                      "heightCm": 51200,
+                      "grid": { "cellSizeCm": 100 },
+                      "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 }
                     }
                   ]
                 }
@@ -449,9 +451,10 @@ namespace GasTests
                   "boards": [
                     {
                       "name": "default",
-                      "widthCells": 256,
-                      "heightCells": 256,
-                      "gridCellSizeCm": 100,
+                      "widthCm": 25600,
+                      "heightCm": 25600,
+                      "grid": { "cellSizeCm": 100 },
+                      "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 },
                       "continuousHeightmapAsset": "terrain/board.height"
                     }
                   ]

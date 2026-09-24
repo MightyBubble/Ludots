@@ -492,6 +492,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
+
                 case GraphNodeOp.TargetListGet:
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -810,6 +813,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ApplyCalendarStart:
+                case GraphNodeOp.SetCalendarDayIndex:
+                case GraphNodeOp.SetCalendarTicksIntoDay:
+                    ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
                 default:
@@ -1584,6 +1609,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
 
                 case GraphNodeOp.QueryFilterRelationship:
                     instruction.A = ResolveValueInput(
@@ -2028,6 +2055,58 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             diagnostics);
                     }
 
+                    break;
+
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ApplyCalendarStart:
+                case GraphNodeOp.SetCalendarDayIndex:
+                case GraphNodeOp.SetCalendarTicksIntoDay:
+                    EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    EmitTimeFlowNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
                     break;
 
                 default:

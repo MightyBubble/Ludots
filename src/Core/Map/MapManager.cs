@@ -8,6 +8,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Core.Spatial;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Map
@@ -753,6 +754,17 @@ namespace Ludots.Core.Map
                     throw new InvalidOperationException(
                         $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
                 }
+
+                if (board.TransportNetwork is { } transportDeclaration)
+                {
+                    if (!spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' board '{board.Name}' declares TransportNetwork but SpatialType is '{spatialType}'; transport networks require a NodeGraph board.");
+                    }
+
+                    transportDeclaration.Validate(mapId.Value, board.Name);
+                }
             }
 
             BoardConfig root = ResolveRootBoard(config, mapId);
@@ -859,70 +871,79 @@ namespace Ludots.Core.Map
 
         private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
         {
-            bool hasX = board.OriginXCm.HasValue;
-            bool hasY = board.OriginYcm.HasValue;
-            if (hasX != hasY)
+            if (board.Anchor == null)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYcm together.");
+                    $"Map '{mapId}' board '{board.Name}' requires Anchor (LocalXCm/LocalYCm/WorldXCm/WorldYCm).");
             }
 
-            if (hasX && ReferenceEquals(board, root))
+            if (board.Grid == null || board.Grid.CellSizeCm <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' root board '{board.Name}' anchors the centered world and cannot declare OriginXCm/OriginYcm; placement is satellite-board-only (#1567 slice 2b).");
+                    $"Map '{mapId}' board '{board.Name}' requires Grid.CellSizeCm > 0.");
             }
 
-            if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
+            if (board.WidthCm <= 0 || board.HeightCm <= 0 || board.WidthCells <= 0 || board.HeightCells <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
+                    $"Map '{mapId}' board '{board.Name}' requires a positive WidthCm/HeightCm that covers at least one cell of Grid.CellSizeCm.");
             }
 
-            bool hasHexes = board.WidthHexes.HasValue || board.HeightHexes.HasValue;
-            if (hasHexes)
+            bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
+            if (isHex)
             {
-                bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
-                if (!isHex)
+                if (board.Hex == null || board.Hex.EdgeLengthCm <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{board.Name}' declares WidthHexes/HeightHexes but SpatialType is '{board.SpatialType}'; hex metrics are HexGrid-only (#1567 slice 2).");
+                        $"Map '{mapId}' board '{board.Name}' is {board.SpatialType} and requires Hex.EdgeLengthCm > 0.");
                 }
-                if (board.WidthHexes is not > 0 || board.HeightHexes is not > 0)
+
+                var metrics = new Ludots.Core.Map.Hex.HexMetrics(board.Hex.EdgeLengthCm);
+                if (!metrics.TryCountFittingHexes(board.WidthCm, board.HeightCm, out _, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{board.Name}' must author positive WidthHexes/HeightHexes together; hexes take precedence over WidthCells when authored (#1567 slice 2).");
+                        $"Map '{mapId}' board '{board.Name}' rectangle {board.WidthCm}x{board.HeightCm}cm fits no whole hex of edge {board.Hex.EdgeLengthCm}cm.");
                 }
+            }
+            else if (board.Hex != null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares Hex but SpatialType is '{board.SpatialType}'; hex metrics are HexGrid-only.");
             }
 
             if (ReferenceEquals(board, root))
             {
+                if (board.Anchor.WorldXCm != 0 || board.Anchor.WorldYCm != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' root board '{board.Name}' Anchor.World must be (0, 0); that point is the Ludots origin.");
+                }
+
                 return;
             }
 
-            long boardWidthCm = board.ResolveExtent().WidthCm;
-            long boardHeightCm = board.ResolveExtent().HeightCm;
-            long rootWidthCm = root.ResolveExtent().WidthCm;
-            long rootHeightCm = root.ResolveExtent().HeightCm;
+            BoardExtentSpec boardExtent = board.ResolveExtent();
+            BoardExtentSpec rootExtent = root.ResolveExtent();
+            long boardWidthCm = boardExtent.WidthCm;
+            long boardHeightCm = boardExtent.HeightCm;
+            long rootWidthCm = rootExtent.WidthCm;
+            long rootHeightCm = rootExtent.HeightCm;
             if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite.");
             }
 
-            if (hasX)
+            long minX = boardExtent.TopologyOriginXCm;
+            long minY = boardExtent.TopologyOriginYCm;
+            long rootMinX = rootExtent.TopologyOriginXCm;
+            long rootMinY = rootExtent.TopologyOriginYCm;
+            if (minX < rootMinX || minY < rootMinY ||
+                minX + boardWidthCm > rootMinX + rootWidthCm ||
+                minY + boardHeightCm > rootMinY + rootHeightCm)
             {
-                long minX = board.OriginXCm!.Value;
-                long minY = board.OriginYcm!.Value;
-                long rootMinX = -rootWidthCm / 2;
-                long rootMinY = -rootHeightCm / 2;
-                if (minX < rootMinX || minY < rootMinY ||
-                    minX + boardWidthCm > rootMinX + rootWidthCm ||
-                    minY + boardHeightCm > rootMinY + rootHeightCm)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' board '{board.Name}' anchored AABB ({minX},{minY})+{boardWidthCm}x{boardHeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootWidthCm}x{rootHeightCm}cm; place the satellite fully inside the world (#1567 slice 2b).");
-                }
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' rectangle ({minX},{minY})+{boardWidthCm}x{boardHeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootWidthCm}x{rootHeightCm}cm; place the satellite fully inside the world.");
             }
         }
 
@@ -933,10 +954,10 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCells", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
-            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
-            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCm", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCm", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCm", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -951,10 +972,19 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthCells", "Boards[].WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightCells", "Boards[].HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "GridCellSizeCm", "Boards[].Grid.CellSizeCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "OriginXCm", "Boards[].Anchor", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "OriginYcm", "Boards[].Anchor", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "OriginYCm", "Boards[].Anchor", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthHexes", "Boards[].WidthCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightHexes", "Boards[].HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HexEdgeLengthCm", "Boards[].Hex.EdgeLengthCm", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "ChunkSizeCells", "Tuning.PartitionChunkCells", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards.<name>", $"{jsonPath}.boards[{i}]");

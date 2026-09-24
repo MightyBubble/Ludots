@@ -116,6 +116,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryFilterKnowledgeVisible:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
                 case GraphNodeOp.QueryFilterTemplate:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (string.IsNullOrWhiteSpace(node.Template))
@@ -184,6 +186,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.C, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Tolerance)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Tolerance, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
                     break;
                 case GraphNodeOp.PointToDirection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -300,6 +307,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireRelationshipFields(node, requireMetric: true, requireFlag: false, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                    ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                    ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
@@ -488,6 +509,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
                 case GraphNodeOp.QueryFilterTemplate:
                     instruction.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
@@ -556,6 +579,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    if (op.NodeOp == GraphNodeOp.ScreenRegionToEntities)
+                    {
+                        instruction.Dst = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Tolerance))
+                            ? ResolveValueInput(
+                                node, GraphControlFlowPorts.Tolerance, GraphValueType.Float,
+                                valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                            : byte.MaxValue;
+                    }
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     break;
                 case GraphNodeOp.PointToDirection:
@@ -711,6 +742,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                    EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                    EmitTimeFlowNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
                     break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,

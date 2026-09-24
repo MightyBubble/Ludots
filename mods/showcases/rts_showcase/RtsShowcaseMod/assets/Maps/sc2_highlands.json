@@ -96,11 +96,21 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 16384,
-      "HeightCells": 16384,
-      "GridCellSizeCm": 100,
-      "HexEdgeLengthCm": 400,
-      "DataFile": "sc2_highlands.hex"
+      "DataFile": "sc2_highlands.hex",
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "TriggerTypes": [],

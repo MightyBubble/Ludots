@@ -213,7 +213,16 @@ namespace Ludots.Tests.GAS
                 }
                 """);
             using var world = World.Create();
-            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            RelationshipTypeRegistry types = new RelationshipTypeRegistry();
+            RelationshipChangeBuffer changes = new RelationshipChangeBuffer();
+            RelationshipRuntime runtime = new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                changes,
+                new RelationshipReverseIndex(world));
             var flags = new RelationshipFlagRegistry();
             RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), flags, new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
@@ -231,8 +240,8 @@ namespace Ludots.Tests.GAS
                 runtime.RemoveLink(source, target, fatherSonTypeId);
             }
 
-            long allocated = MeasureTemplatedChurn(runtime, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
-            long second = MeasureTemplatedChurn(runtime, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
+            long allocated = MeasureTemplatedChurn(runtime, changes, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
+            long second = MeasureTemplatedChurn(runtime, changes, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
 
             Assert.That(Math.Min(allocated, second), Is.EqualTo(0),
                 "Warmed typed edge churn through template application must stay allocation-free.");
@@ -247,6 +256,7 @@ namespace Ludots.Tests.GAS
 
         private static long MeasureTemplatedChurn(
             RelationshipRuntime runtime,
+            RelationshipChangeBuffer changes,
             Entity source,
             Entity target,
             int typeId,
@@ -267,6 +277,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 runtime.RemoveLink(source, target, typeId);
+                changes.Clear();
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;

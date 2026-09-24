@@ -24,6 +24,8 @@ namespace GasTests
             var config = new BoardConfig();
             Assert.That(config.Name, Is.EqualTo("default"));
             Assert.That(config.SpatialType, Is.EqualTo("Grid"));
+            Assert.That(config.WidthCm, Is.EqualTo(1_638_400));
+            Assert.That(config.HeightCm, Is.EqualTo(1_638_400));
             Assert.That(config.WidthCells, Is.EqualTo(16384));
             Assert.That(config.HeightCells, Is.EqualTo(16384));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(100));
@@ -40,10 +42,10 @@ namespace GasTests
             {
                 Name = "battle",
                 SpatialType = "Hex",
-                WidthCells = 32768,
-                HeightCells = 16384,
-                GridCellSizeCm = 200,
-                HexEdgeLengthCm = 600,
+                WidthCm = 6_553_600,
+                HeightCm = 3_276_800,
+                Grid = new BoardGridAuthoring { CellSizeCm = 200 },
+                Hex = new BoardHexAuthoring { EdgeLengthCm = 600 },
                 ChunkSizeCells = 32,
                 LoadedChunkCapacity = 96,
                 DataFile = "Data/Maps/battle.hex",
@@ -52,6 +54,8 @@ namespace GasTests
 
             Assert.That(config.Name, Is.EqualTo("battle"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
+            Assert.That(config.WidthCm, Is.EqualTo(6_553_600));
+            Assert.That(config.HeightCm, Is.EqualTo(3_276_800));
             Assert.That(config.WidthCells, Is.EqualTo(32768));
             Assert.That(config.HeightCells, Is.EqualTo(16384));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
@@ -69,7 +73,7 @@ namespace GasTests
             {
                 Name = "world",
                 SpatialType = "Hex",
-                WidthCells = 256,
+                WidthCm = 25_600,
                 LoadedChunkCapacity = 128,
                 DataFile = "terrain.hex",
                 ContinuousHeightmapAsset = "terrain.height"
@@ -78,15 +82,15 @@ namespace GasTests
             var clone = original.Clone();
             Assert.That(clone.Name, Is.EqualTo("world"));
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(clone.WidthCells, Is.EqualTo(256));
+            Assert.That(clone.WidthCm, Is.EqualTo(25_600));
             Assert.That(clone.LoadedChunkCapacity, Is.EqualTo(128));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.hex"));
             Assert.That(clone.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
 
             // Modify clone, original unchanged
-            clone.WidthCells = 512;
+            clone.WidthCm = 51_200;
             clone.ContinuousHeightmapAsset = "other.height";
-            Assert.That(original.WidthCells, Is.EqualTo(256));
+            Assert.That(original.WidthCm, Is.EqualTo(25_600));
             Assert.That(original.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
         }
 
@@ -97,10 +101,10 @@ namespace GasTests
             {
                 "name": "strategic",
                 "spatialType": "Hex",
-                "widthCells": 32768,
-                "heightCells": 32768,
-                "hexEdgeLengthCm": 600,
-                "navigationEnabled": true,
+                "widthCm": 3276800,
+                "heightCm": 3276800,
+                "grid": { "cellSizeCm": 100 },
+                "hex": { "edgeLengthCm": 600 },
                 "continuousHeightmapAsset": "Data/Maps/strategic.height"
             }
             """;
@@ -109,6 +113,8 @@ namespace GasTests
             Assert.That(config, Is.Not.Null);
             Assert.That(config!.Name, Is.EqualTo("strategic"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
+            Assert.That(config.WidthCm, Is.EqualTo(3276800));
+            Assert.That(config.HeightCm, Is.EqualTo(3276800));
             Assert.That(config.WidthCells, Is.EqualTo(32768));
             Assert.That(config.HeightCells, Is.EqualTo(32768));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
@@ -124,9 +130,10 @@ namespace GasTests
             {
                 "name": "roads",
                 "spatialType": "NodeGraph",
-                "widthCells": 512,
-                "heightCells": 512,
-                "gridCellSizeCm": 100,
+                "widthCm": 51200,
+                "heightCm": 51200,
+                "grid": { "cellSizeCm": 100 },
+                "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 },
                 "chunkSizeCells": 64,
                 "loadedChunkCapacity": 37
             }
@@ -173,10 +180,18 @@ namespace GasTests
                         continue;
                     }
 
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthCells", "WidthCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightCells", "HeightCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "GridCellSizeCm", "Grid.CellSizeCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "OriginXCm", "Anchor", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "OriginYcm", "Anchor", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthHexes", "WidthCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightHexes", "HeightCm", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HexEdgeLengthCm", "Hex.EdgeLengthCm", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "ChunkSizeCells", "Tuning.PartitionChunkCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards", violations);
@@ -237,17 +252,18 @@ namespace GasTests
         }
 
         [Test]
-        public void BoardExtentSpec_ConvertsCellsIntoCenteredWorldSizeSpec()
+        public void BoardExtentSpec_PlacesRectangleAtTopologyOrigin()
         {
-            var extent = new BoardExtentSpec(widthCells: 40, heightCells: 40, cellSizeCm: 100);
+            var extent = new BoardExtentSpec(widthCm: 4_050, heightCm: 4_000, cellSizeCm: 100, topologyOriginXCm: 0, topologyOriginYCm: 0);
 
             var worldSize = extent.ToWorldSizeSpec();
 
-            Assert.That(extent.WidthCm, Is.EqualTo(4_000));
+            Assert.That(extent.WidthCells, Is.EqualTo(40));
+            Assert.That(extent.HeightCells, Is.EqualTo(40));
             Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
-            Assert.That(worldSize.Bounds.Width, Is.EqualTo(4_000));
-            Assert.That(worldSize.Bounds.Left, Is.EqualTo(-2_000));
-            Assert.That(worldSize.Bounds.Top, Is.EqualTo(-2_000));
+            Assert.That(worldSize.Bounds.Width, Is.EqualTo(4_050));
+            Assert.That(worldSize.Bounds.Left, Is.EqualTo(0));
+            Assert.That(worldSize.Bounds.Top, Is.EqualTo(0));
         }
 
         [Test]

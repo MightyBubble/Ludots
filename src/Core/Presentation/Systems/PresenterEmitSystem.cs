@@ -1809,7 +1809,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                 if (TryEmitSkinnedVisualBatchFast(
                         entity,
                         in state,
@@ -1823,6 +1822,8 @@ namespace Ludots.Core.Presentation.Systems
                         presenterWorldScale,
                         animatorSlot))
                 {
+                    // The skinned batch consumes localOffset directly; the Emit fall-through records its own consumption.
+                    PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                     emittedStableVisual = true;
                     continue;
                 }

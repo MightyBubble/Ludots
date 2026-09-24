@@ -111,8 +111,11 @@ namespace Ludots.Tests.Gas.Graph
                 string text = File.ReadAllText(graphFile);
                 Assert.That(text.Contains("\"kind\": \"TriggerGraph\"", StringComparison.Ordinal), Is.True,
                     $"{graphFile} must author the renamed kind.");
-                Assert.That(text.Contains("MapTrigger", StringComparison.Ordinal), Is.False,
-                    $"{graphFile} must not carry the retired dialect name.");
+                foreach (string needle in DialectIdentifierNeedles)
+                {
+                    Assert.That(text.Contains(needle, StringComparison.Ordinal), Is.False,
+                        $"{graphFile} must not carry the retired dialect identifier {needle}; the MapTrigger.* payload-key namespace is the live event vocabulary.");
+                }
             }
 
             foreach (string mapFile in mapFiles)

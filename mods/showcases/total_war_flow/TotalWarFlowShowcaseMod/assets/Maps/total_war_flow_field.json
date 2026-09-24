@@ -16,9 +16,17 @@
   {
    "Name": "default",
    "SpatialType": "Grid",
-   "WidthCells": 200,
-   "HeightCells": 200,
-   "GridCellSizeCm": 100,
+   "WidthCm": 20000,
+   "HeightCm": 20000,
+   "Anchor": {
+    "LocalXCm": 10000,
+    "LocalYCm": 10000,
+    "WorldXCm": 0,
+    "WorldYCm": 0
+   },
+   "Grid": {
+    "CellSizeCm": 100
+   },
    "TerrainHeightStepCm": 250,
    "TerrainProjectAsRamp": true
   }

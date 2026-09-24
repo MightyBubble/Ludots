@@ -82,7 +82,14 @@ namespace Ludots.Core.Gameplay.Lifecycle
                     state.HasMaterializedTarget = true;
                     break;
                 case LifecycleOpId.CopyIdentityComponents:
-                    EntityLifecycleAtomicOps.CopyIdentityComponents(world, state.Target, in state.Snapshot);
+                    EntityLifecycleAtomicOps.CopyIdentityComponents(
+                        world,
+                        state.Target,
+                        state.Source,
+                        in state.Snapshot,
+                        services.Ownership,
+                        services.Relationships,
+                        services.MemberOfTypeId);
                     break;
                 case LifecycleOpId.CopyAttributeSlice:
                     EntityLifecycleAtomicOps.CopyAttributeSlice(

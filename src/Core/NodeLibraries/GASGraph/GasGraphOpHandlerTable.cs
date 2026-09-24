@@ -359,6 +359,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
                 GraphNodeOp.QueryFilterKnowledgeVisible or
+                GraphNodeOp.QueryFilterSelectable or
                 GraphNodeOp.PointToDirection or
                 GraphNodeOp.StickToDirection or
                 GraphNodeOp.LoadPointerScreenX or
@@ -369,7 +370,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitCommandIntent or
                 GraphNodeOp.SubmitCast or
                 GraphNodeOp.SubmitEngageBatch or
-                GraphNodeOp.BindQueryCollection
+                GraphNodeOp.BindQueryCollection or
+                GraphNodeOp.ReadCalendarEnabled or
+                GraphNodeOp.ReadCalendarDayIndex or
+                GraphNodeOp.ReadCalendarTicksIntoDay or
+                GraphNodeOp.ReadCalendarDayPermille or
+                GraphNodeOp.ReadCalendarDayPhase or
+                GraphNodeOp.ReadCalendarYear or
+                GraphNodeOp.ReadCalendarCyclePhase or
+                GraphNodeOp.ReadCalendarCycleDay or
+                GraphNodeOp.ApplyCalendarStart or
+                GraphNodeOp.SetCalendarDayIndex or
+                GraphNodeOp.SetCalendarTicksIntoDay or
+                GraphNodeOp.ReadTimeFlowPaused or
+                GraphNodeOp.ReadTimeFlowScalePermille or
+                GraphNodeOp.AcquireTimeFlowPause or
+                GraphNodeOp.AcquireTimeFlowScale or
+                GraphNodeOp.ReleaseTimeFlowToken
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -952,6 +969,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
+            Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
             Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
@@ -980,6 +998,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
             Register(GraphNodeOp.OfferTask, HandleOfferTask, "OfferTask graph opcode.");
             Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
+            Register(GraphNodeOp.ReadCalendarEnabled, HandleReadCalendarEnabled, "ReadCalendarEnabled graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayIndex, HandleReadCalendarDayIndex, "ReadCalendarDayIndex graph opcode.");
+            Register(GraphNodeOp.ReadCalendarTicksIntoDay, HandleReadCalendarTicksIntoDay, "ReadCalendarTicksIntoDay graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayPermille, HandleReadCalendarDayPermille, "ReadCalendarDayPermille graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayPhase, HandleReadCalendarDayPhase, "ReadCalendarDayPhase graph opcode.");
+            Register(GraphNodeOp.ReadCalendarYear, HandleReadCalendarYear, "ReadCalendarYear graph opcode.");
+            Register(GraphNodeOp.ReadCalendarCyclePhase, HandleReadCalendarCyclePhase, "ReadCalendarCyclePhase graph opcode.");
+            Register(GraphNodeOp.ReadCalendarCycleDay, HandleReadCalendarCycleDay, "ReadCalendarCycleDay graph opcode.");
+            Register(GraphNodeOp.ApplyCalendarStart, HandleApplyCalendarStart, "ApplyCalendarStart graph opcode.");
+            Register(GraphNodeOp.SetCalendarDayIndex, HandleSetCalendarDayIndex, "SetCalendarDayIndex graph opcode.");
+            Register(GraphNodeOp.SetCalendarTicksIntoDay, HandleSetCalendarTicksIntoDay, "SetCalendarTicksIntoDay graph opcode.");
+            Register(GraphNodeOp.ReadTimeFlowPaused, HandleReadTimeFlowPaused, "ReadTimeFlowPaused graph opcode.");
+            Register(GraphNodeOp.ReadTimeFlowScalePermille, HandleReadTimeFlowScalePermille, "ReadTimeFlowScalePermille graph opcode.");
+            Register(GraphNodeOp.AcquireTimeFlowPause, HandleAcquireTimeFlowPause, "AcquireTimeFlowPause graph opcode.");
+            Register(GraphNodeOp.AcquireTimeFlowScale, HandleAcquireTimeFlowScale, "AcquireTimeFlowScale graph opcode.");
+            Register(GraphNodeOp.ReleaseTimeFlowToken, HandleReleaseTimeFlowToken, "ReleaseTimeFlowToken graph opcode.");
         }
 
         // ── Value Ops ──
@@ -1068,6 +1102,135 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.StartDialogue(ins.Imm);
+        }
+
+        private static void HandleReadCalendarEnabled(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.ReadCalendarEnabled() ? 1 : 0);
+        }
+
+        private static void HandleReadCalendarDayIndex(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayIndex();
+        }
+
+        private static void HandleReadCalendarTicksIntoDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarTicksIntoDay();
+        }
+
+        private static void HandleReadCalendarDayPermille(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayPermille();
+        }
+
+        private static void HandleReadCalendarDayPhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayPhase();
+        }
+
+        private static void HandleReadCalendarYear(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarYear(ins.Imm);
+        }
+
+        private static void HandleReadCalendarCyclePhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarCyclePhase(ins.Imm);
+        }
+
+        private static void HandleReadCalendarCycleDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarCycleDay(ins.Imm);
+        }
+
+        private static void HandleApplyCalendarStart(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ApplyCalendarStart(s.I[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleSetCalendarDayIndex(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetCalendarDayIndex(s.I[ins.A]);
+        }
+
+        private static void HandleSetCalendarTicksIntoDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetCalendarTicksIntoDay(s.I[ins.A]);
+        }
+
+        private static void HandleReadTimeFlowPaused(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.ReadTimeFlowPaused(RequireTimeFlowDomain(ref s, ins.Imm)) ? 1 : 0);
+        }
+
+        private static void HandleReadTimeFlowScalePermille(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadTimeFlowScalePermille(RequireTimeFlowDomain(ref s, ins.Imm));
+        }
+
+        private static void HandleAcquireTimeFlowPause(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            (string owner, string reason) = RequireTimeFlowOwner(ref s);
+            s.I[ins.Dst] = s.Api.AcquireTimeFlowPause(RequireTimeFlowDomain(ref s, ins.Imm), owner, reason);
+        }
+
+        private static void HandleAcquireTimeFlowScale(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            (string owner, string reason) = RequireTimeFlowOwner(ref s);
+            s.I[ins.Dst] = s.Api.AcquireTimeFlowScale(RequireTimeFlowDomain(ref s, ins.Imm), s.I[ins.A], owner, reason);
+        }
+
+        private static void HandleReleaseTimeFlowToken(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ReleaseTimeFlowToken(s.I[ins.A]);
+        }
+
+        private static string RequireTimeFlowDomain(ref GraphExecutionState s, int symbolIndex)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol requires a registered graph program. graphId={s.CurrentGraphId}.");
+            }
+
+            string[] symbols = registration.Symbols;
+            if ((uint)symbolIndex >= (uint)symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol index {symbolIndex} is outside the symbol table of graph {s.CurrentGraphId}.");
+            }
+
+            string domain = symbols[symbolIndex];
+            if (string.IsNullOrWhiteSpace(domain))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol index {symbolIndex} is empty on graph {s.CurrentGraphId}.");
+            }
+
+            return domain;
+        }
+
+        private static (string Owner, string Reason) RequireTimeFlowOwner(ref GraphExecutionState s)
+        {
+            string owner = Host.GraphIdRegistry.GetName(s.CurrentGraphId);
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow token owner requires graph id {s.CurrentGraphId} to be registered in GraphIdRegistry.");
+            }
+
+            if (s.Programs == null ||
+                !s.Programs.TryGetSourceMap(s.CurrentGraphId, out GraphInstructionSourceMap sourceMap) ||
+                !sourceMap.TryGetSource(s.CurrentInstructionPc, out GraphInstructionSource source) ||
+                string.IsNullOrWhiteSpace(source.NodeId))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow token reason requires a source node for graph '{owner}'.");
+            }
+
+            return (owner, source.NodeId);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)
@@ -1851,6 +2014,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.TargetList.SetCount(s.Api.FilterKnowledgeVisible(s.Targets, s.TargetList.Count, s.E[ins.A]));
         }
 
+        private static void HandleQueryFilterSelectable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterCommandSourceSelectable(s.Targets, s.TargetList.Count));
+        }
+
         private static void HandleQueryFilterNotEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterNotEntity(s.Targets, s.TargetList.Count, s.E[ins.A]));
@@ -2302,7 +2470,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var rect = ScreenRect.FromPoints(
                 new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
                 new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
-            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+            float tolerancePixels = ins.Dst != byte.MaxValue ? s.F[ins.Dst] : 0f;
+            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId, tolerancePixels));
         }
 
         private static void HandleQueryScreenRegionCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

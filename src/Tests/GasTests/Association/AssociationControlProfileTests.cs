@@ -750,6 +750,7 @@ namespace Ludots.Tests.GAS
                 harness.Runtime.Update();
                 RemoveTagById(harness, grantor, tagId);
                 harness.Runtime.Update();
+                harness.Changes.Clear();
             }
 
             long stop = Stopwatch.GetTimestamp();
@@ -875,6 +876,7 @@ namespace Ludots.Tests.GAS
         {
             public World World = null!;
             public RelationshipRuntime Relationships = null!;
+            public RelationshipChangeBuffer Changes = null!;
             public OwnershipResolver Ownership = null!;
             public TagOps TagOps = null!;
             public AssociationControlProfileRuntime Runtime = null!;
@@ -896,13 +898,14 @@ namespace Ludots.Tests.GAS
             {
                 var types = new RelationshipTypeRegistry();
                 var flags = new RelationshipFlagRegistry();
+                var changes = new RelationshipChangeBuffer(capacity: relationshipChangeCapacity);
                 var relationships = new RelationshipRuntime(
                     world,
                     types,
                     new RelationshipMetricRegistry(),
                     flags,
                     new RelationshipBandRegistry(),
-                    new RelationshipChangeBuffer(capacity: relationshipChangeCapacity),
+                    changes,
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
@@ -938,6 +941,7 @@ namespace Ludots.Tests.GAS
                     keyRegistry.Register("collection.ui.cast.raw"));
                 return new Harness
                 {
+                    Changes = changes,
                     World = world,
                     Relationships = relationships,
                     Ownership = ownership,

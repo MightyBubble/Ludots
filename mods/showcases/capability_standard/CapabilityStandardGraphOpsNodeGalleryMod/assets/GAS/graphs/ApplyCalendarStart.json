@@ -1,0 +1,62 @@
+[
+  {
+    "id": "showcase.graph_op.ApplyCalendarStart",
+    "kind": "Script",
+    "entry": "day",
+    "nodes": [
+      {
+        "id": "day",
+        "op": "ReadCalendarDayIndex"
+      },
+      {
+        "id": "ticks",
+        "op": "ReadCalendarTicksIntoDay"
+      },
+      {
+        "id": "featured",
+        "op": "ApplyCalendarStart"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "day",
+        "fromPort": "next",
+        "to": "ticks"
+      },
+      {
+        "from": "ticks",
+        "fromPort": "next",
+        "to": "featured"
+      },
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "day",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "a"
+      },
+      {
+        "from": "ticks",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "b"
+      },
+      {
+        "from": "day",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -21,6 +21,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             MapId mapId,
             int extraBuildings,
             int seed,
+            float centerXCm,
+            float centerYCm,
             float minRadiusCm = DefaultMinRadiusCm,
             float maxRadiusCm = DefaultMaxRadiusCm)
         {
@@ -30,6 +32,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 PresenterBlacksmithShowcaseIds.TemplateId,
                 extraBuildings,
                 seed,
+                centerXCm,
+                centerYCm,
                 minRadiusCm,
                 maxRadiusCm,
                 DefaultJitterCm);
@@ -41,6 +45,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             string templateId,
             int entityCount,
             int seed,
+            float centerXCm,
+            float centerYCm,
             float minRadiusCm = DefaultMinRadiusCm,
             float maxRadiusCm = DefaultMaxRadiusCm,
             float jitterCm = DefaultJitterCm)
@@ -96,6 +102,9 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                         x *= scale;
                         y *= scale;
                     }
+
+                    x += centerXCm;
+                    y += centerYCm;
 
                     scratch[batchIndex] = new RuntimeEntitySpawnRequest
                     {

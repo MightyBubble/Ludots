@@ -1,0 +1,34 @@
+{
+  "op": "QueryFilterSelectable",
+  "driver": "query",
+  "title": "可选筛只留能点的",
+  "beat": "名单过一道可选门：带可选标记且开关打开的留下，关掉的当场划掉，顺序不变。",
+  "detailTemplate": "可选筛后名单留 {count} 名。",
+  "assertDetailContains": [
+    "可选筛后名单留"
+  ],
+  "featuredNodeId": "selectable_filter",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "viewer",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "观察者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "目标",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

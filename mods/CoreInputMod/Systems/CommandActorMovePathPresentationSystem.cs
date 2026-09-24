@@ -51,6 +51,10 @@ namespace CoreInputMod.Systems
         private int _lineEventKeyId;
         private int _waypointEventKeyId;
         private string _lastProjectionSummary = "projection=uninitialized";
+        private int _lastEmittedLines = -1;
+        private int _lastEmittedWaypoints = -1;
+        private DebugSummarySignature _lastSummarySignature;
+        private bool _hasSummarySignature;
 
         private readonly struct ActorKey : IEquatable<ActorKey>
         {
@@ -151,7 +155,12 @@ namespace CoreInputMod.Systems
             }
 
             EndUntouchedScopes(frameId);
-            _lastProjectionSummary = $"projection=events line={emittedLines} waypoint={emittedWaypoints}";
+            if (_lastEmittedLines != emittedLines || _lastEmittedWaypoints != emittedWaypoints)
+            {
+                _lastProjectionSummary = $"projection=events line={emittedLines} waypoint={emittedWaypoints}";
+                _lastEmittedLines = emittedLines;
+                _lastEmittedWaypoints = emittedWaypoints;
+            }
             PublishDebugState(
                 commandActorCount: count,
                 emittedLines,
@@ -561,6 +570,23 @@ namespace CoreInputMod.Systems
             Entity collectionContext,
             Entity primaryViewed)
         {
+            DebugSummarySignature signature = new DebugSummarySignature(
+                _lastProjectionSummary,
+                commandActorCount,
+                emittedLines,
+                emittedWaypoints,
+                collectionOwner,
+                collectionKey,
+                collectionContext,
+                primaryViewed,
+                _world);
+            if (_hasSummarySignature && signature.Equals(_lastSummarySignature))
+            {
+                return;
+            }
+
+            _lastSummarySignature = signature;
+            _hasSummarySignature = true;
             string summary = BuildDebugSummary(
                 commandActorCount,
                 emittedLines,
@@ -773,6 +799,113 @@ namespace CoreInputMod.Systems
                 int scope = (owner.Id * 100000) + offset;
                 return scope <= 0 ? offset : scope;
             }
+        }
+
+        /// <summary>
+        /// Value identity of the debug summary text: rebuilt (and re-published to globals) only when
+        /// these fields change, so steady frames with an unchanged projection allocate nothing.
+        /// </summary>
+        private readonly struct DebugSummarySignature : IEquatable<DebugSummarySignature>
+        {
+            private readonly string _projectionSummary;
+            private readonly int _commandActorCount;
+            private readonly int _emittedLines;
+            private readonly int _emittedWaypoints;
+            private readonly int _ownerId;
+            private readonly string _collectionKey;
+            private readonly int _contextId;
+            private readonly int _primaryId;
+            private readonly bool _primaryHasOrderBuffer;
+            private readonly bool _primaryHasPosition2D;
+            private readonly int _activeMoveCount;
+            private readonly int _queuedMoveCount;
+            private readonly long _positionX;
+            private readonly long _positionY;
+            private readonly long _worldX;
+            private readonly long _worldY;
+
+            public DebugSummarySignature(
+                string projectionSummary,
+                int commandActorCount,
+                int emittedLines,
+                int emittedWaypoints,
+                Entity collectionOwner,
+                string collectionKey,
+                Entity collectionContext,
+                Entity primaryViewed,
+                World world)
+            {
+                _projectionSummary = projectionSummary;
+                _commandActorCount = commandActorCount;
+                _emittedLines = emittedLines;
+                _emittedWaypoints = emittedWaypoints;
+                _ownerId = collectionOwner.Id;
+                _collectionKey = collectionKey;
+                _contextId = collectionContext.Id;
+                _primaryId = primaryViewed.Id;
+
+                _primaryHasOrderBuffer = false;
+                _primaryHasPosition2D = false;
+                _activeMoveCount = 0;
+                _queuedMoveCount = 0;
+                _positionX = 0;
+                _positionY = 0;
+                _worldX = 0;
+                _worldY = 0;
+                if (primaryViewed != Entity.Null && world.IsAlive(primaryViewed))
+                {
+                    _primaryHasOrderBuffer = world.Has<OrderBuffer>(primaryViewed);
+                    _primaryHasPosition2D = world.Has<Position2D>(primaryViewed);
+                    if (_primaryHasOrderBuffer)
+                    {
+                        OrderBuffer buffer = world.Get<OrderBuffer>(primaryViewed);
+                        _activeMoveCount = buffer.HasActive ? 1 : 0;
+                        _queuedMoveCount = buffer.QueuedCount;
+                    }
+
+                    if (world.TryGet(primaryViewed, out Position2D position2D))
+                    {
+                        _positionX = position2D.Value.X.RawValue;
+                        _positionY = position2D.Value.Y.RawValue;
+                    }
+
+                    if (world.TryGet(primaryViewed, out WorldPositionCm worldPosition))
+                    {
+                        _worldX = worldPosition.Value.X.RawValue;
+                        _worldY = worldPosition.Value.Y.RawValue;
+                    }
+                }
+            }
+
+            public bool Equals(DebugSummarySignature other)
+            {
+                return ReferenceEquals(_projectionSummary, other._projectionSummary) &&
+                       _commandActorCount == other._commandActorCount &&
+                       _emittedLines == other._emittedLines &&
+                       _emittedWaypoints == other._emittedWaypoints &&
+                       _ownerId == other._ownerId &&
+                       string.Equals(_collectionKey, other._collectionKey, StringComparison.Ordinal) &&
+                       _contextId == other._contextId &&
+                       _primaryId == other._primaryId &&
+                       _primaryHasOrderBuffer == other._primaryHasOrderBuffer &&
+                       _primaryHasPosition2D == other._primaryHasPosition2D &&
+                       _activeMoveCount == other._activeMoveCount &&
+                       _queuedMoveCount == other._queuedMoveCount &&
+                       _positionX == other._positionX &&
+                       _positionY == other._positionY &&
+                       _worldX == other._worldX &&
+                       _worldY == other._worldY;
+            }
+
+            public override bool Equals(object? obj) => obj is DebugSummarySignature other && Equals(other);
+
+            public override int GetHashCode() => HashCode.Combine(
+                _commandActorCount,
+                _emittedLines,
+                _emittedWaypoints,
+                _ownerId,
+                _contextId,
+                _primaryId);
         }
 
         private void EnsureCommandActorCapacity(int required)

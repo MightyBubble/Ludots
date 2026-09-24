@@ -47,6 +47,13 @@ namespace Ludots.Core.Engine
                 chainOrderQueue!.Clear();
             }
 
+            // Collection sources hold entity references into the replaced world; without this
+            // reset a restored session would reconcile selections against dead entities.
+            if (TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollections.EntityCollectionStore? collectionStore))
+            {
+                collectionStore!.Clear();
+            }
+
             // Determinism basis: elapsed engine time is simulation state, not wall time. Rewind it
             // so time-derived fields (e.g. Physics2DRuntimeState.LastPhysicsStepTime) resume from
             // the checkpoint instead of carrying pre-restore drift.

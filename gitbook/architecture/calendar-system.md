@@ -123,7 +123,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 存档域 `calendar`：`enabled`、`dayIndex`、`ticksIntoDay`、`activeCalendarId`。定义不存，以配置为准。恢复时 enabled / 主历必须和当前配置一致，否则失败。恢复不补发事件。
 
-读当前日期：`GameEngine` 服务 `CalendarRuntime` 的 `Project` / `CaptureProgressSnapshot`。面板 `Calendar.DayIndex` 仍要等全局 scope（G3）才能用 `LoadSelfAttribute`；现在不要假装这些属性已经有实体。日期不进 `Clock.*`。
+图里读今天：Script、TriggerGraph、Query 用 `ReadCalendarEnabled`、`ReadCalendarDayIndex`、`ReadCalendarTicksIntoDay`、`ReadCalendarDayPermille`、`ReadCalendarDayPhase`、`ReadCalendarYear`、`ReadCalendarCyclePhase`、`ReadCalendarCycleDay`。年份和周期可以点名哪一份历，留空就是当前主历；周期节点必须写周期 id。写日子：`ApplyCalendarStart` 在开局还没提交时落下日序和当天步数，不发事件；提交后再写成同一个值是空操作，写成别的值失败。`SetCalendarDayIndex` 拨到一个不早于今天的绝对日，中间每一天走和时钟同一条跨日路径。`SetCalendarTicksIntoDay` 改当天已走步，范围是 `[0, ticksPerDay)`，昼夜相位变了发 `Calendar.DayPhaseChanged`，不翻日。启用历法仍然只认 `Calendar/world.json`。没有 `Calendar.*` 实体属性，面板值图用这些读节点。日期不进 `Clock.*`。事件载荷里的相位、日历、日序仍用 `LoadEntryPayloadInt`。代码侧 `Project` / `CaptureProgressSnapshot` 还在。
 
 ## 4 场景
 
@@ -147,7 +147,9 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 闰年、阴阳合历、月长不齐、节日：全部用明文相位表表达（含 `yearCycleId` 相位表年）。本年不做隐式闰规则。
 - 事件不遍历广播：没订阅者的事件不派发、不算投影。订阅空窗不补发。
 - `EntityLocalClock` 不驱动世界历。单体变速不影响日序。
-- 没有 `world.json` 时不挂 `CalendarSystem`，不每帧问开没开。调用 `Project` 失败，不返回假日期。
+- 没有 `world.json` 时不挂 `CalendarSystem`，不每帧问开没开。调用 `Project` 失败，不返回假日期。图里只有 `ReadCalendarEnabled` 能读到未启用，其它读写同样失败。
+- 图不能另造一份历。开局日序写在 `world.json`；`ApplyCalendarStart` 只在开局窗口里改这一份已经装上的历。
+- 日序不能往回拨。开局窗口在跨日、订阅者看见昼夜相位变化、作者写过日序或当天步数、或存档恢复之后关闭。
 - 未知字段、相位长度对不齐、主历不存在、年计数二选一写重或漏写：装载失败并点名。
 - `minutesPerDay` / 累计已过分钟不是日序字段。一天只按 `ticksPerDay` 翻页。
 - 时钟层（Engine / GAS / Physics2D / TimeFlow）不认识日、年、季节。日期属性走 `Calendar.*`。
@@ -213,6 +215,31 @@ Feature: 世界日子按历法走
     When 有人要读今天是哪一年
     Then 系统失败并说明历法未启用
 
+  Scenario: 从图里读出今天
+    Given 世界历法已启用
+    And 今天停在开局日序
+    When 作者在图里读取日序、年份和当前季节
+    Then 图给出和历法投影相同的日序
+    And 年份是主历上的年份
+    And 季节相位是当前季节
+
+  Scenario: 开局日子还没落定时可以改开局
+    Given 世界历法已启用
+    And 开局日序还没有被提交
+    When 作者把开局写成另一组日序和当天步数
+    Then 今天变成这组开局
+    And 不发出日子事件
+    When 作者再写成另一组不同的值
+    Then 写入失败并点名已经提交的日子和请求的日子
+
+  Scenario: 日子只能往前拨
+    Given 今天是第 90 日
+    When 作者把日序拨到第 91 日
+    Then 玩家看到进入第 91 日时的季节进出
+    When 作者再把日序拨回第 90 日
+    Then 写入失败
+    And 今天仍停在第 91 日
+
   Scenario: 时钟答不出今天几号
     Given 引擎和玩法步进都在走
     And 没有启用世界历
@@ -234,4 +261,4 @@ Feature: 世界日子按历法走
 - 时钟层：`gitbook/architecture/time-system.md`
 - 实现：`src/Core/Gameplay/Calendar/`
 - 默认历法表：`assets/Calendar/calendars.json`
-- 测试：`src/Tests/CalendarCoreTests/`
+- 测试：`src/Tests/CalendarCoreTests/`、`src/Tests/GasTests/Graph/GraphCalendarOpsTests.cs`

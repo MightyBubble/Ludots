@@ -4,17 +4,25 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "GridCellSizeCm": 200,
-      "WidthCells": 6144,
-      "HeightCells": 4096
+      "WidthCm": 1228800,
+      "HeightCm": 819200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 200
+      }
     }
   ],
   "Entities": [
     {
       "InstanceId": "mule.harbor",
       "Template": "eg.camp",
-      "PositionXCm": 1200,
-      "PositionYCm": -800,
+      "PositionXCm": 615600,
+      "PositionYCm": 408800,
       "Overrides": {
         "Name": {
           "Value": "Mule Harbor Camp"
@@ -24,8 +32,8 @@
     {
       "InstanceId": "mule.alpine",
       "Template": "eg.camp",
-      "PositionXCm": 500,
-      "PositionYCm": 2400
+      "PositionXCm": 614900,
+      "PositionYCm": 412000
     }
   ],
   "Tuning": {

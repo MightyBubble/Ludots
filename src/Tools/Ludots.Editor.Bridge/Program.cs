@@ -4674,7 +4674,11 @@ static class EditorRepo
         int? WidthHexes = null,
         int? HeightHexes = null,
         int EffectiveWidthCm = 0,
-        int EffectiveHeightCm = 0);
+        int EffectiveHeightCm = 0,
+        int AnchorLocalXCm = 0,
+        int AnchorLocalYCm = 0,
+        int AnchorWorldXCm = 0,
+        int AnchorWorldYCm = 0);
 
     public static List<ModInfo> DiscoverMods(string repoRoot)
     {
@@ -4880,6 +4884,19 @@ static class EditorRepo
             !dataFileExists ? "Board DataFile could not be resolved." :
             "Not bakeable.";
 
+        Ludots.Core.Spatial.BoardExtentSpec extent = board.ResolveExtent();
+        int? hexWidth = null;
+        int? hexHeight = null;
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) && board.Hex != null && board.Hex.EdgeLengthCm > 0)
+        {
+            var metrics = new Ludots.Core.Map.Hex.HexMetrics(board.Hex.EdgeLengthCm);
+            if (metrics.TryCountFittingHexes(extent.WidthCm, extent.HeightCm, out int fittedWidth, out int fittedHeight))
+            {
+                hexWidth = fittedWidth;
+                hexHeight = fittedHeight;
+            }
+        }
+
         return new BoardInfo(
             Name: board.Name,
             SpatialType: spatialType,
@@ -4894,12 +4911,16 @@ static class EditorRepo
             CanEditTerrain: canEditTerrain,
             CanBake: canBake,
             Reason: reason,
-            OriginXcm: board.OriginXCm,
-            OriginYcm: board.OriginYcm,
-            WidthHexes: board.WidthHexes,
-            HeightHexes: board.HeightHexes,
-            EffectiveWidthCm: board.ResolveExtent().WidthCm,
-            EffectiveHeightCm: board.ResolveExtent().HeightCm);
+            OriginXcm: board.TopologyOriginXCm,
+            OriginYcm: board.TopologyOriginYCm,
+            WidthHexes: hexWidth,
+            HeightHexes: hexHeight,
+            EffectiveWidthCm: extent.WidthCm,
+            EffectiveHeightCm: extent.HeightCm,
+            AnchorLocalXCm: board.Anchor?.LocalXCm ?? 0,
+            AnchorLocalYCm: board.Anchor?.LocalYCm ?? 0,
+            AnchorWorldXCm: board.Anchor?.WorldXCm ?? 0,
+            AnchorWorldYCm: board.Anchor?.WorldYCm ?? 0);
     }
 
     public static MergedMapResult LoadMergedMapConfig(ModContext ctx, string mapId)
@@ -5196,62 +5217,53 @@ static class EditorRepo
         map.Boards ??= new List<Ludots.Core.Map.Board.BoardConfig>();
         EnsureNoBoardNameConflict(map, name);
 
-int widthCells = request.WidthCells > 0
-            ? request.WidthCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardWidthPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
-        int heightCells = request.HeightCells > 0
-            ? request.HeightCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardHeightPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
         int cellSizeCm = request.CellSizeCm > 0
             ? request.CellSizeCm
             : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
+        int widthCm = request.WidthCm > 0
+            ? request.WidthCm
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardWidthPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells * cellSizeCm;
+        int heightCm = request.HeightCm > 0
+            ? request.HeightCm
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardHeightPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells * cellSizeCm;
+        if (widthCm / cellSizeCm <= 0 || heightCm / cellSizeCm <= 0)
+        {
+            throw new InvalidOperationException("WidthCm and HeightCm must cover at least one cell.");
+        }
 
-        ValidateBoardDimensions(widthCells, heightCells);
         string dataFile = string.IsNullOrWhiteSpace(request.DataFile)
             ? BuildDefaultBoardDataFile(mapId, name, spatialType)
             : request.DataFile.Trim();
 
-        bool hasOrigin = request.OriginXCm.HasValue || request.OriginYcm.HasValue;
-        if (hasOrigin && (request.OriginXCm is null || request.OriginYcm is null))
+        if (map.Boards.Count == 0 && (request.AnchorWorldXCm != 0 || request.AnchorWorldYCm != 0))
         {
-            throw new InvalidOperationException("OriginXCm and OriginYcm must be authored together.");
-        }
-        if (hasOrigin && map.Boards.Count == 0)
-        {
-            throw new InvalidOperationException("The first board on a boardless map becomes the root board and cannot declare an origin; add it centered, then add satellites with origins.");
-        }
-
-        bool hasHexes = request.WidthHexes.HasValue || request.HeightHexes.HasValue;
-        if (hasHexes && !string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("WidthHexes/HeightHexes are HexGrid-only.");
-        }
-        if (hasHexes && (request.WidthHexes is not > 0 || request.HeightHexes is not > 0))
-        {
-            throw new InvalidOperationException("WidthHexes/HeightHexes must be positive and authored together.");
+            throw new InvalidOperationException("The first board on a boardless map becomes the root board; its Anchor.World must be (0, 0).");
         }
 
         var board = new Ludots.Core.Map.Board.BoardConfig
         {
             Name = name,
             SpatialType = spatialType,
-            WidthCells = widthCells,
-            HeightCells = heightCells,
-            GridCellSizeCm = cellSizeCm,
-            HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+            WidthCm = widthCm,
+            HeightCm = heightCm,
+            Grid = new Ludots.Core.Map.Board.BoardGridAuthoring { CellSizeCm = cellSizeCm },
+            Anchor = new Ludots.Core.Map.Board.BoardAnchor
+            {
+                LocalXCm = request.AnchorLocalXCm,
+                LocalYCm = request.AnchorLocalYCm,
+                WorldXCm = request.AnchorWorldXCm,
+                WorldYCm = request.AnchorWorldYCm,
+            },
             DataFile = dataFile,
-            OriginXCm = request.OriginXCm,
-            OriginYcm = request.OriginYcm,
-            WidthHexes = request.WidthHexes,
-            HeightHexes = request.HeightHexes,
         };
-        if (board.WidthHexes.HasValue)
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
         {
-            // Keep legacy cell fields consistent with the hex footprint so terrain data
-            // files and chunk previews size off the effective extent.
-            Ludots.Core.Spatial.BoardExtentSpec footprint = board.ResolveExtent();
-            board.WidthCells = footprint.WidthCells;
-            board.HeightCells = footprint.HeightCells;
+            board.Hex = new Ludots.Core.Map.Board.BoardHexAuthoring
+            {
+                EdgeLengthCm = request.HexEdgeLengthCm > 0
+                    ? request.HexEdgeLengthCm
+                    : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+            };
         }
 
         string? dataPath = null;
@@ -5315,7 +5327,22 @@ int widthCells = request.WidthCells > 0
         {
             if (request.CellSizeCm.Value <= 0)
                 throw new InvalidOperationException("CellSizeCm must be positive.");
-            board.GridCellSizeCm = request.CellSizeCm.Value;
+            board.Grid ??= new Ludots.Core.Map.Board.BoardGridAuthoring();
+            board.Grid.CellSizeCm = request.CellSizeCm.Value;
+        }
+
+        if (request.WidthCm.HasValue)
+        {
+            if (request.WidthCm.Value <= 0)
+                throw new InvalidOperationException("WidthCm must be positive.");
+            board.WidthCm = request.WidthCm.Value;
+        }
+
+        if (request.HeightCm.HasValue)
+        {
+            if (request.HeightCm.Value <= 0)
+                throw new InvalidOperationException("HeightCm must be positive.");
+            board.HeightCm = request.HeightCm.Value;
         }
 
         if (request.HexEdgeLengthCm.HasValue)
@@ -5324,43 +5351,33 @@ int widthCells = request.WidthCells > 0
                 throw new InvalidOperationException("HexEdgeLengthCm can only be updated on HexGrid boards.");
             if (request.HexEdgeLengthCm.Value <= 0)
                 throw new InvalidOperationException("HexEdgeLengthCm must be positive.");
-            board.HexEdgeLengthCm = request.HexEdgeLengthCm.Value;
+            board.Hex ??= new Ludots.Core.Map.Board.BoardHexAuthoring();
+            board.Hex.EdgeLengthCm = request.HexEdgeLengthCm.Value;
         }
 
         bool isRoot = IsRootBoard(map, board);
-        if (request.ClearOrigin == true)
+        bool hasAnchor = request.AnchorLocalXCm.HasValue || request.AnchorLocalYCm.HasValue ||
+            request.AnchorWorldXCm.HasValue || request.AnchorWorldYCm.HasValue;
+        if (hasAnchor)
         {
-            if (isRoot)
-                throw new InvalidOperationException("The root board is always centered and has no origin to clear.");
-            board.OriginXCm = null;
-            board.OriginYcm = null;
-        }
-        else if (request.OriginXCm.HasValue || request.OriginYcm.HasValue)
-        {
-            if (request.OriginXCm is null || request.OriginYcm is null)
-                throw new InvalidOperationException("OriginXCm and OriginYcm must be updated together.");
-            if (isRoot)
-                throw new InvalidOperationException("The root board anchors the centered world and cannot declare an origin (#1567 slice 2b).");
-            board.OriginXCm = request.OriginXCm;
-            board.OriginYcm = request.OriginYcm;
-        }
+            if (request.AnchorLocalXCm is null || request.AnchorLocalYCm is null ||
+                request.AnchorWorldXCm is null || request.AnchorWorldYCm is null)
+            {
+                throw new InvalidOperationException("Anchor local and world centimeters must be updated together.");
+            }
 
-        if (request.ClearHexAuthoring == true)
-        {
-            board.WidthHexes = null;
-            board.HeightHexes = null;
-        }
-        else if (request.WidthHexes.HasValue || request.HeightHexes.HasValue)
-        {
-            if (!string.Equals(board.SpatialType, "HexGrid", StringComparison.Ordinal))
-                throw new InvalidOperationException("WidthHexes/HeightHexes are HexGrid-only.");
-            if (request.WidthHexes is not > 0 || request.HeightHexes is not > 0)
-                throw new InvalidOperationException("WidthHexes/HeightHexes must be positive and updated together.");
-            board.WidthHexes = request.WidthHexes;
-            board.HeightHexes = request.HeightHexes;
-            Ludots.Core.Spatial.BoardExtentSpec footprint = board.ResolveExtent();
-            board.WidthCells = footprint.WidthCells;
-            board.HeightCells = footprint.HeightCells;
+            if (isRoot && (request.AnchorWorldXCm != 0 || request.AnchorWorldYCm != 0))
+            {
+                throw new InvalidOperationException("The root board Anchor.World must stay (0, 0); that point is the Ludots origin.");
+            }
+
+            board.Anchor = new Ludots.Core.Map.Board.BoardAnchor
+            {
+                LocalXCm = request.AnchorLocalXCm.Value,
+                LocalYCm = request.AnchorLocalYCm.Value,
+                WorldXCm = request.AnchorWorldXCm.Value,
+                WorldYCm = request.AnchorWorldYCm.Value,
+            };
         }
 
         foreach (var existing in map.Boards)
@@ -5733,32 +5750,30 @@ int widthCells = request.WidthCells > 0
         if (boardExtent.WidthCm > rootExtent.WidthCm || boardExtent.HeightCm > rootExtent.HeightCm)
         {
             throw new InvalidOperationException(
-                $"Board '{board.Name}' extent {boardExtent.WidthCm}x{boardExtent.HeightCm}cm exceeds root board '{root.Name}' extent {rootExtent.WidthCm}x{rootExtent.HeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
+                $"Board '{board.Name}' extent {boardExtent.WidthCm}x{boardExtent.HeightCm}cm exceeds root board '{root.Name}' extent {rootExtent.WidthCm}x{rootExtent.HeightCm}cm; enlarge the root board or shrink the satellite.");
         }
 
         if (ReferenceEquals(board, root))
         {
+            if (board.Anchor != null && (board.Anchor.WorldXCm != 0 || board.Anchor.WorldYCm != 0))
+            {
+                throw new InvalidOperationException("The root board Anchor.World must be (0, 0); that point is the Ludots origin.");
+            }
+
             return;
         }
 
-        if (board.OriginXCm is int minX && board.OriginYcm is int minY)
+        long minX = boardExtent.TopologyOriginXCm;
+        long minY = boardExtent.TopologyOriginYCm;
+        long rootMinX = rootExtent.TopologyOriginXCm;
+        long rootMinY = rootExtent.TopologyOriginYCm;
+        if (minX < rootMinX || minY < rootMinY ||
+            minX + boardExtent.WidthCm > rootMinX + rootExtent.WidthCm ||
+            minY + boardExtent.HeightCm > rootMinY + rootExtent.HeightCm)
         {
-            long rootMinX = -rootExtent.WidthCm / 2;
-            long rootMinY = -rootExtent.HeightCm / 2;
-            if (minX < rootMinX || minY < rootMinY ||
-                (long)minX + boardExtent.WidthCm > rootMinX + rootExtent.WidthCm ||
-                (long)minY + boardExtent.HeightCm > rootMinY + rootExtent.HeightCm)
-            {
-                throw new InvalidOperationException(
-                    $"Board '{board.Name}' anchored AABB ({minX},{minY})+{boardExtent.WidthCm}x{boardExtent.HeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootExtent.WidthCm}x{rootExtent.HeightCm}cm (#1567 slice 2b).");
-            }
+            throw new InvalidOperationException(
+                $"Board '{board.Name}' rectangle ({minX},{minY})+{boardExtent.WidthCm}x{boardExtent.HeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootExtent.WidthCm}x{rootExtent.HeightCm}cm.");
         }
-    }
-
-    private static void ValidateBoardDimensions(int widthCells, int heightCells)
-    {
-        if (widthCells <= 0) throw new InvalidOperationException("WidthCells must be positive.");
-        if (heightCells <= 0) throw new InvalidOperationException("HeightCells must be positive.");
     }
 
     private static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
@@ -6248,27 +6263,27 @@ sealed class BoardCreateRequest
 {
     public string Name { get; set; } = string.Empty;
     public string SpatialType { get; set; } = "Grid";
-    public int WidthCells { get; set; }
-    public int HeightCells { get; set; }
+    public int WidthCm { get; set; }
+    public int HeightCm { get; set; }
     public int CellSizeCm { get; set; }
     public int HexEdgeLengthCm { get; set; }
     public string? DataFile { get; set; }
-    public int? OriginXCm { get; set; }
-    public int? OriginYcm { get; set; }
-    public int? WidthHexes { get; set; }
-    public int? HeightHexes { get; set; }
+    public int AnchorLocalXCm { get; set; }
+    public int AnchorLocalYCm { get; set; }
+    public int AnchorWorldXCm { get; set; }
+    public int AnchorWorldYCm { get; set; }
 }
 
 sealed class BoardUpdateRequest
 {
+    public int? WidthCm { get; set; }
+    public int? HeightCm { get; set; }
     public int? CellSizeCm { get; set; }
     public int? HexEdgeLengthCm { get; set; }
-    public int? OriginXCm { get; set; }
-    public int? OriginYcm { get; set; }
-    public bool? ClearOrigin { get; set; }
-    public int? WidthHexes { get; set; }
-    public int? HeightHexes { get; set; }
-    public bool? ClearHexAuthoring { get; set; }
+    public int? AnchorLocalXCm { get; set; }
+    public int? AnchorLocalYCm { get; set; }
+    public int? AnchorWorldXCm { get; set; }
+    public int? AnchorWorldYCm { get; set; }
 }
 
 sealed class FlatGridNavBootstrapRequest
