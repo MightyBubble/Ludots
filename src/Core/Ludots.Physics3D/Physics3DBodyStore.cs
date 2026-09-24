@@ -26,6 +26,8 @@ internal sealed class Physics3DBodyStore
     private readonly Physics3DBodyContactPolicy[] _contactPolicies;
     private readonly Physics3DCollisionSubgroup[] _collisionSubgroups;
     private int _freeSlotCount;
+    private int _customCollisionFilterCount;
+    private int _nonSolidContactPolicyCount;
 
     public Physics3DBodyStore(int mobileCapacity, int staticCapacity)
     {
@@ -62,6 +64,8 @@ internal sealed class Physics3DBodyStore
     public int ActiveBodyCount { get; private set; }
     public int ActiveMobileBodyCount { get; private set; }
     public int ActiveStaticBodyCount { get; private set; }
+    public bool HasCustomCollisionFilters => _customCollisionFilterCount > 0;
+    public bool HasNonSolidContactPolicies => _nonSolidContactPolicyCount > 0;
 
     public int AllocateSlot(Physics3DBodyKind kind)
     {
@@ -186,6 +190,7 @@ internal sealed class Physics3DBodyStore
         _slotKinds[slot] = FreeSlot;
         _slotToBepuHandle[slot] = -1;
         _entities[slot] = Entity.Null;
+        UntrackCollisionMetadata(slot);
         _layers[slot] = default;
         _materials[slot] = default;
         _bodyKinds[slot] = default;
@@ -203,6 +208,7 @@ internal sealed class Physics3DBodyStore
         }
 
         Physics3DBodyKind kind = _bodyKinds[slot];
+        UntrackCollisionMetadata(slot);
         _slotKinds[slot] = FreeSlot;
         _bodyKinds[slot] = default;
         _contactPolicies[slot] = default;
@@ -241,14 +247,14 @@ internal sealed class Physics3DBodyStore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AllowCollision(CollidableReference a, CollidableReference b)
-    {
-        int slotA = RequireSlot(a);
-        int slotB = RequireSlot(b);
-        return LayerMask.TestBidirectional(in _layers[slotA], in _layers[slotB]) &&
-               Physics3DCollisionSubgroup.AllowCollision(
-                   in _collisionSubgroups[slotA],
-                   in _collisionSubgroups[slotB]);
-    }
+        => AllowCollision(RequireSlot(a), RequireSlot(b));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AllowCollision(int slotA, int slotB)
+        => LayerMask.TestBidirectional(in _layers[slotA], in _layers[slotB]) &&
+           Physics3DCollisionSubgroup.AllowCollision(
+               in _collisionSubgroups[slotA],
+               in _collisionSubgroups[slotB]);
 
     public int GetBepuHandle(int slot) => _slotToBepuHandle[slot];
     public Physics3DBodyKind GetBodyKind(int slot) => _bodyKinds[slot];
@@ -284,5 +290,38 @@ internal sealed class Physics3DBodyStore
         _bodyKinds[slot] = description.Kind;
         _contactPolicies[slot] = description.ContactPolicy;
         _collisionSubgroups[slot] = description.CollisionSubgroup;
+        TrackCollisionMetadata(slot);
     }
+
+    private void TrackCollisionMetadata(int slot)
+    {
+        if (!IsDefaultCollisionFilter(in _layers[slot], in _collisionSubgroups[slot]))
+        {
+            _customCollisionFilterCount++;
+        }
+
+        if (_contactPolicies[slot].Kind != Physics3DBodyContactPolicyKind.Solid)
+        {
+            _nonSolidContactPolicyCount++;
+        }
+    }
+
+    private void UntrackCollisionMetadata(int slot)
+    {
+        if (!IsDefaultCollisionFilter(in _layers[slot], in _collisionSubgroups[slot]))
+        {
+            _customCollisionFilterCount--;
+        }
+
+        if (_contactPolicies[slot].Kind != Physics3DBodyContactPolicyKind.Solid)
+        {
+            _nonSolidContactPolicyCount--;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsDefaultCollisionFilter(in LayerMask layer, in Physics3DCollisionSubgroup subgroup)
+        => layer.Category == uint.MaxValue &&
+           layer.Mask == uint.MaxValue &&
+           subgroup.AssemblyId == 0;
 }

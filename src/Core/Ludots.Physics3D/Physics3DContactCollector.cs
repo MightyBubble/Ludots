@@ -12,9 +12,16 @@ internal sealed class Physics3DContactCollector
     private ulong[] _nextPersistentKeys;
     private Physics3DContactPair[] _pairs;
     private Physics3DContactPair[] _nextPairs;
+    private readonly byte[] _pairEventKinds;
+    private readonly byte[] _nextPairEventKinds;
+    private readonly Physics3DContactPair[] _endedPairs;
+    private readonly ulong[] _endedKeys;
     private readonly Physics3DContactEvent[] _events;
     private readonly int _workerCapacity;
     private readonly int _pairCapacity;
+    private int _endedCount;
+    private long _eventsStepIndex;
+    private bool _eventsMaterialized;
     private bool _overflowed;
 
     public Physics3DContactCollector(int workerCount, int workerCapacity)
@@ -37,7 +44,11 @@ internal sealed class Physics3DContactCollector
         _nextPersistentKeys = new ulong[_pairCapacity];
         _pairs = new Physics3DContactPair[_pairCapacity];
         _nextPairs = new Physics3DContactPair[_pairCapacity];
-        _events = new Physics3DContactEvent[checked(_pairCapacity * 3)];
+        _pairEventKinds = new byte[_pairCapacity];
+        _nextPairEventKinds = new byte[_pairCapacity];
+        _endedPairs = new Physics3DContactPair[_pairCapacity];
+        _endedKeys = new ulong[_pairCapacity];
+        _events = new Physics3DContactEvent[checked(_pairCapacity * 2)];
         _workerCapacity = workerCapacity;
     }
 
@@ -48,6 +59,8 @@ internal sealed class Physics3DContactCollector
     {
         Array.Clear(_workerCounts);
         EventCount = 0;
+        _endedCount = 0;
+        _eventsMaterialized = false;
         _overflowed = false;
     }
 
@@ -80,24 +93,31 @@ internal sealed class Physics3DContactCollector
         int previousIndex = 0;
         int candidateIndex = 0;
         int nextCount = 0;
-        // Both inputs are key-sorted, so this merge also appends events in their final deterministic order.
+        int endedCount = 0;
+        // Both inputs are key-sorted. Stay events are deferred until CopyEventsTo so dense piles
+        // do not rewrite tens of thousands of Stay records on the Step hot path.
         while (previousIndex < Count || candidateIndex < candidateCount)
         {
             ulong previousKey = previousIndex < Count ? _persistentKeys[previousIndex] : ulong.MaxValue;
             ulong candidateKey = candidateIndex < candidateCount ? _candidateKeys[candidateIndex] : ulong.MaxValue;
             if (previousKey == candidateKey)
             {
-                Physics3DContactPair pair = CreatePair(candidateKey, bodies, stepIndex);
-                AddPersistent(candidateKey, pair, ref nextCount);
-                AddEvent(pair, Physics3DContactEventKind.Stay, stepIndex);
+                Physics3DContactPair previousPair = _pairs[previousIndex];
+                Physics3DContactPair pair = new(
+                    previousPair.BodyA,
+                    previousPair.EntityA,
+                    previousPair.BodyB,
+                    previousPair.EntityB,
+                    stepIndex,
+                    previousPair.ContactKind);
+                AddPersistent(candidateKey, pair, Physics3DContactEventKind.Stay, ref nextCount);
                 previousIndex++;
                 candidateIndex++;
             }
             else if (candidateKey < previousKey)
             {
                 Physics3DContactPair pair = CreatePair(candidateKey, bodies, stepIndex);
-                AddPersistent(candidateKey, pair, ref nextCount);
-                AddEvent(pair, Physics3DContactEventKind.Begin, stepIndex);
+                AddPersistent(candidateKey, pair, Physics3DContactEventKind.Begin, ref nextCount);
                 candidateIndex++;
             }
             else
@@ -112,12 +132,18 @@ internal sealed class Physics3DContactCollector
                         previousPair.EntityB,
                         stepIndex,
                         previousPair.ContactKind);
-                    AddPersistent(previousKey, pair, ref nextCount);
-                    AddEvent(pair, Physics3DContactEventKind.Stay, stepIndex);
+                    AddPersistent(previousKey, pair, Physics3DContactEventKind.Stay, ref nextCount);
                 }
                 else
                 {
-                    AddEvent(previousPair, Physics3DContactEventKind.End, stepIndex);
+                    if (endedCount >= _pairCapacity)
+                    {
+                        throw new Physics3DCapacityExceededException("ended contact pairs", _pairCapacity);
+                    }
+
+                    _endedKeys[endedCount] = previousKey;
+                    _endedPairs[endedCount] = previousPair;
+                    endedCount++;
                 }
 
                 previousIndex++;
@@ -126,11 +152,18 @@ internal sealed class Physics3DContactCollector
 
         (_persistentKeys, _nextPersistentKeys) = (_nextPersistentKeys, _persistentKeys);
         (_pairs, _nextPairs) = (_nextPairs, _pairs);
+        // Event kinds were written into _nextPairEventKinds alongside _nextPairs.
+        _nextPairEventKinds.AsSpan(0, nextCount).CopyTo(_pairEventKinds.AsSpan(0, nextCount));
         Count = nextCount;
+        _endedCount = endedCount;
+        _eventsStepIndex = stepIndex;
+        EventCount = checked(nextCount + endedCount);
+        _eventsMaterialized = false;
     }
 
     public void RemoveBody(int bodySlot, long stepIndex)
     {
+        MaterializeEvents();
         int outputIndex = 0;
         for (int index = 0; index < Count; index++)
         {
@@ -145,6 +178,7 @@ internal sealed class Physics3DContactCollector
             {
                 _persistentKeys[outputIndex] = key;
                 _pairs[outputIndex] = _pairs[index];
+                _pairEventKinds[outputIndex] = _pairEventKinds[index];
             }
 
             outputIndex++;
@@ -167,6 +201,7 @@ internal sealed class Physics3DContactCollector
 
     public int CopyEventsTo(Span<Physics3DContactEvent> destination)
     {
+        MaterializeEvents();
         if (destination.Length < EventCount)
         {
             throw new Physics3DCapacityExceededException("contact event destination", destination.Length);
@@ -219,7 +254,8 @@ internal sealed class Physics3DContactCollector
         }
 
         Span<ulong> keys = _candidateKeys.AsSpan(0, total);
-        keys.Sort();
+        // Reuse the next-persistent buffer as radix scratch; it is overwritten later in CompleteStep.
+        RadixSort(keys, _nextPersistentKeys.AsSpan(0, total));
         int uniqueCount = 1;
         ulong previous = keys[0];
         for (int index = 1; index < keys.Length; index++)
@@ -237,7 +273,54 @@ internal sealed class Physics3DContactCollector
         return uniqueCount;
     }
 
-    private void AddPersistent(ulong key, Physics3DContactPair pair, ref int count)
+    private static void RadixSort(Span<ulong> values, Span<ulong> scratch)
+    {
+        if (values.Length <= 1)
+        {
+            return;
+        }
+
+        Span<int> counts = stackalloc int[256];
+        bool dataInValues = true;
+        for (int shift = 0; shift < 64; shift += 8)
+        {
+            Span<ulong> source = dataInValues ? values : scratch;
+            Span<ulong> destination = dataInValues ? scratch : values;
+            counts.Clear();
+            for (int index = 0; index < source.Length; index++)
+            {
+                counts[(int)((source[index] >> shift) & 0xFF)]++;
+            }
+
+            int sum = 0;
+            for (int bucket = 0; bucket < counts.Length; bucket++)
+            {
+                int count = counts[bucket];
+                counts[bucket] = sum;
+                sum += count;
+            }
+
+            for (int index = 0; index < source.Length; index++)
+            {
+                ulong value = source[index];
+                int bucket = (int)((value >> shift) & 0xFF);
+                destination[counts[bucket]++] = value;
+            }
+
+            dataInValues = !dataInValues;
+        }
+
+        if (!dataInValues)
+        {
+            scratch.CopyTo(values);
+        }
+    }
+
+    private void AddPersistent(
+        ulong key,
+        Physics3DContactPair pair,
+        Physics3DContactEventKind eventKind,
+        ref int count)
     {
         if (count >= _pairCapacity)
         {
@@ -246,7 +329,69 @@ internal sealed class Physics3DContactCollector
 
         _nextPersistentKeys[count] = key;
         _nextPairs[count] = pair;
+        _nextPairEventKinds[count] = (byte)eventKind;
         count++;
+    }
+
+    private void MaterializeEvents()
+    {
+        if (_eventsMaterialized)
+        {
+            return;
+        }
+
+        int pairIndex = 0;
+        int endedIndex = 0;
+        int output = 0;
+        long stepIndex = _eventsStepIndex;
+        while (pairIndex < Count || endedIndex < _endedCount)
+        {
+            ulong pairKey = pairIndex < Count ? _persistentKeys[pairIndex] : ulong.MaxValue;
+            ulong endedKey = endedIndex < _endedCount ? _endedKeys[endedIndex] : ulong.MaxValue;
+            if (pairKey <= endedKey && pairIndex < Count)
+            {
+                Physics3DContactPair pair = _pairs[pairIndex];
+                WriteEvent(
+                    ref output,
+                    pair,
+                    (Physics3DContactEventKind)_pairEventKinds[pairIndex],
+                    stepIndex);
+                pairIndex++;
+            }
+            else
+            {
+                WriteEvent(
+                    ref output,
+                    _endedPairs[endedIndex],
+                    Physics3DContactEventKind.End,
+                    stepIndex);
+                endedIndex++;
+            }
+        }
+
+        EventCount = output;
+        _eventsMaterialized = true;
+    }
+
+    private void WriteEvent(
+        ref int output,
+        in Physics3DContactPair pair,
+        Physics3DContactEventKind kind,
+        long stepIndex)
+    {
+        if (output >= _events.Length)
+        {
+            throw new Physics3DCapacityExceededException("contact events", _events.Length);
+        }
+
+        _events[output++] = new Physics3DContactEvent(
+            pair.BodyA,
+            pair.EntityA,
+            pair.BodyB,
+            pair.EntityB,
+            kind,
+            pair.ContactKind,
+            stepIndex);
     }
 
     private void AddEvent(Physics3DContactPair pair, Physics3DContactEventKind kind, long stepIndex)

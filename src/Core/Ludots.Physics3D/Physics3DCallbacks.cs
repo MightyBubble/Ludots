@@ -39,15 +39,22 @@ internal struct Physics3DNarrowPhaseCallbacks : INarrowPhaseCallbacks
         CollidableReference b,
         ref float speculativeMargin)
     {
+        if (!_bodies.HasCustomCollisionFilters && !_bodies.HasNonSolidContactPolicies)
+        {
+            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
+        }
+
+        int slotA = _bodies.RequireSlot(a);
+        int slotB = _bodies.RequireSlot(b);
         if (a.Mobility != CollidableMobility.Dynamic &&
             b.Mobility != CollidableMobility.Dynamic &&
-            !_bodies.IsSensor(_bodies.RequireSlot(a)) &&
-            !_bodies.IsSensor(_bodies.RequireSlot(b)))
+            !_bodies.IsSensor(slotA) &&
+            !_bodies.IsSensor(slotB))
         {
             return false;
         }
 
-        return _bodies.AllowCollision(a, b);
+        return _bodies.AllowCollision(slotA, slotB);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -65,14 +72,23 @@ internal struct Physics3DNarrowPhaseCallbacks : INarrowPhaseCallbacks
         int slotB = _bodies.RequireSlot(pair.B);
         ref readonly Physics3DMaterial materialA = ref _bodies.GetMaterial(slotA);
         ref readonly Physics3DMaterial materialB = ref _bodies.GetMaterial(slotB);
-        pairMaterial = new PairMaterialProperties(
-            Combine(materialA.FrictionCoefficient, materialB.FrictionCoefficient),
-            Combine(materialA.MaximumRecoveryVelocityCmPerSecond, materialB.MaximumRecoveryVelocityCmPerSecond),
-            new SpringSettings
-            {
-                AngularFrequency = Combine(materialA.SpringAngularFrequency, materialB.SpringAngularFrequency),
-                TwiceDampingRatio = Combine(materialA.SpringTwiceDampingRatio, materialB.SpringTwiceDampingRatio)
-            });
+        pairMaterial = MaterialsEqual(in materialA, in materialB)
+            ? new PairMaterialProperties(
+                materialA.FrictionCoefficient,
+                materialA.MaximumRecoveryVelocityCmPerSecond,
+                new SpringSettings
+                {
+                    AngularFrequency = materialA.SpringAngularFrequency,
+                    TwiceDampingRatio = materialA.SpringTwiceDampingRatio
+                })
+            : new PairMaterialProperties(
+                Combine(materialA.FrictionCoefficient, materialB.FrictionCoefficient),
+                Combine(materialA.MaximumRecoveryVelocityCmPerSecond, materialB.MaximumRecoveryVelocityCmPerSecond),
+                new SpringSettings
+                {
+                    AngularFrequency = Combine(materialA.SpringAngularFrequency, materialB.SpringAngularFrequency),
+                    TwiceDampingRatio = Combine(materialA.SpringTwiceDampingRatio, materialB.SpringTwiceDampingRatio)
+                });
         bool createConstraint = ShouldCreateConstraint(pair, slotA, slotB, ref manifold);
         if (manifold.Count > 0 &&
             (createConstraint || _bodies.IsSensor(slotA) || _bodies.IsSensor(slotB)))
@@ -121,6 +137,13 @@ internal struct Physics3DNarrowPhaseCallbacks : INarrowPhaseCallbacks
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool MaterialsEqual(in Physics3DMaterial left, in Physics3DMaterial right)
+        => left.FrictionCoefficient == right.FrictionCoefficient &&
+           left.MaximumRecoveryVelocityCmPerSecond == right.MaximumRecoveryVelocityCmPerSecond &&
+           left.SpringAngularFrequency == right.SpringAngularFrequency &&
+           left.SpringTwiceDampingRatio == right.SpringTwiceDampingRatio;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ShouldCreateConstraint<TManifold>(
         CollidablePair pair,
         int slotA,
@@ -128,23 +151,37 @@ internal struct Physics3DNarrowPhaseCallbacks : INarrowPhaseCallbacks
         ref TManifold manifold)
         where TManifold : unmanaged, IContactManifold<TManifold>
     {
-        ref readonly Physics3DBodyContactPolicy policyA = ref _bodies.GetContactPolicy(slotA);
-        ref readonly Physics3DBodyContactPolicy policyB = ref _bodies.GetContactPolicy(slotB);
-        if (policyA.Kind == Physics3DBodyContactPolicyKind.Sensor ||
-            policyB.Kind == Physics3DBodyContactPolicyKind.Sensor)
-        {
-            return false;
-        }
-
         if (manifold.Count == 0)
         {
             return false;
         }
 
+        if (!_bodies.HasNonSolidContactPolicies)
+        {
+            return true;
+        }
+
+        ref readonly Physics3DBodyContactPolicy policyA = ref _bodies.GetContactPolicy(slotA);
+        ref readonly Physics3DBodyContactPolicy policyB = ref _bodies.GetContactPolicy(slotB);
+        Physics3DBodyContactPolicyKind kindA = policyA.Kind;
+        Physics3DBodyContactPolicyKind kindB = policyB.Kind;
+        if (kindA == Physics3DBodyContactPolicyKind.Sensor ||
+            kindB == Physics3DBodyContactPolicyKind.Sensor)
+        {
+            return false;
+        }
+
+        // Dense solid/surface contacts are the hot path; skip manifold normal work unless a one-way platform is involved.
+        if (kindA != Physics3DBodyContactPolicyKind.OneWayPlatform &&
+            kindB != Physics3DBodyContactPolicyKind.OneWayPlatform)
+        {
+            return true;
+        }
+
         Vector3 contactNormal = manifold.GetNormal(ref manifold, 0);
-        return (policyA.Kind != Physics3DBodyContactPolicyKind.OneWayPlatform ||
+        return (kindA != Physics3DBodyContactPolicyKind.OneWayPlatform ||
                 AllowsOneWayContact(in policyA, slotA, slotB, pair.A, pair.B, platformIsA: true, contactNormal)) &&
-               (policyB.Kind != Physics3DBodyContactPolicyKind.OneWayPlatform ||
+               (kindB != Physics3DBodyContactPolicyKind.OneWayPlatform ||
                 AllowsOneWayContact(in policyB, slotB, slotA, pair.B, pair.A, platformIsA: false, contactNormal));
     }
 

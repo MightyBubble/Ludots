@@ -101,6 +101,15 @@ internal sealed class Physics3DThreadDispatcher : IThreadDispatcher, IDisposable
     {
         Action<int> workerBody = _currentWorkerBody
             ?? throw new InvalidOperationException("Physics3D dispatcher has no active worker body.");
+
+        // Worker 0 runs on the calling thread. Stage timers already attribute that thread's
+        // elapsed time and managed allocations, and background metrics only sum workers 1..N-1.
+        if (workerIndex == 0)
+        {
+            workerBody(workerIndex);
+            return;
+        }
+
         long allocationBefore = GC.GetAllocatedBytesForCurrentThread();
         long timestamp = Stopwatch.GetTimestamp();
         workerBody(workerIndex);
