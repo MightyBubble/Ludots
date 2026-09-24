@@ -58,8 +58,7 @@ public readonly record struct MassNavigationArrivalEvent(
     float WorldYCm);
 
 public readonly record struct MassNavigationSolverDiagnostics(
-    bool FlowEnabled,
-    int FlowIterationsPerStep,
+    int CrowdStampBudgetUnits,
     float FlowFieldRebuildMs,
     bool ArrivalRecoveryEnabled,
     int ArrivalTimeoutMs,
@@ -429,8 +428,7 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
     {
         return new MassNavigationSolverDiagnostics(
-            FlowEnabled: FlowTuning.Enabled,
-            FlowIterationsPerStep: FlowTuning.IterationsPerStep,
+            CrowdStampBudgetUnits: FlowTuning.CrowdStampBudgetUnits,
             FlowFieldRebuildMs: FlowFieldRebuildMs > 0.001f ? FlowFieldRebuildMs : MassNavigationFlow.LastFlowFieldRebuildMs,
             ArrivalRecoveryEnabled: MassNavigationFlow.ArrivalTuning.Enabled,
             ArrivalTimeoutMs: MassNavigationFlow.ArrivalTuning.TimeoutMs,

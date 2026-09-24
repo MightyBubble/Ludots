@@ -1208,7 +1208,7 @@ public sealed partial class MassNavigationFlowSolverState
                 ? stateCount
                 : Math.Max(1, (stateCount + agentSliceCount) / (agentSliceCount + 1));
             int stateEnd = Math.Min(stateCount, _flowRefreshCursor + chunkSize);
-            int crowdStampBudgetUnits = tuning.Enabled ? tuning.IterationsPerStep : 0;
+            int crowdStampBudgetUnits = tuning.CrowdStampBudgetUnits;
             for (int i = _flowRefreshCursor; i < stateEnd; i++)
             {
                 FlowRuntimeState flowState = _flowStates[i];
