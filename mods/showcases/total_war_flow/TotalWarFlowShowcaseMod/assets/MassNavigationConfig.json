@@ -13,8 +13,8 @@
       {
         "id": "central",
         "label": "Battlefield",
-        "centerXCm": 0,
-        "centerYCm": 0,
+        "centerXCm": 10000,
+        "centerYCm": 10000,
         "widthCm": 20000,
         "heightCm": 20000
       }
