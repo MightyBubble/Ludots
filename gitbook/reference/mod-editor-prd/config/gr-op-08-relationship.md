@@ -41,18 +41,18 @@
 
 ## 2. 逐 op 表
 
-kind 缩写同 gr-op-01。关系类型/度量/旗标符号均来自关系目录（rel-01）。dst=符号解析后的目的。
+kind 缩写同 gr-op-01，另 TG=TriggerGraph。关系类型/度量/旗标符号均来自关系目录（rel-01）。dst=符号解析后的目的。
 
 | op | 可用 kind | 输入引脚 | 输出 | 语义 |
 |---|---|---|---|---|
-| RelationshipEnsureLink | E | source target + 类型 | — | 建链（幂等） |
-| RelationshipRemoveLink | E | source target + 类型 | — | 断链 |
+| RelationshipEnsureLink | E+SC+TG | source target + 类型 | — | 建链（幂等） |
+| RelationshipRemoveLink | E+SC+TG | source target + 类型 | — | 断链 |
 | RelationshipSetMetric | E | source target value + 类型/度量 | — | 度量置值（reason 记账） |
 | RelationshipAddMetric | E | source target value + 类型/度量 | — | 度量加值 |
 | RelationshipSetFlag | E | source target value + 类型/旗标 | — | 旗标开关（reason 记账） |
-| RelationshipGetMetric | L | source target + 类型/度量 | Int | 读度量 |
-| RelationshipHasFlag | L+Q | source target + 类型/旗标 | Bool | 问旗标 |
-| RelationshipHasLink | L+Q | source target + 类型 | Bool | 问链路 |
+| RelationshipGetMetric | L+SC+TG | source target + 类型/度量 | Int | 读度量 |
+| RelationshipHasFlag | L+Q+SC+TG | source target + 类型/旗标 | Bool | 问旗标 |
+| RelationshipHasLink | L+Q+SC+TG | source target + 类型 | Bool | 问链路 |
 | RelationshipQueryOutgoing | Q | source + 类型 | TargetList | 出边邻居 |
 | RelationshipQueryIncoming | Q | source + 类型 | TargetList | 入边邻居 |
 | RelationshipQueryMutual | Q | source b + 类型 | TargetList | 双向都有链 |
@@ -66,7 +66,8 @@ kind 缩写同 gr-op-01。关系类型/度量/旗标符号均来自关系目录�
 
 互斥与陷阱：
 
-- **写侧三重门**：只进 Effect 图；且在效果组合编译（图折叠进效果执行计划）时按 Relationship 域 fail-closed——想把建链塞进效果模板的相位图是行不通的，必须留在显式 Effect 图。
+- **建边与断边**：Effect、Script、TriggerGraph 都能写。效果模板把这种图收进执行计划时仍按关系域拒绝，因为效果事务撤不回这条边。
+- **改度量与改旗标**：仍只进 Effect 图，效果计划同样拒绝。
 - 度量聚合出 Int 不出 Float：关系度量是整数世界，与属性（Float）不同。
 - SetMetric/AddMetric/SetFlag 带 reason 记账目的位（dst=reason）：语义是"为什么改"，外部观察可追溯。
 - 管线 list+source 双输入：source 是判关系的基准实体，list 是被筛的集合——别把两者接反。
@@ -77,7 +78,7 @@ kind 缩写同 gr-op-01。关系类型/度量/旗标符号均来自关系目录�
 
 ## 4. 运行时加载效果
 
-关系目录先于图加载；图内符号编译期对目录解析。写侧编译为 Effect 事务指令；读侧与管线为只读查询。
+关系目录先于图加载；图内符号编译期对目录解析。脚本图和地图触发图里的建边、断边直接落关系库。挂进效果模板则在计划编译时被拒。改度量与改旗标不进脚本图和地图触发图。读侧与管线为只读查询。
 
 ## 5. 异常处理
 
