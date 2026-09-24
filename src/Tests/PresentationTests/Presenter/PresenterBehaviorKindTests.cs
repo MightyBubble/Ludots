@@ -1224,6 +1224,73 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void OwnerPayloadTransformSync_DeadOwner_DoesNotThrowAndDropsFastPath()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            int bodyDefId = definitions.Register("sync.dead-owner.body", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity body = instances.CreateHierarchy(
+                definitions,
+                bodyDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9301,
+                Entity.Null,
+                definitions.Get(bodyDefId));
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(body), Is.True);
+
+            uint mask = world.Get<PresenterState>(body).BehaviorActiveMask;
+            world.Destroy(owner);
+
+            Assert.DoesNotThrow(() => instances.SyncTickBehaviorMarkers(body, definitions.Get(bodyDefId), mask));
+            Assert.That(world.IsAlive(body), Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(body), Is.False);
+
+            Assert.DoesNotThrow(() => instances.CreateHierarchy(
+                definitions,
+                bodyDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9302,
+                Entity.Null,
+                definitions.Get(bodyDefId)));
+        }
+
+        [Test]
         public void OwnerSyncPathSelection_HandsOverBetweenSingleRootFastPathAndPerPresenterSync()
         {
             using var world = World.Create();

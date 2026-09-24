@@ -184,6 +184,48 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void SyncEntities_SkipsTrackedAgentDestroyedBeforeBindingRebuild()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity deadAgent,
+                out Entity survivor,
+                out _);
+            world.Destroy(deadAgent);
+
+            Assert.DoesNotThrow(() => simulation.MassNavigationFlow.SyncEntities(world, simulation.AgentState));
+
+            Assert.That(simulation.LastEntitySyncAgentCount, Is.EqualTo(1));
+            Assert.That(world.IsAlive(survivor), Is.True);
+            Assert.That(
+                world.Get<WorldPositionCm>(survivor).Value.X.ToFloat(),
+                Is.EqualTo(1200f).Within(PositionToleranceCm));
+        }
+
+        [Test]
+        public void SyncDisplacedAgentPoses_SkipsTrackedAgentDestroyedBeforeBindingRebuild()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity deadAgent,
+                out Entity survivor,
+                out _);
+            simulation.MassNavigationFlow.MarkAgentDisplaced(0);
+            world.Destroy(deadAgent);
+
+            Assert.DoesNotThrow(() =>
+                simulation.MassNavigationFlow.SyncDisplacedAgentPoses(world, simulation.AgentState));
+
+            Assert.That(simulation.MassNavigationFlow.DisplacedAgentCount, Is.EqualTo(1));
+            Assert.That(world.IsAlive(survivor), Is.True);
+            Assert.That(
+                world.Get<WorldPositionCm>(survivor).Value.X.ToFloat(),
+                Is.EqualTo(1200f).Within(PositionToleranceCm));
+        }
+
+        [Test]
         public void AppendAuthoredAgents_AfterShrinkRebuild_MarksReusedAgentSlotDirtyForFirstEntitySync()
         {
             using var world = World.Create();

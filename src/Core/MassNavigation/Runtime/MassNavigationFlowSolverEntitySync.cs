@@ -35,18 +35,20 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
-            syncedCount++;
             if (!agentState.TryGetAgentEntity(i, out Entity entity))
             {
                 throw new InvalidOperationException(
                     $"MassNavigationFlowSolverState cannot sync unit {i} because no tracked agent entity is registered.");
             }
 
+            // Death destroys the unit in a later phase. The agent slot stays until the
+            // next binding rebuild, so a dead track is a gameplay fact, not a corrupt table.
             if (!world.IsAlive(entity))
             {
-                throw new InvalidOperationException(
-                    $"MassNavigationFlowSolverState cannot sync unit {i} because tracked entity {entity.Id} is not alive.");
+                continue;
             }
+
+            syncedCount++;
 
             int i2 = i << 1;
             float xCm = _positionsCm[i2];

@@ -4298,7 +4298,10 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
-            return _world.TryGet(state.OwnerEntity, out PresentationOwnerHasPresenterPayload payload) &&
+            Entity owner = state.OwnerEntity;
+            return owner != Entity.Null &&
+                _world.IsAlive(owner) &&
+                _world.TryGet(owner, out PresentationOwnerHasPresenterPayload payload) &&
                 payload.RootCount == 1 &&
                 payload.SingleRootPresenter == presenter &&
                 payload.SingleRootTransformSync != 0;
