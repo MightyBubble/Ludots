@@ -99,6 +99,11 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (output.Kind == BehaviorKind.WorldText)
             {
+                if (output.WorldText.Args is { Length: > 0 })
+                {
+                    return false;
+                }
+
                 if (output.WorldText.BoundAttributeId == WorldTextConfig.UnboundAttributeId ||
                     (output.WorldText.Mode != WorldHudValueMode.AttributeCurrentOverBase &&
                      output.WorldText.Mode != WorldHudValueMode.AttributeCurrent))

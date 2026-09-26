@@ -37,6 +37,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveInteractionContextProfileId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
         private readonly Func<int, GraphKind>? _resolveGraphProgramKind;
+        private readonly Func<int, byte>? _resolveTextTokenArgCount;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
 
@@ -57,7 +58,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveInteractionContextProfileId = null,
             PresenterCommandKindRegistry? commandKinds = null,
             PresenterBehaviorKindRegistry? behaviorKinds = null,
-            Func<int, GraphKind>? resolveGraphProgramKind = null)
+            Func<int, GraphKind>? resolveGraphProgramKind = null,
+            Func<int, byte>? resolveTextTokenArgCount = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -74,6 +76,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveInteractionContextProfileId = resolveInteractionContextProfileId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
             _resolveGraphProgramKind = resolveGraphProgramKind;
+            _resolveTextTokenArgCount = resolveTextTokenArgCount;
             _commandKinds = commandKinds;
             _behaviorKinds = behaviorKinds;
         }
@@ -1029,7 +1032,12 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] WorldTextFields =
         {
-            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize",
+            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize", "args",
+        };
+
+        private static readonly string[] WorldTextArgFields =
+        {
+            "paramKey", "source",
         };
 
         private static readonly string[] StyleFields =
@@ -3130,6 +3138,24 @@ namespace Ludots.Core.Presentation.Config
             }
 
             RejectUnknownFields(obj, path, WorldTextFields);
+            int fontSize = ParseWorldTextFontSize(obj["fontSize"], path);
+            if (obj["args"] != null)
+            {
+                if (obj["mode"] != null || obj["valueParamKey"] != null || obj["secondaryValueParamKey"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{path} args cannot be combined with mode, valueParamKey, or secondaryValueParamKey.");
+                }
+
+                int tokenId = ResolveTextTokenId(obj["textToken"], $"{path}.textToken");
+                return new WorldTextConfig
+                {
+                    TextTokenId = tokenId,
+                    Mode = WorldHudValueMode.None,
+                    FontSize = fontSize,
+                    Args = ParseWorldTextArgs(obj["args"], path, tokenId),
+                };
+            }
 
             return new WorldTextConfig
             {
@@ -3137,7 +3163,78 @@ namespace Ludots.Core.Presentation.Config
                 Mode = ParseRequiredEnum<WorldHudValueMode>(obj["mode"], $"{path}.mode"),
                 ValueParamKey = ParseOptionalParamKey(obj["valueParamKey"], $"{path}.valueParamKey"),
                 SecondaryValueParamKey = ParseOptionalParamKey(obj["secondaryValueParamKey"], $"{path}.secondaryValueParamKey"),
-                FontSize = ParseWorldTextFontSize(obj["fontSize"], path),
+                FontSize = fontSize,
+            };
+        }
+
+        private WorldTextArg[] ParseWorldTextArgs(JsonNode? node, string path, int tokenId)
+        {
+            if (node is not JsonArray array)
+            {
+                throw new InvalidOperationException($"{path}.args requires an array.");
+            }
+
+            if (_resolveTextTokenArgCount == null)
+            {
+                throw new InvalidOperationException($"{path}.args requires resolveTextTokenArgCount.");
+            }
+
+            byte argCount = _resolveTextTokenArgCount(tokenId);
+            if (argCount < 1 || argCount > PresentationTextPacket.MaxArgs || array.Count != argCount)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.args length {array.Count} must equal text token argCount {argCount} (1..{PresentationTextPacket.MaxArgs}).");
+            }
+
+            var args = new WorldTextArg[array.Count];
+            for (int i = 0; i < array.Count; i++)
+            {
+                args[i] = ParseWorldTextArg(array[i], $"{path}.args[{i}]");
+            }
+
+            return args;
+        }
+
+        private static WorldTextArg ParseWorldTextArg(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{path} requires an object.");
+            }
+
+            RejectUnknownFields(obj, path, WorldTextArgFields);
+            bool hasParamKey = obj["paramKey"] != null;
+            bool hasSource = obj["source"] != null;
+            if (hasParamKey == hasSource)
+            {
+                throw new InvalidOperationException($"{path} must set exactly one of paramKey or source.");
+            }
+
+            if (hasParamKey)
+            {
+                return new WorldTextArg
+                {
+                    Source = WorldTextArgSource.Param,
+                    ParamKey = ParseRequiredParamKey(obj["paramKey"], $"{path}.paramKey"),
+                };
+            }
+
+            string source = obj["source"]!.GetValue<string>();
+            if (source is "attribute" or "attributeRatio" or "attributeBase")
+            {
+                throw new InvalidOperationException(
+                    $"{path}.source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead.");
+            }
+
+            if (!string.Equals(source, "entityInfoTitle", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path}.source must be entityInfoTitle.");
+            }
+
+            return new WorldTextArg
+            {
+                Source = WorldTextArgSource.EntityInfoTitle,
+                ParamKey = PresenterParamKeyRegistry.UnsetParamKey,
             };
         }
 

@@ -6,5 +6,6 @@ namespace Ludots.Core.Presentation.Hud
         Int32 = 1,
         Float32 = 2,
         String = 3,
+        TextToken = 4,
     }
 }

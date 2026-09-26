@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Registry;
 using Ludots.Core.Client;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
@@ -683,6 +686,219 @@ namespace Ludots.Tests.Presentation
             Assert.That(hud.Item.FontSize, Is.EqualTo(18));
             Assert.That(hud.Item.Text.TokenId, Is.EqualTo(4001));
             Assert.That(hud.Item.Text.ArgCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WorldTextArgs_EmitsLocaleTitleAndParamHoles()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out int plateId, out int nameId);
+            Entity owner = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new EntityInfoTitleToken { Value = "entity.guan" });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            int levelKey = 61;
+            int defId = definitions.Register("asset.hero_plate", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.WorldText,
+                        ActiveByDefault = true,
+                        WorldText = new WorldTextConfig
+                        {
+                            TextTokenId = plateId,
+                            FontSize = 16,
+                            Args =
+                            [
+                                new WorldTextArg { Source = WorldTextArgSource.Param, ParamKey = levelKey },
+                                new WorldTextArg { Source = WorldTextArgSource.EntityInfoTitle },
+                            ],
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 11f, 12f), 9402, Entity.Null, default);
+            ref var state = ref world.Get<PresenterState>(presenter);
+            state.BehaviorActiveMask = 1u;
+            world.Get<PresenterWorldScale>(presenter).Value = Vector3.One;
+            instances.SetParam(presenter, levelKey, ParamLane.Float, 10f, 0, default);
+
+            Dictionary<string, object> globals = CreateWorldHudProjectionGlobals(world, owner);
+            globals[CoreServiceKeys.PresentationTextCatalog.Name] = catalog;
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                globals,
+                animatorStates: null!,
+                soundRequests: null!);
+
+            system.Update(0.016f);
+
+            ref readonly WorldHudChannelItem hud = ref requests.WorldHudAt(0);
+            Assert.That(hud.Item.ValueBound, Is.EqualTo(0));
+            Assert.That(hud.Item.Id0, Is.EqualTo(0));
+            Assert.That(hud.Item.Id1, Is.EqualTo(0));
+            Assert.That(hud.Item.Text.GetArg(0).AsInt32(), Is.EqualTo(10));
+            Assert.That(hud.Item.Text.GetArg(1).Type, Is.EqualTo(PresentationTextArgType.TextToken));
+            Assert.That(hud.Item.Text.GetArg(1).Raw32, Is.EqualTo(nameId));
+            Assert.That(PresentationTextFormatter.TryFormat(catalog, catalog.DefaultLocaleId, hud.Item.Text, out string enText), Is.True);
+            Assert.That(enText, Is.EqualTo("Lv10 Guan Yu"));
+            Assert.That(
+                PresentationTextFormatter.TryFormat(catalog, catalog.GetLocaleId("zh-CN"), hud.Item.Text, out string zhText),
+                Is.True);
+            Assert.That(zhText, Is.EqualTo("Lv10 关羽"));
+        }
+
+        [Test]
+        public void WorldTextArgs_UsesProfileTitleWhenMapTokenIsAbsent()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out int plateId, out int nameId);
+            const int templateKeyId = 7;
+            Entity owner = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            int defId = definitions.Register("asset.hero_profile", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.WorldText,
+                        ActiveByDefault = true,
+                        WorldText = new WorldTextConfig
+                        {
+                            TextTokenId = plateId,
+                            Args = [new WorldTextArg { Source = WorldTextArgSource.EntityInfoTitle }],
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 9403, Entity.Null, default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
+            world.Get<PresenterWorldScale>(presenter).Value = Vector3.One;
+
+            Dictionary<string, object> globals = CreateWorldHudProjectionGlobals(world, owner);
+            globals[CoreServiceKeys.PresentationTextCatalog.Name] = catalog;
+            globals[CoreServiceKeys.EntityInfoTitleProfiles.Name] = new FixedTitleProfiles(templateKeyId, nameId);
+            using var system = new PresenterEmitSystem(
+                world, instances, definitions, requests, globals, animatorStates: null!, soundRequests: null!);
+
+            system.Update(0.016f);
+
+            ref readonly WorldHudChannelItem hud = ref requests.WorldHudAt(0);
+            Assert.That(hud.Item.Text.GetArg(0).Raw32, Is.EqualTo(nameId));
+        }
+
+        [Test]
+        public void WorldTextArgs_FailsWhenTitlesAreNotInstalled()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out int plateId, out _);
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            int defId = definitions.Register("asset.hero_missing", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.WorldText,
+                        ActiveByDefault = true,
+                        WorldText = new WorldTextConfig
+                        {
+                            TextTokenId = plateId,
+                            Args = [new WorldTextArg { Source = WorldTextArgSource.EntityInfoTitle }],
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9404, Entity.Null, default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
+            world.Get<PresenterWorldScale>(presenter).Value = Vector3.One;
+            Dictionary<string, object> globals = CreateWorldHudProjectionGlobals(world, owner);
+            globals[CoreServiceKeys.PresentationTextCatalog.Name] = catalog;
+            using var system = new PresenterEmitSystem(
+                world, instances, definitions, requests, globals, animatorStates: null!, soundRequests: null!);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f))!;
+            Assert.That(ex.Message, Does.Contain("not installed"));
+        }
+
+        [Test]
+        public void WorldTextArgs_MapTitleWinsOverProfileTitle()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out int plateId, out int nameId);
+            int heroId = catalog.GetTokenId("entity.hero");
+            const int templateKeyId = 7;
+            Entity owner = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new EntityInfoTitleToken { Value = "entity.guan" },
+                new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            int defId = definitions.Register("asset.hero_map", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.WorldText,
+                        ActiveByDefault = true,
+                        WorldText = new WorldTextConfig
+                        {
+                            TextTokenId = plateId,
+                            Args = [new WorldTextArg { Source = WorldTextArgSource.EntityInfoTitle }],
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9405, Entity.Null, default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
+            world.Get<PresenterWorldScale>(presenter).Value = Vector3.One;
+            Dictionary<string, object> globals = CreateWorldHudProjectionGlobals(world, owner);
+            globals[CoreServiceKeys.PresentationTextCatalog.Name] = catalog;
+            globals[CoreServiceKeys.EntityInfoTitleProfiles.Name] = new FixedTitleProfiles(templateKeyId, heroId);
+            using var system = new PresenterEmitSystem(
+                world, instances, definitions, requests, globals, animatorStates: null!, soundRequests: null!);
+
+            system.Update(0.016f);
+
+            Assert.That(requests.WorldHudAt(0).Item.Text.GetArg(0).Raw32, Is.EqualTo(nameId));
+        }
+
+        [Test]
+        public void EntityInfoTitles_UnknownMapTokenFails()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out _, out _);
+            Entity owner = world.Create(new EntityInfoTitleToken { Value = "missing.token" });
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                EntityInfoTitles.TryGetTokenId(world, owner, catalog, new FixedTitleProfiles(1, 1), out _))!;
+            Assert.That(ex.Message, Does.Contain("missing.token"));
         }
 
         [Test]
@@ -2149,6 +2365,77 @@ namespace Ludots.Tests.Presentation
 
             materialId = 0;
             return false;
+        }
+
+        private static PresentationTextCatalog CreatePlateCatalog(out int plateId, out int nameId)
+        {
+            var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            plateId = tokenIds.Register("hud.hero.plate");
+            nameId = tokenIds.Register("entity.guan");
+            int heroId = tokenIds.Register("entity.hero");
+            var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+            tokens[plateId] = new PresentationTextTokenDefinition { TokenId = plateId, Key = "hud.hero.plate", ArgCount = 2 };
+            tokens[nameId] = new PresentationTextTokenDefinition { TokenId = nameId, Key = "entity.guan", ArgCount = 0 };
+            tokens[heroId] = new PresentationTextTokenDefinition { TokenId = heroId, Key = "entity.hero", ArgCount = 0 };
+            var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int en = localeIds.Register("en-US");
+            int zh = localeIds.Register("zh-CN");
+            var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            enTemplates[plateId] = Plate("Lv", " ");
+            zhTemplates[plateId] = Plate("Lv", " ");
+            enTemplates[nameId] = Literal("Guan Yu");
+            zhTemplates[nameId] = Literal("关羽");
+            enTemplates[heroId] = Literal("Hero");
+            zhTemplates[heroId] = Literal("英雄");
+            var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+            locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
+            locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: en);
+        }
+
+        private static PresentationTextTemplate Literal(string text)
+        {
+            return new PresentationTextTemplate(
+                text,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, -1) });
+        }
+
+        private static PresentationTextTemplate Plate(string prefix, string gap)
+        {
+            return new PresentationTextTemplate(
+                prefix + "{0}" + gap + "{1}",
+                new[]
+                {
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, prefix, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 0),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, gap, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 1),
+                });
+        }
+
+        private sealed class FixedTitleProfiles : IEntityInfoTitleProfiles
+        {
+            private readonly int _templateKeyId;
+            private readonly int _tokenId;
+
+            public FixedTitleProfiles(int templateKeyId, int tokenId)
+            {
+                _templateKeyId = templateKeyId;
+                _tokenId = tokenId;
+            }
+
+            public bool TryGetProfileTitleTokenId(int templateKeyId, out int tokenId)
+            {
+                if (templateKeyId == _templateKeyId && _tokenId > 0)
+                {
+                    tokenId = _tokenId;
+                    return true;
+                }
+
+                tokenId = 0;
+                return false;
+            }
         }
     }
 }

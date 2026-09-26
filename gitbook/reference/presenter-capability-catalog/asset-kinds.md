@@ -54,7 +54,7 @@ AssetKind 回答"这个 behavior 绑的是什么类别的可视输出"。作者�
 ### WorldText — 浮动文字
 
 - **是什么**：一次性浮动战斗文字/提示（可配 `DefaultLifetime` 自动回收），带 yDrift 上浮。
-- **怎么写**：`WorldText` behavior（`textToken` 走文本目录本地化，`valueParamKey` 绑黑板数值）。
+- **怎么写**：`WorldText` behavior。两格数值句用 `textToken` + `mode` + `valueParamKey`。多格句子用 `args`：数字孔引用 AttributeBinding 写好的参数键，名字孔用 `entityInfoTitle`。
 - **跑**：preset `presenter_blacksmith_showcase_raylib`。
 - **证据**：文本合同测试与验收见 [Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md) WorldText 章节。
 

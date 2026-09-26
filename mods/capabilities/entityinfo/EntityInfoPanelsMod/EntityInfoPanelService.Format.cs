@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -259,18 +260,24 @@ public sealed partial class EntityInfoPanelService
         return ResolveEntityInfoTitle(world, entity);
     }
 
-    private string ResolveEntityInfoTitle(World world, Entity entity)
+    public bool TryGetProfileTitleTokenId(int templateKeyId, out int tokenId)
     {
-        if (world.TryGet(entity, out EntityInfoTitleToken titleToken))
-        {
-            return ResolveTextTokenKey(titleToken.Value);
-        }
-
-        if (world.TryGet(entity, out EntityTemplateKeyRef profileKey) &&
-            _insightCatalog.TryGetProfileByTemplateKey(profileKey.TemplateKeyId, out EntityInsightProfile profile) &&
+        if (_insightCatalog.TryGetProfileByTemplateKey(templateKeyId, out EntityInsightProfile profile) &&
             profile.TitleTokenId > 0)
         {
-            return ResolveTextTokenId(profile.TitleTokenId);
+            tokenId = profile.TitleTokenId;
+            return true;
+        }
+
+        tokenId = 0;
+        return false;
+    }
+
+    private string ResolveEntityInfoTitle(World world, Entity entity)
+    {
+        if (EntityInfoTitles.TryGetTokenId(world, entity, _presentationTextCatalog, this, out int tokenId))
+        {
+            return ResolveTextTokenId(tokenId);
         }
 
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
