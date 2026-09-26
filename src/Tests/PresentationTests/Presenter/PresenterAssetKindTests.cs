@@ -759,6 +759,73 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldTextArgs_RetainedPlateRebuildsWhenParamChanges()
+        {
+            using var world = World.Create();
+            PresentationTextCatalog catalog = CreatePlateCatalog(out int plateId, out int nameId);
+            Entity owner = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new EntityInfoTitleToken { Value = "entity.guan" });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var hud = new WorldHudBatchBuffer(4);
+            int levelKey = 61;
+            int defId = definitions.Register("asset.hero_plate_retained", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.WorldText,
+                        ActiveByDefault = true,
+                        WorldText = new WorldTextConfig
+                        {
+                            TextTokenId = plateId,
+                            FontSize = 16,
+                            Args =
+                            [
+                                new WorldTextArg { Source = WorldTextArgSource.Param, ParamKey = levelKey },
+                                new WorldTextArg { Source = WorldTextArgSource.EntityInfoTitle },
+                            ],
+                        },
+                    },
+                ],
+            });
+            Assert.That(definitions.Get(defId).AffectsStaticVisualParam(levelKey, ParamLane.Float), Is.True);
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 11f, 12f), 9406, Entity.Null, default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
+            world.Get<PresenterWorldScale>(presenter).Value = Vector3.One;
+            instances.SetParam(presenter, levelKey, ParamLane.Float, 10f, 0, default);
+
+            Dictionary<string, object> globals = CreateWorldHudProjectionGlobals(world, owner);
+            globals[CoreServiceKeys.PresentationTextCatalog.Name] = catalog;
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                globals,
+                animatorStates: null!,
+                soundRequests: null!,
+                worldHudBuffer: hud);
+
+            system.Update(0.016f);
+            Assert.That(hud.Count, Is.EqualTo(1));
+            Assert.That(hud.GetItemRef(0).Text.GetArg(0).AsInt32(), Is.EqualTo(10));
+            Assert.That(hud.GetItemRef(0).Text.GetArg(1).Raw32, Is.EqualTo(nameId));
+
+            instances.SetParam(presenter, levelKey, ParamLane.Float, 20f, 0, default);
+            system.Update(0.016f);
+            Assert.That(hud.Count, Is.EqualTo(1));
+            Assert.That(hud.GetItemRef(0).Text.GetArg(0).AsInt32(), Is.EqualTo(20));
+            Assert.That(hud.GetItemRef(0).Text.GetArg(1).Raw32, Is.EqualTo(nameId));
+        }
+
+        [Test]
         public void WorldTextArgs_UsesProfileTitleWhenMapTokenIsAbsent()
         {
             using var world = World.Create();
