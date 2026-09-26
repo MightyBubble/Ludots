@@ -586,6 +586,11 @@ namespace Ludots.Core.Presentation.Presenters
                                     staticIntParams,
                                     staticVectorParams,
                                     slot.AssetBinding);
+                                if (slot.AssetBinding.AssetKind == AssetKind.WorldText)
+                                {
+                                    CollectWorldTextArgParams(staticFloatParams, in slot.WorldText);
+                                }
+
                                 break;
 
                             default:
@@ -1144,6 +1149,26 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
+        }
+
+        // 常驻头顶字只在这些参数变化时重画。句子孔上的数字也要算进去，否则血量会停在第一次。
+        private static void CollectWorldTextArgParams(
+            System.Collections.Generic.HashSet<int> floatParams,
+            in WorldTextConfig worldText)
+        {
+            WorldTextArg[] args = worldText.Args;
+            if (args == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Source == WorldTextArgSource.Param)
+                {
+                    AddIfValid(floatParams, args[i].ParamKey);
+                }
+            }
         }
 
         private static void CollectGroundOverlayParams(System.Collections.Generic.HashSet<int> floatParams)

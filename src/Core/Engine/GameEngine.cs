@@ -1548,7 +1548,17 @@ namespace Ludots.Core.Engine
                 presenterCommandKinds,
                 presenterBehaviorKinds,
                 resolveGraphProgramKind: graphId =>
-                    graphProgramRegistry.TryGetKind(graphId, out GraphKind kind) ? kind : GraphKind.None).Load(ConfigCatalog, ConfigConflictReport);
+                    graphProgramRegistry.TryGetKind(graphId, out GraphKind kind) ? kind : GraphKind.None,
+                resolveTextTokenArgCount: tokenId =>
+                {
+                    if (!presentationTextCatalog.TryGetTokenDefinition(tokenId, out PresentationTextTokenDefinition definition))
+                    {
+                        throw new InvalidOperationException(
+                            $"WorldText text token id {tokenId} has no definition.");
+                    }
+
+                    return definition.ArgCount;
+                }).Load(ConfigCatalog, ConfigConflictReport);
             presenterDefinitions.RebuildCompiledViews();
 
             int ResolveVfxAssetId(string key)

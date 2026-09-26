@@ -565,31 +565,58 @@ namespace Ludots.Core.Presentation.Systems
                     $"WorldText AssetBinding for presenter definition '{definition.Key}' resolved invalid asset id {tokenId}.");
             }
 
-            float value0 = asset.ScaleParamKey >= 0
-                ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
-                : 0f;
-            float value1 = asset.MaterialParamKey >= 0
-                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
-                : 0f;
-            WorldHudValueMode valueMode = slot.WorldText.Mode;
+            float value0;
+            float value1;
+            int stringTableId;
+            int valueModeId;
+            bool valueBound;
+            PresentationTextPacket packet;
+            if (WorldTextArgs.UsesTemplateArgs(in slot.WorldText))
+            {
+                value0 = 0f;
+                value1 = 0f;
+                stringTableId = 0;
+                valueModeId = 0;
+                valueBound = false;
+                packet = WorldTextArgs.Build(
+                    in slot.WorldText,
+                    tokenId,
+                    entity,
+                    state.OwnerEntity,
+                    _world,
+                    _runtime,
+                    _globals);
+            }
+            else
+            {
+                value0 = asset.ScaleParamKey >= 0
+                    ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
+                    : 0f;
+                value1 = asset.MaterialParamKey >= 0
+                    ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                    : 0f;
+                WorldHudValueMode valueMode = slot.WorldText.Mode;
+                stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
+                valueModeId = (int)valueMode;
+                valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
+                    (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
+                packet = valueBound
+                    ? default
+                    : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            }
+
             int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
-            int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-            bool valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
-                (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
-            PresentationTextPacket packet = valueBound
-                ? default
-                : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
             WorldHudItem item = new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet, valueBound),
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, valueModeId, value0, value1, color, packet, valueBound),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = position,
                 Value0 = value0,
                 Value1 = value1,
                 Id0 = stringTableId,
-                Id1 = (int)valueMode,
+                Id1 = valueModeId,
                 FontSize = fontSize,
                 Color0 = color,
                 Owner = state.OwnerEntity,

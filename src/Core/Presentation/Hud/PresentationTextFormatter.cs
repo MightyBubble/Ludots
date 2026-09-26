@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            text = Format(template, in packet, catalog.StringPool);
+            text = Format(template, in packet, catalog.StringPool, catalog, localeId);
             return true;
         }
 
@@ -39,32 +39,36 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            runs = FormatRuns(template, in packet, catalog.StringPool);
+            runs = FormatRuns(template, in packet, catalog.StringPool, catalog, localeId);
             return true;
         }
 
         public static string Format(
             PresentationTextTemplate template,
             in PresentationTextPacket packet,
-            PresentationTextStringPool? stringPool = null)
+            PresentationTextStringPool? stringPool = null,
+            PresentationTextCatalog? catalog = null,
+            int localeId = 0)
         {
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             var builder = new StringBuilder(Math.Max(template.Source.Length, packet.ArgCount * 8));
-            AppendFormatted(builder, template, in packet, stringPool);
+            AppendFormatted(builder, template, in packet, stringPool, catalog, localeId);
             return builder.ToString();
         }
 
         public static IReadOnlyList<PresentationTextRun> FormatRuns(
             PresentationTextTemplate template,
             in PresentationTextPacket packet,
-            PresentationTextStringPool? stringPool = null)
+            PresentationTextStringPool? stringPool = null,
+            PresentationTextCatalog? catalog = null,
+            int localeId = 0)
         {
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             if (!template.HasStyledParts)
             {
-                string plain = Format(template, in packet, stringPool);
+                string plain = Format(template, in packet, stringPool, catalog, localeId);
                 if (string.IsNullOrEmpty(plain))
                 {
                     return Array.Empty<PresentationTextRun>();
@@ -88,7 +92,7 @@ namespace Ludots.Core.Presentation.Hud
                 else if (part.Kind == PresentationTextTemplatePartKind.Argument)
                 {
                     ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
-                    AppendArg(scratch, packet.GetArg(part.ArgIndex), stringPool);
+                    AppendArg(scratch, packet.GetArg(part.ArgIndex), stringPool, catalog, localeId);
                 }
                 else
                 {
@@ -111,7 +115,9 @@ namespace Ludots.Core.Presentation.Hud
             StringBuilder builder,
             PresentationTextTemplate template,
             in PresentationTextPacket packet,
-            PresentationTextStringPool? stringPool = null)
+            PresentationTextStringPool? stringPool = null,
+            PresentationTextCatalog? catalog = null,
+            int localeId = 0)
         {
             if (builder == null) throw new ArgumentNullException(nameof(builder));
             if (template == null) throw new ArgumentNullException(nameof(template));
@@ -135,7 +141,7 @@ namespace Ludots.Core.Presentation.Hud
 
                 ThrowIfArgIndexOutOfRange(part.ArgIndex, packet.ArgCount);
                 PresentationTextArg arg = packet.GetArg(part.ArgIndex);
-                AppendArg(builder, in arg, stringPool);
+                AppendArg(builder, in arg, stringPool, catalog, localeId);
             }
         }
 
@@ -153,7 +159,9 @@ namespace Ludots.Core.Presentation.Hud
         private static void AppendArg(
             StringBuilder builder,
             in PresentationTextArg arg,
-            PresentationTextStringPool? stringPool)
+            PresentationTextStringPool? stringPool,
+            PresentationTextCatalog? catalog,
+            int localeId)
         {
             switch (arg.Type)
             {
@@ -175,9 +183,57 @@ namespace Ludots.Core.Presentation.Hud
                     builder.Append(stringPool.Get(in arg));
                     break;
 
+                case PresentationTextArgType.TextToken:
+                    AppendTextToken(builder, arg.Raw32, catalog, localeId);
+                    break;
+
                 default:
                     throw new InvalidOperationException(
                         $"Presentation text argument type '{arg.Type}' is not supported.");
+            }
+        }
+
+        private static void AppendTextToken(
+            StringBuilder builder,
+            int tokenId,
+            PresentationTextCatalog? catalog,
+            int localeId)
+        {
+            if (catalog == null)
+            {
+                throw new InvalidOperationException(
+                    "Presentation text token arg requires the text catalog.");
+            }
+
+            if (!catalog.TryGetTokenDefinition(tokenId, out PresentationTextTokenDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation text token argument {tokenId} is not registered.");
+            }
+
+            if (definition.ArgCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation text token argument '{definition.Key}' must be a zero-argument template.");
+            }
+
+            if (!catalog.TryGetTemplate(localeId, tokenId, out PresentationTextTemplate template))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation text token argument '{definition.Key}' is not available for locale {localeId}.");
+            }
+
+            ReadOnlySpan<PresentationTextTemplatePart> parts = template.GetParts();
+            for (int i = 0; i < parts.Length; i++)
+            {
+                PresentationTextTemplatePart part = parts[i];
+                if (part.Kind == PresentationTextTemplatePartKind.Argument)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation text token argument '{definition.Key}' must be a zero-argument template.");
+                }
+
+                builder.Append(part.Literal);
             }
         }
 

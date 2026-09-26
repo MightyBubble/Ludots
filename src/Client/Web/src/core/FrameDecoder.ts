@@ -84,6 +84,7 @@ export interface ScreenHudItem {
   text?: string;
   textPacket?: PresentationTextPacket;
   textTemplate?: string;
+  textTemplates?: Map<number, string>;
 }
 
 export interface ScreenOverlayItem {
@@ -96,6 +97,7 @@ export interface ScreenOverlayItem {
   text: string;
   textPacket?: PresentationTextPacket;
   textTemplate?: string;
+  textTemplates?: Map<number, string>;
 }
 
 export interface MeshMapEntry {
@@ -318,6 +320,7 @@ export class FrameDecoder {
     for (const item of items) {
       if (item.textPacket && item.textPacket.tokenId > 0) {
         item.textTemplate = templates.get(item.textPacket.tokenId);
+        item.textTemplates = templates;
       }
 
       if (item.id0 > 0 && item.id0 < strings.length) {
@@ -373,6 +376,7 @@ export class FrameDecoder {
       const sid = stringIds[i] ?? -1;
       if (item.textPacket && item.textPacket.tokenId > 0) {
         item.textTemplate = templates.get(item.textPacket.tokenId);
+        item.textTemplates = templates;
       }
 
       if (item.kind === 0 && sid >= 0 && sid < strings.length) {

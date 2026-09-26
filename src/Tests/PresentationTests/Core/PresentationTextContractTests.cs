@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Registry;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -482,6 +483,56 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Overlay_ReformatsNestedTitleWhenLocaleChangesWithoutReemit()
+        {
+            var world = World.Create();
+            try
+            {
+                PresentationTextCatalog textCatalog = CreatePlateCatalog();
+                var selection = new PresentationTextLocaleSelection(textCatalog);
+                int plateId = textCatalog.GetTokenId("hud.hero.plate");
+                int nameId = textCatalog.GetTokenId("entity.guan");
+                var packet = PresentationTextPacket.FromToken(plateId);
+                packet.SetArg(0, PresentationTextArg.FromInt32(10));
+                packet.SetArg(1, PresentationTextArg.FromTextToken(nameId));
+
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var builder = new PresentationOverlaySceneBuilder(screenHud, null, textCatalog, selection, screenOverlay: null);
+                var scene = new PresentationOverlayScene(8);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 77,
+                    DirtySerial = 11,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    FontSize = 16,
+                    Text = packet,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                builder.Build(scene);
+                Assert.That(SceneText(scene), Is.EqualTo("Lv10 Guan Yu"));
+
+                selection.SetActiveLocale("zh-CN");
+                builder.Build(scene);
+                Assert.That(SceneText(scene), Is.EqualTo("Lv10 关羽"));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void WorldHudToScreenSystem_SubmitsInCameraLargeBars()
         {
             var world = World.Create();
@@ -892,6 +943,84 @@ namespace Ludots.Tests.Presentation
             int enLocaleId = textCatalog.GetLocaleId("en-US");
             Assert.That(PresentationTextFormatter.TryFormat(textCatalog, enLocaleId, in packet, out string enText), Is.True);
             Assert.That(enText, Is.EqualTo("守望者: 灯还亮着"));
+        }
+
+        [Test]
+        public void PresentationTextFormatter_InsertsZeroArgTokenInActiveLocale()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""hud.hero.plate"", ""argCount"": 2 },
+  { ""id"": ""entity.guan"", ""argCount"": 0 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""hud.hero.plate"": ""Lv{0} {1}"",
+      ""entity.guan"": ""Guan Yu""
+    },
+    ""zh-CN"": {
+      ""hud.hero.plate"": ""Lv{0} {1}"",
+      ""entity.guan"": ""关羽""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            PresentationTextCatalog textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            int plateId = textCatalog.GetTokenId("hud.hero.plate");
+            int nameId = textCatalog.GetTokenId("entity.guan");
+            var packet = PresentationTextPacket.FromToken(plateId);
+            packet.SetArg(0, PresentationTextArg.FromInt32(10));
+            packet.SetArg(1, PresentationTextArg.FromTextToken(nameId));
+
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out string enText), Is.True);
+            Assert.That(enText, Is.EqualTo("Lv10 Guan Yu"));
+
+            int zhLocaleId = textCatalog.GetLocaleId("zh-CN");
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, zhLocaleId, in packet, out string zhText), Is.True);
+            Assert.That(zhText, Is.EqualTo("Lv10 关羽"));
+        }
+
+        [Test]
+        public void PresentationTextFormatter_RejectsNestedTokenThatStillHasArguments()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""hud.hero.plate"", ""argCount"": 1 },
+  { ""id"": ""entity.guan"", ""argCount"": 1 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""hud.hero.plate"": ""{0}"",
+      ""entity.guan"": ""{0}""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            PresentationTextCatalog textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var packet = PresentationTextPacket.FromToken(textCatalog.GetTokenId("hud.hero.plate"));
+            packet.SetArg(0, PresentationTextArg.FromTextToken(textCatalog.GetTokenId("entity.guan")));
+
+            Assert.That(
+                () => PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out _),
+                Throws.InvalidOperationException.With.Message.Contains("zero-argument"));
         }
 
         [Test]
@@ -1375,6 +1504,57 @@ namespace Ludots.Tests.Presentation
                 $"attribute {attributeId} must be readable for owner {owner.Id}");
             Assert.That(actualCurrent, Is.EqualTo(current));
             Assert.That(actualBase, Is.EqualTo(baseValue));
+        }
+
+        private static string SceneText(PresentationOverlayScene scene)
+        {
+            var span = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text);
+            Assert.That(span.Length, Is.EqualTo(1));
+            return span[0].Text ?? string.Empty;
+        }
+
+        private static PresentationTextCatalog CreatePlateCatalog()
+        {
+            var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int plateId = tokenIds.Register("hud.hero.plate");
+            int nameId = tokenIds.Register("entity.guan");
+            var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+            tokens[plateId] = new PresentationTextTokenDefinition { TokenId = plateId, Key = "hud.hero.plate", ArgCount = 2 };
+            tokens[nameId] = new PresentationTextTokenDefinition { TokenId = nameId, Key = "entity.guan", ArgCount = 0 };
+
+            var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int en = localeIds.Register("en-US");
+            int zh = localeIds.Register("zh-CN");
+            var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            enTemplates[plateId] = Plate("Lv", " ");
+            zhTemplates[plateId] = Plate("Lv", " ");
+            enTemplates[nameId] = Literal("Guan Yu");
+            zhTemplates[nameId] = Literal("关羽");
+            var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+            locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
+            locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: en);
+        }
+
+        private static PresentationTextTemplate Literal(string text)
+        {
+            return new PresentationTextTemplate(
+                text,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, -1) });
+        }
+
+        private static PresentationTextTemplate Plate(string prefix, string gap)
+        {
+            return new PresentationTextTemplate(
+                prefix + "{0}" + gap + "{1}",
+                new[]
+                {
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, prefix, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 0),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, gap, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 1),
+                });
         }
 
         private static void EmitWorldHudBar(WorldHudBatchBuffer worldHud)

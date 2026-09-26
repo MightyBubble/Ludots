@@ -54,7 +54,7 @@ AssetBinding 载荷的参数键（字段白名单 `src/Core/Presentation/Config/
 | Mesh 类（Mesh/SkinnedMesh/Decal/VFX） | 全量消费：scale/color/material/assetSwap/visibility 全生效 |
 | Spline（:409-456） | SplineWidth 覆盖 scaleParamKey 推导的宽度；SplineFillColor/BorderColor/SplineBorderWidth 与 SplineP0-P3 控制点全部走 well-known 键 |
 | WorldHud Bar（:458-498） | materialParamKey = 血条填充值（0-1）；scale.X/scale.Y = 条宽高（像素） |
-| WorldText（:500-552） | behavior 的 valueParamKey/secondaryValueParamKey 编译为 ScaleParamKey/MaterialParamKey 通道（`src/Core/Presentation/Presenters/BehaviorSlot.cs:45-46`），发射时落到主值/次值；textToken 决定文案格式 |
+| WorldText | 两格数值句把 valueParamKey/secondaryValueParamKey 编译为 ScaleParamKey/MaterialParamKey，发射时落到主值/次值。多格句子改用 args，按顺序读 AttributeBinding 已经写好的参数键，名字孔为 entityInfoTitle；这条路径不占用上述两个通道 |
 | GroundOverlay（:554-627） | OverlayRadius/InnerRadius/Angle/Rotation/Length/Width 覆盖 localScale 推导的几何缺省；OverlayFill/Border RGBA 分四键覆盖 style.color |
 
 ## 全链时序：从 SetParam 到换砖变色
