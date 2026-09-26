@@ -89,6 +89,66 @@ public sealed class BrowserCanvasContentTests
 	}
 
 	[Test]
+	public void DrawFrame_HitMaskPixels_DoNotCoverHostCanvas()
+	{
+		var renderer = new SkiaBrowserFrameRenderer();
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+		var frame = new BrowserFrame(
+			new BrowserViewport(2, 2),
+			BrowserPixelFormat.Bgra8888Premultiplied,
+			new byte[]
+			{
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255
+			},
+			2 * BrowserFrameBuffer.BytesPerPixel,
+			new[] { new BrowserDirtyRect(0, 0, 2, 2) },
+			1);
+
+		using var bitmap = new SKBitmap(new SKImageInfo(4, 4, SKColorType.Bgra8888, SKAlphaType.Premul));
+		using var canvas = new SKCanvas(bitmap);
+		canvas.Clear(SKColors.Blue);
+		renderer.DrawFrame(canvas, new SKRect(0, 0, 4, 4), frame, mask);
+
+		SKColor pixel = bitmap.GetPixel(2, 2);
+		Assert.That(pixel.Red, Is.EqualTo(0));
+		Assert.That(pixel.Green, Is.EqualTo(0));
+		Assert.That(pixel.Blue, Is.EqualTo(255));
+		Assert.That(pixel.Alpha, Is.EqualTo(255));
+	}
+
+	[Test]
+	public void DrawFrame_HitMaskComposite_DoesNotMutateSourceFrame()
+	{
+		var renderer = new SkiaBrowserFrameRenderer();
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+		byte[] pixels =
+		{
+			mask.B, mask.G, mask.R, 255,
+			mask.B, mask.G, mask.R, 255,
+			mask.B, mask.G, mask.R, 255,
+			mask.B, mask.G, mask.R, 255
+		};
+		var frame = new BrowserFrame(
+			new BrowserViewport(2, 2),
+			BrowserPixelFormat.Bgra8888Premultiplied,
+			pixels,
+			2 * BrowserFrameBuffer.BytesPerPixel,
+			new[] { new BrowserDirtyRect(0, 0, 2, 2) },
+			1);
+
+		using var bitmap = new SKBitmap(new SKImageInfo(4, 4, SKColorType.Bgra8888, SKAlphaType.Premul));
+		using var canvas = new SKCanvas(bitmap);
+		canvas.Clear(SKColors.Blue);
+		renderer.DrawFrame(canvas, new SKRect(0, 0, 4, 4), frame, mask);
+
+		Assert.That(pixels[3], Is.EqualTo((byte)255));
+		Assert.That(pixels[2], Is.EqualTo(mask.R));
+	}
+
+	[Test]
 	public void HandleInput_DownThenMove_KeepsPrimaryButtonStateForBrowserDrag()
 	{
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
@@ -224,6 +284,49 @@ public sealed class BrowserCanvasContentTests
 
 		Assert.That(transparentHit?.TagName, Is.Not.EqualTo("canvas"));
 		Assert.That(opaqueHit?.TagName, Is.EqualTo("canvas"));
+	}
+
+	[Test]
+	public void HitTest_AlphaMode_HitMaskPixel_HitsWhileTransparentStillPassesThrough()
+	{
+		BrowserFrame frame = CreateMaskAndTransparentFrame();
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		UiScene scene = UiSceneComposer.Compose(
+			new SkiaTextMeasurer(),
+			new SkiaImageSizeProvider(),
+			Ui.Canvas(content).Width(200).Height(100));
+		scene.Layout(200, 100);
+
+		UiNode? maskHit = scene.HitTest(40, 50);
+		UiNode? transparentHit = scene.HitTest(160, 50);
+
+		Assert.That(content.VisualHitMask, Is.EqualTo(BrowserHitMaskColor.Default));
+		Assert.That(maskHit?.TagName, Is.EqualTo("canvas"));
+		Assert.That(transparentHit?.TagName, Is.Not.EqualTo("canvas"));
+	}
+
+	[Test]
+	public void HandleInput_AlphaMode_HitMaskPixel_SendsBrowserInput()
+	{
+		BrowserFrame frame = CreateMaskAndTransparentFrame();
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
+
+		bool handled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 50
+		});
+
+		Assert.That(handled, Is.True);
+		Assert.That(surface.InputEvents.Count, Is.EqualTo(2));
+		Assert.That(surface.InputEvents[0], Is.TypeOf<BrowserFocusEvent>());
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 50, BrowserPointerButton.Left, true)));
 	}
 
 	[Test]
@@ -418,6 +521,22 @@ public sealed class BrowserCanvasContentTests
 			{
 				0, 0, 255, leftAlpha,
 				0, 255, 0, rightAlpha
+			},
+			2 * BrowserFrameBuffer.BytesPerPixel,
+			new[] { new BrowserDirtyRect(0, 0, 2, 1) },
+			1);
+	}
+
+	private static BrowserFrame CreateMaskAndTransparentFrame()
+	{
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+		return new BrowserFrame(
+			new BrowserViewport(2, 1),
+			BrowserPixelFormat.Bgra8888Premultiplied,
+			new byte[]
+			{
+				mask.B, mask.G, mask.R, 255,
+				0, 0, 0, 0
 			},
 			2 * BrowserFrameBuffer.BytesPerPixel,
 			new[] { new BrowserDirtyRect(0, 0, 2, 1) },

@@ -129,7 +129,7 @@ public interface IUiSurfaceHost
 
 1. 适配器把平台输入（鼠标/键盘/触摸）翻译成 `PointerEvent` / `KeyboardEvent` 喂进来。
 2. `HandleInput` **先把当前 `Scene` 快照到局部变量**，整帧用这个快照做命中测试与派发。
-3. 派发到命中的节点；如果命中的是一个 `Ui.Canvas(...)` 且其内容实现了 `IUiCanvasInputSink` / `IUiCanvasKeyboardInputSink` / `IUiCanvasFocusSink`（例如浏览器表面），就把输入交给该 sink，并支持 alpha 命中穿透。
+3. 派发到命中的节点；如果命中的是一个 `Ui.Canvas(...)` 且其内容实现了 `IUiCanvasInputSink` / `IUiCanvasKeyboardInputSink` / `IUiCanvasFocusSink`（例如浏览器表面），就把输入交给该 sink，并支持 alpha 命中穿透。浏览器表面默认把透明像素当成“没点到”，指针会落到底下的世界层。放置、瞄准这类罩子不要铺全透明：用命中色 `rgb(0, 255, 1)` 铺成 mask。合成到屏幕时这份色会被抠掉，地图还看得见；命中仍读原帧，罩子能吃到点击。
 4. 派发可能触发回调（按钮点击等），回调**可能在派发过程中**让 Host 重挂/清场景。`HandleInput` 在尾部用 `ReferenceEquals(Scene, snapshot)` 对账：若场景已被换/清，则只置 `IsDirty=true` 并安全收尾，**绝不**去读已失效的旧场景（这就是 issue #394 修复的崩溃）。
 
 > 也就是说，“点击 → 切地图 / 关面板 / 换 showcase”这类在输入帧内改变 UI 的操作是**一等公民、保证安全**的。新写按钮回调时不用担心“点完把自己清掉会不会崩”。

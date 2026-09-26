@@ -47,9 +47,11 @@ namespace Ludots.Adapter.Raylib
                     _states.Add(id, state);
                 }
 
-                if (content.TryReadLatestFrame(state, static (in BrowserFrameAccess frame, BrowserLayerState layerState) =>
+                if (content.TryReadLatestFrame(
+                    (State: state, HitMask: content.VisualHitMask),
+                    static (in BrowserFrameAccess frame, (BrowserLayerState State, BrowserHitMaskColor? HitMask) layer) =>
                     {
-                        layerState.Update(frame);
+                        layer.State.Update(frame, layer.HitMask);
                     }))
                 {
                     state.Draw(rect);
@@ -115,14 +117,16 @@ namespace Ludots.Adapter.Raylib
 
         private sealed class BrowserLayerState : IDisposable
         {
+            private BrowserHitMaskColor? _hitMask;
             private Texture2D _texture;
             private byte[]? _rgbaScratch;
             private int _width;
             private int _height;
             private long _uploadedSequence = -1;
 
-            public void Update(in BrowserFrameAccess frame)
+            public void Update(in BrowserFrameAccess frame, BrowserHitMaskColor? hitMask)
             {
+                _hitMask = hitMask;
                 EnsureTexture(frame.Viewport.Width, frame.Viewport.Height);
                 if (frame.Sequence == _uploadedSequence)
                 {
@@ -202,10 +206,10 @@ namespace Ludots.Adapter.Raylib
                 switch (frame.PixelFormat)
                 {
                     case BrowserPixelFormat.Rgba8888Premultiplied:
-                        CopyRect(frame, rect, target);
+                        CopyRect(frame, rect, target, _hitMask);
                         break;
                     case BrowserPixelFormat.Bgra8888Premultiplied:
-                        CopyBgraRectAsRgba(frame, rect, target);
+                        CopyBgraRectAsRgba(frame, rect, target, _hitMask);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(frame), frame.PixelFormat, "Unsupported browser frame pixel format.");
@@ -238,20 +242,51 @@ namespace Ludots.Adapter.Raylib
                 _rgbaScratch = ArrayPool<byte>.Shared.Rent(byteCount);
             }
 
-            private static void CopyRect(in BrowserFrameAccess frame, BrowserDirtyRect rect, Span<byte> target)
+            private static void CopyRect(
+                in BrowserFrameAccess frame,
+                BrowserDirtyRect rect,
+                Span<byte> target,
+                BrowserHitMaskColor? hitMask)
             {
                 ReadOnlySpan<byte> pixels = frame.Pixels.Span;
-                int targetOffset = 0;
-                int rowLength = checked(rect.Width * BrowserFrameBuffer.BytesPerPixel);
+                if (hitMask is null)
+                {
+                    int targetOffset = 0;
+                    int rowLength = checked(rect.Width * BrowserFrameBuffer.BytesPerPixel);
+                    for (int row = 0; row < rect.Height; row++)
+                    {
+                        int sourceOffset = checked(((rect.Y + row) * frame.RowBytes) + (rect.X * BrowserFrameBuffer.BytesPerPixel));
+                        pixels.Slice(sourceOffset, rowLength).CopyTo(target.Slice(targetOffset, rowLength));
+                        targetOffset += rowLength;
+                    }
+
+                    return;
+                }
+
+                int maskedOffset = 0;
                 for (int row = 0; row < rect.Height; row++)
                 {
                     int sourceOffset = checked(((rect.Y + row) * frame.RowBytes) + (rect.X * BrowserFrameBuffer.BytesPerPixel));
-                    pixels.Slice(sourceOffset, rowLength).CopyTo(target.Slice(targetOffset, rowLength));
-                    targetOffset += rowLength;
+                    for (int x = 0; x < rect.Width; x++)
+                    {
+                        int source = sourceOffset + (x * BrowserFrameBuffer.BytesPerPixel);
+                        BrowserHitMaskComposite.WriteVisualRgba(
+                            target.Slice(maskedOffset, BrowserFrameBuffer.BytesPerPixel),
+                            pixels[source],
+                            pixels[source + 1],
+                            pixels[source + 2],
+                            pixels[source + 3],
+                            hitMask);
+                        maskedOffset += BrowserFrameBuffer.BytesPerPixel;
+                    }
                 }
             }
 
-            private static void CopyBgraRectAsRgba(in BrowserFrameAccess frame, BrowserDirtyRect rect, Span<byte> target)
+            private static void CopyBgraRectAsRgba(
+                in BrowserFrameAccess frame,
+                BrowserDirtyRect rect,
+                Span<byte> target,
+                BrowserHitMaskColor? hitMask)
             {
                 ReadOnlySpan<byte> pixels = frame.Pixels.Span;
                 int targetOffset = 0;
@@ -261,10 +296,13 @@ namespace Ludots.Adapter.Raylib
                     for (int x = 0; x < rect.Width; x++)
                     {
                         int source = sourceOffset + (x * BrowserFrameBuffer.BytesPerPixel);
-                        target[targetOffset] = pixels[source + 2];
-                        target[targetOffset + 1] = pixels[source + 1];
-                        target[targetOffset + 2] = pixels[source];
-                        target[targetOffset + 3] = pixels[source + 3];
+                        BrowserHitMaskComposite.WriteVisualRgba(
+                            target.Slice(targetOffset, BrowserFrameBuffer.BytesPerPixel),
+                            pixels[source + 2],
+                            pixels[source + 1],
+                            pixels[source],
+                            pixels[source + 3],
+                            hitMask);
                         targetOffset += BrowserFrameBuffer.BytesPerPixel;
                     }
                 }
