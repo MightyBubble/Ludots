@@ -4,12 +4,12 @@
 
 ## 1. 概述
 
-关系族合同：三段掩码、目录符号、效果组合的 fail-closed 域。
+关系族合同：三段掩码、目录符号、效果事务里的写与撤回。
 
 ## 2. 设计
 
-- 写侧五件保持 Effect 事务语义；reason 记账位（dst）保留，供外部追溯。
-- 效果组合编译对写侧按 Relationship 域 fail-closed：Unsupported 元数据集中声明，不做逐处特判。
+- 建边、断边的图种是 Effect、Script、TriggerGraph。改度量、改旗标的图种仍只 Effect。reason 记账位（dst）保留，供外部追溯。
+- 五件写节点的效果元数据是 GasTransactional。效果阶段把它们记在副作用事务里，提交时走 RelationshipRuntime，失败时按提交前的边快照撤回。Script 与 TriggerGraph 在图种策略里放行建边与断边，执行时直接写关系库。
 - 读侧与管线只读；管线 list+source 双输入语义固定（source 判关系、list 被筛）。
 - 度量整数世界与属性浮点世界分离：不提供隐式互转。
 - **治理项**：BetweenPair 与 Mutual 的差异（点对间 vs 双向链）只在代码语义里，缺用户面文档锚——在 rel-01 落地时补对比表。

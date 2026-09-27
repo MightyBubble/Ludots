@@ -192,11 +192,11 @@ public static class WalkabilityTextureExporter
                 int b = tile.TriB[triangleIndex];
                 int c = tile.TriC[triangleIndex];
                 long ax = (long)tile.OriginXcm + tile.VertexXcm[a];
-                long az = (long)tile.OriginZcm + tile.VertexZcm[a];
+                long az = (long)tile.OriginYcm + tile.VertexZcm[a];
                 long bx = (long)tile.OriginXcm + tile.VertexXcm[b];
-                long bz = (long)tile.OriginZcm + tile.VertexZcm[b];
+                long bz = (long)tile.OriginYcm + tile.VertexZcm[b];
                 long cx = (long)tile.OriginXcm + tile.VertexXcm[c];
-                long cz = (long)tile.OriginZcm + tile.VertexZcm[c];
+                long cz = (long)tile.OriginYcm + tile.VertexZcm[c];
                 RasterizeTriangle(
                     rgba,
                     width,
@@ -243,7 +243,7 @@ public static class WalkabilityTextureExporter
         if (terrain is MutableGridLogicTerrainField grid)
         {
             originXcm = grid.OriginXcm;
-            originZcm = grid.OriginZcm;
+            originZcm = grid.OriginYcm;
         }
         else
         {
@@ -315,7 +315,7 @@ public static class WalkabilityTextureExporter
             for (int vertexIndex = 0; vertexIndex < tile.VertexCount; vertexIndex++)
             {
                 long x = (long)tile.OriginXcm + tile.VertexXcm[vertexIndex];
-                long z = (long)tile.OriginZcm + tile.VertexZcm[vertexIndex];
+                long z = (long)tile.OriginYcm + tile.VertexZcm[vertexIndex];
                 minX = Math.Min(minX, x);
                 minZ = Math.Min(minZ, z);
                 maxX = Math.Max(maxX, x);
@@ -346,7 +346,7 @@ public static class WalkabilityTextureExporter
             for (int vertexIndex = 0; vertexIndex < tile.VertexCount; vertexIndex++)
             {
                 long x = (long)tile.OriginXcm + tile.VertexXcm[vertexIndex];
-                long z = (long)tile.OriginZcm + tile.VertexZcm[vertexIndex];
+                long z = (long)tile.OriginYcm + tile.VertexZcm[vertexIndex];
                 if (x < bounds.MinXcm ||
                     x > bounds.MaxXcm ||
                     z < bounds.MinZcm ||

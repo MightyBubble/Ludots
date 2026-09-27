@@ -355,6 +355,36 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void PlacedInstanceIdRoundTripsIncludingAbsentValue()
+    {
+        using World world = World.Create();
+        Entity named = world.Create(new PlacedInstanceId { Value = "hero.liu" });
+        Entity absent = world.Create(new PlacedInstanceId { Value = null });
+        var serializer = new ArchBinarySerializer(new PlacedInstanceIdFormatter());
+
+        byte[] bytes = serializer.Serialize(world);
+        using World direct = serializer.Deserialize(bytes);
+        using World restored = CoreRoundTrip(world);
+
+        Assert.That(ReadPlacedInstanceId(direct, "hero.liu"), Is.EqualTo("hero.liu"));
+        Assert.That(CountPlacedInstanceIds(direct, null), Is.EqualTo(1));
+        Assert.That(ReadPlacedInstanceId(restored, "hero.liu"), Is.EqualTo("hero.liu"));
+        Assert.That(CountPlacedInstanceIds(restored, null), Is.EqualTo(1));
+        Assert.That(named.Id, Is.Not.EqualTo(absent.Id));
+    }
+
+    [Test]
+    public void EntityInfoTitleTokenRoundTrips()
+    {
+        using World world = World.Create();
+        world.Create(new EntityInfoTitleToken { Value = "hero.liu.title" });
+
+        using World restored = CoreRoundTrip(world);
+        Entity entity = FindSingle<EntityInfoTitleToken>(restored);
+        Assert.That(restored.Get<EntityInfoTitleToken>(entity).Value, Is.EqualTo("hero.liu.title"));
+    }
+
+    [Test]
     public void ArchBinarySerializerRejectsComponentArrayPayloadWhenSerializedTypeContractDiffersFromSignature()
     {
         using World world = World.Create();
@@ -515,6 +545,31 @@ public sealed class ArchPersistenceCharacterizationTests
         }
 
         return string.Join(" | ", messages);
+    }
+
+    private static string ReadPlacedInstanceId(World world, string instanceId)
+    {
+        string? value = null;
+        int matches = CountPlacedInstanceIds(world, instanceId, found => value = found);
+        Assert.That(matches, Is.EqualTo(1));
+        return value ?? string.Empty;
+    }
+
+    private static int CountPlacedInstanceIds(World world, string? instanceId, Action<string?>? onMatch = null)
+    {
+        var query = new QueryDescription().WithAll<PlacedInstanceId>();
+        int matches = 0;
+        world.Query(in query, (Entity _, ref PlacedInstanceId placed) =>
+        {
+            if (!string.Equals(placed.Value, instanceId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            matches++;
+            onMatch?.Invoke(placed.Value);
+        });
+        return matches;
     }
 
     private static Entity FindByName(World world, string name)

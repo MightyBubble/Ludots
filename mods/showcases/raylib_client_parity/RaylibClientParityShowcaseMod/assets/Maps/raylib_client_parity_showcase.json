@@ -1,127 +1,231 @@
 {
   "Id": "raylib_client_parity_showcase",
-  "Tags": ["showcase", "raylib", "parity"],
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
+  "Tags": [
+    "showcase",
+    "raylib",
+    "parity"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "WidthCm": 51200,
+      "HeightCm": 51200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
-    "TargetXCm": 0,
-    "TargetYCm": 0
+    "TargetXCm": 25600,
+    "TargetYCm": 25600
   },
   "Entities": [
     {
       "Template": "raylib_client_parity_albedo_demo",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 650, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 26250,
+            "Y": 25600
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_vfx_demo",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -650, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 24950,
+            "Y": 25600
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -630, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 24970,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -450, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25150,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -270, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25330,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -90, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25510,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 90, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25690,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 270, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25870,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 450, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 26050,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 630, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 26230,
+            "Y": 26500
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -540, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25060,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -360, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25240,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -180, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25420,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25600,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 180, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25780,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 360, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 25960,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 540, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 26140,
+            "Y": 26680
+          }
+        }
       }
     },
     {
       "Template": "raylib_client_parity_crowd_agent",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 720, "Y": 1080 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 26320,
+            "Y": 26680
+          }
+        }
       }
     }
   ]

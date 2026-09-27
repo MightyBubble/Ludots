@@ -31,6 +31,12 @@
 * [RFC-0065 统一交互—集合—施法架构](RFC-0065-unified-interaction-collection-casting-architecture.md)
   * 整合 RFC-0061~0064 为单一 Epic SSOT：Context Stack、Control Plane、Provenance Presenter，并补齐 Panel Router / 聚合 catalog / CastFlow / CastDispatch；含 Mod 开发者与玩家双 persona 的 BDD UAT 验收
   * Epic issue 粘贴稿：[RFC-0065-epic-issue-body-draft.md](RFC-0065-epic-issue-body-draft.md)（issue 建立后本稿即可删除）
+* [RFC-0066 Agent 调试桥](RFC-0066-agent-debug-bridge.md)
+  * 已合入 main（PR #1001）。这个号已经被占用。旧 PR `#907` 曾误用同一编号谈 GAS 定容，那条枝作废。
+* [RFC-0067 GAS 装载期定容世界级存储](RFC-0067-gas-loadtime-capacity-world-store.md)
+  * 提案：属性/标签种类在装载期按本局内容定容，对局内仍定长、零分配；用世界级 SoA 列存替换实体内嵌 64/256 硬顶
+  * Epic：https://github.com/MightyBubble/Ludots/issues/1196 ；粘贴稿：[RFC-0067-epic-issue-body-draft.md](RFC-0067-epic-issue-body-draft.md)
+  * 关单/建单粘贴稿：[issue-hygiene-2026-08-25.md](issue-hygiene-2026-08-25.md)
 
 ## 2 使用规则
 

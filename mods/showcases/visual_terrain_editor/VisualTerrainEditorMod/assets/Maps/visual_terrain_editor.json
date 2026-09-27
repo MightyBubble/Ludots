@@ -1,5 +1,15 @@
 {
   "Id": "visual_terrain_editor",
-  "Tags": ["terrain", "erosion", "showcase", "editor"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "terrain",
+    "erosion",
+    "showcase",
+    "editor"
+  ],
   "Entities": []
 }

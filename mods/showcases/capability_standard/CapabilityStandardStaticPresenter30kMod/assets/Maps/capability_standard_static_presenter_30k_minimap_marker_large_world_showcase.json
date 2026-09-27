@@ -1,15 +1,23 @@
 {
   "Id": "capability_standard_static_presenter_30k_minimap_marker_large_world_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.height",
-  "Tags": ["showcase", "presenter", "minimap", "large-world"],
+  "Tags": [
+    "showcase",
+    "presenter",
+    "minimap",
+    "large-world"
+  ],
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "minimapMarkerShowcaseTotal": 30000,
       "minimapMarkerScatterPaddingCm": 64000.0,
       "minimapMarkerScatterJitterCm": 4200.0,
       "minimapMarkerVisibleClusterCount": 300,
-      "minimapMarkerVisibleClusterCenterXCm": -2099200.0,
-      "minimapMarkerVisibleClusterCenterYCm": 2508800.0,
+      "minimapMarkerVisibleClusterCenterXCm": 1177600.0,
+      "minimapMarkerVisibleClusterCenterYCm": 5785600.0,
       "minimapMarkerVisibleClusterRadiusCm": 9000.0,
       "minimapMarkerScatterSeed": 129135,
       "minimapMarkerMovementPaddingCm": 64000.0,
@@ -21,17 +29,23 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 256,
-      "HeightInMacroTiles": 256,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "WidthCm": 6553600,
+      "HeightCm": 6553600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
     "VirtualCameraId": "PresenterCapabilityStaticPresenter.Camera.LargeWorldHeightmap",
-    "TargetXCm": -2099200,
-    "TargetYCm": 2508800,
+    "TargetXCm": 1177600,
+    "TargetYCm": 5785600,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 12000,

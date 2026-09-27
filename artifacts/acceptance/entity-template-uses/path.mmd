@@ -1,0 +1,15 @@
+flowchart TD
+    A[装载: templates.json ArrayById 同id合并] --> B[extends/uses 折叠: 合并后/校验前]
+    B --> C{有 uses?}
+    C -- 否 --> D[纯 extends: MergeIntoChild 父进子]
+    C -- 是 --> E[源列表 = extends父 + uses块按序, 先递归展开各自的链]
+    E --> F[一次性私有克隆链: 后一克隆吸收前一结果, 后声明者胜]
+    F --> G[MergeIntoChild 累计结果 -> template: 自身最高]
+    D --> H{未知块 / uses+extends 混合环?}
+    G --> H
+    H -- 是 --> I[启动失败: 指明双方 id / cycle]
+    H -- 否 --> J[同组件多源写入 -> ConfigConflictReport 覆盖链]
+    J --> K[模板校验 + 注册: uses/extends 清空, 块对象只读未污染]
+    K --> L[地图布阵 spawn: 批量快速路径 or EntityBuilder 单实体]
+    L --> M[终值: 自身胜 > 后块 > 先块 > extends父]
+    M --> N[验收通过]

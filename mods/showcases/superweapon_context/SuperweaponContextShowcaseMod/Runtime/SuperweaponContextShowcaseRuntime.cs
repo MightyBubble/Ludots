@@ -332,8 +332,8 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private void CommitShowcaseTargets(GameEngine engine)
         {
-            var writer = engine.GetService(CoreServiceKeys.ContextBoundCollectionWriter)
-                ?? throw new InvalidOperationException("Superweapon context showcase requires ContextBoundCollectionWriter.");
+            var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires CollectionApplier.");
 
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;

@@ -127,12 +127,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 ref readonly GraphInstruction instruction = ref program[i];
                 GraphNodeOp op = (GraphNodeOp)instruction.Op;
-                if (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
-                    descriptor.DstRole == GraphOperandRole.DstRegister)
+                // ScreenRegionToEntities 的 Dst 在查询方言承载可选 tolerance 浮点寄存器：
+                // byte.MaxValue 表示"未接线"（宽容为 0），不是寄存器引用。
+                bool dstIsOptionalAbsent = instruction.Dst == byte.MaxValue &&
+                    op is GraphNodeOp.ScreenRegionToEntities;
+                if (!dstIsOptionalAbsent &&
+                    (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
+                     descriptor.DstRole == GraphOperandRole.DstRegister))
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
                 }
 
+                // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext→caster，DestroyPanel→任意 scope），不是寄存器引用。SubmitCommandIntent 的 A 是可选 target 实体寄存器：byte.MaxValue 表示"仅地面事实"。SubmitAssignedOrder 的 A 是可选目标实体寄存器：byte.MaxValue 表示未指实体目标，运行时填 Entity.Null。
                 // CreatePanel/DestroyPanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel/ReadMapVar*/SetInteractionMode/ActivateContext/DeactivateContext→caster，DestroyPanel→任意 scope），不是寄存器引用。
                 // WriteCollection 的 A 同理：可选 owner 操作数，byte.MaxValue 表示"缺省"（→caster）。
                 bool aIsOptionalAbsent = instruction.A == byte.MaxValue &&
@@ -143,13 +149,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         or GraphNodeOp.SetInteractionMode
                         or GraphNodeOp.ActivateContext
                         or GraphNodeOp.DeactivateContext
+                        or GraphNodeOp.SubmitCommandIntent
+                        or GraphNodeOp.SubmitAssignedOrder
                         or GraphNodeOp.WriteCollection;
                 // WriteMapVar* 的 B 是可选 scope 操作数：byte.MaxValue 表示"缺省"（→caster）。
                 // CreatePanel 的 B 是可选皮肤符号索引：byte.MaxValue 表示"未指定皮"（走模板/全局默认链）。
                 bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&
                     op is GraphNodeOp.WriteMapVarInt
                         or GraphNodeOp.WriteMapVarFloat
-                        or GraphNodeOp.CreatePanel;
+                        or GraphNodeOp.CreatePanel
+                        or GraphNodeOp.SubmitCast;
+                // SubmitCast 的 C 是可选 ground 条件寄存器：byte.MaxValue 表示"无地面断言"。
+                bool cIsOptionalAbsent = instruction.C == byte.MaxValue &&
+                    op is GraphNodeOp.SubmitCast;
                 if (!aIsOptionalAbsent)
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
@@ -158,7 +170,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
                 }
-                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
+                if (!cIsOptionalAbsent)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
+                }
             }
         }
 

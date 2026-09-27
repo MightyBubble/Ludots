@@ -27,5 +27,8 @@
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://UxPrototypeMod/input_preferences.json"
+  },
+  "skillBar": {
+    "enabled": false
   }
 }

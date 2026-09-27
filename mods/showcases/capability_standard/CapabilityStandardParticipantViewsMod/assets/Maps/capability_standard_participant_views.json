@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_participant_views",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.height",
   "Tags": [
     "capability_standard_participant_views",
@@ -7,8 +10,8 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
-    "TargetXCm": 250,
-    "TargetYCm": 350,
+    "TargetXCm": 3200250,
+    "TargetYCm": 3200350,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 12000,
@@ -210,11 +213,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "WidthCm": 6400000,
+      "HeightCm": 6400000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [
@@ -371,8 +380,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -3600,
-            "Y": -1800
+            "X": 3196400,
+            "Y": 3198200
           }
         },
         "Team": {
@@ -392,8 +401,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -3000,
-            "Y": -1400
+            "X": 3197000,
+            "Y": 3198600
           }
         },
         "Team": {
@@ -413,8 +422,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -2300,
-            "Y": -2100
+            "X": 3197700,
+            "Y": 3197900
           }
         },
         "Team": {
@@ -434,8 +443,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -1800,
-            "Y": -1600
+            "X": 3198200,
+            "Y": 3198400
           }
         },
         "Team": {
@@ -455,8 +464,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2200,
-            "Y": -1700
+            "X": 3202200,
+            "Y": 3198300
           }
         },
         "Team": {
@@ -476,8 +485,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2800,
-            "Y": -1200
+            "X": 3202800,
+            "Y": 3198800
           }
         },
         "Team": {
@@ -497,8 +506,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 3500,
-            "Y": -2100
+            "X": 3203500,
+            "Y": 3197900
           }
         },
         "Team": {
@@ -518,8 +527,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 4100,
-            "Y": -1600
+            "X": 3204100,
+            "Y": 3198400
           }
         },
         "Team": {
@@ -539,8 +548,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -1200,
-            "Y": 2100
+            "X": 3198800,
+            "Y": 3202100
           }
         },
         "Team": {
@@ -560,8 +569,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -700,
-            "Y": 2700
+            "X": 3199300,
+            "Y": 3202700
           }
         },
         "Team": {
@@ -581,8 +590,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 1700,
-            "Y": 2100
+            "X": 3201700,
+            "Y": 3202100
           }
         },
         "Team": {
@@ -602,8 +611,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2300,
-            "Y": 2600
+            "X": 3202300,
+            "Y": 3202600
           }
         },
         "Team": {
@@ -623,8 +632,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 400,
-            "Y": 1700
+            "X": 3200400,
+            "Y": 3201700
           }
         },
         "Team": {
@@ -638,8 +647,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 9800,
-            "Y": 9800
+            "X": 3209800,
+            "Y": 3209800
           }
         },
         "ManifestationObstacleIntent2D": {

@@ -1,0 +1,16 @@
+{
+  "actions": [
+    {
+      "id": "Select.Begin",
+      "name": "Gameplay_SelectBegin",
+      "type": "Button"
+    },
+    {
+      "id": "Select.End",
+      "name": "Gameplay_SelectEnd",
+      "type": "Button",
+      "firesOn": "release"
+    }
+  ],
+  "contexts": []
+}

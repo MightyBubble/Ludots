@@ -133,7 +133,7 @@ namespace Ludots.Client.Raylib.Rendering
                     bool dirty = _checksums[slot] != buffer.TileChecksums[i] ||
                                  _stateRevisions[slot] != buffer.StateRevision ||
                                  _originXcm[slot] != tile.OriginXcm ||
-                                 _originZcm[slot] != tile.OriginZcm ||
+                                 _originZcm[slot] != tile.OriginYcm ||
                                  _vertexCounts[slot] != tile.VertexCount ||
                                  _triangleCounts[slot] != tile.TriangleCount;
                     if (dirty)
@@ -234,7 +234,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             int xCm = checked(tile.OriginXcm + tile.VertexXcm[index]);
-            int zCm = checked(tile.OriginZcm + tile.VertexZcm[index]);
+            int zCm = checked(tile.OriginYcm + tile.VertexZcm[index]);
             return new Vector3(
                 xCm * CmToMeters,
                 tile.VertexYcm[index] * CmToMeters + heightOffsetMeters,
@@ -282,7 +282,7 @@ namespace Ludots.Client.Raylib.Rendering
             _checksums[slot] = checksum;
             _stateRevisions[slot] = stateRevision;
             _originXcm[slot] = tile.OriginXcm;
-            _originZcm[slot] = tile.OriginZcm;
+            _originZcm[slot] = tile.OriginYcm;
             _vertexCounts[slot] = tile.VertexCount;
             _triangleCounts[slot] = tile.TriangleCount;
         }

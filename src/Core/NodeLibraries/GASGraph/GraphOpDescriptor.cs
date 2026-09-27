@@ -34,7 +34,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SortDescendingFlags = 13,
         TeamIdSourceFlags = 14,
         RelationshipTypeFlags = 15,
-        ReasonIdDst = 16,
         DispatchPresetDst = 17,
         SrcRegisterFlags = 18
     }

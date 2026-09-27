@@ -97,12 +97,37 @@ namespace Ludots.Core.GraphRuntime
                     return false;
                 }
 
-                return filters.Direction.Value switch
+                bool thresholdMatches = filters.Direction.Value switch
                 {
                     TriggerGraphEntryFilterDirection.CrossAbove => count >= filters.Threshold.Value,
                     TriggerGraphEntryFilterDirection.CrossBelow => count <= filters.Threshold.Value,
                     _ => false,
                 };
+                if (!thresholdMatches)
+                {
+                    return false;
+                }
+            }
+
+            if (filters.Payload is { Count: > 0 } payloadFilters)
+            {
+                for (int i = 0; i < payloadFilters.Count; i++)
+                {
+                    TriggerGraphEntryPayloadFilter filter = payloadFilters[i];
+                    if (filter.IntValue.HasValue)
+                    {
+                        if (!TryGetPayloadInt(context, filter.Key, out int actual) ||
+                            actual != filter.IntValue.Value)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (!TryGetPayloadString(context, filter.Key, out string actual) ||
+                             !string.Equals(actual, filter.StringValue, StringComparison.Ordinal))
+                    {
+                        return false;
+                    }
+                }
             }
 
             return true;

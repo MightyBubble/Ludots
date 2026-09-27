@@ -1,10 +1,30 @@
 {
   "Id": "example_map",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Boards": [
-    { "Name": "default", "DataFile": "example_map.bin", "LoadedChunkCapacity": 256 }
+    {
+      "Name": "default",
+      "DataFile": "example_map.bin",
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
   ],
   "Dependencies": [
-    { "Id": "ExampleMod", "MinVersion": "1.0.0" }
+    {
+      "Id": "ExampleMod",
+      "MinVersion": "1.0.0"
+    }
   ],
   "Entities": []
 }

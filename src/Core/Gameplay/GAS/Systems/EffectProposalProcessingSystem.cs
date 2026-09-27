@@ -82,6 +82,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? _graphApiHost;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
         private readonly EffectPhaseSideEffectTransaction _instantPhaseTransaction;
+
+        /// <summary>
+        /// 共享到期时间轮；注入后 Instant 相位监听（如命中消耗标记的 RemoveEffectTemplate）
+        /// 提交的取消经 ForceVisit 保持 next-slice 销毁语义，与持久相位事务一致。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            set => _instantPhaseTransaction.DueWheel = value;
+        }
+
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
         private readonly bool _ownsFanOutBudget;
@@ -1581,12 +1591,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             float before = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps);
             float after = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
         }

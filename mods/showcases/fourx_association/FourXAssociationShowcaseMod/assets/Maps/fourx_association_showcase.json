@@ -1,8 +1,8 @@
 {
-  "id": "fourx_association_showcase",
-  "name": "4X Association Showcase",
-  "boardId": "default",
-  "width": 24,
-  "height": 16,
-  "metadata": {}
+  "Id": "fourx_association_showcase",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  }
 }

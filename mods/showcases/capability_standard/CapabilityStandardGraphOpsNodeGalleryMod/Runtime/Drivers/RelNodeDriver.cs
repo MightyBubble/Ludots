@@ -949,7 +949,7 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
             if (!string.IsNullOrWhiteSpace(link.Metric))
             {
                 int metricId = ctx.RelationshipMetrics!.Register(link.Metric, -100, 100, 0);
-                ctx.Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue, reasonId: 0);
+                ctx.Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue);
             }
 
             if (link.Flags == null)

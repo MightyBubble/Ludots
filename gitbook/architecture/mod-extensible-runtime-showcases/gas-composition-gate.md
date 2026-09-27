@@ -12,6 +12,7 @@
 |------|----------|--------|----------|
 | Config shards | `CapabilityStandardConfigShardsShowcaseMod` | Layer 2 | `ConfigPipeline` + `config_catalog.json` shard 目录 |
 | Effect preset type code | `CapabilityStandardEffectPresetTypeCodeShowcaseMod` | Layer 2 / 3 | Mod builtin handler registry + `GAS/preset_types/*.json` |
+| Graph op extension | `CapabilityStandardGraphOpExtensionShowcaseMod` | Layer 2 | `RegisterGraphOp` + `GAS/graphs/*.json` ControlFlow |
 | Presenter behavior extension | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | Layer 2 | presenter behavior registry + `Presentation/presenters/*.json` |
 | Presenter command extension | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | Layer 2 | presenter command registry + presenter rule |
 

@@ -231,7 +231,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 tile.BuildConfigHash,
                 tile.Checksum,
                 tile.OriginXcm,
-                tile.OriginZcm,
+                tile.OriginYcm,
                 tile.VertexXcm,
                 tile.VertexYcm,
                 tile.VertexZcm,

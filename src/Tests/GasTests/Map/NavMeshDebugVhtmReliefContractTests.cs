@@ -215,11 +215,11 @@ namespace Ludots.Tests.Gas
                 int b = tile.TriB[t];
                 int c = tile.TriC[t];
                 int ax = tile.VertexXcm[a] + tile.OriginXcm;
-                int az = tile.VertexZcm[a] + tile.OriginZcm;
+                int az = tile.VertexZcm[a] + tile.OriginYcm;
                 int bx = tile.VertexXcm[b] + tile.OriginXcm;
-                int bz = tile.VertexZcm[b] + tile.OriginZcm;
+                int bz = tile.VertexZcm[b] + tile.OriginYcm;
                 int cx = tile.VertexXcm[c] + tile.OriginXcm;
-                int cz = tile.VertexZcm[c] + tile.OriginZcm;
+                int cz = tile.VertexZcm[c] + tile.OriginYcm;
 
                 int d1 = SignXz(xCm, zCm, ax, az, bx, bz);
                 int d2 = SignXz(xCm, zCm, bx, bz, cx, cz);

@@ -1071,5 +1071,467 @@
     "categories": [
       "Effect.Interaction.Lockout"
     ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.E",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.F",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Q",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.R",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Rune",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 150,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.W",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Arcweaver.Z",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 72,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Arcweaver.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.E",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.F",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Q",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.R",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Rune",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.W",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 80,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Commander.Z",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 64,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Commander.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Stress.Fireball",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Stress.Fireball",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.E",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 42,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.F",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 12,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.F",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Q",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.R",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 100,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Rune",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Rune",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.W",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.Interaction.Lockout.Vanguard.Z",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Vanguard.Z",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
+    ]
   }
 ]

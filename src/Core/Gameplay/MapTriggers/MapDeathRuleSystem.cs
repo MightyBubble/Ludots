@@ -13,10 +13,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// <summary>
     /// Data-declared death rule for one map (<c>DeathRule: { "attribute": "Health", "onZero": "destroy" }</c>).
     /// The engine has no built-in "attribute zero kills" policy — maps opt in. On opt-in,
-    /// every map entity whose declared attribute current value reaches zero goes through the
-    /// presentation-aware destroy pipeline (event published first, finalize destroys), which
-    /// feeds the heartbeat death ring so EntityDied / EntityAliveCountChanged fire for
-    /// TriggerGraphs. Without the declaration the system does zero work.
+    /// every map entity whose declared attribute current value reaches zero is destroyed here.
+    /// Destruction does not wait for the presentation finalize pass: an authoritative server
+    /// never runs that pass, and <c>EntityDied</c> is raised from the Arch destroy callback.
+    /// Systems that still hold the entity after this phase must check <c>World.IsAlive</c>
+    /// before component access. Without the declaration the system does zero work.
     /// </summary>
     public sealed class MapDeathRuleSystem : Arch.System.ISystem<float>
     {

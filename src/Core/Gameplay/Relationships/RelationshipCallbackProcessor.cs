@@ -162,7 +162,6 @@ namespace Ludots.Core.Gameplay.Relationships
             context.Set(CoreServiceKeys.RelationshipEventTypeId, change.TypeId);
             context.Set(CoreServiceKeys.RelationshipEventMetricId, change.MetricId);
             context.Set(CoreServiceKeys.RelationshipEventMetricValue, change.NewValue);
-            context.Set(CoreServiceKeys.RelationshipEventReasonId, change.ReasonId);
             engine.TriggerManager.FireEvent(eventKey, context);
         }
     }

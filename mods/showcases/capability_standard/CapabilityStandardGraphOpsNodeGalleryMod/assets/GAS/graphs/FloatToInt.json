@@ -1,0 +1,79 @@
+[
+  {
+    "id": "showcase.graph_op.FloatToInt",
+    "kind": "Effect",
+    "entry": "base",
+    "nodes": [
+      {
+        "id": "base",
+        "op": "ConstFloat",
+        "floatValue": -8.6
+      },
+      {
+        "id": "round",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "back",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "base",
+        "fromPort": "next",
+        "to": "round"
+      },
+      {
+        "from": "round",
+        "fromPort": "next",
+        "to": "back"
+      },
+      {
+        "from": "back",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "base",
+        "fromPort": "value",
+        "to": "round",
+        "toPort": "a"
+      },
+      {
+        "from": "round",
+        "fromPort": "value",
+        "to": "back",
+        "toPort": "a"
+      },
+      {
+        "from": "back",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

@@ -1,6 +1,8 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -43,28 +45,43 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
         public static void CopyIdentityComponents(World world, Entity target, in LifecycleSnapshot snapshot)
         {
-            if (snapshot.HasPlayerOwner)
+            CopyIdentityComponents(world, target, Entity.Null, in snapshot, ownership: null, relationships: null, memberOfTypeId: -1);
+        }
+
+        public static void CopyIdentityComponents(
+            World world,
+            Entity target,
+            Entity source,
+            in LifecycleSnapshot snapshot,
+            OwnershipResolver? ownership,
+            RelationshipRuntime? relationships,
+            int memberOfTypeId)
+        {
+            if (ownership != null &&
+                world.IsAlive(source) &&
+                ownership.TryResolveRootOwner(source, out Entity root) &&
+                world.IsAlive(root) &&
+                world.Has<PlayerIdentity>(root))
             {
-                if (world.Has<PlayerOwner>(target))
-                {
-                    world.Set(target, snapshot.PlayerOwner);
-                }
-                else
-                {
-                    world.Add(target, snapshot.PlayerOwner);
-                }
+                ownership.EnsureOwnership(root, target);
+                ParticipantIdentityProjector.SyncPlayerOwner(world, target, ownership);
+            }
+            else if (snapshot.HasPlayerOwner)
+            {
+                ParticipantIdentityProjector.UpsertPlayerOwner(world, target, snapshot.PlayerOwner.PlayerId);
             }
 
-            if (snapshot.HasTeam)
+            if (relationships != null &&
+                memberOfTypeId >= 0 &&
+                world.IsAlive(source) &&
+                ParticipantIdentityProjector.TryFindTeamRepresentative(world, relationships, memberOfTypeId, source, out Entity teamRepresentative))
             {
-                if (world.Has<Team>(target))
-                {
-                    world.Set(target, snapshot.Team);
-                }
-                else
-                {
-                    world.Add(target, snapshot.Team);
-                }
+                relationships.EnsureLink(target, teamRepresentative, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, target, teamRepresentative);
+            }
+            else if (snapshot.HasTeam)
+            {
+                ParticipantIdentityProjector.UpsertTeam(world, target, snapshot.Team.Id);
             }
         }
 
@@ -96,7 +113,9 @@ namespace Ludots.Core.Gameplay.Lifecycle
             for (int i = 0; i < state.AttributeSliceCount; i++)
             {
                 int attributeId = state.GetAttributeSliceId(i);
-                if (!snapshot.Attributes.HasAttribute(attributeId))
+                if (attributeId < AttributeBuffer.MAX_ATTRS
+                    ? !snapshot.Attributes.HasAttribute(attributeId)
+                    : !SnapshotHasHighAttribute(snapshot, attributeId))
                 {
                     throw new LifecycleExecutionException(
                         $"CopyAttributeSlice failed because source is missing attribute id '{attributeId}'.");
@@ -109,14 +128,36 @@ namespace Ludots.Core.Gameplay.Lifecycle
                         $"CopyAttributeSlice failed because target template is missing attribute '{attributeName}'.");
                 }
 
-                float value = state.AttributeSliceSource switch
+                float value;
+                if (attributeId >= AttributeBuffer.MAX_ATTRS)
                 {
-                    LifecycleAttributeValueSource.Base => snapshot.Attributes.GetBase(attributeId),
-                    LifecycleAttributeValueSource.Current => snapshot.Attributes.GetCurrent(attributeId),
-                    _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{state.AttributeSliceSource}'."),
-                };
+                    if (state.AttributeSliceSource != LifecycleAttributeValueSource.Current)
+                    {
+                        throw new LifecycleExecutionException(
+                            $"CopyAttributeSlice: 高槽位（id {attributeId} ≥ 64）切片只支持 Current 值源（RFC-0067 P1）。");
+                    }
+
+                    value = snapshot.HighAttributes![attributeId - AttributeBuffer.MAX_ATTRS];
+                }
+                else
+                {
+                    value = state.AttributeSliceSource switch
+                    {
+                        LifecycleAttributeValueSource.Base => snapshot.Attributes.GetBase(attributeId),
+                        LifecycleAttributeValueSource.Current => snapshot.Attributes.GetCurrent(attributeId),
+                        _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{state.AttributeSliceSource}'."),
+                    };
+                }
+
                 AttributeMutationOps.SetBase(world, target, attributeId, value, services.TagOps);
             }
+        }
+
+        private static bool SnapshotHasHighAttribute(LifecycleSnapshot snapshot, int attributeId)
+        {
+            return snapshot.HighAttributes != null &&
+                attributeId >= AttributeBuffer.MAX_ATTRS &&
+                attributeId - AttributeBuffer.MAX_ATTRS < snapshot.HighAttributes.Length;
         }
 
         public static void ClearActiveEffects(World world, Entity target)

@@ -1,6 +1,11 @@
 {
   "startupMapId": "arpg_entry",
-  "startupInputContexts": [
-    "Default_Gameplay"
+  "startupInputContexts": [],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.arpg"
+    }
   ]
 }

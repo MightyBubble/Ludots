@@ -1,39 +1,68 @@
+using System.Text.Json.Serialization;
 using Ludots.Core.Spatial;
-using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Core.Map.Board
 {
     /// <summary>
+    /// Where one point on the board sits in the Ludots world.
+    /// Local centimeters are measured from the corner where cells start.
+    /// World centimeters are Ludots host-world coordinates. The root board's world anchor is (0, 0).
+    /// </summary>
+    public sealed class BoardAnchor
+    {
+        public int LocalXCm { get; set; }
+        public int LocalYCm { get; set; }
+        public int WorldXCm { get; set; }
+        public int WorldYCm { get; set; }
+
+        public BoardAnchor Clone()
+        {
+            return new BoardAnchor
+            {
+                LocalXCm = LocalXCm,
+                LocalYCm = LocalYCm,
+                WorldXCm = WorldXCm,
+                WorldYCm = WorldYCm,
+            };
+        }
+    }
+
+    /// <summary>Square-cell size for a board. Cell counts are derived from the centimeter rectangle.</summary>
+    public sealed class BoardGridAuthoring
+    {
+        public int CellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
+
+        public BoardGridAuthoring Clone() => new() { CellSizeCm = CellSizeCm };
+    }
+
+    /// <summary>Hex edge length. How many hexes fit is derived from the centimeter rectangle.</summary>
+    public sealed class BoardHexAuthoring
+    {
+        public int EdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
+
+        public BoardHexAuthoring Clone() => new() { EdgeLengthCm = EdgeLengthCm };
+    }
+
+    /// <summary>
     /// Configuration for a single Board within a Map.
-    /// Replaces the old MapSpatialConfig with per-board granularity.
     /// </summary>
     public class BoardConfig
     {
-        /// <summary>Board name within the map (e.g., "default", "strategic", "battle").</summary>
         public string Name { get; set; } = "default";
 
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in 256-cell macro tiles.</summary>
-        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        public int WidthCm { get; set; } = SpatialScaleDefaults.DefaultBoardWidthPages * SpatialScaleDefaults.TerrainPageCells * SpatialScaleDefaults.CellCm;
 
-        /// <summary>Board height in 256-cell macro tiles.</summary>
-        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        public int HeightCm { get; set; } = SpatialScaleDefaults.DefaultBoardHeightPages * SpatialScaleDefaults.TerrainPageCells * SpatialScaleDefaults.CellCm;
 
-        /// <summary>Grid cell size in centimeters.</summary>
-        public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
+        public BoardAnchor Anchor { get; set; } = new();
 
-        /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
-        public int HexEdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
+        public BoardGridAuthoring Grid { get; set; } = new();
 
-        /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
-        public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
+        public BoardHexAuthoring Hex { get; set; }
 
-        /// <summary>Maximum simultaneously loaded chunks. Must be positive for every board kind; Grid boards construct their chunk window eagerly on load.</summary>
-        public int LoadedChunkCapacity { get; set; }
-
-        /// <summary>Path to binary data file (.hex, .graph) — optional.</summary>
         public string DataFile { get; set; }
 
         public string ContinuousHeightmapAsset { get; set; }
@@ -44,36 +73,58 @@ namespace Ludots.Core.Map.Board
 
         public bool StructureAwareNavigation { get; set; }
 
-        /// <summary>Whether navigation is enabled for this board.</summary>
-        public bool NavigationEnabled { get; set; }
-
-        /// <summary>
-        /// ContinuousHeightmap → LogicTerrain 投影的高度量化步长（cm）。0 = 引擎默认
-        /// （SpatialScaleDefaults.CellCm）。起伏地图用细步长（如 25）可避免
-        /// 粗量化把缓坡切成不可通行的陡崖，navmesh 高度语义需与烘焙
-        /// heightScaleMeters（米/高度层）= 步长/100 保持一致。
-        /// </summary>
         public int TerrainHeightStepCm { get; set; }
 
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
-        /// <summary>Explicit nav tile grid for this board (authored with the bake).
-        /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
-        public NavTileGridConfig NavTileGrid { get; set; }
-
         /// <summary>
-        /// Clone this config to prevent aliasing during merge operations.
+        /// Catalog asset this NodeGraph board installs on map load.
+        /// Absent means the board has no transport network.
         /// </summary>
+        public Ludots.Core.TransportNetwork.TransportNetworkBoardDeclaration TransportNetwork { get; set; }
+
+        [JsonIgnore]
+        public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
+
+        [JsonIgnore]
+        public int LoadedChunkCapacity { get; set; }
+
+        [JsonIgnore]
+        public int GridCellSizeCm => Grid != null && Grid.CellSizeCm > 0 ? Grid.CellSizeCm : 0;
+
+        [JsonIgnore]
+        public int WidthCells => GridCellSizeCm > 0 ? WidthCm / GridCellSizeCm : 0;
+
+        [JsonIgnore]
+        public int HeightCells => GridCellSizeCm > 0 ? HeightCm / GridCellSizeCm : 0;
+
+        [JsonIgnore]
+        public int HexEdgeLengthCm => Hex != null && Hex.EdgeLengthCm > 0
+            ? Hex.EdgeLengthCm
+            : SpatialScaleDefaults.DefaultHexEdgeLengthCm;
+
+        [JsonIgnore]
+        public int TopologyOriginXCm => (Anchor?.WorldXCm ?? 0) - (Anchor?.LocalXCm ?? 0);
+
+        [JsonIgnore]
+        public int TopologyOriginYCm => (Anchor?.WorldYCm ?? 0) - (Anchor?.LocalYCm ?? 0);
+
+        public BoardExtentSpec ResolveExtent()
+        {
+            return new BoardExtentSpec(WidthCm, HeightCm, GridCellSizeCm, TopologyOriginXCm, TopologyOriginYCm);
+        }
+
         public BoardConfig Clone()
         {
             return new BoardConfig
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInMacroTiles = WidthInMacroTiles,
-                HeightInMacroTiles = HeightInMacroTiles,
-                GridCellSizeCm = GridCellSizeCm,
-                HexEdgeLengthCm = HexEdgeLengthCm,
+                WidthCm = WidthCm,
+                HeightCm = HeightCm,
+                Anchor = Anchor?.Clone() ?? new BoardAnchor(),
+                Grid = Grid?.Clone() ?? new BoardGridAuthoring(),
+                Hex = Hex?.Clone(),
                 ChunkSizeCells = ChunkSizeCells,
                 LoadedChunkCapacity = LoadedChunkCapacity,
                 DataFile = DataFile,
@@ -81,10 +132,9 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
                 TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
-                NavTileGrid = NavTileGrid?.Clone()
+                TransportNetwork = TransportNetwork?.Clone(),
             };
         }
     }

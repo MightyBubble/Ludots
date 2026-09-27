@@ -30,11 +30,12 @@ def main():
     # 2) game.json 关键值
     g = json.loads((ROOT / "assets/game.json").read_text(encoding="utf-8"))
     cap = g.get("gasRuntimeCapacity", {})
+    world = g.get("world") or {}
     lines += ["## 游戏配置基线（assets/game.json）", "",
               f"- `targetFps`：{g.get('targetFps')}（代码默认 60）",
               f"- 窗口：{g.get('windowWidth')}×{g.get('windowHeight')}，resizable={g.get('windowResizable')}",
               f"- 仿真预算：{g.get('simulationBudgetMsPerFrame')}ms/帧，最大切片 {g.get('simulationMaxSlicesPerLogicFrame')}",
-              f"- 世界：cellSize {g.get('gridCellSizeCm')}cm，宏格 {g.get('worldWidthInMacroTiles')}×{g.get('worldHeightInMacroTiles')}",
+              f"- 世界：cellSize {world.get('cellSizeCm')}cm，尺寸 {world.get('widthCm')}×{world.get('heightCm')}cm（#1567 World 节）",
               f"- gasRuntimeCapacity 共 **{len(cap)}** 项："]
     for k, v in cap.items():
         lines.append(f"  - `{k}` = {v}")

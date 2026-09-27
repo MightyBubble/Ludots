@@ -296,7 +296,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             int localXcm = (int)MathF.Round((sx / count) * CmPerMeter) - baseTile.OriginXcm;
-            int localZcm = (int)MathF.Round((sz / count) * CmPerMeter) - baseTile.OriginZcm;
+            int localZcm = (int)MathF.Round((sz / count) * CmPerMeter) - baseTile.OriginYcm;
 
             for (int i = 0; i < baseTile.TriangleCount; i++)
             {
@@ -567,7 +567,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             {
                 verts.Add((baseTile.OriginXcm + baseTile.VertexXcm[i]) / CmPerMeter);
                 verts.Add(baseTile.VertexYcm[i] / CmPerMeter);
-                verts.Add((baseTile.OriginZcm + baseTile.VertexZcm[i]) / CmPerMeter);
+                verts.Add((baseTile.OriginYcm + baseTile.VertexZcm[i]) / CmPerMeter);
             }
 
             for (int i = 0; i < baseTile.TriangleCount; i++)
@@ -592,11 +592,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0) return false;
 
             int ax = tile.OriginXcm + tile.VertexXcm[a];
-            int az = tile.OriginZcm + tile.VertexZcm[a];
+            int az = tile.OriginYcm + tile.VertexZcm[a];
             int bx = tile.OriginXcm + tile.VertexXcm[b];
-            int bz = tile.OriginZcm + tile.VertexZcm[b];
+            int bz = tile.OriginYcm + tile.VertexZcm[b];
             int cx = tile.OriginXcm + tile.VertexXcm[c];
-            int cz = tile.OriginZcm + tile.VertexZcm[c];
+            int cz = tile.OriginYcm + tile.VertexZcm[c];
 
             return NavObstacleGeometry.IsTriangleBlockedByObstacles(ax, az, bx, bz, cx, cz, obstacles, layerId);
         }
@@ -663,7 +663,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 buildHash,
                 0UL,
                 baseTile.OriginXcm,
-                baseTile.OriginZcm,
+                baseTile.OriginYcm,
                 vx.ToArray(),
                 vy.ToArray(),
                 vz.ToArray(),
@@ -768,7 +768,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int worldZcm = (int)MathF.Round(wz * CmPerMeter);
 
             int localXcm = worldXcm - baseTile.OriginXcm;
-            int localZcm = worldZcm - baseTile.OriginZcm;
+            int localZcm = worldZcm - baseTile.OriginYcm;
 
             var key = (localXcm, worldYcm, localZcm);
             if (vertexIndex.TryGetValue(key, out int existing)) return existing;

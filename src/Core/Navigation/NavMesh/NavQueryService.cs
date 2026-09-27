@@ -89,7 +89,7 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             int localXcm = worldXcm - tile.OriginXcm;
-            int localZcm = worldZcm - tile.OriginZcm;
+            int localZcm = worldZcm - tile.OriginYcm;
             int triId = FindNearestTriangle(tile, localXcm, localZcm);
             if (triId < 0) return false;
 

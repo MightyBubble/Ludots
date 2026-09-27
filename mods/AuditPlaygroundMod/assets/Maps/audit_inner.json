@@ -1,12 +1,28 @@
 {
   "Id": "audit_inner",
-  "Tags": [ "audit_demo", "audit_inner" ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "audit_demo",
+    "audit_inner"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
       "DataFile": "level_1.bin",
-      "LoadedChunkCapacity": 256
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "TriggerTypes": [
@@ -16,13 +32,23 @@
     {
       "Template": "orc_grunt",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 900, "Y": 0 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 900,
+            "Y": 0
+          }
+        }
       }
     },
     {
       "Template": "tree_pine",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1200, "Y": 200 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1200,
+            "Y": 200
+          }
+        }
       }
     }
   ]

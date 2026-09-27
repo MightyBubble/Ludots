@@ -1,0 +1,4 @@
+{
+  "Q4.Health": { "clampToBase": true, "min": 0 },
+  "Q4.Armor": { "min": 0 }
+}

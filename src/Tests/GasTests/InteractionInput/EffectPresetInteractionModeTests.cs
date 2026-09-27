@@ -265,7 +265,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "SkillQ", Name = "SkillQ", Type = InputActionType.Button },
                     new() { Id = "SkillW", Name = "SkillW", Type = InputActionType.Button },
                     new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
-                    new() { Id = "CommandSourceAcquire", Name = "CommandSourceAcquire", Type = InputActionType.Button },
+                    new() { Id = "Select.Begin", Name = "Select.Begin", Type = InputActionType.Button },
                     new() { Id = "Cancel", Name = "Cancel", Type = InputActionType.Button },
                     new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                 },

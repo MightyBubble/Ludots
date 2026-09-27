@@ -77,7 +77,8 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
 → https://github.com/MightyBubble/Ludots/issues/1099
 
-这五张票都已经进主干；本页只记关单，不再派实现票。
+这五张票都已经进主干；本页只记关单，不再派实现票。  
+关单评语文稿在 [`docs/rfcs/issue-hygiene-2026-08-25.md`](../../docs/rfcs/issue-hygiene-2026-08-25.md)。
 
 ### 3.3 真正还在做的
 
@@ -103,6 +104,10 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 作者面状态：执行线结束合同票 https://github.com/MightyBubble/Ludots/issues/1107 已关闭，不再列为开放任务；当前显式 Halt 合同以编译器和回归为准。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 已关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；对应票（#1106/#1113/#1115/#1116/#1123/#1124/#1125/#1126，连同随 #1222 落地的 #1109、随 TriggerGraph core 线落地的 #1114）已于 2026-08-28 做关单卫生关闭，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。进图开聊的正式入口已落地：`StartDialogue=462`（PR #1289，对话作者关口入门包）——`MapLoaded` TriggerGraph 起聊，`dialogue_author_kit` 展厅纯配置可玩；per-op 画廊真机证据（poster/play.mp4）已补录。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
+**订单驱动图脑（issue #1536，已落地）。** Core 的具体行为循环（DirectAttackSystem / ResourceTransportSystem，PR #711 混入的 RTS 玩法）已删除：行为改成 mod 侧 Script 图数据，由通用 `GraphActionBrainHostSystem`（实体查询、订单黑板胶水 `Order.*` 固定键、常驻帧）驱动。配套新 op：`LoadEntityPosX/Y(500/501)`、`IntToFloat(502)`、`FloatToInt(503)`、`SqrtFloat(504)`、`SubmitAssignedOrder(505)`、`CompleteActiveOrder(506)`、`LoadOrderTypeId(507)`、`LoadEntityPosValid(508)`（484-499 留给输入线重编号）；浮点算术族与 `WriteBlackboardEntity`/`ApplyEffectTemplate`/`ModifyAttributeAdd` 按 ActionLib 合同扩到 Script 方言（kind 策略 carve-out 有名单）。订单引用一律语义键，patch 期 `ResolveOrderType` 走运行时 OrderTypeRegistry。敌我关系判定不在行为图里重做——门在输入侧 `command_intent_profiles.json` 的 stance 过滤（下单时已限定敌对目标；`order_types.json` 的 validationGraph 仍为 none，可作后续收紧点）。前线 `rts.frontline.attack`（standoff 环槽数学在图内可见）与 `rts.frontline.transport` 对拍等价；ArchitectureGuard 禁止 Core/Gameplay 再出现 ActionLoop。→ https://github.com/MightyBubble/Ludots/issues/1536
+
+**已顶寄存器预算的图（issue #1536 对抗审核笔记）**：`rts.frontline.transport`（运矿）已用满 GraphVmLimits 的 32 寄存器预算，今后加分支必爆预算——把寄存器预算当作显式硬线；若需新分支，先删再增或重构成跨拍分派。attack 图同理接近上限。
+
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
 
@@ -115,9 +120,15 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
 方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落地；2026-08-24 又补上技能域 `abilities.json.triggerGraphs`、Mod 域 `mod.json.triggerGraphs` 和显式 `route: global` 跨地图路由，统一复用现有 TriggerManager/TriggerGraph VM。2026-08-26 night-raid 大包（rebase 最新 main，PR #1239）继续把事件 Schema SSOT、全局订阅表/`FireGlobalEvent`/`FireCrossMapEvent`、图互调与放置实体读、Enum 目录、图编辑器作者面 hardening 收进同一条线；真正的跨图派发走 `FireGlobalEvent`，不再靠 FireMapEvent 扇出旧表。区域触发源 2026-09-07 起改为实体 SSOT（#1461）：作者面走既有摆放流水线——实体模板 `components` 声明 `RegionVolumeCm`（circle/rect/凸 polygon/segment 四种形状）+ 可选 tag 过滤与 `RegionVolumeEmissionCm` 发射合同（自定义事件 + 静态 payload），地图 `Entities[]` 摆放、`Overrides` 整组件替换改形；摆放后 bake pass 做 emit 语义校验（对 CustomEventNameRegistry/EventSchemaRegistry fail-closed）并派生 VolumeKey 目录，`RegionVolumeTriggerSystem` 在心跳节拍做差分进出求值，默认事件键与 payload 合同不变。地图 JSON `Regions` 数组、MapRegionDefinition/RegionTriggerSystem 字典版、`PlacedInstanceKinds.Region` 特例全部退役；夜袭与 LoadPlacedRegion 画廊已迁移到模板+摆放（摆放 `PositionXCm/PositionYCm` 兜底落 WorldPositionCm 是引擎级新能力）。FieldRegion 事件族合并与物理 sensor 收敛是后续票（#1468/#1469）。图体一次性控制流补齐 UE 同款 DoOnce 编译期糖（#1467）：var 闩锁 0→1、true/false 双臂、Reset≡WriteMapVarInt(var,0)，降级为 Read/Compare/JumpIfFalse/Write 链零新 opcode；入口级 once 保留为关卡导演糖（17 个生产图在用），两者分工已写进 #1467。高速穿掠防漏判由扫掠判定补齐（#1475）：评估波内对区外移动者做 [PreviousWorldPositionCm → 当前位置] 轨迹求交（跨立测试 + 端点距离，全定点有界无溢出），瞬时穿越同波发 enter+exit 配对且不占 inside-set；无 Previous 组件回退点采样（合同不变）。场图层过境事件并入统一发射合同（#1468）：`Fields/region_emissions.json` 按 region key 声明 emit，区域实体挂 `RegionVolumeEmissionCm`，矢量与网格两线共用 `RegionEmissionFiring` 单一事件出口；默认键保持 `FieldRegionEntered/Exited`，三个 field showcase 零迁移。物理接触并入同一合同（#1469 收口）：`ContactEmissionTap` 在接触排干点读 `RegionVolumeEmissionCm` 发射——传感器事件进触发线，层消费者通道保留；纯数据物理 showcase 待物理体模板授权（另立票）。物理体模板授权与 `contact_sensor_textbook` 教科书已落地（#1480）：压力板/滚球全数据建体，滚球压板经真实物理管线触发自定义事件，headless 真机验收通过。剩余收口是 S4 时序合同全文对齐与 S5 实体/技能真实可玩 showcase、画廊和 AgentBridge 运行证据，不能把 headless 基建测试写成 showcase 完成。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看 #1031 的最新进度快照。
 
+2026-09-20 历法订阅线（PR #1283 增量）：TriggerGraph entry 新增 `filters.payload` 通用载荷订阅——键按事件 schema 闭集校验（声明外/带空白/float/entity 拒绝），int 参数的字符串期望值编译成 ConfigKey id（幂等，装载/编译顺序无关），string 参数保留字符串相等；无 schema 的裸编译不支持 payload 过滤（诊断拒绝）。历法五个 `Calendar.*` 事件载荷全部为 int key id，图内 `LoadEntryPayloadInt` 直读相位/日历/日序。还开着的活：payload 期望符号正规化为「编译产符号、patch 期解析 id」（当前编译期 Register 幂等可接受）；Mod 域 entry 订阅全局订阅表派发的事件（如 `Calendar.*`）安装期 fail-closed 点名，等 Mod 域路由统一进全局表后放开；`varName` 专用过滤槽与 payload 机制语义重复，评估退役。
+
+历法当前值可以在图里直接读、直接写：日序、当天步数、千分比、昼夜相位、年份、周期相位、相位在表里的位置、周期内第几天、离某个相位或相位里的某一天还有几天；开局落定、往前拨日、改当天步数。已登记的符号用 `LoadConfigKey` 写成编号。日序相减用 `SubInt`。启用仍然只认 `Calendar/world.json`。`Calendar.*` 不是实体属性。合同在 [历法](calendar-system.md)。
+
+时间流可以在图里直接读、直接拿令牌：整局和玩法步进的暂停、有效倍率、暂停令牌、变速令牌、放回令牌。一个人的快慢仍写 `time.scale_permille`，经 AttributeSink `Time.EntityScalePermille` 落到本地时钟。本地时钟在属性落地之后推进；同一拍里更早的系统，包括限时标签到期，看到的是上一拍的本地步数。合同在 [时间流图节点](time-flow-graph-nodes.md)。
+
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
-**BT / FSM 作者合同（已纠偏）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json` → `BehaviorTreeWorld`；FSM SSOT = `AI/hfsm.json` → `HfsmWorld` + `GraphProgramHfsmHost`；叶子 = `action_lib.json` + `GAS/graphs.json` Script。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
+**BT / FSM 作者合同（#1542 起组件式驱动）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json`，FSM SSOT = `AI/hfsm.json`；驱动 = `GraphActionBrain{BtId|HfsmId}` + `BtState`/`HfsmState` 组件 + `BtBrainHostSystem`/`HfsmBrainHostSystem`（照 Animator 范式，每实体自持状态，无池无索引无释放）。动作叶 = `action_lib.json`（资产中性，无 host 字段）+ `GAS/graphs.json` Script；转移条件与 BT Condition 叶 = `func_lib.json` 纯函数。`BehaviorTreeWorld` 已退出演武场驱动（遗留消费者：`GraphBehaviorIntegrationMod`，迁移债）；`HfsmWorld` 遗留消费者：HFSM 哨兵 arena（待迁）。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`），保存走生产校验器（action_lib + func_lib 双目录）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
 
 **糖 / 降级宿主（回归，非作者 SSOT）：** `BtSequence` / `BtSelector` / `BtDecorator` / `FsmState` 与 `GraphBehaviorTreeHost` / `GraphFsmHost` 仍保留作编译降级与单元回归；**禁止**再把整树 / 整机 Script 糖当作演武场或编辑器正门。生产资产已删除 `Graph.BT.Tree.PatrolChaseAttack` / `Graph.FSM.Sentry` 外壳。
 
@@ -139,6 +150,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
 | `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
+| 时间流图节点 | **已落地** | 五个域节点 520–524，见 [时间流图节点](time-flow-graph-nodes.md)。`time.scale_permille` 经 `Time.EntityScalePermille` 落到本地时钟 |
 | 外层 L2 拓扑 SSOT 恢复（AI JSON + 拓扑编辑器） | **已落地** | 见 [BT/FSM 独立编辑器](graph-bt-fsm-nested-func.md)；糖宿主仅回归 |
 
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |
@@ -147,6 +159,8 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `TriggerGraphRenameMigrationTests` 误伤合法 payloadKey | 债（非本轮） | 夜袭 `graphs.json` 的 `MapTrigger.PointerScreenX/Y`（随 #1398 入口直绑 action 落地）被「不得出现退役方言名」的子串检查判红；该守卫要改成只查 `kind` / `mount` 字段而不是裸子串 |
 | `QueryAllMapEntities` 定长 TargetList（`MaxTargets=256`）全图查询截断 + roster 候选集「全量重建式」无增量维护原语 | **P1 债 · 做法要变** | 债务正本 `artifacts/techdebt/2026-09-07-case-e-selection-query-cap.md`；可复现/观测 `CaseESelectionScalePressureTests` + `docs/benchmarks/case-e-selection-scale/`。两条线：①解除 256 顶（分页/流式收集，图 VM 寄存器模型重新设计——query graph 专属编译管线适配 ECS 流式查询的裂缝）；②候选集从「事件驱动全量重建」迁到「增量成员 + 过滤条件 diff」（并为 team/模板/状态突变补刷新源）。**另开活，别捆本 PR** |
 | 可调用函数远景（Case E：入参表、whileActive（已替 continuousQuery）、预览 S1/S2、Invoke 与 FuncLib） | **开着 · 先出方案** | 正本 [可调用函数远景](graph-callable-function-vision.md)；Case E 短任务条 `mods/showcases/case_e_selection/CaseESelectionMod/docs/NEXT-AGENT-BRIEF.md`。PR #1444 是台阶。评审前不大改 Core。 |
+| 输入→下令全链图化（选中/名册/下单/瞄准/蓄力/指示器；`SubmitCommandIntent`/`SubmitCast` op + 意图缓冲；引擎特权键拆除：`InteractionContextIds.Default` 稳态锚点、`EntityCollectionKeys` 预注册、`GetControlledActor` 族、`CommandSourceAcquisitionSystem`、`InputOrderMappingSystem` 施法状态机） | **开着 · 切片继续（#1607 已合主干）** | 合同正本 [输入与可调用函数系统·配置宪法](../../mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html) §12；概念正本 `input-command-system.html`；统一分支 #1607 已合 main（`7d77bb72f5`，五线归一 + 吸收 main 含 EQS，PR CI 三绿后合并）。已落：切0/切1、Q4 公式按目标属性分支、Q2 `byAbilityCategory` 槽路由、#1597 退役、集合单一写点、`CommandSourceAcquisitionSystem` 删除、切片③弩车按目标路由（wolf→slot0 weapon / tower→slot1 siege / ground→moveTo 三场景 headless 全绿，纯 JSON 零 C#，`BallistaRouteByTargetAcceptanceTests`）。剩余：S4 技制时序退役、S6 slot 化、S7 InputOrderMapping 拆除、D15 context 生命周期全图化（#1398）；图侧缺件归 #1600。**EQS 围城批量落位已落**（PR #1610：SubmitEngageBatch op + drain 内 EQS 环位逐成员分配 + 占位懒修剪 + moveTo→施法订单续接到位自动开打——#1398 Case 3 / #1600 批量族首件；`Spatial/eqs_queries.json` 纯数据档案，EqsQueryRegistry 引擎服务）。图函数签名/InvokeFunc/登记表仍归上一行远景，不混。 |
+| 图序链终态推进（分支 graph-order-migration，15 提交）：SubmitCommandIntent/SubmitCast 双 op + 意图缓冲 + §12 drain；12/12 装配器退役（自动装配）；rts 四技能+选中全图化（采集对 rts 退役）；arpg 复活（self-roster，#1523 关闭）；首批守卫 3 条 | **开着 · 机械展开** | 终态全量 139 vs 基线 140 零新增；剩余=七 mod battle 声明化→锚点拆除、指示器 behaviors、pref 读写 op。验收正本 artifacts/acceptance/case-e-selection-graph-order/battle-report.md |
 
 
 分层合同条款同步修订在 [图怎么分层](graph-layering-flow-and-behavior.md)。

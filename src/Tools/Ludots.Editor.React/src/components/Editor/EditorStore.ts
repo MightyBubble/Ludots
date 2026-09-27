@@ -37,29 +37,46 @@ export interface BoardInfo {
     cellSizeCm: number;
     hexEdgeLengthCm: number;
     chunkSizeCells: number;
-    navigationEnabled: boolean;
     hasDataFile: boolean;
     dataFileExists: boolean;
     dataFile: string | null;
     canEditTerrain: boolean;
     canBake: boolean;
     reason: string;
+    originXcm: number | null;
+    originYcm: number | null;
+    widthHexes: number | null;
+    heightHexes: number | null;
+    effectiveWidthCm: number;
+    effectiveHeightCm: number;
+    anchorLocalXCm: number;
+    anchorLocalYCm: number;
+    anchorWorldXCm: number;
+    anchorWorldYCm: number;
 }
 
 export interface BoardCreateRequest {
     name: string;
     spatialType: BoardTopology;
-    widthInMacroTiles: number;
-    heightInMacroTiles: number;
+    widthCm: number;
+    heightCm: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled: boolean;
+    anchorLocalXCm: number;
+    anchorLocalYCm: number;
+    anchorWorldXCm: number;
+    anchorWorldYCm: number;
 }
 
 export interface BoardUpdateRequest {
+    widthCm?: number;
+    heightCm?: number;
     cellSizeCm?: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled?: boolean;
+    anchorLocalXCm?: number;
+    anchorLocalYCm?: number;
+    anchorWorldXCm?: number;
+    anchorWorldYCm?: number;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -570,12 +587,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 name: request.name,
                 spatialType: request.spatialType,
-                widthInMacroTiles: request.widthInMacroTiles,
-                heightInMacroTiles: request.heightInMacroTiles,
+                widthCm: request.widthCm,
+                heightCm: request.heightCm,
                 cellSizeCm: request.cellSizeCm,
-                hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
-                chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
-                navigationEnabled: request.navigationEnabled,
+                hexEdgeLengthCm: request.hexEdgeLengthCm,
+                anchorLocalXCm: request.anchorLocalXCm,
+                anchorLocalYCm: request.anchorLocalYCm,
+                anchorWorldXCm: request.anchorWorldXCm,
+                anchorWorldYCm: request.anchorWorldYCm,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -604,9 +623,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                widthCm: request.widthCm,
+                heightCm: request.heightCm,
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm,
-                navigationEnabled: request.navigationEnabled,
+                anchorLocalXCm: request.anchorLocalXCm,
+                anchorLocalYCm: request.anchorLocalYCm,
+                anchorWorldXCm: request.anchorWorldXCm,
+                anchorWorldYCm: request.anchorWorldYCm,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -1055,6 +1079,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 }));
 
+function nestedField(record: JsonRecord | null | undefined, pascalObject: string, camelObject: string, pascalField: string, camelField: string): unknown {
+    const raw = record?.[pascalObject] ?? record?.[camelObject];
+    if (raw == null || typeof raw !== 'object') {
+        return undefined;
+    }
+    const obj = raw as JsonRecord;
+    return obj[pascalField] ?? obj[camelField];
+}
+
+function nullableNumberOr(value: unknown): number | null {
+    const parsed = typeof value === 'string' ? Number(value) : value;
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.floor(parsed) : null;
+}
+
 function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
     const spatialTypeRaw = raw?.spatialType ?? raw?.SpatialType ?? null;
     const spatialType = spatialTypeRaw == null ? null : normalizeSpatialTopology(spatialTypeRaw);
@@ -1066,13 +1104,22 @@ function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
         cellSizeCm: numberOr(raw?.cellSizeCm ?? raw?.CellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
         hexEdgeLengthCm: numberOr(raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm, DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: numberOr(raw?.chunkSizeCells ?? raw?.ChunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
-        navigationEnabled: Boolean(raw?.navigationEnabled ?? raw?.NavigationEnabled ?? false),
         hasDataFile: Boolean(raw?.hasDataFile ?? raw?.HasDataFile ?? false),
         dataFileExists: Boolean(raw?.dataFileExists ?? raw?.DataFileExists ?? false),
         dataFile: stringOrNull(raw?.dataFile ?? raw?.DataFile),
         canEditTerrain: Boolean(raw?.canEditTerrain ?? raw?.CanEditTerrain ?? false),
         canBake: Boolean(raw?.canBake ?? raw?.CanBake ?? false),
         reason: String(raw?.reason ?? raw?.Reason ?? ''),
+        originXcm: nullableNumberOr(raw?.originXcm ?? raw?.OriginXcm),
+        originYcm: nullableNumberOr(raw?.originYcm ?? raw?.OriginYcm),
+        widthHexes: nullableNumberOr(raw?.widthHexes ?? raw?.WidthHexes),
+        heightHexes: nullableNumberOr(raw?.heightHexes ?? raw?.HeightHexes),
+        effectiveWidthCm: numberOr(raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm, 0),
+        effectiveHeightCm: numberOr(raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm, 0),
+        anchorLocalXCm: numberOr(raw?.anchorLocalXCm ?? raw?.AnchorLocalXCm, 0),
+        anchorLocalYCm: numberOr(raw?.anchorLocalYCm ?? raw?.AnchorLocalYCm, 0),
+        anchorWorldXCm: numberOr(raw?.anchorWorldXCm ?? raw?.AnchorWorldXCm, 0),
+        anchorWorldYCm: numberOr(raw?.anchorWorldYCm ?? raw?.AnchorWorldYCm, 0),
     };
 }
 
@@ -1086,13 +1133,22 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         CellSizeCm: raw?.cellSizeCm ?? raw?.CellSizeCm,
         HexEdgeLengthCm: raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm,
         ChunkSizeCells: raw?.chunkSizeCells ?? raw?.ChunkSizeCells,
-        NavigationEnabled: raw?.navigationEnabled ?? raw?.NavigationEnabled,
         HasDataFile: raw?.hasDataFile ?? raw?.HasDataFile,
         DataFileExists: raw?.dataFileExists ?? raw?.DataFileExists,
         DataFile: raw?.dataFile ?? raw?.DataFile,
         CanEditTerrain: raw?.canEditTerrain ?? raw?.CanEditTerrain,
         CanBake: raw?.canBake ?? raw?.CanBake,
         Reason: raw?.reason ?? raw?.Reason,
+        OriginXcm: raw?.originXcm ?? raw?.OriginXcm,
+        OriginYcm: raw?.originYcm ?? raw?.OriginYcm,
+        WidthHexes: raw?.widthHexes ?? raw?.WidthHexes,
+        HeightHexes: raw?.heightHexes ?? raw?.HeightHexes,
+        EffectiveWidthCm: raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm,
+        EffectiveHeightCm: raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm,
+        AnchorLocalXCm: raw?.anchorLocalXCm ?? raw?.AnchorLocalXCm,
+        AnchorLocalYCm: raw?.anchorLocalYCm ?? raw?.AnchorLocalYCm,
+        AnchorWorldXCm: raw?.anchorWorldXCm ?? raw?.AnchorWorldXCm,
+        AnchorWorldYCm: raw?.anchorWorldYCm ?? raw?.AnchorWorldYCm,
     });
     const boardsRaw = Array.isArray(raw?.boards) ? raw.boards : (Array.isArray(raw?.Boards) ? raw.Boards : []);
     const boards = arrayOfRecords(boardsRaw).map(normalizeBoardInfo).filter((b: BoardInfo) => b.name.length > 0);
@@ -1125,12 +1181,14 @@ function resolveBoardMetricsFromMapConfig(
             mapInfo?.spatialType ??
             DEFAULT_BOARD_METRICS.topology),
         cellSizeCm: numberOr(
+            nestedField(selectedBoard, 'Grid', 'grid', 'CellSizeCm', 'cellSizeCm') ??
             selectedBoard?.GridCellSizeCm ??
             selectedBoard?.gridCellSizeCm ??
             boardInfo?.cellSizeCm ??
             mapInfo?.cellSizeCm,
             DEFAULT_BOARD_METRICS.cellSizeCm),
         hexEdgeLengthCm: numberOr(
+            nestedField(selectedBoard, 'Hex', 'hex', 'EdgeLengthCm', 'edgeLengthCm') ??
             selectedBoard?.HexEdgeLengthCm ??
             selectedBoard?.hexEdgeLengthCm ??
             boardInfo?.hexEdgeLengthCm ??
@@ -1171,19 +1229,8 @@ function replaceMapInfo(mapInfos: MapInfo[], next: MapInfo): MapInfo[] {
 }
 
 function pickPrimaryBoard(boards: JsonRecord[]): JsonRecord | null {
-    const navigationDefault = boards.find((b) =>
-        isNavigationEnabled(b) && String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
-    if (navigationDefault) return navigationDefault;
-
-    const navigationBoard = boards.find(isNavigationEnabled);
-    if (navigationBoard) return navigationBoard;
-
     const defaultBoard = boards.find((b) => String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
     return defaultBoard ?? boards[0] ?? null;
-}
-
-function isNavigationEnabled(board: JsonRecord): boolean {
-    return Boolean(board?.NavigationEnabled ?? board?.navigationEnabled ?? false);
 }
 
 function addObstacleFootprintDirtyChunks(

@@ -1,5 +1,8 @@
 {
   "Id": "reconnect_recovery",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "showcase",
     "reconnect",
@@ -9,12 +12,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
-      "NavigationEnabled": true
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [

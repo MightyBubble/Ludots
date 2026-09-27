@@ -540,7 +540,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
                 _runActive = false;
                 _awaitingCallback = false;
-                _cursor = new GraphExecutionCursor(_entry.StartPc);
+                _cursor.Reset(_entry.StartPc);
                 _runCaster = ResolveRunCaster(context);
                 SeedEntryRegisters(context);
                 CaptureEntryPayload(context, dependencies.EventSchemas);

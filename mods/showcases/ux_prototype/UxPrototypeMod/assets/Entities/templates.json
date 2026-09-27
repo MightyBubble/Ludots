@@ -1,6 +1,7 @@
 [
   {
     "id": "ux_city",
+    "initialInteractionContext": "interaction.context.ux.battle",
     "components": {
       "Name": {
         "Value": "City"

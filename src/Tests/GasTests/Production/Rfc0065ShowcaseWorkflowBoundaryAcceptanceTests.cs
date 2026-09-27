@@ -94,9 +94,16 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Assert.That(
                 collectionsService.KeyRegistry.GetName(steadyStateCollectionKeyId),
-                Is.EqualTo(EntityCollectionKeys.CommandSource));
-            Assert.That(engine.World.Has<InteractionContextInstance>(localPlayer), Is.False,
-                "steady state is the absence of mounted interaction state on the local rep.");
+                Is.EqualTo("collection.command.source"));
+            Assert.That(engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance mountedBattleContext), Is.True,
+                "steady state mounts the template-declared battle context on the local rep.");
+            Assert.That(
+                contextProfiles.ProfileIdRegistry.GetName(mountedBattleContext.ContextId),
+                Is.EqualTo("interaction.context.interaction.battle"));
+            Assert.That(mountedBattleContext.Source, Is.EqualTo(InteractionContextInstanceSource.TemplateSpawn),
+                "the base mount comes from the spawn template's initialInteractionContext.");
+            Assert.That(mountedBattleContext.ActiveCollectionKeyId, Is.EqualTo(steadyStateCollectionKeyId),
+                "the declared battle context routes pointer commands through the steady-state collection.");
             Assert.That(engine.World.TryGet<InteractionPref>(localPlayer, out InteractionPref localPlayerPref), Is.True,
                 "map binding must seed the player InteractionPref from Input/interaction_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
@@ -116,7 +123,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Entity[] actors = { arcweaver, vanguard, commander };
             Assert.That(
-                collections.TryGet(localPlayer, EntityCollectionKeys.CommandSource, out EntityCollectionHandle sourceHandle),
+                collections.TryGet(localPlayer, "collection.command.source", out EntityCollectionHandle sourceHandle),
                 Is.True,
                 "Interaction showcase startup must seed collection.command.source directly for command routing.");
             Assert.That(CopyCollection(collections, sourceHandle), Is.EquivalentTo(actors));
@@ -580,7 +587,7 @@ namespace Ludots.Tests.GAS.Production
         private static void PublishHoveredEntity(EntityCollectionStore collections, Entity owner, Entity hovered)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.HoveredEntity,
+                "collection.ui.command.hover",
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 owner,
@@ -1093,7 +1100,7 @@ namespace Ludots.Tests.GAS.Production
                     at = "show5-show6.collection",
                     phase = "command-source",
                     status = "pass",
-                    key = EntityCollectionKeys.CommandSource,
+                    key = "collection.command.source",
                     owner = localPlayer.Id,
                     rows = commandSource.Select(static e => e.Id).ToArray()
                 },

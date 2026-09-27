@@ -104,6 +104,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             ownership.EnsureOwnership(rep, entity);
+            ParticipantIdentityProjector.SyncPlayerOwner(world, entity, ownership);
             return true;
         }
     }

@@ -316,7 +316,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public static List<Trigger> BuildModMountTriggers(
             GraphProgramRegistry programs,
             ModManifest manifest,
-            CustomEventNameRegistry customEvents)
+            CustomEventNameRegistry customEvents,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
         {
             if (programs == null) throw new ArgumentNullException(nameof(programs));
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
@@ -344,6 +345,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     {
                         throw new InvalidOperationException(
                             $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' names map-scoped event '{eventName}'; Mod TriggerGraphs accept global engine events only, and map-scoped events fire only inside a map session.");
+                    }
+
+                    // Mod 域条目落在遗留全局表；schema 声明 Global 且经全局订阅表派发的
+                    // 事件（如历法事件）到不了那里——fail closed 而不是静默死订阅。
+                    // ModLoaded 仍从遗留表派发，是唯一豁免。
+                    if (eventSchemas != null &&
+                        eventSchemas.TryGet(eventName, out Ludots.Core.Scripting.EventSchema modEntrySchema) &&
+                        modEntrySchema.Scope == Ludots.Core.Scripting.EventScope.Global &&
+                        eventName != GameEvents.ModLoaded.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Mod '{manifest.Name}' triggerGraphs graph '{graph}' entry '{entry.Label}' subscribes to global-scope event '{eventName}'; " +
+                            "Mod-domain entries ride the legacy global table while this event dispatches through the global subscription table — mount it on a map instead.");
                     }
 
                     if (eventName.StartsWith(CustomEventNameRegistry.GasEventPrefix, StringComparison.Ordinal))
@@ -556,7 +570,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
                             entry.Filters.Direction,
                             entry.Filters.Action,
                             entry.Filters.InstanceId,
-                            tagId == Ludots.Core.Gameplay.GAS.Registry.TagRegistry.InvalidId ? null : tagId),
+                            tagId == Ludots.Core.Gameplay.GAS.Registry.TagRegistry.InvalidId ? null : tagId,
+                            entry.Filters.VarName,
+                            entry.Filters.Payload),
                         entry.Refire,
                         entry.Priority,
                         entry.IsHookFragment,

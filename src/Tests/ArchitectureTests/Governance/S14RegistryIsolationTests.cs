@@ -120,7 +120,6 @@ public sealed class S14RegistryIsolationTests
         public int ResolveRelationshipType(string name) => throw new NotSupportedException();
         public int ResolveRelationshipMetric(string name) => throw new NotSupportedException();
         public int ResolveRelationshipFlag(string name) => throw new NotSupportedException();
-        public int ResolveRelationshipReason(string name) => throw new NotSupportedException();
         public int ResolveTargetDispatchPreset(string name) => throw new NotSupportedException();
         public int ResolveEntityTemplate(string name) => throw new NotSupportedException();
     }

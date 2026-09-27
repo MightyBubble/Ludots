@@ -1,0 +1,42 @@
+[
+  {
+    "id": "showcase.graph_op.LoadOrderTypeId",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "loadType",
+        "op": "LoadOrderTypeId",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "loadType"
+      },
+      {
+        "from": "loadType",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "loadType",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

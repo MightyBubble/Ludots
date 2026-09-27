@@ -3,33 +3,82 @@
   "synergyTeamId": 1,
   "scenario": {
     "teams": [
-      { "id": 1, "name": "Shu Brotherhood" },
-      { "id": 2, "name": "Yellow Turban Vanguard" }
+      {
+        "id": 1,
+        "name": "Shu Brotherhood"
+      },
+      {
+        "id": 2,
+        "name": "Yellow Turban Vanguard"
+      }
     ],
     "heroes": [
-      { "name": "Liu Bei", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] },
-      { "name": "Guan Yu", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] },
-      { "name": "Zhang Fei", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] }
+      {
+        "name": "Liu Bei",
+        "teamId": 1,
+        "tags": [
+          "Faction.Shu",
+          "Bond.PeachGarden"
+        ]
+      },
+      {
+        "name": "Guan Yu",
+        "teamId": 1,
+        "tags": [
+          "Faction.Shu",
+          "Bond.PeachGarden"
+        ]
+      },
+      {
+        "name": "Zhang Fei",
+        "teamId": 1,
+        "tags": [
+          "Faction.Shu",
+          "Bond.PeachGarden"
+        ]
+      }
     ],
     "enemies": [
       {
         "name": "Yellow Turban Captain",
         "teamId": 2,
-        "tags": ["Faction.YellowTurbans"],
+        "tags": [
+          "Faction.YellowTurbans"
+        ],
         "threats": [
-          { "targetName": "Liu Bei", "value": 25 },
-          { "targetName": "Guan Yu", "value": 35 },
-          { "targetName": "Zhang Fei", "value": 45 }
+          {
+            "targetName": "Liu Bei",
+            "value": 25
+          },
+          {
+            "targetName": "Guan Yu",
+            "value": 35
+          },
+          {
+            "targetName": "Zhang Fei",
+            "value": 45
+          }
         ]
       },
       {
         "name": "Yellow Turban Spearman",
         "teamId": 2,
-        "tags": ["Faction.YellowTurbans"],
+        "tags": [
+          "Faction.YellowTurbans"
+        ],
         "threats": [
-          { "targetName": "Liu Bei", "value": 20 },
-          { "targetName": "Guan Yu", "value": 30 },
-          { "targetName": "Zhang Fei", "value": 40 }
+          {
+            "targetName": "Liu Bei",
+            "value": 20
+          },
+          {
+            "targetName": "Guan Yu",
+            "value": 30
+          },
+          {
+            "targetName": "Zhang Fei",
+            "value": 40
+          }
         ]
       }
     ]
@@ -41,9 +90,21 @@
     "taunt": "Relationship.Taunt",
     "rally": "Relationship.Rally",
     "drillBindings": [
-      { "selectedName": "Liu Bei", "sourceName": "Guan Yu", "targetName": "Zhang Fei" },
-      { "selectedName": "Guan Yu", "sourceName": "Guan Yu", "targetName": "Zhang Fei" },
-      { "selectedName": "Zhang Fei", "sourceName": "Zhang Fei", "targetName": "Guan Yu" }
+      {
+        "selectedName": "Liu Bei",
+        "sourceName": "Guan Yu",
+        "targetName": "Zhang Fei"
+      },
+      {
+        "selectedName": "Guan Yu",
+        "sourceName": "Guan Yu",
+        "targetName": "Zhang Fei"
+      },
+      {
+        "selectedName": "Zhang Fei",
+        "sourceName": "Zhang Fei",
+        "targetName": "Guan Yu"
+      }
     ]
   },
   "events": {
@@ -77,29 +138,53 @@
     "support": "Support",
     "threat": "Threat"
   },
-  "reasons": {
-    "setup": "Scenario.Setup",
-    "doctrine": "Doctrine.Benevolence",
-    "drill": "Bond.OathDrill",
-    "taunt": "Combat.Taunt"
-  },
   "seed": {
     "metrics": [
-      { "sourceName": "Liu Bei", "targetName": "Guan Yu", "type": "SocialBond", "metric": "Loyalty", "value": 50, "reason": "Scenario.Setup" },
-      { "sourceName": "Liu Bei", "targetName": "Zhang Fei", "type": "SocialBond", "metric": "Loyalty", "value": 50, "reason": "Scenario.Setup" },
-      { "sourceName": "Guan Yu", "targetName": "Zhang Fei", "type": "SocialBond", "metric": "Support", "value": 30, "reason": "Scenario.Setup" },
-      { "sourceName": "Zhang Fei", "targetName": "Guan Yu", "type": "SocialBond", "metric": "Support", "value": 30, "reason": "Scenario.Setup" }
+      {
+        "sourceName": "Liu Bei",
+        "targetName": "Guan Yu",
+        "type": "SocialBond",
+        "metric": "Loyalty",
+        "value": 50
+      },
+      {
+        "sourceName": "Liu Bei",
+        "targetName": "Zhang Fei",
+        "type": "SocialBond",
+        "metric": "Loyalty",
+        "value": 50
+      },
+      {
+        "sourceName": "Guan Yu",
+        "targetName": "Zhang Fei",
+        "type": "SocialBond",
+        "metric": "Support",
+        "value": 30
+      },
+      {
+        "sourceName": "Zhang Fei",
+        "targetName": "Guan Yu",
+        "type": "SocialBond",
+        "metric": "Support",
+        "value": 30
+      }
     ]
   },
   "state": {
     "trusted": {
       "sourceName": "Liu Bei",
       "type": "SocialBond",
-      "targetNames": ["Guan Yu", "Zhang Fei"],
+      "targetNames": [
+        "Guan Yu",
+        "Zhang Fei"
+      ],
       "minimumMatches": 2
     },
     "oathBond": {
-      "entityNames": ["Guan Yu", "Zhang Fei"],
+      "entityNames": [
+        "Guan Yu",
+        "Zhang Fei"
+      ],
       "minimumTaggedCount": 2
     },
     "synergy": {
@@ -111,10 +196,19 @@
     "synergyTag": "State.Relationship.Showcase.ShuSynergy",
     "trustedRelationshipType": "SocialBond",
     "trustedPairs": [
-      { "sourceName": "Liu Bei", "targetName": "Guan Yu" },
-      { "sourceName": "Liu Bei", "targetName": "Zhang Fei" }
+      {
+        "sourceName": "Liu Bei",
+        "targetName": "Guan Yu"
+      },
+      {
+        "sourceName": "Liu Bei",
+        "targetName": "Zhang Fei"
+      }
     ],
-    "oathBondMembers": ["Guan Yu", "Zhang Fei"]
+    "oathBondMembers": [
+      "Guan Yu",
+      "Zhang Fei"
+    ]
   },
   "behaviors": {
     "doctrine": {
@@ -165,17 +259,30 @@
     "lockedText": "Locked",
     "metrics": {
       "loyaltyPairs": [
-        { "sourceName": "Liu Bei", "targetName": "Guan Yu" },
-        { "sourceName": "Liu Bei", "targetName": "Zhang Fei" }
+        {
+          "sourceName": "Liu Bei",
+          "targetName": "Guan Yu"
+        },
+        {
+          "sourceName": "Liu Bei",
+          "targetName": "Zhang Fei"
+        }
       ],
       "supportPairs": [
-        { "sourceName": "Guan Yu", "targetName": "Zhang Fei" }
+        {
+          "sourceName": "Guan Yu",
+          "targetName": "Zhang Fei"
+        }
       ],
       "threatSourceName": "Yellow Turban Captain"
     }
   },
   "teamRelations": [
-    { "teamA": 1, "teamB": 2, "relationship": "Hostile" }
+    {
+      "teamA": 1,
+      "teamB": 2,
+      "relationship": "Hostile"
+    }
   ],
   "logs": {
     "scenarioBootstrap": "Scenario bootstrapped: Peach Garden trio holds center while Yellow Turbans probe threat.",

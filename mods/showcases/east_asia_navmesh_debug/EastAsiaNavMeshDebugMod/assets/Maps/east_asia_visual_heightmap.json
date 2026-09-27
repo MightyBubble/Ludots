@@ -1,5 +1,8 @@
 {
   "Id": "east_asia_visual_heightmap",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
   "Tags": [
     "Feature.NavMesh:On",
     "navmesh",
@@ -10,21 +13,18 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 7,
-      "HeightInMacroTiles": 4,
-      "GridCellSizeCm": 3571,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 512,
-      "NavigationEnabled": true,
       "TerrainHeightStepCm": 100,
       "TerrainBlockedAtOrBelowHeightCm": 0,
-      "NavTileGrid": {
-        "widthChunks": 28,
-        "heightChunks": 16,
-        "chunkSizeCells": 64,
-        "cellSizeCm": 3571,
-        "originXcm": 0,
-        "originZcm": 0
+      "WidthCm": 6399232,
+      "HeightCm": 3656704,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 3571
       }
     }
   ],

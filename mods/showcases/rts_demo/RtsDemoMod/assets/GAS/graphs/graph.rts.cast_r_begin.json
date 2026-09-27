@@ -1,0 +1,67 @@
+[
+  {
+    "id": "graph.rts.cast_r_begin",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skill_r",
+        "action": "SkillR",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "activate_aim",
+        "op": "ActivateContext",
+        "context": "interaction.context.rts.aim_r",
+        "parentContext": "interaction.context.rts.battle"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "activate_aim"
+      },
+      {
+        "from": "activate_aim",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "activate_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Effect |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体）、`target`（目标实体） |
 | 特殊写法 | dst 填符号名（编译期解析） |
@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → **RelationshipRemoveLink**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 同类用法：好感与敌友判定、关系数值的聚合与排序、信任旗/失和旗这类关系玩法。
 ## 怎么进
 

@@ -364,13 +364,13 @@ namespace Ludots.Tests.Architecture
 
             private static void RegisterBuiltInEntityCollectionKeys(StringIntRegistry registry)
             {
-                registry.Register(EntityCollectionKeys.UiCommandAcquisition);
-                registry.Register(EntityCollectionKeys.HoveredEntity);
-                registry.Register(EntityCollectionKeys.AbilityAimHover);
-                registry.Register(EntityCollectionKeys.AbilityAimAffected);
-                registry.Register(EntityCollectionKeys.EntityInfoExplicit);
-                registry.Register(EntityCollectionKeys.CommandSource);
-                registry.Register(EntityCollectionKeys.UiCastRaw);
+                registry.Register("collection.ui.command.acquisition");
+                registry.Register("collection.ui.command.hover");
+                registry.Register("collection.ability.aim.hover");
+                registry.Register("collection.ability.aim.affected");
+                registry.Register("collection.entityinfo.explicit");
+                registry.Register("collection.command.source");
+                registry.Register("collection.ui.cast.raw");
                 registry.Register(EntityViewKeys.ControlPlaneCommand);
                 registry.Register(EntityViewKeys.CommandDeckFiltered);
             }

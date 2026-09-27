@@ -55,6 +55,7 @@ internal sealed class InstallEntityInfoPanelsOnGameStartTrigger : Trigger
             displayResolver: engine.GetService(CoreServiceKeys.PresentationDisplayResolver));
         var handles = new EntityInfoPanelHandleStore();
         engine.SetService(EntityInfoPanelServiceKeys.Service, service);
+        engine.SetService(CoreServiceKeys.EntityInfoTitleProfiles, service);
         engine.SetService(EntityInfoPanelServiceKeys.HandleStore, handles);
         engine.SetService(EntityInfoPanelServiceKeys.TemplateCatalog, templateCatalog);
         engine.RegisterPresentationSystem(new EntityInfoPanelPresentationSystem(engine, service));

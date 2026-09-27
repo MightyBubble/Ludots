@@ -32,5 +32,15 @@
     "heightScaleMeters": 0.25,
     "minWalkableUpDot": 0.6,
     "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "nav_gate_valley": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
+      }
+    }
   }
 }

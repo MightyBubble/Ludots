@@ -1,0 +1,12 @@
+[
+  {
+    "id": "intent.route.ballista",
+    "keyKind": "Int",
+    "columns": [ { "id": "route", "kind": "Int" } ],
+    "rows": [
+      { "key": 0, "route": 0 },
+      { "key": 1, "route": 1 },
+      { "key": 2, "route": 2 }
+    ]
+  }
+]

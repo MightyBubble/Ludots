@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Registry;
 using NUnit.Framework;
@@ -243,7 +244,7 @@ namespace Ludots.Tests.GAS
                 batch,
                 EntityCollectionSourceKind.UiAcquisition,
                 DomainRoutingUnresolvedPolicy.Reject));
-            Assert.That(exception!.Message, Does.Contain(stray.ToString()).And.Contain(EntityCollectionKeys.CommandSource));
+            Assert.That(exception!.Message, Does.Contain(stray.ToString()).And.Contain("collection.command.source"));
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out _), Is.False, "A rejected batch must not partially land.");
         }
@@ -490,7 +491,7 @@ namespace Ludots.Tests.GAS
             public RelationshipRuntime Relationships = null!;
             public OwnershipResolver Ownership = null!;
             public EntityCollectionStore Store = null!;
-            public DomainRoutedCollectionWriter Writer = null!;
+            public Ludots.Core.EntityCollections.CollectionApplier Writer = null!;
             public ControlPlaneView View = null!;
             public int ControlsTypeId;
             public int CommandSourceKeyId;
@@ -512,15 +513,24 @@ namespace Ludots.Tests.GAS
                 var query = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
+                var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                applier.BindInputInteraction(
+                    new Ludots.Core.Input.Interaction.FilterProfileRegistry(
+                        new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                        world,
+                        tagOps),
+                    query,
+                    keyRegistry.Register("collection.ui.cast.raw"));
                 return new Harness
                 {
                     Relationships = relationships,
                     Ownership = ownership,
                     Store = store,
-                    Writer = new DomainRoutedCollectionWriter(store, query),
+                    Writer = applier,
                     View = new ControlPlaneView(store, query),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
+                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
                 };
             }
         }

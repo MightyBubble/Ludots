@@ -62,7 +62,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public static bool IsPolicyAllowed(GraphKind kind, GraphNodeOp op, in EffectOperationMetadata metadata)
         {
-            GraphOpDescriptor descriptor = Get(op);
+            if (!TryGet(op, out GraphOpDescriptor descriptor))
+            {
+                return IsExtensionOpPolicyAllowed(kind, (ushort)op, in metadata);
+            }
             if (descriptor.ScriptSliceOnly)
             {
                 return kind is GraphKind.Script or GraphKind.TriggerGraph;
@@ -83,7 +86,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
                     ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
                      op == GraphNodeOp.WriteBlackboardFloat ||
-                     op == GraphNodeOp.WriteBlackboardInt))
+                     op == GraphNodeOp.WriteBlackboardInt ||
+                     op == GraphNodeOp.WriteBlackboardEntity ||
+                     op == GraphNodeOp.ApplyEffectTemplate ||
+                     op == GraphNodeOp.ModifyAttributeAdd))
+                {
+                    return true;
+                }
+
+                // Effect graphs stage these writes and commit them with the phase.
+                // Script and TriggerGraph have no effect transaction, so they write the store directly.
+                if (op is GraphNodeOp.RelationshipEnsureLink or GraphNodeOp.RelationshipRemoveLink)
                 {
                     return true;
                 }
@@ -153,6 +166,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 names.Add(kind.ToString());
             }
+        }
+
+        private static bool IsExtensionOpPolicyAllowed(
+            GraphKind kind,
+            ushort encodedOp,
+            in EffectOperationMetadata metadata)
+        {
+            if (encodedOp < GasGraphOpRegistry.FirstModOpCode)
+            {
+                throw new InvalidOperationException($"Graph opcode '{encodedOp}' has no descriptor.");
+            }
+
+            if (kind == GraphKind.Effect)
+            {
+                return true;
+            }
+
+            return metadata.Kind == EffectOperationKind.Pure;
         }
     }
 }

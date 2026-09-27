@@ -15,6 +15,16 @@
       "id": "Command",
       "name": "Gameplay_Command",
       "type": "Button"
+    },
+    {
+      "id": "CaseE.Command",
+      "name": "CaseE_Command",
+      "type": "Button"
+    },
+    {
+      "id": "CaseE.CastQ",
+      "name": "CaseE_CastQ",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -54,6 +64,14 @@
         {
           "actionId": "ModifierSubtract",
           "path": "<Keyboard>/leftAlt"
+        },
+        {
+          "actionId": "CaseE.Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "CaseE.CastQ",
+          "path": "<Keyboard>/digit1"
         }
       ]
     }

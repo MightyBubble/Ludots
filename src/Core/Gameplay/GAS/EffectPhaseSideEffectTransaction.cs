@@ -24,6 +24,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public const string RelationTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.RelationTargetInvalid";
     public const string MissingPresentationEventBufferError = "GAS.GRAPH.ERR.MissingGasPresentationEventBuffer";
 
+    private readonly RelationshipLinkSideEffectJournal _relationshipLinks;
+
     private readonly World _world;
     private readonly TagOps? _tagOps;
     private readonly EffectRequestQueue? _effectRequests;
@@ -38,7 +40,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
     private readonly ulong[] _attributeChangedMasks;
-    private readonly GameplayAttributeChangedBits[] _attributeChangedOriginalValues;
+        private readonly GameplayAttributeChangedBits[] _attributeChangedOriginalValues;
+    private readonly float[]?[] _highOriginalBase;
+    private readonly float[]?[] _highOriginalCap;
+    private readonly float[]?[] _highOriginalCurrent;
+    private readonly float[]?[] _highStagedCurrent;
+    private readonly System.Collections.Generic.List<(int Index, int Slot, float Value)> _highStagedOps = new();
+
     private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
     private readonly bool[] _attributeChangedExisted;
     private readonly Entity[] _dirtyEntities;
@@ -205,6 +213,12 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeChangedMasks = new ulong[attributeEntityCapacity];
         _attributeChangedOriginalValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
+        _highOriginalBase = new float[attributeEntityCapacity][];
+        _highOriginalCap = new float[attributeEntityCapacity][];
+        _highOriginalCurrent = new float[attributeEntityCapacity][];
+        _highStagedCurrent = new float[attributeEntityCapacity][];
+
+
         _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedExisted = new bool[attributeEntityCapacity];
         _dirtyEntities = new Entity[attributeEntityCapacity + 1];
@@ -313,6 +327,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _structuralCommandCapacity = checked(attributeEntityCapacity * 16);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
         _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
+        _relationshipLinks = new RelationshipLinkSideEffectJournal(attributeEntityCapacity);
     }
 
     public bool IsActive { get; private set; }
@@ -345,6 +360,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerEntityCount = 0;
         _relationParentCount = 0;
         _relationChildCount = 0;
+        _relationshipLinks.Clear();
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;
@@ -354,6 +370,65 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         IsActive = true;
     }
+
+    public bool HasPendingRelationshipLinks => _relationshipLinks.HasPending;
+
+    internal void ApplyStagedRelationshipLinks()
+    {
+        RequireActive();
+        _relationshipLinks.Commit();
+    }
+
+    public void StageRelationshipEnsureLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId)
+    {
+        RequireActive();
+        _relationshipLinks.StageEnsure(runtime, source, target, typeId);
+    }
+
+    public void StageRelationshipRemoveLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId)
+    {
+        RequireActive();
+        _relationshipLinks.StageRemove(runtime, source, target, typeId);
+    }
+
+    public short StageRelationshipSetMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int metricId, int value)
+    {
+        RequireActive();
+        return _relationshipLinks.StageSetMetric(runtime, source, target, typeId, metricId, value);
+    }
+
+    public short StageRelationshipAddMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int metricId, int delta)
+    {
+        RequireActive();
+        return _relationshipLinks.StageAddMetric(runtime, source, target, typeId, metricId, delta);
+    }
+
+    public void StageRelationshipSetFlag(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int flagId, bool enabled)
+    {
+        RequireActive();
+        _relationshipLinks.StageSetFlag(runtime, source, target, typeId, flagId, enabled);
+    }
+
+    public bool TryReadRelationshipHasLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, out bool hasLink)
+        => _relationshipLinks.TryReadHasLink(runtime, source, target, typeId, out hasLink);
+
+    public bool TryReadRelationshipMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int metricId, int typeId, out short value)
+        => _relationshipLinks.TryReadMetric(runtime, source, target, metricId, typeId, out value);
+
+    public bool TryReadRelationshipFlag(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int flagId, int typeId, out bool enabled)
+        => _relationshipLinks.TryReadFlag(runtime, source, target, flagId, typeId, out enabled);
+
+    public void AdjustRelationshipOutgoing(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, int typeId, Span<Entity> buffer, ref int count, ref int dropped)
+        => _relationshipLinks.AdjustOutgoing(runtime, source, typeId, buffer, ref count, ref dropped);
+
+    public void AdjustRelationshipIncoming(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity target, int typeId, Span<Entity> buffer, ref int count, ref int dropped)
+        => _relationshipLinks.AdjustIncoming(runtime, target, typeId, buffer, ref count, ref dropped);
+
+    public void RebuildRelationshipBetweenPair(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, Span<Entity> buffer, out int count, out int dropped)
+        => _relationshipLinks.RebuildBetweenPair(runtime, source, target, typeId, buffer, out count, out dropped);
+
+    public void KeepRelationshipMutual(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity second, int typeId, Span<Entity> buffer, ref int count)
+        => _relationshipLinks.KeepMutual(runtime, second, typeId, buffer, ref count);
 
     public void StageSetParent(Entity subject, Entity parent, bool snapSubjectToParentPosition)
     {
@@ -768,6 +843,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
 
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
+        StageHighModifiers(index, target, in modifiers);
         RefreshAttributeChanged(index, attributeId);
     }
 
@@ -782,6 +858,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
 
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
+
         RefreshAttributeChanged(index, attributeId);
     }
 
@@ -789,6 +866,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     {
         int index = GetOrAddAttributeEntity(target);
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
+
         for (int i = 0; i < modifiers.Count; i++)
         {
             RefreshAttributeChanged(index, modifiers.Get(i).AttributeId);
@@ -1304,6 +1382,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     _attributeChangedValues[i],
                     ref _attributeValues[i],
                     ref _attributeOriginalValues[i]);
+                CommitHighStagedOps(i);
+
             }
             for (int i = 0; i < _tagEntityCount; i++)
             {
@@ -1388,6 +1468,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
             }
 
+            ApplyStagedRelationshipLinks();
             CaptureExternalWriteCheckpoints();
             _externalCommitStarted = true;
             for (int i = 0; i < _dirtyEntityCount; i++)
@@ -1440,6 +1521,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             return;
         }
 
+        _relationshipLinks.RollbackIfApplied();
         if (_externalCommitStarted)
         {
             RollbackExternalWrites();
@@ -1508,6 +1590,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeEntities[index] = entity;
         _attributeIndex.Add(entity, index);
         _attributeOriginalValues[index] = _world.Get<AttributeBuffer>(entity);
+        CaptureHighOriginalRow(index, entity);
+
         _attributeValues[index] = _attributeOriginalValues[index];
         _attributeChangedMasks[index] = 0UL;
         StageDirtyEntity(entity);
@@ -1688,6 +1772,112 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             _attributeChangedMasks[index] &= ~bit;
         }
+    }
+
+    // —— RFC-0067 P1 高槽位（≥64）事务车道：懒分配原始/暂存行，零高内容时零开销 ——
+
+    private void CaptureHighOriginalRow(int index, Entity entity)
+    {
+        var store = WorldAttributeStoreAmbient.Current;
+        if (store == null || !store.TryGetRow(entity, out int row))
+        {
+            return;
+        }
+
+        int slots = store.SlotCount - Components.AttributeBuffer.MAX_ATTRS;
+        if (slots <= 0)
+        {
+            return;
+        }
+
+        _highOriginalBase[index] = new float[slots];
+        _highOriginalCap[index] = new float[slots];
+        _highOriginalCurrent[index] = new float[slots];
+        store.CopyRowTo(row, _highOriginalBase[index]!, _highOriginalCap[index]!, _highOriginalCurrent[index]!, Components.AttributeBuffer.MAX_ATTRS);
+    }
+
+    private void StageHighModifiers(int index, Entity entity, in EffectModifiers modifiers)
+    {
+        bool hasHigh = false;
+        for (int i = 0; i < modifiers.Count; i++)
+        {
+            if (modifiers.Get(i).AttributeId >= Components.AttributeBuffer.MAX_ATTRS)
+            {
+                hasHigh = true;
+                break;
+            }
+        }
+
+        if (!hasHigh)
+        {
+            return;
+        }
+
+        var store = WorldAttributeStoreAmbient.Current
+            ?? throw new InvalidOperationException(
+                "GAS.CAPACITY.ERR.HighLaneUnavailable: 事务暂存 attributeId >= 64 需要世界列存（RFC-0067 P1）。");
+        int row = store.EnsureRow(entity);
+        _highStagedCurrent[index] ??= new float[store.SlotCount - Components.AttributeBuffer.MAX_ATTRS];
+        float[] staged = _highStagedCurrent[index]!;
+        int first = Components.AttributeBuffer.MAX_ATTRS;
+        for (int slot = first; slot < store.SlotCount; slot++)
+        {
+            staged[slot - first] = store.GetCurrent(row, slot);
+        }
+
+        for (int i = 0; i < modifiers.Count; i++)
+        {
+            var mod = modifiers.Get(i);
+            if (mod.AttributeId < first)
+            {
+                continue;
+            }
+
+            float current = staged[mod.AttributeId - first];
+            float value = mod.Operation switch
+            {
+                Components.ModifierOp.Add => current + mod.Value,
+                Components.ModifierOp.Multiply => current * mod.Value,
+                _ => mod.Value,
+            };
+            staged[mod.AttributeId - first] = value;
+            _highStagedOps.Add((index, mod.AttributeId, value));
+        }
+    }
+
+    private void CommitHighStagedOps(int index)
+    {
+        if (_highStagedOps.Count == 0 || _highOriginalCurrent[index] == null)
+        {
+            return;
+        }
+
+        Entity entity = _attributeEntities[index];
+        for (int op = 0; op < _highStagedOps.Count; op++)
+        {
+            if (_highStagedOps[op].Index != index)
+            {
+                continue;
+            }
+
+            AttributeMutationOps.SetCurrent(_world, entity, _highStagedOps[op].Slot, _highStagedOps[op].Value, _tagOps!);
+        }
+    }
+
+    private void RollbackHighRow(int index, Entity entity)
+    {
+        if (_highOriginalCurrent[index] == null)
+        {
+            return;
+        }
+
+        var store = WorldAttributeStoreAmbient.Current;
+        if (store == null || !store.TryGetRow(entity, out int row))
+        {
+            return;
+        }
+
+        store.RestoreRowFrom(row, _highOriginalBase[index]!, _highOriginalCap[index]!, _highOriginalCurrent[index]!, Components.AttributeBuffer.MAX_ATTRS);
     }
 
     private static unsafe float ReadRawBase(ref AttributeBuffer buffer, int attributeId)
@@ -2379,6 +2569,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             if (_world.Has<AttributeBuffer>(entity))
             {
                 _world.Get<AttributeBuffer>(entity) = _attributeOriginalValues[i];
+                RollbackHighRow(i, entity);
+
             }
             if (_attributeChangedMasks[i] != 0UL &&
                 _attributeChangedExisted[i] &&
@@ -2950,6 +3142,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerEntityCount = 0;
         _relationParentCount = 0;
         _relationChildCount = 0;
+        _relationshipLinks.Clear();
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;

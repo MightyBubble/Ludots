@@ -13,14 +13,14 @@ namespace Ludots.Tests
         public static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "collection.command.source")
                 : System.Array.Empty<Entity>();
         }
 
         public static int GetCommandSourceCount(GameEngine engine)
         {
             return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, "collection.command.source")
                 : 0;
         }
 
@@ -32,7 +32,7 @@ namespace Ludots.Tests
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       "collection.command.source",
                        out primary);
         }
 
@@ -44,7 +44,7 @@ namespace Ludots.Tests
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       "collection.command.source",
                        out view);
         }
 
@@ -56,7 +56,7 @@ namespace Ludots.Tests
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       EntityCollectionKeys.HoveredEntity,
+                       "collection.ui.command.hover",
                        out hovered);
         }
 
@@ -70,7 +70,7 @@ namespace Ludots.Tests
                 world,
                 globals,
                 owner,
-                EntityCollectionKeys.HoveredEntity,
+                "collection.ui.command.hover",
                 out hovered);
         }
 

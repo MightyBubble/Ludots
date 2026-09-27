@@ -28,7 +28,7 @@ int opId = context.Extensions.Gas.RegisterGraphOp(
 |---|---|---|
 | `Extensions.Gas.RegisterBuiltinHandler` | 键 + 处理函数 + 操作元数据 | 键成为效果预设可引用的内建处理器名；元数据（操作类别/原子域）决定它可出现的相位窗口 |
 | `Extensions.Gas.RegisterGraphOp` | 键 + 输出类型 + 执行体 + 输入类型 | 键成为图可创作节点；输入输出类型参与编译期类型检查 |
-| `Extensions.Presentation.RegisterPerformerCommand / RegisterPerformerBehavior` | 键 + 描述符 | 表现器配置可按名使用的新命令/行为 |
+| `Extensions.Presentation.RegisterPresenterCommand / RegisterPresenterBehavior` | 键 + 描述符 | 表现器配置可按名使用的新命令/行为 |
 
 三条铁律：只在加载窗口；语义键单主（重复即错，与配置 id 同处全局命名空间）；全部 fail-fast。
 

@@ -1,10 +1,8 @@
 using System.Threading.Tasks;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
-using ArpgDemoMod.Systems;
 
 namespace ArpgDemoMod.Triggers
 {
@@ -36,12 +34,6 @@ namespace ArpgDemoMod.Triggers
             }
             engine.GlobalContext[InstalledKey] = true;
             _ctx.Log("[ArpgDemoMod] Ability definitions loaded via GAS/abilities.json");
-
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
-            {
-                engine.RegisterSystem(new ArpgLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.LocalInput);
-                _ctx.Log("[ArpgDemoMod] ArpgLocalOrderSourceSystem registered");
-            }
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "TPS");
 

@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "InteractionShowcase.Participant", "isSymmetric": false }
+    {
+      "id": "InteractionShowcase.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

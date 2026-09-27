@@ -54,7 +54,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const samplePath = join(root, 'public/samples/panel_templates.json');
 const config = JSON.parse(readFileSync(samplePath, 'utf8'));
 
-if (config.schema !== 'ludots.ui.panel_template/v1') {
+if (config.schema !== 'ludots.ui.panel_template') {
   throw new Error(`Unsupported schema '${config.schema}'.`);
 }
 

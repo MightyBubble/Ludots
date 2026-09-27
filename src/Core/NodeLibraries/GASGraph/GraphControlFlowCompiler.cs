@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 
@@ -215,19 +216,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             BtDecorator = 7,
             SelectByEnum = 8,
             FsmState = 9,
-            DoOnce = 10
+            DoOnce = 10,
+            ExtensionOp = 11
         }
 
         private readonly struct AuthoredOp
         {
             public AuthoredOp(AuthoredOpKind kind, GraphNodeOp nodeOp)
+                : this(kind, nodeOp, extension: null)
+            {
+            }
+
+            public AuthoredOp(AuthoredOpKind kind, GraphNodeOp nodeOp, GasGraphOpDefinition? extension)
             {
                 Kind = kind;
                 NodeOp = nodeOp;
+                Extension = extension;
             }
 
             public AuthoredOpKind Kind { get; }
             public GraphNodeOp NodeOp { get; }
+            public GasGraphOpDefinition? Extension { get; }
         }
 
         public static GraphControlFlowCompileResult Compile(GraphControlFlowDocument document)
@@ -251,20 +260,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static GraphControlFlowCompileResult Compile(
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            Ludots.Core.Scripting.EnumCatalog? enums)
-            => CompileCore(document, eventSchemas, enums) with { Document = document };
+            Ludots.Core.Scripting.EnumCatalog? enums,
+            GasGraphOpRegistry? opRegistry = null)
+            => CompileCore(document, eventSchemas, enums, opRegistry) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
         {
-            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null, enums: null);
+            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null, enums: null, opRegistry: null);
             return (result.Package, result.OutputSchema, result.Diagnostics);
         }
 
         private static GraphControlFlowCompileResult CompileCore(
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            Ludots.Core.Scripting.EnumCatalog? enums)
+            Ludots.Core.Scripting.EnumCatalog? enums,
+            GasGraphOpRegistry? opRegistry = null)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -278,14 +289,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<GraphControlFlowNode> nodes = document.Nodes ?? new List<GraphControlFlowNode>();
             Dictionary<string, int> nodeIndices = BuildNodeIndex(nodes, graphId, diagnostics);
             var ops = new AuthoredOp[nodes.Count];
-            ParseOps(nodes, ops, graphKind, graphId, diagnostics);
+            ParseOps(nodes, ops, graphKind, graphId, diagnostics, opRegistry);
             EnumCaseTable enumCases = BuildEnumCaseTable(document, nodes, ops, enums, graphId, diagnostics);
 
             Dictionary<string, Ludots.Core.Scripting.EventSchema> dispatchSchemas =
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
 
             List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
-                document, nodeIndices, graphKind, graphId, diagnostics);
+                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas);
 
             if (graphKind != GraphKind.TriggerGraph &&
                 !string.IsNullOrWhiteSpace(document.Entry) &&
@@ -620,7 +631,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> nodeIndices,
             GraphKind graphKind,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
         {
             if (graphKind != GraphKind.TriggerGraph)
             {
@@ -694,7 +706,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -822,7 +834,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             TriggerGraphEntryFiltersConfig? filters,
             string graphId,
             string shown,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            string eventName)
         {
             if (filters == null)
             {
@@ -909,7 +923,123 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
             }
 
-            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action, instanceId, null, varName);
+            List<TriggerGraphEntryPayloadFilter>? payloadFilters = null;
+            if (filters.Payload != null)
+            {
+                Ludots.Core.Scripting.EventSchema? entrySchema =
+                    eventSchemas != null && eventSchemas.TryGet(eventName, out Ludots.Core.Scripting.EventSchema schema)
+                        ? schema
+                        : null;
+                foreach (KeyValuePair<string, JsonElement> pair in filters.Payload)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'payload' requires non-empty payload keys.", pair.Key));
+                        continue;
+                    }
+
+                    string payloadKey = pair.Key;
+                    if (!string.Equals(payloadKey, payloadKey.Trim(), StringComparison.Ordinal))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload key '{payloadKey}' must not include leading or trailing whitespace.", payloadKey));
+                        continue;
+                    }
+
+                    // 键闭集走事件 schema 基建：声明的参数载荷键才可过滤；无 schema 的
+                    // 裸编译退回引擎已知载荷键白名单。拼错的键编译期点名，不静默永不匹配。
+                    Ludots.Core.Scripting.EventParamType? declaredType = null;
+                    if (entrySchema != null)
+                    {
+                        bool declared = false;
+                        for (int p = 0; p < entrySchema.Params.Count; p++)
+                        {
+                            if (string.Equals(entrySchema.Params[p].PayloadKey, payloadKey, StringComparison.Ordinal))
+                            {
+                                declaredType = entrySchema.Params[p].Type;
+                                declared = true;
+                                break;
+                            }
+                        }
+
+                        if (!declared)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' is not a declared payload key of event '{eventName}'.", payloadKey));
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires event '{eventName}' to carry a schema; compile with the event schema registry.", payloadKey));
+                        continue;
+                    }
+
+                    if (declaredType == Ludots.Core.Scripting.EventParamType.Float ||
+                        declaredType == Ludots.Core.Scripting.EventParamType.Entity)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' has type {declaredType}; payload filters support int and string params only.", payloadKey));
+                        continue;
+                    }
+
+                    if (pair.Value.ValueKind == JsonValueKind.String)
+                    {
+                        string expected = pair.Value.GetString() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(expected) ||
+                            !string.Equals(expected, expected.Trim(), StringComparison.Ordinal))
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires a non-empty string value without surrounding whitespace.", payloadKey));
+                            continue;
+                        }
+
+                        if (declaredType == Ludots.Core.Scripting.EventParamType.Int)
+                        {
+                            // 配置期符号、运行期 int：int 参数的字符串期望值是符号，编译成
+                            // ConfigKey id（幂等，装载/编译顺序无关），派发期 int 比较。
+                            (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                                new TriggerGraphEntryPayloadFilter(
+                                    payloadKey,
+                                    null,
+                                    Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(expected)));
+                        }
+                        else
+                        {
+                            (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                                new TriggerGraphEntryPayloadFilter(payloadKey, expected, null));
+                        }
+                    }
+                    else if (pair.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        if (declaredType == Ludots.Core.Scripting.EventParamType.String)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' is a string param; author a string value.", payloadKey));
+                            continue;
+                        }
+
+                        if (!pair.Value.TryGetInt32(out int expected))
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires an int32 value.", payloadKey));
+                            continue;
+                        }
+
+                        (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                            new TriggerGraphEntryPayloadFilter(payloadKey, null, expected));
+                    }
+                    else
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' values must be a string or an integer.", payloadKey));
+                    }
+                }
+            }
+
+            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action, instanceId, null, varName, payloadFilters);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(
@@ -942,7 +1072,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp[] ops,
             GraphKind graphKind,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            GasGraphOpRegistry? opRegistry)
         {
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -1124,16 +1255,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 bool parsedNodeOp = GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp);
-                if (!parsedNodeOp ||
-                    !IsControlFlowAuthorable(graphKind, nodeOp))
+                if (parsedNodeOp && IsControlFlowAuthorable(graphKind, nodeOp))
                 {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                        $"Unknown or non-{GraphKindLabel(graphKind)}-authorable op '{node.Op}'.", node.Id));
-                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, nodeOp);
                     continue;
                 }
 
-                ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, nodeOp);
+                if (opRegistry != null && opRegistry.TryGet(node.Op, out GasGraphOpDefinition extensionOp))
+                {
+                    if (!IsExtensionAuthorableKind(graphKind))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Extension op '{node.Op}' is not authorable on {GraphKindLabel(graphKind)}.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.ExtensionOp, GraphNodeOp.None, extensionOp);
+                    continue;
+                }
+
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                    $"Unknown or non-{GraphKindLabel(graphKind)}-authorable op '{node.Op}'.", node.Id));
+                ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
             }
         }
 
@@ -1371,6 +1515,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (ops[i].Kind == AuthoredOpKind.ExtensionOp && ops[i].Extension?.FixedRegister is byte fixedRegister)
+                {
+                    outputRegisters[i] = fixedRegister;
+                    continue;
+                }
+
                 if (nodes[i].PinRegister >= 0)
                 {
                     if (outputType != GraphValueType.Int)
@@ -1388,6 +1538,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphValueType outputType = outputTypes[i];
                 if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList || outputType == GraphValueType.IntIdList || nodes[i].PinRegister >= 0)
+                {
+                    continue;
+                }
+
+                if (ops[i].Kind == AuthoredOpKind.ExtensionOp && ops[i].Extension?.FixedRegister != null)
                 {
                     continue;
                 }
@@ -1410,6 +1565,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return op.Extension?.OutputType ?? GraphValueType.Void;
+            }
+
             if (op.Kind is AuthoredOpKind.BranchBool or AuthoredOpKind.SwitchInt
                 or AuthoredOpKind.While or AuthoredOpKind.Until
                 or AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator
@@ -1554,6 +1714,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 ValidateAuxiliaryOutputs(node, op, graphKind, graphId, diagnostics);
                 ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas, enumCases);
+
+                if (op.Kind == AuthoredOpKind.ExtensionOp)
+                {
+                    ValidateExtensionNode(node, op, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
 
                 if (graphKind == GraphKind.Query)
                 {
@@ -1760,6 +1926,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedControlPort(AuthoredOp op, GraphKind graphKind, string port)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return port == GraphControlFlowPorts.Next;
+            }
             if (op.Kind is AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator)
             {
                 return GraphControlFlowPorts.TryParseChildPort(port, out _);
@@ -1824,6 +1994,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
             EnumCaseTable? enumCases = null)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return IsAllowedExtensionInputPort(op, port);
+            }
+
             // DispatchMapEvent payload ports are dynamic (schema parameter names); the
             // per-port name/type contract is enforced in ValidateLinearNode.
             if (op.NodeOp == GraphNodeOp.DispatchMapEvent && dispatchSchemas != null)
@@ -1880,6 +2055,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedOutputPort(GraphControlFlowNode node, AuthoredOp op, GraphKind graphKind, string port)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return IsAllowedExtensionOutputPort(op, port);
+            }
             if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
                 string.Equals(port, node.ValidOutput, StringComparison.Ordinal))
             {
@@ -2009,6 +2188,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int nodeIndex = -1,
             EnumCaseTable? enumCases = null)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return 2;
+            }
+
             if (btPlan != null && nodeIndex >= 0 && btPlan.IsComposite(nodeIndex))
             {
                 return CountBtCompositeInstructions(op, btPlan, nodeIndex, node.DecoratorKind);
@@ -2147,6 +2331,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
+
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                EmitExtensionNode(
+                    document,
+                    node,
+                    op,
+                    outputRegisters,
+                    outputTypes,
+                    boolScratches,
+                    droppedRegisters,
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    definedInts,
+                    definedBools,
+                    graphId,
+                    diagnostics);
+                return;
+            }
 
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
@@ -2551,7 +2758,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].NodeOp == GraphNodeOp.TargetListGet)
+                if (ops[i].NodeOp == GraphNodeOp.TargetListGet ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosX ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosY)
                 {
                     boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
                     continue;

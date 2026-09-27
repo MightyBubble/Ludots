@@ -31,6 +31,14 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudPhaseGraphDemoTests
     {
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
         // Attribute & BB key constants
         private const string AttrHealthName = "tests.mud.phase.health";
         private const int BbKeyActualDamage = 2;    // float: 实际伤害值
@@ -142,6 +150,9 @@ namespace Ludots.Tests.GAS
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
+                // ReadBlackboardFloat fails closed on missing keys; the accumulated-damage
+                // entry is read by the OnApply Post step before the first write.
+                world.Get<BlackboardFloatBuffer>(target).Set(BbKeyAccumDamage, 0f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 

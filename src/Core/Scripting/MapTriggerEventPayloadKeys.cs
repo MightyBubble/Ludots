@@ -18,6 +18,9 @@ namespace Ludots.Core.Scripting
         public const string OldValueFloat = "MapTrigger.OldValueFloat";    // float
         public const string OldValueInt = "MapTrigger.OldValueInt";        // int
         public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity
+        public const string RelationTypeId = "MapTrigger.RelationTypeId";  // int
+        // 关系事件键与 SourceEntity/TargetEntity/OldValueInt/VarValueInt 共同构成 Relation* 四事件的 payload 面。
+        public const string RelationMetricId = "MapTrigger.RelationMetricId"; // int
         public const string TagId = "MapTrigger.TagId";                    // int
         public const string Magnitude = "MapTrigger.Magnitude";            // float
         public const string AbilityId = "MapTrigger.AbilityId";            // int
@@ -37,6 +40,13 @@ namespace Ludots.Core.Scripting
         public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
+        public const string CalendarId = "Calendar.CalendarId";                  // int (ConfigKey id)
+        public const string CalendarDayIndex = "Calendar.DayIndex";              // int
+        public const string CalendarYear = "Calendar.Year";                      // int
+        public const string CalendarEraId = "Calendar.EraId";                    // int (ConfigKey id)
+        public const string CalendarCycleId = "Calendar.CycleId";                // int (ConfigKey id)
+        public const string CalendarPhaseId = "Calendar.PhaseId";                // int (ConfigKey id)
+        public const string CalendarPhaseIndex = "Calendar.PhaseIndex";          // int
         // fires a schema-less map event carrying the final entity set plus the set semantics;
         public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
 

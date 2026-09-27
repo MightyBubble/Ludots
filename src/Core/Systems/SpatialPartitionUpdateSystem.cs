@@ -25,7 +25,10 @@ namespace Ludots.Core.Systems
             .WithNone<PreviousWorldPositionCm, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
-            .WithNone<SpatialCellRef, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
+            // Static presentation entities are indexed once (they never move, so the tracked
+            // move queries keep excluding them); removing them here made static targets
+            // invisible to every partition consumer (auto-target, projectile collision).
+            .WithNone<SpatialCellRef, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _excludedTrackedQuery = new QueryDescription()
             .WithAll<SpatialPartitionExcluded, SpatialCellRef>();
         private readonly QueryDescription _destroyPendingTrackedQuery = new QueryDescription()

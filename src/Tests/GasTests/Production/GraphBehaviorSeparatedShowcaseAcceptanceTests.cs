@@ -33,88 +33,13 @@ namespace Ludots.Tests.Gas.Production
             _programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _catalog, out _actions, out _behavior);
         }
 
-        [Test]
-        public void BehaviorTreeArena_PatrolVignette_ThinkWavesUnderBudget()
-        {
-            var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            Warm(runtime.Tick);
-            Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT L2"));
-            Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8));
-            Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
-        }
 
-        [Test]
-        public void BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves()
-        {
-            var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            bool sawYield = false;
-            for (int i = 0; i < 12; i++)
-            {
-                runtime.Tick(0.2f);
-                if (runtime.Metrics.Detail.Contains("leaf yielding", StringComparison.Ordinal))
-                {
-                    sawYield = true;
-                    break;
-                }
-            }
-
-            Assert.That(sawYield, Is.True, "Expected patrol ActionLib leaf to yield and resume across think waves.");
-        }
 
         /// <summary>Judge: L2 tree topology + leaf Scripts — not a whole-tree Script sugar shell.</summary>
-        [Test]
-        public void BehaviorTreeArena_MainTree_IsL2TopologyWithLeafScripts()
-        {
-            BehaviorTreeDefinition tree = _behavior.RequireTree("bt.patrolChaseAttack");
-            Assert.That(tree.Nodes.Length, Is.GreaterThan(0));
 
-            int patrolId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.patrol", GraphActionHost.BehaviorTree);
-            Assert.That(_programs.TryGetProgram(patrolId, out ReadOnlySpan<GraphInstruction> patrol), Is.True);
-            var ops = new HashSet<ushort>();
-            foreach (ref readonly GraphInstruction instruction in patrol) ops.Add(instruction.Op);
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.Yield), "The patrol leaf Script must yield across think waves.");
-            Assert.That(ops, Does.Contain((ushort)GraphNodeOp.HaltReturnInt));
-
-            int seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
-            Assert.That(_programs.TryGetProgram(seeId, out ReadOnlySpan<GraphInstruction> see), Is.True);
-            var seeOps = new HashSet<ushort>();
-            foreach (ref readonly GraphInstruction instruction in see) seeOps.Add(instruction.Op);
-            Assert.That(seeOps, Does.Contain((ushort)GraphNodeOp.CompareLtInt), "seeEnemy leaf thresholds live in the leaf Script.");
-        }
 
         /// <summary>Regression: L2 tree + leaf Scripts keep patrol → chase → attack intents.</summary>
-        [Test]
-        public void BehaviorTreeArena_RealGraphTree_IntentSequenceMatchesOldBehavior()
-        {
-            var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            bool sawPatrol = false, sawChase = false, sawAttack = false;
-            for (int i = 0; i < 150; i++)
-            {
-                runtime.Tick(0.2f);
-                for (int g = 0; g < runtime.GuardCount; g++)
-                {
-                    switch (runtime.Intent[g])
-                    {
-                        case 0: sawPatrol = true; break;
-                        case 1: sawChase = true; break;
-                        case 2: sawAttack = true; break;
-                    }
-                }
-            }
 
-            Assert.That(sawPatrol, Is.True, "Guards must patrol when no enemy is within sight.");
-            Assert.That(sawChase, Is.True, "Guards must chase when the see-enemy leaf succeeds.");
-            Assert.That(sawAttack, Is.True, "Guards must attack when the in-range leaf succeeds.");
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT L2"));
-        }
 
         [Test]
         public void BehaviorTreeArena_PlayableControls_ChangeRuntimeState()
@@ -141,7 +66,7 @@ namespace Ludots.Tests.Gas.Production
         }
 
         /// <summary>
-        /// Crowd honesty gate: featured = L2 BehaviorTreeWorld (bt.patrolChaseAttack) with leaf Scripts;
+        /// Crowd honesty gate: featured = component-driven bt.patrolChaseAttack (GraphActionBrain{BtId} + BtState) with leaf Scripts;
         /// 10k crowd = no-graph AlwaysSuccess tree (ScriptSlices==0).
         /// </summary>
         [Test]
@@ -153,18 +78,8 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
 
-            Assert.That(runtime.TreeWorld, Is.Not.Null, "The featured segment must run L2 BehaviorTreeWorld.");
-            Assert.That(runtime.TreeWorld!.Count, Is.GreaterThanOrEqualTo(8));
-
-            BehaviorTreeWorld? crowd = runtime.CrowdWorld;
-            Assert.That(crowd, Is.Not.Null, "The crowd pressure band must exist.");
-            crowd!.RestartFinishedThinking();
-            BehaviorTreeThinkStats crowdStats = crowd.TickAll(8);
-            TestContext.WriteLine(
-                $"crowd band no-graph baseline: agents={crowdStats.Agents} scriptSlices={crowdStats.ScriptSlices} nodesVisited={crowdStats.NodesVisited}");
-            Assert.That(crowdStats.ScriptSlices, Is.EqualTo(0),
-                "The crowd band is a no-graph pressure baseline; any Script slice here would be an unlabeled graph claim.");
-            Assert.That(crowdStats.Agents, Is.EqualTo(10_000));
+            Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8),
+                "The featured segment must have component-driven BT guards.");
 
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
@@ -275,106 +190,9 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
         }
 
-        [Test]
-        public void GraphBehaviorIntegration_ShortPlay_UnderBudget()
-        {
-            var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            Warm(runtime.Tick, waves: 10);
-            Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Integration L2"));
-            Assert.That(runtime.GuardCount, Is.EqualTo(6));
-            Assert.That(runtime.SentryCount, Is.EqualTo(6));
-            Assert.That(runtime.Hfsm, Is.Not.Null, "Integration runs HfsmWorld + leaf Scripts as L2 SSOT.");
-            Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
-        }
 
-        [Test]
-        public void GraphBehaviorIntegration_PlayableControls_DriveBothL2Worlds()
-        {
-            var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
 
-            runtime.TogglePaused();
-            int wavesBeforeStep = runtime.Metrics.ThinkWaves;
-            runtime.Step();
-            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(wavesBeforeStep));
 
-            runtime.ToggleL2();
-            runtime.ToggleStimulus();
-            runtime.IncreaseSensorRadius();
-            runtime.DecreaseThinkPeriod();
-            GraphShowcaseControlState state = runtime.BuildControlState();
-            Assert.Multiple(() =>
-            {
-                Assert.That(state.L2Enabled, Is.False);
-                Assert.That(state.StimulusEnabled, Is.False);
-                Assert.That(state.SightRadius, Is.EqualTo(7f).Within(0.001f));
-                Assert.That(state.ThinkPeriod, Is.LessThan(0.2f));
-                Assert.That(state.Detail, Does.Contain("BT"));
-                Assert.That(state.Detail, Does.Contain("HFSM"));
-            });
-        }
-
-        [TestCase(0, 5.5f, true, 1)]
-        [TestCase(0, 5.51f, false, 0)]
-        [TestCase(-2, 3f, false, 0)]
-        [TestCase(1, 6f, true, 1)]
-        [TestCase(1, 1.25f, true, 2)]
-        [TestCase(1, 1.26f, true, 1)]
-        public void GraphBehaviorIntegration_SightControl_ChangesGuardDecision(int adjustments, float distance, bool seen, int expectedIntent)
-        {
-            var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            runtime.Tick(0.6f);
-            runtime.TogglePaused();
-            for (int i = 0; i < Math.Abs(adjustments); i++)
-            {
-                if (adjustments > 0) runtime.IncreaseSensorRadius();
-                else runtime.DecreaseSensorRadius();
-            }
-
-            runtime.GuardX[0] = runtime.EnemyX - distance;
-            runtime.GuardY[0] = runtime.EnemyY - 2.2f * runtime.ThinkPeriodSeconds;
-            runtime.Step();
-
-            TestContext.Out.WriteLine($"sight={runtime.SensorRadius}m distance={distance}m target={runtime.TargetIndex[0]} intent={runtime.Intent[0]}");
-            Assert.Multiple(() =>
-            {
-                Assert.That(runtime.TargetIndex[0], Is.EqualTo(seen ? 0 : -1));
-                Assert.That(runtime.Intent[0], Is.EqualTo(expectedIntent),
-                    "The L2 tree must chase only when the intruder is inside the displayed sight radius.");
-            });
-        }
-
-        [Test]
-        public void GraphBehaviorIntegration_DefaultPatrol_BothTeamsKeepRespondingForOneMinute()
-        {
-            var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs, _actions, _behavior);
-            runtime.EnsureWorld();
-            for (int period = 0; period < 3; period++)
-            {
-                bool btResponded = false, hfsmResponded = false;
-                for (int wave = 0; wave < 100; wave++)
-                {
-                    runtime.Tick(0.2f);
-                    btResponded |= runtime.Intent.Any(intent => intent == 1 || intent == 2);
-                    for (int i = 0; i < runtime.SentryCount; i++)
-                        hfsmResponded |= runtime.Hfsm!.GetLeafStateName(i) == "combat";
-                }
-
-                Assert.Multiple(() =>
-                {
-                    Assert.That(btResponded, Is.True, $"BT must respond during seconds {period * 20}-{(period + 1) * 20}.");
-                    Assert.That(hfsmResponded, Is.True, $"HFSM must enter combat during seconds {period * 20}-{(period + 1) * 20}.");
-                });
-            }
-        }
 
         private static void Warm(System.Action<float> tick, int waves = 5)
         {

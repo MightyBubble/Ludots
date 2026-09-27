@@ -718,7 +718,7 @@ namespace GenreInfoShowcaseMod.UI
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : EntityCollectionKeys.CommandSource;
+                : "collection.command.source";
         }
 
         private static string ControlGroupCollectionKey(int groupIndex) =>

@@ -114,9 +114,9 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
+            float before = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
             AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
-            float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
+            float after = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
             runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
 
@@ -557,6 +557,32 @@ namespace Ludots.Core.Gameplay.GAS
                     case RelationOperation.RemoveParent:
                         runtime.EffectSideEffects.StageRemoveParent(subject);
                         return;
+                    case RelationOperation.EnsureLink:
+                    {
+                        Entity linkedTarget = ResolveRelationEntity(in context, relation.Parent);
+                        if (!world.IsAlive(linkedTarget))
+                        {
+                            throw new InvalidOperationException(
+                                $"GAS.RELATION.ERR.ParentInvalid: entity={linkedTarget.Id}.");
+                        }
+
+                        if (runtime.Relationships == null)
+                        {
+                            throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
+                        }
+
+                        if (relation.RelationshipTypeId < 0)
+                        {
+                            throw new InvalidOperationException("Relation operation EnsureLink requires a registered relationship type id.");
+                        }
+
+                        runtime.EffectSideEffects.StageRelationshipEnsureLink(
+                            runtime.Relationships,
+                            subject,
+                            linkedTarget,
+                            relation.RelationshipTypeId);
+                        return;
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
@@ -655,9 +681,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
                 RelationOperation.RemoveParent => EffectOperationMetadata.GasTransactional("ApplyRelation.RemoveParent"),
-                RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
-                    EffectAtomicDomain.Relationship,
-                    "ApplyRelation.EnsureLink"),
+                RelationOperation.EnsureLink => EffectOperationMetadata.GasTransactional("ApplyRelation.EnsureLink"),
                 RelationOperation.Attach => EffectOperationMetadata.GasTransactional("ApplyRelation.Attach"),
                 RelationOperation.Detach => EffectOperationMetadata.GasTransactional("ApplyRelation.Detach"),
                 _ => EffectOperationMetadata.Unsupported(

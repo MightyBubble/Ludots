@@ -77,17 +77,20 @@ namespace Ludots.Core.Gameplay.AI.Config
         private readonly AtomRegistry _atoms;
         private readonly AiConfigValidationContext? _validation;
         private readonly GraphActionCatalog? _actions;
+        private readonly GraphFunctionCatalog? _functions;
 
         public AiConfigLoader(
             ConfigPipeline pipeline,
             AtomRegistry atoms,
             AiConfigValidationContext? validation = null,
-            GraphActionCatalog? actions = null)
+            GraphActionCatalog? actions = null,
+            GraphFunctionCatalog? functions = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _atoms = atoms ?? throw new ArgumentNullException(nameof(atoms));
             _validation = validation;
             _actions = actions;
+            _functions = functions;
         }
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
@@ -443,7 +446,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             var utilityRuntime = CompileUtilityRuntime(catalog, report);
-            var behavior = new GraphBehaviorDefinitionLoader(_pipeline, _actions).Load(catalog, report);
+            var behavior = new GraphBehaviorDefinitionLoader(_pipeline, _actions, _functions).Load(catalog, report);
 
             return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots, utilityRuntime, behavior);
         }
@@ -702,7 +705,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                     parsedKind = UtilityAiInputKind.SourceHasTag;
                     arg0 = ResolveTag(RequireString(obj, "Tag", path), $"{path}.Tag");
                 }
-                else
+                else if (string.Equals(kind, "InfluenceSample01", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw Fail(
+                        $"{path}.Kind",
+                        "InfluenceSample01 is runtime-injected only (InfluenceFieldRegistry + field key table). " +
+                        "AI/inputs.json authoring is not supported until influence projection is wired into the main loop.");
+                }                else
                 {
                     throw Fail($"{path}.Kind", $"Unknown input kind '{kind}'.");
                 }
@@ -866,8 +875,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     {
                         throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
                     }
-                }
-                ids.Add(id, tasks.Count);
+                }                ids.Add(id, tasks.Count);
                 tasks.Add(new UtilityAiTaskDefinition(
                     parsedKind,
                     payloadKind,
@@ -1409,7 +1417,6 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
             }
-
             return new ActionOrderSpec(payloadKind, orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
         }
 

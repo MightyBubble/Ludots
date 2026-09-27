@@ -47,8 +47,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private int _threatMetricId;
         private int _focusMetricId;
         private int _priorityTargetFlagId;
-        private int _setupReasonId;
-        private int _pressurePulseReasonId;
         private int _commandableTagId;
         private int _routedTagId;
         private int _objectiveTagId;
@@ -267,15 +265,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry is missing.");
             RelationshipFlagRegistry flags = _engine.GetService(CoreServiceKeys.RelationshipFlagRegistry)
                 ?? throw new InvalidOperationException("RelationshipFlagRegistry is missing.");
-            RelationshipReasonRegistry reasons = _engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry is missing.");
 
             _tacticalIntelTypeId = types.GetId(Config.Relationships.TacticalIntel);
             _threatMetricId = metrics.GetId(Config.Metrics.Threat);
             _focusMetricId = metrics.GetId(Config.Metrics.Focus);
             _priorityTargetFlagId = flags.GetId(Config.Flags.PriorityTarget);
-            _setupReasonId = reasons.Register("Scenario.Setup");
-            _pressurePulseReasonId = reasons.Register("Player.PressurePulse");
             _commandableTagId = TagRegistry.GetId(Config.Tags.Commandable);
             _routedTagId = TagRegistry.GetId(Config.Tags.Routed);
             _objectiveTagId = TagRegistry.GetId(Config.Tags.Objective);
@@ -593,11 +587,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 }
 
                 int metricId = ResolveMetric(seed.Metric);
-                runtime.SetMetric(source, target, _tacticalIntelTypeId, metricId, seed.Value, _setupReasonId);
+                runtime.SetMetric(source, target, _tacticalIntelTypeId, metricId, seed.Value);
                 for (int f = 0; f < seed.Flags.Length; f++)
                 {
                     int flagId = ResolveFlag(seed.Flags[f]);
-                    runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true, _setupReasonId);
+                    runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true);
                 }
             }
         }
@@ -700,7 +694,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     out EntityCollectionView commandSourceView)
                 ? commandSourceView.Revision
                 : 0u;
@@ -711,7 +705,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _selectionScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _selectionScratch);
             var descriptor = EntityCollectionDescriptor.Create(
                 Config.Collections.CommandSourceMirror,
                 EntityCollectionSourceKind.Explicit,
@@ -742,7 +736,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 ScenarioContext.Owner,
@@ -750,7 +744,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 "Command source",
                 $"Committed UI box | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), ScenarioContext.Owner);
-            int committed = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _collectionScratch);
+            int committed = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _collectionScratch);
             if (committed != count)
             {
                 throw new InvalidOperationException(
@@ -784,7 +778,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     out EntityCollectionView descriptor)
                 ? descriptor.Revision
                 : 0u;
@@ -793,7 +787,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            int count = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _formationScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, "collection.command.source", _formationScratch);
             WriteFormationCollection(count);
             _lastSyncedCommandSourceRevision = commandSourceRevision;
         }
@@ -860,11 +854,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             int metricId = ResolveMetric(Config.Scenario.PressurePulse.Metric);
-            runtime.AddMetric(ScenarioContext.Owner, target, _tacticalIntelTypeId, metricId, Config.Scenario.PressurePulse.Delta, _pressurePulseReasonId);
+            runtime.AddMetric(ScenarioContext.Owner, target, _tacticalIntelTypeId, metricId, Config.Scenario.PressurePulse.Delta);
             for (int i = 0; i < Config.Scenario.PressurePulse.Flags.Length; i++)
             {
                 int flagId = ResolveFlag(Config.Scenario.PressurePulse.Flags[i]);
-                runtime.SetFlag(ScenarioContext.Owner, target, _tacticalIntelTypeId, flagId, true, _pressurePulseReasonId);
+                runtime.SetFlag(ScenarioContext.Owner, target, _tacticalIntelTypeId, flagId, true);
             }
 
             _state.PressurePulseCount++;

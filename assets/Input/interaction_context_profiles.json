@@ -1,3 +1,8 @@
 {
-  "profiles": []
+  "profiles": [
+    {
+      "id": "interaction.context.default",
+      "activeCollectionKey": "collection.command.source"
+    }
+  ]
 }

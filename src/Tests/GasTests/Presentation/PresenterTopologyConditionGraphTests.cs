@@ -412,7 +412,6 @@ namespace Ludots.Tests.Presentation
                 => name == "Controls" ? _controlsTypeId : throw new InvalidOperationException($"Unknown relationship type '{name}'.");
             public int ResolveRelationshipMetric(string name) => throw new NotSupportedException();
             public int ResolveRelationshipFlag(string name) => throw new NotSupportedException();
-            public int ResolveRelationshipReason(string name) => throw new NotSupportedException();
             public int ResolveTargetDispatchPreset(string name) => throw new NotSupportedException();
             public int ResolveEntityTemplate(string name) => throw new NotSupportedException();
         }

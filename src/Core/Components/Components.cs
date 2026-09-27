@@ -94,4 +94,20 @@ namespace Ludots.Core.Components
     {
         public string Value; // Note: String in component is not ideal for ECS performance but okay for identifiers
     }
+
+    /// <summary>
+    /// 地图摆放时登记的实例编号。根是 instanceId，子实体是不含地图 id 的 localId 路径。
+    /// </summary>
+    public struct PlacedInstanceId
+    {
+        public string Value;
+    }
+
+    /// <summary>
+    /// 地图这一份摆放自己绑的标题文案槽。档案是模板表，不记录谁摆了它。
+    /// </summary>
+    public struct EntityInfoTitleToken
+    {
+        public string Value;
+    }
 }

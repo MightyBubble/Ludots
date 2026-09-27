@@ -12,8 +12,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
-using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -93,7 +93,7 @@ namespace Ludots.Core.Config
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
-            ActionLoopComponentAuthoring.Register();
+            GraphBrainComponentAuthoring.Register();
             Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
@@ -154,12 +154,13 @@ namespace Ludots.Core.Config
 
                 if (entity.Has<T>())
                 {
-                    throw new InvalidOperationException(
-                        $"Component '{name}' is already present on entity {entity.Id}. " +
-                        "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'."); // 诊断：双挂组件名定位（main 存量断言根因调查）
+                    // Overrides and re-authoring replace the whole component.
+                    entity.Set<T>(component);
                 }
-
-                entity.Add<T>(component);
+                else
+                {
+                    entity.Add<T>(component);
+                }
             }, modId, Component<T>.ComponentType);
         }
 
@@ -214,9 +215,10 @@ namespace Ludots.Core.Config
         /// </summary>
         public static void RegisterAuthoring<T>(
             string name,
-            ComponentSetterWithContext setter)
+            ComponentSetterWithContext setter,
+            string modId = null)
         {
-            Register(name, setter, null, Component<T>.ComponentType);
+            Register(name, setter, modId, Component<T>.ComponentType);
         }
 
         private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
@@ -1261,6 +1263,9 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
         private static unsafe void SetAttributeBuffer(Entity entity, JsonNode data)
         {
             var buffer = default(AttributeBuffer);
+            var highBase = new System.Collections.Generic.Dictionary<int, float>();
+            var highCurrent = new System.Collections.Generic.Dictionary<int, float>();
+            bool hasHigh = false;
             if (data is not JsonObject obj)
             {
                 throw new InvalidOperationException("AttributeBuffer requires an object payload.");
@@ -1283,7 +1288,15 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     float v = kvp.Value.GetValue<float>();
                     int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.base.{kvp.Key}");
-                    buffer.SetBase(attrId, v);
+                    if (attrId >= Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        highBase[attrId] = v;
+                        hasHigh = true;
+                    }
+                    else
+                    {
+                        buffer.SetBase(attrId, v);
+                    }
                 }
             }
 
@@ -1303,7 +1316,15 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     float v = kvp.Value.GetValue<float>();
                     int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.current.{kvp.Key}");
-                    buffer.SetCurrent(attrId, v);
+                    if (attrId >= Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        highCurrent[attrId] = v;
+                        hasHigh = true;
+                    }
+                    else
+                    {
+                        buffer.SetCurrent(attrId, v);
+                    }
                 }
             }
 
@@ -1314,6 +1335,43 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 int attributeId = System.Numerics.BitOperations.TrailingZeroCount(definedMask);
                 definedMask &= definedMask - 1UL;
                 snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+            }
+
+            var store = Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+            if (store != null)
+            {
+                // 种子期建行 + 内嵌全量镜像：列存成为该实体属性数据的完整快照（P4 切真相的地基）。
+                int row = store.EnsureRow(entity);
+                while (definedMask != 0UL)
+                {
+                    definedMask = 0UL; // 上面的循环已耗尽掩码；此处仅为可读性占位
+                }
+
+                ulong mirrorMask = buffer.DefinedMask;
+                while (mirrorMask != 0UL)
+                {
+                    int attributeId = System.Numerics.BitOperations.TrailingZeroCount(mirrorMask);
+                    mirrorMask &= mirrorMask - 1UL;
+                    store.MirrorCurrent(row, attributeId, buffer.GetBase(attributeId), buffer.GetCap(attributeId), buffer.GetCurrent(attributeId));
+                    Ludots.Core.Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
+                }
+
+                foreach (var kvp in highBase)
+                {
+                    store.SetBase(row, kvp.Key, kvp.Value);
+                    Ludots.Core.Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, kvp.Key);
+                }
+
+                foreach (var kvp in highCurrent)
+                {
+                    store.SetCurrentHigh(row, kvp.Key, kvp.Value);
+                    store.SetLastSnapshot(row, kvp.Key, store.GetCurrent(row, kvp.Key));
+                }
+            }
+            else if (hasHigh)
+            {
+                throw new InvalidOperationException(
+                    "GAS.CAPACITY.ERR.HighLaneUnavailable: AttributeBuffer authoring 引用 attributeId >= 64 需要世界列存（RFC-0067 P1），但 WorldAttributeStore 未绑定。");
             }
 
             entity.Add(buffer);
@@ -1339,6 +1397,12 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
         private static void SetGameplayTagContainer(Entity entity, JsonNode data)
         {
+            if (entity.Has<TagCountContainer>())
+            {
+                throw new InvalidOperationException(
+                    "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'.");
+            }
+
             if (data is not JsonObject obj)
             {
                 throw new InvalidOperationException("GameplayTagContainer requires an object payload.");
@@ -1347,6 +1411,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
             var container = new GameplayTagContainer();
             var counts = new TagCountContainer();
+            var highTags = new System.Collections.Generic.List<int>();
             if (obj.TryGetPropertyValue("tags", out var tagsNode))
             {
                 if (tagsNode is not JsonArray tags)
@@ -1363,12 +1428,42 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
                     int tagId = ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}");
-                    container.AddTag(tagId);
+                    if (tagId > Ludots.Core.Gameplay.GAS.Components.GameplayTagContainer.MAX_TAG_ID)
+                    {
+                        highTags.Add(tagId);
+                    }
+                    else
+                    {
+                        container.AddTag(tagId);
+                    }
+
                     if (!counts.AddCount(tagId))
                     {
                         throw new InvalidOperationException("GameplayTagContainer.tags exceeds TagCountContainer capacity.");
                     }
                 }
+            }
+
+            var tagStore = Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+            if (highTags.Count > 0)
+            {
+                if (tagStore == null)
+                {
+                    throw new InvalidOperationException(
+                        "GAS.CAPACITY.ERR.HighLaneUnavailable: GameplayTagContainer.tags 引用 tagId ≥ 256 需要世界列存（RFC-0067 P2）。");
+                }
+
+                int row = tagStore.EnsureRow(entity);
+                foreach (int tagId in highTags)
+                {
+                    tagStore.SetTag(row, tagId);
+                }
+            }
+
+            if (tagStore != null && tagStore.TryGetRow(entity, out int seededRow))
+            {
+                tagStore.MirrorTagWords(seededRow, in container);
+                tagStore.SeedTagSnapshotFromBits(seededRow);
             }
 
             entity.Add(container);
