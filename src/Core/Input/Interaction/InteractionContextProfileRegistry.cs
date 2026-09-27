@@ -215,9 +215,6 @@ namespace Ludots.Core.Input.Interaction
             return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
         }
 
-
-
-
         private int _inputContextIdsFor(int profileId)
         {
             string inputContextId = _profiles[profileId].InputContextId;

@@ -153,8 +153,8 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Cast side of the §12 bridge: actors are the intent-carried member set (empty = the
-        /// acting rep alone, v2); each authorized member receives one cast order with Args.I0 = slot. The cast
+        /// Cast side of the §12 bridge: actors are the intent-carried member set. An empty set is a
+        /// named rejection; each authorized member receives one cast order with Args.I0 = slot. The cast
         /// order-type key resolves through the OrderTypeRegistry at drain time (cold path).
         /// </summary>
         private bool TryRouteCastSubmission(in CastIntentSubmission submission)
@@ -231,8 +231,8 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Engage side of the §12 bridge: actors are the intent-carried member set (empty =
-        /// the acting rep alone, v2); the profile's EQS query runs around the target
+        /// Engage side of the §12 bridge: actors are the intent-carried member set (empty is a
+        /// named rejection); the profile's EQS query runs around the target
         /// and each authorized member gets a move-then-cast plan — moveTo its assigned ring
         /// point with the cast as an order continuation, plus a per-target slot claim so a
         /// later batch excludes occupied points.
@@ -531,16 +531,9 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// LIFO walk of the active context chain: op-activated instances newest-first, then the
-        /// base mounted instance. Only contexts declaring an active collection key count; a dead
-        /// carrier instance is skipped as an unresolved step (fail-closed per instance, the
-        /// pre-reclaim window must not silently route through a dead carrier's collections).
-        /// </summary>
-        /// <summary>
-        /// v2: intents carry their own actor set. The actor span is exactly what the submitting
-        /// graph attached (constitution §12 — direct possession is a data shape expressed by a
-        /// self-roster graph, never a kernel rule); an empty span routes nothing and each lane
-        /// rejects by name.
+        /// Intents carry their own actor set. The actor span is exactly what the submitting
+        /// graph attached; an empty span routes nothing and each lane rejects by name.
+        /// Direct possession is a roster graph that submits those entities, never a kernel substitution.
         /// </summary>
         private int ResolveActors(Entity rep, int memberOffset, int memberCount)
         {

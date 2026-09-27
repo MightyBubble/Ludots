@@ -37,10 +37,9 @@ namespace Ludots.Core.Input.Interaction
     /// record of "which context this subject is in right now", present on the interaction
     /// subject (the control-domain representative) only while an interaction context is
     /// active in that entity's control domain, absent otherwise. Absence is the steady
-    /// state — the entity-side anchor of the retired reserved default frame, where the
-    /// player's
-    /// <see cref="InteractionPref"/> default applies, command sources resolve to the subject itself,
-    /// and cast commits route through the data-declared default profile's collection key.
+    /// state: the player's <see cref="InteractionPref"/> default applies, and command
+    /// sources resolve to the subject itself. Cast commits take their collection key from
+    /// the caller; the mounted context only supplies the filter profile.
     /// Sparse like <see cref="InteractionMode"/> and <see cref="InteractionPref"/>: the vast
     /// majority of entities never carry it, and holders are discoverable by archetype query.
     /// <para>

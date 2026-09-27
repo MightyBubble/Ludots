@@ -175,7 +175,7 @@ namespace Ludots.Core.EntityCollections
         /// <summary>
         /// Commit one cast batch for the local anchor (constitution §12 cast commit): store the raw
         /// hits verbatim under the data-declared cast-raw key, evaluate the anchor's active
-        /// context's filter profile, and domain-route the survivors into the active collection key.
+        /// context's filter profile, and domain-route the survivors into the caller-supplied collection key.
         /// Routed writes use
         /// <see cref="DomainRoutingUnresolvedPolicy.Reject"/>: an entity without a control domain
         /// reaching the routed command source is a pipeline error. Contexts with

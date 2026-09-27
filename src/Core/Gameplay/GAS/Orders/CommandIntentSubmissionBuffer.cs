@@ -76,8 +76,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _memberPoolCount;
 
         /// <summary>
-        /// Copies one graph-supplied actor set into the shared member pool; empty spans mean
-        /// "the acting rep alone" (v2: the submitting graph owns fan-out membership). Overflow
+        /// Copies one graph-supplied actor set into the shared member pool. An empty span is stored
+        /// as an empty range; drain rejects it instead of substituting the acting rep. Overflow
         /// fails loud instead of truncating.
         /// </summary>
         private (int Offset, int Count) PushMembers(System.ReadOnlySpan<Entity> members)
