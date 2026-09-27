@@ -359,7 +359,7 @@ namespace Ludots.Tests.Architecture
         private static bool IsOnMesh(NavTile tile, float pxMeters, float pzMeters, out byte areaId)
         {
             float px = pxMeters * 100f - tile.OriginXcm;
-            float pz = pzMeters * 100f - tile.OriginZcm;
+            float pz = pzMeters * 100f - tile.OriginYcm;
             for (int i = 0; i < tile.TriangleCount; i++)
             {
                 int a = tile.TriA[i];

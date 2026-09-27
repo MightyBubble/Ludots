@@ -471,6 +471,9 @@ namespace Ludots.Core.UI.PanelProjection
                 string eventId = RequireString(intentObject, "event", $"panel template '{templateId}' intent");
                 string intent = RequireString(intentObject, "intent", $"panel template '{templateId}' intent for '{eventId}'");
                 string playerSource = RequireString(intentObject, "playerSource", $"panel template '{templateId}' intent '{intent}'");
+                PanelOwnerKinds.Parse(
+                    playerSource,
+                    $"panel template '{templateId}' intent '{intent}'");
                 string actorSource = RequireString(intentObject, "actorSource", $"panel template '{templateId}' intent '{intent}'");
 
                 var args = new Dictionary<string, string>(StringComparer.Ordinal);

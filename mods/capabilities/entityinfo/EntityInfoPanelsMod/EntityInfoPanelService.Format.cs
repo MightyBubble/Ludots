@@ -4,12 +4,15 @@ using System.Numerics;
 using System.Reflection;
 using Arch.Core;
 using Arch.Core.Extensions;
+using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -252,8 +255,31 @@ public sealed partial class EntityInfoPanelService
         };
     }
 
-    private static string ResolveEntityDisplayName(World world, Entity entity)
+    private string ResolveEntityDisplayName(World world, Entity entity)
     {
+        return ResolveEntityInfoTitle(world, entity);
+    }
+
+    public bool TryGetProfileTitleTokenId(int templateKeyId, out int tokenId)
+    {
+        if (_insightCatalog.TryGetProfileByTemplateKey(templateKeyId, out EntityInsightProfile profile) &&
+            profile.TitleTokenId > 0)
+        {
+            tokenId = profile.TitleTokenId;
+            return true;
+        }
+
+        tokenId = 0;
+        return false;
+    }
+
+    private string ResolveEntityInfoTitle(World world, Entity entity)
+    {
+        if (EntityInfoTitles.TryGetTokenId(world, entity, _presentationTextCatalog, this, out int tokenId))
+        {
+            return ResolveTextTokenId(tokenId);
+        }
+
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
         {
             return name.Value;
@@ -309,7 +335,7 @@ public sealed partial class EntityInfoPanelService
             : preview;
     }
 
-    private static string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
+    private string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
     {
         string displayName = ResolveEntityDisplayName(world, entity).Trim();
         if (displayName.Length == 0)

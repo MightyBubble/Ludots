@@ -267,13 +267,13 @@ namespace Ludots.Tests.ThreeC
 
             ReplaceCommandSource(collections, selector, light, heavy);
 
-            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, EntityCollectionKeys.CommandSource);
+            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, "collection.command.source");
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
             ReplaceCommandSource(collections, selector, light);
-            Assert.That(collections.TryGet(selector, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+            Assert.That(collections.TryGet(selector, "collection.command.source", out EntityCollectionHandle handle), Is.True);
             Assert.That(collections.TryGetEntityAt(handle, 0, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 
@@ -285,7 +285,7 @@ namespace Ludots.Tests.ThreeC
         private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, params Entity[] entities)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -1085,6 +1085,68 @@ namespace Ludots.Tests.ThreeC
             Assert.That(clipPlanes.NearMeters, Is.EqualTo(CameraViewportUtil.DefaultNearPlaneMeters).Within(0.0001f));
             Assert.That(clipPlanes.FarMeters, Is.GreaterThan(Vector3.Distance(renderState.Position, renderState.Target) * 4f));
             Assert.That(clipPlanes.FarMeters, Is.GreaterThan(CameraViewportUtil.DefaultFarPlaneMeters));
+        }
+
+        [Test]
+        public void CameraViewportUtil_ScreenToRay_LargeWorldCoordinates_PreservesOriginSpaceDirections()
+        {
+            var resolution = new Vector2(1526, 892);
+            float aspect = 1526f / 892f;
+            var nearCamera = new CameraRenderState3D(
+                new Vector3(0.42f, 197.33f, 536.42f),
+                new Vector3(0.42f, 141.04f, 568.92f),
+                Vector3.UnitY, 50f);
+            // Same rig translated deep into a 3456 km world: unprojection must not
+            // lose the direction to float cancellation in the world translation.
+            var largeCamera = new CameraRenderState3D(
+                nearCamera.Position + new Vector3(846f, 0f, 12000f),
+                nearCamera.Target + new Vector3(846f, 0f, 12000f),
+                Vector3.UnitY, 50f);
+
+            for (int y = 150; y < 750; y += 30)
+            {
+                for (int x = 250; x < 1250; x += 30)
+                {
+                    var pixel = new Vector2(x, y);
+                    Vector3 nearDirection = CameraViewportUtil.ScreenToRay(pixel, in nearCamera, resolution, aspect).Direction;
+                    Vector3 largeDirection = CameraViewportUtil.ScreenToRay(pixel, in largeCamera, resolution, aspect).Direction;
+                    Assert.That(Vector3.Distance(nearDirection, largeDirection), Is.LessThan(2e-4f),
+                        $"screen=({x},{y}) direction must be translation invariant");
+                }
+            }
+        }
+
+        [Test]
+        public void CameraViewportUtil_ScreenToRay_LargeWorldCoordinates_AdjacentPixelsStaySeparable()
+        {
+            var resolution = new Vector2(1526, 892);
+            float aspect = 1526f / 892f;
+            var nearCamera = new CameraRenderState3D(
+                new Vector3(0.42f, 197.33f, 536.42f),
+                new Vector3(0.42f, 141.04f, 568.92f),
+                Vector3.UnitY, 50f);
+            var largeCamera = new CameraRenderState3D(
+                nearCamera.Position + new Vector3(846f, 0f, 12000f),
+                nearCamera.Target + new Vector3(846f, 0f, 12000f),
+                Vector3.UnitY, 50f);
+
+            for (int y = 150; y < 750; y += 30)
+            {
+                for (int x = 250; x < 1250; x += 30)
+                {
+                    var pixel = new Vector2(x, y);
+                    // The 1px screen-edge wedge is what region broadphase planes are
+                    // built from; translation noise must not drown the wedge signal.
+                    Vector3 nearSide0 = CameraViewportUtil.ScreenToRay(pixel, in nearCamera, resolution, aspect).Direction;
+                    Vector3 nearSide1 = CameraViewportUtil.ScreenToRay(pixel + Vector2.UnitX, in nearCamera, resolution, aspect).Direction;
+                    Vector3 largeSide0 = CameraViewportUtil.ScreenToRay(pixel, in largeCamera, resolution, aspect).Direction;
+                    Vector3 largeSide1 = CameraViewportUtil.ScreenToRay(pixel + Vector2.UnitX, in largeCamera, resolution, aspect).Direction;
+                    float nearWedge = Vector3.Cross(nearSide0, nearSide1).Length();
+                    float largeWedge = Vector3.Cross(largeSide0, largeSide1).Length();
+                    Assert.That(largeWedge, Is.GreaterThan(nearWedge * 0.5f).And.LessThan(nearWedge * 2f),
+                        $"screen=({x},{y}) adjacent-pixel wedge must survive translation");
+                }
+            }
         }
 
         private static CameraManager CreateManagerWithRegistry(params VirtualCameraDefinition[] definitions)

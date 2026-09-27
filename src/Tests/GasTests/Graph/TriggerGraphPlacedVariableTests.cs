@@ -21,7 +21,7 @@ namespace Ludots.Tests.Gas.Graph
     /// #1108 placed-entity variable reads: compile-side instanceId shape validation,
     /// mount-time fail-closed membership against the mounting map's catalog, the
     /// Entity.Null (not throw) run-time miss contract with the World.IsAlive double
-    /// insurance, and the InstanceExposure "declared" load-time stub.
+    /// insurance.
     /// </summary>
     [TestFixture]
     public sealed class TriggerGraphPlacedVariableTests
@@ -342,31 +342,6 @@ namespace Ludots.Tests.Gas.Graph
                 Throws.InvalidOperationException.With.Message.Contains("GAS.GRAPH.ERR.PlacedIndexUnavailable"));
         }
 
-        [Test]
-        public void LoadEntitiesAndIndex_DeclaredExposure_FailsClosedAwaitingHitl()
-        {
-            using var world = World.Create();
-            MapLoader loader = CreateBareLoader(world);
-            var map = new MapConfig { Id = MapId, InstanceExposure = "declared" };
-
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
-
-            Assert.That(ex.Message, Does.Contain(MapId));
-            Assert.That(ex.Message, Does.Contain("declared"));
-            Assert.That(ex.Message, Does.Contain("HITL"));
-        }
-
-        [Test]
-        public void LoadEntitiesAndIndex_UnknownExposure_FailsClosed()
-        {
-            using var world = World.Create();
-            MapLoader loader = CreateBareLoader(world);
-            var map = new MapConfig { Id = MapId, InstanceExposure = "everyone" };
-
-            Assert.That(
-                () => loader.LoadEntitiesAndIndex(map),
-                Throws.InvalidOperationException.With.Message.Contains("\"all\" or \"declared\""));
-        }
 
         private static MapSession CreateSession(World world, string[] registeredInstances, string[]? regionIds = null)
         {

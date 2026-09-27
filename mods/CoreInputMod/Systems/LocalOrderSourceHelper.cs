@@ -92,17 +92,22 @@ namespace CoreInputMod.Systems
 
         public InputOrderMappingSystem? TryCreateMapping(IModContext ctx)
         {
-            return TryCreateMapping(ctx, ctx.ModId);
+            return TryCreateMapping(ctx, sourceModId: null);
         }
 
-        public InputOrderMappingSystem? TryCreateMapping(IModContext ctx, string sourceModId)
+        /// <summary>
+        /// Builds and installs the local order mapping from one mod's assets. sourceModId null
+        /// resolves against the context's own mod (per-mod VFS authoring contract); the
+        /// auto-installed order source passes the shipping mod explicitly.
+        /// </summary>
+        public InputOrderMappingSystem? TryCreateMapping(IModContext ctx, string? sourceModId)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return null;
             }
 
-            string uri = $"{sourceModId}:assets/Input/input_order_mappings.json";
+            string uri = $"{sourceModId ?? ctx.ModId}:assets/Input/input_order_mappings.json";
             if (!ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
                 ctx.Log($"[{sourceModId}] input_order_mappings.json not found, skipping local order mapping.");
@@ -319,6 +324,22 @@ namespace CoreInputMod.Systems
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
+            mapping.SetQueueModifierProvider(() =>
+            {
+                return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                       inputObj is IInputActionReader heldInput &&
+                       heldInput.IsDown("QueueModifier");
+            });
+            if (config.SkillBar?.Enabled is { } skillBarEnabled)
+            {
+                _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = skillBarEnabled;
+            }
+
+            if (config.SkillBar?.KeyLabels is { } keyLabels)
+            {
+                _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = keyLabels.ToArray();
+            }
+
             return mapping;
         }
 
@@ -352,7 +373,9 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
                 dispatchObj is not CastDispatchProfileRegistry dispatch ||
                 !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
-                collectionsObj is not EntityCollectionStore collections)
+                collectionsObj is not EntityCollectionStore collections ||
+                !_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var landingAbilitiesObj) ||
+                landingAbilitiesObj is not AbilityDefinitionRegistry landingAbilities)
             {
                 throw new InvalidOperationException(
                     $"{nameof(LocalOrderSourceHelper)} requires command intent routing services before input-order mappings install.");
@@ -364,6 +387,7 @@ namespace CoreInputMod.Systems
                 intents,
                 dispatch,
                 collections,
+                landingAbilities,
                 TryGetCommandSourceOwner,
                 TryGetPlayerRepresentative);
         }

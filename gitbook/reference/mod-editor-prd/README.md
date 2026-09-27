@@ -282,7 +282,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | `gr-04-compilation.md` | 编译与校验 | 编译期检查全清单、符号解析、注册终态与热替换边界 | P1 | **已写** |
 | `gr-05-execution.md` | 执行模型 | Run-to-Halt 与切片、Yield 宿主政策、步数预算、零分配 | P1 | **已写** |
 | `gr-06-funclib.md` | FuncLib | func_lib.json、纯度闭包校验、跨图调用 | P1 | **已写** |
-| `gr-07-actionlib.md` | ActionLib | action_lib.json、四种 host、yield 政策 | P1 | **已写** |
+| `gr-07-actionlib.md` | ActionLib | action_lib.json、资产中性（无 host）、消费侧 yield 政策 | P1 | **已写** |
 | `gr-08-mount-points.md` | 挂接点总表 | 八个挂点与各自要求的 kind | P1 | **已写** |
 | `gr-09-outputs.md` | Query 图输出 | outputs 声明、实体集合与摘要标量、槽位清理 | P1 | **已写** |
 | `gr-op-01-context.md` | 节点：常量与上下文 | Const 三件、LoadCaster/Target/Viewer、Context 三件、EventPayload、TargetPos | P1 | **已写** |

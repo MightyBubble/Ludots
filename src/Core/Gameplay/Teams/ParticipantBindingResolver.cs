@@ -140,8 +140,8 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 Upsert(world, entity, new PlayerIdentity { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new PlayerOwner { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new Team { Id = binding.TeamId });
+                ParticipantIdentityProjector.UpsertPlayerOwner(world, entity, binding.PlayerId);
+                ParticipantIdentityProjector.UpsertTeam(world, entity, binding.TeamId);
                 playerLookup.Register(binding.PlayerId, entity);
             }
 
@@ -258,6 +258,18 @@ namespace Ludots.Core.Gameplay.Teams
                     $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered before publishing focused participants.");
             }
 
+            // 空座位且无既有座位可替换时不清 seats/views：装载链会先以空座位发布、
+            // 再随实体阶段发布真实座位，过早清空会把 bootstrap 呈现眼连同相机实例
+            // 一起丢掉（DefaultCamera 随后只能落到新相机上，旧实例成为孤儿）。
+            if (localSeats.Count == 0 && seats.Count == 0)
+            {
+                return;
+            }
+
+            // 重建 views 前收养既有呈现相机：地图 DefaultCamera 位姿可能已落在 bootstrap
+            // 或既有参与者视图上，重建实例会把作者取景连同实例丢弃——与 sole-seat
+            // 绑定（ClientLocalSeatBindings.BindSoleSeat）同一合同。
+            Gameplay.Camera.CameraManager? adoptedPresentCamera = Client.ClientLocalSeatBindings.ResolveAdoptablePresentCamera(views);
             seats.Clear();
             views.Clear();
             string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
@@ -271,7 +283,9 @@ namespace Ludots.Core.Gameplay.Teams
                     PossessedPlayerId = possession.PlayerId,
                     PossessedRep = possession.RepEntity,
                 };
-                string viewId = views.EnsureDefaultView(possession.RepEntity);
+                string viewId = views.EnsureDefaultView(
+                    possession.RepEntity,
+                    camera: i == 0 ? adoptedPresentCamera : null);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
                     seat.PresentBinding = PresentBinding.FromDeclaredLayout(
@@ -621,6 +635,7 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity playerRep = players.Get(binding.PlayerId);
                 Entity teamRep = teams.Get(binding.TeamId);
                 relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, playerRep, teamRep);
             }
 
             var stanceMembers = new List<(Entity Entity, int TeamId)>();
@@ -651,6 +666,7 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 relationships.EnsureLink(member, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, member, teamRep);
             }
 
             OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);

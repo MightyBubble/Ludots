@@ -55,8 +55,8 @@ namespace EntityCommandPanelMod
             var collectionQueries = new EntityCommandPanelCollectionQueryConfigRegistry();
             collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
             {
-                Id = EntityCollectionKeys.CommandSource,
-                CollectionKey = EntityCollectionKeys.CommandSource,
+                Id = "collection.command.source",
+                CollectionKey = "collection.command.source",
                 Title = "Collection Commands",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel

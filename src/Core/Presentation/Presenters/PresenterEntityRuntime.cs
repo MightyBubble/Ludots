@@ -605,10 +605,11 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner = state.OwnerEntity;
             bool hasOwnerTransform = _world.IsAlive(owner) && _world.Has<VisualTransform>(owner);
             VisualTransform ownerTransform = hasOwnerTransform ? _world.Get<VisualTransform>(owner) : VisualTransform.Default;
+            bool useOwnerTransform = state.AnchorKind == PresentationAnchorKind.Entity && hasOwnerTransform;
 
-            Vector3 position = hasOwnerTransform ? ownerTransform.Position : _world.Get<PresenterWorldPosition>(presenter).Value;
-            Quaternion rotation = hasOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
-            Vector3 scale = hasOwnerTransform ? ownerTransform.Scale : Vector3.One;
+            Vector3 position = useOwnerTransform ? ownerTransform.Position : _world.Get<PresenterWorldPosition>(presenter).Value;
+            Quaternion rotation = useOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
+            Vector3 scale = useOwnerTransform ? ownerTransform.Scale : Vector3.One;
 
             position += definition.PositionOffset;
 
@@ -2335,6 +2336,18 @@ namespace Ludots.Core.Presentation.Presenters
                     ? rootScopeId
                     : _planNodeScopes[node.ParentNodeIndex];
                 int childScopeId = node.ScopeTag > 0 ? node.ScopeTag : parentScopeId;
+                if (definitions.TryGet(node.DefinitionId, out PresenterDefinition diversionDefinition) &&
+                    PresenterInlineHudFeature.TryCompileDescriptor(diversionDefinition, out PresenterInlineHudDescriptor diversionDescriptor) &&
+                    !node.HasOverridePayload)
+                {
+                    // HUD 内联专 lane：HUD-only 子定义不实例化 presenter 实体，描述符挂父
+                    //（ParentNodeIndex<0 的节点挂计划根 presenter——massnav 血条即此形态）。
+                    // bootstrap 管线服务的是子 presenter 的参数绑定初始化；内联路径合成期直读
+                    // 属主 AttributeBuffer，不需要该管线，门槛不放行。
+                    DivertInlineHudChild(parentEntity, in diversionDescriptor);
+                    continue;
+                }
+
                 int childStableId = allocateStableId != null ? allocateStableId() : 0;
                 if (parentEntity == Entity.Null ||
                     !_world.IsAlive(parentEntity) ||
@@ -2420,6 +2433,19 @@ namespace Ludots.Core.Presentation.Presenters
             int capacity = Math.Max(required, Math.Max(64, _planNodeEntities.Length * 2));
             Array.Resize(ref _planNodeEntities, capacity);
             Array.Resize(ref _planNodeScopes, capacity);
+        }
+
+        private void DivertInlineHudChild(Entity parentEntity, in PresenterInlineHudDescriptor descriptor)
+        {
+            if (_world.TryGet<PresenterInlineHud>(parentEntity, out PresenterInlineHud inline))
+            {
+                Array.Resize(ref inline.Descriptors, inline.Descriptors.Length + 1);
+                inline.Descriptors[^1] = descriptor;
+                _world.Set(parentEntity, inline);
+                return;
+            }
+
+            _world.Add(parentEntity, new PresenterInlineHud { Descriptors = new[] { descriptor } });
         }
 
         private void AppendCreateTrace(in PresenterCreateTraceEntry entry)
@@ -3622,6 +3648,12 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
         {
+            if ((uint)attributeId >= (uint)AttributeBuffer.MAX_ATTRS)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.InlineInitialHighAttribute: 内联初始属性绑定 id={attributeId} ≥ 64 需要 owner 上下文读列存（RFC-0067 P3 边界）——初始值改用运行期属性绑定（PresenterBehaviorSystem 已支持高槽读）。");
+            }
+
             return mode switch
             {
                 ValueSourceKind.Attribute => attributes.GetCurrent(attributeId),
@@ -4266,7 +4298,10 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
-            return _world.TryGet(state.OwnerEntity, out PresentationOwnerHasPresenterPayload payload) &&
+            Entity owner = state.OwnerEntity;
+            return owner != Entity.Null &&
+                _world.IsAlive(owner) &&
+                _world.TryGet(owner, out PresentationOwnerHasPresenterPayload payload) &&
                 payload.RootCount == 1 &&
                 payload.SingleRootPresenter == presenter &&
                 payload.SingleRootTransformSync != 0;

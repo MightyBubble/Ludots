@@ -523,7 +523,6 @@ namespace Ludots.Tests.GAS.Graph
             public int ResolveRelationshipType(string name) => 1;
             public int ResolveRelationshipMetric(string name) => 1;
             public int ResolveRelationshipFlag(string name) => 1;
-            public int ResolveRelationshipReason(string name) => 1;
             public int ResolveTargetDispatchPreset(string name) => 1;
             public int ResolveEntityTemplate(string name) => 1;
         }

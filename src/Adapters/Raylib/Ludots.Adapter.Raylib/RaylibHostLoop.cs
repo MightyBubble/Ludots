@@ -31,6 +31,8 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Fields.Influence;
+using Ludots.Core.Presentation.Fields;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Presenters;
@@ -323,11 +325,7 @@ namespace Ludots.Adapter.Raylib
                         screenHud,
                         presentationTiming,
                         cullingDebug,
-                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap),
-                        new TerrainHudOcclusionConfig(
-                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCacheCapacity,
-                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCellDivisor,
-                            engine.MergedConfig.Presentation.WorldHudTerrainOcclusionHeightBucketCm));
+                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
                     overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
                     overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
                 }
@@ -343,7 +341,7 @@ namespace Ludots.Adapter.Raylib
                 Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer =
                     engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
                         ?? throw new InvalidOperationException("Raylib host requires the Core NavMeshPresentationBuffer service.");
-                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);
+                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);                var influenceFieldProjector = new InfluenceGlobalFieldVisualProjector();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 PresentationRuntimeConfig presentationConfig = engine.MergedConfig.Presentation;
@@ -712,6 +710,7 @@ namespace Ludots.Adapter.Raylib
                             cameraPresenter.Update(ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine), cameraAlpha, renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
+                        OverlayTraceProbe.TraceHudAnchorState(engine);
                         benchmarkRenderer?.PrepareFrame(
                             presentationTiming,
                             lastW,
@@ -735,7 +734,11 @@ namespace Ludots.Adapter.Raylib
                                     fieldSession.RegionGroups,
                                     in mapMode,
                                     globalFieldVisualBuffer);
-                            }
+                        if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
+                        {
+                            influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
+                            influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
+                        }                            }
                         }
 
                         if (overlaySceneBuilder != null && overlayScene != null)
@@ -2667,7 +2670,8 @@ namespace Ludots.Adapter.Raylib
 
             string hoveredSummary = "hovered=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out Entity debugOwner, out EntityCollectionStore debugCollections) &&
-                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, out Entity hovered) &&
+                engine.TryGetService(CoreServiceKeys.InputCollectionKeys, out Ludots.Core.Input.Config.InputCollectionKeyDeclarations inputKeys) &&
+                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, inputKeys.Hover, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
@@ -2675,15 +2679,22 @@ namespace Ludots.Adapter.Raylib
 
             string selectedSummary = "commandSource=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out debugOwner, out debugCollections) &&
-                EntityCollectionContextRuntime.TryGetPrimary(
-                    engine.World,
-                    debugCollections,
-                    debugOwner,
-                    EntityCollectionKeys.CommandSource,
-                    out Entity commandSource) &&
-                commandSource != Entity.Null)
+                engine.World.IsAlive(debugOwner) &&
+                engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(debugOwner, out var debugContext) &&
+                debugContext.ActiveCollectionKeyId > 0)
             {
-                selectedSummary = $"commandSource={DescribeEntity(engine, commandSource)}";
+                string activeKey = debugCollections.KeyRegistry.GetName(debugContext.ActiveCollectionKeyId);
+                if (!string.IsNullOrEmpty(activeKey) &&
+                    EntityCollectionContextRuntime.TryGetPrimary(
+                        engine.World,
+                        debugCollections,
+                        debugOwner,
+                        activeKey,
+                        out Entity commandSource) &&
+                    commandSource != Entity.Null)
+                {
+                    selectedSummary = $"commandSource={DescribeEntity(engine, commandSource)}";
+                }
             }
 
             bool uiCaptured = engine.TryGetService(CoreServiceKeys.UiCaptured, out bool captured) &&

@@ -44,15 +44,19 @@ public sealed partial class MassNavigationFlowSolverState
 
             if (!world.IsAlive(entity))
             {
-                throw new InvalidOperationException(
-                    $"MassNavigationFlowSolverState cannot sync unit {i} because tracked entity {entity.Id} is not alive.");
+                // Agents destroyed outside the nav runtime's own removal (death rule,
+                // two-phase presentation destroy) stay dirty for one removal cycle;
+                // skipping the pose write is the guard — the metadata sync drops the
+                // slot on its next pass.
+                syncedCount--;
+                continue;
             }
 
             int i2 = i << 1;
             float xCm = _positionsCm[i2];
             float yCm = _positionsCm[i2 + 1];
             float worldXCm = _worldOriginXCm + xCm;
-            float worldYCm = _worldOriginYCm + yCm;
+            float worldYCm = _worldOriginYcm + yCm;
             Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;

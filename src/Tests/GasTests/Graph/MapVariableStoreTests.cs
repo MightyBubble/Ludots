@@ -337,7 +337,6 @@ namespace Ludots.Tests.Gas.Graph
                 new RelationshipTypeRegistry(),
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
-                new RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
@@ -383,7 +382,6 @@ namespace Ludots.Tests.Gas.Graph
                 new RelationshipTypeRegistry(),
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
-                new RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);

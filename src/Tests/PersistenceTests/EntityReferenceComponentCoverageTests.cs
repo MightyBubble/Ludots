@@ -30,6 +30,7 @@ public sealed class EntityReferenceComponentCoverageTests
         "Arch.Relationships.InRelationship",
         "Ludots.Core.Gameplay.GAS.Components.OrderBuffer",
         "Ludots.Core.Gameplay.GAS.Components.OrderContinuationBuffer",
+        "Ludots.Core.Input.Interaction.InteractionContextInstance",
     };
 
     [Test]

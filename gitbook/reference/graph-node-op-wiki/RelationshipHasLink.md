@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Query |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph / Query |
 | 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | `source`（来源实体）、`target`（目标实体） |
 | 特殊写法 | 结果写入 dst 寄存器；flags 填关系类型 |
@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → **RelationshipHasLink**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Query；Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - 同类用法：好感与敌友判定、关系数值的聚合与排序、信任旗/失和旗这类关系玩法。
 ## 怎么进
 

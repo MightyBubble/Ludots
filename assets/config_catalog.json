@@ -48,7 +48,19 @@
     "Path": "Enums/enums.json",
     "Policy": "ArrayById",
     "IdField": "id",
-    "ArrayAppendFields": [ "members" ],
+    "ArrayAppendFields": [
+      "members"
+    ],
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Calendar/calendars.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Calendar/world.json",
+    "Policy": "DeepObject",
     "AllowEmpty": true
   },
   {
@@ -407,8 +419,17 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Relationships/projection.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Input/default_input.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "actions",
+      "contexts"
+    ]
   },
   {
     "Path": "Input/action_attribute_bindings.json",
@@ -425,6 +446,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/collection_keys.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/command_intent_profiles.json",
     "Policy": "DeepObject"
   },
@@ -434,7 +459,10 @@
   },
   {
     "Path": "Input/interaction_context_profiles.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "profiles"
+    ]
   },
   {
     "Path": "Input/cast_commit_profiles.json",
@@ -511,6 +539,12 @@
   },
   {
     "Path": "EntityInfo/insight_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Spatial/eqs_queries.json",
     "Policy": "ArrayById",
     "IdField": "id",
     "AllowEmpty": true

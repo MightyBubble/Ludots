@@ -141,6 +141,7 @@
   },
   {
     "id": "interaction_commander",
+    "initialInteractionContext": "interaction.context.interaction.battle",
     "components": {
       "Name": {
         "Value": "Commander"

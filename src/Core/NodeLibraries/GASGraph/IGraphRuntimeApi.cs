@@ -142,6 +142,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
         }
 
+        /// <summary>
+        /// Pushes one command intent into the per-tick submission buffer (constitution §12);
+        /// the order kernel drains the buffer in its own system-group phase. The rep is the
+        /// acting representative (graph caster); target may be null for ground-only facts.
+        /// </summary>
+        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
+        /// <summary>
+        /// Pushes one cast intent into the per-tick submission buffer (constitution §12);
+        /// the drain resolves the cast order type id from the config-key symbol id.
+        /// </summary>
+        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
+        /// <summary>
+        /// Pushes one engage intent into the per-tick submission buffer (constitution §12);
+        /// the drain runs the profile's EQS query around the target and lands per-actor
+        /// move-then-cast with the assigned ring point.
+        /// </summary>
+        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 
@@ -345,11 +374,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        int FilterControllable(Span<Entity> entities, int count, Entity controller)
-        {
-            throw new InvalidOperationException("Graph entity query runtime is not available.");
-        }
-
         int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -428,12 +452,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -448,7 +472,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -543,6 +567,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph knowledge runtime is not available.");
         }
+
+        /// <summary>
+        /// In-place TargetList filter: keeps candidates the viewer currently has a knowledge
+        /// projection of; returns the surviving count. Order preserved.
+        /// </summary>
+        int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
+        {
+            return 0;
+        }
+
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
+        {
+            return FilterScreenRegionEntities(entities, count, in rect, seatId);
+        }
+
+        int FilterCommandSourceSelectable(Span<Entity> candidates, int count)
+        {
+            return 0;
+        }
+        /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
+        /// order. Separate contract from the input-side command-intent buffer.
+        void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
+        /// <summary>Publishes the acting unit's terminal outcome for its active order.</summary>
+        void CompleteActiveOrder(Entity actor)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
@@ -609,6 +664,104 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void OfferTask(string taskId, Entity scopeHost)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+        }
+
+        /// <summary>True when Calendar/world.json enabled the live calendar.</summary>
+        bool ReadCalendarEnabled()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayIndex()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarTicksIntoDay()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPermille()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPhase()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>calendarKeyId 0 reads the active calendar.</summary>
+        int ReadCalendarYear(int calendarKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>packedImm is CalendarOpEncoding.Pack(cycleKeyId, calendarKeyId).</summary>
+        int ReadCalendarCyclePhase(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarCycleDay(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>packedImm is CalendarOpEncoding.Pack(cycleKeyId, calendarKeyId). Result is the 0-based phase slot.</summary>
+        int ReadCalendarCyclePhaseIndex(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Whole days until phaseId. dayInPhase 0 asks for the phase start (0 while inside).
+        /// A positive dayInPhase is the 1-based day inside that phase, wrapping after it has passed.
+        /// </summary>
+        int ReadCalendarDaysUntilPhase(int packedImm, string phaseId, int dayInPhase)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarDayIndex(int dayIndex)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarTicksIntoDay(int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        bool ReadTimeFlowPaused(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int ReadTimeFlowScalePermille(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowPause(string domainName, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowScale(string domainName, int scalePermille, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        void ReleaseTimeFlowToken(int tokenValue)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
         }
 
         /// <summary>
@@ -716,6 +869,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveOrderType(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references order type '{name}', but no OrderTypeRegistry resolver is available.");
+        }
         int ResolveAbility(string name)
         {
             throw new InvalidOperationException(
@@ -724,6 +882,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRngDistribution(string name)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
+        int ResolveEqsQuery(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references EQS query '{name}', but no EqsQueryRegistry resolver is available.");
         }
 
         int ResolveGraphLookupTable(string name)
@@ -741,7 +905,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);
-        int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
 

@@ -22,6 +22,7 @@ internal static unsafe class Gl43
     public const int GL_ARRAY_BUFFER_BINDING = 0x8B8C;
     public const int GL_ELEMENT_ARRAY_BUFFER_BINDING = 0x8895;
     public const int GL_ACTIVE_TEXTURE = 0x84E0;
+    public const int GL_BLEND = 0x0BE2;
     public const uint GL_ELEMENT_ARRAY_BUFFER = 0x8893;
     public const uint GL_SHADER_STORAGE_BUFFER = 0x90D2;
     public const uint GL_STATIC_DRAW = 0x88E4;
@@ -36,7 +37,7 @@ internal static unsafe class Gl43
     public const int GL_COMPILE_STATUS = 0x8B81;
     public const int GL_LINK_STATUS = 0x8B82;
     public const int GL_INFO_LOG_LENGTH = 0x8B84;
-    public const uint GL_SHADER_STORAGE_BARRIER_BIT = 0x0200;
+    public const uint GL_SHADER_STORAGE_BARRIER_BIT = 0x2000;
     public const uint GL_ALL_BARRIER_BITS = 0xFFFFFFFF;
     public const uint GL_TEXTURE0 = 0x84C0;
     public const uint GL_UNSIGNED_SHORT = 0x1403;
@@ -212,6 +213,9 @@ internal static unsafe class Gl43
     public delegate void EnableVertexAttribArrayDelegate(uint index);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    public delegate void DisableDelegate(uint capability);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate void VertexAttribDivisorDelegate(uint index, uint divisor);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -264,6 +268,7 @@ internal static unsafe class Gl43
     public static ViewportDelegate Viewport = null!;
     public static VertexAttribPointerDelegate VertexAttribPointer = null!;
     public static EnableVertexAttribArrayDelegate EnableVertexAttribArray = null!;
+    public static DisableDelegate Disable = null!;
     public static VertexAttribDivisorDelegate VertexAttribDivisor = null!;
     public static GetUniformfvDelegate GetUniformfv = null!;
 
@@ -450,6 +455,7 @@ internal static unsafe class Gl43
         Viewport = Marshal.GetDelegateForFunctionPointer<ViewportDelegate>(Require(resolve, "glViewport"));
         VertexAttribPointer = Marshal.GetDelegateForFunctionPointer<VertexAttribPointerDelegate>(Require(resolve, "glVertexAttribPointer"));
         EnableVertexAttribArray = Marshal.GetDelegateForFunctionPointer<EnableVertexAttribArrayDelegate>(Require(resolve, "glEnableVertexAttribArray"));
+        Disable = Marshal.GetDelegateForFunctionPointer<DisableDelegate>(Require(resolve, "glDisable"));
         VertexAttribDivisor = Marshal.GetDelegateForFunctionPointer<VertexAttribDivisorDelegate>(Require(resolve, "glVertexAttribDivisor"));
         GetUniformfv = Marshal.GetDelegateForFunctionPointer<GetUniformfvDelegate>(Require(resolve, "glGetUniformfv"));
     }

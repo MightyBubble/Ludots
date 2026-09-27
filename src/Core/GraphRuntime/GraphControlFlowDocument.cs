@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.GraphRuntime
@@ -164,6 +165,10 @@ namespace Ludots.Core.GraphRuntime
         public string? Action { get; set; }
         public string? InstanceId { get; set; }
         public string? VarName { get; set; }
+        /// <summary>Generic payload-key filters: payload key → expected value (string or
+        /// int32). Example: { "Calendar.CycleId": "season", "Calendar.PhaseId": "spring" }
+        /// subscribes to spring beginning only.</summary>
+        public Dictionary<string, JsonElement>? Payload { get; set; }
     }
 
     public sealed class GraphControlFlowNode
@@ -186,7 +191,14 @@ namespace Ludots.Core.GraphRuntime
         public string? Distribution { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
+
+        /// <summary>Cast order-type key for SubmitCast (symbol; resolved against OrderTypeRegistry by the drain).</summary>
+        public string? OrderTypeKey { get; set; }
+        /// <summary>Engage profile key for SubmitEngageBatch (symbol; resolved to an EQS query registry id at patch time).</summary>
+        public string? EngageProfile { get; set; }
         public string? EffectTemplate { get; set; }
+        /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
+        public string? OrderType { get; set; }
         public string? PayloadPreset { get; set; }
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
@@ -248,6 +260,21 @@ namespace Ludots.Core.GraphRuntime
         public string? ActivityId { get; set; }
         /// <summary>Task definition id symbol for OfferTask (Imm: string symbol; resolved against the registry at execution time).</summary>
         public string? TaskId { get; set; }
+        /// <summary>Calendar id for ReadCalendarYear / ReadCalendarCycle* . Omit to use the active calendar.</summary>
+        public string? Calendar { get; set; }
+        /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay / ReadCalendarCyclePhaseIndex / ReadCalendarDaysUntilPhase.</summary>
+        public string? Cycle { get; set; }
+        /// <summary>Phase id for ReadCalendarDaysUntilPhase. Matched against that cycle's phase table.</summary>
+        public string? Phase { get; set; }
+        /// <summary>
+        /// 1-based day inside the phase for ReadCalendarDaysUntilPhase.
+        /// 0 asks for the phase start. A positive day counts down to that day and wraps after it passes.
+        /// </summary>
+        public int Day { get; set; }
+        /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
+        public string? Symbol { get; set; }
+        /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
+        public string? Domain { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
@@ -345,6 +372,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Source = "source";
         public const string Min = "min";
         public const string Max = "max";
+        public const string Tolerance = "tolerance";
         public const string A = "a";
         public const string B = "b";
         public const string C = "c";

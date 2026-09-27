@@ -306,9 +306,15 @@ namespace Ludots.Core.Presentation.Systems
                 return true;
             }
 
-            for (int i = 0; i < required.Length; i++)
+            foreach (int attributeId in required)
             {
-                if (!attributes.HasAttribute(required[i]))
+                if ((uint)attributeId >= (uint)AttributeBuffer.MAX_ATTRS)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.CAPACITY.ERR.RequiredAttributeHighSlot: presenter 定义 RequiredAttributeIds 引用 id={attributeId} ≥ 64——定义条件的高槽读属 P3 未对齐面（RFC-0067 §3.3），改用运行期属性绑定。");
+                }
+
+                if (!attributes.HasAttribute(attributeId))
                 {
                     return false;
                 }

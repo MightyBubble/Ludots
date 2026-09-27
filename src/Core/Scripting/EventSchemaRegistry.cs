@@ -112,11 +112,75 @@ namespace Ludots.Core.Scripting
                 new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt, Optional: true),
                 new("oldValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.OldValueFloat, Optional: true),
             }),
+            new(GameEvents.RelationLinkAdded.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationLinkRemoved.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationMetricChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("metricId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationMetricId),
+                new("newValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
+                new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+            }),
+            new(GameEvents.RelationFlagChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("oldFlags", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+                new("newFlags", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
+            }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
             new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]
             {
                 new("modId", EventParamType.String, MapTriggerEventPayloadKeys.ModId),
+            }),
+            new(GameEvents.CalendarDayAdvanced.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
+                new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
+                new("year", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarYear),
+            }),
+            new(GameEvents.CalendarCyclePhaseEntered.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
+                new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
+                new("cycleId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarCycleId),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                new("phaseIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseIndex),
+            }),
+            new(GameEvents.CalendarCyclePhaseExited.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
+                new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
+                new("cycleId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarCycleId),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                new("phaseIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseIndex),
+            }),
+            new(GameEvents.CalendarEraChanged.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
+                new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
+                new("eraId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarEraId),
+                new("year", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarYear),
+            }),
+            new(GameEvents.CalendarDayPhaseChanged.Value, EventScope.Global, new EventParamSchema[]
+            {
+                new("calendarId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarId),
+                new("dayIndex", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarDayIndex),
+                new("phaseId", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
             }),
         };
 

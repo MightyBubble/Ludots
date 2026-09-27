@@ -1,0 +1,15 @@
+[
+  {
+    "id": "Effect.Ballista.Bolt",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "baseDamage": { "type": "Float", "value": 80 }
+    },
+    "phaseGraphs": {
+      "OnApply": { "main": "Graph.Ballista.BoltByArmor" }
+    },
+    "categories": [ "Effect.Ballista.Damage" ]
+  }
+]

@@ -33,6 +33,27 @@ GenreInfo showcase 真实档案（`mods/showcases/info_panels/GenreInfoShowcaseM
 ]
 ```
 
+同一模板要给整份模板一个共用标题时，在档案上加 `titleToken`。showcase 节选没有它，没写就继续用 `Name` 当标题：
+
+```json
+"titleToken": "hero.shared.title"
+```
+
+某一份摆放要单独起名，写在地图上，不写进档案。子实体写在这条摆放的 path 上，path 不含 instanceId：
+
+```json
+{
+  "instanceId": "hero.liu",
+  "template": "hero",
+  "entityInfo": { "titleToken": "hero.liu.title" },
+  "overridePaths": [
+    { "path": "hq", "entityInfo": { "titleToken": "camp.harbor.hq.title" } }
+  ]
+}
+```
+
+`hero.liu.title` 这类槽的中文和英文写在多语言表。档案不记录摆放编号。
+
 ## 2. 字段与行为
 
 | 字段 | 这样配会产生什么效果 |
@@ -40,6 +61,7 @@ GenreInfo showcase 真实档案（`mods/showcases/info_panels/GenreInfoShowcaseM
 | `templateIds` | 匹配的实体模板；跨档案重复即失败（互斥） |
 | `accentColorHex` / `surfaceColorHex` | 面板主色与底色 |
 | `genreGlyph` / `portraitGlyph` | 体裁徽记与肖像字 |
+| `titleToken` | 可选。整份模板共用的标题 token。某一份摆放在地图上写了 `entityInfo.titleToken` 时，用地图那条 |
 | `genreLabelToken` / `subtitleToken` / `bodyToken` | 体裁标签/副题/正文 token；必须可解析 |
 | `badges[].glyph/textToken` | 徽章字与文案 |
 | `stats[].source` | `attribute`（按名解析 AttributeRegistry）或 `constant`（配 value） |
@@ -55,7 +77,7 @@ GenreInfo showcase 真实档案（`mods/showcases/info_panels/GenreInfoShowcaseM
 
 ## 4. 运行时加载效果
 
-EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解析模板键（互斥校验）、token、属性 id、能力引用，产出档案目录。**生效级别：重启**。
+EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解析模板键（互斥校验）、标题 token、属性 id、能力引用，产出档案目录。**生效级别：重启**。
 
 ## 5. 异常处理
 
@@ -66,6 +88,9 @@ EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解�
 | stats 属性未注册 | 加载失败，指明档案与属性名 |
 | source/display 枚举外值 | 加载失败 |
 | 能力引用未注册 | 加载失败 |
+| `titleToken` 未登记，或写了空串 | 加载失败，指明档案与 token |
+| 地图 `entityInfo.titleToken` 未登记 | 打开面板失败，不改用 `Name` |
+| `overridePaths` 写了 `set`，或 path 对不上子实体 | 地图装载失败 |
 
 ## 6. 实例
 

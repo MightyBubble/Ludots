@@ -115,7 +115,11 @@ namespace Ludots.Core.Gameplay.Camera
             float ndcX = (screenPosition.X / resolution.X) * 2f - 1f;
             float ndcY = 1f - (screenPosition.Y / resolution.Y) * 2f;
 
-            var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
+            // Unproject in camera-relative space: the fix is keeping the world
+            // translation out of the inverted matrix, so far-minus-near no longer
+            // cancels large coordinates before the direction can be normalized.
+            var relativeForward = camera.Target - camera.Position;
+            var view = Matrix4x4.CreateLookAt(Vector3.Zero, relativeForward, camera.Up);
             float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);
             CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
             var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
@@ -128,21 +132,21 @@ namespace Ludots.Core.Gameplay.Camera
 
             var nearClip = new Vector4(ndcX, ndcY, 0f, 1f);
             var farClip = new Vector4(ndcX, ndcY, 1f, 1f);
-            var nearWorld4 = Vector4.Transform(nearClip, invViewProj);
-            var farWorld4 = Vector4.Transform(farClip, invViewProj);
-            if (MathF.Abs(nearWorld4.W) < 1e-6f || MathF.Abs(farWorld4.W) < 1e-6f)
+            var nearLocal4 = Vector4.Transform(nearClip, invViewProj);
+            var farLocal4 = Vector4.Transform(farClip, invViewProj);
+            if (MathF.Abs(nearLocal4.W) < 1e-6f || MathF.Abs(farLocal4.W) < 1e-6f)
             {
                 Vector3 fallbackDir = Vector3.Normalize(camera.Target - camera.Position);
                 return new ScreenRay(camera.Position, fallbackDir);
             }
 
-            nearWorld4 /= nearWorld4.W;
-            farWorld4 /= farWorld4.W;
+            nearLocal4 /= nearLocal4.W;
+            farLocal4 /= farLocal4.W;
 
-            var nearWorld = new Vector3(nearWorld4.X, nearWorld4.Y, nearWorld4.Z);
-            var farWorld = new Vector3(farWorld4.X, farWorld4.Y, farWorld4.Z);
-            var direction = Vector3.Normalize(farWorld - nearWorld);
-            return new ScreenRay(nearWorld, direction);
+            var nearLocal = new Vector3(nearLocal4.X, nearLocal4.Y, nearLocal4.Z);
+            var farLocal = new Vector3(farLocal4.X, farLocal4.Y, farLocal4.Z);
+            var direction = Vector3.Normalize(farLocal - nearLocal);
+            return new ScreenRay(camera.Position + nearLocal, direction);
         }
 
         public static CameraClipPlanes ResolveClipPlanes(in CameraRenderState3D camera)

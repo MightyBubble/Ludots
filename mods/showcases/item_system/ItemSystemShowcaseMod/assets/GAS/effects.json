@@ -343,5 +343,68 @@
     "categories": [
       "Effect.ItemShowcase.Lockout"
     ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.MythicPulse",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.MythicPulse",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.RifleFire",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 8,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.RifleFire",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.SecondWind",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.SecondWind",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
+    ]
   }
 ]

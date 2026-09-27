@@ -72,6 +72,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
 
                 var mode = ParseMode(modeText, id, relativePath);
                 var reset = ParseResetPolicy(resetPolicyText, id, relativePath);
+                _sinks.GetSink(sinkId).ValidatePolicy(mode, reset, scale, id, relativePath);
 
                 compiled.Add((sinkId, i, new AttributeBindingEntry(attributeId, sinkId, (byte)channel, mode, reset, scale)));
             }

@@ -194,7 +194,17 @@ internal sealed class MassNavigationGroupRuntime
                 _orderTokenToGroupId[captured.CommandToken] = captured.GroupId;
             }
 
-            if (group.MemberCount == 1)
+            // Arrived groups restore as holds: reassigning targets to the captured
+            // destination would yank settled formations (and freshly appended members)
+            // back across the field on every authored structural change.
+            if (captured.Arrived)
+            {
+                for (int member = 0; member < group.MemberCount; member++)
+                {
+                    simulation.HoldUnitAtCurrentPosition(group.MemberIndices[member]);
+                }
+            }
+            else if (group.MemberCount == 1)
             {
                 AssignLooseOrderTargets(simulation, captured.GroupId, group, resetRecovery: true);
             }
@@ -613,7 +623,34 @@ internal sealed class MassNavigationGroupRuntime
 
             group.CenterX = centerX;
             group.CenterY = centerY;
-            group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
+            // Per-member slot arrival, not centroid-vs-destination: engage profiles
+            // fan members out on a ring AROUND the destination (their slots never
+            // cluster near it), so centroid distance can never reach ArrivedRadiusCm
+            // and the order would never complete. A member is done when it is within
+            // the grouped arrive threshold of its own slot OR the solver has settled
+            // it (reached stop threshold, timed out stuck, or exhausted push
+            // retries) — one blocked member must not pin the whole order forever.
+            float groupedThresholdSq = simulation.Semantics.Group.GroupedAgentArriveThresholdCm *
+                simulation.Semantics.Group.GroupedAgentArriveThresholdCm;
+            bool arrived = true;
+            for (int i = 0; i < group.MemberCount; i++)
+            {
+                int unitIndex = group.MemberIndices[i];
+                if ((uint)unitIndex >= (uint)simulation.UnitCount)
+                {
+                    continue;
+                }
+
+                float dx = group.MemberOrderTargetWorldX[i] - simulation.LocalToWorldXCm(simulation.GetPositionX(unitIndex));
+                float dy = group.MemberOrderTargetWorldY[i] - simulation.LocalToWorldYCm(simulation.GetPositionY(unitIndex));
+                if (((dx * dx) + (dy * dy)) > groupedThresholdSq && !simulation.IsUnitSettled(unitIndex))
+                {
+                    arrived = false;
+                    break;
+                }
+            }
+
+            group.Arrived = arrived;
         }
 
         ActiveGroupCount = CountActiveGroups();

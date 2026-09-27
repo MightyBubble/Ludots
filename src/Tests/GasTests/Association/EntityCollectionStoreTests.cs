@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
             var store = new EntityCollectionStore(registry, initialCollectionCapacity: 2, initialRowCapacity: 4);
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.EntityInfoExplicit,
+                "collection.entityinfo.explicit",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.Display,
                 owner,
@@ -33,9 +33,9 @@ namespace Ludots.Tests.GAS
             EntityCollectionHandle handle = store.Replace(owner, descriptor, new[] { first, second });
 
             Assert.That(handle.IsValid, Is.True);
-            Assert.That(store.TryGet(owner, EntityCollectionKeys.EntityInfoExplicit, out EntityCollectionHandle resolved), Is.True);
+            Assert.That(store.TryGet(owner, "collection.entityinfo.explicit", out EntityCollectionHandle resolved), Is.True);
             Assert.That(resolved.Slot, Is.EqualTo(handle.Slot));
-            Assert.That(store.TryGet(otherOwner, EntityCollectionKeys.EntityInfoExplicit, out _), Is.False);
+            Assert.That(store.TryGet(otherOwner, "collection.entityinfo.explicit", out _), Is.False);
 
             Span<Entity> copied = stackalloc Entity[2];
             Assert.That(store.CopyEntities(resolved, 0, copied), Is.EqualTo(2));
@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(store.TryGetView(resolved, out EntityCollectionView view), Is.True);
             Assert.That(view.Owner, Is.EqualTo(owner));
-            Assert.That(view.Key, Is.EqualTo(EntityCollectionKeys.EntityInfoExplicit));
+            Assert.That(view.Key, Is.EqualTo("collection.entityinfo.explicit"));
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.Display));
             Assert.That(view.ContextEntity, Is.EqualTo(owner));

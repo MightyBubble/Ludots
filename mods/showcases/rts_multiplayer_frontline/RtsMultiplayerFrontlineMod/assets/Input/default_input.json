@@ -1,6 +1,20 @@
 {
   "actions": [
-    { "id": "Frontline.ToggleReady", "name": "Frontline_ToggleReady", "type": "Button" }
+    {
+      "id": "Frontline.ToggleReady",
+      "name": "Frontline_ToggleReady",
+      "type": "Button"
+    },
+    {
+      "id": "Select.Begin",
+      "name": "Select_Begin",
+      "type": "Button"
+    },
+    {
+      "id": "Select.End",
+      "name": "Select_End",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -8,9 +22,22 @@
       "name": "Frontline Gameplay",
       "priority": 50,
       "bindings": [
-        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
-        { "actionId": "CommandSourceAcquire", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Command", "path": "<Mouse>/RightButton" }
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "SkillQ",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        }
       ]
     },
     {
@@ -18,7 +45,10 @@
       "name": "Frontline Room Controls",
       "priority": 80,
       "bindings": [
-        { "actionId": "Frontline.ToggleReady", "path": "<Keyboard>/f5" }
+        {
+          "actionId": "Frontline.ToggleReady",
+          "path": "<Keyboard>/f5"
+        }
       ]
     }
   ]

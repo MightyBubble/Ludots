@@ -261,7 +261,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 localPlayer,

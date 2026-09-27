@@ -97,7 +97,7 @@ Windows：
 | 房间 | 写到哪 | 游戏什么时候吃到 |
 |------|--------|------------------|
 | 蓝图 | `GAS/graphs.json` | 重开游戏（`ReloadConfigs` 也不重编图） |
-| 行为树 / 状态机 | `AI/behavior_trees.json` / `AI/hfsm.json` | 重开，或局内触发 `ReloadConfigs(AI)` |
+| 行为树 / 状态机 | `AI/behavior_trees.json` / `AI/hfsm.json` | 重开，或局内触发 `ReloadConfigs(AI)`。选自己的 Mod 时写到这个 Mod 的 `assets/AI/`，没有文件就先建。 |
 | 对话 | `Dialogue/dialogues.json` | 重开，或局内 `ReloadConfigs(Dialogue/Story)`（会清当前会话） |
 | 时间轴 | `Sequencer/sequences.json` | 重开，或局内 `ReloadConfigs(Sequencer/Story)`。显示名写 `displayNameToken` |
 
@@ -184,6 +184,14 @@ Feature: 作者一键进工作室
     Then 这个叶子从画布上消失
     And 根节点删不掉
     And 我没有点保存
+
+  Scenario: 我能给自己的 Mod 写行为树
+    Given 我打开行为树
+    And 数据源能选到一个还没有 AI/behavior_trees.json 的 Mod
+    When 我选中这个 Mod
+    Then 清单是空的，页面不报找不到文件
+    When 我点「+ 新建拓扑」并保存
+    Then 这个 Mod 的 assets/AI/behavior_trees.json 被写出来
 
   Scenario: 蓝图检查器能删节点和连线
     Given 我打开蓝图并选中一张函数图

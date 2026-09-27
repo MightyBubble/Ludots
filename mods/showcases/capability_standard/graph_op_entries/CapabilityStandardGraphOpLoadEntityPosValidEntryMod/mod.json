@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp LoadEntityPosValid player gallery.",
+  "main": "bin/net9.0/CapabilityStandardGraphOpLoadEntityPosValidEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

@@ -2,9 +2,7 @@
 
 整数参数放进暂存表，子图按名字取走，回执就是同一数字。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_StoreArgInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_StoreArgInt/play.mp4。
-</video>
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -33,7 +31,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/StoreArgInt.json`，共 4 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/StoreArgInt.json`，共 4 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstInt → **StoreArgInt**（本篇） → InvokeGraph → HaltReturnInt
 

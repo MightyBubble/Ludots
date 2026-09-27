@@ -2621,6 +2621,166 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_WorldTextArgs_ReadsParamKeysAndEntityInfoTitle()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "hero_plate",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "activeByDefault": true,
+                        "worldText": {
+                          "textToken": "hud.hero.plate",
+                          "fontSize": 16,
+                          "args": [
+                            { "paramKey": "hero.level" },
+                            { "source": "entityInfoTitle" }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.hero.plate" ? 900 : 0,
+                resolveTextTokenArgCount: id => id == 900 ? (byte)2 : (byte)0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("hero_plate"), out var definition), Is.True);
+            WorldTextConfig worldText = definition.Behaviors[0].WorldText;
+            Assert.That(worldText.TextTokenId, Is.EqualTo(900));
+            Assert.That(worldText.Mode, Is.EqualTo(WorldHudValueMode.None));
+            Assert.That(worldText.ValueParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
+            Assert.That(worldText.SecondaryValueParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
+            Assert.That(worldText.BoundAttributeId, Is.EqualTo(WorldTextConfig.UnboundAttributeId));
+            Assert.That(worldText.Args, Has.Length.EqualTo(2));
+            Assert.That(worldText.Args[0].Source, Is.EqualTo(WorldTextArgSource.Param));
+            Assert.That(PresenterParamKeyRegistry.GetName(worldText.Args[0].ParamKey), Is.EqualTo("hero.level"));
+            Assert.That(worldText.Args[1].Source, Is.EqualTo(WorldTextArgSource.EntityInfoTitle));
+            Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(900));
+            Assert.That(definition.Behaviors[0].AssetBinding.ScaleParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
+            Assert.That(definition.Behaviors[0].AssetBinding.MaterialParamKey, Is.EqualTo(PresenterParamKeyRegistry.UnsetParamKey));
+        }
+
+        [Test]
+        public void Load_WorldTextArgs_RejectsAttributeSource()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "hero_plate",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "worldText": {
+                          "textToken": "hud.hero.plate",
+                          "args": [ { "source": "attribute" } ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.hero.plate" ? 900 : 0,
+                resolveTextTokenArgCount: _ => 1);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AttributeBinding"));
+        }
+
+        [Test]
+        public void Load_WorldTextArgs_RejectsModeAlongsideArgs()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "hero_plate",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "worldText": {
+                          "textToken": "hud.hero.plate",
+                          "mode": "AttributeCurrent",
+                          "args": [ { "paramKey": "hero.level" } ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.hero.plate" ? 900 : 0,
+                resolveTextTokenArgCount: _ => 1);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("cannot be combined"));
+        }
+
+        [Test]
+        public void Load_WorldTextArgs_RejectsArgCountMismatch()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "hero_plate",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "worldText": {
+                          "textToken": "hud.hero.plate",
+                          "args": []
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.hero.plate" ? 900 : 0,
+                resolveTextTokenArgCount: _ => 2);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("argCount 2"));
+        }
+
+        [Test]
         public void PresenterHudStableIds_DifferByBehaviorSlot()
         {
             int first = HudItemIdentity.ComposePresenterStableId(100, WorldHudItemKind.Text, 200, 0);

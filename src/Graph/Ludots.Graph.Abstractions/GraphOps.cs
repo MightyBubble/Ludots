@@ -378,6 +378,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
+
         /// <summary>
         /// Live pointer screen X (window px) for the authoritative PointerPos action.
         /// Pure float read; fail closed when the input snapshot is unavailable.
@@ -390,7 +391,128 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadPointerScreenY = 480,
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
-        QueryFilterControllable = 483,
+
+        // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
+        //    graph-input-order-chain line's renumbering buffer) ──
+
+        /// <summary>Read an entity's world X in int centimeters. E[A] = source; I[Dst] = xCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosX = 500,
+        /// <summary>Read an entity's world Y in int centimeters. E[A] = source; I[Dst] = yCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosY = 501,
+        IntToFloat = 502,    // F[Dst] = I[A]
+        /// <summary>Float→Int with round-half-away-from-zero, matching the world-centimeter rounding convention.</summary>
+        FloatToInt = 503,
+        SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
+        /// <summary>
+        /// Behavior-side order submission: the acting unit enqueues an assigned order into
+        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time);
+        /// E[A] = target entity; I[B] = xCm; I[C] = yCm. Script slice hosts only; the
+        /// input-side SubmitCommandIntent intent-buffer contract is separate.
+        /// </summary>
+        /// <summary>E[A] = source; B[Dst] = 1 when the entity is alive and has a WorldPositionCm, 0 otherwise (edge-readable guard companion of LoadEntityPosX/Y).</summary>
+        LoadEntityPosValid = 508,
+        /// <summary>Load an order type id from its semantic key (Imm resolved at patch time) into I[Dst]. Pure register materialization for order-type dispatch in behavior graphs.</summary>
+        LoadOrderTypeId = 507,
+        SubmitAssignedOrder = 505,
+        /// <summary>
+        /// Publish the acting unit's terminal outcome for its active order through the
+        /// OrderTerminalResultBuffer. Caster = the acting unit. Script slice hosts only.
+        /// </summary>
+        CompleteActiveOrder = 506,
+
+        /// <summary>
+        /// Submit one command intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep (mount subject); ground point = the
+        /// frame's TargetPosCm, which B[B] (condition port, required) asserts was resolved this
+        /// run — a false condition fails closed by name. E[A] (target port, optional) carries a
+        /// picked entity for entity-target facts; absent or null means ground-only facts. The
+        /// order kernel drains the buffer in its own system-group phase: the op never routes,
+        /// reads collections, or touches the OrderQueue.
+        /// </summary>
+        SubmitCommandIntent = 483,
+
+        /// <summary>
+        /// Submit one cast intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B]
+        /// (optional) = cast target entity; B[C] (optional) asserts the frame's TargetPosCm was
+        /// resolved this run and carries the ground point. Imm = the cast order-type key symbol
+        /// (e.g. "castAbility"), resolved by the drain through the OrderTypeRegistry. Actors are
+        /// the rep's active-context-declared active collection members — same §12 resolution as
+        /// command intents.
+        /// </summary>
+        SubmitCast = 484,
+
+        /// <summary>
+        /// TargetList := candidates the viewer E[A] currently has a knowledge projection of
+        /// (per the viewer-target knowledge store); candidates order preserved. Read-only
+        /// viewer-relative query filter (RFC-0065 DEC-5).
+        /// </summary>
+        QueryFilterKnowledgeVisible = 485,
+
+        /// <summary>
+        /// TargetList := candidates that are command-source selectable now: CommandSourceSelectableTag
+        /// present and CommandSourceSelectableState, when present, enabled. Candidates order preserved;
+        /// viewer-independent. Restores the selectable gate the retired CommandSourceAcquisitionSystem
+        /// enforced for click and box acquisition.
+        /// </summary>
+        QueryFilterSelectable = 487,
+
+        /// <summary>
+        /// Submit one engage intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B] =
+        /// the engage target entity (required). Imm = engage profile key symbol resolved to
+        /// an EQS query registry id at patch time. The drain resolves actors from the rep's
+        /// active-context-declared collection, runs the profile's EQS query around the target
+        /// (in-batch exclusion + slot claims), and submits per-actor move-then-cast through the
+        /// composite order planner: moveTo the assigned ring point with the cast as an order
+        /// continuation — the op never routes inline.
+        /// </summary>
+        SubmitEngageBatch = 486,
+
+        // ── World calendar reads and writes (509-519). Enabling the calendar stays
+        // in Calendar/world.json. These ops read the live projection and write the
+        // opening date or move the day forward through CalendarRuntime. ──
+
+        /// <summary>B[Dst] = 1 when the world calendar is enabled, else 0. Does not throw when disabled.</summary>
+        ReadCalendarEnabled = 509,
+        /// <summary>I[Dst] = world day index. Fails closed when the calendar is disabled.</summary>
+        ReadCalendarDayIndex = 510,
+        /// <summary>I[Dst] = steps already consumed inside the current day.</summary>
+        ReadCalendarTicksIntoDay = 511,
+        /// <summary>I[Dst] = progress through the current day, in thousandths.</summary>
+        ReadCalendarDayPermille = 512,
+        /// <summary>I[Dst] = ConfigKey id of the current day-phase.</summary>
+        ReadCalendarDayPhase = 513,
+        /// <summary>I[Dst] = projected year. Imm = calendar key id after patch; 0 = active calendar.</summary>
+        ReadCalendarYear = 514,
+        /// <summary>I[Dst] = ConfigKey id of a cycle's current phase. Imm packs cycle key (low) and calendar key (high, 0 = active).</summary>
+        ReadCalendarCyclePhase = 515,
+        /// <summary>I[Dst] = 1-based day inside a cycle's current phase. Imm packing matches ReadCalendarCyclePhase.</summary>
+        ReadCalendarCycleDay = 516,
+        /// <summary>Place the opening day index (I[A]) and ticks into the day (I[B]) once, without replaying events. Same values after the opening is committed are a no-op.</summary>
+        ApplyCalendarStart = 517,
+        /// <summary>Move the world day index forward to I[A]. Backward fails closed. Each crossed day fires the same events as the clock.</summary>
+        SetCalendarDayIndex = 518,
+        /// <summary>Set ticks into the current day to I[A], in [0, ticksPerDay). A day-phase change fires Calendar.DayPhaseChanged.</summary>
+        SetCalendarTicksIntoDay = 519,
+        /// <summary>B[Dst] = domain named by symbols[Imm] is paused. Effective scale includes the parent domain.</summary>
+        ReadTimeFlowPaused = 520,
+        /// <summary>I[Dst] = effective scale permille of the domain named by symbols[Imm]. 1000 is normal speed. 0 is paused.</summary>
+        ReadTimeFlowScalePermille = 521,
+        /// <summary>I[Dst] = pause token on the domain named by symbols[Imm]. Owner is the running graph id.</summary>
+        AcquireTimeFlowPause = 522,
+        /// <summary>I[Dst] = scale token. Domain is symbols[Imm]. Scale permille is I[A], and must be &gt; 0.</summary>
+        AcquireTimeFlowScale = 523,
+        /// <summary>Release pause or scale token I[A]. A token that is not active fails closed.</summary>
+        ReleaseTimeFlowToken = 524,
+        /// <summary>I[Dst] = ConfigKey id of symbols[Imm]. GetId only; an unregistered name fails and names the word.</summary>
+        LoadConfigKey = 525,
+        /// <summary>I[Dst] = 0-based phase slot. Imm packing matches ReadCalendarCyclePhase. Same number as Calendar.PhaseIndex.</summary>
+        ReadCalendarCyclePhaseIndex = 526,
+        /// <summary>I[Dst] = whole days until the named phase. Imm packs cycle and calendar. ImmF packs the phase symbol index and the optional 1-based day inside that phase (0 = phase start).</summary>
+        ReadCalendarDaysUntilPhase = 527,
+        /// <summary>I[Dst] = I[A] - I[B].</summary>
+        SubInt = 528,
 
     }
 

@@ -22,7 +22,7 @@ The old branch `origin/codex/mass-navigation-bake-data-showcase` is useful as a 
 
 | Input | Unit | Owner | Cost effect |
 |---|---:|---|---|
-| `WidthInMacroTiles` / `HeightInMacroTiles` | macro tiles | board config | Multiplies world cells by `MacroTileCells` |
+| `WidthInMacroTiles` / `HeightInMacroTiles` | macro tiles | board config | Multiplies world cells by `TerrainPageCells` |
 | `GridCellSizeCm` / `CellCm` | cm | board config / scale SSOT | Smaller cells increase world cell count for the same physical map |
 | `TerrainChunkCells` | cells | terrain chunk owner | Defines current nav tile footprint; default is 64 cells |
 | `Targets` | tiles | `NavBakeContext.Targets` | Full bake targets every terrain chunk; dirty bake targets only changed chunks |
@@ -38,7 +38,7 @@ The estimator has three parameter groups. Each group must be reported separately
 
 | Group | Parameter | Required in estimate | Notes |
 |---|---|---|---|
-| Map extent | `WidthInMacroTiles`, `HeightInMacroTiles`, `CellCm`, `MacroTileCells` | Yes | Defines world cells and world cm; `MacroTileCells` is fixed at `MapTile.Size` / 256. |
+| Map extent | `WidthInMacroTiles`, `HeightInMacroTiles`, `CellCm`, `TerrainPageCells` | Yes | Defines world cells and world cm; `TerrainPageCells` is fixed at `MapTile.Size` / 256. |
 | Terrain footprint | `TerrainChunkCells`, terrain width/height chunks, source chain | Yes | Defines full nav tile count and whether the source is projected `LogicTerrain`. |
 | Target mode | `full`, `dirty`, or `window` | Yes | Full = all terrain chunks; dirty = changed chunks plus optional neighbors; window = explicit chunk rectangle. |
 | Multipliers | nav layer count, nav profile count | Yes | Every target tile bakes per layer and per profile. |
@@ -88,8 +88,8 @@ The estimator must never silently reinterpret one mode as another. If dirty data
 For grid maps:
 
 ```text
-worldWidthCells  = WidthInMacroTiles  * MacroTileCells(256)
-worldHeightCells = HeightInMacroTiles * MacroTileCells(256)
+worldWidthCells  = WidthInMacroTiles  * TerrainPageCells(256)
+worldHeightCells = HeightInMacroTiles * TerrainPageCells(256)
 
 worldWidthCm  = worldWidthCells  * CellCm
 worldHeightCm = worldHeightCells * CellCm

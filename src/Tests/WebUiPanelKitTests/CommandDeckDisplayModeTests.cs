@@ -536,7 +536,14 @@ public sealed class CommandDeckDisplayModeTests
 		int keyId = keyRegistry.Register("collection.command.source");
 		keyRegistry.Register(EntityViewKeys.ControlPlaneCommand);
 		var collections = new EntityCollectionStore(keyRegistry, 8, 32);
-		var writer = new DomainRoutedCollectionWriter(collections, query);
+		var writer = new CollectionApplier(world, collections);
+		writer.BindInputInteraction(
+			new FilterProfileRegistry(
+				new StringIntRegistry(16, 1, 0, StringComparer.Ordinal),
+				world,
+				new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry())),
+			query,
+			keyRegistry.Register("collection.ui.cast.raw"));
 		var controlPlane = new ControlPlaneView(collections, query);
 
 		Entity p1 = world.Create(new PlayerIdentity { PlayerId = 1 });

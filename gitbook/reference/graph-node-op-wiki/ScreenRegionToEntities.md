@@ -2,9 +2,7 @@
 
 虚线框罩住西边一段，框里的人被点名线逐个牵住。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/poster.png" src="artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ScreenRegionToEntities/play.mp4。
-</video>
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -14,7 +12,7 @@
 |----|----|
 | 可用图种 | Query / TriggerGraph |
 | 返回 | 无（副作用节点） |
-| 输入端口（值边 toPort） | `list`（目标名单）、`a`（第一操作数）、`b`（第二操作数）、`c`（第三操作数）、`max`（上限） |
+| 输入端口（值边 toPort） | `list`（目标名单）、`a`（第一操作数）、`b`（第二操作数）、`c`（第三操作数）、`max`（上限）；可选 `tolerance`（float，点击宽容像素——仅零位移矩形生效，缺省 0） |
 | 特殊写法 | flags 填第四操作数寄存器编号 |
 
 手册分册（全量字段与语义）：[空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)
@@ -36,7 +34,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ScreenRegionToEntities.json`，共 5 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ScreenRegionToEntities.json`，共 5 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstFloat → ConstFloat → ConstFloat → ConstFloat → **ScreenRegionToEntities**（本篇）
 

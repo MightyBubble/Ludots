@@ -190,7 +190,6 @@ namespace Ludots.Tests.Gas.Graph
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException($"stub resolver: {name}");
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException($"stub resolver: {name}");
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException($"stub resolver: {name}");
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException($"stub resolver: {name}");
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException($"stub resolver: {name}");
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException($"stub resolver: {name}");
         }

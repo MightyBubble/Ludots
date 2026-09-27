@@ -54,7 +54,11 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         _seeded = true;
         GraphOpsNodeActorBinding.BindHud(ctx);
         BuildScanOrder(ctx);
-        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectEffectTemplates), StringComparison.Ordinal))
+        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryFilterKnowledgeVisible), StringComparison.Ordinal))
+        {
+            SeedKnowledgeVisibleProjections(ctx);
+        }
+        else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectEffectTemplates), StringComparison.Ordinal))
         {
             SeedEffectTemplates(ctx);
         }
@@ -91,6 +95,34 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         else if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QueryCollectActiveDialogueChoices), StringComparison.Ordinal))
         {
             SeedActiveDialogueChoices(ctx);
+        }
+    }
+
+    private static void SeedKnowledgeVisibleProjections(GraphOpsNodeDriverContext ctx)
+    {
+        // The headless gallery engine mounts no fog projector: its knowledge store starts
+        // empty and CanKnowEntity fails closed, so the featured filter would drop every
+        // candidate. Disclose live-visible projections from the caster to each stage actor —
+        // the showcase then demonstrates keep-vs-drop on real store semantics.
+        var store = ctx.Knowledge ?? throw new InvalidOperationException(
+            $"Query gallery '{ctx.Vignette.Op}' requires the engine KnowledgeProjectionStore.");
+        var emptyMask = Ludots.Core.Knowledge.KnowledgeIdMask256.Empty;
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            store.Upsert(
+                ctx.Caster,
+                ctx.SimActors[i],
+                new Ludots.Core.Knowledge.KnowledgeDisclosureRecord(
+                    Ludots.Core.Knowledge.KnowledgePresence.LiveVisible,
+                    Ludots.Core.Knowledge.KnowledgePositionAccess.Live,
+                    emptyMask,
+                    emptyMask,
+                    emptyMask,
+                    ctx.Caster,
+                    observedTick: 0,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 0));
         }
     }
 

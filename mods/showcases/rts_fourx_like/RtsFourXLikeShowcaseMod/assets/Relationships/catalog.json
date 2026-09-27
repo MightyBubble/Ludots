@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "RtsFourXLike.Participant", "isSymmetric": false }
+    {
+      "id": "RtsFourXLike.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

@@ -267,7 +267,7 @@ namespace Ludots.Tests.GAS
             collections.Replace(
                 local,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     EntityCollectionSourceKind.UiAcquisition,
                     EntityCollectionRoleKind.CommandSource,
                     local,

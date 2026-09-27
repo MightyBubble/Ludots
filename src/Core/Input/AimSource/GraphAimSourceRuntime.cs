@@ -252,6 +252,9 @@ namespace Ludots.Core.Input.AimSource
         }
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+            => FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels: 0f);
+
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
         {
             if (!TryResolveProjector(seatId, rect.MinX, rect.MinY, out IScreenProjector projector, out Vector2 localOrigin) ||
                 count <= 0)
@@ -259,11 +262,17 @@ namespace Ludots.Core.Input.AimSource
                 return 0;
             }
 
+            float extentX = rect.MaxX - rect.MinX;
+            float extentY = rect.MaxY - rect.MinY;
+            float inflate = extentX <= 0f && extentY <= 0f
+                ? tolerancePixels
+                : 0f;
+
             var localRect = new ScreenRect(
-                localOrigin.X,
-                localOrigin.Y,
-                localOrigin.X + (rect.MaxX - rect.MinX),
-                localOrigin.Y + (rect.MaxY - rect.MinY));
+                localOrigin.X - inflate,
+                localOrigin.Y - inflate,
+                localOrigin.X + extentX + inflate,
+                localOrigin.Y + extentY + inflate);
             ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(_world, _globals);
             int kept = 0;
             for (int i = 0; i < count; i++)

@@ -9,12 +9,13 @@ namespace Ludots.Core.Spatial
     {
         public const int CellCm = 100;
         public const int DefaultHexEdgeLengthCm = 400;
-        public const int MacroTileCells = MapTile.Size;
-        public const int DefaultWorldWidthMacroTiles = 64;
-        public const int DefaultWorldHeightMacroTiles = 64;
+        public const int TerrainPageCells = MapTile.Size;
+        public const int DefaultBoardWidthPages = 64;
+        public const int DefaultBoardHeightPages = 64;
         public const int DefaultTerrainWidthChunks = 64;
         public const int DefaultTerrainHeightChunks = 64;
         public const int PartitionChunkCells = 64;
+        public const int DefaultLoadedChunkCapacity = 256;
         public const int TerrainChunkCells = 64;
         public const int FlowCellCm = CellCm;
         public const int AvoidanceSeparationHashCellCm = CellCm;

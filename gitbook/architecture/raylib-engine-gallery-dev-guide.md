@@ -11,9 +11,13 @@
 3. **运行时目录**：`projects/engine_gallery/catalog.json` 的 `scenes` 数组加一行 `id` + `asset`；`EngineProject`（`src/Client/Ludots.Raylib.SceneKit`）装载关卡容器并按内容程序集组合组件，播放器菜单自动枚举（title/summary 必须与 `showcase.registry.json` 逐字一致，合同测试比对）。
 4. **preset**：`launcher.presets.json` 加 `engine_raylib_<id>` 条目（`--scene <id> --frames 120 --screenshot … --json …`，selectors `["$engine_gallery"]`）。
 5. **注册表**：`showcase.registry.json` 加条目：`category: "engine"`、`binding: "engine_gallery"`、`preset`、`acceptanceTest: "RaylibEngineGalleryTests"`、`artifactDir`、`screenshot`、`docsPath` 指回本文档族；随后跑 `python scripts/build-acceptance-index.py` 同步 `scripts/acceptance/acceptance.index.json`（CI 用 `--check` 校验同步，忘跑即红）。
-6. **验收证据**：本地跑一次 preset 落截图 + stats（命令见下）；CI 的 `ci-acceptance.yml` 会按索引逐条 `--record` 重跑并门禁。
+6. **验收证据**：本地跑一次 preset 落截图 + stats（命令见下）。注意：**engine 画廊不进云端
+   `ci-acceptance` 门禁**——它需要真实 OpenGL 窗口，而 GitHub 的 windows runner 没有可用
+   WGL 驱动，会在 raylib `InitWindow` 里直接崩。画廊在索引里归入 `local-only`
+   （见 `scripts/build-acceptance-index.py` 的 `LOCAL_ONLY_IDS`），回归覆盖由
+   `RaylibEngineGalleryTests` 经 solution-verify 的 `TestCategory=raylib-field` 承担。
 7. **Wiki 页**：`gitbook/reference/engine-gallery-wiki/` 下新增与场景 id 同名的 md 页，README 总目录照既有行格式加一行（人话标题 — 场景页链接 — 一句话简介，参考 vegetation_cutout 条目）；`scripts/build-site.py` 解析 README 生成侧栏导航，条目缺页**硬失败**、孤儿页告警。
-8. **录像**：`python scripts/record-engine-galleries.py`（或 `--scene <id>` 单场景）重录页内播放的 `play.mp4` + `poster.png` 到 `artifacts/evidence/engine_raylib_<id>/`——真实运行采样拼制，录像不是可选项，Wiki 页正文嵌的就是它。
+8. **录像**：`python scripts/record-engine-galleries.py`（或 `--scene <id>` 单场景）重录页内播放的 `play.mp4` + `poster.png` 到 `artifacts/evidence/engine_raylib_<id>/`——真实运行采样拼制，录像不是可选项，Wiki 页正文嵌的就是它。本步骤同样需要真实 GL，只能在有显卡的本地机器跑。
 
 本地验收命令（产物即证据，preset 名替换为新场景）：
 

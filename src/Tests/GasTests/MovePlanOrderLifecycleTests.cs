@@ -212,6 +212,55 @@ public sealed class MovePlanOrderLifecycleTests
     }
 
     [Test]
+    public void SecondaryMoveOrder_ProjectsAndCompletesLikeThePrimaryMoveOrder()
+    {
+        const int secondaryMoveOrderTypeId = 101;
+        using var world = World.Create();
+        Entity actor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+        var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Replace);
+        orderTypes.Register(new OrderTypeConfig
+        {
+            Key = "test.moveTo",
+            OrderTypeId = secondaryMoveOrderTypeId,
+            Priority = 100,
+            CanInterruptSelf = true,
+        });
+
+        Order active = CreateOrder(actor, Entity.Null);
+        active.OrderTypeId = secondaryMoveOrderTypeId;
+        active.OrderId = 58;
+        active.Args.Spatial.WorldCm = new Vector3(2400f, 0f, 1800f);
+        world.Get<OrderBuffer>(actor).SetActiveDirect(in active, priority: 100);
+
+        new MovePlanOrderProjectionSystem(world, MoveOrderTypeId, secondaryMoveOrderTypeId).Update(0f);
+        MovePlanExecutionIntent intent = world.Get<MovePlanExecutionIntent>(actor);
+        Assert.Multiple(() =>
+        {
+            Assert.That(intent.Mode, Is.EqualTo(MovePlanExecutionMode.CommandGroup));
+            Assert.That(intent.CommandGroupToken, Is.EqualTo(58));
+            Assert.That(intent.TargetWorldCm, Is.EqualTo(new Vector2(2400f, 1800f)));
+            Assert.That(intent.HasTarget, Is.EqualTo(1));
+        });
+
+        world.Set(actor, new MovePlanExecutionResult
+        {
+            CommandGroupToken = 58,
+            Kind = MovePlanExecutionResultKind.Arrived,
+        });
+        new MovePlanOrderLifecycleSystem(world, orderTypes, MoveOrderTypeId, secondaryMoveOrderTypeId).Update(0f);
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(orderTypes.TerminalResults.TryGet(58, out var terminal), Is.True);
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Completed));
+        });
+    }
+
+    [Test]
     public void MovePlanResult_CompletesOnlyTheMatchingActiveOrder()
     {
         using var world = World.Create();

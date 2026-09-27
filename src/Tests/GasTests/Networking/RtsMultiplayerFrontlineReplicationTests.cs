@@ -2312,7 +2312,15 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     {
         IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
             ?? throw new InvalidOperationException("Frontline replication test requires a screen projector.");
-        if (!SpatialBoundsUtility.TryProjectScreenBounds(engine.World, mirror, projector, out ScreenRect bounds))
+        ScreenProjectionPoseContext presentedPose = Ludots.Core.Input.ScreenProjectionGrounding.Resolve(
+            engine.World,
+            engine.GlobalContext);
+        if (!SpatialBoundsUtility.TryProjectScreenBounds(
+                engine.World,
+                mirror,
+                projector,
+                out ScreenRect bounds,
+                in presentedPose))
         {
             throw new InvalidOperationException("Frontline mirror did not project into the active camera.");
         }

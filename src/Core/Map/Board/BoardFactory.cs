@@ -23,7 +23,7 @@ namespace Ludots.Core.Map.Board
                 spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
                 spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
             {
-                Log.Info(in LogChannels.Map, $"Creating HexGridBoard '{name}' ({config.WidthInMacroTiles}x{config.HeightInMacroTiles} macroTiles, hexEdge={config.HexEdgeLengthCm}cm)");
+                Log.Info(in LogChannels.Map, $"Creating HexGridBoard '{name}' ({config.WidthCells}x{config.HeightCells} cells, hexEdge={config.HexEdgeLengthCm}cm)");
                 return new HexGridBoard(boardId, name, config);
             }
 
@@ -34,7 +34,7 @@ namespace Ludots.Core.Map.Board
             }
 
             // Default: Grid
-            Log.Info(in LogChannels.Map, $"Creating GridBoard '{name}' ({config.WidthInMacroTiles}x{config.HeightInMacroTiles} macroTiles, cell={config.GridCellSizeCm}cm)");
+            Log.Info(in LogChannels.Map, $"Creating GridBoard '{name}' ({config.WidthCells}x{config.HeightCells} cells, cell={config.GridCellSizeCm}cm)");
             return new GridBoard(boardId, name, config);
         }
     }

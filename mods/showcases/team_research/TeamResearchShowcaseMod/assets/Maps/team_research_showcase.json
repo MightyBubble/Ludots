@@ -1,6 +1,12 @@
 {
   "Id": "team_research_showcase",
-  "Tags": ["team_research_showcase", "participant_view_showcase"],
+  "Tuning": {
+    "PartitionChunkCells": 32
+  },
+  "Tags": [
+    "team_research_showcase",
+    "participant_view_showcase"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "TeamResearch.Camera.Overview",
     "TargetXCm": 6400,
@@ -14,11 +20,20 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 32,
-      "HeightInMacroTiles": 32,
-      "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 32,
-      "NavigationEnabled": false
+      "WidthCm": 819200,
+      "HeightCm": 819200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": []

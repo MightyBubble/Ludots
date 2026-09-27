@@ -12,7 +12,7 @@
       "minWidthCm": 1,
       "sampleStepCm": 5000000,
       "capEnds": true,
-      "geometry": "Corridor"
+      "geometry": "Stripline"
     },
     {
       "id": "carve_lakes",

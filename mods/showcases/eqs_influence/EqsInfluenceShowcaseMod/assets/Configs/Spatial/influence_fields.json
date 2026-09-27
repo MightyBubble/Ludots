@@ -1,0 +1,17 @@
+[
+  {
+    "id": "threat",
+    "cellSizeCm": 50,
+    "chunkSizeCells": 8,
+    "defaultValue": 0,
+    "sources": [
+      {
+        "xCm": 300,
+        "yCm": 0,
+        "radiusCm": 200,
+        "peak": 10,
+        "falloff": "Linear"
+      }
+    ]
+  }
+]

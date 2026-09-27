@@ -28,7 +28,7 @@ flowchart LR
 
 | 领域 | 新 owner / 入口 | 说明 |
 |---|---|---|
-| 尺度 | `SpatialScaleDefaults`、`WorldExtentSpec`、`BoardConfig.WidthInMacroTiles` / `HeightInMacroTiles` | `CellCm` 是唯一 cm 基准；`MacroTileCells` 引用 `MapTile.Size`；编辑器可让作者填米数，但 MapConfig 存派生的 MacroTile 数量。 |
+| 尺度 | `SpatialScaleDefaults`、`WorldExtentSpec`、`BoardConfig.WidthInMacroTiles` / `HeightInMacroTiles` | `CellCm` 是唯一 cm 基准；`TerrainPageCells` 引用 `MapTile.Size`；编辑器可让作者填米数，但 MapConfig 存派生的 MacroTile 数量。 |
 | 地形 | `LogicTerrainField` | Grid / Hex 共享逻辑地形抽象；视觉高度图只经显式投影 adapter 进入逻辑地形，不再隐式决定可走性。 |
 | 障碍 | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与执行消费同一套障碍数据；不新增 `ObstacleGeometryProfile2D` 或私有 obstacles loader。 |
 | Agent | `agent_profiles.json` / AgentProfile registry | navmesh、pathing、MassNavigationFlow、road 通过 profile id 对齐 radius / height / clearance / mass / layer。 |
@@ -41,7 +41,7 @@ flowchart LR
 
 | 子单 | 主题 | 主线结果 |
 |---|---|---|
-| NAV-0 [#282](https://github.com/MightyBubble/Ludots/issues/282) | 空间尺度 SSOT + 常量模块 | `CellCm`、`MacroTileCells`、`TerrainChunkCells`、`FlowCell`、`AvoidanceHashCell` 等概念有单一命名和扫描测试。 |
+| NAV-0 [#282](https://github.com/MightyBubble/Ludots/issues/282) | 空间尺度 SSOT + 常量模块 | `CellCm`、`TerrainPageCells`、`TerrainChunkCells`、`FlowCell`、`AvoidanceHashCell` 等概念有单一命名和扫描测试。 |
 | NAV-1 [#283](https://github.com/MightyBubble/Ludots/issues/283) | `WorldExtentSpec` 与 board 尺度 | 旧 `WidthInTiles` / `HeightInTiles` 语义正名为 `WidthInMacroTiles` / `HeightInMacroTiles`；旧键应 fail-fast。 |
 | NAV-2 [#284](https://github.com/MightyBubble/Ludots/issues/284) | AgentProfile 收敛 | profile id 成为 navmesh/pathing/MassNavigationFlow/road 的跨层引用点。 |
 | NAV-3 [#285](https://github.com/MightyBubble/Ludots/issues/285) | 障碍 SSOT | 障碍由 manifestation/shape/compound state 表达，bake 与执行共享。 |

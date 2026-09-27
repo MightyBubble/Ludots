@@ -1,0 +1,28 @@
+[
+  {
+    "id": "avoid_threat_near_goal",
+    "generator": {
+      "kind": "Ring",
+      "radiusCm": 400,
+      "count": 16
+    },
+    "tests": [
+      {
+        "kind": "Distance",
+        "preferNear": true,
+        "weight": 1,
+        "reference": { "xCm": 500, "yCm": 0 }
+      },
+      {
+        "kind": "Influence",
+        "fieldKey": "threat",
+        "preferLow": true,
+        "weight": 2,
+        "normalizeScale": 10
+      }
+    ],
+    "selection": {
+      "kind": "Best"
+    }
+  }
+]

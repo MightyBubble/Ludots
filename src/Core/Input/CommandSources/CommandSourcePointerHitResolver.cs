@@ -58,17 +58,21 @@ namespace Ludots.Core.Input.CommandSources
                 return Entity.Null;
             }
 
-            Entity best = Entity.Null;
-            ScreenRect bestBounds = default;
-            bool hasBestBounds = false;
             ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
 
-            world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
+            // Delegate-free entity enumeration: a capturing lambda would allocate a
+            // closure per call on this every-frame pointer path.
+            BestCandidate best = default;
+            foreach (Chunk chunk in world.Query(in SelectableQuery))
             {
-                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
-            });
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    Entity entity = chunk.Entity(i);
+                    ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best);
+                }
+            }
 
-            return best;
+            return best.Entity;
         }
 
         /// <summary>
@@ -94,10 +98,8 @@ namespace Ludots.Core.Input.CommandSources
                 return Entity.Null;
             }
 
-            Entity best = Entity.Null;
-            ScreenRect bestBounds = default;
-            bool hasBestBounds = false;
             ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
+            BestCandidate best = default;
 
             for (int i = 0; i < candidates.Length; i++)
             {
@@ -107,10 +109,17 @@ namespace Ludots.Core.Input.CommandSources
                     continue;
                 }
 
-                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
+                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best);
             }
 
-            return best;
+            return best.Entity;
+        }
+
+        private struct BestCandidate
+        {
+            public Entity Entity;
+            public ScreenRect Bounds;
+            public bool HasBounds;
         }
 
         private static void ConsiderCandidate(
@@ -122,9 +131,7 @@ namespace Ludots.Core.Input.CommandSources
             float radiusPixels,
             Entity entity,
             in ScreenProjectionPoseContext projectionPose,
-            ref Entity best,
-            ref ScreenRect bestBounds,
-            ref bool hasBestBounds)
+            ref BestCandidate best)
         {
             if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
             {
@@ -141,20 +148,20 @@ namespace Ludots.Core.Input.CommandSources
                 return;
             }
 
-            if (!hasBestBounds)
+            if (!best.HasBounds)
             {
-                best = entity;
-                bestBounds = candidateBounds;
-                hasBestBounds = true;
+                best.Entity = entity;
+                best.Bounds = candidateBounds;
+                best.HasBounds = true;
                 return;
             }
 
-            int boundsComparison = CompareProjectedBounds(candidateBounds, bestBounds, pointer);
+            int boundsComparison = CompareProjectedBounds(candidateBounds, best.Bounds, pointer);
             if (boundsComparison < 0 ||
-                (boundsComparison == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
+                (boundsComparison == 0 && (best.Entity == Entity.Null || Compare(entity, best.Entity) < 0)))
             {
-                best = entity;
-                bestBounds = candidateBounds;
+                best.Entity = entity;
+                best.Bounds = candidateBounds;
             }
         }
 

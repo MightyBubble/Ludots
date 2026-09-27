@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "CombatStance.Hostile", "isSymmetric": true }
+    {
+      "id": "CombatStance.Hostile",
+      "isSymmetric": true
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

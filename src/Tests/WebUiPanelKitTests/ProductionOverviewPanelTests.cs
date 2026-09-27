@@ -64,7 +64,7 @@ public sealed class ProductionOverviewPanelTests
 		InstallCommandCollection(harness, owner, barracks);
 		harness.InstallProfile(CreateBaseDefinition());
 
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 		ProductionOverviewSnapshot snapshot = harness.Projector.Project(harness.Profiles.Require(ProfileId), in binding);
 
 		Assert.That(snapshot.ProfileId, Is.EqualTo(ProfileId));
@@ -134,7 +134,7 @@ public sealed class ProductionOverviewPanelTests
 		];
 		harness.InstallProfile(definition);
 
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 		ProductionOverviewSnapshot snapshot = harness.Projector.Project(harness.Profiles.Require(ProfileId), in binding);
 
 		Assert.That(snapshot.WorkerRows, Has.Count.EqualTo(3));
@@ -156,7 +156,7 @@ public sealed class ProductionOverviewPanelTests
 		InstallCommandCollection(harness, owner, barracks);
 		harness.InstallProfile(CreateBaseDefinition());
 
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 		ProductionOverviewSnapshot first = harness.Projector.Project(harness.Profiles.Require(ProfileId), in binding);
 
 		source.SetQueue(
@@ -184,7 +184,7 @@ public sealed class ProductionOverviewPanelTests
 		var emptySources = new SourceRegistry();
 		var projector = new ProductionOverviewProjector(emptySources, world: world);
 		Entity owner = world.Create();
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 
 		InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
 			projector.Project(profiles.Require(ProfileId), in binding))!;
@@ -239,12 +239,12 @@ public sealed class ProductionOverviewPanelTests
 		Harness harness = Harness.Create(world, source);
 		harness.InstallProfile(CreateBaseDefinition());
 
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 		InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
 			harness.Projector.Project(harness.Profiles.Require(ProfileId), in binding))!;
 
 		Assert.That(ex.Message, Does.Contain(ProfileId));
-		Assert.That(ex.Message, Does.Contain(EntityCollectionKeys.CommandSource));
+		Assert.That(ex.Message, Does.Contain("collection.command.source"));
 		Assert.That(ex.Message, Does.Contain("missing producer collection").IgnoreCase);
 		Assert.That(source.StatusCopyCount, Is.EqualTo(0), "Must not fall back to owner and project owner statuses.");
 	}
@@ -267,12 +267,12 @@ public sealed class ProductionOverviewPanelTests
 		InstallCommandCollection(harness, owner);
 		harness.InstallProfile(CreateBaseDefinition());
 
-		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource);
+		var binding = new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source");
 		InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
 			harness.Projector.Project(harness.Profiles.Require(ProfileId), in binding))!;
 
 		Assert.That(ex.Message, Does.Contain(ProfileId));
-		Assert.That(ex.Message, Does.Contain(EntityCollectionKeys.CommandSource));
+		Assert.That(ex.Message, Does.Contain("collection.command.source"));
 		Assert.That(ex.Message, Does.Contain("empty").IgnoreCase);
 		Assert.That(source.StatusCopyCount, Is.EqualTo(0), "Must not fall back to owner and project owner statuses.");
 	}
@@ -322,7 +322,7 @@ public sealed class ProductionOverviewPanelTests
 		Harness harness = Harness.Create(world, source);
 		var definition = CreateBaseDefinition();
 		definition.SourceKind = ProductionOverviewSourceKindIds.SolePossessedRep;
-		definition.SourceRef = EntityCollectionKeys.CommandSource;
+		definition.SourceRef = "collection.command.source";
 		harness.InstallProfile(definition);
 
 		var binding = new ProductionOverviewBindingContext(player, Entity.Null, Entity.Null, string.Empty);
@@ -355,7 +355,7 @@ public sealed class ProductionOverviewPanelTests
 			Topic,
 			harness.Projector,
 			harness.Profiles.Require(ProfileId),
-			() => new ProductionOverviewBindingContext(owner, Entity.Null, owner, EntityCollectionKeys.CommandSource));
+			() => new ProductionOverviewBindingContext(owner, Entity.Null, owner, "collection.command.source"));
 
 		using var runtime = new WebUiDataPlaneRuntime();
 		runtime.RegisterTopic(producer);
@@ -383,7 +383,7 @@ public sealed class ProductionOverviewPanelTests
 		Assert.Throws<ArgumentException>(() => new ProductionOverviewPanelDescriptor(
 			"hud.production",
 			ProductionOverviewPanelDescriptor.SourceKindEntityCollection,
-			EntityCollectionKeys.CommandSource,
+			"collection.command.source",
 			commandPanelSourceId: "",
 			ProductionOverviewPanelDescriptor.QueueSourceCommandPanelSupplemental,
 			Topic,
@@ -393,7 +393,7 @@ public sealed class ProductionOverviewPanelTests
 		Assert.Throws<InvalidOperationException>(() => new ProductionOverviewPanelDescriptor(
 			"hud.production",
 			ProductionOverviewPanelDescriptor.SourceKindEntityCollection,
-			EntityCollectionKeys.CommandSource,
+			"collection.command.source",
 			PanelSourceId,
 			queueSourceKind: "inventedQueue",
 			Topic,
@@ -407,7 +407,7 @@ public sealed class ProductionOverviewPanelTests
 		{
 			Id = ProfileId,
 			SourceKind = ProductionOverviewSourceKindIds.EntityCollection,
-			SourceRef = EntityCollectionKeys.CommandSource,
+			SourceRef = "collection.command.source",
 			CommandPanelSourceId = PanelSourceId,
 			QueueSourceKind = ProductionQueueSourceKindIds.CommandPanelSupplemental,
 			WorkerBuckets = [],
@@ -418,7 +418,7 @@ public sealed class ProductionOverviewPanelTests
 	private static void InstallCommandCollection(Harness harness, Entity owner, params Entity[] members)
 	{
 		var descriptor = EntityCollectionDescriptor.Create(
-			EntityCollectionKeys.CommandSource,
+			"collection.command.source",
 			EntityCollectionSourceKind.Explicit,
 			EntityCollectionRoleKind.CommandSource,
 			owner,
@@ -465,7 +465,7 @@ public sealed class ProductionOverviewPanelTests
 			sources.Register(PanelSourceId, source);
 
 			var collectionKeys = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
-			collectionKeys.Register(EntityCollectionKeys.CommandSource);
+			collectionKeys.Register("collection.command.source");
 			var collections = new EntityCollectionStore(collectionKeys, 32, 64);
 
 			OrderTypeRegistry? orderTypes = null;

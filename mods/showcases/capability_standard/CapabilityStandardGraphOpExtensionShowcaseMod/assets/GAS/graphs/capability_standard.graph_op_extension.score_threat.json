@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Graph.CapabilityStandard.GraphOpExtension.ScoreThreat",
+    "kind": "Score",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "threat",
+        "op": "CapabilityStandardGraphOpProviderMod.QueryThreat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "threat"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "threat",
+        "toPort": "a"
+      }
+    ]
+  }
+]

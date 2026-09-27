@@ -1,53 +1,65 @@
 using System;
+using Ludots.Core.Config;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial
 {
     /// <summary>
-    /// Authoring-time world extent expressed in macro tiles and converted into <see cref="WorldSizeSpec"/>.
+    /// World extent authored in centimeters (#1567: the only world-size authority).
+    /// Produces <see cref="WorldSizeSpec"/>; macro-tile counts are derived IO details.
     /// </summary>
     public readonly struct WorldExtentSpec : IEquatable<WorldExtentSpec>
     {
-        public readonly int WidthInMacroTiles;
-        public readonly int HeightInMacroTiles;
+        public readonly int WidthCm;
+        public readonly int HeightCm;
         public readonly int CellCm;
 
-        public WorldExtentSpec(int widthInMacroTiles, int heightInMacroTiles, int cellCm)
+        public WorldExtentSpec(int widthCm, int heightCm, int cellCm)
         {
-            if (widthInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(widthInMacroTiles));
-            if (heightInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(heightInMacroTiles));
+            if (widthCm <= 0) throw new ArgumentOutOfRangeException(nameof(widthCm));
+            if (heightCm <= 0) throw new ArgumentOutOfRangeException(nameof(heightCm));
             if (cellCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellCm));
+            if (widthCm % cellCm != 0 || heightCm % cellCm != 0)
+            {
+                throw new ArgumentException(
+                    $"World extent {widthCm}x{heightCm}cm must be an exact multiple of CellCm {cellCm}.");
+            }
 
-            WidthInMacroTiles = widthInMacroTiles;
-            HeightInMacroTiles = heightInMacroTiles;
+            WidthCm = widthCm;
+            HeightCm = heightCm;
             CellCm = cellCm;
         }
 
-        public int WidthInCells => checked(WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-        public int HeightInCells => checked(HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-        public int WidthCm => checked(WidthInCells * CellCm);
-        public int HeightCm => checked(HeightInCells * CellCm);
+        public int WidthInCells => WidthCm / CellCm;
+        public int HeightInCells => HeightCm / CellCm;
+
+        /// <summary>Macro-tile count for the lazily allocated IO grid; pads partial tiles up.</summary>
+        public int WidthInPages => (WidthInCells + SpatialScaleDefaults.TerrainPageCells - 1) / SpatialScaleDefaults.TerrainPageCells;
+
+        /// <summary>Macro-tile count for the lazily allocated IO grid; pads partial tiles up.</summary>
+        public int HeightInPages => (HeightInCells + SpatialScaleDefaults.TerrainPageCells - 1) / SpatialScaleDefaults.TerrainPageCells;
+
+        public static WorldExtentSpec FromWorld(WorldConfig world) =>
+            new(world.WidthCm, world.HeightCm, world.CellSizeCm);
 
         public WorldSizeSpec ToWorldSizeSpec()
         {
-            int widthCm = WidthCm;
-            int heightCm = HeightCm;
             return new WorldSizeSpec(
-                new WorldAabbCm(-widthCm / 2, -heightCm / 2, widthCm, heightCm),
+                new WorldAabbCm(-WidthCm / 2, -HeightCm / 2, WidthCm, HeightCm),
                 CellCm);
         }
 
         public bool Equals(WorldExtentSpec other)
-            => WidthInMacroTiles == other.WidthInMacroTiles &&
-               HeightInMacroTiles == other.HeightInMacroTiles &&
+            => WidthCm == other.WidthCm &&
+               HeightCm == other.HeightCm &&
                CellCm == other.CellCm;
 
         public override bool Equals(object obj) => obj is WorldExtentSpec other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(WidthInMacroTiles, HeightInMacroTiles, CellCm);
+        public override int GetHashCode() => HashCode.Combine(WidthCm, HeightCm, CellCm);
         public static bool operator ==(WorldExtentSpec left, WorldExtentSpec right) => left.Equals(right);
         public static bool operator !=(WorldExtentSpec left, WorldExtentSpec right) => !left.Equals(right);
         public override string ToString()
-            => $"{WidthInMacroTiles}x{HeightInMacroTiles} MacroTiles, Cell={CellCm}cm";
+            => $"{WidthCm}x{HeightCm}cm, Cell={CellCm}cm";
     }
 }

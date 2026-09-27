@@ -300,7 +300,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 ### WorldText — 浮动文字行为
 
 - **是什么**：见 [asset-kinds.md](asset-kinds.md) WorldText 条目（textToken 本地化 + 数值参数绑定 + yDrift）。
-- **怎么写**：`worldText`（`textToken`/`valueParamKey`/`secondaryValueParamKey`/`fontSize`），上浮速率写在 `motion.yDriftPerSecond`。
+- **怎么写**：`worldText`。两格数值句写 `textToken`、`mode`、`valueParamKey`、`secondaryValueParamKey`、`fontSize`。多格句子写 `textToken` 和 `args`。上浮速率写在 `motion.yDriftPerSecond`。
 - **跑**：preset `presenter_blacksmith_showcase_raylib`。
 
 标准生产配置（耐久度 "当前/上限" 文本；同定义还有两个 AttributeBinding 槽把 Durability 的当前值与上限写进这两个参数键）：
@@ -323,6 +323,34 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 来源：`mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/Presentation/presenters.json:1370-1433`（blacksmith_durability_hud_text）。
 
+头顶要同时写出等级、名字和血量时，句子仍写在文案表，例如 `Lv{0} {1} 血量{2}/{3}`。等级和血量继续由同一定义里的 AttributeBinding 写进参数键。WorldText 用 `args` 按孔位引用这些键。名字那一格写 `source: entityInfoTitle`：这份摆放在地图上绑了标题就显示那句，没绑就用档案上的称号。两处都没有标题时，头顶直接失败。`args` 与 `mode`、`valueParamKey`、`secondaryValueParamKey` 分开写。`mode` 仍只服务上面那种两格数值句。属性名必须已经登记，不存在的名字在装载时失败。
+
+```jsonc
+{
+  "behaviors": [
+    { "slot": "level", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Level", "targetParamKey": "hero.level", "mode": "Attribute" } },
+    { "slot": "healthCurrent", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "hero.health.current", "mode": "Attribute" } },
+    { "slot": "healthBase", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "hero.health.base", "mode": "AttributeBase" } },
+    {
+      "slot": "body",
+      "kind": "WorldText",
+      "worldText": {
+        "textToken": "hud.hero.plate",
+        "fontSize": 16,
+        "args": [
+          { "paramKey": "hero.level" },
+          { "source": "entityInfoTitle" },
+          { "paramKey": "hero.health.current" },
+          { "paramKey": "hero.health.base" }
+        ]
+      }
+    }
+  ]
+}
+```
+
+文案表：`{ "id": "hud.hero.plate", "argCount": 4 }`，`zh-CN` 为 `Lv{0} {1} 血量{2}/{3}`。地图上怎么给这份摆放绑标题，见 [Map Batch Presenter Param Overrides](../../architecture/map-batch-presenter-param-overrides.md)。
+
 ### InstancedBatch — 外部实例批量
 
 - **是什么**：消费外部 factorized transform 源（`ludots.instanced_transform_factorized.v1`）做 5 万级静态实例合批，实例数由源声明、adapter 不拥有。
@@ -342,3 +370,22 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 ```
 
 来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:753-757`；装载合同测试 `src/Tests/PresentationTests/Rendering/InstancedBatchContractTests.cs`。
+
+### Extension — 扩展行为
+
+- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 13 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
+- **怎么写**：`kind: "<ModId>.<Key>"` + `execution.lane`（必填，必须与注册 descriptor 的 lane 一致，不一致装载 fail-loud）。放行 lane 只有四条：Bootstrap / ContinuousTick / OwnerAttributeDirty / OwnerTagDirty；后两条还必须带 `execution.trigger`（`attributeId` 或 `tagId`，解析不到正 id 即失败）。挂在 child instance 上的扩展行为只认 Bootstrap / ContinuousTick 两条 lane。槽位白名单是通用字段（slot / kind / activeByDefault / activationCondition / execution / style / motion），没有内建行为那种同名载荷对象；handler 里读写自定义数据走参数黑板（`IPresenterBehaviorOps` 的参数读写）。
+- **跑/证据**：preset `capability_standard_presenter_behavior_extension_showcase_raylib`；headless 验收 `PresenterBehaviorExtension_PlayerSeesCloudDriftTickFromModBehavior`；架构文档 [Presenter Behavior Extension](../../architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md)。
+
+配置形态（进入地图后 CloudDrift 持续 tick 的最小生产形态）：
+
+```jsonc
+{
+  "slot": "body",
+  "kind": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.CloudDrift",
+  "execution": { "lane": "ContinuousTick" },
+  "activeByDefault": true
+}
+```
+
+来源：`mods/showcases/capability_standard/CapabilityStandardPresenterBehaviorExtensionShowcaseMod/assets/Presentation/presenters/capability_standard.presenter_behavior_extension.cloud_banner.json`；lane 与 trigger 校验 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:3042` 起（`ParseExtensionBehaviorExecution`）；运行时分发 `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs` 的 `ProcessExtensionBehaviors`。

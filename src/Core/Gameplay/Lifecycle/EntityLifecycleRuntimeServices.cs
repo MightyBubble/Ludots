@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Spawning;
@@ -31,7 +33,10 @@ namespace Ludots.Core.Gameplay.Lifecycle
             PresenterEntityRuntime? presenterRuntime = null,
             PresenterDefinitionRegistry? presenterDefinitions = null,
             ComponentAuthoringContext? authoringContext = null,
-            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
+            OwnershipResolver? ownership = null,
+            RelationshipRuntime? relationships = null,
+            int memberOfTypeId = -1)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
@@ -49,6 +54,9 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 presenterDefinitions,
                 presenterDefinitions?.BootstrapRegistry);
             EntityTriggerGraphMounts = entityTriggerGraphMounts;
+            Ownership = ownership;
+            Relationships = relationships;
+            MemberOfTypeId = memberOfTypeId;
         }
 
         public World World => _world;
@@ -56,6 +64,9 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
         /// <summary>Entity-domain TriggerGraph mount pipeline; templates declaring graphs mount at materialization.</summary>
         public EntityTriggerGraphMounts? EntityTriggerGraphMounts { get; }
+        public OwnershipResolver? Ownership { get; }
+        public RelationshipRuntime? Relationships { get; }
+        public int MemberOfTypeId { get; }
 
         internal EntityBuilder Builder => _builder;
         internal EntityTemplateKeyRegistry TemplateKeys => _templateKeys;

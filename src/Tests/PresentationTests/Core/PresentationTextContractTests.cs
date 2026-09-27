@@ -4,8 +4,10 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Registry;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -481,6 +483,56 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Overlay_ReformatsNestedTitleWhenLocaleChangesWithoutReemit()
+        {
+            var world = World.Create();
+            try
+            {
+                PresentationTextCatalog textCatalog = CreatePlateCatalog();
+                var selection = new PresentationTextLocaleSelection(textCatalog);
+                int plateId = textCatalog.GetTokenId("hud.hero.plate");
+                int nameId = textCatalog.GetTokenId("entity.guan");
+                var packet = PresentationTextPacket.FromToken(plateId);
+                packet.SetArg(0, PresentationTextArg.FromInt32(10));
+                packet.SetArg(1, PresentationTextArg.FromTextToken(nameId));
+
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var builder = new PresentationOverlaySceneBuilder(screenHud, null, textCatalog, selection, screenOverlay: null);
+                var scene = new PresentationOverlayScene(8);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 77,
+                    DirtySerial = 11,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    FontSize = 16,
+                    Text = packet,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                builder.Build(scene);
+                Assert.That(SceneText(scene), Is.EqualTo("Lv10 Guan Yu"));
+
+                selection.SetActiveLocale("zh-CN");
+                builder.Build(scene);
+                Assert.That(SceneText(scene), Is.EqualTo("Lv10 关羽"));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void WorldHudToScreenSystem_SubmitsInCameraLargeBars()
         {
             var world = World.Create();
@@ -894,6 +946,84 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationTextFormatter_InsertsZeroArgTokenInActiveLocale()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""hud.hero.plate"", ""argCount"": 2 },
+  { ""id"": ""entity.guan"", ""argCount"": 0 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""hud.hero.plate"": ""Lv{0} {1}"",
+      ""entity.guan"": ""Guan Yu""
+    },
+    ""zh-CN"": {
+      ""hud.hero.plate"": ""Lv{0} {1}"",
+      ""entity.guan"": ""关羽""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            PresentationTextCatalog textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            int plateId = textCatalog.GetTokenId("hud.hero.plate");
+            int nameId = textCatalog.GetTokenId("entity.guan");
+            var packet = PresentationTextPacket.FromToken(plateId);
+            packet.SetArg(0, PresentationTextArg.FromInt32(10));
+            packet.SetArg(1, PresentationTextArg.FromTextToken(nameId));
+
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out string enText), Is.True);
+            Assert.That(enText, Is.EqualTo("Lv10 Guan Yu"));
+
+            int zhLocaleId = textCatalog.GetLocaleId("zh-CN");
+            Assert.That(PresentationTextFormatter.TryFormat(textCatalog, zhLocaleId, in packet, out string zhText), Is.True);
+            Assert.That(zhText, Is.EqualTo("Lv10 关羽"));
+        }
+
+        [Test]
+        public void PresentationTextFormatter_RejectsNestedTokenThatStillHasArguments()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""hud.hero.plate"", ""argCount"": 1 },
+  { ""id"": ""entity.guan"", ""argCount"": 1 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""hud.hero.plate"": ""{0}"",
+      ""entity.guan"": ""{0}""
+    }
+  }
+}");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            PresentationTextCatalog textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var packet = PresentationTextPacket.FromToken(textCatalog.GetTokenId("hud.hero.plate"));
+            packet.SetArg(0, PresentationTextArg.FromTextToken(textCatalog.GetTokenId("entity.guan")));
+
+            Assert.That(
+                () => PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out _),
+                Throws.InvalidOperationException.With.Message.Contains("zero-argument"));
+        }
+
+        [Test]
         public void PresentationTextStringPool_Throws_WhenResolvingAcrossPools()
         {
             var poolA = new PresentationTextStringPool();
@@ -1088,6 +1218,190 @@ namespace Ludots.Tests.Presentation
             Assert.That(selection.ActiveLocaleKey, Is.EqualTo("zh-CN"));
         }
 
+        [Test]
+        public void HudOwnerFrameSnapshot_AlignsAttributeColumnsWithRowCapacity()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                const int stamina = 4;
+                var snapshot = new HudOwnerFrameSnapshot();
+
+                snapshot.RegisterTrackedAttribute(health);
+                Entity first = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                Assert.That(snapshot.TryGetAttributeValues(1, health, out _, out _), Is.False);
+
+                snapshot.RegisterTrackedAttribute(stamina);
+                AssertAttributeRow(snapshot, first, stamina, current: 0f, baseValue: 0f);
+
+                SetAttribute(world, first, health, current: 12f, baseValue: 80f);
+                SetAttribute(world, first, stamina, current: 9f, baseValue: 30f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                AssertAttributeRow(snapshot, world, first, stamina);
+
+                Entity cullOnly = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                AssertAttributeRow(snapshot, world, first, stamina);
+                AssertAttributeRow(snapshot, cullOnly, health, current: 0f, baseValue: 0f);
+                AssertAttributeRow(snapshot, cullOnly, stamina, current: 0f, baseValue: 0f);
+
+                world.Destroy(first);
+                world.Destroy(cullOnly);
+                Entity replacement = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
+                snapshot.Rebuild(world);
+                Assert.That(snapshot.TryGetRow(first, out _), Is.False);
+                AssertAttributeRow(snapshot, replacement, health, current: 0f, baseValue: 0f);
+                AssertAttributeRow(snapshot, replacement, stamina, current: 0f, baseValue: 0f);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void HudOwnerFrameSnapshot_AlignsAttributeColumn_WhenRegisteredWithNoLiveOwners()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                var snapshot = new HudOwnerFrameSnapshot();
+                Entity first = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                snapshot.Rebuild(world);
+                world.Destroy(first);
+                snapshot.Rebuild(world);
+
+                snapshot.RegisterTrackedAttribute(health);
+                Entity returned = CreateAttributedOwner(world, health, current: 7f, baseValue: 20f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, returned, health);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void HudOwnerFrameSnapshot_GrowsAttributeColumnsPastFirstCapacityBlock()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                const int firstBlock = 64;
+                var snapshot = new HudOwnerFrameSnapshot();
+                var owners = new Entity[firstBlock];
+                for (int i = 0; i < owners.Length; i++)
+                {
+                    owners[i] = CreateAttributedOwner(world, health, current: i, baseValue: 100f);
+                }
+
+                snapshot.Rebuild(world);
+                snapshot.RegisterTrackedAttribute(health);
+                Entity extra = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                snapshot.Rebuild(world);
+
+                AssertAttributeRow(snapshot, world, owners[0], health);
+                AssertAttributeRow(snapshot, world, owners[firstBlock - 1], health);
+                AssertAttributeRow(snapshot, extra, health, current: 0f, baseValue: 0f);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_RefreshesBoundText_WhenCullOnlyOwnerAppearsInsideCapacity()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                Entity owner = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 42,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    FontSize = 16,
+                    Value0 = 0f,
+                    Value1 = 0f,
+                    Id1 = (int)WorldHudValueMode.AttributeCurrentOverBase,
+                    ValueBound = 1,
+                    BoundAttributeId = health,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(screenHud.HasAttributeBoundTexts, Is.True);
+
+                system.Update(0f);
+                Assert.That(screenHud.GetTextSpan()[0].Value0, Is.EqualTo(40f));
+                Assert.That(screenHud.GetTextSpan()[0].Value1, Is.EqualTo(150f));
+
+                world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                SetAttribute(world, owner, health, current: 55f, baseValue: 150f);
+                system.Update(0f);
+
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(screenHud.GetTextSpan()[0].Value0, Is.EqualTo(55f));
+                Assert.That(screenHud.GetTextSpan()[0].Value1, Is.EqualTo(150f));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_DoesNotTrackAttributes_ForUnboundBar()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                EmitWorldHudBar(worldHud);
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+                Assert.That(screenHud.HasAttributeBoundTexts, Is.False);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
             BuildPipeline(string root, string[]? modIds = null)
         {
@@ -1143,6 +1457,104 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private static Entity CreateAttributedOwner(World world, int attributeId, float current, float baseValue)
+        {
+            Entity owner = world.Create(
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            SetAttribute(world, owner, attributeId, current, baseValue);
+            return owner;
+        }
+
+        private static void SetAttribute(World world, Entity owner, int attributeId, float current, float baseValue)
+        {
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            attributes.SetBase(attributeId, baseValue);
+            attributes.SetCurrent(attributeId, current);
+        }
+
+        private static void AssertAttributeRow(
+            HudOwnerFrameSnapshot snapshot,
+            World world,
+            Entity owner,
+            int attributeId)
+        {
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            AssertAttributeRow(
+                snapshot,
+                owner,
+                attributeId,
+                attributes.GetCurrent(attributeId),
+                attributes.GetBase(attributeId));
+        }
+
+        private static void AssertAttributeRow(
+            HudOwnerFrameSnapshot snapshot,
+            Entity owner,
+            int attributeId,
+            float current,
+            float baseValue)
+        {
+            Assert.That(snapshot.TryGetRow(owner, out int row), Is.True, $"owner {owner.Id} must be in the frame snapshot");
+            Assert.That(
+                snapshot.TryGetAttributeValues(row, attributeId, out float actualCurrent, out float actualBase),
+                Is.True,
+                $"attribute {attributeId} must be readable for owner {owner.Id}");
+            Assert.That(actualCurrent, Is.EqualTo(current));
+            Assert.That(actualBase, Is.EqualTo(baseValue));
+        }
+
+        private static string SceneText(PresentationOverlayScene scene)
+        {
+            var span = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text);
+            Assert.That(span.Length, Is.EqualTo(1));
+            return span[0].Text ?? string.Empty;
+        }
+
+        private static PresentationTextCatalog CreatePlateCatalog()
+        {
+            var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int plateId = tokenIds.Register("hud.hero.plate");
+            int nameId = tokenIds.Register("entity.guan");
+            var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+            tokens[plateId] = new PresentationTextTokenDefinition { TokenId = plateId, Key = "hud.hero.plate", ArgCount = 2 };
+            tokens[nameId] = new PresentationTextTokenDefinition { TokenId = nameId, Key = "entity.guan", ArgCount = 0 };
+
+            var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int en = localeIds.Register("en-US");
+            int zh = localeIds.Register("zh-CN");
+            var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            enTemplates[plateId] = Plate("Lv", " ");
+            zhTemplates[plateId] = Plate("Lv", " ");
+            enTemplates[nameId] = Literal("Guan Yu");
+            zhTemplates[nameId] = Literal("关羽");
+            var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+            locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
+            locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: en);
+        }
+
+        private static PresentationTextTemplate Literal(string text)
+        {
+            return new PresentationTextTemplate(
+                text,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, -1) });
+        }
+
+        private static PresentationTextTemplate Plate(string prefix, string gap)
+        {
+            return new PresentationTextTemplate(
+                prefix + "{0}" + gap + "{1}",
+                new[]
+                {
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, prefix, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 0),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, gap, -1),
+                    new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Argument, string.Empty, 1),
+                });
         }
 
         private static void EmitWorldHudBar(WorldHudBatchBuffer worldHud)

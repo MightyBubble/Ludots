@@ -15,7 +15,7 @@
 | 可用图种 | 仅 Effect |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体）、`target`（目标实体）、`value`（数值） |
-| 特殊写法 | dst 填原因 id；imm 填符号名（编译期解析）；flags 填关系类型 |
+| 特殊写法 | imm 填符号名（编译期解析）；flags 填关系类型 |
 
 手册分册（全量字段与语义）：[关系与好感 · gr-op-08](../mod-editor-prd/config/gr-op-08-relationship.md)
 

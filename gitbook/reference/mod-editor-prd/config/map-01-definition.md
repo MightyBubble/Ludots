@@ -29,7 +29,7 @@
 | `Id` | 地图 id；游戏配置 `startupMapId` 指向它 |
 | `ParentId` / `Dependencies` | 继承父地图（布阵/棋盘等派生）；进地图时先解析继承链 |
 | `Boards[]` | 空间基底：名字 + 类型（Grid）+ 尺寸/格宽；**按名覆盖**（同名棋盘后到者整体替换） |
-| `Entities[]` | 初始布阵：`Template`（引用实体模板）+ `InstanceId`（实例唯一名）+ `Overrides`（逐组件覆盖初值）；合并为**追加** |
+| `Entities[]` | 初始布阵：`Template`（引用实体模板）+ `InstanceId`（实例唯一名）+ `Overrides`（逐组件覆盖：与模板组件字段级深合并，覆盖只写改动字段，未提及字段继承模板值；变体形状组件顶层 `"__replace": true` 整组件替换）；合并为**追加** |
 | `Teams[]` / `Players[]` | 队伍与玩家绑定（代表实体）；追加式 |
 | `TriggerTypes[]` | 启用的触发器类型名（见 map-02）；合并为并集 |
 | `DefaultCamera` | 开局相机（虚拟相机 id 或显式参数）；后到者赢 |

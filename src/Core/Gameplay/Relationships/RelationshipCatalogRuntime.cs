@@ -149,43 +149,7 @@ namespace Ludots.Core.Gameplay.Relationships
             ArgumentNullException.ThrowIfNull(collections);
 
             var runtime = new RelationshipCatalogRuntime();
-            for (int i = 0; i < catalog.Callbacks.Count; i++)
-            {
-                RelationshipCallbackConfig config = catalog.Callbacks[i];
-                if (string.IsNullOrWhiteSpace(config.MetricId))
-                {
-                    continue;
-                }
-
-                runtime.Callbacks.Add(new RelationshipCallbackRule(
-                    config.Id,
-                    types.GetId(config.TypeId),
-                    metrics.GetId(config.MetricId),
-                    config.MinimumValue,
-                    config.MaximumValue,
-                    new EventKey(config.EventKey ?? string.Empty),
-                    new EventKey(config.ExitEventKey ?? string.Empty),
-                    ResolveTags(config.AddTagsToSource),
-                    ResolveTags(config.AddTagsToTarget),
-                    ResolveTags(config.AddTagsToSourceTeam),
-                    ResolveTags(config.AddTagsToTargetTeam),
-                    ResolveTags(config.RemoveTagsFromSource),
-                    ResolveTags(config.RemoveTagsFromTarget),
-                    ResolveTags(config.RemoveTagsFromSourceTeam),
-                    ResolveTags(config.RemoveTagsFromTargetTeam)));
-            }
-
-            for (int i = 0; i < catalog.Synergies.Count; i++)
-            {
-                RelationshipSynergyConfig config = catalog.Synergies[i];
-                runtime.Synergies.Add(new RelationshipSynergyRule(
-                    config.Id,
-                    ResolveTags(config.RequireAllTags),
-                    Math.Max(1, config.MinimumCount),
-                    ResolveTags(config.ApplyTagsToTeam),
-                    new EventKey(config.EventKey ?? string.Empty)));
-            }
-
+            
             runtime._knowledgeGrants = CompileKnowledgeGrants(catalog.KnowledgeGrants, types, collections);
 
             return runtime;

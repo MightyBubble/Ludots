@@ -23,6 +23,12 @@ using ParticipantViewCapabilityMod.Runtime;
 using Ludots.Platform.Abstractions;
 
 namespace ParticipantViewCapabilityMod.UI;
+    /// <summary>Collection keys consumed by participant view; declared/written by LudotsCoreMod selection graphs.</summary>
+    internal static class ParticipantViewCollectionKeys
+    {
+        public const string CommandSource = "collection.command.source";
+    }
+
 
 internal sealed class ParticipantViewPanelController
 {
@@ -379,7 +385,7 @@ internal sealed class ParticipantViewPanelController
             ? EntityCollectionContextRuntime.GetCount(
                 engine.GlobalContext,
                 commandSourceOwner,
-                EntityCollectionKeys.CommandSource)
+                ParticipantViewCollectionKeys.CommandSource)
             : 0;
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,

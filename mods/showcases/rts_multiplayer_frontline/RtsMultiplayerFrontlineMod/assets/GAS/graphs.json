@@ -1,0 +1,4290 @@
+[
+  {
+    "id": "rts.transport.idle.guardGather",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gType",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.ActiveTypeId"
+      },
+      {
+        "id": "ordTy",
+        "op": "LoadOrderTypeId",
+        "orderType": "frontlineGather"
+      },
+      {
+        "id": "isIt",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gType"
+      },
+      {
+        "from": "gType",
+        "fromPort": "next",
+        "to": "ordTy"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "next",
+        "to": "isIt"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gType",
+        "toPort": "source"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "a"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "b"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSource.enter",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gTarget",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Order.ActiveTarget"
+      },
+      {
+        "id": "saveEnt",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Source"
+      },
+      {
+        "id": "consume",
+        "op": "CompleteActiveOrder"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gTarget"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "next",
+        "to": "saveEnt"
+      },
+      {
+        "from": "saveEnt",
+        "fromPort": "next",
+        "to": "consume"
+      },
+      {
+        "from": "consume",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gTarget",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveEnt",
+        "toPort": "source"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "value",
+        "to": "saveEnt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSource.tick",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Source"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "haltGo",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltIdle",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "haltGo"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "haltIdle"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "b"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSource.atSource",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Source"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "thr",
+        "op": "ConstFloat",
+        "floatValue": 10000.0
+      },
+      {
+        "id": "cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "zeroEnt",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNoEnt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "zeroEnt"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "next",
+        "to": "haltNoEnt"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "mX"
+      },
+      {
+        "from": "mX",
+        "fromPort": "next",
+        "to": "mY"
+      },
+      {
+        "from": "mY",
+        "fromPort": "next",
+        "to": "ftx"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "next",
+        "to": "fty"
+      },
+      {
+        "from": "fty",
+        "fromPort": "next",
+        "to": "fmx"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "next",
+        "to": "fmy"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "next",
+        "to": "dx"
+      },
+      {
+        "from": "dx",
+        "fromPort": "next",
+        "to": "dy"
+      },
+      {
+        "from": "dy",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "d2"
+      },
+      {
+        "from": "d2",
+        "fromPort": "next",
+        "to": "thr"
+      },
+      {
+        "from": "thr",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mY",
+        "toPort": "source"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "fty",
+        "toPort": "a"
+      },
+      {
+        "from": "mX",
+        "fromPort": "value",
+        "to": "fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "mY",
+        "fromPort": "value",
+        "to": "fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "a"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "b"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "a"
+      },
+      {
+        "from": "fty",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "b"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "b"
+      },
+      {
+        "from": "d2",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "thr",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "value",
+        "to": "haltNoEnt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.loading.enter",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "t60",
+        "op": "ConstInt",
+        "intValue": 60
+      },
+      {
+        "id": "save",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "t60"
+      },
+      {
+        "from": "t60",
+        "fromPort": "next",
+        "to": "save"
+      },
+      {
+        "from": "save",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "save",
+        "toPort": "source"
+      },
+      {
+        "from": "t60",
+        "fromPort": "value",
+        "to": "save",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.loading.tick",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "tks",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "tz",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "gt0",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "negOne",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "next",
+        "op": "AddInt"
+      },
+      {
+        "id": "saveTn",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "haltTick",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltIdle",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "tks"
+      },
+      {
+        "from": "tks",
+        "fromPort": "next",
+        "to": "tz"
+      },
+      {
+        "from": "tz",
+        "fromPort": "next",
+        "to": "gt0"
+      },
+      {
+        "from": "gt0",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "negOne"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "next",
+        "to": "next"
+      },
+      {
+        "from": "next",
+        "fromPort": "next",
+        "to": "saveTn"
+      },
+      {
+        "from": "saveTn",
+        "fromPort": "next",
+        "to": "haltTick"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "haltIdle"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "tks",
+        "toPort": "source"
+      },
+      {
+        "from": "tz",
+        "fromPort": "value",
+        "to": "gt0",
+        "toPort": "a"
+      },
+      {
+        "from": "tks",
+        "fromPort": "value",
+        "to": "gt0",
+        "toPort": "b"
+      },
+      {
+        "from": "gt0",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "tks",
+        "fromPort": "value",
+        "to": "next",
+        "toPort": "a"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "value",
+        "to": "next",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveTn",
+        "toPort": "source"
+      },
+      {
+        "from": "next",
+        "fromPort": "value",
+        "to": "saveTn",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.loading.loaded",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "tks",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Transport.Ticks"
+      },
+      {
+        "id": "tz",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "gt0",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltWait",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltGo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "tks"
+      },
+      {
+        "from": "tks",
+        "fromPort": "next",
+        "to": "tz"
+      },
+      {
+        "from": "tz",
+        "fromPort": "next",
+        "to": "gt0"
+      },
+      {
+        "from": "gt0",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltWait"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltGo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "tks",
+        "toPort": "source"
+      },
+      {
+        "from": "tz",
+        "fromPort": "value",
+        "to": "gt0",
+        "toPort": "a"
+      },
+      {
+        "from": "tks",
+        "fromPort": "value",
+        "to": "gt0",
+        "toPort": "b"
+      },
+      {
+        "from": "gt0",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltWait",
+        "toPort": "value"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltGo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSink.enter",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gPid",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.PlayerId"
+      },
+      {
+        "id": "qAll",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "qSink",
+        "op": "QueryFilterTemplate",
+        "template": "rts_frontline_core"
+      },
+      {
+        "id": "qTeam",
+        "op": "QueryFilterTeam"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "sinkGet",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "saveSink",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gPid"
+      },
+      {
+        "from": "gPid",
+        "fromPort": "next",
+        "to": "qAll"
+      },
+      {
+        "from": "qAll",
+        "fromPort": "next",
+        "to": "qSink"
+      },
+      {
+        "from": "qSink",
+        "fromPort": "next",
+        "to": "qTeam"
+      },
+      {
+        "from": "qTeam",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "sinkGet"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "next",
+        "to": "saveSink"
+      },
+      {
+        "from": "saveSink",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPid",
+        "toPort": "source"
+      },
+      {
+        "from": "gPid",
+        "fromPort": "value",
+        "to": "qTeam",
+        "toPort": "teamId"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "sinkGet",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveSink",
+        "toPort": "source"
+      },
+      {
+        "from": "sinkGet",
+        "fromPort": "value",
+        "to": "saveSink",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSink.tick",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "haltGo",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltIdle",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "haltGo"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "haltIdle"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "b"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSink.atSink",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "thr",
+        "op": "ConstFloat",
+        "floatValue": 10000.0
+      },
+      {
+        "id": "cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "zeroEnt",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNoEnt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "zeroEnt"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "next",
+        "to": "haltNoEnt"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "mX"
+      },
+      {
+        "from": "mX",
+        "fromPort": "next",
+        "to": "mY"
+      },
+      {
+        "from": "mY",
+        "fromPort": "next",
+        "to": "ftx"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "next",
+        "to": "fty"
+      },
+      {
+        "from": "fty",
+        "fromPort": "next",
+        "to": "fmx"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "next",
+        "to": "fmy"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "next",
+        "to": "dx"
+      },
+      {
+        "from": "dx",
+        "fromPort": "next",
+        "to": "dy"
+      },
+      {
+        "from": "dy",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "d2"
+      },
+      {
+        "from": "d2",
+        "fromPort": "next",
+        "to": "thr"
+      },
+      {
+        "from": "thr",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mY",
+        "toPort": "source"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "fty",
+        "toPort": "a"
+      },
+      {
+        "from": "mX",
+        "fromPort": "value",
+        "to": "fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "mY",
+        "fromPort": "value",
+        "to": "fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "a"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "b"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "a"
+      },
+      {
+        "from": "fty",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "b"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "b"
+      },
+      {
+        "from": "d2",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "thr",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "value",
+        "to": "haltNoEnt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.toSink.sinkLost",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.transport.dock.credit",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "sink",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Transport.Sink"
+      },
+      {
+        "id": "cargo",
+        "op": "ConstFloat",
+        "floatValue": 20.0
+      },
+      {
+        "id": "credit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Crystals"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "sink"
+      },
+      {
+        "from": "sink",
+        "fromPort": "next",
+        "to": "cargo"
+      },
+      {
+        "from": "cargo",
+        "fromPort": "next",
+        "to": "credit"
+      },
+      {
+        "from": "credit",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "sink",
+        "toPort": "source"
+      },
+      {
+        "from": "sink",
+        "fromPort": "value",
+        "to": "credit",
+        "toPort": "target"
+      },
+      {
+        "from": "cargo",
+        "fromPort": "value",
+        "to": "credit",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.idle.guardAttack",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gType",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.ActiveTypeId"
+      },
+      {
+        "id": "ordTy",
+        "op": "LoadOrderTypeId",
+        "orderType": "attackTarget"
+      },
+      {
+        "id": "isIt",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gType"
+      },
+      {
+        "from": "gType",
+        "fromPort": "next",
+        "to": "ordTy"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "next",
+        "to": "isIt"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gType",
+        "toPort": "source"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "a"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "b"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.pursuit.enter",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gTarget",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Order.ActiveTarget"
+      },
+      {
+        "id": "saveEnt",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "zeroCd",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "saveCd",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "consume",
+        "op": "CompleteActiveOrder"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gTarget"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "next",
+        "to": "saveEnt"
+      },
+      {
+        "from": "saveEnt",
+        "fromPort": "next",
+        "to": "zeroCd"
+      },
+      {
+        "from": "zeroCd",
+        "fromPort": "next",
+        "to": "saveCd"
+      },
+      {
+        "from": "saveCd",
+        "fromPort": "next",
+        "to": "consume"
+      },
+      {
+        "from": "consume",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gTarget",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveEnt",
+        "toPort": "source"
+      },
+      {
+        "from": "gTarget",
+        "fromPort": "value",
+        "to": "saveEnt",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveCd",
+        "toPort": "source"
+      },
+      {
+        "from": "zeroCd",
+        "fromPort": "value",
+        "to": "saveCd",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.pursuit.route",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "rtgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "rVal",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brVal",
+        "op": "BranchBool"
+      },
+      {
+        "id": "rTX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "rTY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "rSX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "rSY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "gPX",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.SpatialXCm"
+      },
+      {
+        "id": "gPY",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.SpatialYCm"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "pxZero",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brPoint",
+        "op": "BranchBool"
+      },
+      {
+        "id": "wGX",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "wGY",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "wSX",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "wSY",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "rdDX",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirX"
+      },
+      {
+        "id": "rdDY",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.DirY"
+      },
+      {
+        "id": "fDX",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fDY",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fTX",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fTY",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fxD",
+        "op": "SubFloat"
+      },
+      {
+        "id": "fyD",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "len2i",
+        "op": "AddFloat"
+      },
+      {
+        "id": "ln",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "one",
+        "op": "ConstFloat",
+        "floatValue": 1.0
+      },
+      {
+        "id": "lenG",
+        "op": "MaxFloat"
+      },
+      {
+        "id": "nx",
+        "op": "DivFloat"
+      },
+      {
+        "id": "ny",
+        "op": "DivFloat"
+      },
+      {
+        "id": "ring",
+        "op": "ConstFloat",
+        "floatValue": 520.0
+      },
+      {
+        "id": "nxR",
+        "op": "MulFloat"
+      },
+      {
+        "id": "nyR",
+        "op": "MulFloat"
+      },
+      {
+        "id": "slotXf",
+        "op": "AddFloat"
+      },
+      {
+        "id": "slotYf",
+        "op": "AddFloat"
+      },
+      {
+        "id": "slotX",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "slotY",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitAssignedOrder",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "haltRoute",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltWait",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "rtgt"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "next",
+        "to": "rVal"
+      },
+      {
+        "from": "rVal",
+        "fromPort": "next",
+        "to": "brVal"
+      },
+      {
+        "from": "brVal",
+        "fromPort": "false",
+        "to": "haltWait"
+      },
+      {
+        "from": "brVal",
+        "fromPort": "true",
+        "to": "rTX"
+      },
+      {
+        "from": "rTX",
+        "fromPort": "next",
+        "to": "rTY"
+      },
+      {
+        "from": "rTY",
+        "fromPort": "next",
+        "to": "rSX"
+      },
+      {
+        "from": "rSX",
+        "fromPort": "next",
+        "to": "rSY"
+      },
+      {
+        "from": "rSY",
+        "fromPort": "next",
+        "to": "gPX"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "next",
+        "to": "gPY"
+      },
+      {
+        "from": "gPY",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "pxZero"
+      },
+      {
+        "from": "pxZero",
+        "fromPort": "next",
+        "to": "brPoint"
+      },
+      {
+        "from": "brPoint",
+        "fromPort": "false",
+        "to": "wGX"
+      },
+      {
+        "from": "wGX",
+        "fromPort": "next",
+        "to": "wGY"
+      },
+      {
+        "from": "brPoint",
+        "fromPort": "true",
+        "to": "wSX"
+      },
+      {
+        "from": "wSX",
+        "fromPort": "next",
+        "to": "wSY"
+      },
+      {
+        "from": "wGY",
+        "fromPort": "next",
+        "to": "rdDX"
+      },
+      {
+        "from": "wSY",
+        "fromPort": "next",
+        "to": "rdDX"
+      },
+      {
+        "from": "rdDX",
+        "fromPort": "next",
+        "to": "rdDY"
+      },
+      {
+        "from": "rdDY",
+        "fromPort": "next",
+        "to": "fDX"
+      },
+      {
+        "from": "fDX",
+        "fromPort": "next",
+        "to": "fDY"
+      },
+      {
+        "from": "fDY",
+        "fromPort": "next",
+        "to": "fTX"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "next",
+        "to": "fTY"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "next",
+        "to": "fxD"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "next",
+        "to": "fyD"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "len2i"
+      },
+      {
+        "from": "len2i",
+        "fromPort": "next",
+        "to": "ln"
+      },
+      {
+        "from": "ln",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "lenG"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "next",
+        "to": "nx"
+      },
+      {
+        "from": "nx",
+        "fromPort": "next",
+        "to": "ny"
+      },
+      {
+        "from": "ny",
+        "fromPort": "next",
+        "to": "ring"
+      },
+      {
+        "from": "ring",
+        "fromPort": "next",
+        "to": "nxR"
+      },
+      {
+        "from": "nxR",
+        "fromPort": "next",
+        "to": "nyR"
+      },
+      {
+        "from": "nyR",
+        "fromPort": "next",
+        "to": "slotXf"
+      },
+      {
+        "from": "slotXf",
+        "fromPort": "next",
+        "to": "slotYf"
+      },
+      {
+        "from": "slotYf",
+        "fromPort": "next",
+        "to": "slotX"
+      },
+      {
+        "from": "slotX",
+        "fromPort": "next",
+        "to": "slotY"
+      },
+      {
+        "from": "slotY",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "haltRoute"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rtgt",
+        "toPort": "source"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rVal",
+        "toPort": "source"
+      },
+      {
+        "from": "rVal",
+        "fromPort": "value",
+        "to": "brVal",
+        "toPort": "condition"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rTX",
+        "toPort": "source"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "rTY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rSX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rSY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gPY",
+        "toPort": "source"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "value",
+        "to": "pxZero",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "pxZero",
+        "toPort": "b"
+      },
+      {
+        "from": "pxZero",
+        "fromPort": "value",
+        "to": "brPoint",
+        "toPort": "condition"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wGX",
+        "toPort": "source"
+      },
+      {
+        "from": "gPX",
+        "fromPort": "value",
+        "to": "wGX",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wGY",
+        "toPort": "source"
+      },
+      {
+        "from": "gPY",
+        "fromPort": "value",
+        "to": "wGY",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wSX",
+        "toPort": "source"
+      },
+      {
+        "from": "rSX",
+        "fromPort": "value",
+        "to": "wSX",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "wSY",
+        "toPort": "source"
+      },
+      {
+        "from": "rSY",
+        "fromPort": "value",
+        "to": "wSY",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rdDX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "rdDY",
+        "toPort": "source"
+      },
+      {
+        "from": "rdDX",
+        "fromPort": "value",
+        "to": "fDX",
+        "toPort": "a"
+      },
+      {
+        "from": "rdDY",
+        "fromPort": "value",
+        "to": "fDY",
+        "toPort": "a"
+      },
+      {
+        "from": "rTX",
+        "fromPort": "value",
+        "to": "fTX",
+        "toPort": "a"
+      },
+      {
+        "from": "rTY",
+        "fromPort": "value",
+        "to": "fTY",
+        "toPort": "a"
+      },
+      {
+        "from": "fDX",
+        "fromPort": "value",
+        "to": "fxD",
+        "toPort": "a"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "value",
+        "to": "fxD",
+        "toPort": "b"
+      },
+      {
+        "from": "fDY",
+        "fromPort": "value",
+        "to": "fyD",
+        "toPort": "a"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "value",
+        "to": "fyD",
+        "toPort": "b"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "len2i",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "len2i",
+        "toPort": "b"
+      },
+      {
+        "from": "len2i",
+        "fromPort": "value",
+        "to": "ln",
+        "toPort": "a"
+      },
+      {
+        "from": "ln",
+        "fromPort": "value",
+        "to": "lenG",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "lenG",
+        "toPort": "b"
+      },
+      {
+        "from": "fxD",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "a"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "value",
+        "to": "nx",
+        "toPort": "b"
+      },
+      {
+        "from": "fyD",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "a"
+      },
+      {
+        "from": "lenG",
+        "fromPort": "value",
+        "to": "ny",
+        "toPort": "b"
+      },
+      {
+        "from": "nx",
+        "fromPort": "value",
+        "to": "nxR",
+        "toPort": "a"
+      },
+      {
+        "from": "ring",
+        "fromPort": "value",
+        "to": "nxR",
+        "toPort": "b"
+      },
+      {
+        "from": "ny",
+        "fromPort": "value",
+        "to": "nyR",
+        "toPort": "a"
+      },
+      {
+        "from": "ring",
+        "fromPort": "value",
+        "to": "nyR",
+        "toPort": "b"
+      },
+      {
+        "from": "fTX",
+        "fromPort": "value",
+        "to": "slotXf",
+        "toPort": "a"
+      },
+      {
+        "from": "nxR",
+        "fromPort": "value",
+        "to": "slotXf",
+        "toPort": "b"
+      },
+      {
+        "from": "fTY",
+        "fromPort": "value",
+        "to": "slotYf",
+        "toPort": "a"
+      },
+      {
+        "from": "nyR",
+        "fromPort": "value",
+        "to": "slotYf",
+        "toPort": "b"
+      },
+      {
+        "from": "slotXf",
+        "fromPort": "value",
+        "to": "slotX",
+        "toPort": "a"
+      },
+      {
+        "from": "slotYf",
+        "fromPort": "value",
+        "to": "slotY",
+        "toPort": "a"
+      },
+      {
+        "from": "rtgt",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "slotX",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "a"
+      },
+      {
+        "from": "slotY",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "b"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.pursuit.inRange",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "thr",
+        "op": "ConstFloat",
+        "floatValue": 422500.0
+      },
+      {
+        "id": "cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "zeroEnt",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNoEnt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "zeroEnt"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "next",
+        "to": "haltNoEnt"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "mX"
+      },
+      {
+        "from": "mX",
+        "fromPort": "next",
+        "to": "mY"
+      },
+      {
+        "from": "mY",
+        "fromPort": "next",
+        "to": "ftx"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "next",
+        "to": "fty"
+      },
+      {
+        "from": "fty",
+        "fromPort": "next",
+        "to": "fmx"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "next",
+        "to": "fmy"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "next",
+        "to": "dx"
+      },
+      {
+        "from": "dx",
+        "fromPort": "next",
+        "to": "dy"
+      },
+      {
+        "from": "dy",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "d2"
+      },
+      {
+        "from": "d2",
+        "fromPort": "next",
+        "to": "thr"
+      },
+      {
+        "from": "thr",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mY",
+        "toPort": "source"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "fty",
+        "toPort": "a"
+      },
+      {
+        "from": "mX",
+        "fromPort": "value",
+        "to": "fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "mY",
+        "fromPort": "value",
+        "to": "fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "a"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "b"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "a"
+      },
+      {
+        "from": "fty",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "b"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "b"
+      },
+      {
+        "from": "d2",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "thr",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "value",
+        "to": "haltNoEnt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.cond.targetLost",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.engage.outOfRange",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brV",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "tY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "mX",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "mY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "ftx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fty",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmx",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "fmy",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "dx",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dy",
+        "op": "SubFloat"
+      },
+      {
+        "id": "dx2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "dy2",
+        "op": "MulFloat"
+      },
+      {
+        "id": "d2",
+        "op": "AddFloat"
+      },
+      {
+        "id": "thr",
+        "op": "ConstFloat",
+        "floatValue": 422500.0
+      },
+      {
+        "id": "cmp",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "zeroEnt",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNoEnt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "brV"
+      },
+      {
+        "from": "brV",
+        "fromPort": "false",
+        "to": "zeroEnt"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "next",
+        "to": "haltNoEnt"
+      },
+      {
+        "from": "brV",
+        "fromPort": "true",
+        "to": "tX"
+      },
+      {
+        "from": "tX",
+        "fromPort": "next",
+        "to": "tY"
+      },
+      {
+        "from": "tY",
+        "fromPort": "next",
+        "to": "mX"
+      },
+      {
+        "from": "mX",
+        "fromPort": "next",
+        "to": "mY"
+      },
+      {
+        "from": "mY",
+        "fromPort": "next",
+        "to": "ftx"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "next",
+        "to": "fty"
+      },
+      {
+        "from": "fty",
+        "fromPort": "next",
+        "to": "fmx"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "next",
+        "to": "fmy"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "next",
+        "to": "dx"
+      },
+      {
+        "from": "dx",
+        "fromPort": "next",
+        "to": "dy"
+      },
+      {
+        "from": "dy",
+        "fromPort": "next",
+        "to": "dx2"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "next",
+        "to": "dy2"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "next",
+        "to": "d2"
+      },
+      {
+        "from": "d2",
+        "fromPort": "next",
+        "to": "thr"
+      },
+      {
+        "from": "thr",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "brV",
+        "toPort": "condition"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tX",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "tY",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mX",
+        "toPort": "source"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "mY",
+        "toPort": "source"
+      },
+      {
+        "from": "tX",
+        "fromPort": "value",
+        "to": "ftx",
+        "toPort": "a"
+      },
+      {
+        "from": "tY",
+        "fromPort": "value",
+        "to": "fty",
+        "toPort": "a"
+      },
+      {
+        "from": "mX",
+        "fromPort": "value",
+        "to": "fmx",
+        "toPort": "a"
+      },
+      {
+        "from": "mY",
+        "fromPort": "value",
+        "to": "fmy",
+        "toPort": "a"
+      },
+      {
+        "from": "fmx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "a"
+      },
+      {
+        "from": "ftx",
+        "fromPort": "value",
+        "to": "dx",
+        "toPort": "b"
+      },
+      {
+        "from": "fmy",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "a"
+      },
+      {
+        "from": "fty",
+        "fromPort": "value",
+        "to": "dy",
+        "toPort": "b"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "a"
+      },
+      {
+        "from": "dx",
+        "fromPort": "value",
+        "to": "dx2",
+        "toPort": "b"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy",
+        "fromPort": "value",
+        "to": "dy2",
+        "toPort": "b"
+      },
+      {
+        "from": "dx2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "a"
+      },
+      {
+        "from": "dy2",
+        "fromPort": "value",
+        "to": "d2",
+        "toPort": "b"
+      },
+      {
+        "from": "d2",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "thr",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroEnt",
+        "fromPort": "value",
+        "to": "haltNoEnt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.engage.cooldown",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "z0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "cd",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "cdGt0",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "brCd",
+        "op": "BranchBool"
+      },
+      {
+        "id": "negOne",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "cdNext",
+        "op": "AddInt"
+      },
+      {
+        "id": "saveNext",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "haltTick",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "fireTgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "fire",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Rts.Frontline.InfantryDamage"
+      },
+      {
+        "id": "cdReset",
+        "op": "ConstInt",
+        "intValue": 30
+      },
+      {
+        "id": "saveRst",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Brain.Attack.Cooldown"
+      },
+      {
+        "id": "haltFire",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "z0"
+      },
+      {
+        "from": "z0",
+        "fromPort": "next",
+        "to": "cd"
+      },
+      {
+        "from": "cd",
+        "fromPort": "next",
+        "to": "cdGt0"
+      },
+      {
+        "from": "cdGt0",
+        "fromPort": "next",
+        "to": "brCd"
+      },
+      {
+        "from": "brCd",
+        "fromPort": "true",
+        "to": "negOne"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "next",
+        "to": "cdNext"
+      },
+      {
+        "from": "cdNext",
+        "fromPort": "next",
+        "to": "saveNext"
+      },
+      {
+        "from": "saveNext",
+        "fromPort": "next",
+        "to": "haltTick"
+      },
+      {
+        "from": "brCd",
+        "fromPort": "false",
+        "to": "fireTgt"
+      },
+      {
+        "from": "fireTgt",
+        "fromPort": "next",
+        "to": "fire"
+      },
+      {
+        "from": "fire",
+        "fromPort": "next",
+        "to": "cdReset"
+      },
+      {
+        "from": "cdReset",
+        "fromPort": "next",
+        "to": "saveRst"
+      },
+      {
+        "from": "saveRst",
+        "fromPort": "next",
+        "to": "haltFire"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "cd",
+        "toPort": "source"
+      },
+      {
+        "from": "z0",
+        "fromPort": "value",
+        "to": "cdGt0",
+        "toPort": "a"
+      },
+      {
+        "from": "cd",
+        "fromPort": "value",
+        "to": "cdGt0",
+        "toPort": "b"
+      },
+      {
+        "from": "cdGt0",
+        "fromPort": "value",
+        "to": "brCd",
+        "toPort": "condition"
+      },
+      {
+        "from": "cd",
+        "fromPort": "value",
+        "to": "cdNext",
+        "toPort": "a"
+      },
+      {
+        "from": "negOne",
+        "fromPort": "value",
+        "to": "cdNext",
+        "toPort": "b"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveNext",
+        "toPort": "source"
+      },
+      {
+        "from": "cdNext",
+        "fromPort": "value",
+        "to": "saveNext",
+        "toPort": "value"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "fireTgt",
+        "toPort": "source"
+      },
+      {
+        "from": "fireTgt",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "target"
+      },
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "saveRst",
+        "toPort": "source"
+      },
+      {
+        "from": "cdReset",
+        "fromPort": "value",
+        "to": "saveRst",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.wait.resumeTarget",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "ent",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Brain.Attack.Target"
+      },
+      {
+        "id": "val",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "ent"
+      },
+      {
+        "from": "ent",
+        "fromPort": "next",
+        "to": "val"
+      },
+      {
+        "from": "val",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "ent",
+        "toPort": "source"
+      },
+      {
+        "from": "ent",
+        "fromPort": "value",
+        "to": "val",
+        "toPort": "source"
+      },
+      {
+        "from": "val",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "rts.attack.cond.moveOrdered",
+    "kind": "Script",
+    "entry": "self0",
+    "nodes": [
+      {
+        "id": "self0",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "gType",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Order.ActiveTypeId"
+      },
+      {
+        "id": "ordTy",
+        "op": "LoadOrderTypeId",
+        "orderType": "moveTo"
+      },
+      {
+        "id": "isIt",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self0",
+        "fromPort": "next",
+        "to": "gType"
+      },
+      {
+        "from": "gType",
+        "fromPort": "next",
+        "to": "ordTy"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "next",
+        "to": "isIt"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "next",
+        "to": "br"
+      },
+      {
+        "from": "br",
+        "fromPort": "true",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "br",
+        "fromPort": "false",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self0",
+        "fromPort": "value",
+        "to": "gType",
+        "toPort": "source"
+      },
+      {
+        "from": "gType",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "a"
+      },
+      {
+        "from": "ordTy",
+        "fromPort": "value",
+        "to": "isIt",
+        "toPort": "b"
+      },
+      {
+        "from": "isIt",
+        "fromPort": "value",
+        "to": "br",
+        "toPort": "condition"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  }
+]

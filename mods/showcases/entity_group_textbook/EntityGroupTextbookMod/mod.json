@@ -1,0 +1,10 @@
+{
+  "name": "EntityGroupTextbookMod",
+  "version": "1.0.0",
+  "description": "实体组教科书：营地作为一个普通 EntityTemplate（递归 children + localId + attach 标记）可复用摆放、可做实例差异 override。已落切A：结构装载与 26 条可寻址路径（EntityGroupTextbookLoadTests 锁定）；路径 override 全集/关系物化/黑板引用属后续切片（issue #1540）。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}
