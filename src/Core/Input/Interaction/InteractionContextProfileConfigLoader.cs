@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     /// declared DeepObject merge through the shared <see cref="ConfigPipeline"/> (a mod fragment's
     /// profiles array replaces the root's, matching the filter profile family); structural
     /// validation fails fast. Referenced filter/intent ids resolve at registry install, not here.
-    /// The engine-reserved steady-state profile installs programmatically in GameEngine, not here.
+    /// Steady state is the absence of a mounted instance. This loader does not install a reserved profile.
     /// </summary>
     public sealed class InteractionContextProfileConfigLoader
     {
@@ -51,9 +51,10 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Case E retired <c>continuousQuery</c> / <c>whileActive</c>; profiles use
-        /// <c>onActivated</c> / <c>onDeactivated</c> graph slots instead. Unknown properties
-        /// are otherwise ignored by the deserializer — fail closed instead.
+        /// Retired profile fields fail closed. <c>continuousQuery</c> / <c>whileActive</c> were
+        /// replaced by <c>onActivated</c> / <c>onDeactivated</c>. <c>activeCollectionKey</c> was
+        /// replaced by the member set on the intent. Other unknown properties are ignored by the
+        /// deserializer, so these names are rejected here.
         /// </summary>
         private static void RejectRetiredPeriodFields(JsonObject root, string relativePath)
         {
@@ -82,6 +83,12 @@ namespace Ludots.Core.Input.Interaction
                     {
                         throw new InvalidOperationException(
                             $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
+                    }
+
+                    if (string.Equals(property.Key, "activeCollectionKey", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; the submitting graph carries the member set on the intent.");
                     }
                 }
             }
@@ -112,8 +119,7 @@ namespace Ludots.Core.Input.Interaction
                     throw new InvalidOperationException($"{path}.id duplicates interaction context profile '{profile.Id}'.");
                 }
 
-                // Collection/view keys are optional: cast/command routing contexts declare
-                // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
+                // activeEntityViewKey is declaration data and has no runtime id consumer.
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
