@@ -30,7 +30,7 @@ public sealed class BrowserCanvasContent : BrowserSurfaceCanvasContent, ISkiaUiC
 			return;
 		}
 
-		_renderer.DrawFrame(canvas, rect, frame);
+		_renderer.DrawFrame(canvas, rect, frame, VisualHitMask);
 	}
 
 	public override void Dispose()

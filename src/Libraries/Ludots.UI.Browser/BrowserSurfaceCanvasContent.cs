@@ -30,6 +30,8 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 
 	public IBrowserSurface Surface => _surface;
 
+	public BrowserHitMaskColor? VisualHitMask => _hitTestOptions.HitMaskColor;
+
 	public BrowserFrame? LatestFrame => _surface.TryGetLatestFrame();
 
 	public bool HitTest(UiNode node, float x, float y)

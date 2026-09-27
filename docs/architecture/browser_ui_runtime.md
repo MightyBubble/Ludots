@@ -109,6 +109,7 @@ The bridge is intentionally string-based at the contract layer:
 - Host-to-browser: `PostMessageAsync` sends structured payloads to the web app.
 - Host-to-browser script execution: `ExecuteScriptAsync` is available for engine adapters that support direct script execution.
 - Browser applications must target Ludots-owned script facades, not provider private globals. Generic application messages use `window.ludotsBrowser`; DataPlane traffic uses `window.ludotsDataplane`.
+- Alpha hit-test samples the browser frame's source alpha. Placement/aim overlays are a hit mask: fill `BrowserHitMaskColor` (`rgb(0, 255, 1)` by default in `BrowserSurfaceHitTestOptions.Alpha()`). Display compositing punches that color to visual alpha 0 so the map stays visible; hit-test still reads the original frame. Do not use `background: transparent` for a capture overlay.
 
 Higher-level C# API binding, permission checks, serialization, and Ludots gameplay/service routing must be built above `IBrowserMessageBridge`, not inside the pixel renderer.
 
