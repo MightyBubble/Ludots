@@ -1,0 +1,41 @@
+[
+  {
+    "id": "showcase.graph_op.QueryFilterKnowledgeVisible",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "all_units",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "knowledge_filter",
+        "op": "QueryFilterKnowledgeVisible"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "all_units"
+      },
+      {
+        "from": "all_units",
+        "fromPort": "next",
+        "to": "knowledge_filter"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "knowledge_filter",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -330,7 +330,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity local = GetLocalPlayer(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,

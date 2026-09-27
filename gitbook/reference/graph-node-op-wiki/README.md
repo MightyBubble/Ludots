@@ -4,6 +4,14 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
+## commandIntent
+
+> 作者语义与全量字段见手册分册 [命令意图 · input-01](../mod-editor-prd/config/input-01-command-intent.md)。
+
+- [一声令下先进缓冲](SubmitCommandIntent.md) — 图里定好落点，一声令下交给缓冲，下令内核下一拍再路由。
+- [围城令先进缓冲](SubmitEngageBatch.md) — 图里认出目标，一声围城令交给缓冲，下令内核下一拍用 EQS 环位逐成员落位。
+- [施法令先进缓冲](SubmitCast.md) — 图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。
+
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
@@ -64,6 +72,7 @@
 - [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
 - [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
 - [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
+- [可选筛只留能点的](QueryFilterSelectable.md) — 名单过一道可选门：带可选标记且开关打开的留下，关掉的当场划掉，顺序不变。
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
 - [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
 - [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
@@ -82,6 +91,7 @@
 - [翻开效果图鉴](QueryCollectEffectTemplates.md) — 墙上贴着一批效果说明书。
 - [翻开物品图鉴](QueryCollectItemDefinitions.md) — 物品说明书贴在墙上。
 - [翻开背包](QueryCollectInventoryItems.md) — 背包里的物被点名线牵住。
+- [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
 ## 子图调用与事件派发
@@ -176,6 +186,7 @@
 - [两段伤害叠成一刀](AddFloat.md) — 30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。
 - [亮出情报面板](ShowPanel.md) — 选中单位的一瞬间，属性卡跟着亮起来。
 - [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
+- [先看坐标读不读得出](LoadEntityPosValid.md) — 图里先确认木桩站在原地，坐标读得出才谈得上追击。
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 - [命运袋里掏一件](WeightedPick.md) — 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
 - [图内切瞄准](SetInteractionMode.md) — 不用碰键位表，一枚目标在图里被切进了瞄准模式。
@@ -183,13 +194,18 @@
 - [图内激活瞄准 context](ActivateContext.md) — 不用碰键位表，一枚指令把木桩切进瞄准 context，实例集里立起一条。
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
+- [开方求真长度](SqrtFloat.md) — 81 的平方开出来是 9，折成 9 点伤打在木桩上。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
 - [撞到上限就停](ClampFloat.md) — 90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 - [收起情报面板](HidePanel.md) — 点掉选中，属性卡跟着隐去。
+- [整数换算成浮点刻度](IntToFloat.md) — 记在整数位上的 -9，换到浮点刻度再打出去，数值不变，刻度变了。
 - [格挡先咬掉一截](SubFloat.md) — 50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 - [永远放行的许可](ConstBool.md) — 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
+- [浮点折回整数位](FloatToInt.md) — -8.6 的伤害按四舍五入折回整数位，折完是多少打多少。
 - [热座换手](SetPanelAudience.md) — 回合一换，面板受众跟着换到当令座位，等待的座位点不动面板。
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
+- [读出木桩的横坐标](LoadEntityPosX.md) — 不靠眼睛看，图里直接读木桩站在第几厘米，读数顺手折成伤打出去。
+- [读出木桩的纵坐标](LoadEntityPosY.md) — 横向读过了，这次读纵坐标，木桩站得多偏一看便知。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
 - [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
 - [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
@@ -220,28 +236,56 @@
 
 > 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
 
+- [一天过了千分之几](ReadCalendarDayPermille.md) — 把今天的进度读成千分比。
+- [今天走到哪](ReadCalendarDayIndex.md) — 读出当前日序，字幕报出这个数。
+- [今天过了多少步](ReadCalendarTicksIntoDay.md) — 读出今天已经走了多少步。
+- [今年是第几年](ReadCalendarYear.md) — 按主历读出年份。
+- [停一下再放开](AcquireTimeFlowPause.md) — 拿一张整局暂停，马上放回。
 - [写死一句字幕](ConstText.md) — 作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。
 - [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 - [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
+- [历法开没开](ReadCalendarEnabled.md) — 先看这局有没有启用历法，开了才能读日子。
 - [句子送进对话框](SinkPresentationText.md) — 图里写好「字幕到了」，指定对话框通道，口吐出同样一句。
 - [叫另一张图来帮忙算](InvokeScript.md) — 主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
 - [士气指针](ReadMapVarFloat.md) — 士气存在地图变量里，指针一动读数就到。
 - [士气补给](WriteMapVarFloat.md) — 一次补给写回士气变量，地图记得这份涨幅。
 - [左右两段字接成一句](ConcatText.md) — 左边「左」、右边「右」并进同一句；字幕口吐出「左右」。
 - [开局战绩上墙](ReadMapVarInt.md) — 地图变量记得每一场胜利，开局张口就报数。
+- [开局日子落定](ApplyCalendarStart.md) — 在日子还没被作者改过时，把读到的日序和当天步数写回开局。
 - [战绩加一](WriteMapVarInt.md) — 赢一场就写回地图变量，战绩板自己会涨。
 - [把 3 抄一份到结果槽](MoveInt.md) — 左边格子里的 3 原样不动，右边结果格里多出一份 3。
 - [把小数念成字](FloatToText.md) — 小数 1.5 先变成文字，再送进字幕口。
 - [把整数念成字](IntToText.md) — 数字 7 先变成文字，再送进字幕口。
+- [把日子往前拨一天](SetCalendarDayIndex.md) — 读出今天，加一天，写回去。不能往回拨。
+- [把暂停放回去](ReleaseTimeFlowToken.md) — 先拿一张整局暂停，再放回这张令牌。
+- [把钟拨回刚读到的这一拍](SetCalendarTicksIntoDay.md) — 读出今天已走的步数，再写回去。
 - [按文案键出字幕](LoadTextKey.md) — 作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。
+- [整局停没停](ReadTimeFlowPaused.md) — 先看整局模拟有没有被暂停。
+- [整局现在多少](ReadTimeFlowScalePermille.md) — 读出整局的有效倍率，一千是原速。
 - [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 - [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
 - [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
 - [点名派发待办活动](OfferActivity.md) — 图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。
+- [现在是哪一段昼夜](ReadCalendarDayPhase.md) — 读出当前昼夜相位的编号。
+- [离秋天还有几天](ReadCalendarDaysUntilPhase.md) — 数到秋季开始还要几天。已经在这一季里，结果是 0。
+- [离第 360 天还有几天](SubInt.md) — 用第 360 天减去今天，得到还差几天。
 - [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
+- [调成两倍再收回](AcquireTimeFlowScale.md) — 给整局一张两倍令牌，马上放回。
+- [这一季叫什么](ReadCalendarCyclePhase.md) — 按季节周期读出当前相位编号。
+- [这一季排在第几格](ReadCalendarCyclePhaseIndex.md) — 按季节表读出当前这一季的位置，春是 0。
+- [这一季的第几天](ReadCalendarCycleDay.md) — 读出当前季节里的第几天。
+- [这个名字对应的编号](LoadConfigKey.md) — 把已经登记过的夏写成图里能比较的编号。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
+
+## 订单与行为
+
+> 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
+
+- [亲手把令办结](CompleteActiveOrder.md) — 手上那道移动令由图里销账，订单缓冲腾出来接下一单。
+- [替自己下移动令](SubmitAssignedOrder.md) — 行为图不等玩家发话，直接往订单队列里塞一道移动令。
+- [认出移动令的编号](LoadOrderTypeId.md) — 图里先把移动令的编号认出来，认得出才指挥得动。
 
 ## 集合写入
 

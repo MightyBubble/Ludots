@@ -21,6 +21,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             MapId mapId,
             int extraBuildings,
             int seed,
+            float centerXCm,
+            float centerYCm,
             float minRadiusCm = DefaultMinRadiusCm,
             float maxRadiusCm = DefaultMaxRadiusCm)
         {
@@ -30,6 +32,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                 CapabilityStandardStaticPresenter30kIds.TemplateId,
                 extraBuildings,
                 seed,
+                centerXCm,
+                centerYCm,
                 minRadiusCm,
                 maxRadiusCm,
                 DefaultJitterCm);
@@ -41,6 +45,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             string templateId,
             int entityCount,
             int seed,
+            float centerXCm,
+            float centerYCm,
             float minRadiusCm = DefaultMinRadiusCm,
             float maxRadiusCm = DefaultMaxRadiusCm,
             float jitterCm = DefaultJitterCm)
@@ -96,6 +102,9 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                         x *= scale;
                         y *= scale;
                     }
+
+                    x += centerXCm;
+                    y += centerYCm;
 
                     scratch[batchIndex] = new RuntimeEntitySpawnRequest
                     {

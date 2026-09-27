@@ -1211,6 +1211,90 @@ internal static class FrontlineVisionScopes
     }
 }
 
+// The one-screen standalone duel seats both commanders on a single surface, so the enemy
+// opening army stays live knowledge; the networked match keeps fog-driven disclosure and
+// never installs this reveal.
+internal sealed class FrontlineStandaloneOpeningRevealSystem : BaseSystem<World, float>
+{
+    private static readonly QueryDescription Query = new QueryDescription()
+        .WithAll<FrontlineParticipant, PlayerOwner, ReplicationSchemaRef>()
+        .WithAny<FrontlineCore, FrontlineHarvester, FrontlineInfantry>()
+        .WithNone<ReplicationMirrorIdentity>();
+
+    private static readonly KnowledgeIdMask256 EmptyRelationshipTypeMask = KnowledgeIdMask256.Empty;
+    private static readonly KnowledgeIdMask256 EmptyTagMask = KnowledgeIdMask256.Empty;
+
+    private readonly GameEngine _engine;
+    private readonly FrontlineSideConfig[] _sides;
+    private readonly FrontlineReplicationEntityScope _scope;
+    private readonly KnowledgeProjectionStore _knowledge;
+    private readonly KnowledgeIdMask256 _enemyAttributeMask;
+    private MapSession? _revealedSession;
+
+    public FrontlineStandaloneOpeningRevealSystem(
+        GameEngine engine,
+        FrontlineConfig config,
+        KnowledgeProjectionStore knowledge,
+        KnowledgeIdMask256 enemyAttributeMask)
+        : base((engine ?? throw new ArgumentNullException(nameof(engine))).World)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
+        _engine = engine;
+        _sides = config.Sides;
+        _scope = new FrontlineReplicationEntityScope(config);
+        _enemyAttributeMask = enemyAttributeMask;
+    }
+
+    public override void Update(in float dt)
+    {
+        MapSession? session = _engine.CurrentMapSession;
+        if (session == null || !_scope.IsConfiguredMap(session.MapId) || ReferenceEquals(_revealedSession, session))
+        {
+            return;
+        }
+
+        _revealedSession = session;
+        int currentTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
+        foreach (ref Chunk chunk in World.Query(in Query))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
+            foreach (int index in chunk)
+            {
+                Entity enemy = chunk.Entity(index);
+                if (!_scope.IsFrontlineEntity(World, enemy, schemas[index].SchemaId, session.MapId))
+                {
+                    continue;
+                }
+
+                int enemySideIndex = participants[index].SideIndex;
+                for (int viewerIndex = 0; viewerIndex < _sides.Length; viewerIndex++)
+                {
+                    if (viewerIndex == enemySideIndex ||
+                        !session.PlayerEntityLookup.TryGet(_sides[viewerIndex].PlayerId, out Entity viewer))
+                    {
+                        continue;
+                    }
+
+                    var disclosure = new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        in _enemyAttributeMask,
+                        in EmptyRelationshipTypeMask,
+                        in EmptyTagMask,
+                        enemy,
+                        currentTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 1);
+                    _knowledge.Upsert(viewer, enemy, in disclosure);
+                }
+            }
+        }
+    }
+}
+
 internal sealed class FrontlineVisionScopeAuthoringSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
@@ -1725,6 +1809,24 @@ internal static class FrontlineReplication
         NetworkProcessRole role = engine.GetService(CoreServiceKeys.NetworkProcessRole);
         if (role == NetworkProcessRole.Standalone)
         {
+            KnowledgeProjectionStore standaloneKnowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException(
+                    "RTS Frontline standalone opening reveal requires KnowledgeProjectionStore.");
+            int standaloneHealthId = AttributeRegistry.GetId(config.HealthAttribute);
+            if (standaloneHealthId == AttributeRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    "RTS Frontline standalone opening reveal requires a registered Health attribute.");
+            }
+
+            // capabilityId: rts-frontline.standalone-opening-reveal
+            engine.RegisterSystem(
+                new FrontlineStandaloneOpeningRevealSystem(
+                    engine,
+                    config,
+                    standaloneKnowledge,
+                    KnowledgeIdMask256.Empty.WithId(standaloneHealthId)),
+                SystemGroup.RuntimeEntityBinding);
             return;
         }
 

@@ -91,6 +91,7 @@ namespace Ludots.Core.Presentation.Presenters
             SecondaryValueParamKey = PresenterParamKeyRegistry.UnsetParamKey;
             FontSize = 16;
             BoundAttributeId = UnboundAttributeId;
+            Args = Array.Empty<WorldTextArg>();
         }
 
         public int TextTokenId;
@@ -100,11 +101,29 @@ namespace Ludots.Core.Presentation.Presenters
         public int FontSize;
 
         /// <summary>
+        /// 句子孔。有内容时 mode 与两个数值键必须缺席：数字仍由 AttributeBinding 写入 paramKey，
+        /// 名字孔只声明 entityInfoTitle。空数组不是旧的两格数值句。
+        /// </summary>
+        public WorldTextArg[] Args = Array.Empty<WorldTextArg>();
+
+        /// <summary>
         /// 值绑定声明（定义编译期从同定义 attributeBinding 解析）：模式化文本的值参数
         /// 由属性直接供给时非负，投影期按 Owner 的 AttributeBuffer 现读权威值；
         /// 解析不出同源属性则保持 Unbound，走既有参数快照语义。
         /// </summary>
         public int BoundAttributeId;
+    }
+
+    public enum WorldTextArgSource : byte
+    {
+        Param = 0,
+        EntityInfoTitle = 1,
+    }
+
+    public struct WorldTextArg
+    {
+        public WorldTextArgSource Source;
+        public int ParamKey;
     }
 
     public struct TrailMeshConfig

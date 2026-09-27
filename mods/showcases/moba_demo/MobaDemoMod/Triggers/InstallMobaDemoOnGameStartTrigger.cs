@@ -49,12 +49,7 @@ namespace MobaDemoMod.Triggers
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/moba_config.json");
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
-                ordersObj is OrderQueue orders)
-            {
-                _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
-                engine.RegisterSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.LocalInput);
-            }
+            engine.RegisterSystem(new MobaInputModeSystem(engine.World, engine.GlobalContext), SystemGroup.LocalInput);
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Moba");
 

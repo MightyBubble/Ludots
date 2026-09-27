@@ -1,6 +1,14 @@
 {
   "Id": "control_plane_projection",
-  "Tags": ["control_plane.showcase", "selection.collection.routing"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "control_plane.showcase",
+    "selection.collection.routing"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "ControlPlaneProjection.Camera.Showcase",
     "TargetXCm": 1650,
@@ -14,85 +22,147 @@
       "InstanceId": "team-rep",
       "Template": "control_plane_projection_team",
       "Overrides": {
-        "Name": { "Value": "Emerald Compact" }
+        "Name": {
+          "Value": "Emerald Compact"
+        }
       }
     },
     {
       "InstanceId": "p1-rep",
       "Template": "control_plane_projection_player",
       "Overrides": {
-        "Name": { "Value": "Azure Commander" }
+        "Name": {
+          "Value": "Azure Commander"
+        }
       }
     },
     {
       "InstanceId": "p2-rep",
       "Template": "control_plane_projection_player",
       "Overrides": {
-        "Name": { "Value": "Amber Commander" }
+        "Name": {
+          "Value": "Amber Commander"
+        }
       }
     },
     {
       "InstanceId": "p1-unit-1",
       "Template": "control_plane_projection_p1_unit",
       "Overrides": {
-        "Name": { "Value": "Azure Spear" },
-        "WorldPositionCm": { "Value": { "X": 1150, "Y": 700 } }
+        "Name": {
+          "Value": "Azure Spear"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1150,
+            "Y": 700
+          }
+        }
       }
     },
     {
       "InstanceId": "p1-unit-2",
       "Template": "control_plane_projection_p1_unit",
       "Overrides": {
-        "Name": { "Value": "Azure Shield" },
-        "WorldPositionCm": { "Value": { "X": 1350, "Y": 640 } }
+        "Name": {
+          "Value": "Azure Shield"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1350,
+            "Y": 640
+          }
+        }
       }
     },
     {
       "InstanceId": "p1-unit-3",
       "Template": "control_plane_projection_p1_unit",
       "Overrides": {
-        "Name": { "Value": "Azure Lance" },
-        "WorldPositionCm": { "Value": { "X": 1250, "Y": 900 } }
+        "Name": {
+          "Value": "Azure Lance"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1250,
+            "Y": 900
+          }
+        }
       }
     },
     {
       "InstanceId": "p1-unit-4",
       "Template": "control_plane_projection_p1_unit",
       "Overrides": {
-        "Name": { "Value": "Azure Scout" },
-        "WorldPositionCm": { "Value": { "X": 1150, "Y": 1150 } }
+        "Name": {
+          "Value": "Azure Scout"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1150,
+            "Y": 1150
+          }
+        }
       }
     },
     {
       "InstanceId": "p1-unit-5",
       "Template": "control_plane_projection_p1_unit",
       "Overrides": {
-        "Name": { "Value": "Azure Medic" },
-        "WorldPositionCm": { "Value": { "X": 1350, "Y": 1200 } }
+        "Name": {
+          "Value": "Azure Medic"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1350,
+            "Y": 1200
+          }
+        }
       }
     },
     {
       "InstanceId": "p2-unit-1",
       "Template": "control_plane_projection_p2_unit",
       "Overrides": {
-        "Name": { "Value": "Amber Ram" },
-        "WorldPositionCm": { "Value": { "X": 2050, "Y": 720 } }
+        "Name": {
+          "Value": "Amber Ram"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2050,
+            "Y": 720
+          }
+        }
       }
     },
     {
       "InstanceId": "p2-unit-2",
       "Template": "control_plane_projection_p2_unit",
       "Overrides": {
-        "Name": { "Value": "Amber Bolt" },
-        "WorldPositionCm": { "Value": { "X": 2200, "Y": 930 } }
+        "Name": {
+          "Value": "Amber Bolt"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2200,
+            "Y": 930
+          }
+        }
       }
     },
     {
       "InstanceId": "p2-unit-3",
       "Template": "control_plane_projection_p2_unit",
       "Overrides": {
-        "Name": { "Value": "Amber Ward" },
-        "WorldPositionCm": { "Value": { "X": 2050, "Y": 1150 } }
+        "Name": {
+          "Value": "Amber Ward"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2050,
+            "Y": 1150
+          }
+        }
       }
     }
   ],

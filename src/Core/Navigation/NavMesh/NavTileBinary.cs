@@ -26,7 +26,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 bw.Write(tile.BuildConfigHash);
                 bw.Write(0UL);
                 bw.Write(tile.OriginXcm);
-                bw.Write(tile.OriginZcm);
+                bw.Write(tile.OriginYcm);
 
                 bw.Write(tile.VertexCount);
                 for (int i = 0; i < tile.VertexCount; i++)

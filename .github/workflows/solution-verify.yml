@@ -49,9 +49,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh
@@ -197,6 +194,16 @@ jobs:
         shell: pwsh
         run: |
           dotnet test src/Tests/PersistenceTests/PersistenceTests.csproj -c Debug --no-build -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Calendar core suite gates the world-calendar layer (multi-calendar tables,
+      # subscriber-gated dispatch, save domain).
+      - name: Test calendar core suite
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/CalendarCoreTests/CalendarCoreTests.csproj -c Debug --no-build -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

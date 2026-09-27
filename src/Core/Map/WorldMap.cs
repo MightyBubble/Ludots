@@ -8,12 +8,12 @@ namespace Ludots.Core.Map
     public class WorldMap
     {
         // Dimensions now configurable
-        public int WidthInMacroTiles { get; private set; }
-        public int HeightInMacroTiles { get; private set; }
-        public const int TileSize = SpatialScaleDefaults.MacroTileCells;
+        public int WidthInPages { get; private set; }
+        public int HeightInPages { get; private set; }
+        public const int TileSize = SpatialScaleDefaults.TerrainPageCells;
         
-        public int TotalWidth => WidthInMacroTiles * TileSize;
-        public int TotalHeight => HeightInMacroTiles * TileSize;
+        public int TotalWidth => WidthInPages * TileSize;
+        public int TotalHeight => HeightInPages * TileSize;
         
         public const int MaxHeightLevel = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
         public const int WorldScale = 1000; // 1 Grid = 1000 IntVector units
@@ -21,29 +21,29 @@ namespace Ludots.Core.Map
         private MapTile[] _tiles;
 
         public WorldMap() : this(
-            SpatialScaleDefaults.DefaultWorldWidthMacroTiles,
-            SpatialScaleDefaults.DefaultWorldHeightMacroTiles) { }
+            SpatialScaleDefaults.DefaultBoardWidthPages,
+            SpatialScaleDefaults.DefaultBoardHeightPages) { }
 
-        public WorldMap(int widthInMacroTiles, int heightInMacroTiles)
+        public WorldMap(int widthInPages, int heightInPages)
         {
-            Initialize(widthInMacroTiles, heightInMacroTiles);
+            Initialize(widthInPages, heightInPages);
         }
 
-        public void Initialize(int widthInMacroTiles, int heightInMacroTiles)
+        public void Initialize(int widthInPages, int heightInPages)
         {
-            if (widthInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(widthInMacroTiles));
-            if (heightInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(heightInMacroTiles));
-            WidthInMacroTiles = widthInMacroTiles;
-            HeightInMacroTiles = heightInMacroTiles;
-            _tiles = new MapTile[WidthInMacroTiles * HeightInMacroTiles];
+            if (widthInPages <= 0) throw new ArgumentOutOfRangeException(nameof(widthInPages));
+            if (heightInPages <= 0) throw new ArgumentOutOfRangeException(nameof(heightInPages));
+            WidthInPages = widthInPages;
+            HeightInPages = heightInPages;
+            _tiles = new MapTile[WidthInPages * HeightInPages];
         }
 
         public MapTile GetOrCreateTile(int tileX, int tileY)
         {
-            if (tileX < 0 || tileX >= WidthInMacroTiles || tileY < 0 || tileY >= HeightInMacroTiles)
+            if (tileX < 0 || tileX >= WidthInPages || tileY < 0 || tileY >= HeightInPages)
                 return null;
 
-            int index = tileY * WidthInMacroTiles + tileX;
+            int index = tileY * WidthInPages + tileX;
             if (_tiles[index] == null)
             {
                 _tiles[index] = new MapTile();

@@ -200,663 +200,428 @@
   {
     "id": "Graph.BT.Leaf.SeeEnemy",
     "kind": "Script",
-    "entry": "readDist",
+    "entry": "self",
     "nodes": [
       {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
         "id": "readDist",
-        "op": "MoveInt"
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
       },
       {
-        "id": "sightCm",
+        "id": "threshold",
         "op": "ConstInt",
-        "intValue": 1
+        "intValue": 550
       },
       {
-        "id": "withinSight",
+        "id": "cmp",
         "op": "CompareLtInt"
       },
       {
-        "id": "seenBranch",
+        "id": "branch",
         "op": "BranchBool"
       },
       {
-        "id": "seenYes",
-        "op": "ConstInt",
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
         "intValue": 1
       },
       {
-        "id": "seenNo",
-        "op": "ConstInt",
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
         "intValue": 0
-      },
-      {
-        "id": "haltSeen",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "haltNotSeen",
-        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
         "from": "readDist",
         "fromPort": "next",
-        "to": "sightCm"
+        "to": "threshold"
       },
       {
-        "from": "sightCm",
+        "from": "threshold",
         "fromPort": "next",
-        "to": "withinSight"
+        "to": "cmp"
       },
       {
-        "from": "withinSight",
+        "from": "cmp",
         "fromPort": "next",
-        "to": "seenBranch"
+        "to": "branch"
       },
       {
-        "from": "seenBranch",
+        "from": "branch",
         "fromPort": "true",
-        "to": "seenYes"
+        "to": "haltTrue"
       },
       {
-        "from": "seenBranch",
+        "from": "branch",
         "fromPort": "false",
-        "to": "seenNo"
-      },
-      {
-        "from": "seenYes",
-        "fromPort": "next",
-        "to": "haltSeen"
-      },
-      {
-        "from": "seenNo",
-        "fromPort": "next",
-        "to": "haltNotSeen"
+        "to": "haltFalse"
       }
     ],
     "valueEdges": [
       {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
         "from": "readDist",
         "fromPort": "value",
-        "to": "withinSight",
+        "to": "cmp",
         "toPort": "a"
       },
       {
-        "from": "sightCm",
+        "from": "threshold",
         "fromPort": "value",
-        "to": "withinSight",
+        "to": "cmp",
         "toPort": "b"
       },
       {
-        "from": "withinSight",
+        "from": "cmp",
         "fromPort": "value",
-        "to": "seenBranch",
+        "to": "branch",
         "toPort": "condition"
-      },
-      {
-        "from": "seenYes",
-        "fromPort": "value",
-        "to": "haltSeen",
-        "toPort": "value"
-      },
-      {
-        "from": "seenNo",
-        "fromPort": "value",
-        "to": "haltNotSeen",
-        "toPort": "value"
       }
     ]
   },
   {
     "id": "Graph.BT.Leaf.InAttackRange",
     "kind": "Script",
-    "entry": "readDist",
+    "entry": "self",
     "nodes": [
       {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
         "id": "readDist",
-        "op": "MoveInt"
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
       },
       {
-        "id": "rangeCm",
+        "id": "threshold",
         "op": "ConstInt",
-        "intValue": 126
+        "intValue": 150
       },
       {
-        "id": "withinRange",
+        "id": "cmp",
         "op": "CompareLtInt"
       },
       {
-        "id": "rangeBranch",
+        "id": "branch",
         "op": "BranchBool"
       },
       {
-        "id": "inRangeYes",
-        "op": "ConstInt",
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
         "intValue": 1
       },
       {
-        "id": "inRangeNo",
-        "op": "ConstInt",
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
         "intValue": 0
-      },
-      {
-        "id": "haltInRange",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "haltOutOfRange",
-        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
       {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
         "from": "readDist",
         "fromPort": "next",
-        "to": "rangeCm"
+        "to": "threshold"
       },
       {
-        "from": "rangeCm",
+        "from": "threshold",
         "fromPort": "next",
-        "to": "withinRange"
+        "to": "cmp"
       },
       {
-        "from": "withinRange",
+        "from": "cmp",
         "fromPort": "next",
-        "to": "rangeBranch"
+        "to": "branch"
       },
       {
-        "from": "rangeBranch",
+        "from": "branch",
         "fromPort": "true",
-        "to": "inRangeYes"
+        "to": "haltTrue"
       },
       {
-        "from": "rangeBranch",
+        "from": "branch",
         "fromPort": "false",
-        "to": "inRangeNo"
-      },
-      {
-        "from": "inRangeYes",
-        "fromPort": "next",
-        "to": "haltInRange"
-      },
-      {
-        "from": "inRangeNo",
-        "fromPort": "next",
-        "to": "haltOutOfRange"
+        "to": "haltFalse"
       }
     ],
     "valueEdges": [
       {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
         "from": "readDist",
         "fromPort": "value",
-        "to": "withinRange",
+        "to": "cmp",
         "toPort": "a"
       },
       {
-        "from": "rangeCm",
+        "from": "threshold",
         "fromPort": "value",
-        "to": "withinRange",
+        "to": "cmp",
         "toPort": "b"
       },
       {
-        "from": "withinRange",
+        "from": "cmp",
         "fromPort": "value",
-        "to": "rangeBranch",
+        "to": "branch",
         "toPort": "condition"
-      },
-      {
-        "from": "inRangeYes",
-        "fromPort": "value",
-        "to": "haltInRange",
-        "toPort": "value"
-      },
-      {
-        "from": "inRangeNo",
-        "fromPort": "value",
-        "to": "haltOutOfRange",
-        "toPort": "value"
       }
     ]
   },
   {
     "id": "Graph.BT.Leaf.Chase",
     "kind": "Script",
-    "entry": "readDist",
+    "entry": "self",
     "nodes": [
       {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
         "id": "readDist",
-        "op": "MoveInt"
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
       },
       {
-        "id": "sightCm",
+        "id": "threshold",
         "op": "ConstInt",
-        "intValue": 1
+        "intValue": 550
       },
       {
-        "id": "targetVisible",
+        "id": "cmp",
         "op": "CompareLtInt"
       },
       {
-        "id": "visibleBranch",
+        "id": "branch",
         "op": "BranchBool"
       },
       {
-        "id": "chaseIntent",
-        "op": "ConstInt",
-        "intValue": 1,
-        "pinRegister": 3
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 1
       },
       {
-        "id": "lostIntent",
-        "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 3
-      },
-      {
-        "id": "haltChase",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "haltLost",
-        "op": "HaltReturnInt"
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 0
       }
     ],
     "controlEdges": [
       {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
         "from": "readDist",
         "fromPort": "next",
-        "to": "sightCm"
+        "to": "threshold"
       },
       {
-        "from": "sightCm",
+        "from": "threshold",
         "fromPort": "next",
-        "to": "targetVisible"
+        "to": "cmp"
       },
       {
-        "from": "targetVisible",
+        "from": "cmp",
         "fromPort": "next",
-        "to": "visibleBranch"
+        "to": "branch"
       },
       {
-        "from": "visibleBranch",
+        "from": "branch",
         "fromPort": "true",
-        "to": "chaseIntent"
+        "to": "haltTrue"
       },
       {
-        "from": "visibleBranch",
+        "from": "branch",
         "fromPort": "false",
-        "to": "lostIntent"
-      },
-      {
-        "from": "chaseIntent",
-        "fromPort": "next",
-        "to": "haltChase"
-      },
-      {
-        "from": "lostIntent",
-        "fromPort": "next",
-        "to": "haltLost"
+        "to": "haltFalse"
       }
     ],
     "valueEdges": [
       {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
         "from": "readDist",
         "fromPort": "value",
-        "to": "targetVisible",
+        "to": "cmp",
         "toPort": "a"
       },
       {
-        "from": "sightCm",
+        "from": "threshold",
         "fromPort": "value",
-        "to": "targetVisible",
+        "to": "cmp",
         "toPort": "b"
       },
       {
-        "from": "targetVisible",
+        "from": "cmp",
         "fromPort": "value",
-        "to": "visibleBranch",
+        "to": "branch",
         "toPort": "condition"
-      },
-      {
-        "from": "chaseIntent",
-        "fromPort": "value",
-        "to": "haltChase",
-        "toPort": "value"
-      },
-      {
-        "from": "lostIntent",
-        "fromPort": "value",
-        "to": "haltLost",
-        "toPort": "value"
       }
     ]
   },
   {
     "id": "Graph.BT.Leaf.Attack",
     "kind": "Script",
-    "entry": "readDist",
+    "entry": "self",
     "nodes": [
       {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
         "id": "readDist",
-        "op": "MoveInt"
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
       },
       {
-        "id": "rangeCm",
+        "id": "threshold",
         "op": "ConstInt",
-        "intValue": 126
+        "intValue": 150
       },
       {
-        "id": "withinRange",
+        "id": "cmp",
         "op": "CompareLtInt"
       },
       {
-        "id": "rangeBranch",
+        "id": "branch",
         "op": "BranchBool"
       },
       {
-        "id": "attackIntent",
-        "op": "ConstInt",
-        "intValue": 2,
-        "pinRegister": 3
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 2
       },
       {
-        "id": "holdIntent",
-        "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 3
-      },
-      {
-        "id": "haltAttack",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "haltHold",
-        "op": "HaltReturnInt"
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 1
       }
     ],
     "controlEdges": [
       {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
         "from": "readDist",
         "fromPort": "next",
-        "to": "rangeCm"
+        "to": "threshold"
       },
       {
-        "from": "rangeCm",
+        "from": "threshold",
         "fromPort": "next",
-        "to": "withinRange"
+        "to": "cmp"
       },
       {
-        "from": "withinRange",
+        "from": "cmp",
         "fromPort": "next",
-        "to": "rangeBranch"
+        "to": "branch"
       },
       {
-        "from": "rangeBranch",
+        "from": "branch",
         "fromPort": "true",
-        "to": "attackIntent"
+        "to": "haltTrue"
       },
       {
-        "from": "rangeBranch",
+        "from": "branch",
         "fromPort": "false",
-        "to": "holdIntent"
-      },
-      {
-        "from": "attackIntent",
-        "fromPort": "next",
-        "to": "haltAttack"
-      },
-      {
-        "from": "holdIntent",
-        "fromPort": "next",
-        "to": "haltHold"
+        "to": "haltFalse"
       }
     ],
     "valueEdges": [
       {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
         "from": "readDist",
         "fromPort": "value",
-        "to": "withinRange",
+        "to": "cmp",
         "toPort": "a"
       },
       {
-        "from": "rangeCm",
+        "from": "threshold",
         "fromPort": "value",
-        "to": "withinRange",
+        "to": "cmp",
         "toPort": "b"
       },
       {
-        "from": "withinRange",
+        "from": "cmp",
         "fromPort": "value",
-        "to": "rangeBranch",
+        "to": "branch",
         "toPort": "condition"
-      },
-      {
-        "from": "attackIntent",
-        "fromPort": "value",
-        "to": "haltAttack",
-        "toPort": "value"
-      },
-      {
-        "from": "holdIntent",
-        "fromPort": "value",
-        "to": "haltHold",
-        "toPort": "value"
       }
     ]
   },
   {
     "id": "Graph.BT.Leaf.Patrol",
     "kind": "Script",
-    "entry": "patrolIntent",
+    "entry": "self",
     "nodes": [
       {
-        "id": "patrolIntent",
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "intent",
         "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 3
-      },
-      {
-        "id": "zeroSteps",
-        "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 0
-      },
-      {
-        "id": "limitSteps",
-        "op": "ConstInt",
-        "intValue": 2,
-        "pinRegister": 1
-      },
-      {
-        "id": "oneValue",
-        "op": "ConstInt",
-        "intValue": 1,
-        "pinRegister": 2
-      },
-      {
-        "id": "readStep",
-        "op": "MoveInt"
-      },
-      {
-        "id": "readLimit",
-        "op": "MoveInt"
-      },
-      {
-        "id": "stepBelowLimit",
-        "op": "CompareLtInt"
-      },
-      {
-        "id": "branchNeedStep",
-        "op": "BranchBool"
-      },
-      {
-        "id": "callStep",
-        "op": "Call"
+        "intValue": 0
       },
       {
         "id": "done",
         "op": "HaltReturnInt"
-      },
-      {
-        "id": "stepReadStep",
-        "op": "MoveInt"
-      },
-      {
-        "id": "stepReadOne",
-        "op": "MoveInt"
-      },
-      {
-        "id": "stepAdd",
-        "op": "AddInt",
-        "pinRegister": 0
-      },
-      {
-        "id": "stepYield",
-        "op": "Yield"
-      },
-      {
-        "id": "stepReturn",
-        "op": "Return"
       }
     ],
     "controlEdges": [
       {
-        "from": "patrolIntent",
+        "from": "self",
         "fromPort": "next",
-        "to": "zeroSteps"
+        "to": "intent"
       },
       {
-        "from": "zeroSteps",
+        "from": "intent",
         "fromPort": "next",
-        "to": "limitSteps"
-      },
-      {
-        "from": "limitSteps",
-        "fromPort": "next",
-        "to": "oneValue"
-      },
-      {
-        "from": "oneValue",
-        "fromPort": "next",
-        "to": "readStep"
-      },
-      {
-        "from": "readStep",
-        "fromPort": "next",
-        "to": "readLimit"
-      },
-      {
-        "from": "readLimit",
-        "fromPort": "next",
-        "to": "stepBelowLimit"
-      },
-      {
-        "from": "stepBelowLimit",
-        "fromPort": "next",
-        "to": "branchNeedStep"
-      },
-      {
-        "from": "branchNeedStep",
-        "fromPort": "true",
-        "to": "callStep"
-      },
-      {
-        "from": "branchNeedStep",
-        "fromPort": "false",
         "to": "done"
-      },
-      {
-        "from": "callStep",
-        "fromPort": "call",
-        "to": "stepReadStep"
-      },
-      {
-        "from": "callStep",
-        "fromPort": "next",
-        "to": "readStep"
-      },
-      {
-        "from": "stepReadStep",
-        "fromPort": "next",
-        "to": "stepReadOne"
-      },
-      {
-        "from": "stepReadOne",
-        "fromPort": "next",
-        "to": "stepAdd"
-      },
-      {
-        "from": "stepAdd",
-        "fromPort": "next",
-        "to": "stepYield"
-      },
-      {
-        "from": "stepYield",
-        "fromPort": "next",
-        "to": "stepReturn"
       }
     ],
     "valueEdges": [
       {
-        "from": "zeroSteps",
-        "fromPort": "value",
-        "to": "readStep",
-        "toPort": "value"
-      },
-      {
-        "from": "limitSteps",
-        "fromPort": "value",
-        "to": "readLimit",
-        "toPort": "value"
-      },
-      {
-        "from": "readStep",
-        "fromPort": "value",
-        "to": "stepBelowLimit",
-        "toPort": "a"
-      },
-      {
-        "from": "readLimit",
-        "fromPort": "value",
-        "to": "stepBelowLimit",
-        "toPort": "b"
-      },
-      {
-        "from": "stepBelowLimit",
-        "fromPort": "value",
-        "to": "branchNeedStep",
-        "toPort": "condition"
-      },
-      {
-        "from": "patrolIntent",
+        "from": "intent",
         "fromPort": "value",
         "to": "done",
         "toPort": "value"
-      },
-      {
-        "from": "zeroSteps",
-        "fromPort": "value",
-        "to": "stepReadStep",
-        "toPort": "value"
-      },
-      {
-        "from": "oneValue",
-        "fromPort": "value",
-        "to": "stepReadOne",
-        "toPort": "value"
-      },
-      {
-        "from": "stepReadStep",
-        "fromPort": "value",
-        "to": "stepAdd",
-        "toPort": "a"
-      },
-      {
-        "from": "stepReadOne",
-        "fromPort": "value",
-        "to": "stepAdd",
-        "toPort": "b"
       }
     ]
   },

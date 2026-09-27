@@ -1,0 +1,126 @@
+[
+  {
+    "id": "graph.rts.select_hit",
+    "kind": "Query",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "press_px",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "rts.select.press.px"
+      },
+      {
+        "id": "press_py",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "rts.select.press.py"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "roster",
+        "op": "QueryFromCollection",
+        "collectionKey": "rts.selectable"
+      },
+      {
+        "id": "rect_hits",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "press_px"
+      },
+      {
+        "from": "press_px",
+        "fromPort": "next",
+        "to": "press_py"
+      },
+      {
+        "from": "press_py",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "roster"
+      },
+      {
+        "from": "roster",
+        "fromPort": "next",
+        "to": "rect_hits"
+      },
+      {
+        "from": "rect_hits",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "roster",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "press_px",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "press_py",
+        "toPort": "source"
+      },
+      {
+        "from": "press_px",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "a"
+      },
+      {
+        "from": "press_py",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "b"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "c"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "rect_hits",
+        "toPort": "max"
+      }
+    ]
+  }
+]

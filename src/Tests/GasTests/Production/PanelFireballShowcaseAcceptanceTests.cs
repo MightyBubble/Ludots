@@ -274,10 +274,12 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
     private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
     {
+        // Hold each edge across one full fixed step (manual clock: frame capture + step
+        // consumption) so the press edge is observed by exactly one step — single submit.
         backend.SetButton(path, true);
-        Tick(engine, 1);
+        Tick(engine, 2);
         backend.SetButton(path, false);
-        Tick(engine, 1);
+        Tick(engine, 2);
     }
 
     private static void TickUntil(

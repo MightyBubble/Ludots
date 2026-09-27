@@ -214,7 +214,7 @@ namespace Ludots.Tests.GAS
             }
             if (operation is GraphNodeOp.RelationshipSetMetric or GraphNodeOp.RelationshipAddMetric)
             {
-                runtime.SetMetric(source, target, typeId, metricId, 11, reasonId: 0);
+                runtime.SetMetric(source, target, typeId, metricId, 11);
             }
 
             AttributeBuffer staged = world.Get<AttributeBuffer>(source);
@@ -232,13 +232,13 @@ namespace Ludots.Tests.GAS
                             graphApi.RemoveRelationshipLink(source, target, typeId);
                             break;
                         case GraphNodeOp.RelationshipSetMetric:
-                            graphApi.SetRelationshipMetric(source, target, metricId, 42, reasonId: 0, typeId);
+                            graphApi.SetRelationshipMetric(source, target, metricId, 42, typeId);
                             break;
                         case GraphNodeOp.RelationshipAddMetric:
-                            graphApi.AddRelationshipMetric(source, target, metricId, 4, reasonId: 0, typeId);
+                            graphApi.AddRelationshipMetric(source, target, metricId, 4, typeId);
                             break;
                         case GraphNodeOp.RelationshipSetFlag:
-                            graphApi.SetRelationshipFlag(source, target, flagId, enabled: true, reasonId: 0, typeId);
+                            graphApi.SetRelationshipFlag(source, target, flagId, enabled: true, typeId);
                             break;
                         default:
                             throw new InvalidOperationException($"Unsupported relationship mutation test operation {operation}.");

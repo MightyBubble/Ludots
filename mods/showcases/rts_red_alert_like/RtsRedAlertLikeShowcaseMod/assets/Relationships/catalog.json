@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "RtsRedAlertLike.Participant", "isSymmetric": false }
+    {
+      "id": "RtsRedAlertLike.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

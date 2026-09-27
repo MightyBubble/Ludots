@@ -39,9 +39,29 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         "EastAsiaBordersLandSeaDemoMod",
     };
 
+
+    private static void RequireLudotsSampleSubmodule()
+    {
+        // East-asia acceptance reads a real-scale heightmap from the LudotsSample
+        // submodule (external sample repo). Missing checkout is an environment gap,
+        // not a product failure — skip loudly instead of failing the gate.
+        string sample = Path.Combine(
+            FindRepoRoot(),
+            "mods", "showcases", "east_asia_playable_terrain", "EastAsiaPlayableTerrainMod",
+            "assets", "samples", "LudotsSample", "east_asia", "east_asia_continuous.height");
+        if (!File.Exists(sample))
+        {
+            Assert.Ignore(
+                "LudotsSample submodule not initialized; run " +
+                "'git submodule update --init mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample' " +
+                "to run east-asia acceptance.");
+        }
+    }
+
     [Test]
     public void BordersLandSea_PathingHasFootMeshAndShipGraph()
     {
+        RequireLudotsSampleSubmodule();
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
 
@@ -72,6 +92,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     [Test]
     public void BordersLandSea_CrossingCountriesUpdatesBorderPanelVars()
     {
+        RequireLudotsSampleSubmodule();
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
         engine.LoadMap(MapId);

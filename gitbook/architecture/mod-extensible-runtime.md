@@ -32,6 +32,7 @@ Each feature has a player-facing authoring showcase. Use these pages when onboar
 
 - [Config Shards](mod-extensible-runtime-showcases/config-shards.md)
 - [Effect Preset Type Code](mod-extensible-runtime-showcases/effect-preset-type-code.md)
+- [Graph Op Extension](mod-extensible-runtime-showcases/graph-op-extension.md)
 - [Presenter Behavior Extension](mod-extensible-runtime-showcases/presenter-behavior-extension.md)
 - [Presenter Command Extension](mod-extensible-runtime-showcases/presenter-command-extension.md)
 
@@ -67,6 +68,8 @@ context.Extensions.Gas.RegisterGraphOp("MyMod.QueryThreat", GraphValueType.Float
 The key must start with the loading mod id plus a dot. Other Mods may reference the provider key in their config, for example a graph node with `"op": "MyMod.QueryThreat"`, but they cannot register new handlers under `MyMod.*`.
 
 Effect preset definitions resolve handler keys through `BuiltinHandlerRegistry`. Graph definitions resolve extension op keys through `GasGraphOpRegistry`. The compiled program then runs against an explicit `GasGraphOpHandlerTable`; there is no static singleton.
+
+Status: the authoring gate landed with [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) (2026-09-20, issue #861 line). `GAS/graphs.json` nodes now resolve mod-registered op keys through the same control-flow front door; unknown keys, extension ops on Query graphs, and missing inputs fail closed at compile time.
 
 Extension graph ops may expose `Void`, `Bool`, `Int`, `Float`, or `Entity` outputs and may consume up to three `Bool`, `Int`, `Float`, or `Entity` inputs. `TargetList` is an implicit VM scratch structure, not a register type for Mod op signatures.
 

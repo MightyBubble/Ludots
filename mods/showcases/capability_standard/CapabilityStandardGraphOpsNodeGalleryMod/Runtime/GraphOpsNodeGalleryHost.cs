@@ -56,6 +56,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
 
     public World World => _world ?? throw new InvalidOperationException("Gallery host is not bootstrapped.");
     public GasGraphRuntimeApi Api { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderQueue Orders { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry OrderTypes { get; private set; } = null!;
     public MapLoadEntityIndex EntityIndex { get; private set; } = null!;
     public EntityTemplateKeyRegistry Templates { get; private set; } = null!;
     public bool OwnsSimulationWorld => _ownsWorld;
@@ -63,8 +65,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public RelationshipTypeRegistry RelationshipTypes { get; private set; } = null!;
     public RelationshipMetricRegistry RelationshipMetrics { get; private set; } = null!;
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
-    public RelationshipReasonRegistry RelationshipReasons { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer CommandIntents { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
         public TagOps TagOps { get; private set; } = null!;
         public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
@@ -85,6 +87,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
         host.FinishResolver(
+            assetsRoot,
             Path.Combine(assetsRoot, "GraphTables"),
             engine.GetService(CoreServiceKeys.RngPickService),
             engine.GetService(CoreServiceKeys.PresentationTextCatalog));
@@ -170,11 +173,14 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             FeaturedDest = featuredDest,
             SimWorld = World,
             Api = Api,
+            Orders = Orders,
+            OrderTypes = OrderTypes,
             Metrics = metrics,
             Stage = stage,
             EffectRequests = EffectRequests,
             Relationships = Relationships,
             Collections = Collections,
+            CommandIntents = CommandIntents,
             TagOps = TagOps,
             EventBus = EventBus,
             GraphCallbacks = GraphCallbacks,
@@ -251,14 +257,16 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         RelationshipTypes = RequireEngineService(engine, CoreServiceKeys.RelationshipTypeRegistry);
         RelationshipMetrics = RequireEngineService(engine, CoreServiceKeys.RelationshipMetricRegistry);
         RelationshipFlags = RequireEngineService(engine, CoreServiceKeys.RelationshipFlagRegistry);
-        RelationshipReasons = RequireEngineService(engine, CoreServiceKeys.RelationshipReasonRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
+        CommandIntents = RequireEngineService(engine, CoreServiceKeys.CommandIntentSubmissions);
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
         _templateRegistry = engine.MapLoader.TemplateRegistry;
         _effectTemplates = RequireEngineService(engine, CoreServiceKeys.EffectTemplateRegistry);
         Api = RequireEngineService(engine, CoreServiceKeys.GasGraphRuntimeApi);
+        Orders = RequireEngineService(engine, CoreServiceKeys.OrderQueue);
+        OrderTypes = RequireEngineService(engine, CoreServiceKeys.OrderTypeRegistry);
         EnsureGalleryRelationshipCatalog();
         EnsureDispatchPreset();
         RegisterCollectionKeys();
@@ -277,6 +285,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     }
 
     private void FinishResolver(
+        string assetsRoot,
         string? graphTablesDir,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
         Ludots.Core.Presentation.Hud.PresentationTextCatalog? presentationTextCatalog = null)
@@ -286,11 +295,32 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipTypes,
             RelationshipMetrics,
             RelationshipFlags,
-            RelationshipReasons,
             DispatchPresets,
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
             rngPicks,
-            presentationTextCatalog);
+            presentationTextCatalog,
+            OrderTypes,
+            LoadEqsQueryRegistry(assetsRoot));
+    }
+
+    private static Ludots.Core.Spatial.Eqs.EqsQueryRegistry? LoadEqsQueryRegistry(string assetsRoot)
+    {
+        string path = System.IO.Path.Combine(assetsRoot, "Spatial", "eqs_queries.json");
+        if (!System.IO.File.Exists(path))
+        {
+            return null;
+        }
+
+        var ids = new Ludots.Core.Registry.StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var registry = new Ludots.Core.Spatial.Eqs.EqsQueryRegistry(ids, capacity: 16);
+        var configs = Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.ParseQueriesDocument(
+            System.IO.File.ReadAllText(path));
+        for (int i = 0; i < configs.Length; i++)
+        {
+            registry.Install(configs[i].Id, Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.CreateQuery(configs[i]));
+        }
+
+        return registry;
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)
@@ -424,7 +454,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             if (!string.IsNullOrWhiteSpace(link.Metric))
             {
                 int metricId = RelationshipMetrics.Register(link.Metric, -100, 100, 0);
-                Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue, reasonId: 0);
+                Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue);
             }
 
             if (link.Flags == null)
@@ -490,7 +520,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _ = RelationshipMetrics.Register("Loyalty", -100, 100, 0);
         _ = RelationshipFlags.Register("Trusted");
         _ = RelationshipFlags.Register("Estranged");
-        _ = RelationshipReasons.Register("Scenario.Setup");
     }
 
     private void EnsureDispatchPreset()

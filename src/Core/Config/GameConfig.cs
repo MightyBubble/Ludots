@@ -85,10 +85,7 @@ namespace Ludots.Core.Config
 
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
-        public int GridCellSizeCm { get; set; } = 100;
-
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
+        /// <summary>Host map binding (#1567): the startup map roots the boot world via its root board.</summary>
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 

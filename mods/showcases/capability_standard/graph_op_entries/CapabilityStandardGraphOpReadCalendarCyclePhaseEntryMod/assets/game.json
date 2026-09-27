@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_ReadCalendarCyclePhase",
+  "windowTitle": "Ludots - 这一季叫什么",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

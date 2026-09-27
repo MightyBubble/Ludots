@@ -96,7 +96,18 @@ namespace Ludots.Core.GraphRuntime
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
         private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
+        private readonly GasGraphOpHandlerTable _operationHandlers;
         private int _version;
+
+        public GraphProgramRegistry()
+            : this(null)
+        {
+        }
+
+        public GraphProgramRegistry(GasGraphOpHandlerTable? operationHandlers)
+        {
+            _operationHandlers = operationHandlers ?? GasGraphOpHandlerTable.Instance;
+        }
 
         public int Version => _version;
 
@@ -384,14 +395,28 @@ namespace Ludots.Core.GraphRuntime
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} TriggerGraph entry '{label}' filters 'direction' value '{filters.Direction.Value}' is not a defined direction.");
             }
+
+            if (filters.Payload != null)
+            {
+                for (int i = 0; i < filters.Payload.Count; i++)
+                {
+                    TriggerGraphEntryPayloadFilter payloadFilter = filters.Payload[i];
+                    if (string.IsNullOrWhiteSpace(payloadFilter.Key) ||
+                        (payloadFilter.StringValue != null) == (payloadFilter.IntValue.HasValue))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} TriggerGraph entry '{label}' filters payload '{payloadFilter.Key}' must name a non-empty payload key and exactly one string or int value.");
+                    }
+                }
+            }
         }
 
-        private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
+        private void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
         {
             GraphKindOperationPolicy.ValidateProgram(
                 kind,
                 program,
-                GasGraphOpHandlerTable.Instance,
+                _operationHandlers,
                 graphId,
                 nameof(GraphProgramRegistry));
         }
@@ -544,11 +569,7 @@ namespace Ludots.Core.GraphRuntime
 
         private static void ValidateProgramLength(GraphInstruction[] program)
         {
-            if (program.Length == 0)
-            {
-                throw new ArgumentException("Graph program must contain at least one instruction.", nameof(program));
-            }
-
+            // Emptiness fails closed through GraphKindOperationPolicy.ValidateHasHalt (MissingHalt), the coded error contract.
             if (program.Length > GraphVmRuntimeLimits.MaxInstructions)
             {
                 throw new ArgumentOutOfRangeException(

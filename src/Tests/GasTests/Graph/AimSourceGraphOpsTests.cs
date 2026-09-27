@@ -235,6 +235,8 @@ namespace Ludots.Tests.GasTests.Graph
             };
 
             using var world = World.Create();
+            world.Create(new Ludots.Core.Presentation.Components.PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             Entity owner = world.Create();
             Entity near = world.Create(WorldPositionCm.FromCm(1600, 1200), new CommandSourceSelectableTag());
             Entity far = world.Create(WorldPositionCm.FromCm(2600, 1600), new CommandSourceSelectableTag());
@@ -288,6 +290,8 @@ namespace Ludots.Tests.GasTests.Graph
             };
 
             using var world = World.Create();
+            world.Create(new Ludots.Core.Presentation.Components.PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             Entity owner = world.Create();
             Entity insideFirst = world.Create(WorldPositionCm.FromCm(1600, 1200), new CommandSourceSelectableTag());
             Entity outside = world.Create(WorldPositionCm.FromCm(5000, 5000), new CommandSourceSelectableTag());
@@ -466,6 +470,8 @@ namespace Ludots.Tests.GasTests.Graph
             // different seats resolves different ground, and the region filter keeps only
             // the entities that seat's camera actually sees — never a merged camera.
             using var world = World.Create();
+            world.Create(new Ludots.Core.Presentation.Components.PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             Entity ownerZero = world.Create();
             Entity ownerOne = world.Create();
 

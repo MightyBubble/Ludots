@@ -1,0 +1,35 @@
+[
+  {
+    "id": "showcase.graph_op.CompleteActiveOrder",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "done",
+        "op": "CompleteActiveOrder"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "done",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": []
+  }
+]

@@ -697,9 +697,6 @@ app.MapGet("/api/ai/topology-catalog", () =>
         string hfsmPath = Path.Combine(mod.RootPath, "assets", "AI", "hfsm.json");
         bool hasBt = File.Exists(btPath);
         bool hasHfsm = File.Exists(hfsmPath);
-        if (!hasBt && !hasHfsm)
-            continue;
-
         sources.Add(new
         {
             id = mod.Id,
@@ -727,11 +724,7 @@ app.MapGet("/api/ai/behavior-trees", (string? source) =>
 {
     if (!TryResolveAiTopologyPath(launcher, source, "behavior_trees.json", out string path, out string resolvedSource, out IResult? error))
         return error!;
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"behavior_trees.json missing at {path}", source = resolvedSource, path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
-    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/behavior_trees.json", path, items });
+    return ReadAiTopologyFile(path, resolvedSource, "AI/behavior_trees.json");
 });
 
 app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
@@ -751,11 +744,13 @@ app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, resolvedSource, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
+    if (!TryBuildAiTopologyFunctionCatalog(launcher, resolvedSource, out GraphFunctionCatalog functions, out string? funcError))
+        return Results.BadRequest(new { ok = false, error = funcError });
     try
     {
-        GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(items, actions);
+        GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(items, actions, functions);
     }
     catch (Exception ex)
     {
@@ -771,11 +766,7 @@ app.MapGet("/api/ai/hfsm", (string? source) =>
 {
     if (!TryResolveAiTopologyPath(launcher, source, "hfsm.json", out string path, out string resolvedSource, out IResult? error))
         return error!;
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"hfsm.json missing at {path}", source = resolvedSource, path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
-    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path, items });
+    return ReadAiTopologyFile(path, resolvedSource, "AI/hfsm.json");
 });
 
 app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
@@ -795,11 +786,13 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, resolvedSource, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
+    if (!TryBuildAiTopologyFunctionCatalog(launcher, resolvedSource, out GraphFunctionCatalog functions, out string? funcError))
+        return Results.BadRequest(new { ok = false, error = funcError });
     try
     {
-        GraphBehaviorDefinitionLoader.ValidateHfsms(items, actions);
+        GraphBehaviorDefinitionLoader.ValidateHfsms(items, actions, functions);
     }
     catch (Exception ex)
     {
@@ -811,32 +804,43 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
     return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path });
 });
 
-app.MapGet("/api/ai/action-lib", (string? host) =>
+app.MapGet("/api/ai/action-lib", (string? host, string? source) =>
 {
-    string repoRoot = FindAssetsRoot();
-    string path = Path.Combine(repoRoot, "assets", "GAS", "action_lib.json");
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"action_lib.json missing at {path}", path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
+    if (!TryResolveAiSource(launcher, source, out string resolvedSource, out _, out IResult? error))
+        return error!;
+    if (!TryCollectMergedActionLibRows(
+            launcher,
+            resolvedSource,
+            out List<(string Name, string Host, string Graph, string Source)> rows,
+            out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, source = resolvedSource });
 
     string? hostFilter = string.IsNullOrWhiteSpace(host) ? null : host.Trim();
     var actions = new List<object>();
-    foreach (JsonNode? node in items)
+    foreach ((string name, string actionHost, string graph, string actionSource) in rows)
     {
-        if (node is not JsonObject row)
-            continue;
-        string name = row["name"]?.GetValue<string>() ?? "";
-        string actionHost = row["host"]?.GetValue<string>() ?? "";
-        string graph = row["graph"]?.GetValue<string>() ?? "";
-        if (name.Length == 0)
-            continue;
         if (hostFilter != null && !string.Equals(actionHost, hostFilter, StringComparison.OrdinalIgnoreCase))
             continue;
-        actions.Add(new { name, host = actionHost, graph });
+        actions.Add(new { name, host = actionHost, graph, source = actionSource });
     }
 
-    return Results.Ok(new { ok = true, path, host = hostFilter, actions });
+    return Results.Ok(new { ok = true, source = resolvedSource, host = hostFilter, actions });
+});
+
+app.MapGet("/api/ai/func-lib", (string? source) =>
+{
+    if (!TryResolveAiSource(launcher, source, out string resolvedSource, out _, out IResult? error))
+        return error!;
+    if (!TryCollectAiLibRoots(launcher, resolvedSource, out List<string> roots, out string? resolveError))
+        return Results.BadRequest(new { ok = false, error = resolveError, source = resolvedSource });
+
+    List<(string Name, string Graph)> entries = MergeAiLibEntries(roots, Path.Combine("GAS", "func_lib.json"));
+    return Results.Ok(new
+    {
+        ok = true,
+        source = resolvedSource,
+        functions = entries.Select(e => new { name = e.Name, graph = e.Graph }),
+    });
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -1533,9 +1537,9 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {payload.MapId}" });
         boardConfig = EditorRepo.ResolveRequiredBoardByName(mapR.Map, payload.BoardName);
         boardInfo = EditorRepo.DescribeBoard(ctx, payload.MapId, boardConfig);
-        if (!boardConfig.NavigationEnabled)
+        if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, payload.ModId), payload.MapId, boardConfig.Name))
         {
-            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{payload.MapId}.boards; declare it on the nav side (#1567)." });
         }
 
         if (!EditorRepo.IsGridBoard(boardConfig))
@@ -1683,9 +1687,9 @@ app.MapPost("/api/nav/query-recast-react", async (HttpRequest req) =>
     {
         var mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, payload.MapId, payload.ModId);
         boardConfig = EditorRepo.ResolveRequiredBoardByName(mapConfig, payload.BoardName);
-        if (!boardConfig.NavigationEnabled)
+        if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, payload.ModId), payload.MapId, boardConfig.Name))
         {
-            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{payload.MapId}.boards; declare it on the nav side (#1567)." });
         }
 
         bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, payload.ModId);
@@ -3633,6 +3637,40 @@ static bool TryFindGraphObject(JsonArray arr, string graphId, out JsonObject gra
     return false;
 }
 
+static bool TryResolveAiSource(
+    LauncherService launcher,
+    string? source,
+    out string resolvedSource,
+    out string? modRoot,
+    out IResult? error)
+{
+    resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
+    modRoot = null;
+    error = null;
+    if (string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        resolvedSource = "core";
+        return true;
+    }
+
+    string sourceKey = resolvedSource;
+    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown AI topology source '{resolvedSource}'. Use 'core' or a launcher mod id.",
+        });
+        return false;
+    }
+
+    resolvedSource = mod.Id;
+    modRoot = mod.RootPath;
+    return true;
+}
+
 static bool TryResolveAiTopologyPath(
     LauncherService launcher,
     string? source,
@@ -3642,31 +3680,42 @@ static bool TryResolveAiTopologyPath(
     out IResult? error)
 {
     path = "";
-    resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
-    error = null;
-    string repoRoot = FindAssetsRoot();
-    string sourceKey = resolvedSource;
-
-    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
-    {
-        path = Path.Combine(repoRoot, "assets", "AI", fileName);
-        return true;
-    }
-
-    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
-        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
-    if (mod == null)
-    {
-        error = Results.BadRequest(new
-        {
-            ok = false,
-            error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.",
-        });
+    if (!TryResolveAiSource(launcher, source, out resolvedSource, out string? modRoot, out error))
         return false;
+
+    path = string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase)
+        ? Path.Combine(FindAssetsRoot(), "assets", "AI", fileName)
+        : Path.Combine(modRoot!, "assets", "AI", fileName);
+    return true;
+}
+
+static IResult ReadAiTopologyFile(string path, string resolvedSource, string relativePath)
+{
+    if (!File.Exists(path))
+    {
+        return Results.Ok(new
+        {
+            ok = true,
+            source = resolvedSource,
+            relativePath,
+            path,
+            exists = false,
+            items = Array.Empty<object>(),
+        });
     }
 
-    path = Path.Combine(mod.RootPath, "assets", "AI", fileName);
-    return true;
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, path, source = resolvedSource });
+
+    return Results.Ok(new
+    {
+        ok = true,
+        source = resolvedSource,
+        relativePath,
+        path,
+        exists = true,
+        items,
+    });
 }
 
 static object[] TryReadAiTopologyIds(string path)
@@ -3750,37 +3799,233 @@ static bool TryParseAiTopologyItemsBody(string body, out JsonArray items, out st
     }
 }
 
-static bool TryBuildAiTopologyActionCatalog(out GraphActionCatalog catalog, out string? error)
+static bool TryCollectAiLibRoots(LauncherService launcher, string? source, out List<string> roots, out string? error)
+{
+    roots = new List<string>();
+    error = null;
+    string repoRoot = FindAssetsRoot();
+    roots.Add(Path.Combine(repoRoot, "assets"));
+
+    string sourceKey = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
+    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.";
+        return false;
+    }
+
+    string modAssets = Path.Combine(mod.RootPath, "assets");
+    if (!roots[0].Equals(modAssets, StringComparison.OrdinalIgnoreCase))
+    {
+        roots.Add(modAssets);
+    }
+
+    return true;
+}
+
+static bool TryCollectMergedActionLibRows(
+    LauncherService launcher,
+    string resolvedSource,
+    out List<(string Name, string Host, string Graph, string Source)> rows,
+    out string? error)
+{
+    rows = new List<(string Name, string Host, string Graph, string Source)>();
+    error = null;
+    var byName = new Dictionary<string, (string Name, string Host, string Graph, string Source)>(StringComparer.Ordinal);
+    string corePath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
+    if (!TryAbsorbActionLibFile(corePath, "core", byName, out error))
+        return false;
+
+    if (!string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        if (!TryResolveAiSource(launcher, resolvedSource, out _, out string? modRoot, out _))
+        {
+            error = $"Unknown AI topology source '{resolvedSource}'.";
+            return false;
+        }
+
+        string overlayPath = Path.Combine(modRoot!, "assets", "GAS", "action_lib.json");
+        if (File.Exists(overlayPath) && !TryAbsorbActionLibFile(overlayPath, resolvedSource, byName, out error))
+            return false;
+    }
+
+    rows.AddRange(byName.Values);
+    rows.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+    return true;
+}
+
+static bool TryAbsorbActionLibFile(
+    string path,
+    string sourceId,
+    Dictionary<string, (string Name, string Host, string Graph, string Source)> byName,
+    out string? error)
+{
+    error = null;
+    if (!File.Exists(path))
+    {
+        if (string.Equals(sourceId, "core", StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"action_lib.json missing at {path}";
+            return false;
+        }
+
+        return true;
+    }
+
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
+        return false;
+
+    for (int i = 0; i < items.Count; i++)
+    {
+        if (items[i] is not JsonObject row)
+        {
+            error = $"ActionLib '{path}' item {i} must be an object.";
+            return false;
+        }
+
+        string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+        string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
+        string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+        if (name.Length == 0)
+        {
+            error = $"ActionLib '{path}' item {i} requires a non-empty name.";
+            return false;
+        }
+
+        byName[name] = (name, hostText, graph, sourceId);
+    }
+
+    return true;
+}
+
+static List<(string Name, string Graph)> MergeAiLibEntries(List<string> roots, string relativePath)
+{
+    // Core first, mod overlay after — mirrors the ConfigPipeline fragment order.
+    var byName = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (string root in roots)
+    {
+        string path = Path.Combine(root, relativePath);
+        if (!TryReadJsonArrayFile(path, out JsonArray items, out _))
+            continue;
+
+        foreach (JsonNode? node in items)
+        {
+            if (node is not JsonObject row)
+                continue;
+            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+            string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+            if (name.Length == 0 || graph.Length == 0)
+                continue;
+            byName[name] = graph;
+        }
+    }
+
+    return byName.Select(kv => (kv.Key, kv.Value)).ToList();
+}
+
+static bool TryBuildAiTopologyActionCatalog(
+    LauncherService launcher,
+    string resolvedSource,
+    out GraphActionCatalog catalog,
+    out string? error)
 {
     catalog = new GraphActionCatalog();
-    error = null;
-    string path = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
+    if (!TryCollectAiLibRoots(launcher, resolvedSource, out List<string> roots, out error))
+        return false;
+
+    try
+    {
+        List<(string Name, string Graph)> entries = MergeAiLibEntries(roots, Path.Combine("GAS", "action_lib.json"));
+        if (entries.Count == 0)
+        {
+            error = "ActionLib has no entries — GAS/action_lib.json is missing or empty in every source root.";
+            return false;
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            catalog.Register(entries[i].Name, i + 1, GraphKind.Script);
+        }
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = ex.Message;
+        return false;
+    }
+}
+
+static bool TryBuildAiTopologyFunctionCatalog(LauncherService launcher, string? source, out GraphFunctionCatalog catalog, out string? error)
+{
+    catalog = new GraphFunctionCatalog();
+    if (!TryCollectAiLibRoots(launcher, source, out List<string> roots, out error))
     {
         return false;
     }
 
     try
     {
-        for (int i = 0; i < items.Count; i++)
+        var graphKeys = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string root in roots)
         {
-            if (items[i] is not JsonObject row)
-            {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} must be an object.");
-            }
+            if (!TryReadJsonArrayFile(Path.Combine(root, "GAS", "graphs.json"), out JsonArray graphs, out _))
+                continue;
 
-            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
-            string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
-            if (name.Length == 0)
+            foreach (JsonNode? node in graphs)
             {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} requires a non-empty name.");
+                if (node is not JsonObject row)
+                    continue;
+                string id = row["id"]?.GetValue<string>()?.Trim() ?? "";
+                if (id.Length > 0)
+                    graphKeys[id] = id;
             }
-            if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
-            {
-                throw new InvalidOperationException($"ActionLib '{name}' host '{hostText}' is unsupported.");
-            }
+        }
 
-            catalog.Register(name, i + 1, GraphKind.Script, host);
+        Dictionary<string, string> raw = new(StringComparer.Ordinal);
+        foreach (string root in roots)
+        {
+            if (!TryReadJsonArrayFile(Path.Combine(root, "GAS", "func_lib.json"), out JsonArray items, out _))
+                continue;
+
+            foreach (JsonNode? node in items)
+            {
+                if (node is not JsonObject row)
+                    continue;
+                string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+                string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+                string kind = row["kind"]?.GetValue<string>()?.Trim() ?? "Script";
+                string purity = row["purity"]?.GetValue<string>()?.Trim() ?? "pure";
+                if (name.Length == 0 || graph.Length == 0)
+                    continue;
+                if (!string.Equals(kind, "Script", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"FuncLib '{name}' kind '{kind}' must be Script.");
+                if (!string.Equals(purity, "pure", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"FuncLib '{name}' purity '{purity}' must be pure.");
+                raw[name] = graph;
+            }
+        }
+
+        if (raw.Count == 0)
+        {
+            error = "FuncLib has no entries — GAS/func_lib.json is missing or empty in every source root.";
+            return false;
+        }
+
+        foreach ((string name, string graph) in raw)
+        {
+            if (!graphKeys.ContainsKey(graph))
+                throw new InvalidOperationException($"FuncLib '{name}' graph '{graph}' is not declared in GAS/graphs.json.");
+            int id = GraphIdRegistry.GetId(graph);
+            if (id <= 0)
+                id = GraphIdRegistry.Register(graph);
+            catalog.Register(name, id, GraphKind.Script);
         }
 
         return true;
@@ -3955,9 +4200,9 @@ static bool TryBuildEditorUploadRecastContext(
         return false;
     }
 
-    if (!boardConfig.NavigationEnabled)
+    if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, modId), mapId, boardConfig.Name))
     {
-        error = Results.BadRequest(new { error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false and cannot bake navmesh." });
+        error = Results.BadRequest(new { error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{mapId}.boards (#1567)." });
         return false;
     }
 
@@ -3987,6 +4232,26 @@ static bool TryBuildEditorUploadRecastContext(
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+        // The bake pipeline tiles by terrain chunk (#1346 bake-side regridding pending);
+        // refuse bakes whose declared nav granularity disagrees, so the mismatch surfaces
+        // here instead of at map load.
+        if (bakeConfig.Maps.TryGetValue(mapId, out var declaredBoards) &&
+            declaredBoards?.Boards.TryGetValue(boardConfig.Name, out var declaredGrid) == true &&
+            declaredGrid != null)
+        {
+            int chunkWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
+            int chunkHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
+            if (declaredGrid.TileWorldWidthCm != chunkWidthCm || declaredGrid.TileWorldHeightCm != chunkHeightCm)
+            {
+                error = Results.BadRequest(new
+                {
+                    ok = false,
+                    error = $"Board '{boardConfig.Name}' declares nav tiles {declaredGrid.TileWorldWidthCm}x{declaredGrid.TileWorldHeightCm}cm but its terrain chunks are {chunkWidthCm}x{chunkHeightCm}cm; the bake pipeline tiles by terrain chunk until nav-owned bake granularity lands (#1346 follow-up), so the declared size must match the chunk size.",
+                });
+                return false;
+            }
+        }
+
         navBakeContext = new NavBakeContext
         {
             MapId = mapId,
@@ -4324,7 +4589,7 @@ static string ToEditorUploadSourceUri(string fileName)
 
 static class EditorRepo
 {
-    private const int EagerEmptyTerrainFileMacroTileLimit = 16;
+    private const int EagerEmptyTerrainFilePageLimit = 16;
 
     public static readonly Dictionary<string, string> StoryCatalogFiles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -4382,7 +4647,6 @@ static class EditorRepo
         int CellSizeCm,
         int HexEdgeLengthCm,
         int ChunkSizeCells,
-        bool NavigationEnabled,
         bool HasDataFile,
         bool DataFileExists,
         string? DataFile,
@@ -4399,13 +4663,22 @@ static class EditorRepo
         int CellSizeCm,
         int HexEdgeLengthCm,
         int ChunkSizeCells,
-        bool NavigationEnabled,
         bool HasDataFile,
         bool DataFileExists,
         string? DataFile,
         bool CanEditTerrain,
         bool CanBake,
-        string Reason);
+        string Reason,
+        int? OriginXcm = null,
+        int? OriginYcm = null,
+        int? WidthHexes = null,
+        int? HeightHexes = null,
+        int EffectiveWidthCm = 0,
+        int EffectiveHeightCm = 0,
+        int AnchorLocalXCm = 0,
+        int AnchorLocalYCm = 0,
+        int AnchorWorldXCm = 0,
+        int AnchorWorldYCm = 0);
 
     public static List<ModInfo> DiscoverMods(string repoRoot)
     {
@@ -4501,7 +4774,6 @@ static class EditorRepo
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
                 HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                NavigationEnabled: false,
                 HasDataFile: false,
                 DataFileExists: false,
                 DataFile: null,
@@ -4525,7 +4797,6 @@ static class EditorRepo
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
                 HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                NavigationEnabled: false,
                 HasDataFile: false,
                 DataFileExists: false,
                 DataFile: null,
@@ -4550,7 +4821,6 @@ static class EditorRepo
             CellSizeCm: primary.CellSizeCm,
             HexEdgeLengthCm: primary.HexEdgeLengthCm,
             ChunkSizeCells: primary.ChunkSizeCells,
-            NavigationEnabled: primary.NavigationEnabled,
             HasDataFile: primary.HasDataFile,
             DataFileExists: primary.DataFileExists,
             DataFile: primary.DataFile,
@@ -4581,13 +4851,8 @@ static class EditorRepo
         int chunkSizeCells = board.ChunkSizeCells > 0
             ? board.ChunkSizeCells
             : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
-        int heightChunks = checked(board.HeightInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
-        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
-        {
-            widthChunks = checked((board.WidthInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
-            heightChunks = checked((board.HeightInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
-        }
+        int widthChunks = checked((board.WidthCells + chunkSizeCells - 1) / chunkSizeCells);
+        int heightChunks = checked((board.HeightCells + chunkSizeCells - 1) / chunkSizeCells);
 
         string? spatialType = null;
         string? topologyError = null;
@@ -4607,17 +4872,30 @@ static class EditorRepo
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
         bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
-        bool canBake = canEditTerrain && board.NavigationEnabled;
+        bool canBake = canEditTerrain && BoardHasNavDeclaration(ctx, mapId, board.Name);
         string reason =
             topologyError != null ? topologyError :
             canBake ? "Ready for nav bake." :
             canUseVirtualEmptyTerrain ? "Sparse empty terrain is virtual; missing chunks are treated as flat until saved." :
-            !board.NavigationEnabled ? "Board NavigationEnabled is false." :
+            !canBake ? "Board has no nav declaration in navmesh.json maps." :
             !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
             !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
             !hasDataFile ? "Board DataFile is empty." :
             !dataFileExists ? "Board DataFile could not be resolved." :
             "Not bakeable.";
+
+        Ludots.Core.Spatial.BoardExtentSpec extent = board.ResolveExtent();
+        int? hexWidth = null;
+        int? hexHeight = null;
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) && board.Hex != null && board.Hex.EdgeLengthCm > 0)
+        {
+            var metrics = new Ludots.Core.Map.Hex.HexMetrics(board.Hex.EdgeLengthCm);
+            if (metrics.TryCountFittingHexes(extent.WidthCm, extent.HeightCm, out int fittedWidth, out int fittedHeight))
+            {
+                hexWidth = fittedWidth;
+                hexHeight = fittedHeight;
+            }
+        }
 
         return new BoardInfo(
             Name: board.Name,
@@ -4627,13 +4905,22 @@ static class EditorRepo
             CellSizeCm: board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
             HexEdgeLengthCm: board.HexEdgeLengthCm > 0 ? board.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells: chunkSizeCells,
-            NavigationEnabled: board.NavigationEnabled,
             HasDataFile: hasDataFile,
             DataFileExists: dataFileExists,
             DataFile: hasDataFile ? board.DataFile : null,
             CanEditTerrain: canEditTerrain,
             CanBake: canBake,
-            Reason: reason);
+            Reason: reason,
+            OriginXcm: board.TopologyOriginXCm,
+            OriginYcm: board.TopologyOriginYCm,
+            WidthHexes: hexWidth,
+            HeightHexes: hexHeight,
+            EffectiveWidthCm: extent.WidthCm,
+            EffectiveHeightCm: extent.HeightCm,
+            AnchorLocalXCm: board.Anchor?.LocalXCm ?? 0,
+            AnchorLocalYCm: board.Anchor?.LocalYCm ?? 0,
+            AnchorWorldXCm: board.Anchor?.WorldXCm ?? 0,
+            AnchorWorldYCm: board.Anchor?.WorldYCm ?? 0);
     }
 
     public static MergedMapResult LoadMergedMapConfig(ModContext ctx, string mapId)
@@ -4649,6 +4936,7 @@ static class EditorRepo
             var cfg = JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(File.ReadAllText(path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (cfg == null) return;
             MergeMapConfig(merged, cfg);
+            Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);
             sources.Add(path);
         }
 
@@ -4929,36 +5217,54 @@ static class EditorRepo
         map.Boards ??= new List<Ludots.Core.Map.Board.BoardConfig>();
         EnsureNoBoardNameConflict(map, name);
 
-        int widthMacroTiles = request.WidthInMacroTiles > 0
-            ? request.WidthInMacroTiles
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
-        int heightMacroTiles = request.HeightInMacroTiles > 0
-            ? request.HeightInMacroTiles
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
-        int chunkSizeCells = request.ChunkSizeCells > 0
-            ? request.ChunkSizeCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         int cellSizeCm = request.CellSizeCm > 0
             ? request.CellSizeCm
             : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
+        int widthCm = request.WidthCm > 0
+            ? request.WidthCm
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardWidthPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells * cellSizeCm;
+        int heightCm = request.HeightCm > 0
+            ? request.HeightCm
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardHeightPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells * cellSizeCm;
+        if (widthCm / cellSizeCm <= 0 || heightCm / cellSizeCm <= 0)
+        {
+            throw new InvalidOperationException("WidthCm and HeightCm must cover at least one cell.");
+        }
 
-        ValidateBoardDimensions(widthMacroTiles, heightMacroTiles, chunkSizeCells);
         string dataFile = string.IsNullOrWhiteSpace(request.DataFile)
             ? BuildDefaultBoardDataFile(mapId, name, spatialType)
             : request.DataFile.Trim();
+
+        if (map.Boards.Count == 0 && (request.AnchorWorldXCm != 0 || request.AnchorWorldYCm != 0))
+        {
+            throw new InvalidOperationException("The first board on a boardless map becomes the root board; its Anchor.World must be (0, 0).");
+        }
 
         var board = new Ludots.Core.Map.Board.BoardConfig
         {
             Name = name,
             SpatialType = spatialType,
-            WidthInMacroTiles = widthMacroTiles,
-            HeightInMacroTiles = heightMacroTiles,
-            GridCellSizeCm = cellSizeCm,
-            HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
-            ChunkSizeCells = chunkSizeCells,
+            WidthCm = widthCm,
+            HeightCm = heightCm,
+            Grid = new Ludots.Core.Map.Board.BoardGridAuthoring { CellSizeCm = cellSizeCm },
+            Anchor = new Ludots.Core.Map.Board.BoardAnchor
+            {
+                LocalXCm = request.AnchorLocalXCm,
+                LocalYCm = request.AnchorLocalYCm,
+                WorldXCm = request.AnchorWorldXCm,
+                WorldYCm = request.AnchorWorldYCm,
+            },
             DataFile = dataFile,
-            NavigationEnabled = request.NavigationEnabled,
         };
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+        {
+            board.Hex = new Ludots.Core.Map.Board.BoardHexAuthoring
+            {
+                EdgeLengthCm = request.HexEdgeLengthCm > 0
+                    ? request.HexEdgeLengthCm
+                    : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+            };
+        }
 
         string? dataPath = null;
         if (!string.IsNullOrWhiteSpace(board.DataFile))
@@ -4979,6 +5285,7 @@ static class EditorRepo
             }
         }
 
+        EnsureBoardFitsRoot(map, board);
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
@@ -5020,7 +5327,22 @@ static class EditorRepo
         {
             if (request.CellSizeCm.Value <= 0)
                 throw new InvalidOperationException("CellSizeCm must be positive.");
-            board.GridCellSizeCm = request.CellSizeCm.Value;
+            board.Grid ??= new Ludots.Core.Map.Board.BoardGridAuthoring();
+            board.Grid.CellSizeCm = request.CellSizeCm.Value;
+        }
+
+        if (request.WidthCm.HasValue)
+        {
+            if (request.WidthCm.Value <= 0)
+                throw new InvalidOperationException("WidthCm must be positive.");
+            board.WidthCm = request.WidthCm.Value;
+        }
+
+        if (request.HeightCm.HasValue)
+        {
+            if (request.HeightCm.Value <= 0)
+                throw new InvalidOperationException("HeightCm must be positive.");
+            board.HeightCm = request.HeightCm.Value;
         }
 
         if (request.HexEdgeLengthCm.HasValue)
@@ -5029,12 +5351,38 @@ static class EditorRepo
                 throw new InvalidOperationException("HexEdgeLengthCm can only be updated on HexGrid boards.");
             if (request.HexEdgeLengthCm.Value <= 0)
                 throw new InvalidOperationException("HexEdgeLengthCm must be positive.");
-            board.HexEdgeLengthCm = request.HexEdgeLengthCm.Value;
+            board.Hex ??= new Ludots.Core.Map.Board.BoardHexAuthoring();
+            board.Hex.EdgeLengthCm = request.HexEdgeLengthCm.Value;
         }
 
-        if (request.NavigationEnabled.HasValue)
+        bool isRoot = IsRootBoard(map, board);
+        bool hasAnchor = request.AnchorLocalXCm.HasValue || request.AnchorLocalYCm.HasValue ||
+            request.AnchorWorldXCm.HasValue || request.AnchorWorldYCm.HasValue;
+        if (hasAnchor)
         {
-            board.NavigationEnabled = request.NavigationEnabled.Value;
+            if (request.AnchorLocalXCm is null || request.AnchorLocalYCm is null ||
+                request.AnchorWorldXCm is null || request.AnchorWorldYCm is null)
+            {
+                throw new InvalidOperationException("Anchor local and world centimeters must be updated together.");
+            }
+
+            if (isRoot && (request.AnchorWorldXCm != 0 || request.AnchorWorldYCm != 0))
+            {
+                throw new InvalidOperationException("The root board Anchor.World must stay (0, 0); that point is the Ludots origin.");
+            }
+
+            board.Anchor = new Ludots.Core.Map.Board.BoardAnchor
+            {
+                LocalXCm = request.AnchorLocalXCm.Value,
+                LocalYCm = request.AnchorLocalYCm.Value,
+                WorldXCm = request.AnchorWorldXCm.Value,
+                WorldYCm = request.AnchorWorldYCm.Value,
+            };
+        }
+
+        foreach (var existing in map.Boards)
+        {
+            EnsureBoardFitsRoot(map, existing);
         }
 
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
@@ -5082,9 +5430,42 @@ static class EditorRepo
         }
 
         map.Boards.RemoveAt(index);
+        if (string.Equals(map.RootBoard?.Trim(), boardName, StringComparison.OrdinalIgnoreCase))
+        {
+            map.RootBoard = null;
+        }
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         return new BoardMutationResult(map, mapInfo, removedInfo, mapPath, dataPath);
+    }
+
+    public static bool BoardHasNavDeclaration(ModContext ctx, string mapId, string boardName)
+    {
+        try
+        {
+            var bake = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(ctx.RepoRoot, ctx.TargetModId);
+            foreach (var mapEntry in bake.Config.Maps)
+            {
+                if (!string.Equals(mapEntry.Key, mapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var boardEntry in mapEntry.Value.Boards)
+                {
+                    if (string.Equals(boardEntry.Key, boardName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static Ludots.Core.Map.Board.BoardConfig? ResolvePrimaryBoard(Ludots.Core.Config.MapConfig map)
@@ -5092,20 +5473,25 @@ static class EditorRepo
         if (map?.Boards == null || map.Boards.Count == 0)
             return null;
 
-        Ludots.Core.Map.Board.BoardConfig? firstNavigationBoard = null;
+        if (!string.IsNullOrWhiteSpace(map.RootBoard))
+        {
+            string designation = map.RootBoard.Trim();
+            foreach (var candidate in map.Boards)
+            {
+                if (string.Equals(candidate.Name, designation, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+        }
+
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!board.NavigationEnabled) continue;
-
-            firstNavigationBoard ??= board;
             if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
                 return board;
         }
-
-        if (firstNavigationBoard != null)
-            return firstNavigationBoard;
 
         for (int i = 0; i < map.Boards.Count; i++)
         {
@@ -5327,14 +5713,66 @@ static class EditorRepo
         }
     }
 
-    private static void ValidateBoardDimensions(int widthMacroTiles, int heightMacroTiles, int chunkSizeCells)
+    private static bool IsRootBoard(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
     {
-        if (widthMacroTiles <= 0) throw new InvalidOperationException("WidthInMacroTiles must be positive.");
-        if (heightMacroTiles <= 0) throw new InvalidOperationException("HeightInMacroTiles must be positive.");
-        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
+        if (string.IsNullOrWhiteSpace(map.RootBoard))
+        {
+            return ReferenceEquals(board, map.Boards[0]);
+        }
+        return string.Equals(board.Name, map.RootBoard, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureBoardFitsRoot(Ludots.Core.Config.MapConfig map, Ludots.Core.Map.Board.BoardConfig board)
+    {
+        // The first board on a boardless map becomes the root; nothing to check.
+        if (map.Boards is not { Count: > 0 })
+        {
+            return;
+        }
+
+        Ludots.Core.Map.Board.BoardConfig? root = null;
+        if (!string.IsNullOrWhiteSpace(map.RootBoard))
+        {
+            foreach (var existing in map.Boards)
+            {
+                if (string.Equals(existing.Name, map.RootBoard, StringComparison.OrdinalIgnoreCase))
+                {
+                    root = existing;
+                    break;
+                }
+            }
+        }
+
+        root ??= map.Boards[0];
+
+        Ludots.Core.Spatial.BoardExtentSpec boardExtent = board.ResolveExtent();
+        Ludots.Core.Spatial.BoardExtentSpec rootExtent = root.ResolveExtent();
+        if (boardExtent.WidthCm > rootExtent.WidthCm || boardExtent.HeightCm > rootExtent.HeightCm)
         {
             throw new InvalidOperationException(
-                $"React terrain editor creates boards with ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; requested {chunkSizeCells}.");
+                $"Board '{board.Name}' extent {boardExtent.WidthCm}x{boardExtent.HeightCm}cm exceeds root board '{root.Name}' extent {rootExtent.WidthCm}x{rootExtent.HeightCm}cm; enlarge the root board or shrink the satellite.");
+        }
+
+        if (ReferenceEquals(board, root))
+        {
+            if (board.Anchor != null && (board.Anchor.WorldXCm != 0 || board.Anchor.WorldYCm != 0))
+            {
+                throw new InvalidOperationException("The root board Anchor.World must be (0, 0); that point is the Ludots origin.");
+            }
+
+            return;
+        }
+
+        long minX = boardExtent.TopologyOriginXCm;
+        long minY = boardExtent.TopologyOriginYCm;
+        long rootMinX = rootExtent.TopologyOriginXCm;
+        long rootMinY = rootExtent.TopologyOriginYCm;
+        if (minX < rootMinX || minY < rootMinY ||
+            minX + boardExtent.WidthCm > rootMinX + rootExtent.WidthCm ||
+            minY + boardExtent.HeightCm > rootMinY + rootExtent.HeightCm)
+        {
+            throw new InvalidOperationException(
+                $"Board '{board.Name}' rectangle ({minX},{minY})+{boardExtent.WidthCm}x{boardExtent.HeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootExtent.WidthCm}x{rootExtent.HeightCm}cm.");
         }
     }
 
@@ -5348,7 +5786,7 @@ static class EditorRepo
     {
         if (string.IsNullOrWhiteSpace(mapId)) return false;
         if (string.IsNullOrWhiteSpace(board.DataFile)) return false;
-        if (board.WidthInMacroTiles <= 0 || board.HeightInMacroTiles <= 0) return false;
+        if (board.WidthCells <= 0 || board.HeightCells <= 0) return false;
         string spatialType = NormalizeSpatialType(board);
         if (!string.Equals(spatialType, "Grid", StringComparison.Ordinal) &&
             !string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
@@ -5362,9 +5800,8 @@ static class EditorRepo
 
     public static byte[] CreateEmptyReactTerrainHeader(Ludots.Core.Map.Board.BoardConfig board)
     {
-        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
-        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
         using var ms = new MemoryStream(9);
         using var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
         bw.Write(widthChunks);
@@ -5376,16 +5813,16 @@ static class EditorRepo
 
     private static bool ShouldCreateFullEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board)
     {
-        return board.WidthInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit &&
-            board.HeightInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit;
+        int eagerCellLimit = EagerEmptyTerrainFilePageLimit * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
+        return board.WidthCells <= eagerCellLimit &&
+            board.HeightCells <= eagerCellLimit;
     }
 
     private static void CreateEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board, string outFile)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
-        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+        int widthChunks = checked((board.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
+        int heightChunks = checked((board.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells);
 
         string tempReactPath = Path.Combine(Path.GetTempPath(), $"ludots_empty_board_{Guid.NewGuid():N}.bin");
         try
@@ -5669,6 +6106,17 @@ static class EditorRepo
                     target.Boards.Add(srcBoard.Clone());
                 }
             }
+
+        if (!string.IsNullOrWhiteSpace(source.RootBoard))
+        {
+            target.RootBoard = source.RootBoard;
+        }
+
+        if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+        {
+            target.Tuning = srcTuning.Clone();
+        }
+
         }
 
         if (source.TriggerTypes != null)
@@ -5815,20 +6263,27 @@ sealed class BoardCreateRequest
 {
     public string Name { get; set; } = string.Empty;
     public string SpatialType { get; set; } = "Grid";
-    public int WidthInMacroTiles { get; set; }
-    public int HeightInMacroTiles { get; set; }
+    public int WidthCm { get; set; }
+    public int HeightCm { get; set; }
     public int CellSizeCm { get; set; }
     public int HexEdgeLengthCm { get; set; }
-    public int ChunkSizeCells { get; set; }
-    public bool NavigationEnabled { get; set; } = true;
     public string? DataFile { get; set; }
+    public int AnchorLocalXCm { get; set; }
+    public int AnchorLocalYCm { get; set; }
+    public int AnchorWorldXCm { get; set; }
+    public int AnchorWorldYCm { get; set; }
 }
 
 sealed class BoardUpdateRequest
 {
+    public int? WidthCm { get; set; }
+    public int? HeightCm { get; set; }
     public int? CellSizeCm { get; set; }
     public int? HexEdgeLengthCm { get; set; }
-    public bool? NavigationEnabled { get; set; }
+    public int? AnchorLocalXCm { get; set; }
+    public int? AnchorLocalYCm { get; set; }
+    public int? AnchorWorldXCm { get; set; }
+    public int? AnchorWorldYCm { get; set; }
 }
 
 sealed class FlatGridNavBootstrapRequest

@@ -16,33 +16,70 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipTypeRegistry _types;
         private readonly RelationshipMetricRegistry _metrics;
         private readonly RelationshipFlagRegistry _flags;
-        private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly GraphLookupTableRegistry? _lookupTables;
         private readonly Gameplay.Rng.RngPickService? _rngPicks;
         private readonly PresentationTextCatalog? _presentationTextCatalog;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
-            RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             GraphLookupTableRegistry? lookupTables = null,
             Gameplay.Rng.RngPickService? rngPicks = null,
-            PresentationTextCatalog? presentationTextCatalog = null)
+            PresentationTextCatalog? presentationTextCatalog = null,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null,
+            Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
-            _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
             _lookupTables = lookupTables;
             _rngPicks = rngPicks;
             _presentationTextCatalog = presentationTextCatalog;
+            _orderTypes = orderTypes;
+            _eqsQueries = eqsQueries;
+        }
+
+        public int ResolveEqsQuery(string name)
+        {
+            if (_eqsQueries == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references EQS query '{name}', but no EqsQueryRegistry was provided.");
+            }
+
+            if (!_eqsQueries.Ids.TryGetId(name, out int queryId) || queryId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown EQS query '{name}'. Declare it in Spatial/eqs_queries.json before loading graph programs.");
+            }
+
+            return queryId;
+        }
+
+        public int ResolveOrderType(string name)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references order type '{name}', but no OrderTypeRegistry was provided.");
+            }
+
+            if (!_orderTypes.TryGetId(name, out int orderTypeId) || orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown order type '{name}'. Register order types before loading graph programs.");
+            }
+
+            return orderTypeId;
         }
 
         public int ResolveRngDistribution(string name)
@@ -155,10 +192,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _flags.GetId(name);
         }
 
-        public int ResolveRelationshipReason(string name)
-        {
-            return _reasons.Register(name);
-        }
 
         public int ResolveTargetDispatchPreset(string name)
         {

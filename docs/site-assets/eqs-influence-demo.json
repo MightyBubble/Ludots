@@ -1,0 +1,37 @@
+{
+  "fields": [
+    {
+      "id": "threat",
+      "cellSizeCm": 50,
+      "chunkSizeCells": 8,
+      "sources": [
+        { "xCm": 300, "yCm": 0, "radiusCm": 200, "peak": 10, "falloff": "Linear" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "avoid_threat_near_goal",
+      "generator": { "kind": "Ring", "radiusCm": 400, "count": 16 },
+      "tests": [
+        { "kind": "Distance", "preferNear": true, "weight": 1, "reference": { "xCm": 500, "yCm": 0 } },
+        { "kind": "Influence", "fieldKey": "threat", "preferLow": true, "weight": 2, "normalizeScale": 10 }
+      ],
+      "selection": { "kind": "Best" }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "avoid_threat_demo",
+      "origin": { "xCm": 0, "yCm": 0 },
+      "queryId": "avoid_threat_near_goal",
+      "influenceFieldIds": ["threat"],
+      "presentation": {
+        "influenceFieldId": "threat",
+        "drawCandidates": true,
+        "drawBest": true,
+        "normalizePeak": 10
+      }
+    }
+  ]
+}

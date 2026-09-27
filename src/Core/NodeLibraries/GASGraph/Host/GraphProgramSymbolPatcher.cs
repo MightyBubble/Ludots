@@ -42,12 +42,49 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadTextKey:
                         ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SubmitAssignedOrder:
+                    case GraphNodeOp.LoadOrderTypeId:
+                        ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.StartDialogue:
+                    case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SubmitEngageBatch:
+                        ins.Imm = Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.Pack(
+                            symbolResolver.ResolveEqsQuery(ResolveSymbol(symbols, ins.Imm)),
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
                         break;
                     case GraphNodeOp.OfferActivity:
                     case GraphNodeOp.OfferTask:
                         _ = ResolveSymbol(symbols, ins.Imm);
+                        break;
+                    case GraphNodeOp.ReadCalendarYear:
+                        if ((ins.Flags & CalendarOpEncoding.CalendarAuthoredFlag) != 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                            ins.Flags = 0;
+                        }
+
+                        break;
+                    case GraphNodeOp.ReadCalendarCyclePhase:
+                    case GraphNodeOp.ReadCalendarCycleDay:
+                    case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                    case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                        // Days-until keeps the phase symbol index in ImmF. Do not clear it here.
+                        int cycleKey = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        int calendarKey = 0;
+                        if ((ins.Flags & CalendarOpEncoding.CalendarAuthoredFlag) != 0)
+                        {
+                            int symbolIndex = ins.B | (ins.C << 8);
+                            calendarKey = ConfigKeyRegistry.Register(ResolveSymbol(symbols, symbolIndex));
+                        }
+
+                        ins.Imm = CalendarOpEncoding.Pack(cycleKey, calendarKey);
+                        ins.Flags = 0;
+                        ins.B = 0;
+                        ins.C = 0;
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
@@ -228,7 +265,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
                             ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (ins.Flags != byte.MaxValue)
@@ -258,7 +294,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                         if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)

@@ -18,6 +18,8 @@ Ludots 采用“一切皆 Mod”的设计。Core 能力、业务功能、调试�
 `IModContext` 是 Mod 的正式扩展 API。典型接入点包括：
 
 - `OnEvent`
+- `IModContext.Extensions`：OnLoad 窗口注册 GAS handler / graph op / presenter command / behavior 扩展 key（详见 [Mod Extensible Runtime](mod-extensible-runtime.md)）
+- `ComponentRegistry`：OnLoad 里登记组件名，使其可用于模板表/地图 authoring（详见 [Mod 自定义组件](mod-custom-components.md)）
 - `SystemFactoryRegistry`
 - `TriggerDecorators`
 - `FunctionRegistry`

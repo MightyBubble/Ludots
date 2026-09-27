@@ -113,6 +113,12 @@ namespace Ludots.Core.Fields
             return (float[])channels[channelIndex];
         }
 
+        public Span<float> GetMutableFloatChannel(Array[] channels, int channelIndex)
+        {
+            ValidateChannel(channelIndex, ChannelCount);
+            return ((float[])channels[channelIndex]).AsSpan();
+        }
+
         internal static void ValidateChannel(int channelIndex, int channelCount)
         {
             if ((uint)channelIndex >= (uint)channelCount)

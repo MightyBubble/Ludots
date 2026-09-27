@@ -1,0 +1,15 @@
+﻿flowchart TD
+    A[装载: templates.json ArrayById 同id合并] --> B[extends 展开: 合并后/校验前]
+    B --> C[components 字段级深合并: 子代字段胜 未提及继承父代]
+    B --> C2[children/TriggerGraphs 追加: 图精确去重]
+    B --> C3[标量钩子: 子代非空才覆盖]
+    C --> D{未知父 / 继承环?}
+    D -- 是 --> E[启动失败: 指明子/父模板 id]
+    D -- 否 --> F[模板校验 + 注册: 物化只消费展开结果]
+    F --> G[地图布阵 spawn: 批量快速路径 or EntityBuilder 单实体]
+    G --> H[实例 Overrides 与模板组件字段级深合并]
+    H --> I{覆盖缺字段?}
+    I -- 是 --> J[继承模板值: 不再吃默认 0]
+    I -- 否 --> K[覆盖值直接生效]
+    J --> L[验收通过]
+    K --> L

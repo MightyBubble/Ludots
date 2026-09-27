@@ -1,0 +1,66 @@
+[
+  {
+    "id": "graph.arpg.cast_slot4",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skill_5",
+        "action": "Arpg.Skill5",
+        "start": "slot",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 4
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

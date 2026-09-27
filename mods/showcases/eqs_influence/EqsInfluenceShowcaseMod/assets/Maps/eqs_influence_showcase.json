@@ -1,0 +1,13 @@
+{
+  "Id": "eqs_influence_showcase",
+  "Tags": ["eqs_influence_showcase", "eqs", "influence"],
+  "DefaultCamera": {
+    "TargetXCm": 250,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 68,
+    "DistanceCm": 1600,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

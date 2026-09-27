@@ -36,8 +36,8 @@ namespace Ludots.Tests.GAS
             Entity source = world.Create();
             Entity target = world.Create();
 
-            Assert.That(runtime.SetMetric(source, target, socialBondTypeId, loyaltyId, 25, reasonId: 0), Is.EqualTo(25));
-            Assert.That(runtime.SetMetric(source, target, hostilityTypeId, threatId, 70, reasonId: 0), Is.EqualTo(70));
+            Assert.That(runtime.SetMetric(source, target, socialBondTypeId, loyaltyId, 25), Is.EqualTo(25));
+            Assert.That(runtime.SetMetric(source, target, hostilityTypeId, threatId, 70), Is.EqualTo(70));
 
             Assert.That(runtime.GetMetric(source, target, socialBondTypeId, loyaltyId), Is.EqualTo(25));
             Assert.That(runtime.GetMetric(source, target, hostilityTypeId, threatId), Is.EqualTo(70));
@@ -336,11 +336,11 @@ namespace Ludots.Tests.GAS
                 removeTagsFromSourceTeam: Array.Empty<int>(),
                 removeTagsFromTargetTeam: Array.Empty<int>()));
 
-            var wrongTypeEnter = new RelationshipChangeRecord(source, target, typeId: 2, metricId: 0, reasonId: 0, oldValue: 50, newValue: 65, oldFlags: 0, newFlags: 0);
+            var wrongTypeEnter = new RelationshipChangeRecord(source, target, typeId: 2, metricId: 0, oldValue: 50, newValue: 65, oldFlags: 0, newFlags: 0);
             processor.Process(new GameEngine(), runtime, new[] { wrongTypeEnter });
             Assert.That(world.Get<GameplayTagContainer>(target).HasTag(trustedTagId), Is.False);
 
-            var matchingTypeEnter = new RelationshipChangeRecord(source, target, typeId: 1, metricId: 0, reasonId: 0, oldValue: 50, newValue: 65, oldFlags: 0, newFlags: 0);
+            var matchingTypeEnter = new RelationshipChangeRecord(source, target, typeId: 1, metricId: 0, oldValue: 50, newValue: 65, oldFlags: 0, newFlags: 0);
             processor.Process(new GameEngine(), runtime, new[] { matchingTypeEnter });
             Assert.That(world.Get<GameplayTagContainer>(target).HasTag(trustedTagId), Is.True);
         }

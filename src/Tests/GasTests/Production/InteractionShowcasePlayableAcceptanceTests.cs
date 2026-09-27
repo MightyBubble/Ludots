@@ -1338,6 +1338,12 @@ namespace Ludots.Tests.GAS.Production
 
             details.Add($"displacements={displacementCount}");
             details.Add($"actorDisplacement={actorDisplacementFound}");
+            engine.World.Query(new QueryDescription().WithAll<DisplacementState>(), (Entity de, ref DisplacementState ds) =>
+            {
+                string dn = engine.World.TryGet(de, out Name dn2) ? dn2.Value : "?";
+                string tn = engine.World.IsAlive(ds.TargetEntity) && engine.World.TryGet(ds.TargetEntity, out Name tn2) ? tn2.Value : ds.TargetEntity.Id.ToString();
+                details.Add($"dispEntity={dn}->target={tn}");
+            });
             details.Add($"activeMode={GetActiveModeId(engine)}");
             return string.Join(" | ", details);
         }
@@ -1957,7 +1963,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 

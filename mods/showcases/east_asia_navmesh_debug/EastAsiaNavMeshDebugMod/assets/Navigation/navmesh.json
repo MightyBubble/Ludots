@@ -27,5 +27,15 @@
     "heightScaleMeters": 1.0,
     "minWalkableUpDot": 0.6,
     "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "east_asia_visual_heightmap": {
+      "boards": {
+        "default": {
+          "tileWorldWidthCm": 228544,
+          "tileWorldHeightCm": 228544
+        }
+      }
+    }
   }
 }

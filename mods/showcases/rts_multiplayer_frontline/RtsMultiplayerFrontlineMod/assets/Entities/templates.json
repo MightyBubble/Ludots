@@ -149,11 +149,6 @@
         "SideIndex": -1
       },
       "FrontlineCore": {},
-      "ResourceSinkProfile": {
-        "ResourceAttribute": "Crystals",
-        "DockOffsetXCm": 0,
-        "DockOffsetYCm": 0
-      },
       "FrontlineCoreState": {},
       "FrontlineDeathState": {},
       "FrontlineTagBindingState": {}
@@ -253,17 +248,20 @@
         "SideIndex": -1
       },
       "FrontlineHarvester": {},
-      "ResourceTransportProfile": {
-        "GatherOrderTypeId": 172,
-        "MoveOrderTypeId": 101,
-        "ResourceAttribute": "Crystals",
-        "CargoAmount": 20,
-        "LoadDurationTicks": 60,
-        "ArrivalRadiusCm": 100
-      },
-      "ResourceTransportState": {},
       "FrontlineDeathState": {},
-      "FrontlineTagBindingState": {}
+      "FrontlineTagBindingState": {},
+      "GraphActionBrain": {
+        "HfsmId": "hfsm.rts.transport",
+        "ThinkEveryNTicks": 1,
+        "BlackboardInts": {
+          "Brain.Transport.Ticks": 0
+        },
+        "BlackboardEntities": {
+          "Brain.Transport.Source": null,
+          "Brain.Transport.Sink": null
+        }
+      },
+      "HfsmState": {}
     }
   },
   {
@@ -358,18 +356,21 @@
         "SideIndex": -1
       },
       "FrontlineInfantry": {},
-      "DirectAttackProfile": {
-        "AttackOrderTypeId": 102,
-        "MoveOrderTypeId": 101,
-        "EffectTemplate": "Effect.Rts.Frontline.InfantryDamage",
-        "TargetRelation": "Hostile",
-        "RangeCm": 650,
-        "CooldownTicks": 30,
-        "EngagementStandoffRadiusCm": 520
-      },
-      "DirectAttackState": {},
       "FrontlineDeathState": {},
-      "FrontlineTagBindingState": {}
+      "FrontlineTagBindingState": {},
+      "GraphActionBrain": {
+        "ThinkEveryNTicks": 1,
+        "BlackboardInts": {
+          "Brain.Attack.Cooldown": 0,
+          "Brain.Attack.DirX": 0,
+          "Brain.Attack.DirY": 0
+        },
+        "BlackboardEntities": {
+          "Brain.Attack.Target": null
+        },
+        "HfsmId": "hfsm.rts.attack"
+      },
+      "HfsmState": {}
     }
   },
   {
@@ -430,9 +431,6 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "FrontlineCrystalNode": {},
-      "ResourceSourceProfile": {
-        "ResourceAttribute": "Crystals"
-      },
       "FrontlineTagBindingState": {}
     }
   }

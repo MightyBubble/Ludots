@@ -1,0 +1,48 @@
+[
+  {
+    "id": "showcase.graph_op.AcquireTimeFlowPause",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      {
+        "id": "featured",
+        "op": "AcquireTimeFlowPause",
+        "domain": "simulation"
+      },
+      {
+        "id": "release",
+        "op": "ReleaseTimeFlowToken"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "release"
+      },
+      {
+        "from": "release",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "release",
+        "toPort": "value"
+      },
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

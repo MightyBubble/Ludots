@@ -12,9 +12,9 @@
 MapSession (唯一模拟世界/事件总线)
 └── EntityTemplate: settlement_root
     ├── EntityTriggerGraphAggregateRoot {}
-    ├── TriggerGraphs: [lifecycle, population, economy]
+    ├── triggerGraphs: [lifecycle, population, economy]
     └── children[] -> MaterializeTemplate + AttachmentOps.Attach
-        └── child entity may declare its own TriggerGraphs[]
+        └── child entity may declare its own triggerGraphs[]
 ```
 
 `EntityTemplate.TriggerGraphs` 是多个 graph id 的有序列表。每个 graph 的 entries 仍按 graph 资产声明顺序挂载。聚落能力由图的连线和已有 atomic op 组合表达，不新增 preset 开关。

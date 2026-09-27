@@ -840,7 +840,6 @@ namespace Ludots.Tests.GAS
             var relationshipMetrics = new RelationshipMetricRegistry();
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();
-            var relationshipReasons = new RelationshipReasonRegistry();
             var relationships = new RelationshipRuntime(
                 world,
                 relationshipTypes,
@@ -869,8 +868,7 @@ namespace Ludots.Tests.GAS
                 relationshipTypes,
                 relationshipMetrics,
                 relationshipFlags,
-                relationshipBands,
-                relationshipReasons);
+                relationshipBands);
             int ownsTypeId = relationshipTypes.GetId("Owns");
             int diplomacyTypeId = relationshipTypes.GetId("Diplomacy");
             int trustMetricId = relationshipMetrics.GetId("Trust");

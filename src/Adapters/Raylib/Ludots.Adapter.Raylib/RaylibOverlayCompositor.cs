@@ -24,6 +24,8 @@ namespace Ludots.Adapter.Raylib
         private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
         private bool _underlayHadContent;
+        private static readonly bool OverlayTraceEnabled = ReadEnvBool("LUDOTS_OVERLAY_TRACE");
+        private int _traceFrame;
         private bool _overlayHadContent;
         private bool _uiHadContent;
         private bool _compositeHadContent;
@@ -95,6 +97,31 @@ namespace Ludots.Adapter.Raylib
             if (framebufferDirectUnderlay && hasUnderlay)
             {
                 refreshUnderlay = true;
+            }
+
+            if (OverlayTraceEnabled && (_traceFrame++ % 30) == 0)
+            {
+                int underUiTexts = 0, underUiBars = 0, topMost = 0;
+                var orphanIds = new System.Text.StringBuilder();
+                if (scene != null)
+                {
+                    foreach (ref readonly PresentationOverlayItem orphan in scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text))
+                    {
+                        underUiTexts++;
+                        if (orphanIds.Length < 120)
+                        {
+                            orphanIds.Append($" id={orphan.StableId}({(int)orphan.X},{(int)orphan.Y})");
+                        }
+                    }
+
+                    underUiBars = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length;
+                    topMost = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length +
+                        scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text).Length;
+                }
+
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                    $"[overlay-trace] f={_traceFrame} underlay={hasUnderlay} fbDirect={framebufferDirectUnderlay} uText={underUiTexts} uBar={underUiBars} miss={scene?.RemoveStableMisses ?? 0}{orphanIds}");
             }
 
             bool underlayCanvasChanged = false;

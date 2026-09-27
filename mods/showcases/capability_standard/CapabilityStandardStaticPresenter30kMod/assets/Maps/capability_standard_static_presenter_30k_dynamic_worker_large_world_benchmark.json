@@ -1,6 +1,17 @@
 {
   "Id": "capability_standard_static_presenter_30k_dynamic_worker_large_world_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator", "large-world"],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator",
+    "large-world"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_dynamic_worker_large_world.height",
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
@@ -16,16 +27,22 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 256,
-      "HeightInMacroTiles": 256,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "WidthCm": 6553600,
+      "HeightCm": 6553600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
-    "TargetXCm": 18640,
-    "TargetYCm": 0,
+    "TargetXCm": 3295440,
+    "TargetYCm": 3276800,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 5000,

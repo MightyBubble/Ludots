@@ -1,0 +1,8 @@
+{
+  "stance": {
+    "stanceTypes": ["Hostile", "Friendly", "Neutral"],
+    "sameDomainStance": "Friendly",
+    "sameTeamStance": "Friendly",
+    "defaultStance": "Neutral"
+  }
+}

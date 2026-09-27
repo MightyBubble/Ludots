@@ -135,7 +135,7 @@ namespace CoreInputMod.Systems
                        _world,
                        collections,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       CoreInputCollectionKeys.CommandSource,
                        out entity);
         }
 

@@ -73,12 +73,54 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return plan.Rejection;
             }
 
-            if (!_world.IsAlive(order.Actor))
+            return SubmitPlanned(in followUpCast, in primaryMove);
+        }
+
+        /// <summary>
+        /// Submits one move-then-cast plan with a caller-provided move anchor (the engage
+        /// kernel passes the EQS-assigned ring point). Same transaction shape as the
+        /// auto-planned path: the follow-up order rides the primary move's continuation,
+        /// rollback releases both the continuation registration and the spatial payload.
+        /// </summary>
+        public OrderSubmitResult SubmitWithMoveAnchor(in Order followUpOrder, Vector3 moveAnchorWorldCm)
+        {
+            OrderEntityReferenceContract.Validate(in followUpOrder, nameof(CompositeOrderPlanner));
+            if (!_world.IsAlive(followUpOrder.Actor))
             {
                 return OrderSubmitResult.RejectedInvalidActor;
             }
 
-            OrderContinuationStateInstaller.RequireInstalled(_world, order.Actor);
+            var moveArgs = new OrderArgs();
+            moveArgs.Spatial.Kind = OrderSpatialKind.WorldCm;
+            moveArgs.Spatial.Mode = OrderCollectionMode.Single;
+            moveArgs.Spatial.WorldCm = moveAnchorWorldCm;
+
+            var primaryMove = new Order
+            {
+                OrderTypeId = _moveToOrderTypeId,
+                PlayerId = followUpOrder.PlayerId,
+                Actor = followUpOrder.Actor,
+                Target = Entity.Null,
+                TargetContext = followUpOrder.TargetContext,
+                Args = moveArgs,
+                SubmitMode = followUpOrder.SubmitMode
+            };
+
+            var followUp = followUpOrder;
+            followUp.SubmitMode = OrderSubmitMode.Queued;
+            return SubmitPlanned(in followUp, in primaryMove);
+        }
+
+        private OrderSubmitResult SubmitPlanned(in Order followUp, in Order move)
+        {
+            if (!_world.IsAlive(move.Actor))
+            {
+                return OrderSubmitResult.RejectedInvalidActor;
+            }
+
+            var followUpCast = followUp;
+            var primaryMove = move;
+            OrderContinuationStateInstaller.RequireInstalled(_world, primaryMove.Actor);
 
             try
             {
@@ -91,7 +133,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw;
             }
 
-            ref var continuations = ref _world.Get<OrderContinuationBuffer>(order.Actor);
+            ref var continuations = ref _world.Get<OrderContinuationBuffer>(primaryMove.Actor);
             if (!continuations.TryAdd(primaryMove.OrderId, in followUpCast))
             {
                 OrderSpatialPayloadOps.Release(_world, in followUpCast);

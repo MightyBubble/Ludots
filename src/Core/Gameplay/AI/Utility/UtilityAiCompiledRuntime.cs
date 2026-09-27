@@ -409,7 +409,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
         ActuatorReadiness01 = 3,
         GraphScore = 4,
         TargetHasTag = 5,
-        SourceHasTag = 6
+        SourceHasTag = 6,
+        InfluenceSample01 = 7  // Sample influence at target position; Arg0 = field key index
     }
 
     public enum UtilityAiNormalizationKind : byte

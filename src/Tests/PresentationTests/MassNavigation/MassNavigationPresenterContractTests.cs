@@ -229,9 +229,9 @@ namespace Ludots.Tests.Presentation
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation map must author a primary board.");
-            Assert.That(board["WidthInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
-            Assert.That(board["HeightInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
-            Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
+            Assert.That(board["WidthCm"]?.GetValue<int>(), Is.EqualTo(250 * 256 * 100));
+            Assert.That(board["HeightCm"]?.GetValue<int>(), Is.EqualTo(250 * 256 * 100));
+            Assert.That(board["Grid"]?["CellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
         [Test]
@@ -615,8 +615,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigation map must declare DefaultCamera.");
 
             Assert.That(RequireString(defaultCamera, "VirtualCameraId"), Is.EqualTo(LargeWorldCameraId));
-            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(0f));
-            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(0f));
+            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(3_200_000f));
+            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(3_200_000f));
 
             JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "config_catalog.json"));
             Assert.That(
@@ -873,13 +873,13 @@ namespace Ludots.Tests.Presentation
                     JsonObject? evt = rule?["event"]?.AsObject();
                     JsonObject? command = rule?["command"]?.AsObject();
                     return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
-                           string.Equals(evt?["key"]?.GetValue<string>(), EntityCollectionKeys.CommandSource, StringComparison.Ordinal) &&
+                           string.Equals(evt?["key"]?.GetValue<string>(), "collection.command.source", StringComparison.Ordinal) &&
                            string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
                            string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
                 });
 
             Assert.That(match, Is.Not.Null,
-                $"Presenter '{definitionId}' must map {eventKind} for {EntityCollectionKeys.CommandSource} to {commandKind} '{markerDefinitionId}'.");
+                $"Presenter '{definitionId}' must map {eventKind} for {"collection.command.source"} to {commandKind} '{markerDefinitionId}'.");
             JsonObject commandObj = match!["command"]!.AsObject();
             Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
                 $"Presenter '{definitionId}' must scope command marker lifecycle by source stable id.");

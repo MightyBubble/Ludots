@@ -64,7 +64,7 @@
    },
    {
     "label": "on_teleport",
-    "action": "CommandSourceAcquire",
+    "action": "Select.Begin",
     "start": "tp_px",
     "refire": "restart"
    }

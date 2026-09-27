@@ -34,6 +34,7 @@
     { href: "graph-op-wiki.html", label: "Graph 节点画廊", page: "graphop" },
     { href: "agent-bridge.html", label: "Agent 调试桥", page: "agentbridge" },
     { href: "gallery.html", label: "Showcase 画廊", page: "gallery" },
+    { href: "eqs-influence.html", label: "EQS 预览", page: "eqs-influence" },
     { href: "tests.html", label: "测试与验收", page: "tests" },
     { href: "diagrams.html", label: "架构图库", page: "diagrams" },
     { href: "panels.html", label: "面板矩阵", page: "panels" }

@@ -1,29 +1,45 @@
 {
   "Id": "nav_editor_grid",
-  "Tags": ["nav_editor", "grid", "navigation"],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "nav_editor",
+    "grid",
+    "navigation"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
       "DataFile": "nav_editor_grid.grid",
-      "NavigationEnabled": true
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     },
     {
       "Name": "board_2",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 16,
-      "HeightInMacroTiles": 16,
-      "GridCellSizeCm": 100,
-      "HexEdgeLengthCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256,
       "DataFile": "nav_editor_grid_board_2.grid",
-      "NavigationEnabled": true
+      "WidthCm": 409600,
+      "HeightCm": 409600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [],
@@ -36,5 +52,6 @@
     "Pitch": 50,
     "DistanceCm": 24000,
     "FovYDeg": 60
-  }
+  },
+  "RootBoard": "board_2"
 }

@@ -1,6 +1,16 @@
 {
   "Id": "static_obstacle_physics_showcase",
-  "Tags": ["showcase", "physics2d", "static_obstacles", "benchmark"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "physics2d",
+    "static_obstacles",
+    "benchmark"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 0,

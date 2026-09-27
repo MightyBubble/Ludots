@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "NarrativeShowcase.Participant", "isSymmetric": false }
+    {
+      "id": "NarrativeShowcase.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

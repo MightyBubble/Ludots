@@ -23,8 +23,8 @@
         "templateId": "formation_capability_showcase_soldier_azure_light",
         "profileId": "light"
       },
-      "centerXCm": -2600,
-      "centerYCm": -2200,
+      "centerXCm": 3197400,
+      "centerYCm": 3197800,
       "facingDeg": 78,
       "slots": {
         "layout": "Grid",
@@ -52,8 +52,8 @@
         "templateId": "formation_capability_showcase_soldier_azure_heavy",
         "profileId": "heavy"
       },
-      "centerXCm": 0,
-      "centerYCm": -2500,
+      "centerXCm": 3200000,
+      "centerYCm": 3197500,
       "facingDeg": 90,
       "slots": {
         "layout": "Disc",
@@ -81,8 +81,8 @@
         "templateId": "formation_capability_showcase_soldier_azure_light",
         "profileId": "light"
       },
-      "centerXCm": 2600,
-      "centerYCm": -2200,
+      "centerXCm": 3202600,
+      "centerYCm": 3197800,
       "facingDeg": 102,
       "slots": {
         "layout": "Grid",
@@ -110,8 +110,8 @@
         "templateId": "formation_capability_showcase_soldier_crimson_light",
         "profileId": "light"
       },
-      "centerXCm": -2600,
-      "centerYCm": 2500,
+      "centerXCm": 3197400,
+      "centerYCm": 3202500,
       "facingDeg": 258,
       "slots": {
         "layout": "Grid",
@@ -139,8 +139,8 @@
         "templateId": "formation_capability_showcase_soldier_crimson_heavy",
         "profileId": "heavy"
       },
-      "centerXCm": 0,
-      "centerYCm": 2800,
+      "centerXCm": 3200000,
+      "centerYCm": 3202800,
       "facingDeg": 270,
       "slots": {
         "layout": "Disc",
@@ -168,8 +168,8 @@
         "templateId": "formation_capability_showcase_soldier_crimson_light",
         "profileId": "light"
       },
-      "centerXCm": 2600,
-      "centerYCm": 2500,
+      "centerXCm": 3202600,
+      "centerYCm": 3202500,
       "facingDeg": 282,
       "slots": {
         "layout": "Grid",

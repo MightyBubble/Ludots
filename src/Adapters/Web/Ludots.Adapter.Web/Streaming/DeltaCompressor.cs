@@ -371,37 +371,37 @@ namespace Ludots.Adapter.Web.Streaming
 
         private void WriteTextTemplateTable(ReadOnlySpan<ScreenHudItem> items, WorldHudStringTable? strings)
         {
-            Span<int> tokenIds = items.Length <= 128 ? stackalloc int[items.Length] : new int[items.Length];
-            int tokenCount = CollectUniqueTokenIds(items, strings, tokenIds);
-
-            EnsureCapacity(2);
-            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)tokenCount);
-            _pos += 2;
-
-            for (int i = 0; i < tokenCount; i++)
-            {
-                int tokenId = tokenIds[i];
-                string template = strings!.TryGet(tokenId) ?? string.Empty;
-                int byteCount = Encoding.UTF8.GetByteCount(template);
-                EnsureCapacity(6 + byteCount);
-                WriteInt32(tokenId);
-                BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)byteCount);
-                _pos += 2;
-                Encoding.UTF8.GetBytes(template, _buffer.AsSpan(_pos));
-                _pos += byteCount;
-            }
+            int capacity = PresentationTextWireTemplates.RequiredCapacity(items.Length);
+            Span<int> tokenIds = items.Length <= PresentationTextWireTemplates.StackItemLimit
+                ? stackalloc int[capacity]
+                : new int[capacity];
+            int tokenCount = PresentationTextWireTemplates.CollectUniqueTokenIds(items, strings, tokenIds);
+            WriteCollectedTextTemplates(tokenIds.Slice(0, tokenCount), strings);
         }
 
         private void WriteTextTemplateTable(ReadOnlySpan<ScreenOverlayItem> items, WorldHudStringTable? strings)
         {
-            Span<int> tokenIds = items.Length <= 128 ? stackalloc int[items.Length] : new int[items.Length];
-            int tokenCount = CollectUniqueTokenIds(items, strings, tokenIds);
+            int capacity = PresentationTextWireTemplates.RequiredCapacity(items.Length);
+            Span<int> tokenIds = items.Length <= PresentationTextWireTemplates.StackItemLimit
+                ? stackalloc int[capacity]
+                : new int[capacity];
+            int tokenCount = PresentationTextWireTemplates.CollectUniqueTokenIds(items, strings, tokenIds);
+            WriteCollectedTextTemplates(tokenIds.Slice(0, tokenCount), strings);
+        }
+
+        private void WriteCollectedTextTemplates(ReadOnlySpan<int> tokenIds, WorldHudStringTable? strings)
+        {
+            if (tokenIds.Length > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation text template table count {tokenIds.Length} exceeds {ushort.MaxValue}.");
+            }
 
             EnsureCapacity(2);
-            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)tokenCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)tokenIds.Length);
             _pos += 2;
 
-            for (int i = 0; i < tokenCount; i++)
+            for (int i = 0; i < tokenIds.Length; i++)
             {
                 int tokenId = tokenIds[i];
                 string template = strings!.TryGet(tokenId) ?? string.Empty;
@@ -413,66 +413,6 @@ namespace Ludots.Adapter.Web.Streaming
                 Encoding.UTF8.GetBytes(template, _buffer.AsSpan(_pos));
                 _pos += byteCount;
             }
-        }
-
-        private static int CollectUniqueTokenIds(ReadOnlySpan<ScreenHudItem> items, WorldHudStringTable? strings, Span<int> tokenIds)
-        {
-            int tokenCount = 0;
-            for (int i = 0; i < items.Length; i++)
-            {
-                int tokenId = items[i].Text.TokenId;
-                if (tokenId <= 0 || strings?.TryGet(tokenId) == null)
-                {
-                    continue;
-                }
-
-                bool exists = false;
-                for (int tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++)
-                {
-                    if (tokenIds[tokenIndex] == tokenId)
-                    {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (!exists)
-                {
-                    tokenIds[tokenCount++] = tokenId;
-                }
-            }
-
-            return tokenCount;
-        }
-
-        private static int CollectUniqueTokenIds(ReadOnlySpan<ScreenOverlayItem> items, WorldHudStringTable? strings, Span<int> tokenIds)
-        {
-            int tokenCount = 0;
-            for (int i = 0; i < items.Length; i++)
-            {
-                int tokenId = items[i].Text.TokenId;
-                if (tokenId <= 0 || strings?.TryGet(tokenId) == null)
-                {
-                    continue;
-                }
-
-                bool exists = false;
-                for (int tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++)
-                {
-                    if (tokenIds[tokenIndex] == tokenId)
-                    {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (!exists)
-                {
-                    tokenIds[tokenCount++] = tokenId;
-                }
-            }
-
-            return tokenCount;
         }
 
         private void WriteUiScene(string? sceneJson)

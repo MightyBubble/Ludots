@@ -38,6 +38,7 @@
   },
   {
     "id": "moba_hero",
+    "initialInteractionContext": "interaction.context.moba.battle",
     "components": {
       "Name": {
         "Value": "Hero"

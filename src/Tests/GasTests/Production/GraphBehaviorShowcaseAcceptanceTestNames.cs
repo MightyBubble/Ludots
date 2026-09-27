@@ -19,16 +19,6 @@ namespace Ludots.Tests.Gas.Production
     {
         private const double ShowcaseThinkBudgetMs = 15.0;
 
-        [Test]
-        public void RegistryName_DelegatesToSeparatedSuite()
-        {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
-            var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(programs, actions, behavior);
-            runtime.EnsureWorld();
-            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
-        }
     }
 
     [TestFixture]
@@ -38,39 +28,12 @@ namespace Ludots.Tests.Gas.Production
     {
         private const double ShowcaseThinkBudgetMs = 15.0;
 
-        [Test]
-        public void RegistryName_DelegatesToSeparatedSuite()
-        {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
-            var runtime = new HfsmSentryArenaRuntime();
-            runtime.Bind(programs, actions, behavior);
-            runtime.EnsureWorld();
-            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
-        }
     }
 
     [TestFixture]
     [Category("ci-gate")]
     public sealed class AbilityGraphSandboxShowcaseAcceptanceTests
     {
-        [Test]
-        public void RegistryName_DelegatesToSeparatedSuite()
-        {
-            using var runtime = new AbilityGraphSandboxRuntime();
-            runtime.BindStandaloneFromModAssets();
-            runtime.EnsureWorld();
-            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.Multiple(() =>
-            {
-                Assert.That(runtime.Metrics.Detail, Does.Contain("查一圈"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("挂状态"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("加好感"));
-                Assert.That(runtime.EffectApplications, Is.GreaterThan(0));
-                Assert.That(runtime.RelationshipScore, Is.GreaterThan(0));
-                Assert.That(runtime.NearbyCount, Is.EqualTo(AbilityGraphSandboxGraphKeys.QueryLimit));
-            });
-        }
 
         [Test]
         public void SandboxGraphs_EmitAllCoveredOps()
@@ -124,15 +87,5 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class GraphBehaviorIntegrationShowcaseAcceptanceTests
     {
-        [Test]
-        public void RegistryName_DelegatesToSeparatedSuite()
-        {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
-            var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(programs, actions, behavior);
-            runtime.EnsureWorld();
-            for (int i = 0; i < 15; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.GuardCount, Is.EqualTo(6));
-        }
     }
 }

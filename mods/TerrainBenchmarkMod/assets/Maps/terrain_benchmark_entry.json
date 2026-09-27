@@ -1,0 +1,74 @@
+{
+  "Id": "terrain_benchmark_entry",
+  "ParentId": null,
+  "Dependencies": {},
+  "Tags": [
+    "moba_demo"
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "Name": {
+          "Value": "Enemy1"
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "Name": {
+          "Value": "Enemy2"
+        }
+      }
+    }
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "terrain_bench.hex",
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
+    }
+  ],
+  "TriggerTypes": []
+}

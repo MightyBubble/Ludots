@@ -1,0 +1,10 @@
+{
+  "actions": [
+    { "id": "Ballista.Command", "name": "Ballista_Command", "type": "Button" }
+  ],
+  "contexts": [
+    { "id": "default", "bindings": [
+      { "actionId": "Ballista.Command", "path": "<Mouse>/rightButton" }
+    ] }
+  ]
+}

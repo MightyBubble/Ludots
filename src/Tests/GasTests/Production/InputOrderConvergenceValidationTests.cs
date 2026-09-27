@@ -52,15 +52,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
             Assert.That(localInputNames, Does.Contain("AuthoritativePointerButtonSnapshotSystem"));
             Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
-            Assert.That(localInputNames, Does.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(localInputNames, Does.Contain("AxisMoveOrderSystem"));
             Assert.That(localInputNames, Does.Contain("TabTargetCycleSystem"));
             Assert.That(localInputNames, Does.Contain("ViewModeSwitchSystem"));
-            Assert.That(localInputNames, Does.Contain("MobaLocalOrderSourceSystem"));
+            Assert.That(localInputNames, Does.Contain("MobaInputModeSystem"));
+            Assert.That(inputNames, Does.Contain("AutoInstalledLocalOrderSourceSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
             Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
-            Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("CommandSourceAcquisitionSystem")));
-            Assert.That(localInputNames.IndexOf("CommandSourceAcquisitionSystem"), Is.LessThan(localInputNames.IndexOf("MobaLocalOrderSourceSystem")));
+            Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("MobaInputModeSystem")));
             Assert.That(localInputNames, Does.Not.Contain("ClockSystem"));
             Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
             Assert.That(localInputNames, Does.Not.Contain("Physics2DSimulationSystem"));
@@ -70,7 +69,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
-            Assert.That(presentationNames, Does.Not.Contain("MobaLocalOrderSourceSystem"));
+            Assert.That(presentationNames, Does.Not.Contain("MobaInputModeSystem"));
             Assert.That(presentationNames, Does.Contain("AbilityAimPresentationProjectionSystem"));
             Assert.That(presentationNames, Does.Contain("CommandActorMovePathPresentationSystem"));
             Assert.That(presentationNames, Does.Contain("SkillBarOverlaySystem"));

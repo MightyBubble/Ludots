@@ -101,10 +101,12 @@ namespace Ludots.Tests.GAS.Production
             string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
             DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
             AssertCollectionCount(engine, owner, config.Collections.UiBox, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
+            Assert.That(ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count, Is.EqualTo(0),
+                "ui box acquisition must not reach command semantics before the commit action");
+            Assert.That(ReadCollectionSnapshot(engine, owner, config.Collections.FormationPrimary, required: false).Count, Is.EqualTo(0),
+                "formation snapshot follows the committed command source, not the ui box");
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote both the UI acquisition collection and the authoritative command source.");
+            timeline.Add("[T+002] Player dragged a friendly box; the showcase-owned select graph wrote the UI acquisition collection while command semantics stayed reserved for the commit action.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);
@@ -290,12 +292,11 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry missing.");
             RelationshipChangeBuffer relationshipChanges = engine.GetService(CoreServiceKeys.RelationshipChangeBuffer)
                 ?? throw new InvalidOperationException("RelationshipChangeBuffer missing.");
-            RelationshipReasonRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry missing.");
+            RelationshipBandRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipBandRegistry)
+                ?? throw new InvalidOperationException("RelationshipBandRegistry missing.");
             int tacticalIntelTypeId = relationshipTypes.GetId(config.Relationships.TacticalIntel);
             int pressureMetricId = relationshipMetrics.GetId(config.Scenario.PressurePulse.Metric);
-            int pressureReasonId = reasons.Register("Benchmark.PressurePulse");
-            GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
+                GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
             GraphConfig hostileGraphConfig = LoadGraphConfig(engine, config.Graphs.HostileThreats);
             GraphConfig formationGraphConfig = LoadGraphConfig(engine, config.Graphs.FormationCache);
             GraphOutputSchemaRegistry schemas = engine.GetService(CoreServiceKeys.GraphOutputSchemaRegistry)
@@ -366,7 +367,7 @@ namespace Ludots.Tests.GAS.Production
                 iteration =>
                 {
                     int delta = (iteration & 1) == 0 ? config.Scenario.PressurePulse.Delta : -config.Scenario.PressurePulse.Delta;
-                    relationships.AddMetric(owner, pressureTarget, tacticalIntelTypeId, pressureMetricId, delta, pressureReasonId);
+                    relationships.AddMetric(owner, pressureTarget, tacticalIntelTypeId, pressureMetricId, delta);
                     ExecuteProductionGraphs(writer, graphIds, owner, api, (uint)(iteration + 50000));
                 },
                 relationshipChanges.Clear);
@@ -2251,7 +2252,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final threat max: `{final.ThreatMax}`");
             sb.AppendLine($"- final formation count: `{final.FormationCount}`");
             sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, command source `{final.CommandSourceRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
             return sb.ToString();
         }
 
@@ -2372,7 +2373,7 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[ConfigPipeline loads EntityQueryTacticsShowcaseMod] --> B[MapLoader spawns teams, templates, attrs, tags]",
                 "    B --> C[Player drags UI box selection]",
-                "    C --> D[CommandSourceAcquisitionSystem writes UI acquisition and command source]",
+                "    C --> D[graph.core.select_commit writes the declared active collection]",
                 "    D --> E[Configured commit action confirms command source]",
                 "    E --> F[Showcase publishes command and formation snapshots to EntityCollectionStore]",
                 "    F --> G[GraphReturnWriter executes graph ops through shared C# EntitySetQueryRuntime API]",

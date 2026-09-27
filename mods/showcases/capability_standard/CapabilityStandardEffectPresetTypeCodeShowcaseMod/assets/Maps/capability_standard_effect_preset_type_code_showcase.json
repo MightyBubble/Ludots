@@ -1,6 +1,15 @@
 {
   "Id": "capability_standard_effect_preset_type_code_showcase",
-  "Tags": ["showcase", "capability-standard", "effect-preset-type-code"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "effect-preset-type-code"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 850,

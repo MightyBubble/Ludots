@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Entity-domain TriggerGraph mount pipeline. Entities whose template declares
-    /// "TriggerGraphs" get one mount per graph (scope = the entity itself; caster =
+    /// "triggerGraphs" get one mount per graph (scope = the entity itself; caster =
     /// explicit target = E[0] convention = self), built by TriggerGraphMounting and
     /// registered through the map trigger pipeline of the entity's map
     /// (TriggerManager map registration, decorators, unload cleanup).

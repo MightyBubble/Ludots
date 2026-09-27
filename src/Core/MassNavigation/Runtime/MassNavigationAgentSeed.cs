@@ -2,10 +2,18 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 using Arch.Core;
 
+/// <summary>
+/// One agent entering the flow solver. The integer domain id is an opaque
+/// relationship-domain key: authored agents derive it from their control-domain or
+/// member-of relationship (see MassNavigationAuthoredAgentBindingSystem.ResolveDomain),
+/// scenario spawn derives it from the scenario's domain table. The solver never reads
+/// gameplay team state — domain pairs only feed the injected relationship projection
+/// that scales avoidance.
+/// </summary>
 public readonly struct MassNavigationAgentSeed
 {
     public MassNavigationAgentSeed(
-        int teamId,
+        int relationshipDomainId,
         float localPositionXCm,
         float localPositionYCm,
         bool heavy,
@@ -15,7 +23,7 @@ public readonly struct MassNavigationAgentSeed
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
     {
-        TeamId = teamId;
+        RelationshipDomainId = relationshipDomainId;
         DomainRep = Entity.Null;
         LocalPositionXCm = localPositionXCm;
         LocalPositionYCm = localPositionYCm;
@@ -51,7 +59,7 @@ public readonly struct MassNavigationAgentSeed
         DomainRep = domainRep;
     }
 
-    public int TeamId { get; }
+    public int RelationshipDomainId { get; }
     public Entity DomainRep { get; }
     public float LocalPositionXCm { get; }
     public float LocalPositionYCm { get; }

@@ -18,7 +18,6 @@ namespace RelationshipShowcaseMod.Runtime
         public RelationshipTagConfig Tags { get; set; } = new();
         public RelationshipEffectConfig Effects { get; set; } = new();
         public RelationshipMetricConfig Metrics { get; set; } = new();
-        public RelationshipReasonConfig Reasons { get; set; } = new();
         public RelationshipSeedConfig Seeds { get; set; } = new();
         public RelationshipSeedConfig Seed
         {
@@ -66,7 +65,6 @@ namespace RelationshipShowcaseMod.Runtime
             RequireTagConfig();
             RequireEffectConfig();
             RequireMetricConfig();
-            RequireReasonConfig();
             RequireBehaviorConfig();
             RequireStatusConfig();
             RequireStateConfig();
@@ -154,14 +152,6 @@ namespace RelationshipShowcaseMod.Runtime
             Require(Metrics.Loyalty, nameof(Metrics.Loyalty));
             Require(Metrics.Support, nameof(Metrics.Support));
             Require(Metrics.Threat, nameof(Metrics.Threat));
-        }
-
-        private void RequireReasonConfig()
-        {
-            Require(Reasons.Setup, nameof(Reasons.Setup));
-            Require(Reasons.Doctrine, nameof(Reasons.Doctrine));
-            Require(Reasons.Drill, nameof(Reasons.Drill));
-            Require(Reasons.Taunt, nameof(Reasons.Taunt));
         }
 
         private void RequireSeeds()
@@ -381,13 +371,6 @@ namespace RelationshipShowcaseMod.Runtime
         public string Threat { get; set; } = string.Empty;
     }
 
-    public sealed class RelationshipReasonConfig
-    {
-        public string Setup { get; set; } = string.Empty;
-        public string Doctrine { get; set; } = string.Empty;
-        public string Drill { get; set; } = string.Empty;
-        public string Taunt { get; set; } = string.Empty;
-    }
 
     public sealed class RelationshipSeedConfig
     {
@@ -407,13 +390,6 @@ namespace RelationshipShowcaseMod.Runtime
         public string Type { get; set; } = string.Empty;
         public string Metric { get; set; } = string.Empty;
         public int Value { get; set; }
-        public string Reason { get; set; } = string.Empty;
-
-        public string ReasonId
-        {
-            get => Reason;
-            set => Reason = value ?? string.Empty;
-        }
     }
 
     public sealed class RelationshipStatusConfig

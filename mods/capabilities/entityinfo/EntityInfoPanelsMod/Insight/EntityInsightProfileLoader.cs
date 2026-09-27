@@ -67,6 +67,7 @@ public sealed class EntityInsightProfileLoader
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),
+                TitleTokenId = ReadOptionalTokenId(textCatalog, node, "titleToken", profileId),
                 Badges = ReadBadges(textCatalog, node, profileId),
                 Stats = ReadStats(textCatalog, node, profileId),
                 Tips = ReadTips(textCatalog, node, profileId),
@@ -249,6 +250,16 @@ public sealed class EntityInsightProfileLoader
         }
 
         return actions;
+    }
+
+    private static int ReadOptionalTokenId(PresentationTextCatalog textCatalog, JsonObject node, string propertyName, string scope)
+    {
+        if (!node.ContainsKey(propertyName) || node[propertyName] is null)
+        {
+            return 0;
+        }
+
+        return ResolveRequiredTokenId(textCatalog, node, propertyName, scope);
     }
 
     private static int ResolveRequiredTokenId(PresentationTextCatalog textCatalog, JsonObject node, string propertyName, string scope)

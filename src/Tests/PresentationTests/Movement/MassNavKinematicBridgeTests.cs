@@ -393,7 +393,7 @@ namespace Ludots.Tests.Presentation.Movement
 
                     Agents[i] = entity;
                     seeds[i] = new MassNavigationAgentSeed(
-                        teamId: TeamId,
+                        relationshipDomainId: TeamId,
                         localPositionXCm: spec.WorldXCm,
                         localPositionYCm: spec.WorldYCm,
                         heavy: false,

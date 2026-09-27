@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -17,7 +18,15 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudSc2AndYgoDemoTests
     {
-        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
 
         [Test]
         public void MudSc2ClassicSkills_DemoLog()
@@ -137,7 +146,7 @@ namespace Ludots.Tests.GAS
                 var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, orderRuleRegistry, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
                 var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
                 var effectLoop = new EffectProcessingLoopSystem(
@@ -364,7 +373,7 @@ namespace Ludots.Tests.GAS
 
                 var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
-                var tagOps2 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps2 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -380,7 +389,7 @@ namespace Ludots.Tests.GAS
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: tagOps2);
-                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps2);
+                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps2, aggregateDirty: tagOps2.AggregateDirty);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
 
@@ -392,7 +401,7 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var player = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 50f);
                 var opponent = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(opponent).SetBase(attrHealth, 50f);
@@ -500,7 +509,7 @@ namespace Ludots.Tests.GAS
                 var inputReq = new InputRequestQueue();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
-                var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,

@@ -641,7 +641,9 @@ namespace Ludots.Core.EntityQueries
                 return false;
             }
 
-            value = attributes.GetCurrent(attributeId);
+            value = (uint)attributeId < (uint)Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS
+                ? attributes.GetCurrent(attributeId)
+                : Ludots.Core.Gameplay.GAS.AttributeReads.Current(_world, entity, attributeId);
             return true;
         }
 

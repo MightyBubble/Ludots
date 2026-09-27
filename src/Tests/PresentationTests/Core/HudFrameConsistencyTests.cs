@@ -203,14 +203,116 @@ public sealed class HudFrameConsistencyTests
         }
     }
 
+    [Test]
+    public void WorldHud_TextPositionOnlyDelta_MatchesFullRebuildScreenX()
+    {
+        var world = World.Create();
+        try
+        {
+            var worldHud = new WorldHudBatchBuffer(16);
+            var screenHud = new ScreenHudBatchBuffer(16);
+            var view = new FixedView();
+            var camera = new CameraManager();
+            camera.ApplyPose(new CameraPoseRequest { DistanceCm = 16000, Pitch = 50, TargetCm = Vector2.Zero });
+            var projector = new CoreScreenProjector(camera, view);
+            using var projection = new WorldHudToScreenSystem(world, worldHud, null, projector, view, screenHud);
+
+            const int textId = 11;
+            const int barId = 12;
+            var p1 = new Vector3(3f, 0f, 0f);
+            Assert.That(worldHud.TryAdd(new WorldHudItem
+            {
+                StableId = textId, DirtySerial = 1, Kind = WorldHudItemKind.Text,
+                WorldPosition = p1, FontSize = 16,
+                Color0 = Vector4.One, Value0 = 1, Id1 = (int)WorldHudValueMode.Constant,
+            }), Is.True);
+            Assert.That(worldHud.TryAdd(new WorldHudItem
+            {
+                StableId = barId, DirtySerial = 1, Kind = WorldHudItemKind.Bar,
+                WorldPosition = p1, Width = 12, Height = 3, Value0 = 0.5f,
+                Color0 = Vector4.One, Color1 = new Vector4(0, 1, 0, 1),
+            }), Is.True);
+            projection.Update(1f / 60);
+
+            // 相机不动、无结构变化：UpdatePosition 走 position-only 增量投影
+            var p2 = new Vector3(6f, 0f, 0f);
+            worldHud.UpdatePosition(textId, in p2);
+            worldHud.UpdatePosition(barId, in p2);
+            projection.Update(1f / 60);
+            float textXDelta = GetTextScreenX(screenHud, textId);
+            float barXDelta = GetBarScreenX(screenHud, barId);
+
+            // 结构变化强制全量重建：同世界位置、同相机下的权威投影
+            Assert.That(worldHud.TryAdd(new WorldHudItem
+            {
+                StableId = 99, DirtySerial = 1, Kind = WorldHudItemKind.Bar,
+                WorldPosition = new Vector3(5000f, 0f, 5000f), Width = 12, Height = 3, Value0 = 1f,
+                Color0 = Vector4.One, Color1 = Vector4.One,
+            }), Is.True);
+            projection.Update(1f / 60);
+
+            Assert.That(GetBarScreenX(screenHud, barId), Is.EqualTo(barXDelta),
+                "bar 控制组：position-only 增量与全量重建的 ScreenX 必须一致");
+            Assert.That(GetTextScreenX(screenHud, textId), Is.EqualTo(textXDelta),
+                "text position-only 增量与全量重建的 ScreenX 必须一致——Width=0 的文本不得吃 16f 宽度兜底" +
+                "（兜底把它按 16px 居中左移 8px，与全量路径的锚点语义来回跳，就是单位移动中的左右抖动）");
+        }
+        finally
+        {
+            World.Destroy(world);
+        }
+    }
+
+    private static float GetTextScreenX(ScreenHudBatchBuffer screenHud, int stableId)
+    {
+        foreach (var text in screenHud.GetTextSpan())
+        {
+            if (text.StableId == stableId)
+            {
+                return text.ScreenX;
+            }
+        }
+
+        Assert.Fail($"text stableId={stableId} not projected");
+        return 0f;
+    }
+
+    private static float GetBarScreenX(ScreenHudBatchBuffer screenHud, int stableId)
+    {
+        foreach (var bar in screenHud.GetBarSpan())
+        {
+            if (bar.StableId == stableId)
+            {
+                return bar.ScreenX;
+            }
+        }
+
+        Assert.Fail($"bar stableId={stableId} not projected");
+        return 0f;
+    }
+
     private static void AssertSamePixels(SKSurface actual, SKSurface expected, string name)
     {
         using var actualImage = actual.Snapshot();
         using var expectedImage = expected.Snapshot();
         using var actualBitmap = SKBitmap.FromImage(actualImage);
         using var expectedBitmap = SKBitmap.FromImage(expectedImage);
-        bool equal = actualBitmap.GetPixelSpan().SequenceEqual(expectedBitmap.GetPixelSpan());
-        if (!equal)
+        // 允许 ≤1/255 的 AA 量化噪声（精灵烘焙面与主画布两条合法光栅路径的固有差异）；
+        // 错位/错内容类缺陷会产生满幅通道差，仍然必须爆红。
+        ReadOnlySpan<byte> actualPixels = actualBitmap.GetPixelSpan();
+        ReadOnlySpan<byte> expectedPixels = expectedBitmap.GetPixelSpan();
+        Assert.That(actualPixels.Length, Is.EqualTo(expectedPixels.Length), $"{name}: surface size mismatch");
+        int overshoot = 0;
+        for (int i = 0; i < actualPixels.Length; i++)
+        {
+            int delta = actualPixels[i] - expectedPixels[i];
+            if (delta is > 1 or < -1)
+            {
+                overshoot++;
+            }
+        }
+
+        if (overshoot > 0)
         {
             string directory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "hud-frame-consistency");
             Directory.CreateDirectory(directory);
@@ -219,7 +321,8 @@ public sealed class HudFrameConsistencyTests
             File.WriteAllBytes(Path.Combine(directory, name + "-actual.png"), actualPng.ToArray());
             File.WriteAllBytes(Path.Combine(directory, name + "-expected.png"), expectedPng.ToArray());
         }
-        Assert.That(equal, Is.True, $"{name}: retained HUD must draw the same positions as a fresh render of this frame");
+        Assert.That(overshoot, Is.Zero,
+            $"{name}: retained HUD must draw the same positions as a fresh render of this frame (channel delta >1)");
     }
 
     private sealed class FixedView : IViewController

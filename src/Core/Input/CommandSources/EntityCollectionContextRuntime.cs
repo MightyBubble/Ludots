@@ -140,9 +140,16 @@ namespace Ludots.Core.Input.CommandSources
             World world,
             EntityCollectionStore collections,
             Entity owner,
+            string hoverCollectionKey,
             out Entity hovered)
         {
-            return TryGetPrimary(world, collections, owner, EntityCollectionKeys.HoveredEntity, out hovered);
+            if (string.IsNullOrWhiteSpace(hoverCollectionKey))
+            {
+                hovered = default;
+                return false;
+            }
+
+            return TryGetPrimary(world, collections, owner, hoverCollectionKey, out hovered);
         }
 
         public static bool TryDescribeView(

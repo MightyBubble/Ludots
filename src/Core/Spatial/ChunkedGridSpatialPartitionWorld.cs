@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -68,38 +69,76 @@ namespace Ludots.Core.Spatial
             int maxChunkX = MathUtil.FloorDiv(maxCellX, _chunkSize);
             int maxChunkY = MathUtil.FloorDiv(maxCellY, _chunkSize);
 
+            // A broad rect over a sparse world covers vastly more chunk addresses than
+            // the dictionary stores; enumerating stored chunks beats scanning empties.
+            long coveredChunks = (long)(maxChunkX - minChunkX + 1) * (maxChunkY - minChunkY + 1);
+            if (coveredChunks > _chunks.Count)
+            {
+                long[] rented = ArrayPool<long>.Shared.Rent(_chunks.Count);
+                try
+                {
+                    int stored = 0;
+                    foreach (long key in _chunks.Keys)
+                    {
+                        int cx = (int)(key >> 32);
+                        int cy = (int)(key & 0xFFFFFFFFL);
+                        if (cx < minChunkX || cx > maxChunkX || cy < minChunkY || cy > maxChunkY) continue;
+                        // Store (cy, cx) with cx's sign bit flipped so a plain sort of
+                        // the low half yields the dense path's signed row-major order.
+                        rented[stored++] = ((long)cy << 32) | (uint)(cx ^ int.MinValue);
+                    }
+                    Array.Sort(rented, 0, stored);
+                    for (int i = 0; i < stored; i++)
+                    {
+                        int cx = (int)((rented[i] & 0xFFFFFFFFL) ^ 0x80000000L);
+                        int cy = (int)(rented[i] >> 32);
+                        QueryChunk(_chunks[GetChunkKey(cx, cy)], cx, cy, minCellX, minCellY, maxCellX, maxCellY, buffer, ref count, ref dropped);
+                    }
+                }
+                finally
+                {
+                    ArrayPool<long>.Shared.Return(rented);
+                }
+                return count;
+            }
+
             for (int cy = minChunkY; cy <= maxChunkY; cy++)
             {
                 for (int cx = minChunkX; cx <= maxChunkX; cx++)
                 {
-                    long key = GetChunkKey(cx, cy);
-                    if (!_chunks.TryGetValue(key, out var chunk)) continue;
-
-                    int chunkMinCellX = cx * _chunkSize;
-                    int chunkMinCellY = cy * _chunkSize;
-
-                    int startX = Math.Max(minCellX - chunkMinCellX, 0);
-                    int startY = Math.Max(minCellY - chunkMinCellY, 0);
-                    int endX = Math.Min(maxCellX - chunkMinCellX, _chunkSize - 1);
-                    int endY = Math.Min(maxCellY - chunkMinCellY, _chunkSize - 1);
-
-                    for (int y = startY; y <= endY; y++)
-                    {
-                        for (int x = startX; x <= endX; x++)
-                        {
-                            var list = chunk.GetCellList(x, y);
-                            if (list == null) continue;
-                            for (int i = 0; i < list.Count; i++)
-                            {
-                                if (count < buffer.Length) buffer[count++] = list[i];
-                                else dropped++;
-                            }
-                        }
-                    }
+                    if (!_chunks.TryGetValue(GetChunkKey(cx, cy), out var chunk)) continue;
+                    QueryChunk(chunk, cx, cy, minCellX, minCellY, maxCellX, maxCellY, buffer, ref count, ref dropped);
                 }
             }
 
             return count;
+        }
+
+        private void QueryChunk(Chunk chunk, int cx, int cy,
+            int minCellX, int minCellY, int maxCellX, int maxCellY,
+            Span<Entity> buffer, ref int count, ref int dropped)
+        {
+            int chunkMinCellX = cx * _chunkSize;
+            int chunkMinCellY = cy * _chunkSize;
+
+            int startX = Math.Max(minCellX - chunkMinCellX, 0);
+            int startY = Math.Max(minCellY - chunkMinCellY, 0);
+            int endX = Math.Min(maxCellX - chunkMinCellX, _chunkSize - 1);
+            int endY = Math.Min(maxCellY - chunkMinCellY, _chunkSize - 1);
+
+            for (int y = startY; y <= endY; y++)
+            {
+                for (int x = startX; x <= endX; x++)
+                {
+                    var list = chunk.GetCellList(x, y);
+                    if (list == null) continue;
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        if (count < buffer.Length) buffer[count++] = list[i];
+                        else dropped++;
+                    }
+                }
+            }
         }
 
         private static long GetChunkKey(int chunkX, int chunkY) => ((long)chunkX << 32) | (uint)chunkY;

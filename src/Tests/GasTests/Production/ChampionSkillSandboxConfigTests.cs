@@ -1696,7 +1696,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -1704,7 +1704,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1, "seat.0");
         }
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
@@ -1728,7 +1728,7 @@ namespace Ludots.Tests.GAS.Production
                          keyObj is string activeKey &&
                          !string.IsNullOrWhiteSpace(activeKey)
                 ? activeKey
-                : EntityCollectionKeys.CommandSource;
+                : "collection.command.source";
 
             if (owner == Entity.Null ||
                 !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||

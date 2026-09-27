@@ -42,6 +42,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             harness.Ownership.EnsureOwnership(p2Rep, m99);
 
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02, m99 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -71,6 +72,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p2Rep, m99);
             harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
 
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02, m99 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -99,6 +101,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);
 
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -126,6 +129,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m05);
             harness.Ownership.EnsureOwnership(p1Rep, m06);
 
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             // Ability context declares no filter profile: explicit 0 = pass-through, no fallback lookup.
@@ -142,12 +146,15 @@ namespace Ludots.Tests.GAS
             count = harness.Store.CopyEntities(commandHandle, 0, rows);
             Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m01, m02 }), "command.source must stay untouched while the ability frame is active.");
 
+            // Exec reclaim restores the saved base context (no steady-state fallback exists);
+            // the unmount-then-bare-commit form retired with the Default profile.
             harness.UnmountContext(p1Rep);
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01 }, EntityCollectionSourceKind.UiAcquisition);
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
             count = harness.Store.CopyEntities(commandHandle, 0, rows);
-            Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m01 }), "Casts must write command.source again after the frame is removed.");
+            Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m01 }), "Casts must write the restored base key again after the frame ends.");
         }
 
         [Test]
@@ -163,7 +170,7 @@ namespace Ludots.Tests.GAS
 
             // Context without a filter profile: raw hits pass through, so the configurer owns routability.
             // A domainless entity reaching the domain-routed command source must fail loudly (semantic guardrail).
-            harness.MountContext(p1Rep, EntityCollectionKeys.CommandSource, filterProfileId: 0);
+            harness.MountContext(p1Rep, "collection.command.source", filterProfileId: 0);
 
             Entity[] raw = { m01, neutral };
             Assert.Throws<InvalidOperationException>(
@@ -195,6 +202,7 @@ namespace Ludots.Tests.GAS
             }
 
             harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
+            harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, raw, EntityCollectionSourceKind.UiAcquisition);
 
             long allocated = MeasureCommitCastAllocations(harness, p1Rep, raw);
@@ -207,6 +215,7 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
+                harness.MountContext(anchor, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
                 harness.Writer.CommitCast(anchor, raw, EntityCollectionSourceKind.UiAcquisition);
             }
 
@@ -220,7 +229,7 @@ namespace Ludots.Tests.GAS
             public World World = null!;
             public EntityCollectionStore Store = null!;
             public FilterProfileRegistry Filters = null!;
-            public ContextBoundCollectionWriter Writer = null!;
+            public Ludots.Core.EntityCollections.CollectionApplier Writer = null!;
             public int ControlsTypeId;
             public int CommandSourceKeyId;
             public int UiCastRawKeyId;
@@ -276,7 +285,7 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = InteractionContextIds.Default,
-                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveCollectionKey = "collection.command.source",
                             FilterProfileId = DefaultProfileId,
                         },
                     },
@@ -289,15 +298,32 @@ namespace Ludots.Tests.GAS
                     World = world,
                     Store = store,
                     Filters = filters,
-                    Writer = new ContextBoundCollectionWriter(world, contextProfiles, filters, new DomainRoutedCollectionWriter(store, domains), store),
+                    Writer = CreateApplier(world, store, filters, domains, keyRegistry),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
-                    UiCastRawKeyId = keyRegistry.Register(EntityCollectionKeys.UiCastRaw),
+                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    UiCastRawKeyId = keyRegistry.Register("collection.ui.cast.raw"),
                 };
+            }
+
+            private static Ludots.Core.EntityCollections.CollectionApplier CreateApplier(
+                World world,
+                EntityCollectionStore store,
+                FilterProfileRegistry filters,
+                ControlDomainQuery domains,
+                StringIntRegistry keyRegistry)
+            {
+                var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
+                applier.BindInputInteraction(filters, domains, keyRegistry.Register("collection.ui.cast.raw"));
+                return applier;
             }
 
             public void MountContext(Entity anchorRep, string collectionKey, int filterProfileId)
             {
+                if (World.Has<InteractionContextInstance>(anchorRep))
+                {
+                    World.Remove<InteractionContextInstance>(anchorRep);
+                }
+
                 World.Add(anchorRep, new InteractionContextInstance
                 {
                     ActiveCollectionKeyId = Store.KeyRegistry.Register(collectionKey),

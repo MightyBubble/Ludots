@@ -315,7 +315,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: setup.RelationshipTypes,
                 metricRegistry: setup.RelationshipMetrics,
                 flagRegistry: setup.RelationshipFlags,
-                reasonRegistry: setup.RelationshipReasons,
                 targetDispatchPresets: setup.TargetDispatchPresets,
                 entityCollections: graph.Collections,
                 entityQueries: setup.EntityQueries);
@@ -369,7 +368,6 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipMetrics,
                 setup.RelationshipFlags,
                 setup.RelationshipBands,
-                setup.RelationshipReasons,
                 setup.Collections);
 
             GraphRuntimeSetup graph = CreateGraphRuntime(setup, File.ReadAllText(graphsPath));
@@ -429,7 +427,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: setup.RelationshipTypes,
                 metricRegistry: setup.RelationshipMetrics,
                 flagRegistry: setup.RelationshipFlags,
-                reasonRegistry: setup.RelationshipReasons,
                 targetDispatchPresets: setup.TargetDispatchPresets,
                 entityCollections: graph.Collections,
                 entityQueries: setup.EntityQueries);
@@ -517,7 +514,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: setup.RelationshipTypes,
                 metricRegistry: setup.RelationshipMetrics,
                 flagRegistry: setup.RelationshipFlags,
-                reasonRegistry: setup.RelationshipReasons,
                 targetDispatchPresets: setup.TargetDispatchPresets,
                 entityCollections: graph.Collections,
                 entityQueries: setup.EntityQueries);
@@ -694,7 +690,6 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipTypes,
                 setup.RelationshipMetrics,
                 setup.RelationshipFlags,
-                setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
             GraphIdRegistry.Clear();
@@ -796,7 +791,6 @@ namespace Ludots.Tests.GAS
             var metricRegistry = new RelationshipMetricRegistry();
             var flagRegistry = new RelationshipFlagRegistry();
             var bandRegistry = new RelationshipBandRegistry();
-            var reasonRegistry = new RelationshipReasonRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
             var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships);
@@ -811,7 +805,6 @@ namespace Ludots.Tests.GAS
                 metricRegistry,
                 flagRegistry,
                 bandRegistry,
-                reasonRegistry,
                 entityQueries,
                 templateKeys,
                 targetDispatchPresets,
@@ -1240,7 +1233,6 @@ namespace Ludots.Tests.GAS
             RelationshipMetricRegistry RelationshipMetrics,
             RelationshipFlagRegistry RelationshipFlags,
             RelationshipBandRegistry RelationshipBands,
-            RelationshipReasonRegistry RelationshipReasons,
             EntitySetQueryRuntime EntityQueries,
             EntityTemplateKeyRegistry TemplateKeys,
             TargetDispatchPresetRegistry TargetDispatchPresets,

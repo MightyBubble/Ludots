@@ -394,7 +394,6 @@ namespace Ludots.Tests.Gas.Graph
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException(name);
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException(name);
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException(name);
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException(name);
         }
@@ -480,7 +479,6 @@ namespace Ludots.Tests.Gas.Graph
                 new RelationshipTypeRegistry(),
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
-                new RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);

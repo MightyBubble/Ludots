@@ -5,8 +5,6 @@
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 0,
-  "worldWidthInMacroTiles": 250,
-  "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
     "deferredTriggerPerFrameCapacity": 16384,
     "orderQueueCapacity": 16384,
@@ -39,7 +37,6 @@
     "splineRibbonCapacity": 65536,
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
-    "worldHudTerrainOcclusionCacheCapacity": 131072,
     "skinnedVisualBatchCapacity": 131072,
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,

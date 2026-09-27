@@ -1,0 +1,34 @@
+{
+  "op": "SubmitAssignedOrder",
+  "driver": "order",
+  "title": "替自己下移动令",
+  "beat": "行为图不等玩家发话，直接往订单队列里塞一道移动令。",
+  "detailTemplate": "队列里进了一道移动令，去 ({x}, {y}) 厘米；本波共 {count} 道。",
+  "assertDetailContains": [
+    "移动令"
+  ],
+  "featuredNodeId": "submit",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

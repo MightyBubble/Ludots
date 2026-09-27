@@ -1,0 +1,35 @@
+{
+  "op": "SubmitCast",
+  "driver": "commandIntent",
+  "title": "施法令先进缓冲",
+  "beat": "图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。",
+  "detailTemplate": "施法令进缓冲，{count} 条意图待扇出。",
+  "assertDetailContains": [
+    "进缓冲",
+    "待扇出"
+  ],
+  "featuredNodeId": "submit",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

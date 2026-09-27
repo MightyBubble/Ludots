@@ -8,7 +8,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.ActionLoops;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -36,6 +36,9 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 internal sealed class AcceptanceDriver : ISystem<float>
 {
     private const string FrontlineRuntimeContextKey = "rts.multiplayer.frontline.runtime";
+
+    // Mirrors the per-haul credit constant authored in the transport dock action (rts.transport.dock.credit).
+    private const float CargoCrystalsPerTrip = 20f;
 
     private static readonly QueryDescription ClientCoreQuery = new QueryDescription()
         .WithAll<FrontlineCore, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, AttributeBuffer, ReplicationMirrorIdentity, PresentationStableId>();
@@ -464,14 +467,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             _evidence.Gameplay.HarvesterHandle = FormatHandle(_trackedHarvester);
             _evidence.Gameplay.HarvesterStartPosition = CapturePosition(_trackedHarvester);
-            ref readonly ResourceTransportProfile transport = ref _world.Get<ResourceTransportProfile>(_trackedHarvester);
             float gatherDelta = _plan.Expected.HarvestedCrystals - _plan.Expected.InitialCrystals;
-            float configuredTrips = gatherDelta / transport.CargoAmount;
+            float configuredTrips = gatherDelta / CargoCrystalsPerTrip;
             if (gatherDelta <= 0f || !Approximately(configuredTrips, MathF.Round(configuredTrips)))
             {
                 throw new InvalidOperationException(
                     $"Gathering target {_plan.Expected.HarvestedCrystals} is not reachable from " +
-                    $"{_plan.Expected.InitialCrystals} in configured cargo increments of {transport.CargoAmount}.");
+                    $"{_plan.Expected.InitialCrystals} in configured cargo increments of {CargoCrystalsPerTrip}.");
             }
             _gatherCrystalsBeforeCommand = _plan.Expected.InitialCrystals;
             BeginEntitySelection(_trackedHarvester, additive: false);
@@ -511,8 +513,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return;
         }
         float crystals = ReadAttribute(core, _crystalAttributeId);
-        ref readonly ResourceTransportProfile profile = ref _world.Get<ResourceTransportProfile>(_trackedHarvester);
-        float expectedAfterCargo = _gatherCrystalsBeforeCommand + profile.CargoAmount;
+        float expectedAfterCargo = _gatherCrystalsBeforeCommand + CargoCrystalsPerTrip;
         if (crystals < expectedAfterCargo)
         {
             return;
@@ -521,7 +522,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             throw new InvalidOperationException(
                 $"Gathering changed crystals from {_gatherCrystalsBeforeCommand} to {crystals}; " +
-                $"expected one configured cargo of {profile.CargoAmount}.");
+                $"expected one configured cargo of {CargoCrystalsPerTrip}.");
         }
         if (crystals < _plan.Expected.HarvestedCrystals)
         {
@@ -2052,7 +2053,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void CaptureCommandActors()
     {
         Entity owner = RequireLocalPlayerEntity();
-        _commandActorCount = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _commandActors);
+        _commandActorCount = _collections!.CopyEntities(owner, "collection.command.source", _commandActors);
         if (_commandActorCount <= 0)
         {
             throw new InvalidOperationException("Player input command has no formally selected command-source actors.");
@@ -2101,7 +2102,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private string[] CaptureSelectedHandles()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
         var handles = new string[count];
         for (int i = 0; i < count; i++)
         {
@@ -2113,7 +2114,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private AcceptancePositionEvidence[] CaptureSelectedPositions()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
         var result = new AcceptancePositionEvidence[count];
         for (int i = 0; i < count; i++)
         {
@@ -2132,7 +2133,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void RequireSelectedSet(ReadOnlySpan<Entity> expected)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
         if (count != expected.Length)
         {
             throw new InvalidOperationException(
@@ -2270,7 +2271,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -2295,7 +2296,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsVisibleWithPresenterPayload()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -3129,7 +3130,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
 
-        int count = _collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        int count = _collections.CopyEntities(owner, "collection.command.source", _entityScratch);
         var selected = new AcceptanceSelectedActorCheckpoint[count];
         for (int i = 0; i < count; i++)
         {
