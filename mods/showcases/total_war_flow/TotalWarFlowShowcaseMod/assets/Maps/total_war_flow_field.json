@@ -44,7 +44,6 @@
   "Feature.NavMesh:On"
  ],
  "HeartbeatIntervalTicks": 6,
- "ContinuousHeightmapAsset": "assets/terrain/tw_hills.height",
  "ContinuousHeightmap": {
   "Asset": "assets/terrain/tw_hills.height",
   "WorldWidthCm": 20000
@@ -58,9 +57,6 @@
    "Overrides": {
     "PlayerIdentity": {
      "PlayerId": 1
-    },
-    "Team": {
-     "Id": 1
     }
    }
   },
@@ -68,26 +64,16 @@
    "template": "tw_marine",
    "instanceId": "tw-marine-1",
    "PositionXCm": 9700,
-   "PositionYCm": 10100,
-   "Overrides": {
-    "Team": {
-     "Id": 1
-    }
-   }
+   "PositionYCm": 10100
   },
   {
    "template": "tw_marine",
    "instanceId": "tw-marine-2",
    "PositionXCm": 9700,
-   "PositionYCm": 9900,
-   "Overrides": {
-    "Team": {
-     "Id": 1
-    }
-   }
+   "PositionYCm": 9900
   },
   {
-   "template": "ballista_wolf",
+   "template": "tw_wolf",
    "instanceId": "wolf_1",
    "PositionXCm": 10400,
    "PositionYCm": 10000

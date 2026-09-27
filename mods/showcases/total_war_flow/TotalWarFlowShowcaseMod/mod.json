@@ -1,11 +1,15 @@
 {
   "name": "TotalWarFlowShowcaseMod",
   "version": "1.0.0",
-  "description": "全战四阶段端到端验收（#1398 切片③验收样板）：战役大地图→战斗备置→RTS 战斗→TPS 瞄准射击，单地图四上下文迁移；成员装载全走 v2 图自取。",
+  "description": "一张地图打完四个阶段：大地图行军、战前布阵、即时战斗、指挥官亲自开火。按 Enter 进入下一阶段。",
   "priority": 1100,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "BallistaRouteByTargetMod": "^1.0.0"
+    "CoreInputMod": "^1.0.0",
+    "SelectionInteractionMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "BallistaUnitsMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": [
