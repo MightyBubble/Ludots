@@ -41,4 +41,44 @@ public sealed class BrowserHitMaskCompositeTests
 
 		Assert.That(pixels, Is.EqualTo(new byte[] { 0, 0, 0, 0, 0, 20, 200, 255 }));
 	}
+
+	[Test]
+	public void NeedsVisualRebuild_SamePixelsSameMask_IsFalse()
+	{
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+
+		Assert.That(BrowserHitMaskComposite.NeedsVisualRebuild(true, mask, mask), Is.False);
+	}
+
+	[Test]
+	public void NeedsVisualRebuild_SamePixelsMaskChanged_IsTrue()
+	{
+		Assert.That(
+			BrowserHitMaskComposite.NeedsVisualRebuild(true, null, BrowserHitMaskColor.Default),
+			Is.True);
+		Assert.That(
+			BrowserHitMaskComposite.NeedsVisualRebuild(true, BrowserHitMaskColor.Default, null),
+			Is.True);
+		Assert.That(
+			BrowserHitMaskComposite.NeedsVisualRebuild(
+				true,
+				BrowserHitMaskColor.Default,
+				new BrowserHitMaskColor(1, 255, 0)),
+			Is.True);
+	}
+
+	[Test]
+	public void NeedsVisualRebuild_PixelsChangedSameMask_IsTrue()
+	{
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+
+		Assert.That(BrowserHitMaskComposite.NeedsVisualRebuild(false, mask, mask), Is.True);
+	}
+
+	[Test]
+	public void HitMaskChanged_RequiresFullVisualRect()
+	{
+		Assert.That(BrowserHitMaskComposite.HitMaskChanged(null, BrowserHitMaskColor.Default), Is.True);
+		Assert.That(BrowserHitMaskComposite.HitMaskChanged(BrowserHitMaskColor.Default, BrowserHitMaskColor.Default), Is.False);
+	}
 }

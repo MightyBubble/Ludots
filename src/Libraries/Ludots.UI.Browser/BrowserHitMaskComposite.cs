@@ -85,6 +85,19 @@ public static class BrowserHitMaskComposite
 		WriteVisual(destination, b, g, r, a, mask, bgra: false);
 	}
 
+	public static bool HitMaskChanged(BrowserHitMaskColor? uploaded, BrowserHitMaskColor? current)
+	{
+		return !Nullable.Equals(uploaded, current);
+	}
+
+	public static bool NeedsVisualRebuild(
+		bool sourcePixelsUnchanged,
+		BrowserHitMaskColor? uploadedHitMask,
+		BrowserHitMaskColor? currentHitMask)
+	{
+		return !sourcePixelsUnchanged || HitMaskChanged(uploadedHitMask, currentHitMask);
+	}
+
 	private static void WriteVisual(
 		Span<byte> destination,
 		byte b,

@@ -51,9 +51,11 @@ public sealed class SkiaBrowserFrameRenderer : IDisposable
 
 	private SKImage GetImage(BrowserFrame frame, BrowserHitMaskColor? hitMask)
 	{
-		if (ReferenceEquals(_cachedFrame, frame) &&
-			_cachedImage != null &&
-			Nullable.Equals(_cachedHitMask, hitMask))
+		if (_cachedImage != null &&
+			!BrowserHitMaskComposite.NeedsVisualRebuild(
+				ReferenceEquals(_cachedFrame, frame),
+				_cachedHitMask,
+				hitMask))
 		{
 			return _cachedImage;
 		}

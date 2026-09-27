@@ -120,6 +120,42 @@ public sealed class BrowserCanvasContentTests
 	}
 
 	[Test]
+	public void DrawFrame_SameFrame_HitMaskToggle_RebuildsVisualCopy()
+	{
+		var renderer = new SkiaBrowserFrameRenderer();
+		BrowserHitMaskColor mask = BrowserHitMaskColor.Default;
+		var frame = new BrowserFrame(
+			new BrowserViewport(2, 2),
+			BrowserPixelFormat.Bgra8888Premultiplied,
+			new byte[]
+			{
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255,
+				mask.B, mask.G, mask.R, 255
+			},
+			2 * BrowserFrameBuffer.BytesPerPixel,
+			new[] { new BrowserDirtyRect(0, 0, 2, 2) },
+			1);
+
+		using var bitmap = new SKBitmap(new SKImageInfo(4, 4, SKColorType.Bgra8888, SKAlphaType.Premul));
+		using var canvas = new SKCanvas(bitmap);
+		canvas.Clear(SKColors.Blue);
+		renderer.DrawFrame(canvas, new SKRect(0, 0, 4, 4), frame, mask);
+		SKColor punched = bitmap.GetPixel(2, 2);
+		Assert.That(punched.Blue, Is.EqualTo(255));
+		Assert.That(punched.Green, Is.EqualTo(0));
+
+		canvas.Clear(SKColors.Blue);
+		renderer.DrawFrame(canvas, new SKRect(0, 0, 4, 4), frame, hitMask: null);
+		SKColor restored = bitmap.GetPixel(2, 2);
+		Assert.That(restored.Red, Is.EqualTo(mask.R));
+		Assert.That(restored.Green, Is.EqualTo(mask.G));
+		Assert.That(restored.Blue, Is.EqualTo(mask.B));
+		Assert.That(restored.Alpha, Is.EqualTo(255));
+	}
+
+	[Test]
 	public void DrawFrame_HitMaskComposite_DoesNotMutateSourceFrame()
 	{
 		var renderer = new SkiaBrowserFrameRenderer();

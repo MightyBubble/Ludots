@@ -126,16 +126,20 @@ namespace Ludots.Adapter.Raylib
 
             public void Update(in BrowserFrameAccess frame, BrowserHitMaskColor? hitMask)
             {
-                _hitMask = hitMask;
                 EnsureTexture(frame.Viewport.Width, frame.Viewport.Height);
-                if (frame.Sequence == _uploadedSequence)
+                bool sourcePixelsUnchanged = frame.Sequence == _uploadedSequence;
+                if (!BrowserHitMaskComposite.NeedsVisualRebuild(sourcePixelsUnchanged, _hitMask, hitMask))
                 {
                     return;
                 }
 
-                IReadOnlyList<BrowserDirtyRect> dirtyRects = frame.DirtyRects.Count > 0
-                    ? frame.DirtyRects
-                    : new[] { new BrowserDirtyRect(0, 0, frame.Viewport.Width, frame.Viewport.Height) };
+                bool fullRect = BrowserHitMaskComposite.HitMaskChanged(_hitMask, hitMask)
+                    || frame.DirtyRects.Count == 0;
+                _hitMask = hitMask;
+
+                IReadOnlyList<BrowserDirtyRect> dirtyRects = fullRect
+                    ? new[] { new BrowserDirtyRect(0, 0, frame.Viewport.Width, frame.Viewport.Height) }
+                    : frame.DirtyRects;
 
                 foreach (BrowserDirtyRect rect in dirtyRects)
                 {
