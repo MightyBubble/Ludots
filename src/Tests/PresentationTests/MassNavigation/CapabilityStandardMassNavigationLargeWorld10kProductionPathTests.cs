@@ -1195,7 +1195,6 @@ namespace Ludots.Tests.Presentation
             ref InteractionContextInstance context = ref engine.World.Get<InteractionContextInstance>(player);
             var collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             Assert.That(context.ContextEntity, Is.EqualTo(player));
-            Assert.That(context.ActiveCollectionKeyId, Is.EqualTo(collections.KeyRegistry.GetId("selected")));
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);

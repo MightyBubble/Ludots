@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m06);
 
             harness.MountBaseContext(p1Rep);
-            harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
+            harness.Writer.CommitCast(p1Rep, harness.CommandSourceKeyId, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
             harness.Ownership.EnsureOwnership(p1Rep, actor);
@@ -78,12 +78,11 @@ namespace Ludots.Tests.GAS
             harness.ContextSystem.Update(0f);
             Assert.That(world.TryGet<InteractionContextInstance>(p1Rep, out InteractionContextInstance mounted), Is.True,
                 "Exec start must mount the ability's context on the carrier's domain rep.");
-            Assert.That(mounted.ActiveCollectionKeyId, Is.EqualTo(harness.AbilityTargetsKeyId), "The mounted context must expose the ability collection key.");
             Assert.That(mounted.ContextEntity, Is.EqualTo(actor), "Context ownership is the exec carrier entity.");
             Assert.That(mounted.Source, Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
 
             // M2: casts during the ability context land in the ability key; command.source is untouched.
-            harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m05, m06 }, EntityCollectionSourceKind.UiAcquisition);
+            harness.Writer.CommitCast(p1Rep, harness.AbilityTargetsKeyId, stackalloc Entity[] { m05, m06 }, EntityCollectionSourceKind.UiAcquisition);
             Span<Entity> rows = stackalloc Entity[8];
             Assert.That(harness.Store.TryGet(p1Rep, harness.AbilityTargetsKeyId, out EntityCollectionHandle abilityHandle), Is.True);
             int count = harness.Store.CopyEntities(abilityHandle, 0, rows);
@@ -108,9 +107,8 @@ namespace Ludots.Tests.GAS
             // the pre-ability mount is present again rather than the bare no-context form.
             Assert.That(world.TryGet<InteractionContextInstance>(p1Rep, out InteractionContextInstance restored), Is.True,
                 "The exec reclaim must restore the pre-ability base context.");
-            Assert.That(restored.ActiveCollectionKeyId, Is.EqualTo(harness.CommandSourceKeyId));
 
-            harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m02 }, EntityCollectionSourceKind.UiAcquisition);
+            harness.Writer.CommitCast(p1Rep, harness.CommandSourceKeyId, stackalloc Entity[] { m02 }, EntityCollectionSourceKind.UiAcquisition);
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
             count = harness.Store.CopyEntities(commandHandle, 0, rows);
             Assert.That(rows[..count].ToArray(), Is.EqualTo(new[] { m02 }), "Casts write command.source again in the steady state.");
@@ -603,13 +601,11 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = ContextProfileName,
-                            ActiveCollectionKey = AbilityTargetsCollectionKey,
                             CommandIntentId = ContextIntentName,
                         },
                         new()
                         {
                             Id = BaseContextProfileName,
-                            ActiveCollectionKey = "collection.command.source",
                         },
                     },
                 }, keyRegistry, filterProfileIds, commandIntentProfileIds);
@@ -698,7 +694,6 @@ namespace Ludots.Tests.GAS
                 {
                     ContextId = profileId,
                     ContextEntity = rep,
-                    ActiveCollectionKeyId = CommandSourceKeyId,
                     Source = InteractionContextInstanceSource.TemplateSpawn,
                 });
             }

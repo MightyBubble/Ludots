@@ -1,0 +1,91 @@
+[
+ {
+  "id": "tw.panel.values",
+  "kind": "Query",
+  "entry": "rep",
+  "nodes": [
+   {
+    "id": "rep",
+    "op": "LoadCaster"
+   },
+   {
+    "id": "phase_rd",
+    "op": "ReadMapVarInt",
+    "var": "tw.phase"
+   },
+   {
+    "id": "kills_rd",
+    "op": "ReadMapVarInt",
+    "var": "tw.kills"
+   },
+   {
+    "id": "selected",
+    "op": "QueryFromCollection",
+    "collectionKey": "selected"
+   },
+   {
+    "id": "selected_cnt",
+    "op": "AggCount"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "rep",
+    "fromPort": "next",
+    "to": "phase_rd"
+   },
+   {
+    "from": "phase_rd",
+    "fromPort": "next",
+    "to": "kills_rd"
+   },
+   {
+    "from": "kills_rd",
+    "fromPort": "next",
+    "to": "selected"
+   },
+   {
+    "from": "selected",
+    "fromPort": "next",
+    "to": "selected_cnt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "rep",
+    "fromPort": "value",
+    "to": "selected",
+    "toPort": "source"
+   },
+   {
+    "from": "selected",
+    "fromPort": "list",
+    "to": "selected_cnt",
+    "toPort": "list"
+   }
+  ],
+  "outputs": [
+   {
+    "id": "phase",
+    "destination": "Summary",
+    "type": "Int",
+    "source": "phase_rd",
+    "key": "tw.panel.phase"
+   },
+   {
+    "id": "kills",
+    "destination": "Summary",
+    "type": "Int",
+    "source": "kills_rd",
+    "key": "tw.panel.kills"
+   },
+   {
+    "id": "selectedCount",
+    "destination": "Summary",
+    "type": "Int",
+    "source": "selected_cnt",
+    "key": "tw.panel.selectedCount"
+   }
+  ]
+ }
+]
