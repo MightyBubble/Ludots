@@ -78,6 +78,6 @@ public sealed class DualSeatPanelsShowcaseModEntry : IMod
         }
 
         int healthId = AttributeRegistry.RequireId("Health");
-        AttributeMutationOps.AddCurrent(engine.World, target, healthId, amount, tagOps);
+        AttributeMutationOps.AddCurrent(engine.World, target, healthId, amount, tagOps, Entity.Null);
     }
 }

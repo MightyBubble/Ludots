@@ -381,7 +381,7 @@ namespace Ludots.Core.Gameplay.Exchange
                 }
 
                 _attributeCosts.Add(new AttributeCostRecord(actor, input.AttributeId, previousValue));
-                AttributeMutationOps.SetCurrent(_world, actor, input.AttributeId, previousValue - input.Quantity, _tagOps);
+                AttributeMutationOps.SetCurrent(_world, actor, input.AttributeId, previousValue - input.Quantity, _tagOps, actor);
                 return true;
             }
 
@@ -435,7 +435,7 @@ namespace Ludots.Core.Gameplay.Exchange
                 AttributeCostRecord record = _attributeCosts[i];
                 if (_world.IsAlive(record.Actor) && _world.Has<AttributeBuffer>(record.Actor))
                 {
-                    AttributeMutationOps.SetCurrent(_world, record.Actor, record.AttributeId, record.PreviousValue, _tagOps);
+                    AttributeMutationOps.SetCurrent(_world, record.Actor, record.AttributeId, record.PreviousValue, _tagOps, record.Actor);
                 }
             }
 

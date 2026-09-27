@@ -190,7 +190,7 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
                 TagOps tagOps = _engine.GetService(CoreServiceKeys.TagOps)
                     ?? throw new InvalidOperationException("LiveSkillWorkbench requires TagOps.");
                 AttributeMutationOps.SetBase(_engine.World, _mageEntity, _healthAttrId, 100f, tagOps);
-                AttributeMutationOps.SetCurrent(_engine.World, _mageEntity, _healthAttrId, 35f, tagOps);
+                AttributeMutationOps.SetCurrent(_engine.World, _mageEntity, _healthAttrId, 35f, tagOps, Entity.Null);
                 _attrExecutor?.SetSelectedEntity(_mageEntity);
             }
         }

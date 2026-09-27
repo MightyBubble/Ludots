@@ -164,7 +164,7 @@ namespace GasTests.GasCore
             {
                 foreach (ref readonly Entity entity in entities.AsSpan())
                 {
-                    AttributeMutationOps.SetCurrent(world, entity, 1, w * 1f, _tagOps);
+                    AttributeMutationOps.SetCurrent(world, entity, 1, w * 1f, _tagOps, Entity.Null);
                     world.Get<AttributeBuffer>(entity).GetCurrent(1);
                 }
             }
@@ -176,7 +176,7 @@ namespace GasTests.GasCore
                 {
                     for (int it = 0; it < Iterations; it++)
                     {
-                        AttributeMutationOps.SetCurrent(world, entity, it & 7, it * 0.5f, _tagOps);
+                        AttributeMutationOps.SetCurrent(world, entity, it & 7, it * 0.5f, _tagOps, Entity.Null);
                         sink += world.Get<AttributeBuffer>(entity).GetCurrent(it & 7);
                     }
                 }

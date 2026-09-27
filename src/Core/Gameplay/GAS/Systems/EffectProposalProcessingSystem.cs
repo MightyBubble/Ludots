@@ -1581,7 +1581,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _instantPhaseTransaction.TryReadAttributeCurrent(proposal.Target, primaryAttributeId, out float currentBefore)
                         ? currentBefore
                         : 0f;
-                _instantPhaseTransaction.StageModifiers(proposal.Target, in proposal.Modifiers);
+                _instantPhaseTransaction.StageModifiers(proposal.Target, in proposal.Modifiers, proposal.Source);
                 float stagedAfter = primaryAttributeId >= 0 &&
                     _instantPhaseTransaction.TryReadAttributeCurrent(proposal.Target, primaryAttributeId, out float currentAfter)
                         ? currentAfter
@@ -1594,7 +1594,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
-            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps);
+            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps, proposal.Source);
             float after = primaryAttributeId >= 0
                 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;

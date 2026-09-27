@@ -576,7 +576,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         int healthId = RequireAttribute(runtime.Config.HealthAttribute);
         TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
             ?? throw new InvalidOperationException("TagOps service is missing.");
-        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f, tagOps);
+        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f, tagOps, Entity.Null);
 
         for (int i = 0; i < 8 && engine.World.IsAlive(southernCore); i++)
         {

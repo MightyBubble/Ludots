@@ -64,7 +64,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _eventBus.Publish(new GameplayEvent
             {
                 TagId = eventTagId,
-                Source = trigger.Target,
+                Source = trigger.Source,
                 Target = trigger.Target,
                 Magnitude = trigger.NewValue
             });

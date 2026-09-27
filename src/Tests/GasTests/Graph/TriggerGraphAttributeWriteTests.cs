@@ -43,6 +43,7 @@ public sealed class TriggerGraphAttributeWriteTests
 
         Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(42f));
         Assert.That(world.Get<DirtyFlags>(target).IsAttributeDirty(healthId), Is.True);
+        Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(healthId), Is.EqualTo(caster));
         Assert.That(world.Has<GameplayAttributeChangedBits>(target), Is.True);
         Assert.That(world.Get<GameplayAttributeChangedBits>(target).IsSet(healthId), Is.True);
     }

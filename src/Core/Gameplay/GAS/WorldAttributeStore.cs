@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly float[] _cap;
         private readonly float[] _current;
         private readonly float[] _lastSnapshot;
+        private readonly Entity[] _lastSource;
         private readonly ulong[] _definedWords;
         private readonly ulong[] _aggregateDirtyRows;
         private readonly ulong[] _attributeDirtyRows;
@@ -52,6 +53,7 @@ namespace Ludots.Core.Gameplay.GAS
             _cap = new float[cells];
             _current = new float[cells];
             _lastSnapshot = new float[cells];
+            _lastSource = new Entity[cells];
             int definedWordCount = WordCount * rowCapacity;
             _definedWords = new ulong[definedWordCount];
             _aggregateDirtyRows = new ulong[(rowCapacity + 63) >> 6];
@@ -232,6 +234,22 @@ namespace Ludots.Core.Gameplay.GAS
             _lastSnapshot[Cell(row, attributeId)] = value;
         }
 
+        public void RecordAttributeSource(int row, int attributeId, Entity source)
+        {
+            _lastSource[Cell(row, ValidateSlot(attributeId))] = source;
+        }
+
+        public Entity GetAttributeSource(int row, int attributeId)
+        {
+            Entity source = _lastSource[Cell(row, ValidateSlot(attributeId))];
+            return source.Version == 0 ? Entity.Null : source;
+        }
+
+        public void ClearAttributeSource(int row, int attributeId)
+        {
+            _lastSource[Cell(row, ValidateSlot(attributeId))] = Entity.Null;
+        }
+
         // —— 脏位：高槽位专属（[64, SlotCount)），内嵌 DirtyFlags 的 64 位掩码覆盖不到的部分 ——
 
         public void MarkAttributeDirtyHigh(int row, int attributeId)
@@ -246,7 +264,14 @@ namespace Ludots.Core.Gameplay.GAS
 
         public bool HasAttributeDirtyHigh(int row) => (_attributeDirtyRows[row >> 6] & (1UL << (row & 63))) != 0UL;
 
-        public void ClearAttributeDirtyHigh(int row) => _attributeDirtyRows[row >> 6] &= ~(1UL << (row & 63));
+        public void ClearAttributeDirtyHigh(int row)
+        {
+            _attributeDirtyRows[row >> 6] &= ~(1UL << (row & 63));
+            for (int slot = AttributeBuffer.MAX_ATTRS; slot < _slotCount; slot++)
+            {
+                _lastSource[Cell(row, slot)] = Entity.Null;
+            }
+        }
 
         public void MarkAggregateDirty(int row)
         {

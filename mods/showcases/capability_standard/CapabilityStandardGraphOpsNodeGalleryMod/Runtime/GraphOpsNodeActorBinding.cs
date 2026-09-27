@@ -173,7 +173,7 @@ public static class GraphOpsNodeActorBinding
         }
 
         AttributeMutationOps.SetBase(world, entity, healthId, ceiling, tagOps);
-        AttributeMutationOps.SetCurrent(world, entity, healthId, Math.Clamp(health, 0f, ceiling), tagOps);
+        AttributeMutationOps.SetCurrent(world, entity, healthId, Math.Clamp(health, 0f, ceiling), tagOps, Entity.Null);
     }
 
     public static float ReadHealth(World world, Entity entity)

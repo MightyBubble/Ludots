@@ -44,6 +44,7 @@ namespace Ludots.Core.Gameplay.GAS
                     triggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
                     {
                         Target = entity,
+                        Source = store.GetAttributeSource(row, slot),
                         AttributeId = slot,
                         OldValue = oldValue,
                         NewValue = newValue,

@@ -292,7 +292,7 @@ namespace GenreInfoShowcaseMod.Runtime
             {
                 int attributeId = AttributeRegistry.Register(values[i].Name);
                 AttributeMutationOps.SetBase(world, entity, attributeId, values[i].Base, tagOps);
-                AttributeMutationOps.SetCurrent(world, entity, attributeId, values[i].Current, tagOps);
+                AttributeMutationOps.SetCurrent(world, entity, attributeId, values[i].Current, tagOps, Entity.Null);
             }
         }
 

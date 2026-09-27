@@ -371,7 +371,7 @@ public sealed class FourXAssociationRuntime
 
         TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
             ?? throw new InvalidOperationException("FourXAssociationShowcase requires TagOps.");
-        AttributeMutationOps.SetCurrent(world, _playerA, _goldAttributeId, config.StartingGold, tagOps);
+        AttributeMutationOps.SetCurrent(world, _playerA, _goldAttributeId, config.StartingGold, tagOps, Entity.Null);
 
         OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
             ?? throw new InvalidOperationException("OwnershipResolver missing.");

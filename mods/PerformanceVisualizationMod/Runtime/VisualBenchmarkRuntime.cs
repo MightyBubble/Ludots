@@ -482,7 +482,7 @@ namespace PerformanceVisualizationMod.Runtime
                     TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
                         ?? throw new InvalidOperationException("PerformanceVisualizationMod requires TagOps.");
                     AttributeMutationOps.SetBase(world, entity, _healthAttributeId, 100f, tagOps);
-                    AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, 40f + (i % 60), tagOps);
+                    AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, 40f + (i % 60), tagOps, Entity.Null);
 
                     knowledge!.Upsert(
                         audienceViewer,

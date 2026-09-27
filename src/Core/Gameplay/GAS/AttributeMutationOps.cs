@@ -9,7 +9,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class AttributeMutationOps
     {
-        public static void AddCurrent(World world, Entity target, int attributeId, float delta, TagOps tagOps)
+        public static void AddCurrent(World world, Entity target, int attributeId, float delta, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -19,10 +19,10 @@ namespace Ludots.Core.Gameplay.GAS
             float current = (uint)attributeId < (uint)Components.AttributeBuffer.MAX_ATTRS
                 ? world.Get<Components.AttributeBuffer>(target).GetCurrent(attributeId)
                 : AttributeReads.Current(world, target, attributeId);
-            SetCurrent(world, target, attributeId, current + delta, tagOps);
+            SetCurrent(world, target, attributeId, current + delta, tagOps, source);
         }
 
-        public static void SetCurrent(World world, Entity target, int attributeId, float value, TagOps tagOps)
+        public static void SetCurrent(World world, Entity target, int attributeId, float value, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -40,7 +40,7 @@ namespace Ludots.Core.Gameplay.GAS
             EnsureDirtyFlags(world, target);
             if ((uint)attributeId >= (uint)Components.AttributeBuffer.MAX_ATTRS)
             {
-                SetCurrentHigh(world, target, attributeId, value, tagOps);
+                SetCurrentHigh(world, target, attributeId, value, tagOps, source);
                 return;
             }
 
@@ -57,7 +57,7 @@ namespace Ludots.Core.Gameplay.GAS
 
             try
             {
-                world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
+                world.Get<DirtyFlags>(target).RecordAttributeSource(attributeId, source);
                 tagOps.MarkDirtyEntity(world, target);
                 MarkAttributeAggregateDirty(world, target, tagOps);
                 MirrorToStore(world, target, attributeId);
@@ -72,7 +72,7 @@ namespace Ludots.Core.Gameplay.GAS
             MarkPresentationChanged(world, target, attributeId);
         }
 
-        public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps)
+        public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -82,7 +82,7 @@ namespace Ludots.Core.Gameplay.GAS
             float cap = (uint)attributeId < (uint)Components.AttributeBuffer.MAX_ATTRS
                 ? world.Get<Components.AttributeBuffer>(target).GetCap(attributeId)
                 : AttributeReads.Cap(world, target, attributeId);
-            SetCurrent(world, target, attributeId, cap, tagOps);
+            SetCurrent(world, target, attributeId, cap, tagOps, source);
         }
 
         public static void SetBase(World world, Entity target, int attributeId, float value, TagOps tagOps)
@@ -137,7 +137,7 @@ namespace Ludots.Core.Gameplay.GAS
             MarkPresentationChanged(world, target, attributeId);
         }
 
-        public static void ApplyModifiers(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps)
+        public static void ApplyModifiers(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps, Entity source)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
             {
@@ -145,7 +145,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             RequireTagOps(tagOps);
-            ApplyModifiersHigh(world, target, in modifiers, tagOps);
+            ApplyModifiersHigh(world, target, in modifiers, tagOps, source);
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
             Span<float> beforeValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
             ulong touchedMask = 0UL;
@@ -197,7 +197,7 @@ namespace Ludots.Core.Gameplay.GAS
                     hasDirty = true;
                 }
 
-                world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
+                world.Get<DirtyFlags>(target).RecordAttributeSource(attributeId, source);
                 changedMask |= bit;
             }
 
@@ -225,7 +225,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static void SetCurrentHigh(World world, Entity target, int attributeId, float value, TagOps tagOps)
+        private static void SetCurrentHigh(World world, Entity target, int attributeId, float value, TagOps tagOps, Entity source)
         {
             WorldAttributeStore store = WorldAttributeStoreAmbient.Current
                 ?? throw new InvalidOperationException(
@@ -238,6 +238,7 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
+            store.RecordAttributeSource(row, attributeId, source);
             store.MarkAttributeDirtyHigh(row, attributeId);
             store.MarkAggregateDirty(row);
             tagOps.MarkDirtyEntity(world, target);
@@ -265,7 +266,7 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>ApplyModifiers 的高槽位前置补丁：内嵌车道由本方法与 EffectModifierOps 共同跳过 ≥64。</summary>
-        private static void ApplyModifiersHigh(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps)
+        private static void ApplyModifiersHigh(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps, Entity source)
         {
             bool hasHigh = false;
             for (int i = 0; i < modifiers.Count; i++)
@@ -305,6 +306,7 @@ namespace Ludots.Core.Gameplay.GAS
                 store.SetCurrentHigh(row, mod.AttributeId, value);
                 if (before != store.GetCurrent(row, mod.AttributeId))
                 {
+                    store.RecordAttributeSource(row, mod.AttributeId, source);
                     store.MarkAttributeDirtyHigh(row, mod.AttributeId);
                     changed = true;
                 }

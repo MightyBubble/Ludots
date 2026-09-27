@@ -417,7 +417,7 @@ public sealed class InstantEffectTransactionTests
             attributeEntityCapacity: 8);
         transaction.Begin();
         transaction.StageBlackboardFloat(victim, keyId: 7, value: 3.5f);
-        transaction.StageAttributeAdd(survivor, healthId, -25f);
+        transaction.StageAttributeAdd(survivor, healthId, -25f, source);
         EffectPhaseListenerBuffer setup = default;
         setup.Count = 1;
         setup.Phases[0] = (byte)EffectPhaseId.OnApply;
@@ -517,6 +517,35 @@ public sealed class InstantEffectTransactionTests
         Assert.That(world.Get<GameplayTagContainer>(target).HasTag(tagId), Is.True);
         Assert.That(world.Get<TagCountContainer>(target).GetCount(tagId), Is.EqualTo(1));
         Assert.That(dirtyQueue.Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void StageAttributeAdd_Commit_RecordsSourceOnDirtyFlags()
+    {
+        using World world = World.Create();
+        int healthId = AttributeRegistry.Register($"Test.AttrSource.Health.{Guid.NewGuid():N}");
+        AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase(0f));
+        var tagOps = new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry());
+        Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+        world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
+        Entity lethal = world.Create();
+        Entity wasted = world.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 4);
+
+        transaction.Begin();
+        transaction.StageAttributeAdd(target, healthId, -100f, lethal);
+        transaction.StageAttributeAdd(target, healthId, -10f, wasted);
+        transaction.Commit();
+
+        Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(0f));
+        Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(healthId), Is.EqualTo(lethal));
+        Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(healthId), Is.Not.EqualTo(wasted));
     }
 
     [Test]

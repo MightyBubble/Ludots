@@ -761,14 +761,14 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
                 float health = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.HealthValid)
                     ? FrontlineReplicationPayload.UnpackLowFloat(values.Value1)
                     : 0f;
-                AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, health, _tagBinder.TagOps);
+                AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, health, _tagBinder.TagOps, Entity.Null);
             }
             if (_spec.HasCrystals)
             {
                 float crystals = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.CrystalsValid)
                     ? FrontlineReplicationPayload.UnpackHighFloat(values.Value1)
                     : 0f;
-                AttributeMutationOps.SetCurrent(world, entity, _crystalAttributeId, crystals, _tagBinder.TagOps);
+                AttributeMutationOps.SetCurrent(world, entity, _crystalAttributeId, crystals, _tagBinder.TagOps, Entity.Null);
             }
         }
 

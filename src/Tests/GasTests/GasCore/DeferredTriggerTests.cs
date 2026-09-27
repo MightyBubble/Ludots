@@ -167,5 +167,24 @@ namespace Ludots.Tests.GAS
             
             Console.WriteLine($"[DeferredTriggerTests] TestDirtyFlags_Clear: Clear works correctly");
         }
+
+        [Test]
+        public void TestDirtyFlags_DefaultAndClear_AttributeSourceIsNull()
+        {
+            _world.Add(_entity, new DirtyFlags());
+            ref var dirtyFlags = ref _world.Get<DirtyFlags>(_entity);
+
+            Assert.That(dirtyFlags.GetAttributeSource(0), Is.EqualTo(Entity.Null));
+
+            dirtyFlags.RecordAttributeSource(0, _entity);
+            Assert.That(dirtyFlags.GetAttributeSource(0), Is.EqualTo(_entity));
+
+            dirtyFlags.ClearAttributeDirty(0);
+            Assert.That(dirtyFlags.GetAttributeSource(0), Is.EqualTo(Entity.Null));
+
+            dirtyFlags.RecordAttributeSource(3, _entity);
+            dirtyFlags.Clear();
+            Assert.That(dirtyFlags.GetAttributeSource(3), Is.EqualTo(Entity.Null));
+        }
     }
 }

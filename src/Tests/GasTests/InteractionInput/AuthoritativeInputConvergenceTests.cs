@@ -193,6 +193,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<AttributeBuffer>(localPlayerIdentity), Is.False);
             ref AttributeBuffer cameraAttributes = ref world.Get<AttributeBuffer>(cameraBehaviorInputTarget);
             Assert.That(cameraAttributes.GetCurrent(lookXAttribute), Is.EqualTo(3f).Within(0.001f));
+            Assert.That(world.Get<DirtyFlags>(cameraBehaviorInputTarget).GetAttributeSource(lookXAttribute), Is.EqualTo(Entity.Null));
         }
 
         [Test]

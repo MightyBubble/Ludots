@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -93,6 +94,7 @@ namespace Ludots.Tests.GAS
             That(trigger.AttributeId, Is.EqualTo(0));
             That(trigger.OldValue, Is.EqualTo(10f));
             That(trigger.NewValue, Is.EqualTo(20f));
+            That(trigger.Source, Is.EqualTo(Entity.Null));
 
             ref var snapRef = ref world.Get<AttributeLastSnapshot>(e);
             unsafe { That(snapRef.Values[0], Is.EqualTo(20f)); }
@@ -226,7 +228,7 @@ namespace Ludots.Tests.GAS
             active.Track(world, queued);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => AttributeMutationOps.SetCurrent(world, target, 0, 75f, tagOps))!;
+                () => AttributeMutationOps.SetCurrent(world, target, 0, 75f, tagOps, Entity.Null))!;
 
             Assert.That(ex.Message, Does.Contain(DirtyEntityQueue.CapacityExceededError));
             Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(100f));
@@ -253,13 +255,116 @@ namespace Ludots.Tests.GAS
             active.Track(world, queued);
 
             Assert.Throws<InvalidOperationException>(
-                () => AttributeMutationOps.ApplyModifiers(world, target, in modifiers, tagOps));
+                () => AttributeMutationOps.ApplyModifiers(world, target, in modifiers, tagOps, Entity.Null));
 
             ref AttributeBuffer after = ref world.Get<AttributeBuffer>(target);
             Assert.That(after.GetCurrent(0), Is.EqualTo(100f));
             Assert.That(after.GetCurrent(1), Is.EqualTo(50f));
             Assert.That(world.Get<DirtyFlags>(target).IsAnyAttributeDirty(), Is.False);
             Assert.That(world.Get<DirtyFlags>(target).DeferredTriggerQueued, Is.Zero);
+        }
+
+        [Test]
+        public void AttributeMutation_RecordsSourceOnDirtyFlags_AndCollectionCopiesIt()
+        {
+            using var world = World.Create();
+            var queue = new DeferredTriggerQueue();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var system = new DeferredTriggerCollectionSystem(world, queue, tagOps);
+
+            int durabilityId = AttributeRegistry.Register($"Durability.Source.{System.Guid.NewGuid():N}");
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(durabilityId, 100f);
+            var snap = default(AttributeLastSnapshot);
+            unsafe { snap.Values[durabilityId] = 100f; }
+            Entity target = world.Create(attributes, new DirtyFlags(), snap);
+            Entity caster = world.Create();
+
+            AttributeMutationOps.AddCurrent(world, target, durabilityId, -40f, tagOps, caster);
+            system.Update(0.016f);
+
+            Assert.That(queue.AttributeTriggerCount, Is.EqualTo(1));
+            var trigger = queue.GetAttributeTrigger(0);
+            Assert.That(trigger.Target, Is.EqualTo(target));
+            Assert.That(trigger.Source, Is.EqualTo(caster));
+            Assert.That(trigger.AttributeId, Is.EqualTo(durabilityId));
+            Assert.That(trigger.OldValue, Is.EqualTo(100f));
+            Assert.That(trigger.NewValue, Is.EqualTo(60f));
+            Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(durabilityId), Is.EqualTo(Entity.Null));
+        }
+
+        [Test]
+        public void AttributeMutation_WhenValueDoesNotChange_DoesNotOverwriteRecordedSource()
+        {
+            using var world = World.Create();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            int durabilityId = AttributeRegistry.Register($"Durability.NoOpSource.{System.Guid.NewGuid():N}");
+            AttributeRegistry.SetConstraints(durabilityId, AttributeRegistry.AttributeConstraints.ClampToBase(0f));
+
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(durabilityId, 10f);
+            Entity target = world.Create(attributes, new DirtyFlags());
+            Entity lethalCaster = world.Create();
+            Entity wastedCaster = world.Create();
+
+            AttributeMutationOps.SetCurrent(world, target, durabilityId, 0f, tagOps, lethalCaster);
+            AttributeMutationOps.AddCurrent(world, target, durabilityId, -5f, tagOps, wastedCaster);
+
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(0f));
+            Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(durabilityId), Is.EqualTo(lethalCaster));
+        }
+
+        [Test]
+        public void AttributeMutation_LastActualChange_WinsSourceSlot()
+        {
+            using var world = World.Create();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            int durabilityId = AttributeRegistry.Register($"Durability.LastWriter.{System.Guid.NewGuid():N}");
+            AttributeRegistry.SetConstraints(durabilityId, AttributeRegistry.AttributeConstraints.ClampToBase(0f));
+
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(durabilityId, 100f);
+            Entity target = world.Create(attributes, new DirtyFlags());
+            Entity first = world.Create();
+            Entity killingBlow = world.Create();
+
+            AttributeMutationOps.AddCurrent(world, target, durabilityId, -40f, tagOps, first);
+            AttributeMutationOps.AddCurrent(world, target, durabilityId, -60f, tagOps, killingBlow);
+
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(0f));
+            Assert.That(world.Get<DirtyFlags>(target).GetAttributeSource(durabilityId), Is.EqualTo(killingBlow));
+        }
+
+        [Test]
+        public void DeferredTriggerProcessSystem_AfterMutation_PublishesRecordedSource()
+        {
+            using var world = World.Create();
+            var bus = new GameplayEventBus();
+            var queue = new DeferredTriggerQueue();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var collection = new DeferredTriggerCollectionSystem(world, queue, tagOps);
+            var process = new DeferredTriggerProcessSystem(world, queue, bus);
+
+            int healthId = AttributeRegistry.Register($"Health.EventSource.{System.Guid.NewGuid():N}");
+            int evtTagId = TagRegistry.Register($"Event.Attribute.Health.EventSource.{System.Guid.NewGuid():N}");
+            AttributeEventTagRegistry.Register(healthId, evtTagId);
+
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(healthId, 80f);
+            var snap = default(AttributeLastSnapshot);
+            unsafe { snap.Values[healthId] = 80f; }
+            Entity target = world.Create(attributes, snap, new DirtyFlags());
+            Entity caster = world.Create();
+
+            AttributeMutationOps.AddCurrent(world, target, healthId, -80f, tagOps, caster);
+            collection.Update(0.016f);
+            process.Update(0.016f);
+            bus.Update();
+
+            Assert.That(bus.Events.Count, Is.EqualTo(1));
+            Assert.That(bus.Events[0].Source, Is.EqualTo(caster));
+            Assert.That(bus.Events[0].Target, Is.EqualTo(target));
+            Assert.That(bus.Events[0].Magnitude, Is.EqualTo(0f));
         }
 
         [Test]

@@ -277,7 +277,7 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             AttributeMutationOps.SetBase(world, entity, moveSpeedId, 100f, tagOps);
             AttachAddModifier(world, entity, moveSpeedId, 18f);
-            AttributeMutationOps.SetCurrent(world, entity, moveSpeedId, 50f, tagOps);
+            AttributeMutationOps.SetCurrent(world, entity, moveSpeedId, 50f, tagOps, Entity.Null);
 
             using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             tagOps.AggregateDirty.MarkDirty(entity);
@@ -287,6 +287,27 @@ namespace Ludots.Tests.GAS
             That(attributes.GetCurrent(moveSpeedId), Is.EqualTo(50f));
             That(attributes.GetCap(moveSpeedId), Is.EqualTo(118f));
             That(attributes.GetBase(moveSpeedId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public unsafe void AggregatorCapRecalc_DoesNotOverwriteCombatSource()
+        {
+            int moveSpeedId = EnsureAttribute($"MoveSpeed.KeepSource.{Guid.NewGuid():N}");
+            var tagOps = CreateTagOps();
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
+            Entity caster = world.Create();
+            AttributeMutationOps.SetBase(world, entity, moveSpeedId, 100f, tagOps);
+            AttachAddModifier(world, entity, moveSpeedId, 18f);
+            AttributeMutationOps.SetCurrent(world, entity, moveSpeedId, 50f, tagOps, caster);
+
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
+            tagOps.AggregateDirty.MarkDirty(entity);
+            aggregator.Update(0f);
+
+            That(world.Get<DirtyFlags>(entity).GetAttributeSource(moveSpeedId), Is.EqualTo(caster));
+            That(world.Get<AttributeBuffer>(entity).GetCurrent(moveSpeedId), Is.EqualTo(50f));
         }
 
         [Test]
@@ -300,7 +321,7 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             AttributeMutationOps.SetBase(world, entity, healthId, 100f, tagOps);
             AttachAddModifier(world, entity, healthId, 18f);
-            AttributeMutationOps.SetCurrent(world, entity, healthId, 50f, tagOps);
+            AttributeMutationOps.SetCurrent(world, entity, healthId, 50f, tagOps, Entity.Null);
 
             using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             tagOps.AggregateDirty.MarkDirty(entity);
@@ -370,14 +391,15 @@ namespace Ludots.Tests.GAS
             int missingId = AttributeRegistry.GetId("S2.Missing.WriteCurrent");
             That(missingId, Is.EqualTo(AttributeRegistry.InvalidId));
             Throws<ArgumentOutOfRangeException>(() =>
-                AttributeMutationOps.SetCurrent(world, target, missingId, 7f, tagOps));
+                AttributeMutationOps.SetCurrent(world, target, missingId, 7f, tagOps, Entity.Null));
             var named = Throws<ArgumentException>(() =>
                 AttributeMutationOps.SetCurrent(
                     world,
                     target,
                     AttributeRegistry.RequireId("S2.Missing.WriteCurrent"),
                     7f,
-                    tagOps));
+                    tagOps,
+                    Entity.Null));
             That(named!.Message, Does.Contain("S2.Missing.WriteCurrent"));
         }
 
