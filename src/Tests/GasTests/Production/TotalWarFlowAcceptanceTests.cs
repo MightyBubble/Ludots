@@ -129,6 +129,8 @@ namespace Ludots.Tests.GAS
 
             // 无令不动：增援出生后不给指令，位置必须保持。
             var spawnedMarine = FindNewestMarine(engine, commander);
+            Assert.That(engine.World.TryGet<Ludots.Core.Gameplay.Components.Team>(spawnedMarine, out var spawnedTeam) && spawnedTeam.Id == 1,
+                Is.True, "a reinforcement placed during deployment joins the player's team from its template");
             var spawnedAt = engine.World.Get<WorldPositionCm>(spawnedMarine).Value;
             for (int idleFrame = 0; idleFrame < 120; idleFrame++)
             {
@@ -194,7 +196,7 @@ namespace Ludots.Tests.GAS
             backend.SetMousePosition(Project(engine, wolfPos));
             backend.SetButton("<Mouse>/leftButton", true);
             engine.Tick(1f / 60f);
-            backend.SetButton("<Mouse>/rightButton", false);
+            backend.SetButton("<Mouse>/leftButton", false);
             TickUntil(engine, 30, () => drain.LastDrainedCount > 0);
             engine.Tick(4);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
@@ -450,7 +452,7 @@ namespace Ludots.Tests.GAS
         {
             var engine = new Ludots.Core.Engine.GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "SelectionInteractionMod", "BallistaRouteByTargetMod", "TotalWarFlowShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod", "BallistaUnitsMod", "TotalWarFlowShowcaseMod" }),
                 Path.Combine(repoRoot, "assets"));
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);

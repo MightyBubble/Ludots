@@ -6,7 +6,7 @@
     "CoreInputMod",
     "CameraProfilesMod",
     "SelectionInteractionMod",
-    "BallistaRouteByTargetMod",
+    "BallistaUnitsMod",
     "MassNavigationMod",
     "NavMeshDebugLaunchMod",
     "TotalWarFlowShowcaseMod",
@@ -30,8 +30,8 @@
       "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
     },
     {
-      "id": "BallistaRouteByTargetMod",
-      "rootPath": "../../../../../../../mods/fixtures/gas/BallistaRouteByTargetMod"
+      "id": "BallistaUnitsMod",
+      "rootPath": "../../../../../../../mods/showcases/ballista_units/BallistaUnitsMod"
     },
     {
       "id": "MassNavigationMod",
