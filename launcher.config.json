@@ -26,6 +26,13 @@
       }
     },
     {
+      "name": "ballista_units",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ballista_units/BallistaUnitsMod"
+      }
+    },
+    {
       "name": "ballista_route_by_target",
       "target": {
         "type": "path",

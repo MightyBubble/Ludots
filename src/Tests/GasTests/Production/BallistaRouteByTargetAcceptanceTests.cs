@@ -304,7 +304,7 @@ namespace Ludots.Tests.GAS
             backend = new TestInputBackend();
             var engine = new Ludots.Core.Engine.GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", ModId }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "BallistaUnitsMod", ModId }),
                 Path.Combine(repoRoot, "assets"));
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);

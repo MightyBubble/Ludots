@@ -3,6 +3,11 @@
   "exemptions": [
     {
       "kind": "binding",
+      "value": "ballista_units",
+      "reason": "弩车兵种包，只有兵种、技能和外观，没有地图和操作；由 ballista_route_by_target 和 total_war_flow 共用，不是独立的 showcase"
+    },
+    {
+      "kind": "binding",
       "value": "save_panel",
       "reason": "SavePanelMod 是通用存档 UI 组件 mod，非独立 showcase 条目；演示由 save_load showcase 承担"
     },

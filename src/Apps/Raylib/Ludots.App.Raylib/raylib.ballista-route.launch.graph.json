@@ -4,6 +4,7 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
+    "BallistaUnitsMod",
     "BallistaRouteByTargetMod",
     "AgentBridgeMod"
   ],
@@ -15,6 +16,10 @@
     {
       "id": "CoreInputMod",
       "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "BallistaUnitsMod",
+      "rootPath": "../../../../../../../mods/showcases/ballista_units/BallistaUnitsMod"
     },
     {
       "id": "BallistaRouteByTargetMod",
