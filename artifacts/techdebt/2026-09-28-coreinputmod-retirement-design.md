@@ -34,10 +34,10 @@ CoreInputMod 每一块的去向：
 | 小地图焦点 | C# 注册，焦点固定取 `collection.command.source` | 小地图配置里写看哪个集合 | 有现成做法 |
 | 技能栏 `SkillBarOverlaySystem` | 画当前单位的技能槽 | 面板 + 图（`QueryCollectAbilitySlots`），照 TW 的 `tw.panel.*` | 零件都在 |
 | Tab 切目标 `TabTargetCycleSystem` | 按 Tab 轮流选附近敌人 | 交互状态绑 Tab + 边沿图，结果写集合 | 零件基本都在，排序要核实 |
-| 瞄准预览 `AbilityAimPresentationProjectionSystem` | 瞄准时画范围圈 | 宪法 §12 已定：瞄准交互状态 + 持续图写黑板 + presenter | 缺各 mod 的配置 |
-| 持续瞄准 `AbilityExecAimSyncSystem` | 引导技能期间跟着鼠标改落点 | 持续图写技能落点 | 缺一个节点 |
+| 瞄准预览 `AbilityAimPresentationProjectionSystem` | 瞄准时画范围圈 | 删；指示器由 presenter 读实体参数画（3.7） | 零件都在，缺各 mod 的配置 |
+| 持续瞄准 `AbilityExecAimSyncSystem` | 引导技能期间跟着鼠标改落点 | 删；指针经交互状态写进实体参数，技能效果图自己读（3.7） | 零件都在 |
 | 视角模式 `ViewMode*` + `viewmodes.json` | 切镜头 + 切施法方式 + 开关技能栏 | 每个模式一个交互状态，切换走 `ActivateContext` | 缺切镜头节点 |
-| 移动路线预览 `CommandActorMovePathPresentationSystem` | 画选中单位的移动线和路点 | 待定 | 缺读路线的节点 |
+| 移动路线预览 `CommandActorMovePathPresentationSystem` | 画选中单位的移动线和路点 | 删；以后走 presenter，按参与者座位显示（3.10） | 这次不做替代 |
 | 默认按键 `default_input.json`、presenter `presenters.json` | 全局默认动作和瞄准 / 路线 presenter | 搬进真正用它们的 mod，或随上面各项删掉 | 跟随 |
 
 ## 3. 详情
@@ -98,13 +98,23 @@ presenter 按 tab_target 集合画目标环
 
 待核实：`QuerySortStable` 是不是按距离排序。不是的话，缺一个"按离某点距离排序"的节点。
 
-### 3.7 瞄准
+### 3.7 瞄准和持续瞄准
 
-宪法 §12 已经写了做法：技能按下图读 `InteractionPref` 分支，智能施法直接 `SubmitCast`；否则 `ActivateContext(瞄准)`，瞄准交互状态挂持续图，算方向 / 落点写黑板，确认图 `SubmitCast`，取消图 `DeactivateContext`。范围圈、扇形、落点标记都是 presenter，读同一份黑板。
+五层，各管各的：
 
-要做的是给用到瞄准的 mod 写上这些配置，把 CoreInputMod `presenters.json` 里的 `core_input.ability_aim.*` 搬进这些 mod。
+| 层 | 管什么 | 配置 / 节点 |
+| --- | --- | --- |
+| 设备 | 鼠标、键盘、手柄 | `default_input.json` 的绑定 |
+| 输入语义 | "指针位置""确认""取消"这些动作和它的轴值 | `default_input.json` 的动作 |
+| 实体参数 | 动作轴值写到玩家实体上 | `action_attribute_bindings.json`，和 Case E 取指针一样；图用 `LoadAttribute` 读 |
+| 技能效果 | 落点从实体参数取 | 技能效果图读实体参数，`ClampTargetToRange` 限射程 |
+| 指示器 | 范围圈、扇形、落点标记 | presenter 读同一份实体参数 |
 
-持续瞄准（引导技能期间跟着鼠标改落点）要一个图节点把落点写回正在执行的技能。现在没有，见 3.9。
+瞄准本身按宪法 §12：技能按下图读 `InteractionPref` 分支，智能施法直接 `SubmitCast`；否则 `ActivateContext(瞄准)`，确认图 `SubmitCast`，取消图 `DeactivateContext`。指针轴值只在瞄准交互状态活着时绑定。
+
+引导技能期间跟着鼠标改落点，不需要单独的系统，也不需要新节点：技能效果图每次生效都从实体参数取最新落点。
+
+要做的是给用到瞄准的 mod 写这些配置，把 CoreInputMod `presenters.json` 里的 `core_input.ability_aim.*` 搬进这些 mod。`AbilityExecAimSyncSystem`、`AbilityAimPresentationProjectionSystem`、Core 的 `AbilityExecAimSync` 组件都删掉。`ChampionSkillSandboxMod` 模板里的 `AbilityExecAimSync` 改成上面的配置。
 
 ### 3.8 视角模式
 
@@ -123,18 +133,15 @@ presenter 按 tab_target 集合画目标环
 | 编号 | 缺什么 | 谁要 | 备注 |
 | --- | --- | --- | --- |
 | C1 | 图里切镜头：激活某个虚拟镜头，可带跟随目标 | 视角模式 | 镜头配置已在 `Camera/virtual_cameras.json`，节点只按 id 激活 |
-| C2 | 图里改正在执行的技能的落点 | 持续瞄准 | 只在 `ChampionSkillSandboxMod` 一个模板里用到，也可以决定不要这个功能 |
-| C3 | 按离某点距离排序 | Tab 切目标 | 先核实 `QuerySortStable` |
-| C4 | 读单位当前移动目标 / 路点 | 移动路线预览 | 见 3.10 |
+| C2 | 按离某点距离排序 | Tab 切目标 | 先核实 `QuerySortStable`，是按距离排就不补 |
 
-### 3.10 待定：移动路线预览
+### 3.10 移动路线预览：先删
 
-现在的系统读选中单位（最多 4 个）的下令队列，画出移动线和路点，只预览 `movePathPreviewOrderTypeKeys` 里列的下令类型。7 个 mod 的配置里写了这个字段。
+现在的系统读选中单位（最多 4 个）的下令队列，画移动线和路点。集合名、4 个单位上限、画面分层编号都写死在 C# 里。
 
-图里没有读下令队列或路线的节点。两种做法：
+这次整块删掉：`CommandActorMovePathPresentationSystem`、`core_input.move_path.*` presenter、7 个 mod 配置里的 `movePathPreviewOrderTypeKeys`。
 
-- **甲：补节点。** 加 C4，由持续图把路点写进集合或黑板，presenter 画线。表现层只读图写好的数据，符合宪法"表现域零计算"。
-- **乙：先不做路线预览。** 退役时删掉这个功能，7 个 mod 的预览字段一起删，以后有需要再按甲做。
+以后要做时，走 presenter 那套：presenter 声明画什么，按参与者座位决定谁能看到（只有下令的那个玩家看到自己单位的路线）。开发这一片时把这条待办登记到 `gitbook/architecture/graph-capability-status.md`。
 
 ## 4. 场景
 
@@ -151,14 +158,15 @@ presenter 按 tab_target 集合画目标环
 
 - 不建新的通用输入 mod，不把 CoreInputMod 的 C# 换个地方放。
 - 共享 mod 和引擎里不出现任何动作名、集合名、下令类型名。
-- 删 `InputGate` 以后，技能配置里再写它，加载时报"未知执行项"并点名技能。
+- 删 `InputGate` 以后，技能配置里再写它，加载时报"未知执行项"并点名技能。`AbilityExecAimSync` 同理。
+- 移动路线预览删掉后，选中单位下令时不再有路线线条，这是这次有意去掉的。
 - 没声明焦点集合的小地图不显示焦点；没挂 tab 图的 mod 按 Tab 没反应。都是配置决定的，不是故障。
 - 三个 C# 下令改写钩子迁不进图的部分，列出来单独评审，不留钩子。
 - 片与片之间 main 要能跑：每片只删已经没人用的东西。
 - 删掉依赖后，这个 mod 开局就不会再装 CoreInputMod 的那批系统。所以删依赖前，要逐个跑这个 mod 的验收，确认它没有暗中靠这批系统。
 - 分片顺序：
   1. 删死代码和 56 个空依赖（3.1）。
-  2. 补 C1–C3（C4 看 3.10 的决定）。
+  2. 补 C1、C2，删移动路线预览（3.10）。
   3. 12 个 mod 的下令改图（3.2），同时去掉 `LocalOrderSourceHelper` 对 `ControlDomainQuery` 的调用。
   4. 技能栏、Tab、瞄准、视角模式、小地图改配置（3.4–3.8）。
   5. `collection.command.source` 全部换掉，showcase 的 C# 直写改图写（3.3）。
@@ -188,6 +196,11 @@ Feature: 技能瞄准
     Then 英雄脚下出现 Q 的范围圈，圈跟着鼠标走
     When 我左键
     Then 技能在鼠标处放出，范围圈消失
+
+  Scenario: 引导技能跟着鼠标走
+    Given 我在放一个引导 3 秒的激光
+    When 我在这 3 秒里移动鼠标
+    Then 激光落点跟着鼠标走，超出射程时停在射程边上
 
   Scenario: 右键取消瞄准
     Given 我按 Q 进入瞄准
