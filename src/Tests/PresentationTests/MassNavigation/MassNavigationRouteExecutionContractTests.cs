@@ -66,7 +66,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(pathService.SolveCount, Is.EqualTo(1));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float routedX, out float routedY), Is.True);
             Assert.That(new Vector2(routedX, routedY), Is.EqualTo(new Vector2(5_300, 5_000)));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            AssertHoldsInPlace(runtime, 1);
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.PathStatus, Is.EqualTo(PathStatus.NoPath));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False);
+            AssertHoldsInPlace(runtime, 0);
         }
 
         [Test]
@@ -141,9 +141,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.AgentIndex, Is.EqualTo(1));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False,
+            AssertHoldsInPlace(runtime, 0,
                 "Route execution must prepare the full OrderId batch before committing any member target.");
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            AssertHoldsInPlace(runtime, 1);
         }
 
         [Test]
@@ -338,6 +338,17 @@ namespace Ludots.Tests.Presentation
                 WaypointAdvanceBodyRadiusScale = 1.5f,
             };
             Assert.That(() => matchingStopCircle.Validate(), Throws.Nothing);
+        }
+
+        private static void AssertHoldsInPlace(
+            MassNavigationSimulationRuntime runtime,
+            int agentIndex,
+            string? message = null)
+        {
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(agentIndex, out float targetX, out float targetY), Is.True,
+                "Agents without an applied move target hold position at an anchor.");
+            Assert.That(new Vector2(targetX, targetY), Is.EqualTo(runtime.GetAgentWorldPositionCm(agentIndex)), message);
+            Assert.That(runtime.GetFlowSolverForTests().IsUnitSettled(agentIndex), Is.True, message);
         }
 
         private static MassNavigationSimulationRuntime CreateRuntime(

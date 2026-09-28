@@ -816,7 +816,12 @@ public sealed class MassNavigationRouteExecutionSink
         Vector2 position = simulation.GetAgentWorldPositionCm(state.AgentIndex);
         float threshold = ResolveWaypointAdvanceThresholdCm(simulation, state.AgentIndex);
         float thresholdSq = threshold * threshold;
-        bool settledHopAvailable = simulation.IsAgentSettled(state.AgentIndex);
+        // Idle agents hold position and count as settled too; only a settle reached while
+        // pursuing the already-applied current waypoint proves that waypoint is blocked.
+        bool settledHopAvailable =
+            !state.ForceResetNextApply &&
+            state.LastAppliedWaypointIndex == state.CurrentWaypointIndex &&
+            simulation.IsAgentSettled(state.AgentIndex);
         while (state.CurrentWaypointIndex < state.PointCount - 1)
         {
             Vector2 waypoint = state.CurrentWaypointWorldCm;
