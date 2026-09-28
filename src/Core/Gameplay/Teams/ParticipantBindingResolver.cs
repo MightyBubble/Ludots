@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 
@@ -641,7 +642,7 @@ namespace Ludots.Core.Gameplay.Teams
             var stanceMembers = new List<(Entity Entity, int TeamId)>();
             var stanceMemberQuery = new QueryDescription()
                 .WithAll<Team, MapEntity>()
-                .WithNone<PlayerIdentity, TeamIdentity>();
+                .WithNone<PlayerIdentity, TeamIdentity, PresentationDestroyPending>();
             world.Query(in stanceMemberQuery, (Entity entity, ref Team team, ref MapEntity mapEntity) =>
             {
                 if (mapEntity.MapId == session.MapId && team.Id > 0)
