@@ -276,7 +276,7 @@
 | 调用方 | 用它做什么 |
 | --- | --- |
 | `InputOrderActorAuthorization` | 下令时逐个成员授权（上面说的，删掉） |
-| `CoreInputMod` 的 `LocalOrderSourceHelper` | 自动选目标时判断成员归哪个玩家 |
+| `CoreInputMod` 的 `LocalOrderSourceHelper` | 自动选目标时判断成员归哪个玩家；随 CoreInputMod 退役整个删掉，见 `2026-09-28-coreinputmod-retirement-design.md` 3.2 |
 | `CollectionApplier.ReplaceRouted` | 按控制域把一份名单拆开，分别写进各玩家的集合 |
 | `ControlPlaneProjectionShowcaseMod`、`FormationCapabilityShowcaseMod` | showcase 里判断归属 |
 
