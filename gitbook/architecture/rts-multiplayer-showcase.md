@@ -58,7 +58,7 @@ Showcase 的正式交付形态必须同时包含：
 | --- | --- | --- |
 | 本地交互到 Order | `src/Core/Input/Orders/InputOrderMappingSystem.cs`、`mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs` | 把本地意图编译成自包含语义命令；本地框选不上网 |
 | 唯一全局订单入口 | `src/Core/Gameplay/GAS/Orders/OrderQueue.cs` | 网络命令校验后以完整批次进入玩法，禁止第二套订单入口 |
-| 所有权与控制域 | `src/Core/Association/OwnershipResolver.cs`、`src/Core/Gameplay/Relationships/ControlDomainQuery.cs` | 判断玩家能否指挥某个采集车、步兵或核心 |
+| 所有权与控制域 | `src/Core/Gameplay/Relationships/RelationshipRuntime.Rules.cs`、`src/Core/Gameplay/Relationships/ControlDomainQuery.cs` | 判断玩家能否指挥某个采集车、步兵或核心 |
 | 实体生成 | `src/Core/Gameplay/Spawning/RuntimeEntitySpawnQueue.cs` | 生产完成后通过正式生命周期边界生成步兵 |
 | RTS 资源花费与生产 | `mods/showcases/rts_demo/RtsDemoMod/assets/GAS/abilities.json`、`mods/showcases/rts_demo/RtsDemoMod/assets/GAS/effects.json` | 复用数据驱动的花费、训练和生成组合 |
 | RTS 输入与移动入口 | `mods/showcases/rts_demo/RtsDemoMod/assets/Input/input_order_mappings.json` | 复用正式移动 Order 映射，不让网络层直接改位置 |
