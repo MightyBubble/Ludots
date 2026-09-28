@@ -28,7 +28,7 @@
         ▼
 选人：候选集合 = rts.commandable（Case E 候选名单那一套不变）
 下令：下令图 QueryFromCollection(selected) 装入成员 → SubmitCommandIntent / SubmitCast 提交
-授权：服务器收到意图后逐个成员判断"这个玩家能不能指挥它"——读什么，见 3.6（待定）
+授权：不单独做。成员来自玩家实体上的集合，而集合只装能指挥的（见 3.6）
 表现：presenter 订阅集合成员变化（蓝环 / 归属色），不自己判断归属
 ```
 
@@ -95,7 +95,7 @@
 }
 ```
 
-节点链：`LoadExplicitTarget`（玩家实体）→ `InvokeGraph(rts.owned_query)` → `WriteCollection(rts.commandable, replace)` → `InvokeGraph(rts.granted_query)` → `WriteCollection(rts.commandable, add)`。
+节点链：`LoadExplicitTarget`（玩家实体）→ `InvokeGraph(rts.owned_query)` → `WriteCollection(rts.commandable, replace)` → `InvokeGraph(rts.granted_query)` → `WriteCollection(rts.commandable, add)` → 把 `selected` 里已经不归我管的减掉（三步，见 3.6）。
 
 - `filters.relationshipType` 是**缺口 G3**；其余字段、节点都是现有的。
 - 单位死亡时引擎不发"关系断开"事件（死掉的一端在查询时跳过），所以同步图也要听 `EntityDied`，和 RTS 现有的 `graph.rts.roster_sync` 一样。
@@ -243,6 +243,7 @@
 | 关系目录的 `rules`、`RelationshipTypeRuleRegistry`、`RelationshipRuntime.Rules.cs` | "唯一主人"等规矩写在改边的图里 |
 | 连边时自动顶替旧主人、自动重算整棵子树归属 | 归属不再缓存，查询时现算，没有东西需要重算 |
 | `OwnershipResolver` | 你之前要求删；它的活由改边的图和查询图接手 |
+| 下令时的逐个成员授权 `InputOrderActorAuthorization`，以及 `ControlDomainQuery` | 能指挥谁由玩家实体上的集合回答，见 3.6 |
 
 ### 3.5 引擎要补的缺口（只有这 4 个）
 
@@ -253,18 +254,33 @@
 | G3 | 事件入口的 `filters` 加 `relationshipType`：写关系名，挂载时换成编号，写错名字挂载时报错 | 关系变化事件里带的是关系类型编号；现有的 `filters.payload` 只能写死数字 | 有。`filters.tag` 就是按名字过滤 |
 | G4 | 出生事件 `EntitySpawned` 的载荷加两项："召唤者"（`MapTrigger.SpawnerEntity`，实体）和"模板名"（`MapTrigger.SpawnTemplate`，字符串） | 出兵节点 `SpawnTemplate` 不返回新实体，出生事件也不带召唤者和模板，召唤连边图既不知道该从谁连，也分不出出生的是不是召唤物 | 出兵请求里本来就带召唤者和模板，只是没放进事件 |
 
-### 3.6 待定：服务器授权读什么
+### 3.6 下令不再单独授权
 
-现状（tw 分支）：服务器收到意图后，对每个成员调 `InputOrderActorAuthorization.IsAuthorized`，里面是 `ControlDomainQuery.IsControllableBy`。这段是 C# 写死的，沿着 Owns / Controls 往上找玩家；main 上它靠 `OwnershipResolver`。
+"这个玩家能不能指挥这个单位"不需要引擎另判一次，Case E 的现成零件已经保证了：
 
-框选已经只能选 `rts.commandable` 里的人，但授权不能信客户端交上来的成员：联机时客户端可以伪造成员，必须由服务器再判断一次。所以 `OwnershipResolver` 删掉以后，授权得有个去处。几种可选做法：
+- **能框的只有能指挥的。** 框选命中图的候选来自玩家实体上的 `rts.commandable`，所以 `selected` 一开始就只装能指挥的单位。
+- **归属变了，选中名单也跟着收。** 同步图重算完 `rts.commandable` 以后，接着把 `selected` 里已经不归我管的去掉。没有求交集的节点，用现有的三种写法拼：
 
-| 做法 | 服务器怎么判断 | 要加什么 | 问题 |
-| --- | --- | --- | --- |
-| 甲：授权也写成图 | 下令意图配置里声明一张授权查询图，服务器对每个成员调它 | 意图配置加一个"授权图"字段 | 每次下令都要跑一遍图 |
-| 乙：授权读玩家身上的集合 | 服务器看成员在不在这个玩家的某个集合里（比如 `rts.commandable`） | 意图配置声明读哪个集合名 | 又出现一个集合名字段，只是从交互状态挪到了意图配置 |
+| 步骤 | 节点 | 结果 |
+| --- | --- | --- |
+| 1 | `QueryFromCollection(selected)` → `WriteCollection(rts.lost, replace)` | `rts.lost` = 选中的 |
+| 2 | `QueryFromCollection(rts.commandable)` → `WriteCollection(rts.lost, subtract)` | `rts.lost` = 选中了、但已经不归我管的 |
+| 3 | `QueryFromCollection(rts.lost)` → `WriteCollection(selected, subtract)` | `selected` 只剩还归我管的 |
 
-这一项等你定了再开发。
+- **成员不从客户端来。** 下令图用 `QueryFromCollection(selected)` 从玩家实体上的集合装入成员，现有代码里没有把成员名单跨网络转发的逻辑，所以没有伪造的入口。
+
+所以下令时逐个成员调的 `InputOrderActorAuthorization.IsAuthorized`（里面是 `ControlDomainQuery.IsControllableBy`）可以删掉。
+
+`ControlDomainQuery` 在 C# 里还有这些调用，要逐个改成读玩家实体上的集合：
+
+| 调用方 | 用它做什么 |
+| --- | --- |
+| `InputOrderActorAuthorization` | 下令时逐个成员授权（上面说的，删掉） |
+| `CoreInputMod` 的 `LocalOrderSourceHelper` | 自动选目标时判断成员归哪个玩家 |
+| `CollectionApplier.ReplaceRouted` | 按控制域把一份名单拆开，分别写进各玩家的集合 |
+| `ControlPlaneProjectionShowcaseMod`、`FormationCapabilityShowcaseMod` | showcase 里判断归属 |
+
+改完这些，`ControlDomainQuery` 本身删掉。
 
 ## 4. 场景
 
@@ -274,6 +290,7 @@
 | 召唤两层 | 死灵法师召出的骷髅法师、骷髅法师召出的小骷髅，玩家都能框选和指挥 | 召唤连边图逐层连边；查询图往下走到底 |
 | 精神控制 | 敌方单位 30 秒内听我指挥，时间到或被驱散时回到原主人那边 | 效果生效时换边并记下原主人，到期或被驱散时换回来 |
 | 精神控制中施法者阵亡 | 施法者死后到到期之前，这个单位谁也指挥不了；到期后回到原主人那边 | 施法者死了，它往下的边在查询时被跳过；到期时断边什么都不做，再连回原主人。施法者死后效果会不会照常到期，开发时要先核实 |
+| 选中后归属变了 | 我选中了被精神控制的坦克，控制到期后它从我的选中里消失，右键不会再给它下令 | 同步图重算后把 `selected` 里不归我管的减掉 |
 | 盟友掉线 | 盟友掉线后我能框他的兵；他回来后我框不到了 | 现有控制授权连上或撤掉 `Controls` 边，同步图把盟友的兵并进或移出我的集合 |
 | 召唤者死亡 | 死灵法师死了，他召出的骷髅变成无主，谁也指挥不了 | 死掉的一端在查询时被跳过；同步图听到 `EntityDied` 后重算 |
 
@@ -287,7 +304,8 @@
 - **图里没有"这个实体还活着吗"的判断节点。** 往死掉的实体连边会报错，所以这一轮的改边图只往玩家实体或当场在场的实体连边。精神控制的原主人如果可能是会死的单位（比如指挥官），归还前需要先判断存活，那时再补节点。
 - **占领出错只发事件，不写日志。** 图里没有写日志或报错的节点，所以主人数不对时，夺城图发 `rts.capture_rejected` 事件并停下，由这个玩法决定怎么提示。
 - **同步图是整份重写。** 每次关系变化都把这个玩家的集合整份重算一遍，和 RTS 现有候选名单的做法一样。人口到了上万级别，改成增量维护要另开一单（Case E 已记录同类债务）。
-- 同一时刻只有一个同步图写 `rts.commandable`，遵守集合"只有一个写者"的规矩。
+- 写集合全部走 `WriteCollection`，没有第二个写入口。`selected` 由选中落定图和同步图两处写，和 Case E 里 `selection.pending` 由松手图写、落定图消费是同一种用法。
+- 关系边变了到同步图跑完之间，有一小段时间 `rts.commandable` 还是旧的。这段时间里下的令还按旧名单发。开发时要量一下这段时间有多长。
 
 ## 6. UAT
 
@@ -339,6 +357,12 @@ Feature: 精神控制到时归还
     When 30 秒过去
     Then 敌方玩家又能框选这个坦克
     And 我框选不到这个坦克
+
+  Scenario: 选中的坦克到期后不再听我的
+    Given 我选中了自己的步兵和一个被我精神控制的敌方坦克
+    When 精神控制到期
+    Then 坦克的选中环消失
+    And 我右键地面，只有步兵移动，坦克不动
 
   Scenario: 被驱散时立刻归还
     Given 我控制着敌方的一个坦克
