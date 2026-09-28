@@ -891,25 +891,17 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 entityCollectionStore);
             relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
-            // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
-            // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
-            // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
-            // are pure data — profiles referencing them fail fast at their own load site instead.
-            int ownsRelationshipTypeId = relationshipTypeRegistry.GetId("Owns");
-            int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
-            int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
-            var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
+            var relationshipRoles = RelationshipRoleBindings.Resolve(relationshipCatalog, relationshipTypeRegistry);
+            int memberOfRelationshipTypeId = relationshipRoles.MembershipTypeId;
+            var ownershipResolver = new OwnershipResolver(relationshipRuntime, relationshipRoles.OwnershipTypeId);
             ownershipResolver.BindIdentityProjection(World);
-            relationshipRuntime.BindParticipantIdentityProjection(
-                ownershipResolver,
-                ownsRelationshipTypeId,
-                memberOfRelationshipTypeId);
+            relationshipRuntime.BindParticipantIdentityProjection(relationshipRoles);
             var controlDomainQuery = new ControlDomainQuery(
                 World,
                 relationshipRuntime,
                 ownershipResolver,
-                ownsRelationshipTypeId,
-                controlsRelationshipTypeId);
+                relationshipRoles.OwnershipTypeId,
+                relationshipRoles.ControlGrantTypeId);
             var domainStanceQuery = DomainStanceQuery.Create(
                 relationshipRuntime,
                 memberOfRelationshipTypeId,
@@ -2449,7 +2441,7 @@ namespace Ludots.Core.Engine
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
-                ownsTypeId: relationshipTypeRegistry.GetId("Owns"),
+                ownsTypeId: ownershipResolver.OwnsTypeId,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
                 initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);

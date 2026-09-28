@@ -1165,9 +1165,12 @@ namespace Ludots.Tests.GAS
         private static OwnershipResolver CreateOwnership(RelationshipRuntime relationships, RelationshipTypeRegistry types)
         {
             int ownsType = types.Register("Owns");
-            types.Register("Controls");
-            types.Register("MemberOf");
-            return new OwnershipResolver(relationships, ownsType);
+            int controlsType = types.Register("Controls");
+            int memberOfType = types.Register("MemberOf");
+            var ownership = new OwnershipResolver(relationships, ownsType);
+            relationships.BindParticipantIdentityProjection(
+                new RelationshipRoleBindings(ownsType, memberOfType, controlsType));
+            return ownership;
         }
 
         private static RelationshipRuntime CreateRelationshipRuntime(World world, RelationshipTypeRegistry types)

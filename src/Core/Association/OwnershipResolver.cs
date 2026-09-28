@@ -25,6 +25,7 @@ namespace Ludots.Core.Association
             }
 
             _ownsTypeId = ownsTypeId;
+            _relationships.AttachOwnership(this);
         }
 
         public int OwnsTypeId => _ownsTypeId;
@@ -46,15 +47,15 @@ namespace Ludots.Core.Association
                 throw new ArgumentException("Ownership target must not be null.", nameof(owned));
             }
 
-            ClearOwnership(owned, owner);
             _relationships.EnsureLink(owner, owned, _ownsTypeId);
-            ProjectPlayerOwnerTree(owned);
         }
 
         public void ClearOwnership(Entity owned)
         {
-            ClearOwnership(owned, Entity.Null);
-            ProjectPlayerOwnerTree(owned);
+            if (TryGetDirectOwner(owned, out Entity owner))
+            {
+                _relationships.RemoveLink(owner, owned, _ownsTypeId);
+            }
         }
 
         public bool TryGetDirectOwner(Entity owned, out Entity owner)
@@ -162,7 +163,7 @@ namespace Ludots.Core.Association
             }
         }
 
-        private void ProjectPlayerOwnerTree(Entity owned)
+        internal void ProjectPlayerOwnerTree(Entity owned)
         {
             if (_projectionWorld == null || owned == Entity.Null)
             {
@@ -175,26 +176,6 @@ namespace Ludots.Core.Association
             for (int i = 0; i < _projectionScratch.Count; i++)
             {
                 ParticipantIdentityProjector.SyncPlayerOwner(_projectionWorld, _projectionScratch[i], this);
-            }
-        }
-
-        private void ClearOwnership(Entity owned, Entity preservedOwner)
-        {
-            if (owned == Entity.Null)
-            {
-                return;
-            }
-
-            int count = CollectIncomingOwners(owned);
-            for (int i = 0; i < count; i++)
-            {
-                Entity currentOwner = _incomingScratch[i];
-                if (currentOwner == Entity.Null || currentOwner == preservedOwner)
-                {
-                    continue;
-                }
-
-                _relationships.RemoveLink(currentOwner, owned, _ownsTypeId);
             }
         }
 

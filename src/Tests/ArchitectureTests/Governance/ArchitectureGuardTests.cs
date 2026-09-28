@@ -2020,7 +2020,8 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(ownership, Does.Contain("RelationshipRuntime"));
                 Assert.That(ownership, Does.Contain("CollectIncoming"));
                 Assert.That(ownership, Does.Contain("CollectOutgoing"));
-                Assert.That(gameEngine, Does.Contain("GetId(\"Owns\")"));
+                Assert.That(gameEngine, Does.Contain("RelationshipRoleBindings.Resolve("));
+                Assert.That(gameEngine, Does.Not.Contain("GetId(\"Owns\")"));
                 Assert.That(scope, Does.Contain("RoleSlot"));
             });
         }

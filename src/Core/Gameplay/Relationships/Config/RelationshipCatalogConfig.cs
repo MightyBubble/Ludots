@@ -30,7 +30,23 @@ namespace Ludots.Core.Gameplay.Relationships.Config
     {
         public string Id { get; set; } = string.Empty;
         public bool IsSymmetric { get; set; }
+        public RelationshipRole Role { get; set; }
         public RelationshipTypeTemplateConfig? Template { get; set; }
+    }
+
+    /// <summary>
+    /// Engine behavior a relationship type opts into. The catalog must bind every non-None role to
+    /// exactly one type; the engine resolves type ids by role and never by type name.
+    /// </summary>
+    public enum RelationshipRole
+    {
+        None = 0,
+        /// <summary>source owns target; a target has at most one direct owner and inherits PlayerOwner from its root owner.</summary>
+        Ownership,
+        /// <summary>source is a member of target; a target carrying TeamIdentity projects Team onto the source.</summary>
+        Membership,
+        /// <summary>source may command target (and target's owned subtree when target is a player rep) in addition to what it owns.</summary>
+        ControlGrant,
     }
 
     /// <summary>

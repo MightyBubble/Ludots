@@ -23,9 +23,9 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
         private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
-        private OwnershipResolver? _identityOwnership;
-        private int _identityOwnsTypeId = -1;
-        private int _identityMemberOfTypeId = -1;
+        private OwnershipResolver? _ownership;
+        private RelationshipRoleBindings? _roles;
+        private Entity[] _releasedOwnerScratch = new Entity[2];
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -49,39 +49,77 @@ namespace Ludots.Core.Gameplay.Relationships
             RebuildEntityIndexFromWorld();
         }
 
-        public void BindParticipantIdentityProjection(OwnershipResolver ownership, int ownsTypeId, int memberOfTypeId)
+        /// <summary>
+        /// Called by the <see cref="OwnershipResolver"/> constructor. From then on every link of the
+        /// ownership type keeps the single-direct-owner invariant: a new owner replaces the previous one.
+        /// </summary>
+        internal void AttachOwnership(OwnershipResolver ownership)
         {
-            _identityOwnership = ownership ?? throw new ArgumentNullException(nameof(ownership));
-            if (ownsTypeId < 0)
+            ArgumentNullException.ThrowIfNull(ownership);
+            ValidateTypeId(ownership.OwnsTypeId);
+            if (_ownership != null && _ownership.OwnsTypeId != ownership.OwnsTypeId)
             {
-                throw new ArgumentOutOfRangeException(nameof(ownsTypeId));
+                throw new InvalidOperationException(
+                    $"RelationshipRuntime already enforces ownership on type {_ownership.OwnsTypeId}; cannot attach a second ownership type {ownership.OwnsTypeId}.");
             }
 
-            if (memberOfTypeId < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(memberOfTypeId));
-            }
-
-            _identityOwnsTypeId = ownsTypeId;
-            _identityMemberOfTypeId = memberOfTypeId;
+            _ownership = ownership;
         }
+
+        public void BindParticipantIdentityProjection(RelationshipRoleBindings roles)
+        {
+            ArgumentNullException.ThrowIfNull(roles);
+            if (_ownership == null || _ownership.OwnsTypeId != roles.OwnershipTypeId)
+            {
+                throw new InvalidOperationException(
+                    $"Participant identity projection requires the OwnershipResolver for role type {roles.OwnershipTypeId} to be constructed on this runtime first.");
+            }
+
+            ValidateTypeId(roles.MembershipTypeId);
+            ValidateTypeId(roles.ControlGrantTypeId);
+            _roles = roles;
+        }
+
+        public RelationshipRoleBindings Roles => _roles
+            ?? throw new InvalidOperationException(
+                "Relationship roles are not bound; the engine binds them from Relationships/catalog.json at install.");
 
         private void ProjectParticipantIdentity(Entity source, Entity target, int typeId)
         {
-            if (_identityOwnership == null)
+            if (_ownership != null && typeId == _ownership.OwnsTypeId)
             {
+                _ownership.ProjectPlayerOwnerTree(target);
                 return;
             }
 
-            if (typeId == _identityOwnsTypeId)
+            if (_roles != null && typeId == _roles.MembershipTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
             {
-                ParticipantIdentityProjector.SyncPlayerOwner(_world, target, _identityOwnership);
-                return;
+                ParticipantIdentityProjector.SyncTeam(_world, source, this, _roles.MembershipTypeId);
+            }
+        }
+
+        private void ReleaseOtherOwners(Entity newOwner, Entity owned, int ownsTypeId)
+        {
+            int count;
+            int dropped;
+            while (true)
+            {
+                count = CollectIncoming(owned, ownsTypeId, _releasedOwnerScratch, out dropped);
+                if (dropped == 0)
+                {
+                    break;
+                }
+
+                Array.Resize(ref _releasedOwnerScratch, count + dropped);
             }
 
-            if (typeId == _identityMemberOfTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
+            for (int i = 0; i < count; i++)
             {
-                ParticipantIdentityProjector.SyncTeam(_world, source, this, _identityMemberOfTypeId);
+                Entity previousOwner = _releasedOwnerScratch[i];
+                if (previousOwner != newOwner)
+                {
+                    RemoveLinkCore(previousOwner, owned, ownsTypeId, projectIdentity: false);
+                }
             }
         }
 
@@ -249,6 +287,11 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
+            if (_ownership != null && validatedTypeId == _ownership.OwnsTypeId)
+            {
+                ReleaseOtherOwners(source, target, validatedTypeId);
+            }
+
             set.Set(validatedTypeId, RelationshipEdge.CreateDefault(_metrics));
             if (hasExisting)
             {
@@ -269,6 +312,11 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
+        {
+            RemoveLinkCore(source, target, typeId, projectIdentity: true);
+        }
+
+        private void RemoveLinkCore(Entity source, Entity target, int typeId, bool projectIdentity)
         {
             if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
@@ -298,7 +346,10 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
-            ProjectParticipantIdentity(source, target, validatedTypeId);
+            if (projectIdentity)
+            {
+                ProjectParticipantIdentity(source, target, validatedTypeId);
+            }
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
                 metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));

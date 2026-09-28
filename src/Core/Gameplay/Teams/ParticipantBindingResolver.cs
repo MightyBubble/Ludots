@@ -151,7 +151,7 @@ namespace Ludots.Core.Gameplay.Teams
                 playerLookup);
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);
-            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
+            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, ownership);
 
             bool hasParticipantBindings = mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0;
             return new ParticipantBindingResult(
@@ -614,7 +614,6 @@ namespace Ludots.Core.Gameplay.Teams
             TeamEntityLookup teams,
             PlayerEntityLookup players,
             RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes,
             OwnershipResolver? ownership)
         {
             if (mapConfig.Teams.Count == 0 && mapConfig.Players.Count == 0)
@@ -622,13 +621,13 @@ namespace Ludots.Core.Gameplay.Teams
                 return;
             }
 
-            if (relationships == null || relationshipTypes == null || ownership == null)
+            if (relationships == null || ownership == null)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime/RelationshipTypeRegistry/OwnershipResolver) is unavailable.");
+                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime/OwnershipResolver) is unavailable.");
             }
 
-            int memberOfTypeId = relationshipTypes.GetId("MemberOf");
+            int memberOfTypeId = relationships.Roles.MembershipTypeId;
             for (int i = 0; i < mapConfig.Players.Count; i++)
             {
                 PlayerBindingData binding = mapConfig.Players[i]!;
