@@ -13,6 +13,8 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.UI;
@@ -267,6 +269,18 @@ public sealed class TcgPromptShowcaseAcceptanceTests
             {
                 _engine.SetService(CoreServiceKeys.UiCaptured, false);
                 _engine.Tick(DeltaTime);
+                AssertDrawnItemsHaveOwners();
+            }
+        }
+
+        private void AssertDrawnItemsHaveOwners()
+        {
+            PrimitiveDrawBuffer draws = _engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer service is missing.");
+            foreach (ref readonly PrimitiveDrawItem item in draws.GetSpan())
+            {
+                Assert.That(item.StableId <= 0 || item.OwnerStableId > 0, Is.True,
+                    $"画面上的东西 stableId={item.StableId} mesh={item.MeshAssetId} 没有主人，Raylib 提交回执会直接崩");
             }
         }
 

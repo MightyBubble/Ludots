@@ -1168,17 +1168,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(meshes.TryGetDescriptor(cueMeshAssetId, out MeshAssetDescriptor cue), Is.True);
             Assert.That(cue.Type, Is.EqualTo(MeshAssetType.Primitive));
 
-            var presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) as PresenterDefinitionRegistry
-                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
-            CueMarkerAuthoredVisual authored = CueMarkerAuthoredVisual.Resolve(meshes, presenters);
-            Assert.That(authored.MeshAssetId, Is.EqualTo(cueMeshAssetId));
-            Assert.That(authored.Scale, Is.EqualTo(new System.Numerics.Vector3(0.2f, 0.2f, 0.2f)));
-            Assert.That(authored.AnchorOffset.Y, Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(authored.LifetimeSeconds, Is.EqualTo(0.35f).Within(0.001f));
-
             var constructorMeshes = new MeshAssetRegistry();
             Assert.That(
-                constructorMeshes.GetId(WellKnownMeshKeys.CueMarker),
+                constructorMeshes.GetId("cue_marker"),
                 Is.EqualTo(0),
                 "cue_marker must not be dual-registered in MeshAssetRegistry constructor; mesh_assets.json is the mesh SSOT.");
             Assert.That(constructorMeshes.GetId(WellKnownMeshKeys.Cube), Is.GreaterThan(0));

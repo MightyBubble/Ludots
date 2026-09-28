@@ -227,9 +227,6 @@ namespace Ludots.Tests.GAS
             var orderRequests = new OrderRequestQueue();
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
-            var markers = new TransientMarkerBuffer();
-            var meshes = new MeshAssetRegistry();
-            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
             var request = default(OrderRequest);
@@ -241,7 +238,7 @@ namespace Ludots.Tests.GAS
 
             That(orderRequests.TryEnqueue(request), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui);
             system.Update(0f);
 
             That(ui.Visible, Is.True);
@@ -272,12 +269,9 @@ namespace Ludots.Tests.GAS
             var orderRequests = new OrderRequestQueue();
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
-            var markers = new TransientMarkerBuffer();
-            var meshes = new MeshAssetRegistry();
-            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui);
 
             var first = default(OrderRequest);
             first.PlayerId = 1;
@@ -297,42 +291,6 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<System.InvalidOperationException>(() => system.Update(0f));
             That(ex?.Message, Does.Contain("cannot replace active root"));
-        }
-
-        [Test]
-        public void ResponseChainDirectorSystem_OnlyEmitsCueMarkersForResolvedTelemetry()
-        {
-            using var world = World.Create();
-
-            var orderRequests = new OrderRequestQueue();
-            var telemetry = new ResponseChainTelemetryBuffer();
-            var ui = new ResponseChainUiState();
-            var markers = new TransientMarkerBuffer();
-            var meshes = new MeshAssetRegistry();
-            var presenters = new PresenterDefinitionRegistry();
-            RegisterAuthoredCueMarker(meshes, presenters);
-
-            var actor = world.Create(new VisualTransform { Position = new Vector3(2f, 0f, 3f), Scale = Vector3.One });
-            That(telemetry.TryAdd(new ResponseChainTelemetryEvent
-            {
-                Kind = ResponseChainTelemetryKind.WindowOpened,
-                RootId = 1,
-                Source = actor,
-                Target = actor
-            }), Is.True);
-            That(telemetry.TryAdd(new ResponseChainTelemetryEvent
-            {
-                Kind = ResponseChainTelemetryKind.ProposalResolved,
-                RootId = 1,
-                Source = actor,
-                Target = actor,
-                Outcome = ResponseChainResolveOutcome.AppliedInstant
-            }), Is.True);
-
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
-            system.Update(0f);
-
-            That(markers.Count, Is.EqualTo(1), "Only resolved response-chain telemetry should emit cue markers.");
         }
 
         [Test]
@@ -382,35 +340,6 @@ namespace Ludots.Tests.GAS
                 builtinHandlers,
                 new GraphProgramRegistry(),
                 "Test/ResponseChainPresenterPipelineTests.json");
-        }
-
-        private static void RegisterAuthoredCueMarker(MeshAssetRegistry meshes, PresenterDefinitionRegistry presenters)
-        {
-            int meshId = meshes.Register(
-                WellKnownMeshKeys.CueMarker,
-                MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube));
-            presenters.Register(WellKnownMeshKeys.CueMarker, new PresenterDefinition
-            {
-                DefaultLifetime = 0.35f,
-                PositionOffset = new Vector3(0f, 0.2f, 0f),
-                Behaviors =
-                [
-                    new BehaviorSlot
-                    {
-                        SlotIndex = 0,
-                        Kind = BehaviorKind.AssetBinding,
-                        ActiveByDefault = true,
-                        AssetBinding = new AssetBindingConfig
-                        {
-                            AssetKind = AssetKind.Mesh,
-                            AssetId = meshId,
-                            RenderPath = VisualRenderPath.StaticMesh,
-                            Mobility = VisualMobility.Movable,
-                            LocalScale = new Vector3(0.2f, 0.2f, 0.2f),
-                        },
-                    },
-                ],
-            });
         }
     }
 }

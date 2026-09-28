@@ -2595,7 +2595,7 @@ namespace Ludots.Core.Engine
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext, presentationTimingDiagnostics));
             RegisterPresentationSystem(presentationEntityLifecycleSystem);
-            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, meshAssets, presenterDefinitions));
+            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState));
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);
             RegisterPresentationSystem(new EntityCollectionPresentationEventSystem(World, entityCollectionStore, presentationEventStream, GameSession));
