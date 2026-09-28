@@ -94,6 +94,8 @@ Windows：
 
 节点就是作者面：选中一张说话节点，检查器里直接选说话人（下拉显示解析后的名字，可「+ 新建说话人」——填 id、显示名、半身像，保存时一起落库）、直接写正文（B / I / 取色工具栏与文本房同一套受限标记，下方即时预览）。**作者不碰 `lineId`、不碰词条 id**：保存时同步器把正文自动落成三份文件——`Story/lines.json` 补一条 `{id, speakerId, textToken}`（id 按 `line.<对话slug>.<节点id>` 派生，撞名加后缀）、`text_tokens.json` 补词条（`story.<lineId>`，零参）、`text_locales.json` 默认语言写模板。已绑定的台词改文只更新默认语言模板，其他语言原样保留（去文本房补译，缺翻译在那里标红）；磁盘合同不变，节点仍只存 `lineId`，引擎装载路径分毫未动。改了哪几个目录就写哪几个（脏检测逐目录比对），写入前过桥的引擎同源校验。换绑、词条、标签这些底细收在检查器的「高级」折叠里，兜住存量数据和高级用法；没被引用的台词不做删除，留在台词本里提示。
 
+立绘默认跟随说话人映射（`speaker.portraitImageId` / `standingImageId`）；「高级」里的「立绘差分」给单句换表情图——节点 `portraitImageId` 覆盖说话人映射（对半身/全身两个表现槽都生效），差分图在 `Presentation/image_assets.json` 里按 id 多声明一条，选完随对话树落盘。
+
 ### 3.4 文本（对照 SC2 编辑器的 Text 模块）
 
 文本房是一张表：行是词条 id，列是语言。台词、说话人名、界面文案都引用词条键；这间房改的就是键背后的文字本体（`Presentation/text_tokens.json` 登记 id 和参数个数，`Presentation/text_locales.json` 按语言存模板）。
