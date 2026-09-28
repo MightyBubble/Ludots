@@ -1,0 +1,16 @@
+{
+  "startupMapId": "tcg_prompt",
+  "windowTitle": "Ludots - TCG 响应窗：要不要接招",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "startupInputContexts": ["Default_Gameplay"],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.tcg_prompt"
+    }
+  ]
+}

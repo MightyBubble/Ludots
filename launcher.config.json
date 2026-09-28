@@ -1725,6 +1725,13 @@
       }
     },
     {
+      "name": "tcg_prompt_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/tcg_demo/TcgPromptShowcaseMod"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",

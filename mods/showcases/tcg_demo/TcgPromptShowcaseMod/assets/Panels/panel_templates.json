@@ -1,0 +1,72 @@
+[
+  {
+    "id": "panel.tcg_prompt.hero_status",
+    "ownerKind": "seat",
+    "audienceSeats": ["seat.0"],
+    "graph": "graph.tcg_prompt.vitals",
+    "pins": [
+      { "name": "hp", "key": "tcg_prompt.hp", "mode": "realtime", "default": 0 },
+      { "name": "hpMax", "key": "tcg_prompt.hp_max", "mode": "realtime", "default": 0 }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "tcg-prompt-hero-title", "text": "你的英雄" },
+        { "type": "progressBar", "class": "tcg-prompt-hero-hp-bar", "current": "hp", "max": "hpMax" },
+        { "type": "label", "class": "tcg-prompt-hero-hp", "bind": "hp", "prefix": "血量 " },
+        { "type": "label", "class": "tcg-prompt-hero-trap", "text": "场上盖着：陷阱【反击】" }
+      ]
+    }
+  },
+  {
+    "id": "panel.tcg_prompt.mage_status",
+    "ownerKind": "participant",
+    "audienceSeats": ["seat.0"],
+    "graph": "graph.tcg_prompt.vitals",
+    "pins": [
+      { "name": "hp", "key": "tcg_prompt.hp", "mode": "realtime", "default": 0 },
+      { "name": "hpMax", "key": "tcg_prompt.hp_max", "mode": "realtime", "default": 0 }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "tcg-prompt-mage-title", "text": "敌方法师" },
+        { "type": "progressBar", "class": "tcg-prompt-mage-hp-bar", "current": "hp", "max": "hpMax" },
+        { "type": "label", "class": "tcg-prompt-mage-hp", "bind": "hp", "prefix": "血量 " }
+      ]
+    }
+  },
+  {
+    "id": "panel.tcg_prompt.turn_hint",
+    "ownerKind": "seat",
+    "width": 620,
+    "audienceSeats": ["seat.0"],
+    "graph": "graph.tcg_prompt.vitals",
+    "pins": [
+      { "name": "hp", "key": "tcg_prompt.hp", "mode": "realtime", "default": 0 }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "tcg-prompt-hint-title", "text": "你的回合" },
+        { "type": "label", "class": "tcg-prompt-hint-key", "text": "按 E 结束回合：轮到敌方法师，他会朝你放一发火球（-30）" },
+        { "type": "label", "class": "tcg-prompt-hint-trap", "text": "别慌，你场上盖着陷阱【反击】，火球飞来时牌桌会停下来问你要不要接招" }
+      ]
+    }
+  },
+  {
+    "id": "panel.tcg_prompt.prompt",
+    "ownerKind": "seat",
+    "width": 620,
+    "audienceSeats": ["seat.0"],
+    "graph": "graph.tcg_prompt.vitals",
+    "pins": [
+      { "name": "hp", "key": "tcg_prompt.hp", "mode": "realtime", "default": 0 }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "tcg-prompt-ask-title", "text": "敌方法师朝你放出【火球】（-30）！要不要接招？" },
+        { "type": "label", "class": "tcg-prompt-ask-pass", "text": "空格：让过——火球照打，你吃下 30" },
+        { "type": "label", "class": "tcg-prompt-ask-negate", "text": "N：打出【无效】——这发火球作废，谁也不掉血" },
+        { "type": "label", "class": "tcg-prompt-ask-activate", "text": "1：翻开陷阱【反击】——火球照打，同时反打法师 15" }
+      ]
+    }
+  }
+]

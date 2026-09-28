@@ -6568,6 +6568,29 @@
       ]
     },
     {
+      "id": "tcg_prompt",
+      "path": "mods/showcases/tcg_demo/TcgPromptShowcaseMod",
+      "title": "TCG 响应窗：要不要接招",
+      "summary": "按 E 结束回合，敌方法师朝你放火球；你场上盖着陷阱，牌桌停下来问你：空格让过、N 让火球作废、1 翻开反击同时反打法师。",
+      "tier": "T2",
+      "category": "demo",
+      "binding": "tcg_prompt_showcase",
+      "preset": "tcg_prompt_raylib",
+      "docsPath": "gitbook/reference/mod-editor-prd/reference/fx-07-response-chain.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.TcgPromptShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/tcg_prompt",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "tcg",
+        "response-chain",
+        "interaction",
+        "panel",
+        "showcase"
+      ]
+    },
+    {
       "id": "team_research",
       "path": "mods/showcases/team_research/TeamResearchShowcaseMod",
       "projectPath": "TeamResearchShowcaseMod.csproj",

@@ -2556,6 +2556,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "tcg_prompt_raylib",
+      "name": "TCG Prompt Raylib",
+      "selectors": [
+        "$tcg_prompt_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
