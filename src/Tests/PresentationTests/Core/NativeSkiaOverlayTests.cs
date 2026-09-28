@@ -326,6 +326,7 @@ public sealed class NativeSkiaOverlayTests
             MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExplicitHalfExtentCm = 0f,
+            Actions = MinimapTestActions.Create(),
         });
         var overlay = new ScreenOverlayBuffer();
 

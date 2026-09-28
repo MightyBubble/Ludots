@@ -5,6 +5,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Networking.Configuration;
@@ -90,6 +91,8 @@ namespace Ludots.Core.Config
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
         public CommandSourceAcquisitionConfig? CommandSource { get; set; }
+
+        public InteractionActionBindings? InteractionActions { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 
@@ -339,6 +342,12 @@ namespace Ludots.Core.Config
         /// </summary>
         [JsonPropertyName("responseChainOrderTypeIds")]
         public Dictionary<string, int> ResponseChainOrderTypeIds { get; set; } = new Dictionary<string, int>();
+
+        /// <summary>
+        /// Input action ids the human response-chain source reads, keyed like `responseChainOrderTypeIds`.
+        /// </summary>
+        [JsonPropertyName("responseChainActionIds")]
+        public Dictionary<string, string> ResponseChainActionIds { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
         /// Attribute names (previously in GameAttributes.cs): health, mana...

@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
@@ -16,6 +15,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly ResponseChainUiState _ui;
         private readonly OrderQueue _chainOrders;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
+        private readonly ResponseChainActionIds _actionIds;
 
         public OrderSubmitResult LastSubmissionResult { get; private set; } = OrderSubmitResult.RejectedByRule;
         public int LastSubmittedOrderId { get; private set; }
@@ -38,6 +38,7 @@ namespace Ludots.Core.Presentation.Systems
                 ChainNegate = RequireResponseChainOrderTypeId(config, "chainNegate"),
                 ChainActivateEffect = RequireResponseChainOrderTypeId(config, "chainActivateEffect")
             };
+            _actionIds = ResponseChainActionIds.Require(_globals, nameof(ResponseChainHumanOrderSourceSystem));
         }
 
         public void Initialize() { }
@@ -47,9 +48,7 @@ namespace Ludots.Core.Presentation.Systems
             if (!_ui.Visible) return;
             if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return;
 
-            var bindings = ResolveBindings();
-
-            if (input.PressedThisFrame(bindings.ResponseChainPassActionId))
+            if (input.PressedThisFrame(_actionIds.Pass))
             {
                 Submit(new Order
                 {
@@ -62,7 +61,7 @@ namespace Ludots.Core.Presentation.Systems
                 });
             }
 
-            if (input.PressedThisFrame(bindings.ResponseChainNegateActionId))
+            if (input.PressedThisFrame(_actionIds.Negate))
             {
                 Submit(new Order
                 {
@@ -75,7 +74,7 @@ namespace Ludots.Core.Presentation.Systems
                 });
             }
 
-            if (input.PressedThisFrame(bindings.ResponseChainActivateActionId))
+            if (input.PressedThisFrame(_actionIds.Activate))
             {
                 var args = default(OrderArgs);
                 args.I0 = _ui.PromptTagId;
@@ -95,11 +94,6 @@ namespace Ludots.Core.Presentation.Systems
         {
             LastSubmissionResult = _chainOrders.SubmitAssigned(ref order);
             LastSubmittedOrderId = order.OrderId;
-        }
-
-        private InteractionActionBindings ResolveBindings()
-        {
-            return InteractionActionBindingsResolver.Require(_globals, nameof(ResponseChainHumanOrderSourceSystem));
         }
 
         private static int RequireResponseChainOrderTypeId(GameConfig config, string key)

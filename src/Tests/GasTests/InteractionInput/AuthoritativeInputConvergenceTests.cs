@@ -44,6 +44,7 @@ namespace Ludots.Tests.GAS
         private const int InputConvergenceDebugMarkerSampleCapacity = 64;
         private const float InputConvergenceMinZoomHalfExtentCm = 750f;
         private const float InputConvergenceMaxZoomHalfExtentCm = 22000f;
+        private static readonly MinimapActionsConfig InputConvergenceMinimapActions = Ludots.Tests.Presentation.MinimapTestActions.Create();
 
         [Test]
         public void AuthoritativeInputAccumulator_PreservesEdgesUntilConsumed()
@@ -130,7 +131,12 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = registry,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -459,7 +465,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
             };
 
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -484,7 +495,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
                 [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
             };
 
@@ -569,8 +585,8 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.ToggleRotateWithCamera, Type = InputActionType.Button },
+                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
+                    new() { Id = InputConvergenceMinimapActions.ToggleRotateWithCamera, Type = InputActionType.Button },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -585,8 +601,8 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
                         }
                     }
                 }
@@ -735,8 +751,8 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.ToggleRotateWithCamera, Type = InputActionType.Button },
+                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
+                    new() { Id = InputConvergenceMinimapActions.ToggleRotateWithCamera, Type = InputActionType.Button },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -751,8 +767,8 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
                         }
                     }
                 }
@@ -908,12 +924,13 @@ namespace Ludots.Tests.GAS
                 MinZoomExplicitHalfExtentCm = InputConvergenceMinZoomHalfExtentCm,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
+                Actions = InputConvergenceMinimapActions,
             });
         }
 
         private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
         {
-            return new MinimapInputConsumer(minimap, NoMinimapFocusCollection);
+            return new MinimapInputConsumer(minimap, InputConvergenceMinimapActions, NoMinimapFocusCollection);
         }
 
         private static bool NoMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
@@ -958,7 +975,6 @@ namespace Ludots.Tests.GAS
                 ConfirmActionId = "Confirm",
                 CommandActionId = "Command",
                 CancelActionId = "Cancel",
-                PointerPositionActionId = "PointerPos",
             };
         }
 

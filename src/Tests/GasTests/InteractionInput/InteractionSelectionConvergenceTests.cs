@@ -397,7 +397,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                     new() { Id = "Stop", Name = "Stop", Type = InputActionType.Button },
                     new() { Id = "Confirm", Name = "Confirm", Type = InputActionType.Button },
-                    new() { Id = InteractionActionBindings.DefaultConfirmActionId, Name = "Command Source Acquire", Type = InputActionType.Button },
+                    new() { Id = "Select.Begin", Name = "Command Source Acquire", Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Additive, Name = CommandSourceModifierActionIds.Additive, Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Toggle, Name = CommandSourceModifierActionIds.Toggle, Type = InputActionType.Button },
                     new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },

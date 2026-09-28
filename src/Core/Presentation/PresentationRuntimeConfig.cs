@@ -211,6 +211,49 @@ namespace Ludots.Core.Presentation
         ExplicitCm = 2,
     }
 
+    public sealed class MinimapActionsConfig
+    {
+        private string? _toggle;
+        private string? _togglePreset;
+        private string? _toggleRotateWithCamera;
+        private string? _zoom;
+        private string? _zoomIn;
+        private string? _zoomOut;
+        private string? _pan;
+        private string? _centerOnFocusPrimary;
+
+        public string Toggle { get => Require(_toggle, "toggle"); set => _toggle = value; }
+        public string TogglePreset { get => Require(_togglePreset, "togglePreset"); set => _togglePreset = value; }
+        public string ToggleRotateWithCamera { get => Require(_toggleRotateWithCamera, "toggleRotateWithCamera"); set => _toggleRotateWithCamera = value; }
+        public string Zoom { get => Require(_zoom, "zoom"); set => _zoom = value; }
+        public string ZoomIn { get => Require(_zoomIn, "zoomIn"); set => _zoomIn = value; }
+        public string ZoomOut { get => Require(_zoomOut, "zoomOut"); set => _zoomOut = value; }
+        public string Pan { get => Require(_pan, "pan"); set => _pan = value; }
+        public string CenterOnFocusPrimary { get => Require(_centerOnFocusPrimary, "centerOnFocusPrimary"); set => _centerOnFocusPrimary = value; }
+
+        public void Validate()
+        {
+            _ = Toggle;
+            _ = TogglePreset;
+            _ = ToggleRotateWithCamera;
+            _ = Zoom;
+            _ = ZoomIn;
+            _ = ZoomOut;
+            _ = Pan;
+            _ = CenterOnFocusPrimary;
+        }
+
+        private static string Require(string? value, string field)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"presentation.minimap.actions.{field} must be explicitly configured.");
+            }
+
+            return value;
+        }
+    }
+
     public sealed class MinimapRuntimeConfig
     {
         private float? _initialZoomNormalized;
@@ -224,6 +267,7 @@ namespace Ludots.Core.Presentation
         private MinimapZoomExtentMode? _maxZoomExtentMode;
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
+        private MinimapActionsConfig? _actions;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
@@ -236,9 +280,16 @@ namespace Ludots.Core.Presentation
         public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
         public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
         public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
+        public MinimapActionsConfig Actions
+        {
+            get => _actions ?? throw new InvalidOperationException("presentation.minimap.actions must be explicitly configured.");
+            set => _actions = value;
+        }
 
         public void Validate()
         {
+            Actions.Validate();
+
             float initialZoom = PresentationRuntimeConfig.RequireFinite(_initialZoomNormalized, "presentation.minimap.initialZoomNormalized");
             if (initialZoom < 0f || initialZoom > 1f)
             {

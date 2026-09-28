@@ -1229,7 +1229,9 @@ namespace Ludots.Core.Engine
             var inputRequestQueue = new InputRequestQueue();
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
-            var interactionActionBindings = new InteractionActionBindings();
+            var interactionActionBindings = config.InteractionActions
+                ?? throw new InvalidOperationException("game.json interactionActions must be explicitly configured.");
+            interactionActionBindings.Validate();
             var filterProfileIdRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var filterProfileRegistry = new FilterProfileRegistry(filterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
@@ -1601,6 +1603,7 @@ namespace Ludots.Core.Engine
             {
                 new MinimapInputConsumer(
                     minimapRuntime,
+                    presentationConfig.Minimap.Actions,
                     static (GameEngine engine, out Entity owner, out string collectionKey) =>
                     {
                         owner = Entity.Null;

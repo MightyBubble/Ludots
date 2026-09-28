@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using System.Numerics;
@@ -13,12 +12,14 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly ResponseChainUiState _ui;
         private readonly OrderTypeRegistry _orderTypeRegistry;
+        private readonly ResponseChainActionIds _actionIds;
  
         public ResponseChainUiSyncSystem(Dictionary<string, object> globals, ResponseChainUiState ui, OrderTypeRegistry orderTypeRegistry)
         {
             _globals = globals;
             _ui = ui;
             _orderTypeRegistry = orderTypeRegistry;
+            _actionIds = ResponseChainActionIds.Require(_globals, nameof(ResponseChainUiSyncSystem));
         }
  
         public void Initialize() { }
@@ -44,7 +45,6 @@ namespace Ludots.Core.Presentation.Systems
             Vector4 title = new(1f, 0.92f, 0.35f, 1f);
             Vector4 text = new(1f, 1f, 1f, 0.95f);
             Vector4 hint = new(0.72f, 0.82f, 0.95f, 0.9f);
-            var bindings = ResolveBindings();
 
             int x = 12;
             int y = 12;
@@ -76,7 +76,7 @@ namespace Ludots.Core.Presentation.Systems
             overlay.AddText(
                 x + padding,
                 lineY + 4,
-                $"Pass={bindings.ResponseChainPassActionId}  Negate={bindings.ResponseChainNegateActionId}  Activate={bindings.ResponseChainActivateActionId}",
+                $"Pass={_actionIds.Pass}  Negate={_actionIds.Negate}  Activate={_actionIds.Activate}",
                 13,
                 hint);
 
@@ -86,11 +86,6 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private InteractionActionBindings ResolveBindings()
-        {
-            return InteractionActionBindingsResolver.Require(_globals, nameof(ResponseChainUiSyncSystem));
-        }
- 
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }

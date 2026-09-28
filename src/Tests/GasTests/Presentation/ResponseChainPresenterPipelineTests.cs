@@ -372,14 +372,9 @@ namespace Ludots.Tests.GAS
                             ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
                             ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
                             ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
-                        }
+                        },
+                        ResponseChainActionIds = TestResponseChainActionIds()
                     }
-                },
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ResponseChainPassActionId = "UiPass",
-                    ResponseChainNegateActionId = "UiNegate",
-                    ResponseChainActivateActionId = "UiActivate"
                 }
             };
 
@@ -433,14 +428,9 @@ namespace Ludots.Tests.GAS
                             ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
                             ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
                             ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
-                        }
+                        },
+                        ResponseChainActionIds = TestResponseChainActionIds()
                     }
-                },
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
-                {
-                    ResponseChainPassActionId = "UiPass",
-                    ResponseChainNegateActionId = "UiNegate",
-                    ResponseChainActivateActionId = "UiActivate"
                 }
             };
             var admissionResults = new OrderAdmissionResultBuffer(4, 4);
@@ -504,11 +494,12 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
                 {
-                    ResponseChainPassActionId = "UiPass",
-                    ResponseChainNegateActionId = "UiNegate",
-                    ResponseChainActivateActionId = "UiActivate"
+                    Constants = new GameConstants
+                    {
+                        ResponseChainActionIds = TestResponseChainActionIds()
+                    }
                 }
             };
 
@@ -518,22 +509,22 @@ namespace Ludots.Tests.GAS
                     new ResponseChainUiState(),
                     new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64))));
 
-            That(ex!.Message, Does.Contain("GameConfig"));
-            That(ex.Message, Does.Contain("chainPass"));
+            That(ex!.Message, Does.Contain("constants.responseChainOrderTypeIds.chainPass"));
         }
 
         [Test]
-        public void ResponseChainUiSyncSystem_UsesInteractionBindingHints()
+        public void ResponseChainUiSyncSystem_UsesConfiguredActionHints()
         {
             var overlay = new ScreenOverlayBuffer();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.ScreenOverlayBuffer.Name] = overlay,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
                 {
-                    ResponseChainPassActionId = "UiPass",
-                    ResponseChainNegateActionId = "UiNegate",
-                    ResponseChainActivateActionId = "UiActivate"
+                    Constants = new GameConstants
+                    {
+                        ResponseChainActionIds = TestResponseChainActionIds()
+                    }
                 }
             };
 
@@ -558,6 +549,43 @@ namespace Ludots.Tests.GAS
             string[] lines = GetOverlayStrings(overlay);
             That(lines, Has.Some.EqualTo("Pass=UiPass  Negate=UiNegate  Activate=UiActivate"));
             That(lines, Has.Some.EqualTo("- Pass (1)"));
+        }
+
+        [Test]
+        public void ResponseChainUiSyncSystem_MissingActionIds_IsRejected()
+        {
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
+                {
+                    Constants = new GameConstants
+                    {
+                        ResponseChainActionIds = new Dictionary<string, string>
+                        {
+                            ["chainPass"] = "UiPass",
+                            ["chainNegate"] = "UiNegate"
+                        }
+                    }
+                }
+            };
+
+            var ex = Throws<InvalidOperationException>(() =>
+                new ResponseChainUiSyncSystem(
+                    globals,
+                    new ResponseChainUiState(),
+                    new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity))));
+
+            That(ex!.Message, Does.Contain("constants.responseChainActionIds.chainActivateEffect"));
+        }
+
+        private static Dictionary<string, string> TestResponseChainActionIds()
+        {
+            return new Dictionary<string, string>
+            {
+                ["chainPass"] = "UiPass",
+                ["chainNegate"] = "UiNegate",
+                ["chainActivateEffect"] = "UiActivate"
+            };
         }
 
         private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay)

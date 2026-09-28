@@ -1284,6 +1284,17 @@ namespace Ludots.Tests.Architecture
                     MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
                     MinZoomExplicitHalfExtentCm = 750f,
                     MaxZoomExplicitHalfExtentCm = 0f,
+                    Actions = new MinimapActionsConfig
+                    {
+                        Toggle = "Minimap.Toggle",
+                        TogglePreset = "Minimap.TogglePreset",
+                        ToggleRotateWithCamera = "Minimap.ToggleRotateWithCamera",
+                        Zoom = "Minimap.Zoom",
+                        ZoomIn = "Minimap.ZoomIn",
+                        ZoomOut = "Minimap.ZoomOut",
+                        Pan = "Minimap.Pan",
+                        CenterOnFocusPrimary = "Minimap.CenterOnFocusPrimary",
+                    },
                 },
             };
         }
