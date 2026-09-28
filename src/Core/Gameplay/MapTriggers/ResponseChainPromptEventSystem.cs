@@ -25,7 +25,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<ScriptContext> _contextFactory;
 
         private int _announcedWindowId;
-        private Entity _announcedActor;
+        private Entity _announcedWindowSource;
         private Entity _announcedRep;
         private MapId _announcedMap;
 
@@ -64,11 +64,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_announcedRep != Entity.Null)
                 {
-                    Fire(_announcedMap, GameEvents.ResponseChainPromptClosed, _announcedActor, _announcedRep);
+                    Fire(_announcedMap, GameEvents.ResponseChainPromptClosed, _announcedWindowSource, _announcedRep);
                 }
 
                 _announcedWindowId = 0;
-                _announcedActor = Entity.Null;
+                _announcedWindowSource = Entity.Null;
                 _announcedRep = Entity.Null;
                 _announcedMap = default;
             }
@@ -91,17 +91,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            _announcedActor = _prompt.Actor;
+            _announcedWindowSource = _prompt.WindowSource;
             _announcedRep = rep;
             _announcedMap = _world.Get<MapEntity>(rep).MapId;
-            Fire(_announcedMap, GameEvents.ResponseChainPromptOpened, _announcedActor, _announcedRep);
+            Fire(_announcedMap, GameEvents.ResponseChainPromptOpened, _announcedWindowSource, _announcedRep);
         }
 
-        private void Fire(MapId mapId, EventKey eventKey, Entity actor, Entity rep)
+        private void Fire(MapId mapId, EventKey eventKey, Entity windowSource, Entity rep)
         {
             ScriptContext context = _contextFactory();
             context.Set(ContextKeys.MapId, mapId);
-            context.Set(MapTriggerEventPayloadKeys.SourceEntity, actor);
+            context.Set(MapTriggerEventPayloadKeys.SourceEntity, windowSource);
             context.Set(MapTriggerEventPayloadKeys.TargetEntity, rep);
             _triggerManager.FireMapEvent(mapId, eventKey, context);
         }

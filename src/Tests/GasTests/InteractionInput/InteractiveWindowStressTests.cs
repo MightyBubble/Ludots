@@ -66,14 +66,6 @@ namespace Ludots.Tests.GAS
                     new GraphProgramRegistry(),
                     "Test/InteractiveWindowStressTests.Stress.json");
 
-                var listenerEntity = world.Create();
-                unsafe
-                {
-                    var listener = new ResponseChainListener();
-                    listener.Add(tagOpen, ResponseType.PromptInput, priority: 100, effectTemplateId: inputRequestTag);
-                    world.Add(listenerEntity, listener);
-                }
-
                 var clock = new DiscreteClock();
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
@@ -103,6 +95,12 @@ namespace Ludots.Tests.GAS
                 };
 
                 var source = world.Create(new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
+                unsafe
+                {
+                    var listener = new ResponseChainListener();
+                    listener.Add(tagOpen, ResponseType.PromptInput, priority: 100, effectTemplateId: inputRequestTag);
+                    world.Add(source, listener);
+                }
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(attrHealth, 1000f);
@@ -115,11 +113,7 @@ namespace Ludots.Tests.GAS
                     That(promptState.IsOpen, Is.True);
                     That(orderReq.TryDequeue(out _), Is.True);
                     var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
-                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
-                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
                     That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
-                    That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
-                    That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
                     processing.Update(1f);
                     admissionResults.EndEntityIntake();
                     admissionResults.EndLogicStep();
@@ -164,11 +158,7 @@ namespace Ludots.Tests.GAS
                     if (!promptState.IsOpen) promptsNotOpened++;
                     if (!orderReq.TryDequeue(out _)) failedOrderDequeues++;
                     var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
-                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
-                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
                     if (chainOrders.SubmitAssigned(ref activate) != OrderSubmitResult.Queued) failedSubmissions++;
-                    if (chainOrders.SubmitAssigned(ref pass1) != OrderSubmitResult.Queued) failedSubmissions++;
-                    if (chainOrders.SubmitAssigned(ref pass2) != OrderSubmitResult.Queued) failedSubmissions++;
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     phase0 = processing.DebugProposalWindowPhase;

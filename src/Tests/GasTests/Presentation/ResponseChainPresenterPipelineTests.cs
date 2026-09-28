@@ -107,10 +107,8 @@ namespace Ludots.Tests.GAS
                 args.I0 = tplRoot;
                 var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args };
                 var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
-                var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
                 That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
                 That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
-                That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
  
                 processing.Update(0f);
 
@@ -118,8 +116,8 @@ namespace Ludots.Tests.GAS
                 That(activateIntake.Result, Is.EqualTo(OrderSubmitResult.Activated));
                 That(admissionResults.TryGet(pass1.OrderId, OrderAdmissionStage.EntityIntake, out var pass1Intake), Is.True);
                 That(pass1Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
-                That(admissionResults.TryGet(pass2.OrderId, OrderAdmissionStage.EntityIntake, out var pass2Intake), Is.True);
-                That(pass2Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(promptState.IsOpen, Is.False, "the activated link re-prompted the same player, whose single pass resolved the chain");
+                That(chainOrders.Count, Is.Zero);
  
                 bool sawAdded = false;
                 bool sawClosed = false;
@@ -189,14 +187,12 @@ namespace Ludots.Tests.GAS
             world.Add(actor, listener);
 
             int previousPass1Id = 0;
-            int previousPass2Id = 0;
             for (int frame = 0; frame < 10_000; frame++)
             {
                 admissionResults.BeginLogicStep();
                 if (previousPass1Id > 0)
                 {
                     That(admissionResults.TryGet(previousPass1Id, OrderAdmissionStage.GlobalIntake, out _), Is.False);
-                    That(admissionResults.TryGet(previousPass2Id, OrderAdmissionStage.GlobalIntake, out _), Is.False);
                 }
 
                 requests.Publish(new EffectRequest
@@ -210,19 +206,14 @@ namespace Ludots.Tests.GAS
                 That(orderRequests.TryDequeue(out _), Is.True);
 
                 var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = actor, Target = actor };
-                var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = actor, Target = actor };
                 That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
-                That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
                 processing.Update(0f);
 
                 That(admissionResults.TryGet(pass1.OrderId, OrderAdmissionStage.EntityIntake, out var pass1Intake), Is.True);
                 That(pass1Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
-                That(admissionResults.TryGet(pass2.OrderId, OrderAdmissionStage.EntityIntake, out var pass2Intake), Is.True);
-                That(pass2Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
                 That(chainOrders.Count, Is.Zero);
 
                 previousPass1Id = pass1.OrderId;
-                previousPass2Id = pass2.OrderId;
                 admissionResults.EndEntityIntake();
                 admissionResults.EndLogicStep();
             }

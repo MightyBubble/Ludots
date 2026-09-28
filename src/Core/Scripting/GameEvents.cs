@@ -171,8 +171,8 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Map-scoped: a response-chain window started waiting for a player's answer.
-        /// Payload: SourceEntity (the window's acting unit), TargetEntity (the prompted
-        /// player's representative entity; the event routes through its map).
+        /// Payload: SourceEntity (the unit whose effect opened the window), TargetEntity (the
+        /// prompted player's representative entity; the event routes through its map).
         /// </summary>
         public static readonly EventKey ResponseChainPromptOpened = new EventKey("ResponseChain.PromptOpened");
 

@@ -61,6 +61,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public const string ResponseQueueOverflowError = "GAS.RESPONSE_CHAIN.ERR.ResponseQueueOverflow";
         public const string PromptStateMissingError = "GAS.RESPONSE_CHAIN.ERR.PromptStateMissing";
         public const string InputRequestTagMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestTagMissing";
+        public const string PromptResponderWithoutOwnerError = "GAS.RESPONSE_CHAIN.ERR.PromptResponderWithoutOwner";
         public const string OrderRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.OrderRequestQueueFull";
 
         private readonly EffectRequestQueue _queue = null!;
@@ -129,12 +130,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private EffectRequest _activeReq;
         private int _responseSteps;
         private int _creates;
-        private int _passStreak;
         private int _pendingNegates;
         private int _resolveIndex;
         private int _resolveNegatesRemaining;
         private bool _interactiveRequested;
         private bool _closeRequested;
+        private Entity _promptResponder;
         private bool _inputRequestSent;
         private int _inputRequestTagId;
         private int _nextWindowId = 1;
@@ -460,7 +461,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _window.Clear();
                     _responseSteps = 0;
                     _creates = 0;
-                    _passStreak = 0;
                     _pendingNegates = 0;
                     _resolveIndex = -1;
                     _resolveNegatesRemaining = 0;
@@ -468,6 +468,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _closeRequested = false;
                     _inputRequestSent = false;
                     _inputRequestTagId = 0;
+                    _promptResponder = Entity.Null;
                     _emitTelemetry = rootTpl.ParticipatesInResponse;
 
                     var rootModifiers = rootTpl.Modifiers;
@@ -594,7 +595,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                                     case ResponseType.PromptInput:
                                         _interactiveRequested = true;
-                                        if (_inputRequestTagId == 0) _inputRequestTagId = response.EffectTemplateId;
+                                        if (_inputRequestTagId == 0)
+                                        {
+                                            _inputRequestTagId = response.EffectTemplateId;
+                                            _promptResponder = response.ResponseEntity;
+                                        }
                                         break;
                                 }
                             }
@@ -647,14 +652,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
                         }
 
-                        var src = _window[0].Source;
-                        if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
+                        var responder = _promptResponder;
+                        if (!World.IsAlive(responder) || !World.Has<PlayerOwner>(responder))
                         {
                             throw new InvalidOperationException(
-                                $"Response-chain prompt requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                                $"{PromptResponderWithoutOwnerError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, responder={responder}.");
                         }
 
-                        int playerId = World.Get<PlayerOwner>(src).PlayerId;
+                        int playerId = World.Get<PlayerOwner>(responder).PlayerId;
                         if (playerId <= 0)
                         {
                             throw new InvalidOperationException(
@@ -668,7 +673,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 RequestId = _activeReq.RootId,
                                 PromptTagId = _inputRequestTagId,
                                 PlayerId = playerId,
-                                Actor = src,
+                                Actor = responder,
                                 Target = _window[0].Target,
                                 TargetContext = _window[0].TargetContext,
                                 AllowedCount = 0
@@ -687,7 +692,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _promptState.Open(
                             _nextWindowId++,
                             playerId,
-                            src,
+                            responder,
+                            _window[0].Source,
                             _window[0].Target,
                             _window[0].TargetContext,
                             _inputRequestTagId);
@@ -709,7 +715,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
-                    if (!World.IsAlive(_promptState!.Actor))
+                    if (!World.IsAlive(_promptState!.Responder))
                     {
                         _promptState.RecordAbandonedForMissingActor();
                         _closeRequested = true;
@@ -748,6 +754,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             bool admissionCommitted = false;
                             try
                             {
+                                if (order.Actor != _promptState.Responder)
+                                {
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.RejectedValidation,
+                                        ref admissionCommitted);
+                                    ConsumeWork(ref workUnits);
+                                    continue;
+                                }
+
                                 if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
                                 {
                                     if (_telemetry != null && _emitTelemetry)
@@ -771,18 +788,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         in order,
                                         OrderSubmitResult.Activated,
                                         ref admissionCommitted);
-                                    _passStreak++;
-                                    if (_passStreak >= 2)
-                                    {
-                                        _closeRequested = true;
-                                        break;
-                                    }
-
-                                    ConsumeWork(ref workUnits);
-                                    continue;
+                                    _closeRequested = true;
+                                    break;
                                 }
 
-                                _passStreak = 0;
                                 if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
                                 {
                                     if (_telemetry != null && _emitTelemetry)
@@ -807,8 +816,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         OrderSubmitResult.Activated,
                                         ref admissionCommitted);
                                     _pendingNegates++;
-                                    ConsumeWork(ref workUnits);
-                                    continue;
+                                    _closeRequested = true;
+                                    break;
                                 }
 
                                 if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
@@ -860,8 +869,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     var chained = new EffectProposal
                                     {
                                         RootId = _activeReq.RootId,
-                                        Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
-                                        Target = _activeReq.Target,
+                                        Source = order.Actor,
+                                        Target = order.Actor == _activeReq.Source ? _activeReq.Target : _activeReq.Source,
                                         TargetContext = _activeReq.TargetContext,
                                         TemplateId = order.Args.I0,
                                         CategoryId = tpl.CategoryId,
@@ -951,6 +960,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         in order,
                                         OrderSubmitResult.Activated,
                                         ref admissionCommitted);
+                                    _interactiveRequested = false;
+                                    _inputRequestSent = false;
+                                    _inputRequestTagId = 0;
+                                    _promptResponder = Entity.Null;
+                                    _promptState.Close();
                                     _phase = WindowPhase.Collect;
                                     ConsumeWork(ref workUnits);
                                     goto ContinueOuter;
@@ -1026,7 +1040,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             continue;
                         }
 
-                        if (i > 0 && _resolveNegatesRemaining > 0)
+                        if (_resolveNegatesRemaining > 0)
                         {
                             _resolveNegatesRemaining--;
                             if (_telemetry != null && _emitTelemetry)
@@ -1161,7 +1175,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _inputRequestSent = false;
                     _promptState?.Close();
                     _pendingNegates = 0;
-                    _passStreak = 0;
                     ConsumeWork(ref workUnits);
                     continue;
                 }
@@ -1323,7 +1336,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _rootCountSnapshot = 0;
             _responseSteps = 0;
             _creates = 0;
-            _passStreak = 0;
             _pendingNegates = 0;
             _resolveIndex = 0;
             _resolveNegatesRemaining = 0;
@@ -1331,6 +1343,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _closeRequested = false;
             _inputRequestSent = false;
             _inputRequestTagId = 0;
+            _promptResponder = Entity.Null;
             _promptState?.Close();
             _emitTelemetry = false;
             _sliceActive = false;

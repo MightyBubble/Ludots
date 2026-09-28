@@ -2377,7 +2377,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             var prompt = _responseChainPrompt;
-            if (!prompt.IsOpen || prompt.PlayerId != owner.PlayerId)
+            if (!prompt.IsOpen || prompt.Answered || prompt.PlayerId != owner.PlayerId)
             {
                 prompt.RecordRejectedWithoutPrompt();
                 return;
@@ -2387,8 +2387,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 OrderTypeId = orderTypeId,
                 PlayerId = owner.PlayerId,
-                Actor = prompt.Actor,
-                Target = prompt.Target,
+                Actor = prompt.Responder,
+                Target = prompt.WindowTarget,
                 TargetContext = prompt.TargetContext,
             };
             if (activate)
