@@ -373,11 +373,11 @@ public sealed class FourXAssociationRuntime
             ?? throw new InvalidOperationException("FourXAssociationShowcase requires TagOps.");
         AttributeMutationOps.SetCurrent(world, _playerA, _goldAttributeId, config.StartingGold, tagOps, Entity.Null);
 
-        OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
-            ?? throw new InvalidOperationException("OwnershipResolver missing.");
-        ownership.EnsureOwnership(_playerA, _cityA);
-        ownership.EnsureOwnership(_playerB, _cityB);
-        ownership.EnsureOwnership(_playerB, _hiddenUnit);
+        RelationshipRuntime ownershipEdges = RequireRelationships(engine);
+        int ownsTypeId = ownershipEdges.Roles.OwnershipTypeId;
+        ownershipEdges.EnsureLink(_playerA, _cityA, ownsTypeId);
+        ownershipEdges.EnsureLink(_playerB, _cityB, ownsTypeId);
+        ownershipEdges.EnsureLink(_playerB, _hiddenUnit, ownsTypeId);
 
         InventoryRuntimeService inventory = engine.GetService(CoreServiceKeys.InventoryRuntimeService)
             ?? throw new InvalidOperationException("InventoryRuntimeService missing.");
@@ -519,10 +519,10 @@ public sealed class FourXAssociationRuntime
             supplyCount = inventory.CountStackUnits(_playerA, _supplyItemId);
             requirementSatisfied = EvaluateRequirement(engine);
 
-            OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
-                ?? throw new InvalidOperationException("OwnershipResolver missing.");
-            rootMatches = ownership.TryResolveRootOwner(_cityAStash, out Entity rootOwner) && rootOwner == _playerA;
-            directCityToStash = ownership.TryGetDirectOwner(_cityAStash, out Entity directOwner) && directOwner == _cityA;
+            RelationshipRuntime ownershipEdges = RequireRelationships(engine);
+            int ownsTypeId = ownershipEdges.Roles.OwnershipTypeId;
+            rootMatches = ownershipEdges.TryResolveRootSource(_cityAStash, ownsTypeId, out Entity rootOwner) && rootOwner == _playerA;
+            directCityToStash = ownershipEdges.TryGetSingleSource(_cityAStash, ownsTypeId, out Entity directOwner) && directOwner == _cityA;
         }
 
         return new FourXAssociationSnapshot(

@@ -91,8 +91,7 @@ public sealed class OwnershipCascadeShowcaseAcceptanceTests
 
         var relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
             ?? throw new InvalidOperationException("RelationshipRuntime missing.");
-        int ownsTypeId = engine.GetService(CoreServiceKeys.OwnershipResolver)?.OwnsTypeId
-            ?? throw new InvalidOperationException("OwnershipResolver missing.");
+        int ownsTypeId = relationships.Roles.OwnershipTypeId;
         Assert.That(ownsTypeId, Is.EqualTo(relationships.TypeRegistry.GetId("Owns")));
 
         WriteTrace(artifactDir, initial, captured, reclaimed, frameTimesMs);

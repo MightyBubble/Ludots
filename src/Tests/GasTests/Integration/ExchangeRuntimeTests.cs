@@ -873,8 +873,8 @@ namespace Ludots.Tests.GAS
             int diplomacyTypeId = relationshipTypes.GetId("Diplomacy");
             int trustMetricId = relationshipMetrics.GetId("Trust");
             int embargoFlagId = relationshipFlags.GetId("Embargo");
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
-            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, ownership);
+            DefaultRelationshipRules.Install(relationships);
+            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, relationships, ownsTypeId);
             var operations = new ExchangeOperationRegistry();
             var scoped = new ExchangeScopedOperationStore();
             var effects = new EffectRequestQueue();

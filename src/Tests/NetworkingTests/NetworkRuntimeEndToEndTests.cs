@@ -1525,10 +1525,10 @@ public sealed class NetworkRuntimeEndToEndTests
             new RelationshipReverseIndex(world));
         int ownsType = relationshipTypes.Register("Owns");
         int controlsType = relationshipTypes.Register("Controls");
-        var ownership = new OwnershipResolver(relationships, ownsType);
-        ownership.EnsureOwnership(player, first);
-        ownership.EnsureOwnership(player, second);
-        var control = new ControlDomainQuery(world, relationships, ownership, ownsType, controlsType);
+        DefaultRelationshipRules.Install(relationships);
+        relationships.EnsureLink(player, first, ownsType);
+        relationships.EnsureLink(player, second, ownsType);
+        var control = new ControlDomainQuery(world, relationships, ownsType, controlsType);
         var entities = new NetworkEntityTable(capacity: 2);
         Assert.That(entities.TryAllocate(first, out NetworkEntityHandle firstHandle), Is.True);
         Assert.That(entities.TryAllocate(second, out NetworkEntityHandle secondHandle), Is.True);

@@ -704,8 +704,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipBandRegistry(),
                 new RelationshipChangeBuffer(capacity: 8),
                 new RelationshipReverseIndex(world));
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
-            var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+            DefaultRelationshipRules.Install(relationships);
+            var controlDomains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
             var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
             {
                 StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },

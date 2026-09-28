@@ -891,16 +891,15 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 entityCollectionStore);
             relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
+            relationshipRuntime.Rules.InstallFromCatalog(relationshipCatalog);
             var relationshipRoles = RelationshipRoleBindings.Resolve(relationshipCatalog, relationshipTypeRegistry);
             int memberOfRelationshipTypeId = relationshipRoles.MembershipTypeId;
-            var ownershipResolver = new OwnershipResolver(relationshipRuntime, relationshipRoles.OwnershipTypeId);
-            ownershipResolver.BindIdentityProjection(World);
+            int ownsRelationshipTypeId = relationshipRoles.OwnershipTypeId;
             relationshipRuntime.BindParticipantIdentityProjection(relationshipRoles);
             var controlDomainQuery = new ControlDomainQuery(
                 World,
                 relationshipRuntime,
-                ownershipResolver,
-                relationshipRoles.OwnershipTypeId,
+                ownsRelationshipTypeId,
                 relationshipRoles.ControlGrantTypeId);
             var domainStanceQuery = DomainStanceQuery.Create(
                 relationshipRuntime,
@@ -1122,7 +1121,7 @@ namespace Ludots.Core.Engine
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
-            var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, ownershipResolver);
+            var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, relationshipRuntime, ownsRelationshipTypeId);
             var exchangeRuntime = new ExchangeRuntime(
                 World,
                 exchangeOperations,
@@ -2037,7 +2036,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
             SetService(CoreServiceKeys.RngStreamService, rngStreams);
             SetService(CoreServiceKeys.RngPickService, rngPickService);
-            SetService(CoreServiceKeys.OwnershipResolver, ownershipResolver);
             SetService(CoreServiceKeys.InventoryRuntimeService, inventoryRuntime);
             SetService(CoreServiceKeys.ExchangeOperationRegistry, exchangeOperations);
             SetService(CoreServiceKeys.ExchangeScopedOperationStore, exchangeScopedOperations);
@@ -2408,8 +2406,8 @@ namespace Ludots.Core.Engine
                 presenterDefinitions,
                 componentAuthoringContext,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
-                ownership: ownershipResolver,
                 relationships: relationshipRuntime,
+                ownsTypeId: ownsRelationshipTypeId,
                 memberOfTypeId: memberOfRelationshipTypeId);
             var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
@@ -2436,12 +2434,11 @@ namespace Ludots.Core.Engine
                 WorldSizeSpec,
                 presentationTimingDiagnostics,
                 componentAuthoringContext,
-                ownership: ownershipResolver,
                 playerLookup: playerEntityLookup,
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
-                ownsTypeId: ownershipResolver.OwnsTypeId,
+                ownsTypeId: ownsRelationshipTypeId,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
                 initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);
@@ -2970,7 +2967,6 @@ namespace Ludots.Core.Engine
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
                         GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                        GetService(CoreServiceKeys.OwnershipResolver),
                         GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
                 SetMapEntitiesSuspended(mid, true);
 
@@ -3147,7 +3143,6 @@ namespace Ludots.Core.Engine
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
                     GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                    GetService(CoreServiceKeys.OwnershipResolver),
                     GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
             SetMapEntitiesSuspended(inner, true);
 

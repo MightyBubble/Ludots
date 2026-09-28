@@ -59,7 +59,6 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly WorldSizeSpec _worldSizeSpec;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly ComponentAuthoringContext _authoringContext;
-        private readonly OwnershipResolver? _ownership;
         private readonly PlayerEntityLookup? _playerLookup;
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
@@ -103,7 +102,6 @@ namespace Ludots.Core.Gameplay.Spawning
             WorldSizeSpec worldSizeSpec = default,
             PresentationTimingDiagnostics? timingDiagnostics = null,
             ComponentAuthoringContext? authoringContext = null,
-            OwnershipResolver? ownership = null,
             PlayerEntityLookup? playerLookup = null,
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
@@ -135,7 +133,6 @@ namespace Ludots.Core.Gameplay.Spawning
             _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
             _presentationEvents = presentationEvents;
             _timingDiagnostics = timingDiagnostics;
-            _ownership = ownership;
             _playerLookup = playerLookup;
             _teamLookup = teamLookup;
             _relationships = relationships;
@@ -144,6 +141,8 @@ namespace Ludots.Core.Gameplay.Spawning
             _entityTriggerGraphMounts = entityTriggerGraphMounts;
             _initialInteractionContexts = initialInteractionContexts;
         }
+
+        private bool HasOwnershipTopology => _relationships != null && _ownsTypeId >= 0;
 
         public override void Update(in float dt)
         {
@@ -778,7 +777,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
             bool hasExplicitRelationshipWork = false;
-            bool hasOwnershipEdgeWork = _ownership != null && _playerLookup != null;
+            bool hasOwnershipEdgeWork = HasOwnershipTopology && _playerLookup != null;
             bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
             for (int i = 0; i < count; i++)
             {
@@ -1158,7 +1157,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 owner = World.Get<PlayerOwner>(request.Source);
             }
 
-            if (_ownership != null && _playerLookup != null &&
+            if (HasOwnershipTopology && _playerLookup != null &&
                 _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
             {
                 if (!World.Has<PlayerIdentity>(playerRep))
@@ -1174,8 +1173,8 @@ namespace Ludots.Core.Gameplay.Spawning
                         $"Player {owner.PlayerId} resolved representative {playerRep.Id} whose PlayerIdentity is {identityPlayerId}.");
                 }
 
-                _ownership.EnsureOwnership(playerRep, entity);
-                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _ownership);
+                _relationships!.EnsureLink(playerRep, entity, _ownsTypeId);
+                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _relationships, _ownsTypeId);
                 return;
             }
 
@@ -1186,20 +1185,20 @@ namespace Ludots.Core.Gameplay.Spawning
         /// <summary>RFC-0065 CTRL-2: runtime spawns join the ownership topology exactly like map-load binding.</summary>
         private void TryLinkOwnershipEdge(Entity entity)
         {
-            if (_ownership == null || _playerLookup == null)
+            if (!HasOwnershipTopology || _playerLookup == null)
             {
                 return;
             }
 
-            OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
+            OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _relationships!, _ownsTypeId, _playerLookup, entity);
         }
 
         private void ApplyRelationshipPlan(in SpawnRelationshipPlan plan, Entity entity)
         {
             if (plan.HasOwnershipSource)
             {
-                _ownership!.EnsureOwnership(plan.OwnershipSource, entity);
-                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _ownership);
+                _relationships!.EnsureLink(plan.OwnershipSource, entity, _ownsTypeId);
+                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _relationships, _ownsTypeId);
             }
 
             if (plan.HasMembershipTarget)
@@ -1245,9 +1244,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private void PreflightExplicitRelationship(in RuntimeEntitySpawnRequest request)
         {
             if (request.HasOwnershipSource != 0 &&
-                (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource)))
+                (!HasOwnershipTopology || !IsAliveInCurrentWorld(request.OwnershipSource)))
             {
-                throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
+                throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and the relationship runtime with an ownership type.");
             }
 
             if (request.HasMembershipTarget != 0 &&

@@ -2547,7 +2547,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, commandActor);
+            commandHarness.Relationships.EnsureLink(localPlayer, commandActor, commandHarness.OwnsTypeId);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.programmatic",
@@ -2659,7 +2659,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, commandActor);
+            commandHarness.Relationships.EnsureLink(localPlayer, commandActor, commandHarness.OwnsTypeId);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.none_target",
@@ -2840,8 +2840,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, firstSource);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, secondSource);
+            commandHarness.Relationships.EnsureLink(localPlayer, firstSource, commandHarness.OwnsTypeId);
+            commandHarness.Relationships.EnsureLink(localPlayer, secondSource, commandHarness.OwnsTypeId);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.atomic_batch",
@@ -2966,8 +2966,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, unroutedNearActor);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, routedFarActor);
+            commandHarness.Relationships.EnsureLink(localPlayer, unroutedNearActor, commandHarness.OwnsTypeId);
+            commandHarness.Relationships.EnsureLink(localPlayer, routedFarActor, commandHarness.OwnsTypeId);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.routed_only",
@@ -3098,8 +3098,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, authorizedActor);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, foreignActor);
+            commandHarness.Relationships.EnsureLink(localPlayer, authorizedActor, commandHarness.OwnsTypeId);
+            commandHarness.Relationships.EnsureLink(localPlayer, foreignActor, commandHarness.OwnsTypeId);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.atomic_authorization",
@@ -4163,8 +4163,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity grantedActor = world.Create();
             Entity foreignActor = world.Create();
             var harness = CreateControlDomain(world);
-            harness.Ownership.EnsureOwnership(playerOne, ownedActor);
-            harness.Ownership.EnsureOwnership(playerTwo, foreignActor);
+            harness.Relationships.EnsureLink(playerOne, ownedActor, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(playerTwo, foreignActor, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(playerOne, grantedActor, harness.ControlsTypeId);
             var players = new PlayerEntityLookup();
             players.Register(1, playerOne);
@@ -4436,17 +4436,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new RelationshipReverseIndex(world));
             int ownsTypeId = types.Register("Owns");
             int controlsTypeId = types.Register("Controls");
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            DefaultRelationshipRules.Install(relationships);
             return new ControlDomainHarness(
                 relationships,
-                ownership,
-                new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId),
+                ownsTypeId,
+                new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId),
                 controlsTypeId);
         }
 
         private readonly record struct ControlDomainHarness(
             RelationshipRuntime Relationships,
-            OwnershipResolver Ownership,
+            int OwnsTypeId,
             ControlDomainQuery Domains,
             int ControlsTypeId);
     }

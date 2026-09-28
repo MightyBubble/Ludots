@@ -30,9 +30,9 @@ namespace Ludots.Tests.GAS
             Entity mOwn = world.Create();
             Entity mEnemy1 = world.Create();
             Entity mEnemy2 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, mOwn);
-            harness.Ownership.EnsureOwnership(p3Rep, mEnemy1);
-            harness.Ownership.EnsureOwnership(p3Rep, mEnemy2);
+            harness.Relationships.EnsureLink(p1Rep, mOwn, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p3Rep, mEnemy1, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p3Rep, mEnemy2, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(p1Rep, mEnemy1, harness.ControlsTypeId);
 
             harness.ReplaceDomainCollection(p1Rep, stackalloc Entity[] { mOwn });
@@ -57,8 +57,8 @@ namespace Ludots.Tests.GAS
             Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity mOwn = world.Create();
             Entity mEnemy1 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, mOwn);
-            harness.Ownership.EnsureOwnership(p3Rep, mEnemy1);
+            harness.Relationships.EnsureLink(p1Rep, mOwn, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p3Rep, mEnemy1, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(p1Rep, mEnemy1, harness.ControlsTypeId);
 
             harness.ReplaceDomainCollection(p1Rep, stackalloc Entity[] { mOwn });
@@ -90,7 +90,7 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity mEnemy1 = world.Create();
-            harness.Ownership.EnsureOwnership(p3Rep, mEnemy1);
+            harness.Relationships.EnsureLink(p3Rep, mEnemy1, harness.OwnsTypeId);
             harness.ReplaceDomainCollection(p3Rep, stackalloc Entity[] { mEnemy1 });
 
             uint initial = harness.View.ComputeRevision(p1Rep, harness.CommandSourceKeyId);
@@ -119,14 +119,14 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < 4; i++)
             {
                 Entity own = world.Create();
-                harness.Ownership.EnsureOwnership(p1Rep, own);
+                harness.Relationships.EnsureLink(p1Rep, own, harness.OwnsTypeId);
                 p1Members[i] = own;
             }
 
             for (int i = 0; i < 8; i++)
             {
                 Entity enemy = world.Create();
-                harness.Ownership.EnsureOwnership(p3Rep, enemy);
+                harness.Relationships.EnsureLink(p3Rep, enemy, harness.OwnsTypeId);
                 p3Members[i] = enemy;
             }
 
@@ -158,7 +158,7 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity mOwn = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, mOwn);
+            harness.Relationships.EnsureLink(p1Rep, mOwn, harness.OwnsTypeId);
 
             const int foreignRows = 50_000;
             const int grantCount = 64;
@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < foreignRows; i++)
             {
                 foreign[i] = world.Create();
-                harness.Ownership.EnsureOwnership(p3Rep, foreign[i]);
+                harness.Relationships.EnsureLink(p3Rep, foreign[i], harness.OwnsTypeId);
             }
 
             var granted = new Entity[grantCount];
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS
         private sealed class Harness
         {
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
+            public int OwnsTypeId;
             public EntityCollectionStore Store = null!;
             public ControlPlaneView View = null!;
             public int ControlsTypeId;
@@ -314,14 +314,14 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var query = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var query = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
                 return new Harness
                 {
                     Relationships = relationships,
-                    Ownership = ownership,
+                    OwnsTypeId = ownsTypeId,
                     Store = store,
                     View = new ControlPlaneView(store, query),
                     ControlsTypeId = controlsTypeId,

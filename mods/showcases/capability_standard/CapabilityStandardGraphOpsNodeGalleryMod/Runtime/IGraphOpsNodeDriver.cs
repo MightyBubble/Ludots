@@ -46,7 +46,7 @@ public sealed class GraphOpsNodeDriverContext
     public TagOps? TagOps { get; set; }
     public GameplayEventBus? EventBus { get; set; }
     public GraphCallbackService? GraphCallbacks { get; set; }
-    public OwnershipResolver? Ownership { get; set; }
+    public int OwnsTypeId { get; set; } = -1;
     public KnowledgeProjectionStore? Knowledge { get; set; }
     public ISpatialCoordinateConverter? Coords { get; set; }
     public ISpatialQueryService? SpatialQueries { get; set; }

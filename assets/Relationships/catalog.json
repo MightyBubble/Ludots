@@ -3,7 +3,12 @@
     {
       "id": "Owns",
       "isSymmetric": false,
-      "role": "Ownership"
+      "role": "Ownership",
+      "rules": {
+        "maxIncoming": 1,
+        "onFull": "Replace",
+        "acyclic": true
+      }
     },
     {
       "id": "Controls",

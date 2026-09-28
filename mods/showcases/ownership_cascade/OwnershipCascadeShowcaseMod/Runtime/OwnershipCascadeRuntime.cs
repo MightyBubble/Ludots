@@ -154,11 +154,12 @@ public sealed class OwnershipCascadeRuntime
         _warehouse = CreateNamed(world, _config.WarehouseName);
         _production = CreateNamed(world, _config.ProductionName);
 
-        OwnershipResolver ownership = RequireOwnership(engine);
-        ownership.EnsureOwnership(_enemyPlayer, _city);
-        ownership.EnsureOwnership(_city, _garrison);
-        ownership.EnsureOwnership(_city, _warehouse);
-        ownership.EnsureOwnership(_city, _production);
+        RelationshipRuntime relationships = RequireRelationships(engine);
+        int ownsTypeId = relationships.Roles.OwnershipTypeId;
+        relationships.EnsureLink(_enemyPlayer, _city, ownsTypeId);
+        relationships.EnsureLink(_city, _garrison, ownsTypeId);
+        relationships.EnsureLink(_city, _warehouse, ownsTypeId);
+        relationships.EnsureLink(_city, _production, ownsTypeId);
 
         _scenarioReady = true;
         _status = "Neutral city starts under enemy ownership. Press C to capture.";
@@ -167,11 +168,8 @@ public sealed class OwnershipCascadeRuntime
 
     private void ReassignCity(GameEngine engine, Entity player, string status)
     {
-        OwnershipResolver ownership = RequireOwnership(engine);
-        ownership.EnsureOwnership(player, _city);
-        ownership.EnsureOwnership(_city, _garrison);
-        ownership.EnsureOwnership(_city, _warehouse);
-        ownership.EnsureOwnership(_city, _production);
+        RelationshipRuntime relationships = RequireRelationships(engine);
+        relationships.EnsureLink(player, _city, relationships.Roles.OwnershipTypeId);
         _status = status;
         PushLog(status);
         RefreshPanelInternal(engine);
@@ -195,10 +193,8 @@ public sealed class OwnershipCascadeRuntime
                 0);
         }
 
-        OwnershipResolver ownership = RequireOwnership(engine);
-        RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
-            ?? throw new InvalidOperationException("RelationshipRuntime missing.");
-        int ownsTypeId = ownership.OwnsTypeId;
+        RelationshipRuntime relationships = RequireRelationships(engine);
+        int ownsTypeId = relationships.Roles.OwnershipTypeId;
         return new OwnershipCascadeSnapshot(
             CityOwner: ResolveOwnerName(engine, _city),
             GarrisonOwner: ResolveOwnerName(engine, _garrison),
@@ -214,8 +210,8 @@ public sealed class OwnershipCascadeRuntime
 
     private string ResolveOwnerName(GameEngine engine, Entity entity)
     {
-        OwnershipResolver ownership = RequireOwnership(engine);
-        if (!ownership.TryResolveRootOwner(entity, out Entity owner))
+        RelationshipRuntime relationships = RequireRelationships(engine);
+        if (!relationships.TryResolveRootSource(entity, relationships.Roles.OwnershipTypeId, out Entity owner))
         {
             return "none";
         }
@@ -230,10 +226,10 @@ public sealed class OwnershipCascadeRuntime
         return entity;
     }
 
-    private OwnershipResolver RequireOwnership(GameEngine engine)
+    private static RelationshipRuntime RequireRelationships(GameEngine engine)
     {
-        return engine.GetService(CoreServiceKeys.OwnershipResolver)
-            ?? throw new InvalidOperationException("OwnershipResolver missing.");
+        return engine.GetService(CoreServiceKeys.RelationshipRuntime)
+            ?? throw new InvalidOperationException("RelationshipRuntime missing.");
     }
 
     private GameEngine? TryGetEngine()

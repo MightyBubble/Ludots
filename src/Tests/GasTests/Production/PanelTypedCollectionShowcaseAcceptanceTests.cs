@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Scripting;
@@ -148,15 +149,15 @@ public sealed class PanelTypedCollectionShowcaseAcceptanceTests
                 InventoryRuntimeService inventory =
                     engine.GetService(CoreServiceKeys.InventoryRuntimeService)
                     ?? throw new InvalidOperationException("InventoryRuntimeService missing.");
-                OwnershipResolver ownership =
-                    engine.GetService(CoreServiceKeys.OwnershipResolver)
-                    ?? throw new InvalidOperationException("OwnershipResolver missing.");
+                RelationshipRuntime relationships =
+                    engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                    ?? throw new InvalidOperationException("RelationshipRuntime missing.");
                 Span<Entity> items = stackalloc Entity[4];
                 int itemCount = inventory.CollectOwnedItemInstances(hero, items);
                 Assert.That(itemCount, Is.EqualTo(3));
                 for (int i = 0; i < itemCount; i++)
                 {
-                    Assert.That(ownership.IsOwnedBy(hero, items[i]), Is.True);
+                    Assert.That(relationships.IsUpstreamOf(hero, items[i], relationships.Roles.OwnershipTypeId), Is.True);
                     Assert.That(engine.World.Get<PlayerOwner>(items[i]).PlayerId, Is.EqualTo(1));
                 }
                 break;

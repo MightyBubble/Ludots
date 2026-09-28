@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS
 
             Entity spawned = SpawnAssembly(harness, playerOwnerIdOverride: 42);
 
-            Assert.That(harness.Ownership.TryGetDirectOwner(spawned, out _), Is.False,
+            Assert.That(harness.Relationships.TryGetSingleSource(spawned, harness.OwnsTypeId, out _), Is.False,
                 "A PlayerOwner id with no bound rep has no control domain, so no edge exists.");
         }
 
@@ -114,7 +114,6 @@ namespace Ludots.Tests.GAS
         {
             public World World = null!;
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
             public ControlDomainQuery ControlDomains = null!;
             public PlayerEntityLookup Players = null!;
             public RuntimeEntitySpawnQueue Requests = null!;
@@ -134,7 +133,7 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
+                DefaultRelationshipRules.Install(relationships);
                 var players = new PlayerEntityLookup();
                 var requests = new RuntimeEntitySpawnQueue(capacity: 8);
                 var system = new RuntimeEntitySpawnSystem(
@@ -143,14 +142,14 @@ namespace Ludots.Tests.GAS
                     new DataRegistry<EntityTemplate>(null!),
                     new EntityTemplateKeyRegistry(),
                     new Ludots.Core.Presentation.PresentationStableIdAllocator(),
-                    ownership: ownership,
+                    relationships: relationships,
+                    ownsTypeId: ownsTypeId,
                     playerLookup: players);
                 return new Harness
                 {
                     World = world,
                     Relationships = relationships,
-                    Ownership = ownership,
-                    ControlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId),
+                    ControlDomains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId),
                     Players = players,
                     Requests = requests,
                     System = system,

@@ -227,7 +227,7 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 7 });
             harness.BindSoleSeat(rep);
             Entity carrier = world.Create();
-            harness.Ownership.EnsureOwnership(rep, carrier);
+            harness.Relationships.EnsureLink(rep, carrier, harness.OwnsTypeId);
 
             harness.MountContext(rep, ContextA);
             harness.System.Update(0.016f);
@@ -253,7 +253,7 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 7 });
             harness.BindSoleSeat(rep);
             Entity carrier = world.Create();
-            harness.Ownership.EnsureOwnership(rep, carrier);
+            harness.Relationships.EnsureLink(rep, carrier, harness.OwnsTypeId);
 
             harness.MountContext(rep, ContextA);
             harness.System.Update(0.016f);
@@ -281,7 +281,7 @@ namespace Ludots.Tests.GAS
             harness.BindSoleSeat(rep);
             Entity otherRep = world.Create(new PlayerIdentity { PlayerId = 9 });
             Entity carrier = world.Create();
-            harness.Ownership.EnsureOwnership(otherRep, carrier);
+            harness.Relationships.EnsureLink(otherRep, carrier, harness.OwnsTypeId);
 
             harness.MountContext(otherRep, ContextA);
             harness.System.Update(0.016f);
@@ -297,7 +297,7 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 7 });
             harness.BindSoleSeat(rep);
             Entity carrier = world.Create();
-            harness.Ownership.EnsureOwnership(rep, carrier);
+            harness.Relationships.EnsureLink(rep, carrier, harness.OwnsTypeId);
             world.Add(rep, new InteractionMode { ModeId = harness.Map.ModeIdRegistry.GetId(ModeSiege) });
 
             harness.MountContext(rep, ContextB);
@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 7 });
             harness.BindSoleSeat(rep);
             Entity carrier = world.Create();
-            harness.Ownership.EnsureOwnership(rep, carrier);
+            harness.Relationships.EnsureLink(rep, carrier, harness.OwnsTypeId);
 
             harness.MountContext(rep, "imc.test.undefined");
 
@@ -427,10 +427,10 @@ namespace Ludots.Tests.GAS
             Assert.That(system.LastCommands.Count, Is.EqualTo(2));
         }
 
-        private static ControlDomainQuery NewControlDomainQuery(World world, out OwnershipResolver ownership)
+        private static ControlDomainQuery NewControlDomainQuery(World world, out RelationshipRuntime relationships, out int ownsTypeId)
         {
             var types = new RelationshipTypeRegistry();
-            var relationships = new RelationshipRuntime(
+            relationships = new RelationshipRuntime(
                 world,
                 types,
                 new RelationshipMetricRegistry(),
@@ -438,10 +438,10 @@ namespace Ludots.Tests.GAS
                 new RelationshipBandRegistry(),
                 new RelationshipChangeBuffer(capacity: 4),
                 new RelationshipReverseIndex(world));
-            int ownsTypeId = types.Register("Owns");
+            ownsTypeId = types.Register("Owns");
             int controlsTypeId = types.Register("Controls");
-            ownership = new OwnershipResolver(relationships, ownsTypeId);
-            return new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+            DefaultRelationshipRules.Install(relationships);
+            return new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
         }
 
         // ── Harness ──
@@ -477,15 +477,15 @@ namespace Ludots.Tests.GAS
             public InteractionModeMap Map = null!;
             public InputContextProjectionSystem System = null!;
             public InteractionContextProfileRegistry ContextProfiles = null!;
-            public OwnershipResolver Ownership = null!;
+            public RelationshipRuntime Relationships = null!;
+            public int OwnsTypeId;
             private World _world = null!;
             private readonly Dictionary<string, object> _globals = new();
 
             public static ProjectionHarness Create(World world, bool withHandler)
             {
                 var harness = new ProjectionHarness { Map = new ModeMapFixture().Map };
-                var domains = NewControlDomainQuery(world, out OwnershipResolver ownership);
-                harness.Ownership = ownership;
+                var domains = NewControlDomainQuery(world, out harness.Relationships, out harness.OwnsTypeId);
                 harness.ContextProfiles = NewContextProfiles();
                 harness._world = world;
                 if (withHandler)

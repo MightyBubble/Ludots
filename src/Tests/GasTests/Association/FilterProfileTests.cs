@@ -38,9 +38,9 @@ namespace Ludots.Tests.GAS
             Entity m01 = world.Create();
             Entity m02 = world.Create();
             Entity m99 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
-            harness.Ownership.EnsureOwnership(p2Rep, m99);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p2Rep, m99, harness.OwnsTypeId);
 
             int profileId = harness.ProfileIds.GetId(DefaultProfileId);
             Span<Entity> filtered = stackalloc Entity[8];
@@ -63,8 +63,8 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity m01 = world.Create();
             Entity m02 = world.Create(new GameplayTagContainer());
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);
 
             int profileId = harness.ProfileIds.GetId(DefaultProfileId);
@@ -89,8 +89,8 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity tagged = world.Create(new GameplayTagContainer());
             Entity untagged = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, tagged);
-            harness.Ownership.EnsureOwnership(p1Rep, untagged);
+            harness.Relationships.EnsureLink(p1Rep, tagged, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, untagged, harness.OwnsTypeId);
             world.Get<GameplayTagContainer>(tagged).AddTag(selectableTagId);
 
             int profileId = harness.ProfileIds.GetId("filter.selectable.only");
@@ -116,8 +116,8 @@ namespace Ludots.Tests.GAS
             Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity m99 = world.Create();
             Entity dead = world.Create(new GameplayTagContainer());
-            harness.Ownership.EnsureOwnership(p2Rep, m99);
-            harness.Ownership.EnsureOwnership(p2Rep, dead);
+            harness.Relationships.EnsureLink(p2Rep, m99, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p2Rep, dead, harness.OwnsTypeId);
             world.Get<GameplayTagContainer>(dead).AddTag(deadTagId);
 
             int profileId = harness.ProfileIds.GetId("filter.anything.alive");
@@ -140,8 +140,8 @@ namespace Ludots.Tests.GAS
             {
                 Entity own = world.Create();
                 Entity foreign = world.Create();
-                harness.Ownership.EnsureOwnership(p1Rep, own);
-                harness.Ownership.EnsureOwnership(p2Rep, foreign);
+                harness.Relationships.EnsureLink(p1Rep, own, harness.OwnsTypeId);
+                harness.Relationships.EnsureLink(p2Rep, foreign, harness.OwnsTypeId);
                 raw[i * 2] = own;
                 raw[(i * 2) + 1] = foreign;
             }
@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS
         internal sealed class Harness
         {
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
+            public int OwnsTypeId;
             public FilterProfileRegistry Filters = null!;
             public StringIntRegistry ProfileIds = null!;
             public int ControlsTypeId;
@@ -265,8 +265,8 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var domains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var filters = new FilterProfileRegistry(profileIds, world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()));
                 filters.RegisterExpander(
@@ -276,7 +276,7 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     Relationships = relationships,
-                    Ownership = ownership,
+                    OwnsTypeId = ownsTypeId,
                     Filters = filters,
                     ProfileIds = profileIds,
                     ControlsTypeId = controlsTypeId,

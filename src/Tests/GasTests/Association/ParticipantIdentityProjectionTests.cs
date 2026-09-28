@@ -16,7 +16,7 @@ namespace Ludots.Tests.GAS
     public sealed class ParticipantIdentityProjectionTests
     {
         [Test]
-        public void EnsureOwnership_ProjectsPlayerOwnerFromPlayerIdentity_AndFollowsLaterTransfers()
+        public void OwnershipLink_ProjectsPlayerOwnerFromPlayerIdentity_AndFollowsLaterTransfers()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
@@ -24,21 +24,21 @@ namespace Ludots.Tests.GAS
             Entity playerB = world.Create(new PlayerIdentity { PlayerId = 9 });
             Entity unit = world.Create();
 
-            harness.Ownership.EnsureOwnership(playerA, unit);
+            harness.Relationships.EnsureLink(playerA, unit, harness.OwnsTypeId);
 
             Assert.That(world.TryGet(unit, out PlayerOwner owner), Is.True);
             Assert.That(owner.PlayerId, Is.EqualTo(4));
 
-            harness.Ownership.EnsureOwnership(playerB, unit);
+            harness.Relationships.EnsureLink(playerB, unit, harness.OwnsTypeId);
 
             Assert.That(world.Get<PlayerOwner>(unit).PlayerId, Is.EqualTo(9));
             Assert.That(harness.Relationships.HasLink(playerA, unit, harness.OwnsTypeId), Is.False);
             Assert.That(harness.Relationships.HasLink(playerB, unit, harness.OwnsTypeId), Is.True);
 
-            harness.Ownership.ClearOwnership(unit);
+            harness.Relationships.RemoveIncoming(unit, harness.OwnsTypeId);
 
             Assert.That(world.Has<PlayerOwner>(unit), Is.False);
-            Assert.That(harness.Ownership.TryGetDirectOwner(unit, out _), Is.False);
+            Assert.That(harness.Relationships.TryGetSingleSource(unit, harness.OwnsTypeId, out _), Is.False);
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace Ludots.Tests.GAS
 
             Entity spawned = FindSpawnedUnit(world, Entity.Null);
             Assert.That(world.Get<PlayerOwner>(spawned).PlayerId, Is.EqualTo(42));
-            Assert.That(harness.Ownership.TryGetDirectOwner(spawned, out _), Is.False);
+            Assert.That(harness.Relationships.TryGetSingleSource(spawned, harness.OwnsTypeId, out _), Is.False);
         }
 
         private static Entity FindSpawnedUnit(World world, Entity exclude)
@@ -122,7 +122,6 @@ namespace Ludots.Tests.GAS
         private sealed class Harness
         {
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
             public PlayerEntityLookup Players = null!;
             public RuntimeEntitySpawnQueue Requests = null!;
             public RuntimeEntitySpawnSystem System = null!;
@@ -142,8 +141,9 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int memberOfTypeId = types.Register("MemberOf");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                ownership.BindIdentityProjection(world);
+                int controlsTypeId = types.Register("Controls");
+                DefaultRelationshipRules.Install(relationships);
+                relationships.BindParticipantIdentityProjection(new RelationshipRoleBindings(ownsTypeId, memberOfTypeId, controlsTypeId));
                 var players = new PlayerEntityLookup();
                 var requests = new RuntimeEntitySpawnQueue(capacity: 8);
                 var system = new RuntimeEntitySpawnSystem(
@@ -152,7 +152,6 @@ namespace Ludots.Tests.GAS
                     new DataRegistry<EntityTemplate>(null!),
                     new EntityTemplateKeyRegistry(),
                     new PresentationStableIdAllocator(),
-                    ownership: ownership,
                     playerLookup: players,
                     relationships: relationships,
                     memberOfTypeId: memberOfTypeId,
@@ -160,7 +159,6 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     Relationships = relationships,
-                    Ownership = ownership,
                     Players = players,
                     Requests = requests,
                     System = system,

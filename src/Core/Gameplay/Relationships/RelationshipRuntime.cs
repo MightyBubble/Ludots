@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -10,7 +9,7 @@ using Ludots.Core.Gameplay.Relationships.Config;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
-    public sealed class RelationshipRuntime
+    public sealed partial class RelationshipRuntime
     {
         private static readonly QueryDescription RelationshipEntityQuery = new QueryDescription()
             .WithAll<RelationshipInstanceCm>();
@@ -23,9 +22,8 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
         private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
-        private OwnershipResolver? _ownership;
+        private readonly RelationshipTypeRuleRegistry _rules;
         private RelationshipRoleBindings? _roles;
-        private Entity[] _releasedOwnerScratch = new Entity[2];
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -45,38 +43,24 @@ namespace Ludots.Core.Gameplay.Relationships
             _bands = bands ?? throw new ArgumentNullException(nameof(bands));
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
+            _rules = new RelationshipTypeRuleRegistry(types);
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
-        }
-
-        /// <summary>
-        /// Called by the <see cref="OwnershipResolver"/> constructor. From then on every link of the
-        /// ownership type keeps the single-direct-owner invariant: a new owner replaces the previous one.
-        /// </summary>
-        internal void AttachOwnership(OwnershipResolver ownership)
-        {
-            ArgumentNullException.ThrowIfNull(ownership);
-            ValidateTypeId(ownership.OwnsTypeId);
-            if (_ownership != null && _ownership.OwnsTypeId != ownership.OwnsTypeId)
-            {
-                throw new InvalidOperationException(
-                    $"RelationshipRuntime already enforces ownership on type {_ownership.OwnsTypeId}; cannot attach a second ownership type {ownership.OwnsTypeId}.");
-            }
-
-            _ownership = ownership;
         }
 
         public void BindParticipantIdentityProjection(RelationshipRoleBindings roles)
         {
             ArgumentNullException.ThrowIfNull(roles);
-            if (_ownership == null || _ownership.OwnsTypeId != roles.OwnershipTypeId)
-            {
-                throw new InvalidOperationException(
-                    $"Participant identity projection requires the OwnershipResolver for role type {roles.OwnershipTypeId} to be constructed on this runtime first.");
-            }
-
+            ValidateTypeId(roles.OwnershipTypeId);
             ValidateTypeId(roles.MembershipTypeId);
             ValidateTypeId(roles.ControlGrantTypeId);
+            if (!_rules.TryGet(roles.OwnershipTypeId, out RelationshipTypeRule ownershipRule) || ownershipRule.MaxIncoming != 1)
+            {
+                throw new InvalidOperationException(
+                    $"PlayerOwner is projected from the single root reached along '{_types.Get(roles.OwnershipTypeId).Name}'; " +
+                    "declare rules.maxIncoming: 1 on that type in Relationships/catalog.json.");
+            }
+
             _roles = roles;
         }
 
@@ -84,42 +68,24 @@ namespace Ludots.Core.Gameplay.Relationships
             ?? throw new InvalidOperationException(
                 "Relationship roles are not bound; the engine binds them from Relationships/catalog.json at install.");
 
+        public RelationshipTypeRuleRegistry Rules => _rules;
+
         private void ProjectParticipantIdentity(Entity source, Entity target, int typeId)
         {
-            if (_ownership != null && typeId == _ownership.OwnsTypeId)
+            if (_roles == null)
             {
-                _ownership.ProjectPlayerOwnerTree(target);
                 return;
             }
 
-            if (_roles != null && typeId == _roles.MembershipTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
+            if (typeId == _roles.OwnershipTypeId)
+            {
+                ProjectPlayerOwnerSubtree(target, typeId);
+                return;
+            }
+
+            if (typeId == _roles.MembershipTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
             {
                 ParticipantIdentityProjector.SyncTeam(_world, source, this, _roles.MembershipTypeId);
-            }
-        }
-
-        private void ReleaseOtherOwners(Entity newOwner, Entity owned, int ownsTypeId)
-        {
-            int count;
-            int dropped;
-            while (true)
-            {
-                count = CollectIncoming(owned, ownsTypeId, _releasedOwnerScratch, out dropped);
-                if (dropped == 0)
-                {
-                    break;
-                }
-
-                Array.Resize(ref _releasedOwnerScratch, count + dropped);
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                Entity previousOwner = _releasedOwnerScratch[i];
-                if (previousOwner != newOwner)
-                {
-                    RemoveLinkCore(previousOwner, owned, ownsTypeId, projectIdentity: false);
-                }
             }
         }
 
@@ -279,19 +245,19 @@ namespace Ludots.Core.Gameplay.Relationships
             EnsureAliveInRuntimeWorld(source, target);
 
             int validatedTypeId = ValidateTypeId(typeId);
-            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
-
-            if (set.HasType(validatedTypeId))
+            if (HasLink(source, target, validatedTypeId))
             {
                 MaterializeRelationshipEntity(source, target, validatedTypeId);
                 return;
             }
 
-            if (_ownership != null && validatedTypeId == _ownership.OwnsTypeId)
+            if (_rules.TryGet(validatedTypeId, out RelationshipTypeRule rule))
             {
-                ReleaseOtherOwners(source, target, validatedTypeId);
+                RejectLinkBreakingRule(source, target, validatedTypeId, in rule);
+                MakeRoomForLink(source, target, validatedTypeId, in rule);
             }
 
+            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
             set.Set(validatedTypeId, RelationshipEdge.CreateDefault(_metrics));
             if (hasExisting)
             {
@@ -312,11 +278,6 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
-        {
-            RemoveLinkCore(source, target, typeId, projectIdentity: true);
-        }
-
-        private void RemoveLinkCore(Entity source, Entity target, int typeId, bool projectIdentity)
         {
             if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
@@ -346,10 +307,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
-            if (projectIdentity)
-            {
-                ProjectParticipantIdentity(source, target, validatedTypeId);
-            }
+            ProjectParticipantIdentity(source, target, validatedTypeId);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
                 metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));

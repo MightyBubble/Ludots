@@ -1,7 +1,6 @@
 using System;
 using Arch.Core;
 using Arch.Core.Extensions;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
@@ -88,10 +87,38 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void BareOwnershipLink_ReplacesThePreviousOwnerAndReprojectsTheWholeOwnedTree()
+        public void OwnershipRoleWithoutSingleSourceRule_FailsWhenProjectionIsBound()
         {
             using World world = World.Create();
-            RelationshipRuntime relationships = CreateBoundRuntime(world, out OwnershipResolver ownership, out RelationshipRoleBindings roles);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => CreateBoundRuntime(world, holdsRules: null, out _));
+            Assert.That(ex!.Message, Does.Contain("'Holds'").And.Contain("maxIncoming: 1"));
+        }
+
+        [Test]
+        public void OwnershipLink_UnderSingleSourceRejectRule_KeepsTheFirstOwner()
+        {
+            using World world = World.Create();
+            var rejectRules = new RelationshipTypeRulesConfig { MaxIncoming = 1, OnFull = RelationshipCapacityPolicy.Reject };
+            RelationshipRuntime relationships = CreateBoundRuntime(world, rejectRules, out RelationshipRoleBindings roles);
+
+            Entity red = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity blue = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity castle = world.Create();
+            relationships.EnsureLink(red, castle, roles.OwnershipTypeId);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => relationships.EnsureLink(blue, castle, roles.OwnershipTypeId));
+            Assert.That(ex!.Message, Does.Contain("maxIncoming"));
+            Assert.That(relationships.HasLink(red, castle, roles.OwnershipTypeId), Is.True);
+            Assert.That(relationships.HasLink(blue, castle, roles.OwnershipTypeId), Is.False);
+            Assert.That(castle.Get<PlayerOwner>().PlayerId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void OwnershipLink_UnderSingleSourceReplaceRule_ReplacesPreviousOwnerAndReprojectsTheWholeTree()
+        {
+            using World world = World.Create();
+            RelationshipRuntime relationships = CreateBoundRuntime(world, SingleOwnerRules(), out RelationshipRoleBindings roles);
 
             Entity red = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity blue = world.Create(new PlayerIdentity { PlayerId = 2 });
@@ -108,11 +135,10 @@ namespace Ludots.Tests.GAS
             Span<Entity> owners = stackalloc Entity[4];
             Assert.That(relationships.CollectIncoming(castle, roles.OwnershipTypeId, owners), Is.EqualTo(1));
             Assert.That(owners[0], Is.EqualTo(blue));
-            Assert.That(relationships.HasLink(red, castle, roles.OwnershipTypeId), Is.False);
             Assert.That(castle.Get<PlayerOwner>().PlayerId, Is.EqualTo(2));
             Assert.That(garrison.Get<PlayerOwner>().PlayerId, Is.EqualTo(2));
             Assert.That(cannon.Get<PlayerOwner>().PlayerId, Is.EqualTo(2));
-            Assert.That(ownership.TryResolveRootOwner(cannon, out Entity root), Is.True);
+            Assert.That(relationships.TryResolveRootSource(cannon, roles.OwnershipTypeId, out Entity root), Is.True);
             Assert.That(root, Is.EqualTo(blue));
         }
 
@@ -120,7 +146,7 @@ namespace Ludots.Tests.GAS
         public void RemovingAnOwnershipLink_ClearsPlayerOwnerFromTheWholeDetachedTree()
         {
             using World world = World.Create();
-            RelationshipRuntime relationships = CreateBoundRuntime(world, out _, out RelationshipRoleBindings roles);
+            RelationshipRuntime relationships = CreateBoundRuntime(world, SingleOwnerRules(), out RelationshipRoleBindings roles);
 
             Entity red = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity castle = world.Create();
@@ -140,7 +166,7 @@ namespace Ludots.Tests.GAS
         public void RelinkingTheSameOwner_KeepsExactlyOneOwnershipEdge()
         {
             using World world = World.Create();
-            RelationshipRuntime relationships = CreateBoundRuntime(world, out _, out RelationshipRoleBindings roles);
+            RelationshipRuntime relationships = CreateBoundRuntime(world, SingleOwnerRules(), out RelationshipRoleBindings roles);
 
             Entity red = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity castle = world.Create();
@@ -156,7 +182,7 @@ namespace Ludots.Tests.GAS
         public void MembershipLink_ProjectsTeamFromTheRepresentativeTheRoleNames()
         {
             using World world = World.Create();
-            RelationshipRuntime relationships = CreateBoundRuntime(world, out _, out RelationshipRoleBindings roles);
+            RelationshipRuntime relationships = CreateBoundRuntime(world, SingleOwnerRules(), out RelationshipRoleBindings roles);
 
             Entity blueBanner = world.Create(new TeamIdentity { TeamId = 7 });
             Entity knight = world.Create();
@@ -167,25 +193,23 @@ namespace Ludots.Tests.GAS
             Assert.That(knight.Has<Team>(), Is.False);
         }
 
-        [Test]
-        public void SecondOwnershipResolverOnAnotherType_FailsFast()
+        private static RelationshipTypeRulesConfig SingleOwnerRules() => new()
         {
-            using World world = World.Create();
-            RelationshipRuntime relationships = CreateBoundRuntime(world, out _, out RelationshipRoleBindings roles);
-
-            Assert.Throws<InvalidOperationException>(() => new OwnershipResolver(relationships, roles.MembershipTypeId));
-        }
+            MaxIncoming = 1,
+            OnFull = RelationshipCapacityPolicy.Replace,
+            Acyclic = true,
+        };
 
         private static RelationshipRuntime CreateBoundRuntime(
             World world,
-            out OwnershipResolver ownership,
+            RelationshipTypeRulesConfig? holdsRules,
             out RelationshipRoleBindings roles)
         {
             var catalog = new RelationshipCatalogConfig
             {
                 Types =
                 {
-                    new RelationshipTypeConfig { Id = "Holds", Role = RelationshipRole.Ownership },
+                    new RelationshipTypeConfig { Id = "Holds", Role = RelationshipRole.Ownership, Rules = holdsRules },
                     new RelationshipTypeConfig { Id = "Commands", Role = RelationshipRole.ControlGrant },
                     new RelationshipTypeConfig { Id = "SwornTo", Role = RelationshipRole.Membership },
                 },
@@ -205,8 +229,7 @@ namespace Ludots.Tests.GAS
                 new RelationshipReverseIndex(world));
 
             roles = RelationshipRoleBindings.Resolve(catalog, types);
-            ownership = new OwnershipResolver(relationships, roles.OwnershipTypeId);
-            ownership.BindIdentityProjection(world);
+            relationships.Rules.InstallFromCatalog(catalog);
             relationships.BindParticipantIdentityProjection(roles);
             return relationships;
         }

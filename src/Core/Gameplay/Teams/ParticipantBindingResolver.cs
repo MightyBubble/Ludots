@@ -56,7 +56,6 @@ namespace Ludots.Core.Gameplay.Teams
             MapLoadEntityIndex entityIndex,
             RelationshipRuntime? relationships,
             RelationshipTypeRegistry? relationshipTypes,
-            OwnershipResolver? ownership = null,
             DomainStanceConfig? stanceCatalog = null)
         {
             ArgumentNullException.ThrowIfNull(session);
@@ -151,7 +150,7 @@ namespace Ludots.Core.Gameplay.Teams
                 playerLookup);
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);
-            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, ownership);
+            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships);
 
             bool hasParticipantBindings = mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0;
             return new ParticipantBindingResult(
@@ -613,18 +612,17 @@ namespace Ludots.Core.Gameplay.Teams
             MapConfig mapConfig,
             TeamEntityLookup teams,
             PlayerEntityLookup players,
-            RelationshipRuntime? relationships,
-            OwnershipResolver? ownership)
+            RelationshipRuntime? relationships)
         {
             if (mapConfig.Teams.Count == 0 && mapConfig.Players.Count == 0)
             {
                 return;
             }
 
-            if (relationships == null || ownership == null)
+            if (relationships == null)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime/OwnershipResolver) is unavailable.");
+                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime) is unavailable.");
             }
 
             int memberOfTypeId = relationships.Roles.MembershipTypeId;
@@ -668,7 +666,7 @@ namespace Ludots.Core.Gameplay.Teams
                 ParticipantIdentityProjector.ProjectTeam(world, member, teamRep);
             }
 
-            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
+            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, relationships, relationships.Roles.OwnershipTypeId, players, session.MapId);
         }
 
         private static void EnsureRelationship(RelationshipRuntime relationships, Entity source, Entity target, int typeId, bool symmetric)

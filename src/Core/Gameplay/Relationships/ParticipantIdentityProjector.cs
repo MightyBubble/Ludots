@@ -1,13 +1,12 @@
 using Arch.Core;
 using Arch.Core.Extensions;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
     public static class ParticipantIdentityProjector
     {
-        public static void SyncPlayerOwner(World world, Entity entity, OwnershipResolver ownership)
+        public static void SyncPlayerOwner(World world, Entity entity, RelationshipRuntime relationships, int ownsTypeId)
         {
             if (entity == Entity.Null || !world.IsAlive(entity))
             {
@@ -20,7 +19,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
-            if (ownership.TryResolveRootOwner(entity, out Entity root) &&
+            if (relationships.TryResolveRootSource(entity, ownsTypeId, out Entity root) &&
                 world.IsAlive(root) &&
                 world.Has<PlayerIdentity>(root))
             {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
-using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
@@ -10,11 +9,9 @@ using Ludots.Core.Map;
 namespace Ludots.Core.Gameplay.Relationships
 {
     /// <summary>
-    /// Builds control-plane ownership topology (RFC-0065 CTRL-2): <c>Owns(playerRep → unit)</c> edges for
+    /// Builds control-plane ownership topology (RFC-0065 CTRL-2): ownership edges <c>playerRep → unit</c> for
     /// entities carrying <see cref="PlayerOwner"/>. Shared by map-load participant binding and runtime spawn.
-    /// Single-direct-owner semantics follow <see cref="OwnershipResolver.EnsureOwnership"/>: re-linking an
-    /// owned entity under a different rep removes the previous owns edge first (fail-fast against multi-owner
-    /// states is enforced inside <see cref="OwnershipResolver"/>).
+    /// What happens to a previous owner is decided by the ownership type's catalog rules, not here.
     /// An entity whose <see cref="PlayerOwner.PlayerId"/> has no bound rep has no control domain; that is a
     /// topology fact, not an error, so no edge is created for it.
     /// </summary>
@@ -31,12 +28,13 @@ namespace Ludots.Core.Gameplay.Relationships
         /// </summary>
         public static int LinkMapOwnedEntities(
             World world,
-            OwnershipResolver ownership,
+            RelationshipRuntime relationships,
+            int ownsTypeId,
             PlayerEntityLookup players,
             MapId mapId)
         {
             ArgumentNullException.ThrowIfNull(world);
-            ArgumentNullException.ThrowIfNull(ownership);
+            ArgumentNullException.ThrowIfNull(relationships);
             ArgumentNullException.ThrowIfNull(players);
 
             var candidates = new List<(Entity Entity, int PlayerId)>(capacity: 64);
@@ -51,7 +49,7 @@ namespace Ludots.Core.Gameplay.Relationships
             int linked = 0;
             for (int i = 0; i < candidates.Count; i++)
             {
-                if (TryLink(world, ownership, players, candidates[i].Entity, candidates[i].PlayerId))
+                if (TryLink(world, relationships, ownsTypeId, players, candidates[i].Entity, candidates[i].PlayerId))
                 {
                     linked++;
                 }
@@ -62,16 +60,17 @@ namespace Ludots.Core.Gameplay.Relationships
 
         /// <summary>
         /// Links one freshly spawned entity to its player rep when it carries <see cref="PlayerOwner"/> and is not
-        /// itself a domain rep. Returns true when an owns edge was ensured.
+        /// itself a domain rep. Returns true when an ownership edge was ensured.
         /// </summary>
         public static bool TryLinkSpawnedEntity(
             World world,
-            OwnershipResolver ownership,
+            RelationshipRuntime relationships,
+            int ownsTypeId,
             PlayerEntityLookup players,
             Entity entity)
         {
             ArgumentNullException.ThrowIfNull(world);
-            ArgumentNullException.ThrowIfNull(ownership);
+            ArgumentNullException.ThrowIfNull(relationships);
             ArgumentNullException.ThrowIfNull(players);
             if (entity == Entity.Null || !world.IsAlive(entity))
             {
@@ -83,12 +82,13 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            return TryLink(world, ownership, players, entity, world.Get<PlayerOwner>(entity).PlayerId);
+            return TryLink(world, relationships, ownsTypeId, players, entity, world.Get<PlayerOwner>(entity).PlayerId);
         }
 
         private static bool TryLink(
             World world,
-            OwnershipResolver ownership,
+            RelationshipRuntime relationships,
+            int ownsTypeId,
             PlayerEntityLookup players,
             Entity entity,
             int playerId)
@@ -103,8 +103,8 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            ownership.EnsureOwnership(rep, entity);
-            ParticipantIdentityProjector.SyncPlayerOwner(world, entity, ownership);
+            relationships.EnsureLink(rep, entity, ownsTypeId);
+            ParticipantIdentityProjector.SyncPlayerOwner(world, entity, relationships, ownsTypeId);
             return true;
         }
     }

@@ -228,7 +228,7 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
         Assert.That(runtime.Metrics.Detail, Does.Contain("说了算"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("队长"));
         var ctx = runtime.Context;
-        Assert.That(ctx.Ownership!.TryResolveRootOwner(ctx.Target, out Entity root), Is.True);
+        Assert.That(ctx.Relationships!.TryResolveRootSource(ctx.Target, ctx.OwnsTypeId, out Entity root), Is.True);
         Assert.That(root, Is.EqualTo(ctx.Caster), "the vignette Owns link must reach the captain without being flattened.");
     }
 

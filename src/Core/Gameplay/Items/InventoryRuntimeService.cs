@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Gameplay.Items
 {
@@ -18,7 +18,8 @@ namespace Ludots.Core.Gameplay.Items
         private readonly ItemShapeRegistry _shapes;
         private readonly ItemLayoutRegistry _layouts;
         private readonly ItemDefinitionRegistry _definitions;
-        private readonly OwnershipResolver _ownership;
+        private readonly RelationshipRuntime _relationships;
+        private readonly int _ownsTypeId;
         private readonly List<Entity> _ownedContainerScratch = new(32);
         private readonly List<Entity> _ownedItemScratch = new(128);
         private readonly List<Entity> _destroyItemScratch = new(64);
@@ -32,13 +33,15 @@ namespace Ludots.Core.Gameplay.Items
             ItemShapeRegistry shapes,
             ItemLayoutRegistry layouts,
             ItemDefinitionRegistry definitions,
-            OwnershipResolver ownership)
+            RelationshipRuntime relationships,
+            int ownsTypeId)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _shapes = shapes ?? throw new ArgumentNullException(nameof(shapes));
             _layouts = layouts ?? throw new ArgumentNullException(nameof(layouts));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
-            _ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
+            _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
+            _ownsTypeId = relationships.RequireRelationshipTypeId(ownsTypeId);
         }
 
         public bool TryGetDefinition(int definitionId, out ItemDefinition definition)
@@ -71,7 +74,7 @@ namespace Ludots.Core.Gameplay.Items
                 LayoutId = layoutId,
                 Purpose = purpose
             });
-            _ownership.EnsureOwnership(owner, container);
+            _relationships.EnsureLink(owner, container, _ownsTypeId);
             return container;
         }
 
@@ -614,7 +617,7 @@ namespace Ludots.Core.Gameplay.Items
             else if (_world.Has<ItemLocationCm>(item))
             {
                 _world.Remove<ItemLocationCm>(item);
-                _ownership.ClearOwnership(item);
+                _relationships.RemoveIncoming(item, _ownsTypeId);
             }
 
             if (previousContainer != Entity.Null)
@@ -680,7 +683,7 @@ namespace Ludots.Core.Gameplay.Items
                 Entity container = _destroyContainerScratch[i];
                 if (_world.IsAlive(container))
                 {
-                    _ownership.ClearOwnership(container);
+                    _relationships.RemoveIncoming(container, _ownsTypeId);
                     _world.Destroy(container);
                 }
             }
@@ -700,7 +703,7 @@ namespace Ludots.Core.Gameplay.Items
                 }
 
                 if (data.Purpose == purpose &&
-                    _ownership.IsOwnedBy(owner, entity))
+                    _relationships.IsUpstreamOf(owner, entity, _ownsTypeId))
                 {
                     found = entity;
                 }
@@ -799,7 +802,7 @@ namespace Ludots.Core.Gameplay.Items
             _grantContainerScratch.Clear();
             _world.Query(in ContainerQuery, (Entity entity, ref ItemContainerCm data) =>
             {
-                if (_ownership.IsOwnedBy(actor, entity) &&
+                if (_relationships.IsUpstreamOf(actor, entity, _ownsTypeId) &&
                     data.Purpose == ItemContainerPurpose.Equipment)
                 {
                     _grantContainerScratch.Add(entity);
@@ -831,7 +834,7 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            return _ownership.TryResolveRootOwner(container, out actor) &&
+            return _relationships.TryResolveRootSource(container, _ownsTypeId, out actor) &&
                    actor != Entity.Null &&
                    _world.IsAlive(actor);
         }
@@ -866,7 +869,7 @@ namespace Ludots.Core.Gameplay.Items
                     }
 
                     Entity item = Unsafe.Add(ref first, index);
-                    if (_ownership.IsOwnedBy(owner, item))
+                    if (_relationships.IsUpstreamOf(owner, item, _ownsTypeId))
                     {
                         buffer[written++] = item;
                     }
@@ -1061,7 +1064,7 @@ namespace Ludots.Core.Gameplay.Items
                 return;
             }
 
-            _ownership.ClearOwnership(item);
+            _relationships.RemoveIncoming(item, _ownsTypeId);
             _world.Destroy(item);
         }
 
@@ -1337,7 +1340,7 @@ namespace Ludots.Core.Gameplay.Items
                 _world.Add(item, nextLocation);
             }
 
-            _ownership.EnsureOwnership(nextLocation.Container, item);
+            _relationships.EnsureLink(nextLocation.Container, item, _ownsTypeId);
 
             if (previousContainer != Entity.Null)
             {
@@ -1354,7 +1357,7 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            return _ownership.IsOwnedBy(item, container);
+            return _relationships.IsUpstreamOf(item, container, _ownsTypeId);
         }
 
         private void MarkEquipmentDirtyFromContainer(Entity container)

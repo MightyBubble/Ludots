@@ -24,8 +24,8 @@ public sealed class NetworkCommandIngressTests
         Entity playerTwo = world.Create(new PlayerIdentity { PlayerId = 2 });
         Entity actorOne = world.Create();
         Entity actorTwo = world.Create();
-        harness.Ownership.EnsureOwnership(playerOne, actorOne);
-        harness.Ownership.EnsureOwnership(playerTwo, actorTwo);
+        harness.Relationships.EnsureLink(playerOne, actorOne, harness.OwnsTypeId);
+        harness.Relationships.EnsureLink(playerTwo, actorTwo, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actorOne, out NetworkEntityHandle actorOneHandle), Is.True);
         Assert.That(harness.Entities.TryAllocate(actorTwo, out NetworkEntityHandle actorTwoHandle), Is.True);
         var seatOne = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
@@ -74,8 +74,8 @@ public sealed class NetworkCommandIngressTests
         Entity playerTwo = world.Create(new PlayerIdentity { PlayerId = 2 });
         Entity owned = world.Create();
         Entity foreign = world.Create();
-        harness.Ownership.EnsureOwnership(playerOne, owned);
-        harness.Ownership.EnsureOwnership(playerTwo, foreign);
+        harness.Relationships.EnsureLink(playerOne, owned, harness.OwnsTypeId);
+        harness.Relationships.EnsureLink(playerTwo, foreign, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(owned, out NetworkEntityHandle stale), Is.True);
         Assert.That(harness.Entities.TryRelease(stale), Is.True);
         Assert.That(harness.Entities.TryAllocate(owned, out NetworkEntityHandle current), Is.True);
@@ -118,7 +118,7 @@ public sealed class NetworkCommandIngressTests
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
         Entity target = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         Assert.That(harness.Entities.TryAllocate(target, out NetworkEntityHandle targetHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
@@ -179,7 +179,7 @@ public sealed class NetworkCommandIngressTests
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
         Entity target = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         Assert.That(harness.Entities.TryAllocate(target, out NetworkEntityHandle targetHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
@@ -238,7 +238,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 4);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 4, 1);
         harness.Ingress.BindSeat(in seat, player, serverTick: 10);
@@ -282,7 +282,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 1);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle handle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, serverTick: 10);
@@ -311,7 +311,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, 10);
@@ -345,7 +345,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, serverTick: 10);
@@ -381,7 +381,7 @@ public sealed class NetworkCommandIngressTests
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
         Entity fillerActor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, 10);
@@ -417,7 +417,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, serverTick: 10);
@@ -455,8 +455,8 @@ public sealed class NetworkCommandIngressTests
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity firstActor = world.Create();
         Entity secondActor = world.Create();
-        harness.Ownership.EnsureOwnership(player, firstActor);
-        harness.Ownership.EnsureOwnership(player, secondActor);
+        harness.Relationships.EnsureLink(player, firstActor, harness.OwnsTypeId);
+        harness.Relationships.EnsureLink(player, secondActor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(firstActor, out NetworkEntityHandle firstHandle), Is.True);
         Assert.That(harness.Entities.TryAllocate(secondActor, out NetworkEntityHandle secondHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
@@ -552,7 +552,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, serverTick: 10);
@@ -581,7 +581,7 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
-        harness.Ownership.EnsureOwnership(player, actor);
+        harness.Relationships.EnsureLink(player, actor, harness.OwnsTypeId);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, 1);
@@ -670,7 +670,7 @@ public sealed class NetworkCommandIngressTests
         }
 
         public required RelationshipRuntime Relationships { get; init; }
-        public required OwnershipResolver Ownership { get; init; }
+        public required int OwnsTypeId { get; init; }
         public required NetworkEntityTable Entities { get; init; }
         public required KnowledgeProjectionStore Knowledge { get; init; }
         public required OrderQueue Orders { get; init; }
@@ -695,11 +695,10 @@ public sealed class NetworkCommandIngressTests
                 new RelationshipReverseIndex(world));
             int ownsTypeId = relationshipTypes.Register("Owns");
             int controlsTypeId = relationshipTypes.Register("Controls");
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            DefaultRelationshipRules.Install(relationships);
             var controlDomains = new ControlDomainQuery(
                 world,
                 relationships,
-                ownership,
                 ownsTypeId,
                 controlsTypeId);
             var entities = new NetworkEntityTable(capacity: 16);
@@ -760,7 +759,7 @@ public sealed class NetworkCommandIngressTests
             return new Harness
             {
                 Relationships = relationships,
-                Ownership = ownership,
+                OwnsTypeId = ownsTypeId,
                 Entities = entities,
                 Knowledge = knowledge,
                 Orders = orders,

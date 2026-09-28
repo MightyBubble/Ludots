@@ -38,9 +38,9 @@ namespace Ludots.Tests.GAS
             Entity m01 = world.Create();
             Entity m02 = world.Create();
             Entity m99 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
-            harness.Ownership.EnsureOwnership(p2Rep, m99);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p2Rep, m99, harness.OwnsTypeId);
 
             harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02, m99 }, EntityCollectionSourceKind.UiAcquisition);
@@ -67,9 +67,9 @@ namespace Ludots.Tests.GAS
             Entity m01 = world.Create();
             Entity m02 = world.Create();
             Entity m99 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
-            harness.Ownership.EnsureOwnership(p2Rep, m99);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p2Rep, m99, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
 
             harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
@@ -97,8 +97,8 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity m01 = world.Create();
             Entity m02 = world.Create(new GameplayTagContainer());
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);
 
             harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
@@ -124,10 +124,10 @@ namespace Ludots.Tests.GAS
             Entity m02 = world.Create();
             Entity m05 = world.Create();
             Entity m06 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
-            harness.Ownership.EnsureOwnership(p1Rep, m05);
-            harness.Ownership.EnsureOwnership(p1Rep, m06);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m05, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m06, harness.OwnsTypeId);
 
             harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
@@ -166,7 +166,7 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity m01 = world.Create();
             Entity neutral = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
 
             // Context without a filter profile: raw hits pass through, so the configurer owns routability.
             // A domainless entity reaching the domain-routed command source must fail loudly (semantic guardrail).
@@ -195,8 +195,8 @@ namespace Ludots.Tests.GAS
             {
                 Entity own = world.Create();
                 Entity foreign = world.Create();
-                harness.Ownership.EnsureOwnership(p1Rep, own);
-                harness.Ownership.EnsureOwnership(p2Rep, foreign);
+                harness.Relationships.EnsureLink(p1Rep, own, harness.OwnsTypeId);
+                harness.Relationships.EnsureLink(p2Rep, foreign, harness.OwnsTypeId);
                 raw[i * 2] = own;
                 raw[(i * 2) + 1] = foreign;
             }
@@ -225,7 +225,7 @@ namespace Ludots.Tests.GAS
         private sealed class Harness
         {
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
+            public int OwnsTypeId;
             public World World = null!;
             public EntityCollectionStore Store = null!;
             public FilterProfileRegistry Filters = null!;
@@ -247,8 +247,8 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var domains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
 
                 // One key registry shared by the context profiles and the store, mirroring GameEngine wiring.
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -294,7 +294,7 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     Relationships = relationships,
-                    Ownership = ownership,
+                    OwnsTypeId = ownsTypeId,
                     World = world,
                     Store = store,
                     Filters = filters,
