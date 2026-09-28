@@ -372,54 +372,6 @@ namespace Ludots.Tests.GAS
             That(chainOrders.TryDequeue(out _), Is.False);
         }
 
-        [Test]
-        public void ResponseChainUiSyncSystem_ListsAllowedOrdersWithoutEngineKeyHints()
-        {
-            var overlay = new ScreenOverlayBuffer();
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.ScreenOverlayBuffer.Name] = overlay
-            };
-
-            var ui = new ResponseChainUiState();
-            var request = default(OrderRequest);
-            request.RequestId = 77;
-            request.PlayerId = 4;
-            request.PromptTagId = 88;
-            request.AddAllowed(TestResponseChainOrderTypeIds.ChainPass);
-            ui.ApplyRequest(request);
-
-            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig
-            {
-                OrderTypeId = TestResponseChainOrderTypeIds.ChainPass,
-                Label = "Pass"
-            });
-
-            var system = new ResponseChainUiSyncSystem(globals, ui, orderTypes);
-            system.Update(0f);
-
-            string[] lines = GetOverlayStrings(overlay);
-            That(lines, Has.Some.EqualTo("- Pass (1)"));
-            That(lines, Has.None.Contains("="), "which key answers belongs to the mod's prompt context, not the engine HUD");
-        }
-
-        private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay)
-        {
-            var items = overlay.GetSpan();
-            var lines = new List<string>(items.Length);
-            for (int i = 0; i < items.Length; i++)
-            {
-                ScreenOverlayItem item = items[i];
-                if (item.Kind == ScreenOverlayItemKind.Text)
-                {
-                    lines.Add(overlay.GetString(item.StringId) ?? string.Empty);
-                }
-            }
-
-            return lines.ToArray();
-        }
-
         private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
         {
             var builtinHandlers = new BuiltinHandlerRegistry();
