@@ -244,7 +244,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
 | `ab-01-definition.md` | 技能定义骨架 | abilities.json 顶层、presentation 与本地化、input 声明、禁止字段 | P1 | **已写** |
-| `ab-02-exec-timeline.md` | 执行时间轴 | 11 种 item 全表、独立时钟、推进与打断、终态 | P1 | **已写** |
+| `ab-02-exec-timeline.md` | 执行时间轴 | 9 种 item 全表、独立时钟、推进与打断、终态 | P1 | **已写** |
 | `ab-03-caller-params.md` | CallerParams 参数池 | 最多四组、与 configParams 的合并规则 | P1 | **已写** |
 | `ab-04-cooldown.md` | 冷却三件套 | cooldown 数据契约、TagClip 与 blockTags 闭环、AI 就绪判定 | P1 | **已写** |
 | `ab-05-activation-gates.md` | 激活门 | 校验顺序、blockTags、前置校验图、进度需求、toggle 先关 | P1 | **已写** |
