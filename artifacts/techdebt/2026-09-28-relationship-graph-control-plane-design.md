@@ -2,13 +2,15 @@
 
 状态：待评审，未开发。
 
+前提：下令部分以 `cursor/tw-showcase-intent-members-de53` 分支的合同为准。那份合同里交互状态不再声明集合键（`activeCollectionKey` 已删，写了启动即失败），下令图自己装入这一次的成员，随意图一起提交；下令的后续处理只做授权和逐个下单。
+
 ## 1. 概述
 
 "谁是谁的主人""我能指挥谁"这类问题，照 Case E 选人名单的做法来答：
 
 - **真相只有关系边。** 城堡归谁，就看有没有一条"某玩家 →Owns→ 城堡"的边。引擎不在单位身上另存一份归属。
 - **规矩写在改边的那张图里。** "一个城堡只能有一个主人"不是引擎规矩，也不是关系目录里的配置，是"夺城"这张图自己的写法：先断旧主人，再连新主人。别的玩法要别的规矩，就写别的图。
-- **反复要用的答案放进集合。** "我能指挥谁"由一张图从玩家实体出发、沿关系边查出来，写进挂在这个玩家实体上的集合 `rts.commandable`。它和 Case E 的候选集合 `case_e.selectable` 是同一种东西。选人和下令只读集合。
+- **反复要用的答案放进集合。** "我能指挥谁"由一张图从玩家实体出发、沿关系边查出来，写进挂在这个玩家实体上的集合 `rts.commandable`。它和 Case E 的候选集合 `case_e.selectable` 是同一种东西。框选只能从这个集合里选人；下令图从 `selected` 装入成员提交。
 - **配置只写接线。** 关系目录只声明有哪些关系名；交互状态的配置只写挂哪些图；集合名写在图和交互状态里。引擎代码里不出现任何关系名。
 
 这一轮不新增配置结构。引擎侧只补 4 个小缺口（见 3.5），每个都是给现有节点或事件补能力，不是新管线。
@@ -25,7 +27,8 @@
   └─ 做：调查询图 → 把结果写进这个玩家的集合 rts.commandable
         ▼
 选人：候选集合 = rts.commandable（Case E 候选名单那一套不变）
-下令：沿用现有 activeCollectionKey 路由，只给选中的成员下令
+下令：下令图 QueryFromCollection(selected) 装入成员 → SubmitCommandIntent / SubmitCast 提交
+授权：服务器收到意图后逐个成员判断"这个玩家能不能指挥它"——读什么，见 3.6（待定）
 表现：presenter 订阅集合成员变化（蓝环 / 归属色），不自己判断归属
 ```
 
@@ -102,16 +105,21 @@
 ```json
 {
   "id": "interaction.context.rts.battle",
-  "activeCollectionKey": "selected",
+  "bindings": [ "CaseE.BoxSelectBegin", "Rts.Command" ],
   "triggers": [
     { "trigger": "rts.commandable_sync" },
     { "trigger": "rts.box_begin" },
-    { "trigger": "rts.command_commit" }
-  ]
+    { "trigger": "rts.command" }
+  ],
+  "commandIntentId": "intent.command.default"
 }
 ```
 
-选人候选直接用 `rts.commandable`：框选命中图的输入从 `QueryFromCollection(rts.commandable)` 取，和 Case E 的 `box_hit` 从 `case_e.selectable` 取一样。下令路由不改。
+字段都是 tw 分支上现有的：`bindings`、`triggers`、`commandIntentId`。没有集合键。
+
+选人候选直接用 `rts.commandable`：框选命中图的输入从 `QueryFromCollection(rts.commandable)` 取，和 Case E 的 `box_hit` 从 `case_e.selectable` 取一样。
+
+下令图 `rts.command` 照 tw 的 `tw.rts.command` 写：`LoadCaster` → 指针落地 → `QueryFromCollection(selected)` 装入成员 → `SubmitCommandIntent`。本设计不改下令图。
 
 对比现状：Case E 的候选图 `graph.case_e.candidates` 写死了 `QueryFilterTeam(teamId: 1)`，第二个玩家要复制一份 `graph.case_e.roster_sync_player2`。改成沿关系边查以后，一张同步图挂在每个玩家实体上，各算各的，不用按玩家复制图。
 
@@ -244,6 +252,19 @@
 | G2 | 新节点 `RelationshipExpandDescendants`：输入一份名单和一种关系，返回沿这种关系往下所有层能走到的实体，去重，不含起点；已经死掉的实体不算，也不再从它往下走；超出容量就报错点名，不截断 | 图里没有遍历名单的循环，多层归属（城堡 → 驻军、召唤物的召唤物）拼不出来 | 没有。这是唯一的新节点 |
 | G3 | 事件入口的 `filters` 加 `relationshipType`：写关系名，挂载时换成编号，写错名字挂载时报错 | 关系变化事件里带的是关系类型编号；现有的 `filters.payload` 只能写死数字 | 有。`filters.tag` 就是按名字过滤 |
 | G4 | 出生事件 `EntitySpawned` 的载荷加两项："召唤者"（`MapTrigger.SpawnerEntity`，实体）和"模板名"（`MapTrigger.SpawnTemplate`，字符串） | 出兵节点 `SpawnTemplate` 不返回新实体，出生事件也不带召唤者和模板，召唤连边图既不知道该从谁连，也分不出出生的是不是召唤物 | 出兵请求里本来就带召唤者和模板，只是没放进事件 |
+
+### 3.6 待定：服务器授权读什么
+
+现状（tw 分支）：服务器收到意图后，对每个成员调 `InputOrderActorAuthorization.IsAuthorized`，里面是 `ControlDomainQuery.IsControllableBy`。这段是 C# 写死的，沿着 Owns / Controls 往上找玩家；main 上它靠 `OwnershipResolver`。
+
+框选已经只能选 `rts.commandable` 里的人，但授权不能信客户端交上来的成员：联机时客户端可以伪造成员，必须由服务器再判断一次。所以 `OwnershipResolver` 删掉以后，授权得有个去处。几种可选做法：
+
+| 做法 | 服务器怎么判断 | 要加什么 | 问题 |
+| --- | --- | --- | --- |
+| 甲：授权也写成图 | 下令意图配置里声明一张授权查询图，服务器对每个成员调它 | 意图配置加一个"授权图"字段 | 每次下令都要跑一遍图 |
+| 乙：授权读玩家身上的集合 | 服务器看成员在不在这个玩家的某个集合里（比如 `rts.commandable`） | 意图配置声明读哪个集合名 | 又出现一个集合名字段，只是从交互状态挪到了意图配置 |
+
+这一项等你定了再开发。
 
 ## 4. 场景
 
