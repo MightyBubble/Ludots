@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：开发中。片 1、片 2 已完成；片 3 先做动作名进配置，按键归属待定（见 3.11）。
+状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，按键归属待定（见 3.11）。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -210,7 +210,7 @@ presenter 按 tab_target 集合画目标环
 - 分片顺序：
   1. 删死代码：已选中回调、视角模式显示开关（3.1）。
   2. 删技能里"等玩家"的两种步骤和应答系统（3.1），先做 GAS 自审。
-  3. Core 动作名写进配置（3.11）。按键归属定下来后再搬按键。
+  3. Core 动作名写进配置（3.11，已完成）。按键归属定下来后再搬按键。
   4. 补 C1、C2，删移动路线预览（3.10）。
   5. 12 个 mod 的下令改图（3.2），同时去掉 `LocalOrderSourceHelper` 对 `ControlDomainQuery` 的调用。
   6. 技能栏、Tab、瞄准、视角模式、小地图改配置（3.4–3.8）。
