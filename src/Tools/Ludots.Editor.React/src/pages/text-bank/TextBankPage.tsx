@@ -1,32 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   MAX_ARGS,
-  cssToArgbHex,
   issueKey,
   parseTemplatePreview,
   validateBank,
-  wrapSelection,
   type LocaleRoot,
-  type PreviewRun,
   type TextTokenRow,
 } from './textBankModel';
+import { RichTextArea, RunSpan } from './RichTextArea';
 import './textBank.css';
 
 type ModInfo = { id: string; name?: string };
 
 type EditingCell = { tokenId: string; locale: string } | null;
-
-function RunSpan({ run }: { run: PreviewRun }) {
-  if (run.placeholder !== undefined) {
-    return <span className="text-bank-run-placeholder">{run.text}</span>;
-  }
-  const style: React.CSSProperties = {};
-  if (run.bold) style.fontWeight = 700;
-  if (run.italic) style.fontStyle = 'italic';
-  if (run.color) style.color = run.color;
-  return <span style={style}>{run.text}</span>;
-}
 
 function CellEditor({
   initial,
@@ -38,73 +25,21 @@ function CellEditor({
   onCancel: () => void;
 }) {
   const [text, setText] = useState(initial);
-  const ref = useRef<HTMLTextAreaElement | null>(null);
-  const lastColor = useRef('#FFF6C56B');
 
   useEffect(() => {
-    ref.current?.focus();
-    ref.current?.setSelectionRange(initial.length, initial.length);
-  }, [initial.length]);
-
-  const applyMarkup = (kind: 'b' | 'i' | 'color', colorCss?: string) => {
-    const node = ref.current;
-    if (!node) return;
-    if (kind === 'color') {
-      if (!colorCss) return;
-      const argb = cssToArgbHex(colorCss);
-      if (!argb) return;
-      lastColor.current = colorCss;
-      const next = wrapSelection(text, node.selectionStart, node.selectionEnd, kind, argb);
-      setText(next.text);
-      requestAnimationFrame(() => {
-        node.setSelectionRange(next.selectionStart, next.selectionEnd);
-        node.focus();
-      });
-      return;
-    }
-    const next = wrapSelection(text, node.selectionStart, node.selectionEnd, kind);
-    setText(next.text);
-    requestAnimationFrame(() => {
-      node.setSelectionRange(next.selectionStart, next.selectionEnd);
-      node.focus();
-    });
-  };
+    setText(initial);
+  }, [initial]);
 
   return (
-    <div>
-      <div className="text-bank-markup-bar">
-        <button type="button" title="加粗" onClick={() => applyMarkup('b')}>
-          B
-        </button>
-        <button type="button" title="斜体" onClick={() => applyMarkup('i')}>
-          I
-        </button>
-        <input
-          type="color"
-          title="给选中文字上色"
-          value={lastColor.current}
-          onChange={(e) => applyMarkup('color', e.target.value)}
-        />
-      </div>
-      <textarea
-        ref={ref}
-        className="text-bank-editor"
-        value={text}
-        spellCheck={false}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => onCommit(text)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            onCancel();
-          }
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            onCommit(text);
-          }
-        }}
-      />
-    </div>
+    <RichTextArea
+      value={text}
+      onChange={setText}
+      ariaLabel="编辑这条词条"
+      autoFocusToEnd
+      onCommitHotkey={() => onCommit(text)}
+      onCancel={onCancel}
+      onBlur={() => onCommit(text)}
+    />
   );
 }
 
