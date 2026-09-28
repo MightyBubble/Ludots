@@ -65,7 +65,6 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                     simulation.FlowTuning,
                     step.RefreshFlow,
                     step.RefreshCrowd,
-                    step.RefreshObstacles,
                     step.AgentSliceIndex,
                     step.AgentSliceCount,
                     _observeFlowFieldRebuild!))

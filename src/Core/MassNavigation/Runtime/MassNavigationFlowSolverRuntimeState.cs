@@ -92,12 +92,13 @@ public sealed partial class MassNavigationFlowSolverState
 
     private sealed class FlowRuntimeState
     {
-        public FlowRuntimeState(int teamStateIndex, uint categoryMask, uint interactionMask, int gridCellCount)
+        /// <param name="flowCellCount">没有目标的队伍从不采样流场，传 0 不分配网格。</param>
+        public FlowRuntimeState(int teamStateIndex, uint categoryMask, uint interactionMask, int flowCellCount)
         {
             TeamStateIndex = teamStateIndex;
             CategoryMask = categoryMask;
             InteractionMask = interactionMask;
-            Flow = new float[gridCellCount * 2];
+            Flow = flowCellCount > 0 ? new float[flowCellCount * 2] : Array.Empty<float>();
         }
 
         public int TeamStateIndex { get; }
@@ -106,11 +107,12 @@ public sealed partial class MassNavigationFlowSolverState
         public float[] Flow { get; }
 
         /// <summary>
-        /// 纯缓存：无 crowd stamp 预算时，场的输入只有 static cost revision 与 team target；
+        /// 纯缓存：人群印记没有造出新阻挡格时，场的输入只有 static cost revision 与 team target；
         /// 两者未变则刷新结果与现存场逐位相同，可跳过 grid 级重算。
         /// </summary>
         public int LastComputedCostRevision { get; set; } = -1;
         public float LastComputedTargetX { get; set; } = float.NaN;
         public float LastComputedTargetY { get; set; } = float.NaN;
+        public bool LastComputedCrowdBlocksCells { get; set; }
     }
 }
