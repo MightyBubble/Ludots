@@ -1227,8 +1227,6 @@ namespace Ludots.Core.Engine
                 budget: gasBudget,
                 graphProgramScratchCapacity: gasRuntimeCapacity.EffectPhaseGraphProgramScratchCapacity);
             var inputRequestQueue = new InputRequestQueue();
-            var abilityInputRequestQueue = new InputRequestQueue();
-            var inputResponseBuffer = new InputResponseBuffer();
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
             var interactionActionBindings = new InteractionActionBindings();
@@ -1897,7 +1895,7 @@ namespace Ludots.Core.Engine
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi,
                 closeEntityIntakeOnUpdate: false);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
+            var abilityExecSystem = new AbilityExecSystem(World, clock, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
@@ -1969,8 +1967,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ProgressionRequirementEvaluator, progressionEvaluator);
             SetService(CoreServiceKeys.ContextGroupRegistry, contextGroups);
             SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
-            SetService(CoreServiceKeys.AbilityInputRequestQueue, abilityInputRequestQueue);
-            SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.IntIdCollectionStore, intIdCollectionStore);

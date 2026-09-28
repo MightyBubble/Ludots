@@ -65,58 +65,8 @@
         }
     }
 
-    /// <summary>
-    /// Generic swap-remove buffer for response types matched by RequestId.
-    /// </summary>
-    public class SwapRemoveBuffer<T> where T : struct, IHasRequestId
-    {
-        private readonly T[] _items;
-        private int _count;
-
-        public SwapRemoveBuffer(int capacity = 1024)
-        {
-            if (capacity < 16) capacity = 16;
-            _items = new T[capacity];
-        }
-
-        public int Count => _count;
-        public int Capacity => _items.Length;
-
-        public bool TryAdd(in T response)
-        {
-            if (_count >= _items.Length) return false;
-            _items[_count++] = response;
-            return true;
-        }
-
-        public bool TryConsume(int requestId, out T response)
-        {
-            for (int i = 0; i < _count; i++)
-            {
-                if (_items[i].RequestId != requestId) continue;
-                response = _items[i];
-                _count--;
-                if (i != _count) _items[i] = _items[_count];
-                return true;
-            }
-
-            response = default;
-            return false;
-        }
-
-        public void Clear()
-        {
-            _count = 0;
-        }
-    }
-
     public sealed class InputRequestQueue : RingBuffer<InputRequest>
     {
         public InputRequestQueue(int capacity = 1024) : base(capacity) { }
-    }
-
-    public sealed class InputResponseBuffer : SwapRemoveBuffer<InputResponse>
-    {
-        public InputResponseBuffer(int capacity = 1024) : base(capacity) { }
     }
 }

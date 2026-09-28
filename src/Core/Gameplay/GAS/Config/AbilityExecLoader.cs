@@ -430,7 +430,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             int[] callerParamSetParamCounts)
         {
             string kindStr = RequireNonEmptyString(itemObj["kind"], $"exec.items[{idx}].kind", id, path);
-            var kind = ParseItemKind(kindStr);
+            var kind = ParseItemKind(kindStr, id, idx, path);
             GasOperatorWhitelist.ValidateExecItemKind(kindStr, id);
             if (itemObj["tick"] is not JsonNode tickNode)
             {
@@ -516,12 +516,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             int payloadA = itemObj["payloadA"]?.GetValue<int>() ?? 0;
-
-            if (kind == ExecItemKind.InputGate && itemObj["payloadA"] is null)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'exec.items[{idx}].payloadA' is required for InputGate.");
-            }
 
             if ((kind == ExecItemKind.EffectClip || kind == ExecItemKind.EffectSignal) &&
                 itemObj["dispatchTarget"] is JsonValue dispatchTargetNode)
@@ -1108,7 +1102,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static ExecItemKind ParseItemKind(string str)
+        private static ExecItemKind ParseItemKind(string str, string abilityId, int itemIndex, string path)
         {
             return str switch
             {
@@ -1119,11 +1113,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "EventSignal" => ExecItemKind.EventSignal,
                 "TagSignal" => ExecItemKind.TagSignal,
                 "TagSignalTarget" => ExecItemKind.TagSignalTarget,
-                "InputGate" => ExecItemKind.InputGate,
                 "EventGate" => ExecItemKind.EventGate,
-                "TargetCollectionGate" => ExecItemKind.TargetCollectionGate,
                 "End" => ExecItemKind.End,
-                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
+                _ => throw new InvalidOperationException($"Ability '{abilityId}' in '{path}' field 'exec.items[{itemIndex}].kind': Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, TagSignal, TagSignalTarget, EventGate, End."),
             };
         }
     }

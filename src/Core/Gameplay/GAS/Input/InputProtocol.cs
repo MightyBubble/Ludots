@@ -4,8 +4,8 @@ using Ludots.Core.Mathematics;
 namespace Ludots.Core.Gameplay.GAS.Input
 {
     /// <summary>
-    /// Common interface for request/response types that carry a RequestId.
-    /// Used by generic RingBuffer and SwapRemoveBuffer.
+    /// Common interface for request types that carry a RequestId.
+    /// Used by the generic RingBuffer.
     /// </summary>
     public interface IHasRequestId
     {
@@ -22,16 +22,4 @@ namespace Ludots.Core.Gameplay.GAS.Input
         public int PayloadA;
         public int PayloadB;
     }
-
-    public struct InputResponse : IHasRequestId
-    {
-        public int RequestId { get; set; }
-        public int ResponseTagId;
-        public Entity Source;
-        public Entity Target;
-        public Entity TargetContext;
-        public int PayloadA;
-        public int PayloadB;
-    }
-
 }

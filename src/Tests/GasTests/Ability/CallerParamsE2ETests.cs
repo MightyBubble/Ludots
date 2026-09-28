@@ -516,8 +516,6 @@ namespace Ludots.Tests.GAS
             var abilityExec = new AbilityExecSystem(
                 world,
                 clock,
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 requests,
                 snapshotCapacity: 16,
                 abilityDefinitions: abilityDefinitions,

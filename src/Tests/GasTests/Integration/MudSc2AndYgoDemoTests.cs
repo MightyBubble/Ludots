@@ -131,7 +131,6 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var inputResp = new InputResponseBuffer();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -148,7 +147,7 @@ namespace Ludots.Tests.GAS
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
+                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -215,9 +214,8 @@ namespace Ludots.Tests.GAS
 
                 var empExec = default(AbilityExecSpec);
                 empExec.ClockId = GasClockId.Step;
-                empExec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0);
-                empExec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
-                empExec.SetItem(2, ExecItemKind.End, tick: 0);
+                empExec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
+                empExec.SetItem(1, ExecItemKind.End, tick: 0);
                 var empAbility = world.Create(new AbilityTemplate(), empExec);
 
                 var healExec = default(AbilityExecSpec);
@@ -286,13 +284,6 @@ namespace Ludots.Tests.GAS
                 sb.AppendLine("[MUD][SC2] 敌方探测对你施加【显形】。");
                 RunFrame(2);
 
-                var resp = new InputResponse
-                {
-                    RequestId = 4,
-                    ResponseTagId = 900,
-                    Target = enemy,
-                };
-                inputResp.TryAdd(resp);
                 incomingOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = orderCastAbility, Actor = player, Target = enemy, Args = new OrderArgs { I0 = 2 } });
                 sb.AppendLine("[MUD][SC2] 你投掷【EMP】命中目标敌人。");
                 RunFrame(3);
@@ -359,7 +350,6 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var inputResp = new InputResponseBuffer();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -501,7 +491,6 @@ namespace Ludots.Tests.GAS
                 var budgetReset = new GasBudgetResetSystem(budget, orderAdmissionResults: admissionResults);
                 var admissionEnd = new OrderAdmissionGenerationEndSystem(admissionResults);
                 var eventBus = new GameplayEventBus();
-                var inputResp = new InputResponseBuffer();
                 var abilityDefs = new AbilityDefinitionRegistry();
 
                 const int orderCastAbility = 100;
@@ -510,7 +499,7 @@ namespace Ludots.Tests.GAS
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
+                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,

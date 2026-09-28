@@ -58,7 +58,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Contain("MobaInputModeSystem"));
             Assert.That(inputNames, Does.Contain("AutoInstalledLocalOrderSourceSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
-            Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
             Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("MobaInputModeSystem")));
             Assert.That(localInputNames, Does.Not.Contain("ClockSystem"));
             Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
@@ -66,7 +65,6 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
-            Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
             Assert.That(presentationNames, Does.Not.Contain("MobaInputModeSystem"));
