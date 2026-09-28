@@ -8,6 +8,7 @@ namespace Ludots.Core.MassNavigation.Runtime;
 internal sealed class MassNavigationGroupRuntime
 {
     internal const float OrderTargetRestoreToleranceCm = 0.001f;
+    private const int PendingReleaseGroupId = -2;
 
     private readonly List<NavGroupState?> _groups;
     private readonly Dictionary<int, int> _orderTokenToGroupId;
@@ -892,11 +893,33 @@ internal sealed class MassNavigationGroupRuntime
         ReadOnlySpan<int> nextMembers,
         int teamId)
     {
+        // Releasing anchors the unit and zeroes its velocity, so members that stay in
+        // the group (same set, different query order) must not pass through it.
         for (int i = 0; i < group.MemberCount; i++)
         {
             int unitIndex = group.MemberIndices[i];
             if ((uint)unitIndex < (uint)_groupIdsByAgentIndex.Length &&
                 _groupIdsByAgentIndex[unitIndex] == groupId)
+            {
+                _groupIdsByAgentIndex[unitIndex] = PendingReleaseGroupId;
+            }
+        }
+
+        for (int i = 0; i < nextMembers.Length; i++)
+        {
+            int unitIndex = nextMembers[i];
+            if ((uint)unitIndex < (uint)_groupIdsByAgentIndex.Length &&
+                _groupIdsByAgentIndex[unitIndex] == PendingReleaseGroupId)
+            {
+                _groupIdsByAgentIndex[unitIndex] = groupId;
+            }
+        }
+
+        for (int i = 0; i < group.MemberCount; i++)
+        {
+            int unitIndex = group.MemberIndices[i];
+            if ((uint)unitIndex < (uint)_groupIdsByAgentIndex.Length &&
+                _groupIdsByAgentIndex[unitIndex] == PendingReleaseGroupId)
             {
                 _groupIdsByAgentIndex[unitIndex] = -1;
                 simulation.ReleaseUnitToTeamTarget(unitIndex);

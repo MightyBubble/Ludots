@@ -118,6 +118,13 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
             }
         }
 
+        // Query order shifts between frames; the group runtime compares member lists by
+        // position, so an unchanged member set must arrive in the same order every frame.
+        for (int i = 0; i < _usedBucketCount; i++)
+        {
+            _buckets[i].Members.Sort();
+        }
+
         MassNavigationRouteExecutionSink? routeSink = ResolveRouteSink(simulation);
         PrepareCommandGroups(simulation, routeSink);
         try
