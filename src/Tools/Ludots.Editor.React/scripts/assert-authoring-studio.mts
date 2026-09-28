@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -121,6 +121,13 @@ const studioSurfaces = [
   'src/pages/dialogue-tree-editor/StatementInspector.tsx',
   'src/pages/dialogue-tree-editor/inlineAuthoring.ts',
   'src/pages/run/RunPage.tsx',
+  'src/components/ui/Button.tsx',
+  'src/components/ui/Field.tsx',
+  'src/components/ui/NavTab.tsx',
+  'src/components/ui/Panel.tsx',
+  'src/components/ui/Badge.tsx',
+  'src/components/ui/Collapse.tsx',
+  'src/components/ui/chrome.ts',
 ];
 const bannedPalette = /violet-|indigo-|fuchsia-|purple-|cyan-|sky-|#a78bfa|#e879f9|#c084fc|#a855f7|#7c3aed|#8b5cf6|#22d3ee|#67e8f9|#a78bfa/;
 for (const rel of studioSurfaces) {
@@ -157,6 +164,24 @@ assert(textBankPage.includes('缺这条翻译'), 'text bank must flag missing tr
 assert(textBankPage.includes('story/text/validate'), 'text bank save must gate on the engine validate endpoint');
 const richTextArea = readFileSync(join(here, '../src/pages/text-bank/RichTextArea.tsx'), 'utf8');
 assert(richTextArea.includes('wrapSelection'), 'inline markup toolbar lives in the shared RichTextArea');
+for (const rel of [
+  'src/pages/authoring-studio/authoringTheme.ts',
+  'src/pages/StoryAuthoringPage.tsx',
+  'src/pages/AiTopologyEditorPage.tsx',
+  'src/pages/GasGraphEditorPage.tsx',
+  'src/pages/dialogue-tree-editor/StatementInspector.tsx',
+  'src/pages/dialogue-tree-editor/DialogueTreeCanvas.tsx',
+  'src/pages/run/RunPage.tsx',
+  'src/pages/authoring-studio/AuthoringShell.tsx',
+]) {
+  const text = readFileSync(join(here, '..', rel), 'utf8');
+  assert(!text.includes('STUDIO_CHROME'), `${rel} must use components/ui primitives, not STUDIO_CHROME`);
+}
+const uiDir = join(here, '../src/components/ui');
+for (const uiFile of readdirSync(uiDir)) {
+  const text = readFileSync(join(uiDir, uiFile), 'utf8');
+  assert(!/#[0-9a-fA-F]{3,8}/.test(text), `components/ui/${uiFile} must not hardcode hex colors`);
+}
 const runPage = readFileSync(join(here, '../src/pages/run/RunPage.tsx'), 'utf8');
 assert(runPage.includes('/api/launch'), 'run page must launch through the bridge contract (#1699)');
 assert(runPage.includes('/api/launcher/state'), 'run page must read launcher state through the bridge contract');

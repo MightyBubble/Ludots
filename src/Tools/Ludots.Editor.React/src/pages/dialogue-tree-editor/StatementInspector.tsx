@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { STUDIO_CHROME } from '../authoring-studio/authoringTheme';
 import { MarkupPreview, RichTextArea } from '../text-bank/RichTextArea';
+import { Button } from '@/components/ui/Button';
+import { Collapse } from '@/components/ui/Collapse';
+import { labelClass } from '@/components/ui/chrome';
+import { fieldControlClass } from '@/components/ui/Field';
 import { choiceHandle, type DialogueNode, type DialogueTree, type LinePreview } from './dialogueTreeModel';
 import {
   draftKeyForChoice,
@@ -49,28 +52,28 @@ function SpeakerPicker({
   if (adding) {
     return (
       <div className="space-y-2 rounded-md border border-studio-elevated bg-studio-bg p-2">
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           说话人 ID
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={form.id}
             placeholder="speaker.scout"
             onChange={(e) => setForm({ ...form, id: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           显示名
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={form.displayName}
             placeholder="斥候"
             onChange={(e) => setForm({ ...form, displayName: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           半身像资产 ID（可选）
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={form.portraitImageId ?? ''}
             placeholder="portrait.speaker.scout"
             onChange={(e) => setForm({ ...form, portraitImageId: e.target.value })}
@@ -78,9 +81,9 @@ function SpeakerPicker({
         </label>
         {error ? <p className="text-[10px] text-studio-red">{error}</p> : null}
         <div className="flex gap-2">
-          <button
-            type="button"
-            className={`flex-1 ${STUDIO_CHROME.btnPrimary}`}
+          <Button
+            variant="primary"
+            className="flex-1"
             onClick={() => {
               const problem = onQuickAdd({ ...form, id: form.id.trim(), displayName: form.displayName.trim() });
               if (problem) {
@@ -93,10 +96,10 @@ function SpeakerPicker({
             }}
           >
             建好并选用
-          </button>
-          <button type="button" className={`flex-1 ${STUDIO_CHROME.btnGhost}`} onClick={() => setAdding(false)}>
+          </Button>
+          <Button variant="ghost" className="flex-1" onClick={() => setAdding(false)}>
             取消
-          </button>
+          </Button>
         </div>
         <p className="text-[10px] text-studio-muted">显示名和词条保存时一起落语言表。</p>
       </div>
@@ -105,7 +108,7 @@ function SpeakerPicker({
 
   return (
     <div>
-      <select className={STUDIO_CHROME.field} value={value} onChange={(e) => onPick(e.target.value)}>
+      <select className={fieldControlClass} value={value} onChange={(e) => onPick(e.target.value)}>
         <option value="">选说话人</option>
         {speakers.map((speaker) => (
           <option key={speaker.id} value={speaker.id}>
@@ -113,16 +116,16 @@ function SpeakerPicker({
           </option>
         ))}
       </select>
-      <button
-        type="button"
-        className={`mt-1 w-full ${STUDIO_CHROME.btnGhost}`}
+      <Button
+        variant="ghost"
+        className="mt-1 w-full"
         onClick={() => {
           setForm({ id: '', displayName: '', portraitImageId: '' });
           setAdding(true);
         }}
       >
         + 新建说话人
-      </button>
+      </Button>
     </div>
   );
 }
@@ -172,7 +175,7 @@ function StatementLineEditor({
 
   return (
     <div className="space-y-2">
-      <label className={STUDIO_CHROME.label}>
+      <label className={labelClass}>
         说话人
         <SpeakerPicker
           speakers={speakers}
@@ -182,7 +185,7 @@ function StatementLineEditor({
           onQuickAdd={onQuickAddSpeaker}
         />
       </label>
-      <label className={STUDIO_CHROME.label}>
+      <label className={labelClass}>
         {label}
         <RichTextArea
           value={textValue}
@@ -193,13 +196,12 @@ function StatementLineEditor({
         />
       </label>
       <MarkupPreview source={textValue} />
-      <details className="rounded-md border border-studio-elevated px-2 py-1.5">
-        <summary className="cursor-pointer text-xs text-studio-muted">高级（绑定与词条）</summary>
-        <div className="mt-2 space-y-2">
-          <label className={STUDIO_CHROME.label}>
+      <Collapse summary="高级（绑定与词条）">
+        <div>
+          <label className={labelClass}>
             台词绑定
             <select
-              className={STUDIO_CHROME.field}
+              className={fieldControlClass}
               value={boundLineId}
               onChange={(e) => onPatchLineId(e.target.value, effectiveKey)}
             >
@@ -217,7 +219,7 @@ function StatementLineEditor({
           </p>
           {extraAdvanced}
         </div>
-      </details>
+      </Collapse>
     </div>
   );
 }
@@ -247,9 +249,9 @@ export function StatementInspector(props: StatementInspectorProps) {
 
   return (
     <div className="space-y-3">
-      <label className={STUDIO_CHROME.label}>
+      <label className={labelClass}>
         节点 ID
-        <input className={STUDIO_CHROME.field} value={node.id} readOnly />
+        <input className={fieldControlClass} value={node.id} readOnly />
       </label>
 
       <StatementLineEditor
@@ -266,10 +268,10 @@ export function StatementInspector(props: StatementInspectorProps) {
         onPatchLineId={patchLineId}
         extraAdvanced={
           <>
-            <label className={STUDIO_CHROME.label}>
+            <label className={labelClass}>
               立绘差分
               <select
-                className={STUDIO_CHROME.field}
+                className={fieldControlClass}
                 value={node.portraitImageId ?? ''}
                 onChange={(e) =>
                   onChange(e.target.value ? { ...node, portraitImageId: e.target.value } : { ...node, portraitImageId: undefined })
@@ -286,34 +288,34 @@ export function StatementInspector(props: StatementInspectorProps) {
                 ) : null}
               </select>
             </label>
-            <label className={STUDIO_CHROME.label}>
+            <label className={labelClass}>
               表现配置
               <input
-                className={STUDIO_CHROME.field}
+                className={fieldControlClass}
                 value={node.presentationProfile ?? ''}
                 onChange={(e) => onChange({ ...node, presentationProfile: e.target.value })}
               />
             </label>
-            <label className={STUDIO_CHROME.label}>
+            <label className={labelClass}>
               镜头
               <input
-                className={STUDIO_CHROME.field}
+                className={fieldControlClass}
                 value={node.cameraId ?? ''}
                 onChange={(e) => onChange({ ...node, cameraId: e.target.value })}
               />
             </label>
-            <label className={STUDIO_CHROME.label}>
+            <label className={labelClass}>
               进句动作图
               <input
-                className={STUDIO_CHROME.field}
+                className={fieldControlClass}
                 value={node.onEnterActionGraphId ?? ''}
                 onChange={(e) => onChange({ ...node, onEnterActionGraphId: e.target.value })}
               />
             </label>
-            <label className={STUDIO_CHROME.label}>
+            <label className={labelClass}>
               自动接下句（秒，0 表示等玩家）
               <input
-                className={STUDIO_CHROME.field}
+                className={fieldControlClass}
                 type="number"
                 min={0}
                 step={0.1}
@@ -327,16 +329,16 @@ export function StatementInspector(props: StatementInspectorProps) {
 
       <div className="flex items-center justify-between">
         <div className="text-xs text-studio-muted">选项（黄头节点下口）</div>
-        <button type="button" className={STUDIO_CHROME.btnGhost} onClick={onAddChoice}>
+        <Button variant="ghost" onClick={onAddChoice}>
           + 加选项
-        </button>
+        </Button>
       </div>
       {(node.choices ?? []).map((choice) => (
         <div key={choice.id} className="space-y-2 rounded-md border border-studio-elevated p-2">
-          <label className={STUDIO_CHROME.label}>
+          <label className={labelClass}>
             选项 ID
             <input
-              className={STUDIO_CHROME.field}
+              className={fieldControlClass}
               value={choice.id}
               onChange={(e) => {
                 const choices = (node.choices ?? []).slice();
@@ -361,10 +363,10 @@ export function StatementInspector(props: StatementInspectorProps) {
             onPatchLineId={(nextLineId, draftKey) => patchChoiceLineId(choice.id, nextLineId, draftKey)}
             extraAdvanced={
               <>
-                <label className={STUDIO_CHROME.label}>
+                <label className={labelClass}>
                   条件图
                   <input
-                    className={STUDIO_CHROME.field}
+                    className={fieldControlClass}
                     value={choice.conditionGraphId ?? ''}
                     onChange={(e) => {
                       const choices = (node.choices ?? []).map((row) =>
@@ -374,10 +376,10 @@ export function StatementInspector(props: StatementInspectorProps) {
                     }}
                   />
                 </label>
-                <label className={STUDIO_CHROME.label}>
+                <label className={labelClass}>
                   动作图
                   <input
-                    className={STUDIO_CHROME.field}
+                    className={fieldControlClass}
                     value={choice.actionGraphId ?? ''}
                     onChange={(e) => {
                       const choices = (node.choices ?? []).map((row) =>
@@ -391,14 +393,14 @@ export function StatementInspector(props: StatementInspectorProps) {
             }
           />
           <p className="text-[10px] text-studio-muted">下一句从选项节点「{choiceHandle(choice.id)}」口往下拉。</p>
-          <button type="button" className={STUDIO_CHROME.btnDanger} onClick={() => onRemoveChoice(choice.id)}>
+          <Button variant="danger" onClick={() => onRemoveChoice(choice.id)}>
             删除此选项
-          </button>
+          </Button>
         </div>
       ))}
-      <button type="button" className={STUDIO_CHROME.btnDanger} disabled={!canRemove} onClick={onRemove}>
+      <Button variant="danger" disabled={!canRemove} onClick={onRemove}>
         删除此句
-      </button>
+      </Button>
     </div>
   );
 }

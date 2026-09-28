@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { STUDIO_CHROME } from '../authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
+import { labelClass } from '@/components/ui/chrome';
+import { fieldControlClass } from '@/components/ui/Field';
+import { pageClass } from '@/components/ui/chrome';
 
 type LauncherPreset = {
   id: string;
@@ -174,7 +177,7 @@ export function RunPage() {
   const presetId = customSelection ? '' : (snapshot?.selectedPresetId ?? '');
 
   return (
-    <div className={`${STUDIO_CHROME.page} overflow-auto p-6 font-sans`}>
+    <div className={`${pageClass} overflow-auto p-6 font-sans`}>
       <div className="mb-4 flex items-center gap-4 flex-wrap">
         <h1 className="text-xl text-studio-label">开局</h1>
         <span className="text-xs text-studio-muted">
@@ -184,10 +187,10 @@ export function RunPage() {
 
       <div className="grid grid-cols-12 gap-4">
         <aside className="col-span-4 space-y-3">
-          <label className={STUDIO_CHROME.label}>
+          <label className={labelClass}>
             平台
             <select
-              className={STUDIO_CHROME.field}
+              className={fieldControlClass}
               value={platformId}
               onChange={(e) => void selectPlatform(e.target.value)}
             >
@@ -198,9 +201,9 @@ export function RunPage() {
               ))}
             </select>
           </label>
-          <label className={STUDIO_CHROME.label}>
+          <label className={labelClass}>
             Preset
-            <select className={STUDIO_CHROME.field} value={presetId} onChange={(e) => void selectPreset(e.target.value)}>
+            <select className={fieldControlClass} value={presetId} onChange={(e) => void selectPreset(e.target.value)}>
               <option value="">（自选组合，不存 preset）</option>
               {(snapshot?.presets ?? []).map((preset) => (
                 <option key={preset.id} value={preset.id}>
@@ -209,14 +212,14 @@ export function RunPage() {
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            className={`w-full ${STUDIO_CHROME.btnPrimary}`}
+          <Button
+            variant="primary"
+            className="w-full"
             disabled={launching || !platformId || selectedModIds.size === 0}
             onClick={() => void launch()}
           >
             {launching ? '正在拉起…' : `开局（${selectedModIds.size} 个 Mod）`}
-          </button>
+          </Button>
           {error ? <p className="text-xs text-studio-red">{error}</p> : null}
 
           <div className="rounded-md border border-studio-elevated bg-studio-surface p-3 text-xs">
@@ -261,7 +264,7 @@ export function RunPage() {
 
         <main className="col-span-8 space-y-2">
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             placeholder="搜 Mod id 或名字…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

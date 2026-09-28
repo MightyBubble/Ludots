@@ -26,7 +26,8 @@ import {
   type HfsmTransitionEdgeData,
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
-import { diskSaveStatus, STUDIO_CHROME, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { diskSaveStatus, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
 
 type TopologyKind = 'behavior-trees' | 'hfsm';
 
@@ -790,14 +791,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
           >
             + 新建拓扑
           </button>
-          <button
-            type="button"
-            disabled={!selected}
-            className={`w-full ${STUDIO_CHROME.btnDanger}`}
-            onClick={removeSelectedTopology}
-          >
+          <Button variant="danger" className="w-full" disabled={!selected} onClick={removeSelectedTopology}>
             删除当前拓扑
-          </button>
+          </Button>
         </aside>
 
         <main className="relative col-span-7 min-h-0 border-r border-studio-elevated">
@@ -863,16 +859,11 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 中键平移 · 左键框选 · 右键添加节点 · 从节点下方拖线连接
               </div>
               <div className="absolute right-3 top-3 z-10 flex gap-2">
-                <button
-                  type="button"
-                  className={STUDIO_CHROME.btnGhost}
-                  onClick={() => setPaletteOpen((v) => !v)}
-                >
+                <Button variant="ghost" onClick={() => setPaletteOpen((v) => !v)}>
                   添加节点
-                </button>
-                <button
-                  type="button"
-                  className={STUDIO_CHROME.btnGhost}
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     if (!selected) return;
                     const flow = isBt ? btToFlow(selected as BtTree) : hfsmToFlow(selected as HfsmMachine);
@@ -882,7 +873,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   }}
                 >
                   自动排版
-                </button>
+                </Button>
               </div>
               {paletteOpen ? (
                 <div className="absolute right-3 top-14 z-20 w-56 rounded border border-studio-fill bg-studio-bg p-2 shadow-xl">
@@ -988,9 +979,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   组合节点：从下方手柄拖线到子节点。子序 = 连线顺序。
                 </div>
               )}
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+              <Button variant="danger" onClick={removeSelectedNode}>
                 删除此节点
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1046,9 +1037,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   打开叶子函数图
                 </button>
               ) : null}
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedNode}>
+              <Button variant="danger" onClick={removeSelectedNode}>
                 删除此节点
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -1092,9 +1083,9 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                   onChange={(e) => updateSelectedTransition({ priority: Number.parseInt(e.target.value, 10) || 0 })}
                 />
               </label>
-              <button type="button" className={STUDIO_CHROME.btnDanger} onClick={removeSelectedEdge}>
+              <Button variant="danger" onClick={removeSelectedEdge}>
                 删除此转移
-              </button>
+              </Button>
             </div>
           ) : null}
 

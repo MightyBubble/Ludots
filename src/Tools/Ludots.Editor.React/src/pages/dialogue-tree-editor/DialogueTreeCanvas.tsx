@@ -14,7 +14,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './dialogueTree.css';
-import { STUDIO_CHROME, STUDIO_THEME } from '../authoring-studio/authoringTheme';
+import { STUDIO_THEME } from '../authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
+import { labelClass } from '@/components/ui/chrome';
+import { fieldControlClass } from '@/components/ui/Field';
 import { DialogueChoiceNode } from './DialogueChoiceNode';
 import { DialogueFlowEdge } from './DialogueFlowEdge';
 import { DialogueSayNode } from './DialogueSayNode';
@@ -257,36 +260,36 @@ export function DialogueTreeCanvas({
           />
         </ReactFlow>
         <div className="absolute right-3 top-3 z-10 flex gap-2">
-          <button type="button" className={STUDIO_CHROME.btnGhost} onClick={addStatement}>
+          <Button variant="ghost" onClick={addStatement}>
             加一句
-          </button>
-          <button type="button" className={STUDIO_CHROME.btnGhost} onClick={relayout}>
+          </Button>
+          <Button variant="ghost" onClick={relayout}>
             自动排版
-          </button>
+          </Button>
         </div>
       </div>
       <aside className="col-span-4 space-y-3 overflow-auto border-l border-studio-elevated bg-studio-surface p-4">
         <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           对话 ID
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.id}
             onChange={(e) => onChange({ ...tree, id: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           显示名
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.displayName ?? ''}
             onChange={(e) => onChange({ ...tree, displayName: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           入口节点
           <select
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.entryNode}
             onChange={(e) => onChange({ ...tree, entryNode: e.target.value })}
           >
