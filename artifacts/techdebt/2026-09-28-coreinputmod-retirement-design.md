@@ -78,6 +78,8 @@ CoreInputMod 每一块的去向：
 
 全部迁完后删：`LocalOrderSource*`、`AutoInstalledLocalOrderSourceSystem`、`LocalOrderSourceHelper`（它是 `ControlDomainQuery` 的调用方之一，和关系那份设计对上）、Core 的 `InputOrderMappingSystem`、`InputOrderMappingLoader` 和所有 `input_order_mappings.json` / `local_order_source.json`。
 
+架构守卫 `Mods_Carry_NoPerModLocalOrderSourceInstallers` 现在在 main 上是红的：CoreInputMod 里 `LocalOrderSourceSystem` 和 `AutoInstalledLocalOrderSourceSystem` 是两个重复的安装器。这一片删完后，`mods/` 下不再有 `*LocalOrderSourceSystem*.cs`，守卫里给 `AutoInstalledLocalOrderSourceSystem` 开的例外也一起删掉，改成断言一个都没有。这一片的完成标准包括这条守卫变绿。
+
 ### 3.3 选中集合：不再有写死的名字
 
 `collection.command.source` 在 CoreInputMod 外有 98 个文件引用。写它的只有两张图：`LudotsCoreMod` 的 `graph.core.select_commit.json` 和 `RtsDemoMod` 的 `graph.rts.select_commit.json`，其余是 showcase 的 C# 直写、presenter 规则、镜头跟随配置和测试。
