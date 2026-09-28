@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，按键归属待定（见 3.11）。
+状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，作为过渡；接下来做片 3b 响应连锁改交互状态（见 3.11）。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -29,7 +29,7 @@ CoreInputMod 每一块的去向：
 | 技能输入应答 `GasInputResponseSystem` + 技能里"等玩家"的两种步骤 `InputGate`、`TargetCollectionGate` | 技能执行到一半等玩家点目标 / 选一组目标 | 删；没有任何技能数据用到这两种步骤 | 死功能 |
 | 空的 `interaction_context_profiles.json` | 无 | 删 | 空文件 |
 | 81 个 mod 的 `mod.json` 依赖 | 靠它拿到 Core 功能的默认按键（3.11），也靠它开局装上的技能栏、Tab 切目标等系统 | 随 CoreInputMod 目录一起删（片 8） | 不是空依赖 |
-| Core 里写死的动作名：`InteractionActionBindings`、`MinimapPresentationSystem`、响应连锁系统 | Core 功能按固定名字找动作，默认按键由 CoreInputMod 提供 | 动作名写进各功能的配置，默认按键由开这个功能的 mod 带（3.11） | Core 硬编码 |
+| Core 里写死的输入消费者：响应连锁人工下令、小地图输入、交互默认动作 | 引擎装的系统按固定名字读键，按键由 CoreInputMod 提供 | 删消费者；引擎出图节点和事件，用到的 showcase 自己写交互状态和按键（3.11） | Core 硬编码 |
 | 老下令映射（`LocalOrderSource*`、`AutoInstalledLocalOrderSourceSystem`、Core 的 `InputOrderMappingSystem` 和 `input_order_mappings.json`） | 按键直接翻成下令 | 12 个 mod 改成交互状态 + 下令图 + `SubmitCommandIntent` / `SubmitCast` | 有现成做法 |
 | 集合名 `collection.command.source` | 写死的"选中单位"集合 | 改成各 mod 选中图自己写的集合，和 Case E 的 `selected` 一样 | 有现成做法 |
 | 小地图焦点 | C# 注册，焦点固定取 `collection.command.source` | 小地图配置里写看哪个集合 | 有现成做法 |
@@ -153,38 +153,89 @@ presenter 按 tab_target 集合画目标环
 
 以后要做时，走 presenter 那套：presenter 声明画什么，按参与者座位决定谁能看到（只有下令的那个玩家看到自己单位的路线）。开发这一片时把这条待办登记到 `gitbook/architecture/graph-capability-status.md`。
 
-### 3.11 Core 里写死的动作名和默认按键
+### 3.11 Core 里写死的输入消费者和默认按键
 
-几个 Core 功能按固定名字找动作：
+几个 Core 功能由引擎自己装一个输入消费者，按固定动作名读键：
 
-| 功能 | 写死的动作名 | 位置 |
+| 功能 | 引擎装的消费者 | 读的动作 |
 | --- | --- | --- |
-| 交互默认动作 | `Select.Begin`（确认）、`Cancel`、`Command`、`PointerPos` | `InteractionActionBindings` |
-| 响应连锁 | `ResponseChainPass`、`ResponseChainNegate`、`ResponseChainActivate` | `InteractionActionBindings`、`ResponseChainHumanOrderSourceSystem`、`ResponseChainUiSyncSystem` |
-| 小地图 | `Minimap.Toggle`、`Minimap.Zoom`、`Minimap.Pan` 等 8 个 | `MinimapPresentationSystem` |
+| 交互默认动作 | 指针按键快照、界面挡指针时屏蔽确认 / 下令 / 取消 | 确认、命令、取消 |
+| 响应连锁 | `ResponseChainHumanOrderSourceSystem`，窗口弹出时按键就往连锁队列下令 | 让过、反制、发动 |
+| 小地图 | `MinimapInputConsumer`，开关、缩放、平移、回焦点，指针在小地图上时点击跳镜头、右键在小地图上下令 | 8 个 `Minimap.*`，外加确认、命令 |
 
-这些动作的声明和默认按键（左键框选、右键下令、Esc、M、PageUp/PageDown、空格 / 1 / N 等）只在 CoreInputMod 的 `default_input.json` 里。根目录 `assets/Input/default_input.json` 声明了 `Default_Gameplay` 上下文，CoreInputMod 往里追加这些绑定。`LudotsCoreMod` 的 `game.json` 默认开 `Default_Gameplay`，所以每个依赖 CoreInputMod 的 mod 都拿到了这批按键。删掉依赖，这些 mod 就没有左键框选、右键下令和小地图按键了。
+这些动作的按键只在 CoreInputMod 的 `default_input.json` 里，它往根目录声明的 `Default_Gameplay` 上下文追加绑定。
 
-除了上表，交互默认动作还有这几个读者：指针按键快照、界面挡住指针时屏蔽确认 / 下令 / 取消、小地图右键下令时改写地面落点。它们都是引擎默认装上的，每个游戏都有。
+按 `commandSystem.md` 的分层，这套做法有两处不对：
 
-**动作名进配置（片 3 先做，玩家无感）。** 三处都照 `game.json` 已有的写法，必填、C# 里没有默认值，缺了启动报错：
+- 按键该属于交互状态。响应窗口弹出、指针停在小地图上，都是玩家当前的一种输入状态，和施法瞄准、UI 抢输入是一类，由交互状态决定哪些键在这时有意义，不该由引擎的固定消费者常年监听。
+- 引擎不带默认按键、默认交互状态。哪个游戏要这个功能，哪个游戏自己声明交互状态、绑定和图。
 
-| 功能 | 配置位置 | 字段 |
+所以做法是：引擎把这几个功能的"动作"做成图节点和事件，C# 消费者删掉；用到的 showcase 自己写交互状态，照宪法 §03 命名 `interaction.context.<mod>.<状态>`。
+
+**片 3 已做的"动作名进配置"是过渡。** `interactionActions`、`constants.responseChainActionIds`、`presentation.minimap.actions` 三组配置去掉了 C# 常量，但仍是"全局一份动作名给引擎消费者读"。消费者删掉时，这三组配置跟着删：
+
+| 配置 | 什么时候删 |
+| --- | --- |
+| `constants.responseChainActionIds` | 片 3b |
+| `presentation.minimap.actions` | 片 3c |
+| `interactionActions` | 最后两个读者没了以后：老下令映射（片 5）和小地图指针交互（片 6） |
+
+指针位置统一用引擎保留名 `PointerPos`，这一条保留。
+
+#### 3.11.1 响应连锁（片 3b）
+
+现在：窗口弹出时，引擎给来源单位的主人发一个提示。`ResponseChainHumanOrderSourceSystem` 每帧看窗口开没开，开着就按让过 / 反制 / 发动三个键往连锁队列下令。没有任何 mod 数据真的弹出过提示（没有 mod 用 `PromptInput` 类型的监听），只有测试在用。
+
+改成：
+
+| 层 | 谁管 | 内容 |
 | --- | --- | --- |
-| 交互默认动作 | `game.json` 顶层 `interactionActions` | `confirmActionId`、`commandActionId`、`cancelActionId` |
-| 响应连锁 | `constants.responseChainActionIds`，和已有的 `responseChainOrderTypeIds` 同一组键 | `chainPass`、`chainNegate`、`chainActivateEffect` |
-| 小地图 | `presentation.minimap.actions`，和已有的小地图参数放一起 | `toggle`、`togglePreset`、`toggleRotateWithCamera`、`zoom`、`zoomIn`、`zoomOut`、`pan`、`centerOnFocusPrimary` |
+| 窗口事件 | 引擎 | 窗口等玩家时发"提示弹出"事件，窗口关闭时发"提示关闭"事件。事件目标是被提示玩家的代表实体，trigger graph 用 `event` 入口接 |
+| 下令节点 | 引擎，新节点 `SubmitResponseChainOrder` | 选项写在节点上：让过 / 反制 / 发动。下令类型从已有的 `responseChainOrderTypeIds` 查。节点按当前等这个玩家的窗口组连锁指令；没有窗口在等这个玩家时拒绝，并给出原因，不静默 |
+| 交互状态 | showcase | 提示弹出图 `ActivateContext(响应窗)`，提示关闭图 `DeactivateContext`。响应窗状态的 bindings 写按键，triggers 挂三张小图，各调一次 `SubmitResponseChainOrder` |
+| 按键提示 | showcase | 写在它自己的面板里。引擎的响应连锁面板去掉"Pass=… Negate=…"那行键名 |
 
-三组值都写在 LudotsCoreMod 的 `game.json` 里，这几个功能的其他基础参数本来就在那里。指针位置不单独配：引擎已经登记了保留动作名 `PointerPos`（`ReservedInputActionIds`），图节点和 presenter 都按这个名字取指针，交互默认动作里的指针名删掉，统一用保留名。
+删：`ResponseChainHumanOrderSourceSystem`、`ResponseChainActionIds`、`constants.responseChainActionIds`、CoreInputMod 里三个响应连锁动作和空格 / N / 1 的绑定。电脑那一方的自动让过 `ResponseChainAiOrderSourceSystem` 不是输入，保留。
 
-**按键归属（待定）。** 查下来有两个事实，原来"用小地图的 mod 带小地图按键"的说法落不了地：
+谁来演示：TCG 演示加一张图 `tcg_prompt`。新玩家进来看到自己的英雄和一个敌人，屏幕提示"按 Q 放火球"。火球放出后弹出响应窗，写着"空格 让过 / N 反制 / 1 发动反击"。让过，火球照常打中敌人；反制，火球被抵消，敌人不掉血；发动，火球打中后再追加一次反击伤害。按键、响应窗状态、面板都写在 TcgDemoMod 里。TCG 演示现在没有本地玩家席位，这一片给它补上席位和代表实体。
 
-- 小地图、响应连锁、指针快照是引擎给每个游戏都装的，不存在"开这个功能的 mod"。现在是否能用，取决于有没有拿到 CoreInputMod 的按键：81 个依赖它的 mod 有，另外 85 个没有。比如小地图默认隐藏，这 85 个 mod 里按 M 没反应。
-- 按键如果搬进 LudotsCoreMod，这 85 个 mod 会多出这批按键，其中几处和它们自己的按键撞车：调试面板 `DiagnosticsOverlayMod` 用了空格、F6、F7，Case E `SelectionInteractionMod` 用了左右键，`AuditPlaygroundMod`、`DualSeatPanelsShowcaseMod` 用了 I，`CapabilityStandardSoundShowcaseMod` 用了 1，`BallistaRouteByTargetMod` 用了右键。
+#### 3.11.2 小地图按键（片 3c）
 
-要选的是：这批功能是所有游戏默认都有（按键进 LudotsCoreMod，撞车的几个 mod 改键），还是游戏自己选（功能加显式开关，开的 mod 带按键）。定下来之前，按键留在 CoreInputMod 的 `default_input.json`，不动。
+现在：M 开关、F6 切模式、F7 旋转、PageUp / PageDown 缩放、IJKL 平移、Home 回焦点，都由 `MinimapInputConsumer` 按 `Minimap.*` 读。没有 showcase 或验收测试用这些键；主动打开小地图的 4 个 mod（小地图展示、浏览器小地图叠加、迷雾衰减、万人寻路）都是在 C# 里直接把小地图设成显示。
 
-**删依赖。** CoreInputMod 开局给每个依赖它的 mod 装技能栏（默认开着，只有显式关掉才不画）、Tab 切目标、视角模式、小地图焦点。只要这些系统还在，删依赖就会让玩家看到的东西变少，所以删依赖不单独做，放到片 8 和 CoreInputMod 目录一起删。
+改成：引擎加小地图节点，showcase 在自己的交互状态里绑键、挂图调节点：
+
+| 节点 | 做什么 |
+| --- | --- |
+| `MinimapSetVisible` | 显示 / 隐藏 / 切换，选项写在节点上 |
+| `MinimapCyclePreset` | 全图和跟随镜头两种模式切换 |
+| `MinimapToggleRotateWithCamera` | 跟不跟镜头旋转 |
+| `MinimapZoomStep` | 按一档放大或缩小 |
+| `MinimapCenterOnCollectionPrimary` | 小地图中心移到某个集合的第一个实体，集合名写在节点上 |
+
+键盘平移去掉：它要按住持续生效，边沿图做不自然，也没人用；在小地图上拖动照样能平移。4 个用小地图的 mod 按需声明自己的键，C# 里直接设显示的地方改成开局图调 `MinimapSetVisible`。
+
+删：`MinimapInputConsumer` 里的键盘部分、`presentation.minimap.actions`、CoreInputMod 里的 `Minimap.*` 动作和绑定。
+
+#### 3.11.3 小地图指针交互和界面抢输入（片 6）
+
+指针停在小地图上时，左键点击跳镜头、拖动平移、滚轮缩放、点小地图上的按钮，右键在小地图上直接下令。现在靠 `MinimapInputConsumer` 命中测试后设"指针被抢"标记 `PointerInputCaptured`，再由 `InputRuntimeSystem` 屏蔽确认 / 下令 / 取消；右键下令靠 `AuthoritativeGroundPointerOverride` 把地面落点改成小地图上对应的位置。
+
+按 `commandSystem.md`，"指针在界面上"本身就是一个交互状态。改成：
+
+- 小地图发"指针进入 / 离开小地图"事件。showcase 的图在进入时激活一个前台交互状态，离开时退掉。前台状态会压住下面的世界交互状态，框选、下令这些键自然不响应，不需要"抢"标记。
+- 小地图状态里的按键调小地图节点：按下 / 拖动 / 松开、滚轮缩放、点按钮。
+- 右键在小地图上下令：showcase 的下令图用新节点"小地图点换地面坐标"代替 `ScreenPointToGround`，再 `SubmitCommandIntent`。改写落点的那条旁路就不需要了。
+
+删：`MinimapInputConsumer`、`PointerInputCaptured`、`AuthoritativeGroundPointerOverride`，以及 `interactionActions`（它的另一个读者老下令映射在片 5 已删）。`commandSystem.md` 里"抑制类标记退役、归到输入上下文"的其余部分（`UiCaptured`、`IsAiming`）不在这份设计里，另开。
+
+这一步依赖片 5：右键下令先得是图，才能换成小地图的坐标节点。
+
+#### 3.11.4 按键归属
+
+没有公共默认按键。LudotsCoreMod 和引擎里都不放按键；哪个 showcase 用到响应连锁、小地图、框选下令，就在它自己的 `default_input.json` 和交互状态里声明。别的 mod 自己的按键不受影响，也就没有撞键问题。
+
+**删依赖。** CoreInputMod 开局给每个依赖它的 mod 装技能栏（默认开着，只有显式关掉才不画）、Tab 切目标、视角模式、小地图焦点，还通过 `Default_Gameplay` 给了框选、下令这些键。只要这些还在，删依赖就会让玩家看到的东西变少，所以删依赖不单独做，放到片 8 和 CoreInputMod 目录一起删。
 
 ## 4. 场景
 
@@ -196,11 +247,13 @@ presenter 按 tab_target 集合画目标环
 | 技能栏 | 选中英雄后屏幕下方出现他的技能格子，冷却中的变灰 | 面板 + `QueryCollectAbilitySlots` |
 | 切视角 | 按键从战术视角切到跟随视角，镜头跟到我的英雄身上，施法方式和技能栏跟着模式变 | 视角交互状态的 `onActivated` 图 |
 | 选中指示器 | MOBA 里选中英雄，脚下出现选中环（现在不出现） | presenter 订阅选中集合 |
+| TCG 响应窗 | 放火球后弹出响应窗，空格让过、N 反制、1 发动反击 | 提示事件图激活响应窗状态，按键图调 `SubmitResponseChainOrder` |
+| 小地图开关 | 在用小地图的 showcase 里按它面板上写的键开关小地图；别的游戏按 M 没反应 | showcase 的交互状态绑键，图调 `MinimapSetVisible` |
 
 ## 5. 边界
 
 - 不建新的通用输入 mod，不把 CoreInputMod 的 C# 换个地方放。
-- 共享 mod 和引擎里不出现任何动作名、集合名、下令类型名。
+- 共享 mod 和引擎里不出现任何动作名、集合名、下令类型名，也不放任何默认按键。
 - 删 `InputGate` 以后，技能配置里再写它，加载时报"未知执行项"并点名技能。`AbilityExecAimSync` 同理。
 - 移动路线预览删掉后，选中单位下令时不再有路线线条，这是这次有意去掉的。
 - 没声明焦点集合的小地图不显示焦点；没挂 tab 图的 mod 按 Tab 没反应。都是配置决定的，不是故障。
@@ -210,10 +263,12 @@ presenter 按 tab_target 集合画目标环
 - 分片顺序：
   1. 删死代码：已选中回调、视角模式显示开关（3.1）。
   2. 删技能里"等玩家"的两种步骤和应答系统（3.1），先做 GAS 自审。
-  3. Core 动作名写进配置（3.11，已完成）。按键归属定下来后再搬按键。
+  3. Core 动作名写进配置（3.11，已完成，过渡用）。
+     3b. 响应连锁改交互状态，TCG 演示加 `tcg_prompt`（3.11.1）。
+     3c. 小地图按键改交互状态和小地图节点（3.11.2）。
   4. 补 C1、C2，删移动路线预览（3.10）。
   5. 12 个 mod 的下令改图（3.2），同时去掉 `LocalOrderSourceHelper` 对 `ControlDomainQuery` 的调用。
-  6. 技能栏、Tab、瞄准、视角模式、小地图改配置（3.4–3.8）。
+  6. 技能栏、Tab、瞄准、视角模式、小地图焦点改配置（3.4–3.8），小地图指针交互改交互状态并删 `interactionActions`（3.11.3）。
   7. `collection.command.source` 全部换掉，showcase 的 C# 直写改图写，选中指示器改 presenter 订阅（3.3）。
   8. 删 CoreInputMod 目录、各 mod 对它的依赖和 Core 里只为它存在的类型，架构测试禁止这些名字再出现。
 
@@ -299,26 +354,53 @@ Feature: 旧写法启动即失败
     When 游戏加载
     Then 加载失败，报错写明是哪个技能的哪一步
 
-Feature: 动作名进配置后按键照旧
+Feature: TCG 响应窗
 
-  Scenario: 小地图和响应连锁按键不变
-    Given 我在 MOBA 演示里
-    When 我按 M
+  Background:
+    Given 我进入 TCG 演示的 tcg_prompt 图
+    And 屏幕提示"按 Q 放火球"
+
+  Scenario: 让过
+    When 我按 Q
+    Then 弹出响应窗，写着"空格 让过 / N 反制 / 1 发动反击"
+    When 我按空格
+    Then 响应窗关闭，敌人被火球打掉血
+
+  Scenario: 反制
+    When 我按 Q
+    And 响应窗弹出后我按 N
+    Then 响应窗关闭，敌人血量不变
+
+  Scenario: 发动反击
+    When 我按 Q
+    And 响应窗弹出后我按 1
+    Then 敌人先被火球打中，再被反击打中一次
+
+  Scenario: 没弹窗时按空格
+    Given 响应窗没有弹出
+    When 我按空格
+    Then 什么都不发生
+
+Feature: 小地图按键归 showcase
+
+  Scenario: 小地图展示里开关小地图
+    Given 我在小地图展示里，小地图开着
+    When 我按这个 showcase 面板上写的小地图开关键
+    Then 小地图关掉
+    When 我再按一次
     Then 小地图出现
-    When 响应连锁窗口弹出后我按空格
-    Then 我这一方选择"过"，窗口轮到对方
 
-  Scenario: 配置漏写动作名
-    Given 某个游戏的 game.json 删掉了 presentation.minimap.actions 里的 toggle
-    When 游戏启动
-    Then 启动失败，报错写明缺的是 presentation.minimap.actions.toggle
+  Scenario: 不用小地图的游戏
+    Given 我在一个没有声明小地图按键的游戏里
+    When 我按 M
+    Then 什么都不发生，也不影响这个游戏自己绑在 M 上的功能
 
 Feature: 删掉依赖后按键不丢
 
-  Scenario: 小地图按键
-    Given 一个用小地图的 showcase 已经不依赖 CoreInputMod
-    When 我按 M
-    Then 小地图照常开关
+  Scenario: 框选下令
+    Given RTS 演示已经不依赖 CoreInputMod
+    When 我框选几个兵再右键地面
+    Then 这几个兵照常走过去
 ```
 
 ## 附录 A：删依赖的前提
