@@ -108,8 +108,8 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 hash = Mix(hash, blocker.PieceCount);
                 hash = Mix(hash, blocker.ShapeSignature);
                 hash = Mix(hash, blocker.PoseSignature);
-                hash = Mix(hash, position.Value.X.GetHashCode());
-                hash = Mix(hash, position.Value.Y.GetHashCode());
+                hash = Mix(hash, position.Value.X.RawValue);
+                hash = Mix(hash, position.Value.Y.RawValue);
                 for (int pieceIndex = 0; pieceIndex < blocker.PieceCount; pieceIndex++)
                 {
                     hash = Mix(hash, (int)blocker.GetShape(pieceIndex));
@@ -134,8 +134,8 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 long hash = FnvOffsetBasis;
                 hash = Mix(hash, entity.Id);
                 hash = Mix(hash, entity.Version);
-                hash = Mix(hash, position.Value.X.GetHashCode());
-                hash = Mix(hash, position.Value.Y.GetHashCode());
+                hash = Mix(hash, position.Value.X.RawValue);
+                hash = Mix(hash, position.Value.Y.RawValue);
                 markerSetHash = unchecked(markerSetHash + hash);
             }
         }
