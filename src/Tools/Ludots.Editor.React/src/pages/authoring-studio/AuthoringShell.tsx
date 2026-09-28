@@ -6,6 +6,7 @@ import {
   AUTHORING_TOOLS,
   matchAuthoringTool,
 } from './authoringTools';
+import { AgentDock } from '@/components/agent/AgentDock';
 import { Badge } from '@/components/ui/Badge';
 import { NavTab } from '@/components/ui/NavTab';
 
@@ -15,6 +16,18 @@ export function AuthoringShell() {
   const location = useLocation();
   const active = matchAuthoringTool(location.pathname);
   const [bridge, setBridge] = useState<BridgeState>('checking');
+  const [dockOpen, setDockOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === '`') {
+        event.preventDefault();
+        setDockOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +80,17 @@ export function AuthoringShell() {
             );
           })}
         </nav>
+        <button
+          type="button"
+          data-agent-dock-toggle={dockOpen ? 'open' : 'closed'}
+          title="副驾（Ctrl+`）"
+          onClick={() => setDockOpen((open) => !open)}
+          className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] ${
+            dockOpen ? 'bg-studio-blue/20 text-studio-blue' : 'bg-studio-elevated text-studio-muted hover:text-studio-label'
+          }`}
+        >
+          副驾
+        </button>
         <Badge
           data-bridge-state={bridge}
           tone={bridge === 'up' ? 'blue' : bridge === 'down' ? 'red' : 'muted'}
@@ -74,8 +98,11 @@ export function AuthoringShell() {
           {bridge === 'up' ? '桥已接通' : bridge === 'down' ? '桥没连上' : '在探桥…'}
         </Badge>
       </header>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <Outlet />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <Outlet />
+        </div>
+        {dockOpen ? <AgentDock onClose={() => setDockOpen(false)} /> : null}
       </div>
     </div>
   );

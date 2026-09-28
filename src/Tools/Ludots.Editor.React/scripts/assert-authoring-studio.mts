@@ -128,6 +128,13 @@ const studioSurfaces = [
   'src/components/ui/Badge.tsx',
   'src/components/ui/Collapse.tsx',
   'src/components/ui/chrome.ts',
+  'src/components/agent/AgentDock.tsx',
+  'src/components/agent/Conversation.tsx',
+  'src/components/agent/Message.tsx',
+  'src/components/agent/PromptInput.tsx',
+  'src/components/agent/ToolCard.tsx',
+  'src/components/agent/llm.ts',
+  'src/components/agent/tools.ts',
 ];
 const bannedPalette = /violet-|indigo-|fuchsia-|purple-|cyan-|sky-|#a78bfa|#e879f9|#c084fc|#a855f7|#7c3aed|#8b5cf6|#22d3ee|#67e8f9|#a78bfa/;
 for (const rel of studioSurfaces) {
@@ -182,6 +189,12 @@ for (const uiFile of readdirSync(uiDir)) {
   const text = readFileSync(join(uiDir, uiFile), 'utf8');
   assert(!/#[0-9a-fA-F]{3,8}/.test(text), `components/ui/${uiFile} must not hardcode hex colors`);
 }
+const shellPage = readFileSync(join(here, '../src/pages/authoring-studio/AuthoringShell.tsx'), 'utf8');
+assert(shellPage.includes('AgentDock'), 'studio shell must host the agent copilot dock (#1699 S3)');
+assert(shellPage.includes('data-agent-dock-toggle'), 'shell must offer the dock toggle affordance');
+const llmLib = readFileSync(join(here, '../src/components/agent/llm.ts'), 'utf8');
+assert(!llmLib.includes('sk-'), 'llm layer must not ship a default API key');
+assert(llmLib.includes('localStorage'), 'llm config must stay in browser-local storage');
 const runPage = readFileSync(join(here, '../src/pages/run/RunPage.tsx'), 'utf8');
 assert(runPage.includes('/api/launch'), 'run page must launch through the bridge contract (#1699)');
 assert(runPage.includes('/api/launcher/state'), 'run page must read launcher state through the bridge contract');
