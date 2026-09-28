@@ -30,6 +30,7 @@ public static class GraphOpsNodeDriverCatalog
             "commandIntent" => new Drivers.CommandIntentNodeDriver(),
             "derivedQuery" => new Drivers.DerivedQueryNodeDriver(),
             "order" => new Drivers.OrderNodeDriver(),
+            "responseChain" => new Drivers.ResponseChainNodeDriver(),
             _ => throw new InvalidOperationException($"Unknown GraphOps node driver '{driver}'.")
         };
     }

@@ -10992,6 +10992,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubInt/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj",
+      "title": "替玩家回答响应窗口",
+      "summary": "指挥打出一记引子，响应窗口停下来问他要不要接招；图替他回答：接上追击，再让过两次。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SubmitResponseChainOrder"
+      ],
+      "binding": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "preset": "capability_standard_graph_op_SubmitResponseChainOrder_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubmitResponseChainOrder.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

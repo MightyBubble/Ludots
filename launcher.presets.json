@@ -3669,6 +3669,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitResponseChainOrder_raylib",
+      "name": "Graph Op SubmitResponseChainOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitResponseChainOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

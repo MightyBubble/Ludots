@@ -1,0 +1,29 @@
+[
+  {
+    "id": "showcase.graph_op.SubmitResponseChainOrder",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "answer"
+      }
+    ],
+    "nodes": [
+      { "id": "answer", "op": "SubmitResponseChainOrder", "orderType": "chainActivateEffect" },
+      { "id": "pass_first", "op": "SubmitResponseChainOrder", "orderType": "chainPass" },
+      { "id": "pass_second", "op": "SubmitResponseChainOrder", "orderType": "chainPass" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "answer", "fromPort": "next", "to": "pass_first" },
+      { "from": "pass_first", "fromPort": "next", "to": "pass_second" },
+      { "from": "pass_second", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]
