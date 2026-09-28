@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod;
-using CoreInputMod.Triggers;
 using InteractionShowcaseMod.Runtime;
 using InteractionShowcaseMod.Systems;
 using Ludots.Core.Engine;
@@ -12,10 +9,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 
 namespace InteractionShowcaseMod.Triggers
 {
@@ -74,55 +68,8 @@ namespace InteractionShowcaseMod.Triggers
                 SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
-            WireCommandSourceAcquisitionFeedback(context, engine);
-            _ctx.Log("[InteractionShowcaseMod] Stress runtime and command-source acquisition feedback registered.");
+            _ctx.Log("[InteractionShowcaseMod] Stress runtime registered.");
             return Task.CompletedTask;
-        }
-
-        private static void WireCommandSourceAcquisitionFeedback(ScriptContext context, GameEngine engine)
-        {
-            if (!CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out List<Action<WorldCmInt2, Entity>> commandSourceAcquiredCallbacks))
-            {
-                return;
-            }
-
-            if (context.Get(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
-            {
-                return;
-            }
-
-            if (context.Get(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry definitions)
-            {
-                return;
-            }
-
-            int selectionDefId = definitions.GetId(InteractionShowcaseIds.SelectionIndicatorDefId);
-            if (selectionDefId <= 0)
-            {
-                return;
-            }
-
-            commandSourceAcquiredCallbacks.Add((_, entity) =>
-            {
-                commands.TryAdd(new PresenterCommand
-                {
-                    CommandKind = PresenterCommandKind.DestroyPresenterScope,
-                    ScopeTag = InteractionShowcaseIds.SelectionScopeId
-                });
-
-                if (!engine.World.IsAlive(entity))
-                {
-                    return;
-                }
-
-                commands.TryAdd(new PresenterCommand
-                {
-                    CommandKind = PresenterCommandKind.CreatePresenter,
-                    PresenterDefinitionId = selectionDefId,
-                    ScopeTag = InteractionShowcaseIds.SelectionScopeId,
-                    Source = entity
-                });
-            });
         }
     }
 }

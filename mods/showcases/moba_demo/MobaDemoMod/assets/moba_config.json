@@ -14,8 +14,6 @@
     "maxPerFrame": 128
   },
   "presentation": {
-    "commandSourceIndicatorDefKey": "moba_command_source_indicator",
-    "commandSourceScopeId": 99001,
     "rangeCircleIndicatorDefKey": "moba_ability_range",
     "circleEnemyMarker": {
       "scale": [1.2, 0.08, 1.2],

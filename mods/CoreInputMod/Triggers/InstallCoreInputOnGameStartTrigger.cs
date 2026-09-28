@@ -27,11 +27,9 @@ namespace CoreInputMod.Triggers
     /// Registers generic input systems on game start: CommandSourceAcquisition, GasInputResponse.
     /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
     /// For camera, compose CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod as needed.
-    /// Mods can add callbacks via GlobalContext["CoreInputMod.CommandSourceAcquiredCallbacks"] to customize visual feedback.
     /// </summary>
     public sealed class InstallCoreInputOnGameStartTrigger : Trigger
     {
-        public const string CommandSourceAcquiredCallbacksKey = "CoreInputMod.CommandSourceAcquiredCallbacks";
         private readonly IModContext _ctx;
 
         public InstallCoreInputOnGameStartTrigger(IModContext ctx)
@@ -52,16 +50,6 @@ namespace CoreInputMod.Triggers
             engine.SetService(
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
-
-            // The acquisition system that fired these retired with the input→order graph line;
-            // the registration point stays so dependent mods (camera follow, VFX hooks) can
-            // attach, and the graph selection commit path can invoke them once it lands.
-            if (!engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out var _))
-            {
-                engine.SetService(
-                    CoreInputServiceKeys.CommandSourceAcquiredCallbacks,
-                    new System.Collections.Generic.List<System.Action<Ludots.Platform.Abstractions.WorldCmInt2, Arch.Core.Entity>>());
-            }
 
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");

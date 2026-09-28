@@ -6,8 +6,6 @@ namespace InteractionShowcaseMod
         public const string StressMapId = "interaction_showcase_stress";
 
         public const string InputContextId = "InteractionShowcase.Controls";
-        public const string SelectionIndicatorDefId = "interaction_selection_indicator";
-        public const int SelectionScopeId = 22041;
 
         public const string WowModeId = "Interaction.Mode.WoW";
         public const string LolModeId = "Interaction.Mode.LoL";
