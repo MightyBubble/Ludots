@@ -19,7 +19,8 @@
       {
         "id": "submit",
         "op": "SubmitCast",
-        "orderTypeKey": "castAbility"
+        "orderTypeKey": "castAbility",
+        "collectionKey": "selected"
       },
       {
         "id": "ok",

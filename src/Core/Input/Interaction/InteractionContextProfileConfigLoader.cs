@@ -42,7 +42,7 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
-            RejectRetiredPeriodFields(mergedObject, relativePath);
+            RejectRetiredProfileFields(mergedObject, relativePath);
 
             var config = mergedObject.Deserialize<InteractionContextProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
@@ -51,11 +51,11 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Case E retired <c>continuousQuery</c> / <c>whileActive</c>; profiles use
-        /// <c>onActivated</c> / <c>onDeactivated</c> graph slots instead. Unknown properties
-        /// are otherwise ignored by the deserializer — fail closed instead.
+        /// Retired and undeclared profile fields fail closed. The deserializer ignores unknown
+        /// properties, so a collection field invented beside <c>activeCollectionKey</c> would
+        /// otherwise sit in the file and never reach the entity.
         /// </summary>
-        private static void RejectRetiredPeriodFields(JsonObject root, string relativePath)
+        public static void RejectRetiredProfileFields(JsonObject root, string relativePath)
         {
             if (!root.TryGetPropertyValue("profiles", out JsonNode? profilesNode) ||
                 profilesNode is not JsonArray profiles)
@@ -82,6 +82,20 @@ namespace Ludots.Core.Input.Interaction
                     {
                         throw new InvalidOperationException(
                             $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
+                    }
+
+                    if (string.Equals(property.Key, "activeEntityViewKey", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; it has no runtime consumer.");
+                    }
+
+                    if (IsArbitraryCollectionField(property.Key))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares collection field '{property.Key}'. " +
+                            "Collection keys are declared as collectionKey on graph nodes. The only profile field is activeCollectionKey, " +
+                            "and a context whose submit graph declares collectionKey must omit it — that key is persisted on the entity interaction instance.");
                     }
                 }
             }
@@ -112,9 +126,8 @@ namespace Ludots.Core.Input.Interaction
                     throw new InvalidOperationException($"{path}.id duplicates interaction context profile '{profile.Id}'.");
                 }
 
-                // Collection/view keys are optional: cast/command routing contexts declare
-                // activeCollectionKey; entity-mounted play contexts (Case E battle/boxing) omit both.
-                // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
+                // activeCollectionKey is optional. A context whose submit graphs declare
+                // collectionKey must omit it; install copies that graph key onto the entity.
                 RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
@@ -180,6 +193,16 @@ namespace Ludots.Core.Input.Interaction
                     ?? throw new InvalidOperationException($"{path}[{i}] must be a string.");
                 RequireTrimmedNonEmpty(graph, $"{path}[{i}]");
             }
+        }
+
+        private static bool IsArbitraryCollectionField(string propertyName)
+        {
+            if (string.Equals(propertyName, "activeCollectionKey", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return propertyName.Contains("collection", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)

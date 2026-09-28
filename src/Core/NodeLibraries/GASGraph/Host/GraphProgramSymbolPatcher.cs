@@ -47,14 +47,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.StartDialogue:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SubmitCommandIntent:
+                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: true);
+                        break;
                     case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: false);
                         break;
                     case GraphNodeOp.SubmitEngageBatch:
                         ins.Imm = Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.Pack(
                             symbolResolver.ResolveEqsQuery(ResolveSymbol(symbols, ins.Imm)),
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
                         ins.Dst = 0;
+                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: false);
                         break;
                     case GraphNodeOp.OfferActivity:
                     case GraphNodeOp.OfferTask:
@@ -378,6 +385,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return symbols[symbolIndex] ?? string.Empty;
+        }
+
+        private static void PatchAuthoredCollectionKey(
+            ref GraphInstruction ins,
+            string[] symbols,
+            EntityCollectionStore? entityCollections,
+            bool inImmediate)
+        {
+            if ((ins.Flags & GraphInstructionFlags.CollectionKeyAuthored) == 0)
+            {
+                return;
+            }
+
+            int symbolIndex = inImmediate ? ins.Imm : BitConverter.SingleToInt32Bits(ins.ImmF);
+            int keyId = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, symbolIndex));
+            if (inImmediate)
+            {
+                ins.Imm = keyId;
+            }
+            else
+            {
+                ins.ImmF = BitConverter.Int32BitsToSingle(keyId);
+            }
+
+            ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.CollectionKeyAuthored);
         }
 
         private static int ResolveEntityCollectionKey(EntityCollectionStore? entityCollections, string key)

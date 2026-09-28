@@ -29,7 +29,8 @@
       },
       {
         "id": "submit",
-        "op": "SubmitCommandIntent"
+        "op": "SubmitCommandIntent",
+        "collectionKey": "selected"
       },
       {
         "id": "ok",

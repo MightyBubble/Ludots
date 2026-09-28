@@ -30,7 +30,11 @@ namespace Ludots.Core.Input.Interaction
     {
         public string Id { get; set; } = string.Empty;
 
-        /// <summary>Collection key context-bound cast commits write while the context is active.</summary>
+        /// <summary>
+        /// Routing collection key copied onto <see cref="InteractionContextInstance"/> at mount.
+        /// Leave empty when a bound submit graph declares <c>collectionKey</c> — that graph
+        /// declaration is the one persisted on the entity. Declaring both fails install.
+        /// </summary>
         public string ActiveCollectionKey { get; set; } = string.Empty;
 
         /// <summary>Optional filter profile applied to cast commits (empty = pass-through).</summary>
