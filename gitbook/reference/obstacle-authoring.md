@@ -115,7 +115,7 @@ Compound obstacle:
 | Change | Expected behavior |
 | --- | --- |
 | Add a map-authored obstacle entity | Recast bake carves it; MassNavigationFlow runtime binds it after bridge + environment binding. |
-| Move `WorldPositionCm` | MassNavigationFlow obstacle snapshot changes and flow fields rebuild. |
+| Move `WorldPositionCm` | MassNavigationFlow obstacle snapshot changes; the static obstacle grid and flow fields rebuild on the next simulation step. Resubmitting identical obstacles triggers no rebuild. |
 | Rotate `FacingDirection` on box/polygon | Bake geometry and MassNavigationFlow projection offsets use the rotated pose. |
 | Remove the obstacle entity or disable navigation sink | Runtime projection is removed and MassNavigationFlow rebuilds without it. |
 
