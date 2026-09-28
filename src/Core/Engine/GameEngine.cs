@@ -1226,7 +1226,6 @@ namespace Ludots.Core.Engine
                 eventBus: EventBus,
                 budget: gasBudget,
                 graphProgramScratchCapacity: gasRuntimeCapacity.EffectPhaseGraphProgramScratchCapacity);
-            var inputRequestQueue = new InputRequestQueue();
             var commandSourceConfig = config.CommandSource
                 ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
             var interactionActionBindings = config.InteractionActions
@@ -1969,7 +1968,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ScopeResolver, scopeResolver);
             SetService(CoreServiceKeys.ProgressionRequirementEvaluator, progressionEvaluator);
             SetService(CoreServiceKeys.ContextGroupRegistry, contextGroups);
-            SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.IntIdCollectionStore, intIdCollectionStore);
@@ -2403,6 +2401,9 @@ namespace Ludots.Core.Engine
                 ChainNegate = cfgChainNegate,
                 ChainActivateEffect = cfgChainActivateEffect
             };
+            var responseChainPromptState = new ResponseChainPromptState();
+            SetService(CoreServiceKeys.ResponseChainPromptState, responseChainPromptState);
+            _gasGraphRuntimeApi.BindResponseChain(chainOrderQueue, responseChainPromptState, responseChainOrderTypes);
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
             var entityLifecycleServices = new EntityLifecycleRuntimeServices(
@@ -2418,7 +2419,7 @@ namespace Ludots.Core.Engine
                 ownership: ownershipResolver,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId);
-            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
+            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, responseChainPromptState, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
             RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
@@ -2548,6 +2549,7 @@ namespace Ludots.Core.Engine
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasEventTriggerBridgeSystem(EventBus, TriggerManager, World, CreateContext), SystemGroup.EventDispatch);
+            RegisterSystem(new ResponseChainPromptEventSystem(responseChainPromptState, playerEntityLookup, TriggerManager, World, CreateContext), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
             // Phase 7.1: Hosts with a presentation consumer project gameplay facts for performer owner bindings.
@@ -2594,7 +2596,6 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext, presentationTimingDiagnostics));
             RegisterPresentationSystem(presentationEntityLifecycleSystem);
             RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, meshAssets, presenterDefinitions));
-            RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);

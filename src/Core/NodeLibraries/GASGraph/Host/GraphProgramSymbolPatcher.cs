@@ -44,6 +44,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.SubmitAssignedOrder:
                     case GraphNodeOp.LoadOrderTypeId:
+                    case GraphNodeOp.SubmitResponseChainOrder:
                         ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.StartDialogue:

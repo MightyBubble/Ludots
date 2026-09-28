@@ -116,6 +116,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EffectRequestQueue? _effectRequests;
         private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
         private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _responseChainOrders;
+        private Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState? _responseChainPrompt;
+        private Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -2339,6 +2342,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void BindResponseChain(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue chainOrders,
+            Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState prompt,
+            Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes orderTypes)
+        {
+            _responseChainOrders = chainOrders ?? throw new ArgumentNullException(nameof(chainOrders));
+            _responseChainPrompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
+            _responseChainOrderTypes = orderTypes;
+        }
+
+        public void SubmitResponseChainOrder(Entity rep, int orderTypeId)
+        {
+            if (_responseChainOrders == null || _responseChainPrompt == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.ResponseChainUnavailable");
+            }
+
+            bool activate = orderTypeId == _responseChainOrderTypes.ChainActivateEffect;
+            if (!activate &&
+                orderTypeId != _responseChainOrderTypes.ChainPass &&
+                orderTypeId != _responseChainOrderTypes.ChainNegate)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NotResponseChainOrderType: SubmitResponseChainOrder references order type {orderTypeId}, which is not one of constants.responseChainOrderTypeIds.");
+            }
+
+            if (!_world.IsAlive(rep) || !_world.TryGet(rep, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ResponseChainRepHasNoPlayerOwner: rep {rep} answered a response-chain prompt but carries no positive PlayerOwner.");
+            }
+
+            var prompt = _responseChainPrompt;
+            if (!prompt.IsOpen || prompt.PlayerId != owner.PlayerId)
+            {
+                prompt.RecordRejectedWithoutPrompt();
+                return;
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = owner.PlayerId,
+                Actor = prompt.Actor,
+                Target = prompt.Target,
+                TargetContext = prompt.TargetContext,
+            };
+            if (activate)
+            {
+                order.Args.I0 = prompt.OfferedEffectTemplateId;
+            }
+
+            prompt.RecordSubmission(_responseChainOrders.SubmitAssigned(ref order), order.OrderId);
         }
 
         public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)

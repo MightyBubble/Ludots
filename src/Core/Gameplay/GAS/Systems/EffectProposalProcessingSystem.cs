@@ -59,18 +59,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public const string WindowDepthExceededError = "GAS.RESPONSE_CHAIN.ERR.WindowDepthExceeded";
         public const string CreateCapacityExceededError = "GAS.RESPONSE_CHAIN.ERR.CreateCapacityExceeded";
         public const string ResponseQueueOverflowError = "GAS.RESPONSE_CHAIN.ERR.ResponseQueueOverflow";
-        public const string InputRequestQueueMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueMissing";
-        public const string InputRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueFull";
+        public const string PromptStateMissingError = "GAS.RESPONSE_CHAIN.ERR.PromptStateMissing";
         public const string InputRequestTagMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestTagMissing";
         public const string OrderRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.OrderRequestQueueFull";
 
         private readonly EffectRequestQueue _queue = null!;
         private readonly GasBudget? _budget;
         private readonly EffectTemplateRegistry? _templates;
-        private readonly InputRequestQueue? _inputRequests;
         private readonly OrderQueue? _chainOrders;
         private readonly ResponseChainTelemetryBuffer? _telemetry;
         private readonly OrderRequestQueue? _orderRequests;
+        private readonly ResponseChainPromptState? _promptState;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly GasPresentationEventBuffer? _presentationEvents;
         private readonly TagOps? _tagOps;
@@ -328,7 +327,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, ResponseChainPromptState? promptState = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
             : base(world)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
@@ -339,10 +338,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _queue.TrackResponseChainListenerLifecycle(world);
             _budget = budget;
             _templates = templates;
-            _inputRequests = inputRequests;
             _chainOrders = chainOrders;
             _telemetry = telemetry;
             _orderRequests = orderRequests;
+            _promptState = promptState;
             _responseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
                 responseChainOrderTypes,
                 nameof(EffectProposalProcessingSystem));
@@ -633,45 +632,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             ThrowWindowDepthExceeded(_activeReq.RootId, _activeReq.TemplateId, "WaitInput");
                         }
-                        if (_inputRequests == null)
+                        if (_promptState == null)
                         {
                             throw new InvalidOperationException(
-                                $"{InputRequestQueueMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}.");
+                                $"{PromptStateMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}.");
                         }
 
-                        // Prompt + optional OrderRequest are one visible transaction: preflight both
-                        // capacities before publishing either, so a full OrderRequest queue cannot
-                        // leave an orphan prompt the player cannot answer.
-                        if (_inputRequests.Count >= _inputRequests.Capacity)
+                        // Prompt + optional OrderRequest are one visible transaction: preflight the
+                        // OrderRequest capacity before opening the prompt, so a full queue cannot
+                        // leave an orphan prompt the HUD never shows.
+                        if (_orderRequests != null && _orderRequests.Count >= _orderRequests.Capacity)
                         {
                             throw new InvalidOperationException(
-                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
+                                $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
                         }
 
                         var src = _window[0].Source;
-                        OrderRequest orderRequest = default;
+                        if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
+                        {
+                            throw new InvalidOperationException(
+                                $"Response-chain prompt requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                        }
+
+                        int playerId = World.Get<PlayerOwner>(src).PlayerId;
+                        if (playerId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Response-chain prompt requires a positive PlayerOwner.PlayerId: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, playerId={playerId}.");
+                        }
+
                         if (_orderRequests != null)
                         {
-                            if (_orderRequests.Count >= _orderRequests.Capacity)
-                            {
-                                throw new InvalidOperationException(
-                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
-                            }
-
-                            if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
-                            {
-                                throw new InvalidOperationException(
-                                    $"Response-chain order request requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
-                            }
-
-                            int playerId = World.Get<PlayerOwner>(src).PlayerId;
-                            if (playerId <= 0)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Response-chain order request requires a positive PlayerOwner.PlayerId: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, playerId={playerId}.");
-                            }
-
-                            orderRequest = new OrderRequest
+                            var orderRequest = new OrderRequest
                             {
                                 RequestId = _activeReq.RootId,
                                 PromptTagId = _inputRequestTagId,
@@ -683,33 +675,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             };
                             orderRequest.AddAllowed(_responseChainOrderTypes.ChainPass);
                             orderRequest.AddAllowed(_responseChainOrderTypes.ChainNegate);
-                            if (_inputRequestTagId > 0) orderRequest.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
-                        }
-
-                        var windowId = _nextWindowId++;
-                        var inputRequest = new InputRequest
-                        {
-                            RequestId = windowId,
-                            RequestTagId = _inputRequestTagId,
-                            Source = _window[0].Source,
-                            Target = _window[0].Target,
-                            Context = _window[0].TargetContext,
-                            PayloadA = 0,
-                            PayloadB = 0
-                        };
-                        if (!_inputRequests.TryEnqueue(in inputRequest))
-                        {
-                            throw new InvalidOperationException(
-                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
-                        }
-
-                        if (_orderRequests != null && !_orderRequests.TryEnqueue(in orderRequest))
-                        {
-                            throw new InvalidOperationException(
-                                $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                            orderRequest.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
+                            if (!_orderRequests.TryEnqueue(in orderRequest))
+                            {
+                                throw new InvalidOperationException(
+                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                            }
                         }
 
                         _inputRequestSent = true;
+                        _promptState.Open(
+                            _nextWindowId++,
+                            playerId,
+                            src,
+                            _window[0].Target,
+                            _window[0].TargetContext,
+                            _inputRequestTagId);
 
                         if (_telemetry != null && _emitTelemetry)
                         {
@@ -728,8 +709,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
+                    if (!World.IsAlive(_promptState!.Actor))
+                    {
+                        _promptState.RecordAbandonedForMissingActor();
+                        _closeRequested = true;
+                    }
+
                     bool progressed = false;
-                    if (_chainOrders != null)
+                    if (_chainOrders != null && !_closeRequested)
                     {
                         while (_chainOrders.TryPeek(out var nextOrder))
                         {
@@ -1172,6 +1159,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _interactiveRequested = false;
                     _closeRequested = false;
                     _inputRequestSent = false;
+                    _promptState?.Close();
                     _pendingNegates = 0;
                     _passStreak = 0;
                     ConsumeWork(ref workUnits);
@@ -1343,6 +1331,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _closeRequested = false;
             _inputRequestSent = false;
             _inputRequestTagId = 0;
+            _promptState?.Close();
             _emitTelemetry = false;
             _sliceActive = false;
         }

@@ -79,11 +79,6 @@
       "chainNegate": 2,
       "chainActivateEffect": 3
     },
-    "responseChainActionIds": {
-      "chainPass": "ResponseChainPass",
-      "chainNegate": "ResponseChainNegate",
-      "chainActivateEffect": "ResponseChainActivate"
-    },
     "attributes": {
       "health": "Health"
     }

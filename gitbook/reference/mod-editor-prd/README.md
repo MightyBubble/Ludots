@@ -262,7 +262,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | `ord-02-rules.md` | 订单规则与打断 | orderRules、阻止与打断、同类型与满队策略 | P1 | **已写** |
 | `fx-01-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | **已写** |
 | `gr-op-05-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | **已写** |
-| `ord-05-input-protocol.md` | 输入协议 | InputRequest 与 Response、三种 Gate 的等待与改写目标 | P1 | **已写** |
+| `ord-05-input-protocol.md` | 输入协议 | 响应链等待状态与回答节点、三种 Gate 的等待与改写目标 | P1 | **已写** |
 | `ord-06-input-mappings.md` | 输入映射 | input_order_mappings.json、argsTemplate、路由候选、用户覆写 | P1 | **已写** |
 | `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | **已写** |
 | `input-02-cast-dispatch.md` | 施法派发档案 | cast_dispatch_profiles.json、目标收集与派发策略 | P2 | **已写** |

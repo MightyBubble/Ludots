@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -157,7 +157,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
@@ -349,7 +349,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -373,7 +373,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
@@ -495,7 +495,7 @@ namespace Ludots.Tests.GAS
 
                 const int orderCastAbility = 100;
 
-                var inputReq = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());

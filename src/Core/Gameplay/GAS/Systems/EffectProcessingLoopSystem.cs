@@ -39,7 +39,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class EffectProcessingLoopSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
         private readonly EffectRequestQueue _effectRequests;
-        private readonly InputRequestQueue _inputRequests;
         private readonly OrderQueue _chainOrders;
         private readonly OrderRequestQueue _orderRequests;
 
@@ -77,11 +76,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, int fanOutCommandCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, int maxWorkUnitsPerSlice = int.MaxValue, OrderQueue orderIntake = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
+        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, int fanOutCommandCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, ResponseChainPromptState promptState = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, int maxWorkUnitsPerSlice = int.MaxValue, OrderQueue orderIntake = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
             : base(world)
         {
             _effectRequests = effectRequests;
-            _inputRequests = inputRequests;
             _chainOrders = chainOrders;
             _orderRequests = orderRequests;
             _fanOutBudget = new RootBudgetTable(fanOutCommandCapacity);
@@ -90,7 +88,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 responseChainOrderTypes,
                 nameof(EffectProcessingLoopSystem));
             _proposal = new EffectProposalProcessingSystem(
-                world, effectRequests, fanOutCommandCapacity, clock, budget, templates, inputRequests, chainOrders, telemetry, orderRequests,
+                world, effectRequests, fanOutCommandCapacity, clock, budget, templates, promptState, chainOrders, telemetry, orderRequests,
                 configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi, tagOps,
                 spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, exchangeRuntime,
                 progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz,
@@ -291,7 +289,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ProposalWaitingInput = phase == 2,
 
                 EffectRequestCount = _effectRequests?.Count ?? 0,
-                InputRequestCount = _inputRequests?.Count ?? 0,
                 ChainOrderCount = _chainOrders?.Count ?? 0,
                 OrderRequestCount = _orderRequests?.Count ?? 0,
 

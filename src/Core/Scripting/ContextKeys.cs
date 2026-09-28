@@ -42,7 +42,6 @@ namespace Ludots.Core.Scripting
         public const string GasController = "GasController";
         public const string GasConditionRegistry = "GasConditionRegistry";
         public const string TagOps = "TagOps";
-        public const string InputRequestQueue = "InputRequestQueue";
         public const string RuntimeEntitySpawnQueue = "RuntimeEntitySpawnQueue";
         public const string InteractionActionBindings = "InteractionActionBindings";
         public const string ActiveInputOrderMapping = "ActiveInputOrderMapping";

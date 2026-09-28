@@ -12,14 +12,12 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly ResponseChainUiState _ui;
         private readonly OrderTypeRegistry _orderTypeRegistry;
-        private readonly ResponseChainActionIds _actionIds;
  
         public ResponseChainUiSyncSystem(Dictionary<string, object> globals, ResponseChainUiState ui, OrderTypeRegistry orderTypeRegistry)
         {
             _globals = globals;
             _ui = ui;
             _orderTypeRegistry = orderTypeRegistry;
-            _actionIds = ResponseChainActionIds.Require(_globals, nameof(ResponseChainUiSyncSystem));
         }
  
         public void Initialize() { }
@@ -44,14 +42,13 @@ namespace Ludots.Core.Presentation.Systems
             Vector4 border = new(0.35f, 0.55f, 1f, 0.85f);
             Vector4 title = new(1f, 0.92f, 0.35f, 1f);
             Vector4 text = new(1f, 1f, 1f, 0.95f);
-            Vector4 hint = new(0.72f, 0.82f, 0.95f, 0.9f);
 
             int x = 12;
             int y = 12;
             int width = 340;
             int lineHeight = 18;
             int padding = 10;
-            int panelHeight = 126 + (_ui.AllowedCount * lineHeight);
+            int panelHeight = 104 + (_ui.AllowedCount * lineHeight);
 
             overlay.AddRect(x, y, width, panelHeight, bg, border);
             overlay.AddText(x + padding, y + padding, "Response Chain", 16, title);
@@ -72,13 +69,6 @@ namespace Ludots.Core.Presentation.Systems
                 overlay.AddText(x + padding + 6, lineY, $"- {label} ({orderTypeId})", 13, text);
                 lineY += lineHeight;
             }
-
-            overlay.AddText(
-                x + padding,
-                lineY + 4,
-                $"Pass={_actionIds.Pass}  Negate={_actionIds.Negate}  Activate={_actionIds.Activate}",
-                13,
-                hint);
 
             if (_ui.Dirty)
             {

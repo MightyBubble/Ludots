@@ -344,12 +344,6 @@ namespace Ludots.Core.Config
         public Dictionary<string, int> ResponseChainOrderTypeIds { get; set; } = new Dictionary<string, int>();
 
         /// <summary>
-        /// Input action ids the human response-chain source reads, keyed like `responseChainOrderTypeIds`.
-        /// </summary>
-        [JsonPropertyName("responseChainActionIds")]
-        public Dictionary<string, string> ResponseChainActionIds { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
         /// Attribute names (previously in GameAttributes.cs): health, mana...
         /// </summary>
         public Dictionary<string, string> Attributes { get; set; } = new Dictionary<string, string>();

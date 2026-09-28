@@ -514,6 +514,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>I[Dst] = I[A] - I[B].</summary>
         SubInt = 528,
 
+        /// <summary>
+        /// Answer the response-chain prompt waiting on the caster's player (Caster = the rep the
+        /// prompt context is mounted on). Imm = response-chain order type id (semantic key
+        /// resolved at patch time). Actor / target / context and the offered effect come from
+        /// the open prompt, never from graph registers.
+        /// </summary>
+        SubmitResponseChainOrder = 529,
+
     }
 
     public static class GraphNodeOpParser

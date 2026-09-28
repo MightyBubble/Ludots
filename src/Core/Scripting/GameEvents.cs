@@ -169,6 +169,19 @@ namespace Ludots.Core.Scripting
         /// </summary>
         public static readonly EventKey RelationFlagChanged = new EventKey("RelationFlagChanged");
 
+        /// <summary>
+        /// Map-scoped: a response-chain window started waiting for a player's answer.
+        /// Payload: SourceEntity (the window's acting unit), TargetEntity (the prompted
+        /// player's representative entity; the event routes through its map).
+        /// </summary>
+        public static readonly EventKey ResponseChainPromptOpened = new EventKey("ResponseChain.PromptOpened");
+
+        /// <summary>
+        /// Map-scoped: the response-chain window that was waiting for a player closed.
+        /// Payload matches <see cref="ResponseChainPromptOpened"/>.
+        /// </summary>
+        public static readonly EventKey ResponseChainPromptClosed = new EventKey("ResponseChain.PromptClosed");
+
         public static bool IsMapScoped(string eventName)
         {
             return eventName == MapLoaded.Value ||
@@ -188,7 +201,9 @@ namespace Ludots.Core.Scripting
                 eventName == RelationLinkAdded.Value ||
                 eventName == RelationLinkRemoved.Value ||
                 eventName == RelationMetricChanged.Value ||
-                eventName == RelationFlagChanged.Value;
+                eventName == RelationFlagChanged.Value ||
+                eventName == ResponseChainPromptOpened.Value ||
+                eventName == ResponseChainPromptClosed.Value;
         }
     }
 }

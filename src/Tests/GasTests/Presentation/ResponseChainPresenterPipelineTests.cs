@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var telemetry = new ResponseChainTelemetryBuffer();
@@ -71,7 +71,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     telemetry,
                     orderReq,
@@ -162,7 +162,7 @@ namespace Ludots.Tests.GAS
             var requests = new EffectRequestQueue();
             var admissionResults = new OrderAdmissionResultBuffer(8, 8);
             var chainOrders = new OrderQueue(8, admissionResults);
-            var inputRequests = new InputRequestQueue(capacity: 8);
+            var promptState = new ResponseChainPromptState();
             var orderRequests = new OrderRequestQueue(capacity: 8);
             var processing = new EffectProcessingLoopSystem(
                 world,
@@ -173,7 +173,7 @@ namespace Ludots.Tests.GAS
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 new GasBudget(),
                 templates,
-                inputRequests,
+                promptState,
                 chainOrders,
                 new ResponseChainTelemetryBuffer(),
                 orderRequests,
@@ -206,7 +206,7 @@ namespace Ludots.Tests.GAS
                     TemplateId = tplRoot
                 });
                 processing.Update(0f);
-                That(inputRequests.TryDequeue(out _), Is.True);
+                That(promptState.IsOpen, Is.True);
                 That(orderRequests.TryDequeue(out _), Is.True);
 
                 var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = actor, Target = actor };
@@ -345,111 +345,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ResponseChainHumanOrderSourceSystem_UsesSharedInputBindings()
-        {
-            using var world = World.Create();
-
-            var (backend, handler) = BuildResponseChainHandler();
-            var actor = world.Create();
-            var ui = new ResponseChainUiState();
-            var request = default(OrderRequest);
-            request.PlayerId = 3;
-            request.PromptTagId = 9001;
-            request.Actor = actor;
-            request.Target = actor;
-            request.TargetContext = Entity.Null;
-            ui.ApplyRequest(request);
-
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                {
-                    Constants = new GameConstants
-                    {
-                        ResponseChainOrderTypeIds = new Dictionary<string, int>
-                        {
-                            ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
-                            ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
-                            ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
-                        },
-                        ResponseChainActionIds = TestResponseChainActionIds()
-                    }
-                }
-            };
-
-            var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-            var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
-
-            PressButton(handler, backend, "<Keyboard>/f");
-            system.Update(0f);
-            ReleaseButton(handler, backend, "<Keyboard>/f");
-            That(chainOrders.TryDequeue(out var pass), Is.True);
-            That(pass.OrderTypeId, Is.EqualTo(TestResponseChainOrderTypeIds.ChainPass));
-            That(pass.PlayerId, Is.EqualTo(3));
-
-            PressButton(handler, backend, "<Keyboard>/g");
-            system.Update(0f);
-            ReleaseButton(handler, backend, "<Keyboard>/g");
-            That(chainOrders.TryDequeue(out var negate), Is.True);
-            That(negate.OrderTypeId, Is.EqualTo(TestResponseChainOrderTypeIds.ChainNegate));
-
-            PressButton(handler, backend, "<Keyboard>/h");
-            system.Update(0f);
-            ReleaseButton(handler, backend, "<Keyboard>/h");
-            That(chainOrders.TryDequeue(out var activate), Is.True);
-            That(activate.OrderTypeId, Is.EqualTo(TestResponseChainOrderTypeIds.ChainActivateEffect));
-            That(activate.Args.I0, Is.EqualTo(9001));
-        }
-
-        [Test]
-        public void ResponseChainHumanOrderSourceSystem_QueueFullPublishesRejectedOrderResult()
-        {
-            using var world = World.Create();
-            var (backend, handler) = BuildResponseChainHandler();
-            var actor = world.Create();
-            var ui = new ResponseChainUiState();
-            var request = default(OrderRequest);
-            request.PlayerId = 3;
-            request.PromptTagId = 9001;
-            request.Actor = actor;
-            request.Target = actor;
-            request.TargetContext = Entity.Null;
-            ui.ApplyRequest(request);
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                {
-                    Constants = new GameConstants
-                    {
-                        ResponseChainOrderTypeIds = new Dictionary<string, int>
-                        {
-                            ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
-                            ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
-                            ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
-                        },
-                        ResponseChainActionIds = TestResponseChainActionIds()
-                    }
-                }
-            };
-            var admissionResults = new OrderAdmissionResultBuffer(4, 4);
-            var chainOrders = new OrderQueue(capacity: 1, admissionResults);
-            var seed = new Order { Actor = actor, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
-            That(chainOrders.TryEnqueue(in seed), Is.True);
-            var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
-
-            PressButton(handler, backend, "<Keyboard>/f");
-            system.Update(0f);
-
-            That(chainOrders.Count, Is.EqualTo(1));
-            That(system.LastSubmissionResult, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
-            That(system.LastSubmittedOrderId, Is.GreaterThan(0));
-            That(admissionResults.TryGet(system.LastSubmittedOrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
-            That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
-        }
-
-        [Test]
         public void ResponseChainAiOrderSourceSystem_QueueFullDoesNotMarkRootSubmitted()
         {
             using var world = World.Create();
@@ -487,45 +382,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ResponseChainHumanOrderSourceSystem_MissingOrderTypes_IsRejected()
-        {
-            using var world = World.Create();
-            var (_, handler) = BuildResponseChainHandler();
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                {
-                    Constants = new GameConstants
-                    {
-                        ResponseChainActionIds = TestResponseChainActionIds()
-                    }
-                }
-            };
-
-            var ex = Throws<InvalidOperationException>(() =>
-                new ResponseChainHumanOrderSourceSystem(
-                    globals,
-                    new ResponseChainUiState(),
-                    new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64))));
-
-            That(ex!.Message, Does.Contain("constants.responseChainOrderTypeIds.chainPass"));
-        }
-
-        [Test]
-        public void ResponseChainUiSyncSystem_UsesConfiguredActionHints()
+        public void ResponseChainUiSyncSystem_ListsAllowedOrdersWithoutEngineKeyHints()
         {
             var overlay = new ScreenOverlayBuffer();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.ScreenOverlayBuffer.Name] = overlay,
-                [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                {
-                    Constants = new GameConstants
-                    {
-                        ResponseChainActionIds = TestResponseChainActionIds()
-                    }
-                }
+                [CoreServiceKeys.ScreenOverlayBuffer.Name] = overlay
             };
 
             var ui = new ResponseChainUiState();
@@ -547,45 +409,8 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             string[] lines = GetOverlayStrings(overlay);
-            That(lines, Has.Some.EqualTo("Pass=UiPass  Negate=UiNegate  Activate=UiActivate"));
             That(lines, Has.Some.EqualTo("- Pass (1)"));
-        }
-
-        [Test]
-        public void ResponseChainUiSyncSystem_MissingActionIds_IsRejected()
-        {
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                {
-                    Constants = new GameConstants
-                    {
-                        ResponseChainActionIds = new Dictionary<string, string>
-                        {
-                            ["chainPass"] = "UiPass",
-                            ["chainNegate"] = "UiNegate"
-                        }
-                    }
-                }
-            };
-
-            var ex = Throws<InvalidOperationException>(() =>
-                new ResponseChainUiSyncSystem(
-                    globals,
-                    new ResponseChainUiState(),
-                    new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity))));
-
-            That(ex!.Message, Does.Contain("constants.responseChainActionIds.chainActivateEffect"));
-        }
-
-        private static Dictionary<string, string> TestResponseChainActionIds()
-        {
-            return new Dictionary<string, string>
-            {
-                ["chainPass"] = "UiPass",
-                ["chainNegate"] = "UiNegate",
-                ["chainActivateEffect"] = "UiActivate"
-            };
+            That(lines, Has.None.Contains("="), "which key answers belongs to the mod's prompt context, not the engine HUD");
         }
 
         private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay)
@@ -616,39 +441,6 @@ namespace Ludots.Tests.GAS
                 "Test/ResponseChainPresenterPipelineTests.json");
         }
 
-        private static (TestInputBackend backend, PlayerInputHandler handler) BuildResponseChainHandler()
-        {
-            var backend = new TestInputBackend();
-            var config = new InputConfigRoot
-            {
-                Actions = new List<InputActionDef>
-                {
-                    new() { Id = "UiPass", Type = InputActionType.Button },
-                    new() { Id = "UiNegate", Type = InputActionType.Button },
-                    new() { Id = "UiActivate", Type = InputActionType.Button }
-                },
-                Contexts = new List<InputContextDef>
-                {
-                    new()
-                    {
-                        Id = "Gameplay",
-                        Priority = 1,
-                        Bindings = new List<InputBindingDef>
-                        {
-                            new() { ActionId = "UiPass", Path = "<Keyboard>/f", Processors = new() },
-                            new() { ActionId = "UiNegate", Path = "<Keyboard>/g", Processors = new() },
-                            new() { ActionId = "UiActivate", Path = "<Keyboard>/h", Processors = new() }
-                        }
-                    }
-                }
-            };
-
-            var handler = new PlayerInputHandler(backend, config);
-            handler.PushContext("Gameplay");
-            handler.Update(1f / 60f);
-            return (backend, handler);
-        }
-
         private static void RegisterAuthoredCueMarker(MeshAssetRegistry meshes, PresenterDefinitionRegistry presenters)
         {
             int meshId = meshes.Register(
@@ -676,32 +468,6 @@ namespace Ludots.Tests.GAS
                     },
                 ],
             });
-        }
-
-        private static void PressButton(PlayerInputHandler handler, TestInputBackend backend, string path)
-        {
-            backend.Buttons[path] = true;
-            handler.Update(1f / 60f);
-        }
-
-        private static void ReleaseButton(PlayerInputHandler handler, TestInputBackend backend, string path)
-        {
-            backend.Buttons[path] = false;
-            handler.Update(1f / 60f);
-        }
-
-        private sealed class TestInputBackend : IInputBackend
-        {
-            public Dictionary<string, bool> Buttons { get; } = new();
-            public Vector2 MousePosition { get; set; }
-
-            public float GetAxis(string devicePath) => 0f;
-            public bool GetButton(string devicePath) => Buttons.TryGetValue(devicePath, out bool down) && down;
-            public Vector2 GetMousePosition() => MousePosition;
-            public float GetMouseWheel() => 0f;
-            public void EnableIME(bool enable) { }
-            public void SetIMECandidatePosition(int x, int y) { }
-            public string GetCharBuffer() => string.Empty;
         }
     }
 }
