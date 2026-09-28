@@ -38,6 +38,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     private readonly float[] _staticCost;
     private readonly float[] _staticObstacleAvoidance;
+    private readonly int[] _obstacleAvoidanceVisitGeneration;
+    private int _obstacleAvoidanceVisitCounter;
+    private float[] _obstacleAvoidanceOffsetX = Array.Empty<float>();
+    private float[] _obstacleAvoidanceOffsetY = Array.Empty<float>();
+    private bool[] _obstacleAvoidanceOffsetContributes = Array.Empty<bool>();
+    private int _obstacleAvoidanceOffsetRadiusCells;
     private readonly float[] _cost;
     private readonly float[] _obsX;
     private readonly float[] _obsY;
@@ -229,6 +235,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         _staticCost = new float[_gridCellCount];
         _staticObstacleAvoidance = new float[_gridCellCount * 2];
+        _obstacleAvoidanceVisitGeneration = new int[_gridCellCount];
         _cost = new float[_gridCellCount];
         _obsX = new float[_maxObstacleCount];
         _obsY = new float[_maxObstacleCount];
@@ -1735,7 +1742,9 @@ public sealed partial class MassNavigationFlowSolverState
             }
         }
 
+        RebuildObstacleAvoidanceOffsetTable();
         int neighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
+        int visitGeneration = NextObstacleAvoidanceVisitGeneration();
         for (int i = 0; i < ObstacleCount; i++)
         {
             if (!TryGetObstacleCellBounds(i, neighborRadiusCells, out int minX, out int maxX, out int minY, out int maxY))
@@ -1745,15 +1754,77 @@ public sealed partial class MassNavigationFlowSolverState
 
             for (int y = minY; y <= maxY; y++)
             {
+                int rowBase = y * _gridWidth;
                 for (int x = minX; x <= maxX; x++)
                 {
-                    int flowIndex = ((y * _gridWidth) + x) << 1;
+                    int idx = rowBase + x;
+                    if (_obstacleAvoidanceVisitGeneration[idx] == visitGeneration)
+                    {
+                        continue;
+                    }
+
+                    _obstacleAvoidanceVisitGeneration[idx] = visitGeneration;
                     ComputeObstacleAvoidance(_staticCost, x, y, out float avoidX, out float avoidY);
-                    _staticObstacleAvoidance[flowIndex] = avoidX;
-                    _staticObstacleAvoidance[flowIndex + 1] = avoidY;
+                    _staticObstacleAvoidance[idx << 1] = avoidX;
+                    _staticObstacleAvoidance[(idx << 1) + 1] = avoidY;
                 }
             }
         }
+    }
+
+    private int NextObstacleAvoidanceVisitGeneration()
+    {
+        if (_obstacleAvoidanceVisitCounter == int.MaxValue)
+        {
+            Array.Clear(_obstacleAvoidanceVisitGeneration);
+            _obstacleAvoidanceVisitCounter = 0;
+        }
+
+        return ++_obstacleAvoidanceVisitCounter;
+    }
+
+    /// <summary>
+    /// 邻域里每个偏移的排斥贡献只取决于偏移本身，按与逐格计算相同的表达式预先算好；
+    /// 累加顺序不变，所以查表结果与逐格开方、除法逐位一致。
+    /// </summary>
+    private void RebuildObstacleAvoidanceOffsetTable()
+    {
+        int radius = Semantics.Solver.FlowObstacleNeighborRadiusCells;
+        int side = (radius * 2) + 1;
+        int entryCount = side * side;
+        if (_obstacleAvoidanceOffsetX.Length != entryCount)
+        {
+            _obstacleAvoidanceOffsetX = new float[entryCount];
+            _obstacleAvoidanceOffsetY = new float[entryCount];
+            _obstacleAvoidanceOffsetContributes = new bool[entryCount];
+        }
+
+        int entry = 0;
+        for (int offsetY = -radius; offsetY <= radius; offsetY++)
+        {
+            for (int offsetX = -radius; offsetX <= radius; offsetX++, entry++)
+            {
+                float ovx = -offsetX;
+                float ovy = -offsetY;
+                float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
+                bool contributes = (offsetX != 0 || offsetY != 0) && obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq;
+                _obstacleAvoidanceOffsetContributes[entry] = contributes;
+                if (!contributes)
+                {
+                    _obstacleAvoidanceOffsetX[entry] = 0f;
+                    _obstacleAvoidanceOffsetY[entry] = 0f;
+                    continue;
+                }
+
+                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
+                float obstacleDist = obstacleDistSq * invObstacleDist;
+                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
+                _obstacleAvoidanceOffsetX[entry] = (ovx * invObstacleDist) * obstacleWeight;
+                _obstacleAvoidanceOffsetY[entry] = (ovy * invObstacleDist) * obstacleWeight;
+            }
+        }
+
+        _obstacleAvoidanceOffsetRadiusCells = radius;
     }
 
     private bool TryGetObstacleCellBounds(int obstacleIndex, int paddingCells, out int minX, out int maxX, out int minY, out int maxY)
@@ -1992,36 +2063,31 @@ public sealed partial class MassNavigationFlowSolverState
     {
         avoidX = 0f;
         avoidY = 0f;
-        int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
-        for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)
+        int radius = _obstacleAvoidanceOffsetRadiusCells;
+        float blockedThreshold = Semantics.Solver.FlowBlockedCellThreshold;
+        int entry = 0;
+        for (int offsetY = -radius; offsetY <= radius; offsetY++)
         {
-            for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)
+            int ny = y + offsetY;
+            if ((uint)ny >= (uint)_gridHeight)
             {
-                if (offsetX == 0 && offsetY == 0)
-                {
-                    continue;
-                }
+                entry += (radius * 2) + 1;
+                continue;
+            }
 
+            int rowBase = ny * _gridWidth;
+            for (int offsetX = -radius; offsetX <= radius; offsetX++, entry++)
+            {
                 int nx = x + offsetX;
-                int ny = y + offsetY;
-                if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)
+                if (!_obstacleAvoidanceOffsetContributes[entry] || (uint)nx >= (uint)_gridWidth)
                 {
                     continue;
                 }
 
-                if (blockedCost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                if (blockedCost[rowBase + nx] > blockedThreshold)
                 {
-                    float ovx = -offsetX;
-                    float ovy = -offsetY;
-                    float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                    if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
-                    {
-                        float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
-                        float obstacleDist = obstacleDistSq * invObstacleDist;
-                        float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
-                        avoidX += (ovx * invObstacleDist) * obstacleWeight;
-                        avoidY += (ovy * invObstacleDist) * obstacleWeight;
-                    }
+                    avoidX += _obstacleAvoidanceOffsetX[entry];
+                    avoidY += _obstacleAvoidanceOffsetY[entry];
                 }
             }
         }
