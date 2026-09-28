@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { AUTHORING_STUDIO_HOME, AUTHORING_TOOLS, matchAuthoringTool } from './authoringTools';
+import {
+  AUTHORING_SECTIONS,
+  AUTHORING_STUDIO_HOME,
+  AUTHORING_TOOLS,
+  matchAuthoringTool,
+} from './authoringTools';
 import { STUDIO_CHROME } from './authoringTheme';
 
 type BridgeState = 'checking' | 'up' | 'down';
@@ -38,20 +43,36 @@ export function AuthoringShell() {
             location.pathname === AUTHORING_STUDIO_HOME ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff
           }
         >
-          <span className="text-sm font-semibold">作者工作室</span>
+          <span className="text-sm font-semibold">LudotsEditor</span>
         </Link>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2">
-          {AUTHORING_TOOLS.map((tool) => {
-            const on = active?.id === tool.id;
+          {AUTHORING_SECTIONS.map((section) => {
+            const tools = AUTHORING_TOOLS.filter((tool) => tool.section === section.id);
+            const sectionActive = tools.some((tool) => tool.id === active?.id);
             return (
-              <Link
-                key={tool.id}
-                to={tool.path}
-                data-authoring-tool={tool.id}
-                className={on ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff}
-              >
-                {tool.title}
-              </Link>
+              <div key={section.id} className="flex items-center gap-1" data-authoring-section={section.id}>
+                <span
+                  className={`shrink-0 px-1 text-[10px] uppercase tracking-wide ${
+                    sectionActive ? 'text-studio-blue' : 'text-studio-muted'
+                  }`}
+                >
+                  {section.title}
+                </span>
+                {tools.map((tool) => {
+                  const on = active?.id === tool.id;
+                  return (
+                    <Link
+                      key={tool.id}
+                      to={tool.path}
+                      data-authoring-tool={tool.id}
+                      className={on ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff}
+                    >
+                      {tool.title}
+                    </Link>
+                  );
+                })}
+                <span className="mx-1 h-4 w-px shrink-0 bg-studio-elevated" />
+              </div>
             );
           })}
         </nav>

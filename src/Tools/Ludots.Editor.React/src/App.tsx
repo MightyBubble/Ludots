@@ -5,6 +5,7 @@ import { AiTopologyEditorPage } from "@/pages/AiTopologyEditorPage";
 import { UiPanelAuthoringPage } from "@/pages/UiPanelAuthoringPage";
 import { StoryAuthoringPage } from "@/pages/StoryAuthoringPage";
 import { TextBankPage } from "@/pages/text-bank/TextBankPage";
+import { RunPage } from "@/pages/run/RunPage";
 import { AuthoringShell } from "@/pages/authoring-studio/AuthoringShell";
 import { AuthoringStudioHome } from "@/pages/authoring-studio/AuthoringStudioHome";
 
@@ -22,9 +23,11 @@ export default function App() {
           <Route path="/text-bank" element={<TextBankPage />} />
           <Route path="/timeline" element={<StoryAuthoringPage tool="timeline" />} />
           <Route path="/story-authoring" element={<StoryAuthoringPage />} />
+          <Route path="/map" element={<EditorLayout />} />
+          <Route path="/panel-authoring" element={<UiPanelAuthoringPage />} />
+          <Route path="/ui-panel-authoring" element={<UiPanelAuthoringPage />} />
+          <Route path="/run" element={<RunPage />} />
         </Route>
-        <Route path="/map" element={<EditorLayout />} />
-        <Route path="/ui-panel-authoring" element={<UiPanelAuthoringPage />} />
       </Routes>
     </Router>
   );

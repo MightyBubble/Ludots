@@ -51,4 +51,7 @@ export const TOOL_ACCENT: Record<string, StudioAccent> = {
   fsm: 'yellow',
   dialogue: 'blue',
   timeline: 'yellow',
+  map: 'blue',
+  panels: 'yellow',
+  run: 'red',
 };

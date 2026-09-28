@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  AUTHORING_SECTIONS,
   AUTHORING_STUDIO_HOME,
   AUTHORING_TOOL_IDS,
   AUTHORING_TOOLS,
@@ -14,16 +15,29 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 assert(AUTHORING_STUDIO_HOME === '/', 'studio home must be / so one-click opens the desk, not the map');
-assert(AUTHORING_TOOLS.length === 6, `studio must list exactly 6 tools, got ${AUTHORING_TOOLS.length}`);
 assert(
-  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,text,timeline',
-  `studio tool order must be blueprint, bt, fsm, dialogue, text, timeline; got ${AUTHORING_TOOL_IDS.join(',')}`,
+  AUTHORING_SECTIONS.map((section) => section.id).join(',') === 'author,world,run',
+  `studio sections must be author, world, run (#1699); got ${AUTHORING_SECTIONS.map((section) => section.id).join(',')}`,
+);
+for (const section of AUTHORING_SECTIONS) {
+  assert(AUTHORING_TOOLS.some((tool) => tool.section === section.id), `${section.id} section must have tools`);
+}
+for (const tool of AUTHORING_TOOLS) {
+  assert(
+    AUTHORING_SECTIONS.some((section) => section.id === tool.section),
+    `${tool.id} must belong to a studio section`,
+  );
+}
+assert(AUTHORING_TOOLS.length === 9, `studio must list exactly 9 tools, got ${AUTHORING_TOOLS.length}`);
+assert(
+  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,text,timeline,map,panels,run',
+  `studio tool order must be blueprint, bt, fsm, dialogue, text, timeline, map, panels, run; got ${AUTHORING_TOOL_IDS.join(',')}`,
 );
 
-const forbidden = ['/map', '/ui-panel-authoring', '/gas', '/data'];
+const forbidden = ['/data'];
 for (const tool of AUTHORING_TOOLS) {
   assert(tool.path.startsWith('/'), `${tool.id} path must be a route`);
-  assert(!forbidden.includes(tool.path), `${tool.id} must not point at map/panel/data`);
+  assert(!forbidden.includes(tool.path), `${tool.id} must not point at data pages`);
   assert(tool.title.length > 0, `${tool.id} needs a title`);
   assert(tool.blurb.length > 0, `${tool.id} needs a player-facing blurb`);
 }
@@ -34,8 +48,10 @@ assert(matchAuthoringTool('/blueprint')?.id === 'blueprint', '/blueprint is the 
 assert(matchAuthoringTool('/dialogue')?.id === 'dialogue', '/dialogue is the studio card path');
 assert(matchAuthoringTool('/timeline')?.id === 'timeline', '/timeline is a first-class studio room');
 assert(matchAuthoringTool('/text-bank')?.id === 'text', '/text-bank is a first-class studio room');
-assert(matchAuthoringTool('/map') === undefined, 'map editor must not be a studio tool');
-assert(matchAuthoringTool('/ui-panel-authoring') === undefined, 'panel authoring must not be a studio tool');
+assert(matchAuthoringTool('/map')?.id === 'map', '/map is a first-class world-section tool (#1699)');
+assert(matchAuthoringTool('/ui-panel-authoring')?.id === 'panels', '/ui-panel-authoring must stay a panels alias');
+assert(matchAuthoringTool('/panel-authoring')?.id === 'panels', '/panel-authoring is the panels card path');
+assert(matchAuthoringTool('/run')?.id === 'run', '/run is the launch section (#1699)');
 assert(AUTHORING_TOOLS.find((tool) => tool.id === 'dialogue')?.blurb.includes('树'), 'dialogue card must say it is a tree');
 
 assert(STUDIO_THEME.bg === 'var(--studio-bg)', 'STUDIO_THEME.bg must alias CSS, not copy hex');
@@ -104,6 +120,7 @@ const studioSurfaces = [
   'src/pages/text-bank/RichTextArea.tsx',
   'src/pages/dialogue-tree-editor/StatementInspector.tsx',
   'src/pages/dialogue-tree-editor/inlineAuthoring.ts',
+  'src/pages/run/RunPage.tsx',
 ];
 const bannedPalette = /violet-|indigo-|fuchsia-|purple-|cyan-|sky-|#a78bfa|#e879f9|#c084fc|#a855f7|#7c3aed|#8b5cf6|#22d3ee|#67e8f9|#a78bfa/;
 for (const rel of studioSurfaces) {
@@ -140,5 +157,9 @@ assert(textBankPage.includes('缺这条翻译'), 'text bank must flag missing tr
 assert(textBankPage.includes('story/text/validate'), 'text bank save must gate on the engine validate endpoint');
 const richTextArea = readFileSync(join(here, '../src/pages/text-bank/RichTextArea.tsx'), 'utf8');
 assert(richTextArea.includes('wrapSelection'), 'inline markup toolbar lives in the shared RichTextArea');
+const runPage = readFileSync(join(here, '../src/pages/run/RunPage.tsx'), 'utf8');
+assert(runPage.includes('/api/launch'), 'run page must launch through the bridge contract (#1699)');
+assert(runPage.includes('/api/launcher/state'), 'run page must read launcher state through the bridge contract');
+assert(runPage.includes('agent-bridge'), 'run page must surface the live-debug agent bridge channel');
 
 console.log('assert-authoring-studio: ok');
