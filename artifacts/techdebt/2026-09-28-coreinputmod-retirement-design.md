@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，作为过渡；接下来做片 3b 响应连锁改交互状态（见 3.11）。
+状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，作为过渡；片 3b 的引擎部分和节点画廊已完成，TCG 演示 `tcg_prompt` 要先改设计（见 3.11.1 末尾）；接下来做片 3c 小地图。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -52,7 +52,7 @@ CoreInputMod 每一块的去向：
 
 **视角模式显示开关。** `EntityCommandPanelShowcaseMod`、`InteractionShowcaseMod`、`SuperweaponContextShowcaseMod` 在写 `CoreInputMod.ViewModeHudEnabled`，没有任何代码读它。删常量和六处写入。
 
-**技能里"等玩家"的两种步骤。** 技能执行项 `InputGate`（停下来等玩家点目标）和 `TargetCollectionGate`（停下来等玩家确认一组目标）都往同一条请求队列里放请求，由 `GasInputResponseSystem` 在玩家按确认时回答。技能数据里一个都没有，只有加载器、执行器和几个测试在用。删掉这两种执行项、`GasInputResponseSystem`、技能请求队列 `AbilityInputRequestQueue` 和应答缓冲 `InputResponseBuffer`。响应连锁用的是另一条请求队列 `InputRequestQueue`，保留。
+**技能里"等玩家"的两种步骤。** 技能执行项 `InputGate`（停下来等玩家点目标）和 `TargetCollectionGate`（停下来等玩家确认一组目标）都往同一条请求队列里放请求，由 `GasInputResponseSystem` 在玩家按确认时回答。技能数据里一个都没有，只有加载器、执行器和几个测试在用。删掉这两种执行项、`GasInputResponseSystem`、技能请求队列 `AbilityInputRequestQueue` 和应答缓冲 `InputResponseBuffer`。响应连锁用的是另一条请求队列 `InputRequestQueue`，片 3b 已换成等待状态 `ResponseChainPromptState` 并删掉。
 
 连带要改的是技能"使用条件"的延后判断：现在技能如果在产生效果前有等玩家的步骤，使用条件推迟到选完目标再判断。两种步骤删掉以后，这条延后路径也没有了，使用条件一律在开始时判断。
 
@@ -198,6 +198,19 @@ presenter 按 tab_target 集合画目标环
 删：`ResponseChainHumanOrderSourceSystem`、`ResponseChainActionIds`、`constants.responseChainActionIds`、CoreInputMod 里三个响应连锁动作和空格 / N / 1 的绑定。电脑那一方的自动让过 `ResponseChainAiOrderSourceSystem` 不是输入，保留。
 
 谁来演示：TCG 演示加一张图 `tcg_prompt`。新玩家进来看到自己的英雄和一个敌人，屏幕提示"按 Q 放火球"。火球放出后弹出响应窗，写着"空格 让过 / N 反制 / 1 发动反击"。让过，火球照常打中敌人；反制，火球被抵消，敌人不掉血；发动，火球打中后再追加一次反击伤害。按键、响应窗状态、面板都写在 TcgDemoMod 里。TCG 演示现在没有本地玩家席位，这一片给它补上席位和代表实体。
+
+**片 3b 完成情况。** 引擎部分已做完：`ResponseChainPromptState` 记当前等谁回答；窗口开、关时向被问玩家的代表实体发 `ResponseChain.PromptOpened` / `ResponseChain.PromptClosed`；`SubmitResponseChainOrder` 节点回答，没有窗口在等这个玩家时拒绝并计数；上面"删"一行列的东西和 `InputRequestQueue` 都删了。节点画廊里有这颗节点的演示（指挥打出引子，图替他接上追击再让过两次）。
+
+另外补了一条规则：被问的出手单位已经不在了（比如所在地图卸载），窗口按全员让过关闭并计数。以前窗口会一直挂着，后面所有效果请求都卡住。
+
+`tcg_prompt` 没做，原设计有两处和引擎现有行为对不上，要先定：
+
+- 反制抵消不了火球。引擎的反制只作用在窗口里后加进来的效果上，打开窗口的那个效果（火球本身）不会被反制。
+- 引擎问的是出手单位的主人，也就是放火球的玩家自己，不是对手。
+
+两种改法：一是演示只给"让过 / 发动反击"两个选项，反制留给有连锁的场景；二是先改引擎，让窗口问对手，并允许反制打开窗口的效果。后者改的是响应链规则，要单独评审。
+
+另有两件和这片无关、这次碰到的老问题：画廊地图直接启动时报"宿主地图没有声明世界"（#1567 的规则），所有画廊节点都录不了像，这颗新节点的 wiki 页因此暂时没有录像；`GasTests` 全量跑会在中途崩掉测试进程，main 上也一样。
 
 #### 3.11.2 小地图按键（片 3c）
 
