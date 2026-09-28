@@ -5,8 +5,8 @@
 ## 1. 现状快照
 
 - 装载现状：管线 loader 默认路径 `Relationships/catalog.json`、DeepObject；九块（types/metrics/flags/bands/reasons/callbacks/synergies/knowledgeGrants/stance）按 id 覆盖合并，首现定序、后到覆盖整条目、空 id 跳过；stance 整对象替换。
-- 字段现状：Type{Id,IsSymmetric}；Metric{Id,MinValue=-100,MaxValue=100,DefaultValue}；Flag{Id}；Band{Id,TypeId,MetricId,FlagId,Threshold(short),Comparison 缺省 GreaterOrEqual}；Reason{Id}；Callback{Id,TypeId,MetricId,Min/Max(int?),EventKey,ExitEventKey,八组 tag 列表}；Synergy{Id,RequireAllTags,MinimumCount=1,ApplyTagsToTeam,EventKey}；KnowledgeGrant{Id,TypeId,CollectionKey,Presence,Position,AttributeIds,RelationshipTypeIds,TagIds,ObservedTick,ExpiryTick,ConfidencePermille=1000}；Stance{StanceTypes,SameDomainStance,SameTeamStance,DefaultStance}。
-- 资产现状：引擎默认 catalog 3 个非对称 type（Owns/Controls/MemberOf），metrics/flags/bands/reasons/callbacks/synergies/knowledgeGrants 全空，stance 词表 Hostile/Friendly/Neutral、同域/同队 Friendly、缺省 Neutral；mod 侧另有增量（如 LudotsCore.Participant）。
+- 字段现状：Type{Id,IsSymmetric,Role=None|Ownership|Membership|ControlGrant}；Metric{Id,MinValue=-100,MaxValue=100,DefaultValue}；Flag{Id}；Band{Id,TypeId,MetricId,FlagId,Threshold(short),Comparison 缺省 GreaterOrEqual}；Reason{Id}；Callback{Id,TypeId,MetricId,Min/Max(int?),EventKey,ExitEventKey,八组 tag 列表}；Synergy{Id,RequireAllTags,MinimumCount=1,ApplyTagsToTeam,EventKey}；KnowledgeGrant{Id,TypeId,CollectionKey,Presence,Position,AttributeIds,RelationshipTypeIds,TagIds,ObservedTick,ExpiryTick,ConfidencePermille=1000}；Stance{StanceTypes,SameDomainStance,SameTeamStance,DefaultStance}。
+- 资产现状：引擎默认 catalog 3 个非对称 type（Owns→Ownership、Controls→ControlGrant、MemberOf→Membership），metrics/flags/bands/reasons/callbacks/synergies/knowledgeGrants 全空，stance 词表 Hostile/Friendly/Neutral、同域/同队 Friendly、缺省 Neutral；mod 侧另有增量（如 LudotsCore.Participant）。
 - 反序列化现状：大小写不敏感、枚举字符串转换，无未知字段拒绝。
 
 ## 2. 代码锚点
@@ -16,6 +16,8 @@
 | loader 与合并 | src/Core/Gameplay/Relationships/Config/RelationshipCatalogPipelineLoader.cs:23-28,64-75 |
 | 九块结构定义 | src/Core/Gameplay/Relationships/Config/RelationshipCatalogConfig.cs |
 | 反序列化选项 | RelationshipCatalogPipelineLoader.cs:12-16 |
+| 角色解析与启动校验 | src/Core/Gameplay/Relationships/RelationshipRoleBindings.cs |
+| 所有权单一直接主人、整树 PlayerOwner 重算 | src/Core/Gameplay/Relationships/RelationshipRuntime.cs（EnsureLink / RemoveLink） |
 | 引擎默认资产 | assets/Relationships/catalog.json |
 | mod 增量资产 | mods/LudotsCoreMod/assets/Relationships/catalog.json 等 |
 
