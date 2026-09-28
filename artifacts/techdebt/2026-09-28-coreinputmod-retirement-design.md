@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：待评审，未开发。
+状态：开发中。片 1、片 2 已完成；片 3 先做动作名进配置，按键归属待定（见 3.11）。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -28,7 +28,7 @@ CoreInputMod 每一块的去向：
 | 视角模式显示开关 `CoreInputMod.ViewModeHudEnabled` | 3 个 showcase 在写 | 删，连同写它的代码 | 死代码（没人读） |
 | 技能输入应答 `GasInputResponseSystem` + 技能里"等玩家"的两种步骤 `InputGate`、`TargetCollectionGate` | 技能执行到一半等玩家点目标 / 选一组目标 | 删；没有任何技能数据用到这两种步骤 | 死功能 |
 | 空的 `interaction_context_profiles.json` | 无 | 删 | 空文件 |
-| 81 个 mod 的 `mod.json` 依赖 | 大多没用它的代码，但都靠它拿到 Core 功能的默认按键（3.11） | 按键归位后再删 | 不是空依赖 |
+| 81 个 mod 的 `mod.json` 依赖 | 靠它拿到 Core 功能的默认按键（3.11），也靠它开局装上的技能栏、Tab 切目标等系统 | 随 CoreInputMod 目录一起删（片 8） | 不是空依赖 |
 | Core 里写死的动作名：`InteractionActionBindings`、`MinimapPresentationSystem`、响应连锁系统 | Core 功能按固定名字找动作，默认按键由 CoreInputMod 提供 | 动作名写进各功能的配置，默认按键由开这个功能的 mod 带（3.11） | Core 硬编码 |
 | 老下令映射（`LocalOrderSource*`、`AutoInstalledLocalOrderSourceSystem`、Core 的 `InputOrderMappingSystem` 和 `input_order_mappings.json`） | 按键直接翻成下令 | 12 个 mod 改成交互状态 + 下令图 + `SubmitCommandIntent` / `SubmitCast` | 有现成做法 |
 | 集合名 `collection.command.source` | 写死的"选中单位"集合 | 改成各 mod 选中图自己写的集合，和 Case E 的 `selected` 一样 | 有现成做法 |
@@ -165,13 +165,26 @@ presenter 按 tab_target 集合画目标环
 
 这些动作的声明和默认按键（左键框选、右键下令、Esc、M、PageUp/PageDown、空格 / 1 / N 等）只在 CoreInputMod 的 `default_input.json` 里。根目录 `assets/Input/default_input.json` 声明了 `Default_Gameplay` 上下文，CoreInputMod 往里追加这些绑定。`LudotsCoreMod` 的 `game.json` 默认开 `Default_Gameplay`，所以每个依赖 CoreInputMod 的 mod 都拿到了这批按键。删掉依赖，这些 mod 就没有左键框选、右键下令和小地图按键了。
 
-做法：
+除了上表，交互默认动作还有这几个读者：指针按键快照、界面挡住指针时屏蔽确认 / 下令 / 取消、小地图右键下令时改写地面落点。它们都是引擎默认装上的，每个游戏都有。
 
-- 动作名不写在 C# 里。小地图、响应连锁各自的配置写"用哪个动作做什么"；交互的确认 / 取消 / 下令由交互状态的 `bindings` 和边沿图决定，不需要引擎默认名。
-- 默认按键由开这个功能的 mod 带：用小地图的 mod 带小地图按键，用响应连锁的 mod 带连锁按键，用框选的 mod 带框选按键。
-- 做完这一步，才逐个删 `mod.json` 里的 CoreInputMod 依赖。删之前跑这个 mod 的验收。
+**动作名进配置（片 3 先做，玩家无感）。** 三处都照 `game.json` 已有的写法，必填、C# 里没有默认值，缺了启动报错：
 
-开发前要先逐个查小地图、响应连锁现有的配置入口，确认动作名放在哪个配置里。
+| 功能 | 配置位置 | 字段 |
+| --- | --- | --- |
+| 交互默认动作 | `game.json` 顶层 `interactionActions` | `confirmActionId`、`commandActionId`、`cancelActionId` |
+| 响应连锁 | `constants.responseChainActionIds`，和已有的 `responseChainOrderTypeIds` 同一组键 | `chainPass`、`chainNegate`、`chainActivateEffect` |
+| 小地图 | `presentation.minimap.actions`，和已有的小地图参数放一起 | `toggle`、`togglePreset`、`toggleRotateWithCamera`、`zoom`、`zoomIn`、`zoomOut`、`pan`、`centerOnFocusPrimary` |
+
+三组值都写在 LudotsCoreMod 的 `game.json` 里，这几个功能的其他基础参数本来就在那里。指针位置不单独配：引擎已经登记了保留动作名 `PointerPos`（`ReservedInputActionIds`），图节点和 presenter 都按这个名字取指针，交互默认动作里的指针名删掉，统一用保留名。
+
+**按键归属（待定）。** 查下来有两个事实，原来"用小地图的 mod 带小地图按键"的说法落不了地：
+
+- 小地图、响应连锁、指针快照是引擎给每个游戏都装的，不存在"开这个功能的 mod"。现在是否能用，取决于有没有拿到 CoreInputMod 的按键：81 个依赖它的 mod 有，另外 85 个没有。比如小地图默认隐藏，这 85 个 mod 里按 M 没反应。
+- 按键如果搬进 LudotsCoreMod，这 85 个 mod 会多出这批按键，其中几处和它们自己的按键撞车：调试面板 `DiagnosticsOverlayMod` 用了空格、F6、F7，Case E `SelectionInteractionMod` 用了左右键，`AuditPlaygroundMod`、`DualSeatPanelsShowcaseMod` 用了 I，`CapabilityStandardSoundShowcaseMod` 用了 1，`BallistaRouteByTargetMod` 用了右键。
+
+要选的是：这批功能是所有游戏默认都有（按键进 LudotsCoreMod，撞车的几个 mod 改键），还是游戏自己选（功能加显式开关，开的 mod 带按键）。定下来之前，按键留在 CoreInputMod 的 `default_input.json`，不动。
+
+**删依赖。** CoreInputMod 开局给每个依赖它的 mod 装技能栏（默认开着，只有显式关掉才不画）、Tab 切目标、视角模式、小地图焦点。只要这些系统还在，删依赖就会让玩家看到的东西变少，所以删依赖不单独做，放到片 8 和 CoreInputMod 目录一起删。
 
 ## 4. 场景
 
@@ -193,16 +206,16 @@ presenter 按 tab_target 集合画目标环
 - 没声明焦点集合的小地图不显示焦点；没挂 tab 图的 mod 按 Tab 没反应。都是配置决定的，不是故障。
 - 三个 C# 下令改写钩子迁不进图的部分，列出来单独评审，不留钩子。
 - 片与片之间 main 要能跑：每片只删已经没人用的东西。
-- 删掉依赖后，这个 mod 开局就不会再装 CoreInputMod 的那批系统，也不再拿到它的默认按键。所以删依赖放在按键归位之后，删之前逐个跑这个 mod 的验收。
+- 删掉依赖后，这个 mod 开局就不会再装 CoreInputMod 的那批系统，也不再拿到它的默认按键。所以删依赖不提前做，放到片 8。
 - 分片顺序：
   1. 删死代码：已选中回调、视角模式显示开关（3.1）。
   2. 删技能里"等玩家"的两种步骤和应答系统（3.1），先做 GAS 自审。
-  3. Core 动作名写进配置，默认按键归位到功能所属 mod，然后删 `mod.json` 依赖（3.11）。
+  3. Core 动作名写进配置（3.11）。按键归属定下来后再搬按键。
   4. 补 C1、C2，删移动路线预览（3.10）。
   5. 12 个 mod 的下令改图（3.2），同时去掉 `LocalOrderSourceHelper` 对 `ControlDomainQuery` 的调用。
   6. 技能栏、Tab、瞄准、视角模式、小地图改配置（3.4–3.8）。
   7. `collection.command.source` 全部换掉，showcase 的 C# 直写改图写，选中指示器改 presenter 订阅（3.3）。
-  8. 删 CoreInputMod 目录和 Core 里只为它存在的类型，架构测试禁止这些名字再出现。
+  8. 删 CoreInputMod 目录、各 mod 对它的依赖和 Core 里只为它存在的类型，架构测试禁止这些名字再出现。
 
 ## 6. UAT
 
@@ -286,6 +299,20 @@ Feature: 旧写法启动即失败
     When 游戏加载
     Then 加载失败，报错写明是哪个技能的哪一步
 
+Feature: 动作名进配置后按键照旧
+
+  Scenario: 小地图和响应连锁按键不变
+    Given 我在 MOBA 演示里
+    When 我按 M
+    Then 小地图出现
+    When 响应连锁窗口弹出后我按空格
+    Then 我这一方选择"过"，窗口轮到对方
+
+  Scenario: 配置漏写动作名
+    Given 某个游戏的 game.json 删掉了 presentation.minimap.actions 里的 toggle
+    When 游戏启动
+    Then 启动失败，报错写明缺的是 presentation.minimap.actions.toggle
+
 Feature: 删掉依赖后按键不丢
 
   Scenario: 小地图按键
@@ -296,6 +323,6 @@ Feature: 删掉依赖后按键不丢
 
 ## 附录 A：删依赖的前提
 
-81 个 mod 在 `mod.json` 里依赖 CoreInputMod。按 main（`0cc88ce375`）逐个查，其中 38 个既不引用它的 C#，也不用它的配置约定（视角模式文件、下令映射、`collection.command.source`、技能栏开关、`core_input.*` presenter、它声明的动作）。但这 38 个也都经 `Default_Gameplay` 拿到它追加的默认按键，所以都要等 3.11 做完才能删依赖。
+81 个 mod 在 `mod.json` 里依赖 CoreInputMod。按 main（`0cc88ce375`）逐个查，其中 38 个既不引用它的 C#，也不用它的配置约定（视角模式文件、下令映射、`collection.command.source`、技能栏开关、`core_input.*` presenter、它声明的动作）。但这 38 个也不能先删依赖：它们都经 `Default_Gameplay` 拿到它追加的默认按键；技能栏默认开着，本地单位有技能就会画；按 Tab 也会切目标。删依赖放到片 8。
 
 TW 删了直接依赖后，还经 `CameraProfilesMod` 间接依赖，要等 3.8 做完。`VisualTerrainEditorMod` 的项目文件里还有一条对 CoreInputMod 的引用，没用上，放在同一片删。
