@@ -141,6 +141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
         private Func<MapId, IReadOnlySet<string>?>? _regionCatalogResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Func<ScriptContext>? _eventContextFactory;
         private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
@@ -296,12 +297,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
-        /// events via <see cref="FireEventKey"/>.
+        /// Binds the engine TriggerManager so graph programs can fire trigger events. Every fired
+        /// event starts from <paramref name="eventContextFactory"/> so receivers see the same engine
+        /// services as events raised by engine systems.
         /// </summary>
-        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
+        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager, Func<ScriptContext> eventContextFactory)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+            _eventContextFactory = eventContextFactory ?? throw new ArgumentNullException(nameof(eventContextFactory));
         }
 
         /// <summary>
@@ -865,7 +868,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             MapId mapId = ResolveRequiredMapId(scope);
-            var context = new ScriptContext();
+            var context = _eventContextFactory!();
             context.Set(ContextKeys.MapId, mapId);
             context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
             triggerManager.FireMapEvent(mapId, new EventKey(name), context);
@@ -955,9 +958,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return schema;
         }
 
-        private static ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
+        private ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
         {
-            var context = new ScriptContext();
+            var context = _eventContextFactory!();
             if (!string.IsNullOrEmpty(mapId.Value))
             {
                 context.Set(ContextKeys.MapId, mapId);

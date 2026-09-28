@@ -1166,7 +1166,7 @@ namespace Ludots.Core.Engine
             var effectDueWheel = new Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel(clock, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity);
             gasGraphApi.DueWheel = effectDueWheel;
             gasGraphApi.AggregateDirty = aggregateDirtyRegistry;
-            gasGraphApi.BindTriggerManager(TriggerManager);
+            gasGraphApi.BindTriggerManager(TriggerManager, CreateContext);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
             var commandIntentSubmissions = new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer(
                 gasRuntimeCapacity.CommandIntentScratchCapacity);
