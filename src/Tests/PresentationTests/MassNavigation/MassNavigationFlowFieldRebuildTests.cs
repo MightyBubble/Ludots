@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using NUnit.Framework;
 
@@ -103,6 +104,79 @@ public sealed class MassNavigationFlowFieldRebuildTests
     }
 
     [Test]
+    public void SlicedPipeline_RoundRefreshArrivingMidPass_RunsAnotherPassAfterward()
+    {
+        const int sliceCount = 3;
+        MassNavigationFlowSolverState flow = CreateScenarioFlow();
+        Assert.That(flow.FlowStateCount, Is.EqualTo(4), "4 个 flow state、3 个分片时一轮刷新会跨到下一轮。");
+        var tuning = new MassNavigationFlowTuning { Enabled = false, IterationsPerStep = 0 };
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: false, refreshCrowd: false);
+
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: false, agentSliceIndex: 0, agentSliceCount: sliceCount);
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: false, agentSliceIndex: 1, agentSliceCount: sliceCount);
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: false, agentSliceIndex: 2, agentSliceCount: sliceCount);
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: false, agentSliceIndex: 0, agentSliceCount: sliceCount);
+
+        Assert.That(
+            flow.AdvanceFlowPipeline(tuning, refreshFlow: false, refreshCrowd: false, agentSliceIndex: 1, agentSliceCount: sliceCount),
+            Is.True,
+            "上一轮刷新还没走完时到来的新一轮刷新，必须在本轮结束后补跑。");
+        Assert.That(flow.LastFlowRefreshStateCount, Is.GreaterThan(0));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void RequestFlowRebuild_AppliesSemanticsChangedAfterFirstBuild(bool crowdStampEnabled)
+    {
+        MassNavigationFlowSolverState flow = CreateScenarioFlow();
+        var tuning = new MassNavigationFlowTuning { Enabled = crowdStampEnabled, IterationsPerStep = crowdStampEnabled ? 16 : 0 };
+        MassNavigationObstacleSnapshot[] obstacles = CreateObstacles(new Random(RandomSeed), count: 32);
+        flow.ResetRuntimeObstaclesFromWorld(obstacles);
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: true);
+
+        flow.Semantics.Solver.FlowObstacleNeighborRadiusCells = 2;
+        flow.Semantics.Solver.FlowObstacleAvoidanceWeight *= 3f;
+        flow.Semantics.Solver.FlowTargetStopDistanceSq *= 4f;
+        flow.RequestFlowRebuild();
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: false, refreshCrowd: false);
+
+        AssertFlowFieldsMatchReference(flow, obstacles, "semantics changed then explicit rebuild");
+    }
+
+    [TestCase(5_000f, 5_000f, 3e11f)]
+    [TestCase(-2e10f, 5_000f, 2e10f + 2_000f)]
+    [TestCase(5_000f, 2e12f, 2e12f - 6_000f)]
+    public void HugeObstacle_BlocksEveryCoveredCellLikeReference(float x, float y, float radius)
+    {
+        MassNavigationFlowSolverState flow = CreateScenarioFlow();
+        var tuning = new MassNavigationFlowTuning { Enabled = false, IterationsPerStep = 0 };
+        MassNavigationObstacleSnapshot[] obstacles = { new(x, y, radius) };
+
+        flow.ResetRuntimeObstaclesFromWorld(obstacles);
+        flow.AdvanceFlowPipeline(tuning, refreshFlow: true, refreshCrowd: false);
+
+        AssertFlowFieldsMatchReference(flow, obstacles, "huge obstacles");
+    }
+
+    [TestCase(float.NaN, 0f, 100f)]
+    [TestCase(float.PositiveInfinity, 0f, 100f)]
+    [TestCase(0f, float.NegativeInfinity, 100f)]
+    [TestCase(0f, 0f, float.PositiveInfinity)]
+    public void NonFiniteObstacle_IsRejectedWithoutTouchingCurrentObstacles(float x, float y, float radius)
+    {
+        MassNavigationFlowSolverState flow = CreateScenarioFlow();
+        MassNavigationObstacleSnapshot[] obstacles = CreateObstacles(new Random(RandomSeed), count: 4);
+        flow.ResetRuntimeObstaclesFromWorld(obstacles);
+
+        Assert.Throws<InvalidOperationException>(() => flow.ResetRuntimeObstaclesFromWorld(new[]
+        {
+            obstacles[0],
+            new MassNavigationObstacleSnapshot(x, y, radius),
+        }));
+        Assert.That(flow.ObstacleCount, Is.EqualTo(obstacles.Length));
+    }
+
+    [Test]
     public void AuthoredTeamsWithoutTarget_DoNotAllocateFlowFields()
     {
         MassNavigationFlowSolverState flow = CreateConfiguredFlow();
@@ -157,6 +231,25 @@ public sealed class MassNavigationFlowFieldRebuildTests
             Assert.That(afterArchetypeMove, Is.EqualTo(before), "实体换 chunk 只改变遍历顺序，不应触发重绑。");
             Assert.That(afterMove.Hash, Is.Not.EqualTo(before.Hash), "障碍真的移动了，签名必须变化。");
         });
+    }
+
+    [Test]
+    public void EnvironmentSignature_DistinguishesPositionsWithEqualFixedPointHashCodes()
+    {
+        Fix64 collidingCoordinate = Fix64.FromRaw((1_000_000L << 32) | 1_000_000L);
+        Assert.That(collidingCoordinate.GetHashCode(), Is.EqualTo(Fix64.Zero.GetHashCode()),
+            "前提：这两个定点坐标的 GetHashCode 相同。");
+
+        using var world = World.Create();
+        Entity blocker = world.Create(
+            new WorldPositionCm { Value = new Fix64Vec2(Fix64.Zero, Fix64.Zero) },
+            CreateSinglePieceProjection(50));
+        var before = MassNavigationEnvironmentBindingSystem.ComputeSignature(world);
+
+        world.Set(blocker, new WorldPositionCm { Value = new Fix64Vec2(collidingCoordinate, collidingCoordinate) });
+        var after = MassNavigationEnvironmentBindingSystem.ComputeSignature(world);
+
+        Assert.That(after.Hash, Is.Not.EqualTo(before.Hash), "障碍移动到哈希相同的坐标，也必须触发重绑。");
     }
 
     private static MassNavigationFlowObstacleProjection CreateSinglePieceProjection(int radiusCm)

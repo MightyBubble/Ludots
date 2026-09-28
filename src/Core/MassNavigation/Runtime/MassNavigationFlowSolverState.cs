@@ -669,9 +669,12 @@ public sealed partial class MassNavigationFlowSolverState
         return changed;
     }
 
+    /// <summary>
+    /// 显式重建请求：静态障碍图与排斥表按当前 Semantics 重算，版本号前进使所有流场缓存失效。
+    /// </summary>
     public void RequestFlowRebuild()
     {
-        MarkFlowDirty();
+        MarkStaticCostDirty();
     }
 
     public void ResetRuntimeObstaclesFromWorld(ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles)
@@ -682,17 +685,26 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlowSolverState runtime obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.");
         }
 
+        for (int i = 0; i < obstacles.Length; i++)
+        {
+            MassNavigationObstacleSnapshot obstacle = obstacles[i];
+            if (!(obstacle.RadiusCm > 0f) || !float.IsFinite(obstacle.RadiusCm))
+            {
+                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle radius requires a finite radiusCm > 0.");
+            }
+
+            if (!float.IsFinite(obstacle.WorldXCm) || !float.IsFinite(obstacle.WorldYCm))
+            {
+                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle position must be finite.");
+            }
+        }
+
         int previousCount = ObstacleCount;
         bool changed = obstacles.Length != previousCount;
         ObstacleCount = obstacles.Length;
         for (int i = 0; i < obstacles.Length; i++)
         {
             MassNavigationObstacleSnapshot obstacle = obstacles[i];
-            if (!(obstacle.RadiusCm > 0f))
-            {
-                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle radius requires radiusCm > 0.");
-            }
-
             Vector2 localCm = WorldToLocalCm(new Vector2(obstacle.WorldXCm, obstacle.WorldYCm));
             if (!changed &&
                 (_obsX[i] != localCm.X || _obsY[i] != localCm.Y || _obsRadius[i] != obstacle.RadiusCm))
@@ -1234,7 +1246,8 @@ public sealed partial class MassNavigationFlowSolverState
     /// 错峰流场刷新：一轮刷新把 flow state 集合按 cadence 分片步切 chunk，
     /// 每个 fixed tick 只重建一个 chunk（grid 级工作、与 agent 分片窗口无关）。
     /// 一轮开始时才消费刷新请求；轮内到达的失效请求保留到本轮走完后再开下一轮，
-    /// 保证分片时每一轮都能走到最后一个 flow state。静态障碍图失效时在本 tick 立即重建，
+    /// 保证分片时每一轮都能走到最后一个 flow state。cadence 的刷新标志在同一 agent 分片轮次内恒定，
+    /// 只在分片轮次首步读取一次，避免同一标志在轮内反复触发。静态障碍图失效时在本 tick 立即重建，
     /// 不等轮次，因为单位步进直接读它做目标避障。
     /// </summary>
     public bool AdvanceFlowPipeline(
@@ -1253,7 +1266,13 @@ public sealed partial class MassNavigationFlowSolverState
 
         int stateCount = _flowStates.Count;
         bool passActive = _flowRefreshCursor < stateCount;
-        bool passRequested = _flowDirty || refreshFlow || refreshCrowd;
+        bool roundRefreshRequested = agentSliceIndex == 0 && (refreshFlow || refreshCrowd);
+        if (roundRefreshRequested && passActive)
+        {
+            _flowDirty = true;
+        }
+
+        bool passRequested = _flowDirty || roundRefreshRequested;
         if (!_staticCostDirty && !passActive && !passRequested)
         {
             return false;
@@ -1829,14 +1848,37 @@ public sealed partial class MassNavigationFlowSolverState
 
     private bool TryGetObstacleCellBounds(int obstacleIndex, int paddingCells, out int minX, out int maxX, out int minY, out int maxY)
     {
-        float radius = _obsRadius[obstacleIndex];
-        float obstacleX = _obsX[obstacleIndex];
-        float obstacleY = _obsY[obstacleIndex];
-        minX = Math.Max(0, (int)MathF.Floor((obstacleX - radius) / _flowCellSizeCm) - 1 - paddingCells);
-        maxX = Math.Min(_gridWidth - 1, (int)MathF.Floor((obstacleX + radius) / _flowCellSizeCm) + 1 + paddingCells);
-        minY = Math.Max(0, (int)MathF.Floor((obstacleY - radius) / _flowCellSizeCm) - 1 - paddingCells);
-        maxY = Math.Min(_gridHeight - 1, (int)MathF.Floor((obstacleY + radius) / _flowCellSizeCm) + 1 + paddingCells);
-        return minX <= maxX && minY <= maxY;
+        double radius = _obsRadius[obstacleIndex];
+        double obstacleX = _obsX[obstacleIndex];
+        double obstacleY = _obsY[obstacleIndex];
+        double margin = 1 + paddingCells;
+        minY = maxY = 0;
+        return TryClampCellRange(
+                Math.Floor((obstacleX - radius) / _flowCellSizeCm) - margin,
+                Math.Floor((obstacleX + radius) / _flowCellSizeCm) + margin,
+                _gridWidth,
+                out minX,
+                out maxX) &&
+            TryClampCellRange(
+                Math.Floor((obstacleY - radius) / _flowCellSizeCm) - margin,
+                Math.Floor((obstacleY + radius) / _flowCellSizeCm) + margin,
+                _gridHeight,
+                out minY,
+                out maxY);
+    }
+
+    private static bool TryClampCellRange(double low, double high, int cellCount, out int min, out int max)
+    {
+        min = 0;
+        max = 0;
+        if (high < 0d || low > cellCount - 1)
+        {
+            return false;
+        }
+
+        min = low <= 0d ? 0 : (int)low;
+        max = high >= cellCount - 1 ? cellCount - 1 : (int)high;
+        return true;
     }
 
     private bool StampCrowdCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
