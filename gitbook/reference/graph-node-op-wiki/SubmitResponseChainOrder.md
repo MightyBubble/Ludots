@@ -1,6 +1,6 @@
 # 替玩家回答响应窗口
 
-指挥打出一记引子，响应窗口停下来问他要不要接招；图替他回答：接上追击，再让过两次。
+指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。
 
 本页演示录像尚未录制，可用下方启动命令运行场景。
 
@@ -25,9 +25,9 @@
 
 ## 这场是怎么搭出来的
 
-这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/SubmitResponseChainOrder.json`，共 5 个节点。下列调用顺序可供编写自己的图时参考：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/SubmitResponseChainOrder.json`，共 3 个节点。下列调用顺序可供编写自己的图时参考：
 
-**SubmitResponseChainOrder**（本篇） → **SubmitResponseChainOrder**（本篇） → **SubmitResponseChainOrder**（本篇） → ConstInt → HaltReturnInt
+**SubmitResponseChainOrder**（本篇） → ConstInt → HaltReturnInt
 
 图跑完，字幕报出结果：
 

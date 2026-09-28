@@ -98,7 +98,7 @@
 
 > 作者语义与全量字段见手册分册 [响应链 · fx-07](../mod-editor-prd/config/fx-07-response-chain.md)。
 
-- [替玩家回答响应窗口](SubmitResponseChainOrder.md) — 指挥打出一记引子，响应窗口停下来问他要不要接招；图替他回答：接上追击，再让过两次。
+- [替玩家回答响应窗口](SubmitResponseChainOrder.md) — 指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。
 
 ## 子图调用与事件派发
 

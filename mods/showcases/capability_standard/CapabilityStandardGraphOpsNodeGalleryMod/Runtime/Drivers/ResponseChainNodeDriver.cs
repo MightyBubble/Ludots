@@ -17,7 +17,7 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 /// <summary>
 /// Hosts the SubmitResponseChainOrder vignette as a three-wave loop on the engine's own response
 /// window: the caster's opening spell stops the window on its owner's prompt, the featured
-/// TriggerGraph answers that prompt, and the settled window shows up as damage on the target.
+/// TriggerGraph answers that prompt once, and the settled window shows up as damage on the target.
 /// The driver only stages the spell and reads results; every answer comes from the graph.
 /// </summary>
 public sealed class ResponseChainNodeDriver : IGraphOpsNodeDriver
@@ -113,14 +113,14 @@ public sealed class ResponseChainNodeDriver : IGraphOpsNodeDriver
                 break;
 
             case Wave.Answer:
-                if (!_prompt.IsOpen || _prompt.PlayerId != PromptedPlayerId)
+                if (!_prompt.IsOpen || _prompt.PlayerId != PromptedPlayerId || _prompt.Responder != ctx.Caster)
                 {
                     throw new InvalidOperationException(
-                        $"Response-chain gallery expected the opening spell to leave the window waiting on player {PromptedPlayerId}.");
+                        $"Response-chain gallery expected the opening spell to leave the window waiting on player {PromptedPlayerId}'s caster, whose listener asked to respond.");
                 }
 
                 RunFeaturedGraph(ctx);
-                if (!OrderSubmitResultSemantics.IsAccepted(_prompt.LastSubmissionResult))
+                if (!_prompt.Answered || !OrderSubmitResultSemantics.IsAccepted(_prompt.LastSubmissionResult))
                 {
                     throw new InvalidOperationException(
                         $"Response-chain gallery answer was rejected: {_prompt.LastSubmissionResult}.");
@@ -135,7 +135,7 @@ public sealed class ResponseChainNodeDriver : IGraphOpsNodeDriver
                 if (_prompt.IsOpen)
                 {
                     throw new InvalidOperationException(
-                        "Response-chain gallery expected the graph's answers to close the window.");
+                        "Response-chain gallery expected the graph's answer to close the window.");
                 }
 
                 float damage = _targetHealthBeforeCast - GraphOpsNodeActorBinding.ReadHealth(ctx.SimWorld, ctx.Target);

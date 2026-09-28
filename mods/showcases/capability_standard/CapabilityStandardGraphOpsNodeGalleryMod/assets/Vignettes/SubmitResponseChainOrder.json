@@ -2,7 +2,7 @@
   "op": "SubmitResponseChainOrder",
   "driver": "responseChain",
   "title": "替玩家回答响应窗口",
-  "beat": "指挥打出一记引子，响应窗口停下来问他要不要接招；图替他回答：接上追击，再让过两次。",
+  "beat": "指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。",
   "detailTemplate": "窗口结算完，木桩先挨追击再挨引子，一共掉了 {damage} 血。",
   "assertDetailContains": [
     "窗口结算完",
