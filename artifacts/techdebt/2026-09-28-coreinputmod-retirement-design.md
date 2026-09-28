@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，作为过渡；片 3b 的引擎部分和节点画廊已完成，TCG 演示 `tcg_prompt` 要先改设计（见 3.11.1 末尾）；接下来做片 3c 小地图。
+状态：开发中。片 1、片 2 已完成；片 3 的动作名进配置已完成，作为过渡；片 3b 已完成（引擎规则、节点画廊、TCG 演示 `tcg_prompt`）；接下来做片 3c 小地图。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -193,24 +193,43 @@ presenter 按 tab_target 集合画目标环
 | 窗口事件 | 引擎 | 窗口等玩家时发"提示弹出"事件，窗口关闭时发"提示关闭"事件。事件目标是被提示玩家的代表实体，trigger graph 用 `event` 入口接 |
 | 下令节点 | 引擎，新节点 `SubmitResponseChainOrder` | 选项写在节点上：让过 / 反制 / 发动。下令类型从已有的 `responseChainOrderTypeIds` 查。节点按当前等这个玩家的窗口组连锁指令；没有窗口在等这个玩家时拒绝，并给出原因，不静默 |
 | 交互状态 | showcase | 提示弹出图 `ActivateContext(响应窗)`，提示关闭图 `DeactivateContext`。响应窗状态的 bindings 写按键，triggers 挂三张小图，各调一次 `SubmitResponseChainOrder` |
-| 按键提示 | showcase | 写在它自己的面板里。引擎的响应连锁面板去掉"Pass=… Negate=…"那行键名 |
+| 按键提示 | showcase | 写在它自己的面板里，随响应窗状态的 `onActivated` / `onDeactivated` 显示和收起。引擎原来钉在左上角的英文调试浮层（`ResponseChainUiSyncSystem`）删掉 |
+| 结算反馈 | showcase | 谁掉了多少血、链结有没有被作废，由 showcase 自己的面板和表现去画。引擎原来每结算一条链结就在目标头上冒一个按结果写死颜色的小方块（`ResponseChainDirectorSystem` 里的提示方块，配 Core 的 `cue_marker` 表现定义），一起删掉。这个方块不带主人编号，Raylib 一结算就崩 |
 
 删：`ResponseChainHumanOrderSourceSystem`、`ResponseChainActionIds`、`constants.responseChainActionIds`、CoreInputMod 里三个响应连锁动作和空格 / N / 1 的绑定。电脑那一方的自动让过 `ResponseChainAiOrderSourceSystem` 不是输入，保留。
 
-谁来演示：TCG 演示加一张图 `tcg_prompt`。新玩家进来看到自己的英雄和一个敌人，屏幕提示"按 Q 放火球"。火球放出后弹出响应窗，写着"空格 让过 / N 反制 / 1 发动反击"。让过，火球照常打中敌人；反制，火球被抵消，敌人不掉血；发动，火球打中后再追加一次反击伤害。按键、响应窗状态、面板都写在 TcgDemoMod 里。TCG 演示现在没有本地玩家席位，这一片给它补上席位和代表实体。
+**牌桌规则（片 3b 实现）。** 原设计写好后发现引擎的响应链规则和牌桌不一样：问的是出手的人自己、反制打不掉火球本身、要连续让过两次才关窗。这一片把规则改成牌桌的样子：
 
-**片 3b 完成情况。** 引擎部分已做完：`ResponseChainPromptState` 记当前等谁回答；窗口开、关时向被问玩家的代表实体发 `ResponseChain.PromptOpened` / `ResponseChain.PromptClosed`；`SubmitResponseChainOrder` 节点回答，没有窗口在等这个玩家时拒绝并计数；上面"删"一行列的东西和 `InputRequestQueue` 都删了。节点画廊里有这颗节点的演示（指挥打出引子，图替他接上追击再让过两次）。
+- 问谁：问陷阱（`PromptInput` 监听）的主人。火球是法师放的，陷阱是你的，问你。
+- 一次一答：只有被问的人能答，每次提问只算第一次回答。别人发来的回答单记为拒绝；已经答过再按，节点拒绝并计数。
+- 让过：一次就关窗，链上的效果按后进先出结算。
+- 反制：作废链上最近的一环，包括打开窗口的那个效果。只有火球时，反制就是让火球作废。
+- 发动：把陷阱给的效果接到链上，出手的是你，打的是对面（火球的出手人）。接完关掉这次提问，重新收集响应，对面有监听时会反过来问对面。
+- 被问的人不在了（比如地图卸载），关窗并计数，后面的效果请求不会卡住。
+- 陷阱监听直接写在实体模板上（`ResponseChainListener` 组件），模板里写类别、类型、优先级和给的效果；组件加上或拿掉时监听缓存自动刷新。
 
-另外补了一条规则：被问的出手单位已经不在了（比如所在地图卸载），窗口按全员让过关闭并计数。以前窗口会一直挂着，后面所有效果请求都卡住。
+**演示 `tcg_prompt`。** 新 mod `TcgPromptShowcaseMod`，只有数据，复用 TcgDemoMod 的火球和反击效果。
 
-`tcg_prompt` 没做，原设计有两处和引擎现有行为对不上，要先定：
+- 进场：左上是你的英雄（100 血，场上盖着陷阱【反击】），右上是敌方法师（100 血），底部提示"按 E 结束回合，轮到敌方法师，他会朝你放一发火球"。
+- 按 E：你的对局状态里 E 调图发 `TcgPrompt.TurnEnded` 事件，挂在法师身上的图收到后给法师下施法单，火球朝你飞来。
+- 火球进链，你的陷阱监听让牌桌停下来问你。提示弹出事件的图给你的代表实体激活"要不要接招"状态，底部换成三个选项。这个状态是前台状态，这时按 E 没反应。
+- 空格让过：你 100 → 70。N 无效：火球作废，双方都是 100。1 翻开反击：你 100 → 70，法师 100 → 85。
+- 回答后提示关闭事件的图退掉"要不要接招"状态，底部回到回合提示，可以再按 E 来一轮。
+- 按键、两个交互状态、事件、图、面板、法师的施法都在 mod 数据里，没有 C#。验收是 `TcgPromptShowcaseAcceptanceTests`，启动配置是 `tcg_prompt_raylib`。
 
-- 反制抵消不了火球。引擎的反制只作用在窗口里后加进来的效果上，打开窗口的那个效果（火球本身）不会被反制。
-- 引擎问的是出手单位的主人，也就是放火球的玩家自己，不是对手。
-
-两种改法：一是演示只给"让过 / 发动反击"两个选项，反制留给有连锁的场景；二是先改引擎，让窗口问对手，并允许反制打开窗口的效果。后者改的是响应链规则，要单独评审。
+做这个演示时修了一个引擎问题：图里用 `DispatchMapEvent` 发出的地图事件，上下文是空的，挂在这个事件上的触发图拿不到引擎，一收到就报错。现在 `BindTriggerManager` 同时绑定事件上下文工厂，图发出的事件和引擎系统发出的事件带一样的服务。
 
 另有两件和这片无关、这次碰到的老问题：画廊地图直接启动时报"宿主地图没有声明世界"（#1567 的规则），所有画廊节点都录不了像，这颗新节点的 wiki 页因此暂时没有录像；`GasTests` 全量跑会在中途崩掉测试进程，main 上也一样。
+
+这次还碰到几件不归这片管的老问题，只登记不顺手改：
+
+- Case E 的施法键绑的是 `<Keyboard>/digit1`，Raylib 不认这个写法（只认 `<Keyboard>/1`），真机上按 1 放不出技能。
+- TcgDemoMod 把 GAS 时钟设成手动步进，但真机里没有任何东西去推步进，它的几张图启动后效果永远不结算。`tcg_prompt` 在自己的 mod 里把时钟设回自动。
+- 电脑那一方的自动让过 `ResponseChainAiOrderSourceSystem` 把"电脑是 2 号玩家"写死在代码里。
+- 节点画廊的 `InvokeGraph` 演示驱动会把引擎共用的图运行接口换绑到自己的触发器管理器上。
+- TcgDemoMod 其他几张图的监听还是 C# 按地图标签装的，现在可以改成写在模板上。
+- 引擎的临时标记（`TransientMarkerBuffer`）发出去的画面条目不带主人编号，Raylib 的提交回执见到就抛错。响应连锁那一路已经删掉；路网 showcase（`RoadNetworkOrderPolicySystem`）下令时还在用它，真机上大概率同样会崩。
+- `GasTests` 里有 3 个和这片无关的老失败：`MapLoaderBatchPlacementTests` 两个反射调用参数个数对不上，`SplineSurfaceUat_LoadMap_BakesAllPresenterSourcedSurfaceKinds` 地图实体坐标越界。
 
 #### 3.11.2 小地图按键（片 3c）
 
@@ -260,7 +279,7 @@ presenter 按 tab_target 集合画目标环
 | 技能栏 | 选中英雄后屏幕下方出现他的技能格子，冷却中的变灰 | 面板 + `QueryCollectAbilitySlots` |
 | 切视角 | 按键从战术视角切到跟随视角，镜头跟到我的英雄身上，施法方式和技能栏跟着模式变 | 视角交互状态的 `onActivated` 图 |
 | 选中指示器 | MOBA 里选中英雄，脚下出现选中环（现在不出现） | presenter 订阅选中集合 |
-| TCG 响应窗 | 放火球后弹出响应窗，空格让过、N 反制、1 发动反击 | 提示事件图激活响应窗状态，按键图调 `SubmitResponseChainOrder` |
+| TCG 响应窗 | 按 E 结束回合，敌方法师朝你放火球，牌桌停下来问你：空格让过、N 无效、1 发动反击 | 模板上的陷阱监听；提示事件图激活"要不要接招"状态，按键图调 `SubmitResponseChainOrder` |
 | 小地图开关 | 在用小地图的 showcase 里按它面板上写的键开关小地图；别的游戏按 M 没反应 | showcase 的交互状态绑键，图调 `MinimapSetVisible` |
 
 ## 5. 边界
@@ -370,29 +389,49 @@ Feature: 旧写法启动即失败
 Feature: TCG 响应窗
 
   Background:
-    Given 我进入 TCG 演示的 tcg_prompt 图
-    And 屏幕提示"按 Q 放火球"
+    Given 我进入 tcg_prompt 牌桌
+    And 左上是我的英雄 100 血，写着场上盖着陷阱【反击】
+    And 右上是敌方法师 100 血
+    And 底部提示"按 E 结束回合"
+
+  Scenario: 别人出手时牌桌停下来问我
+    When 我按 E
+    Then 敌方法师朝我放出火球
+    And 底部换成"要不要接招"，列出空格、N、1 三个选项
+    And 我的血还是 100
 
   Scenario: 让过
-    When 我按 Q
-    Then 弹出响应窗，写着"空格 让过 / N 反制 / 1 发动反击"
+    Given 牌桌正在问我要不要接招
     When 我按空格
-    Then 响应窗关闭，敌人被火球打掉血
+    Then 选项收起，底部回到回合提示
+    And 我的血变成 70，法师还是 100
 
-  Scenario: 反制
-    When 我按 Q
-    And 响应窗弹出后我按 N
-    Then 响应窗关闭，敌人血量不变
+  Scenario: 无效
+    Given 牌桌正在问我要不要接招
+    When 我按 N
+    Then 选项收起，火球作废
+    And 我和法师都还是 100
 
-  Scenario: 发动反击
-    When 我按 Q
-    And 响应窗弹出后我按 1
-    Then 敌人先被火球打中，再被反击打中一次
+  Scenario: 翻开反击
+    Given 牌桌正在问我要不要接招
+    When 我按 1
+    Then 选项收起，火球照样打中我
+    And 我的血变成 70，法师被反打到 85
 
-  Scenario: 没弹窗时按空格
-    Given 响应窗没有弹出
-    When 我按空格
-    Then 什么都不发生
+  Scenario: 只算第一次回答
+    Given 牌桌正在问我要不要接招
+    When 我先按空格再马上按 1
+    Then 只按让过结算：我掉 30，法师不掉血
+
+  Scenario: 问我的时候按 E 不插队
+    Given 牌桌正在问我要不要接招
+    When 我按 E
+    Then 什么都不变，还在等我回答
+
+  Scenario: 没人出手时按回答键
+    Given 底部是回合提示
+    When 我按空格、N、1
+    Then 什么都不发生，双方都是 100
 
 Feature: 小地图按键归 showcase
 
