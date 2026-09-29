@@ -1,0 +1,83 @@
+[
+  {
+    "id": "Effect.Supply.Cover.Wei",
+    "categories": ["Effect.Supply.Cover"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 6, "periodTicks": 0, "clockId": "FixedFrame" },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Supply.Cover.Wei.Up", "skipMain": true },
+      "OnExpire": { "post": "Graph.Supply.Cover.Wei.Down", "skipMain": true }
+    }
+  },
+  {
+    "id": "Effect.Supply.Cover.Shu",
+    "categories": ["Effect.Supply.Cover"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 6, "periodTicks": 0, "clockId": "FixedFrame" },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Supply.Cover.Shu.Up", "skipMain": true },
+      "OnExpire": { "post": "Graph.Supply.Cover.Shu.Down", "skipMain": true }
+    }
+  },
+  {
+    "id": "Effect.Supply.Cover.Wu",
+    "categories": ["Effect.Supply.Cover"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 6, "periodTicks": 0, "clockId": "FixedFrame" },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Supply.Cover.Wu.Up", "skipMain": true },
+      "OnExpire": { "post": "Graph.Supply.Cover.Wu.Down", "skipMain": true }
+    }
+  },
+  {
+    "id": "Effect.Supply.Pulse.Close.Wei",
+    "categories": ["Effect.Supply.Pulse"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 600, "periodTicks": 2, "clockId": "FixedFrame" },
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 300, "origin": "Source" },
+    "targetFilter": { "relationFilter": "All", "excludeSource": true, "maxTargets": 16 },
+    "targetDispatch": { "payloadEffect": "Effect.Supply.Cover.Wei" }
+  },
+  {
+    "id": "Effect.Supply.Pulse.Far.Shu",
+    "categories": ["Effect.Supply.Pulse"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 600, "periodTicks": 2, "clockId": "FixedFrame" },
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 1000, "origin": "Source" },
+    "targetFilter": { "relationFilter": "All", "excludeSource": true, "maxTargets": 16 },
+    "targetDispatch": { "payloadEffect": "Effect.Supply.Cover.Shu" }
+  },
+  {
+    "id": "Effect.Supply.Resolve",
+    "categories": ["Effect.Supply.Resolve"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Supply.Pick", "skipMain": true }
+    }
+  },
+  {
+    "id": "Effect.Supply.Commit",
+    "categories": ["Effect.Supply.Commit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Supply.Commit", "skipMain": true }
+    }
+  }
+]
