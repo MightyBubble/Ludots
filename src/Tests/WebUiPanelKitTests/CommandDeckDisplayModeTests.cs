@@ -530,8 +530,8 @@ public sealed class CommandDeckDisplayModeTests
 			new RelationshipReverseIndex(world));
 		int ownsTypeId = types.Register("Owns");
 		int controlsTypeId = types.Register("Controls");
-		var ownership = new OwnershipResolver(relationships, ownsTypeId);
-		var query = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+		DefaultRelationshipRules.Install(relationships);
+		var query = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
 		var keyRegistry = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 		int keyId = keyRegistry.Register("collection.command.source");
 		keyRegistry.Register(EntityViewKeys.ControlPlaneCommand);
@@ -550,8 +550,8 @@ public sealed class CommandDeckDisplayModeTests
 		Entity p2 = world.Create(new PlayerIdentity { PlayerId = 2 });
 		Entity m01 = world.Create();
 		Entity m99 = world.Create();
-		ownership.EnsureOwnership(p1, m01);
-		ownership.EnsureOwnership(p2, m99);
+		relationships.EnsureLink(p1, m01, ownsTypeId);
+		relationships.EnsureLink(p2, m99, ownsTypeId);
 
 		writer.ReplaceRouted(
 			p1,

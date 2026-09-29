@@ -37,17 +37,17 @@ namespace Ludots.Tests.GAS
                 relationshipFlags,
                 relationshipBands);
             int ownsTypeId = relationships.TypeRegistry.GetId("Owns");
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            DefaultRelationshipRules.Install(relationships);
 
             var shapes = new ItemShapeRegistry();
             var layouts = new ItemLayoutRegistry();
             var definitions = new ItemDefinitionRegistry();
             int stashLayout = RegisterOneByOneItemSetup(shapes, layouts, definitions);
-            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, ownership);
+            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, relationships, ownsTypeId);
 
             Entity player = world.Create();
             Entity city = world.Create();
-            ownership.EnsureOwnership(player, city);
+            relationships.EnsureLink(player, city, ownsTypeId);
 
             Entity stash = inventory.CreateContainer(city, stashLayout, ItemContainerPurpose.Stash);
             Entity artifact = inventory.CreateItem(definitionId: 1);

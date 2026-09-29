@@ -19,8 +19,8 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity city = world.Create();
             Entity unit = world.Create();
-            harness.Ownership.EnsureOwnership(rep, city);
-            harness.Ownership.EnsureOwnership(city, unit);
+            harness.Relationships.EnsureLink(rep, city, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(city, unit, harness.OwnsTypeId);
 
             Span<Entity> buffer = stackalloc Entity[8];
             int count = harness.Query.CollectControlled(rep, buffer);
@@ -39,8 +39,8 @@ namespace Ludots.Tests.GAS
             Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity ownUnit = world.Create();
             Entity proxyUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repA, ownUnit);
-            harness.Ownership.EnsureOwnership(repB, proxyUnit);
+            harness.Relationships.EnsureLink(repA, ownUnit, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repB, proxyUnit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
 
             Span<Entity> buffer = stackalloc Entity[8];
@@ -75,7 +75,7 @@ namespace Ludots.Tests.GAS
 
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity unit = world.Create();
-            harness.Ownership.EnsureOwnership(rep, unit);
+            harness.Relationships.EnsureLink(rep, unit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(rep, unit, harness.ControlsTypeId);
 
             Span<Entity> buffer = stackalloc Entity[4];
@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
             Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity proxyUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repB, proxyUnit);
+            harness.Relationships.EnsureLink(repB, proxyUnit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
 
             Span<Entity> buffer = stackalloc Entity[4];
@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
             Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity enemyUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repC, enemyUnit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
 
@@ -136,8 +136,8 @@ namespace Ludots.Tests.GAS
             Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity enemy1 = world.Create();
             Entity enemy2 = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemy1);
-            harness.Ownership.EnsureOwnership(repC, enemy2);
+            harness.Relationships.EnsureLink(repC, enemy1, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repC, enemy2, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, enemy1, harness.ControlsTypeId);
 
             Span<Entity> domains = stackalloc Entity[8];
@@ -180,7 +180,7 @@ namespace Ludots.Tests.GAS
             Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity enemyUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repC, enemyUnit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, repC, harness.ControlsTypeId);
 
@@ -217,7 +217,7 @@ namespace Ludots.Tests.GAS
             Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity enemyUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repC, enemyUnit, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
 
@@ -259,10 +259,10 @@ namespace Ludots.Tests.GAS
             Entity enemyC3 = world.Create();
             Entity unitB = world.Create();
             Entity strayUnit = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemyC1);
-            harness.Ownership.EnsureOwnership(repC, enemyC2);
-            harness.Ownership.EnsureOwnership(repC, enemyC3);
-            harness.Ownership.EnsureOwnership(repB, unitB);
+            harness.Relationships.EnsureLink(repC, enemyC1, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repC, enemyC2, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repC, enemyC3, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repB, unitB, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, enemyC1, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, enemyC2, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, unitB, harness.ControlsTypeId);
@@ -289,8 +289,8 @@ namespace Ludots.Tests.GAS
             Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
             Entity enemy1 = world.Create();
             Entity enemy2 = world.Create();
-            harness.Ownership.EnsureOwnership(repC, enemy1);
-            harness.Ownership.EnsureOwnership(repC, enemy2);
+            harness.Relationships.EnsureLink(repC, enemy1, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(repC, enemy2, harness.OwnsTypeId);
             harness.Relationships.EnsureLink(repA, enemy1, harness.ControlsTypeId);
             harness.Relationships.EnsureLink(repA, enemy2, harness.ControlsTypeId);
 
@@ -316,9 +316,9 @@ namespace Ludots.Tests.GAS
             Entity city = world.Create();
             Entity building = world.Create();
             Entity unit = world.Create();
-            harness.Ownership.EnsureOwnership(rep, city);
-            harness.Ownership.EnsureOwnership(city, building);
-            harness.Ownership.EnsureOwnership(building, unit);
+            harness.Relationships.EnsureLink(rep, city, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(city, building, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(building, unit, harness.OwnsTypeId);
 
             Assert.That(harness.Query.TryResolveControlDomain(unit, out Entity domainRep), Is.True);
             Assert.That(domainRep, Is.EqualTo(rep));
@@ -334,7 +334,7 @@ namespace Ludots.Tests.GAS
 
             Entity orphanOwner = world.Create();
             Entity orphanUnit = world.Create();
-            harness.Ownership.EnsureOwnership(orphanOwner, orphanUnit);
+            harness.Relationships.EnsureLink(orphanOwner, orphanUnit, harness.OwnsTypeId);
 
             Assert.That(harness.Query.TryResolveControlDomain(orphanUnit, out Entity domainRep), Is.False);
             Assert.That(domainRep, Is.EqualTo(Entity.Null));
@@ -350,8 +350,8 @@ namespace Ludots.Tests.GAS
             Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
             for (int i = 0; i < 8; i++)
             {
-                harness.Ownership.EnsureOwnership(repA, world.Create());
-                harness.Ownership.EnsureOwnership(repB, world.Create());
+                harness.Relationships.EnsureLink(repA, world.Create(), harness.OwnsTypeId);
+                harness.Relationships.EnsureLink(repB, world.Create(), harness.OwnsTypeId);
             }
 
             harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
@@ -378,7 +378,6 @@ namespace Ludots.Tests.GAS
         private sealed class Harness
         {
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
             public ControlDomainQuery Query = null!;
             public int OwnsTypeId;
             public int ControlsTypeId;
@@ -396,12 +395,11 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
+                DefaultRelationshipRules.Install(relationships);
                 return new Harness
                 {
                     Relationships = relationships,
-                    Ownership = ownership,
-                    Query = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId),
+                    Query = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId),
                     OwnsTypeId = ownsTypeId,
                     ControlsTypeId = controlsTypeId,
                 };

@@ -45,7 +45,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
         public static void CopyIdentityComponents(World world, Entity target, in LifecycleSnapshot snapshot)
         {
-            CopyIdentityComponents(world, target, Entity.Null, in snapshot, ownership: null, relationships: null, memberOfTypeId: -1);
+            CopyIdentityComponents(world, target, Entity.Null, in snapshot, relationships: null, ownsTypeId: -1, memberOfTypeId: -1);
         }
 
         public static void CopyIdentityComponents(
@@ -53,18 +53,19 @@ namespace Ludots.Core.Gameplay.Lifecycle
             Entity target,
             Entity source,
             in LifecycleSnapshot snapshot,
-            OwnershipResolver? ownership,
             RelationshipRuntime? relationships,
+            int ownsTypeId,
             int memberOfTypeId)
         {
-            if (ownership != null &&
+            if (relationships != null &&
+                ownsTypeId >= 0 &&
                 world.IsAlive(source) &&
-                ownership.TryResolveRootOwner(source, out Entity root) &&
+                relationships.TryResolveRootSource(source, ownsTypeId, out Entity root) &&
                 world.IsAlive(root) &&
                 world.Has<PlayerIdentity>(root))
             {
-                ownership.EnsureOwnership(root, target);
-                ParticipantIdentityProjector.SyncPlayerOwner(world, target, ownership);
+                relationships.EnsureLink(root, target, ownsTypeId);
+                ParticipantIdentityProjector.SyncPlayerOwner(world, target, relationships, ownsTypeId);
             }
             else if (snapshot.HasPlayerOwner)
             {

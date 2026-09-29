@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Activities;
@@ -275,8 +276,13 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
-        OwnershipResolver ownership = ctx.Ownership
-            ?? throw new InvalidOperationException("Typed inventory gallery requires OwnershipResolver.");
+        RelationshipRuntime relationships = ctx.Relationships
+            ?? throw new InvalidOperationException("Typed inventory gallery requires RelationshipRuntime.");
+        if (ctx.OwnsTypeId < 0)
+        {
+            throw new InvalidOperationException("Typed inventory gallery requires the ownership relationship type.");
+        }
+
         InventoryRuntimeService inventory = ctx.InventoryRuntime
             ?? throw new InvalidOperationException("Typed inventory gallery requires InventoryRuntimeService.");
         Entity container = ctx.SimWorld.Create(new ItemContainerCm
@@ -284,11 +290,11 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             LayoutId = 0,
             Purpose = ItemContainerPurpose.Backpack
         });
-        ownership.EnsureOwnership(ctx.Caster, container);
+        relationships.EnsureLink(ctx.Caster, container, ctx.OwnsTypeId);
         Entity item = ctx.SimWorld.Create(
             new ItemInstanceCm { DefinitionId = definitionId, StackCount = 3 },
             new ItemLocationCm { Container = container });
-        ownership.EnsureOwnership(container, item);
+        relationships.EnsureLink(container, item, ctx.OwnsTypeId);
         Span<Entity> seededItems = stackalloc Entity[1];
         if (inventory.CollectOwnedItemInstances(ctx.Caster, seededItems) != 1)
         {

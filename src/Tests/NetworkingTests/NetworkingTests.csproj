@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\DefaultRelationshipRules.cs" Link="DefaultRelationshipRules.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
   </ItemGroup>
 

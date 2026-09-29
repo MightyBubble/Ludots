@@ -34,8 +34,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
             PresenterDefinitionRegistry? presenterDefinitions = null,
             ComponentAuthoringContext? authoringContext = null,
             EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
-            OwnershipResolver? ownership = null,
             RelationshipRuntime? relationships = null,
+            int ownsTypeId = -1,
             int memberOfTypeId = -1)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -54,7 +54,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 presenterDefinitions,
                 presenterDefinitions?.BootstrapRegistry);
             EntityTriggerGraphMounts = entityTriggerGraphMounts;
-            Ownership = ownership;
+            OwnsTypeId = ownsTypeId;
             Relationships = relationships;
             MemberOfTypeId = memberOfTypeId;
         }
@@ -64,7 +64,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
         /// <summary>Entity-domain TriggerGraph mount pipeline; templates declaring graphs mount at materialization.</summary>
         public EntityTriggerGraphMounts? EntityTriggerGraphMounts { get; }
-        public OwnershipResolver? Ownership { get; }
+        public int OwnsTypeId { get; }
         public RelationshipRuntime? Relationships { get; }
         public int MemberOfTypeId { get; }
 

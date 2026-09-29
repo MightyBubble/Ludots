@@ -60,9 +60,9 @@ namespace Ludots.Tests.GAS
             int rivalryType = types.Register("Rivalry");
             int membershipType = types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
 
-            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
@@ -137,11 +137,11 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
             ApplyInvalidScenario(map, scenario);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership))!;
+                ParticipantBindingResolver.Resolve(session, world, index, relationships, types))!;
 
             Assert.That(ex.Message, Is.Not.Empty);
         }
@@ -854,7 +854,7 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
             int ownsType = types.GetId("Owns");
             int memberOfType = types.GetId("MemberOf");
             Entity unitOfPlayerOne = world.Create(
@@ -867,7 +867,7 @@ namespace Ludots.Tests.GAS
                 new PlayerOwner { PlayerId = 7 },
                 new MapEntity { MapId = new MapId("some_other_map") });
 
-            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
 
             Assert.That(relationships.HasLink(playerOne, unitOfPlayerOne, ownsType), Is.True);
             Assert.That(relationships.HasLink(playerTwo, unitOfPlayerTwo, ownsType), Is.True);
@@ -876,7 +876,7 @@ namespace Ludots.Tests.GAS
             Assert.That(relationships.HasLink(playerTwo, teamTwo, memberOfType), Is.True);
             Assert.That(relationships.HasLink(playerOne, playerOne, ownsType), Is.False, "Reps never own themselves.");
 
-            var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsType, types.GetId("Controls"));
+            var controlDomains = new ControlDomainQuery(world, relationships, ownsType, types.GetId("Controls"));
             Assert.That(controlDomains.TryResolveControlDomain(unitOfPlayerOne, out Entity domainOne), Is.True);
             Assert.That(domainOne, Is.EqualTo(playerOne));
             Assert.That(controlDomains.TryResolveControlDomain(unitOfPlayerTwo, out Entity domainTwo), Is.True);
@@ -895,21 +895,20 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
-            int ownsType = types.GetId("Owns");
+            int ownsType = BindControlPlane(relationships, types);
             Entity unit = world.Create(
                 new PlayerOwner { PlayerId = 7 },
                 new MapEntity { MapId = new MapId(map.Id) });
 
-            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
             Assert.That(relationships.HasLink(playerOne, unit, ownsType), Is.True);
 
             world.Set(unit, new PlayerOwner { PlayerId = 8 });
-            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, RebuildPlayerLookup(playerOne, playerTwo), session.MapId);
+            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, relationships, ownsType, RebuildPlayerLookup(playerOne, playerTwo), session.MapId);
 
             Assert.That(relationships.HasLink(playerOne, unit, ownsType), Is.False, "Single direct owner: the previous owns edge must be removed.");
             Assert.That(relationships.HasLink(playerTwo, unit, ownsType), Is.True);
-            Assert.That(ownership.TryGetDirectOwner(unit, out Entity owner), Is.True);
+            Assert.That(relationships.TryGetSingleSource(unit, ownsType, out Entity owner), Is.True);
             Assert.That(owner, Is.EqualTo(playerTwo));
         }
 
@@ -925,11 +924,11 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
             DomainStanceConfig stanceCatalog = CreateStanceCatalog(types);
             map.ParticipantRelationships.PlayerTeams[0].Attitude = stanceCatalog.StanceTypes[0];
 
-            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog);
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, stanceCatalog);
 
             int bridgedStanceId = types.GetId(stanceCatalog.StanceTypes[0]);
             Assert.That(relationships.HasLink(teamOne, teamTwo, bridgedStanceId), Is.True, "Symmetric team attitude must bridge the A→B stance edge.");
@@ -958,7 +957,7 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
             var stanceCatalog = new DomainStanceConfig
             {
                 StanceTypes = { "Stance.OnlyOther" },
@@ -969,7 +968,7 @@ namespace Ludots.Tests.GAS
             types.Register(stanceCatalog.StanceTypes[0]);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog))!;
+                ParticipantBindingResolver.Resolve(session, world, index, relationships, types, stanceCatalog))!;
 
             Assert.That(ex.Message, Does.Contain(map.ParticipantRelationships.Teams[0].Attitude));
             Assert.That(ex.Message, Does.Contain(stanceCatalog.StanceTypes[0]), "Fail-fast message must list the registered stance names.");
@@ -987,10 +986,10 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
             int stanceId = types.Register(CreateStanceCatalog(types).StanceTypes[0]);
 
-            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog: null);
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, stanceCatalog: null);
 
             Assert.That(relationships.HasLink(teamOne, teamTwo, stanceId), Is.False, "No stance catalog = pure legacy TeamManager behavior, no stance edges.");
             Assert.That(TeamManager.GetRelationship(10, 20), Is.EqualTo(TeamRelationship.Friendly), "TeamManager double-write must stay untouched.");
@@ -1037,9 +1036,9 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
 
-            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
 
             Assert.That(result.LocalSeats.Count, Is.EqualTo(1));
             Assert.That(result.LocalSeats[0].PlayerId, Is.EqualTo(8));
@@ -1058,9 +1057,9 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
 
-            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
+            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
 
             Assert.That(result.LocalSeats, Is.Empty);
         }
@@ -1080,10 +1079,10 @@ namespace Ludots.Tests.GAS
             types.Register("Rivalry");
             types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
-            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            BindControlPlane(relationships, types);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership))!;
+                ParticipantBindingResolver.Resolve(session, world, index, relationships, types))!;
 
             Assert.That(ex.Message, Does.Contain("playerId 99"));
         }
@@ -1162,12 +1161,15 @@ namespace Ludots.Tests.GAS
             return index;
         }
 
-        private static OwnershipResolver CreateOwnership(RelationshipRuntime relationships, RelationshipTypeRegistry types)
+        private static int BindControlPlane(RelationshipRuntime relationships, RelationshipTypeRegistry types)
         {
             int ownsType = types.Register("Owns");
-            types.Register("Controls");
-            types.Register("MemberOf");
-            return new OwnershipResolver(relationships, ownsType);
+            int controlsType = types.Register("Controls");
+            int memberOfType = types.Register("MemberOf");
+            DefaultRelationshipRules.Install(relationships);
+            relationships.BindParticipantIdentityProjection(
+                new RelationshipRoleBindings(ownsType, memberOfType, controlsType));
+            return ownsType;
         }
 
         private static RelationshipRuntime CreateRelationshipRuntime(World world, RelationshipTypeRegistry types)

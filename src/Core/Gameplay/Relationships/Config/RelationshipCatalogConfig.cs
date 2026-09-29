@@ -30,7 +30,53 @@ namespace Ludots.Core.Gameplay.Relationships.Config
     {
         public string Id { get; set; } = string.Empty;
         public bool IsSymmetric { get; set; }
+        public RelationshipRole Role { get; set; }
+        public RelationshipTypeRulesConfig? Rules { get; set; }
         public RelationshipTypeTemplateConfig? Template { get; set; }
+    }
+
+    /// <summary>
+    /// Which relationship type the engine reads when it answers a control-plane question. A role carries
+    /// no link constraints of its own; uniqueness, exclusion and cycles are declared in <see cref="RelationshipTypeRulesConfig"/>.
+    /// </summary>
+    public enum RelationshipRole
+    {
+        None = 0,
+        /// <summary>PlayerOwner is projected from the root source reached by walking incoming edges of this type.</summary>
+        Ownership,
+        /// <summary>Team is projected onto the source from a target carrying TeamIdentity.</summary>
+        Membership,
+        /// <summary>Control domains add the targets of this type to what the source owns.</summary>
+        ControlGrant,
+    }
+
+    /// <summary>
+    /// Link constraints for one relationship type, enforced on every link of that type regardless of caller.
+    /// Counterpart of the tag rule set: <c>blockedAny</c> / <c>removed</c> name other relationship types between the same pair.
+    /// </summary>
+    public sealed class RelationshipTypeRulesConfig
+    {
+        /// <summary>Most links of this type a target may receive; 0 = unlimited.</summary>
+        public int MaxIncoming { get; set; }
+        /// <summary>Most links of this type a source may hold; 0 = unlimited.</summary>
+        public int MaxOutgoing { get; set; }
+        /// <summary>Required whenever a maximum is set.</summary>
+        public RelationshipCapacityPolicy OnFull { get; set; }
+        /// <summary>Reject a link that would close a cycle along this type.</summary>
+        public bool Acyclic { get; set; }
+        /// <summary>Reject the link when the same source → target pair already has any of these types.</summary>
+        public List<string> BlockedAny { get; set; } = new();
+        /// <summary>Remove these types from the same source → target pair when the link is made.</summary>
+        public List<string> Removed { get; set; } = new();
+    }
+
+    public enum RelationshipCapacityPolicy
+    {
+        None = 0,
+        /// <summary>The new link fails loudly; existing links stay.</summary>
+        Reject,
+        /// <summary>The existing link is removed and the new one takes its place; only valid with a maximum of 1.</summary>
+        Replace,
     }
 
     /// <summary>

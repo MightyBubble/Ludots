@@ -62,16 +62,16 @@ namespace Ludots.Tests.GAS
             Entity m02 = world.Create();
             Entity m05 = world.Create();
             Entity m06 = world.Create();
-            harness.Ownership.EnsureOwnership(p1Rep, m01);
-            harness.Ownership.EnsureOwnership(p1Rep, m02);
-            harness.Ownership.EnsureOwnership(p1Rep, m05);
-            harness.Ownership.EnsureOwnership(p1Rep, m06);
+            harness.Relationships.EnsureLink(p1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m02, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m05, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(p1Rep, m06, harness.OwnsTypeId);
 
             harness.MountBaseContext(p1Rep);
             harness.Writer.CommitCast(p1Rep, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(p1Rep, actor);
+            harness.Relationships.EnsureLink(p1Rep, actor, harness.OwnsTypeId);
             harness.ExecSystem.Update(0f);
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.True, "Exec must be gate-waiting.");
 
@@ -123,7 +123,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
@@ -323,7 +323,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
@@ -341,7 +341,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
@@ -371,7 +371,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
@@ -399,7 +399,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
 
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
@@ -440,7 +440,7 @@ namespace Ludots.Tests.GAS
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
 
             Entity first = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, first);
+            harness.Relationships.EnsureLink(rep, first, harness.OwnsTypeId);
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
             Assert.That(
@@ -449,7 +449,7 @@ namespace Ludots.Tests.GAS
                 Is.True);
 
             Entity second = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, second);
+            harness.Relationships.EnsureLink(rep, second, harness.OwnsTypeId);
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
             Assert.That(
@@ -513,7 +513,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity actor = harness.CreateCastingActor(AbilityWithContextId);
-            harness.Ownership.EnsureOwnership(rep, actor);
+            harness.Relationships.EnsureLink(rep, actor, harness.OwnsTypeId);
             harness.ExecSystem.Update(0f);
             harness.ContextSystem.Update(0f);
             Assert.That(world.Has<InteractionContextInstance>(rep), Is.True);
@@ -553,7 +553,8 @@ namespace Ludots.Tests.GAS
         private sealed class Harness
         {
             public World World = null!;
-            public OwnershipResolver Ownership = null!;
+            public RelationshipRuntime Relationships = null!;
+            public int OwnsTypeId;
             public EntityCollectionStore Store = null!;
             public InteractionContextProfileRegistry ContextProfiles = null!;
             public StringIntRegistry IntentIds = null!;
@@ -580,8 +581,8 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var domains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
 
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
@@ -670,7 +671,8 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     World = world,
-                    Ownership = ownership,
+                    Relationships = relationships,
+                    OwnsTypeId = ownsTypeId,
                     Store = store,
                     ContextProfiles = contextProfiles,
                     IntentIds = commandIntentProfileIds,

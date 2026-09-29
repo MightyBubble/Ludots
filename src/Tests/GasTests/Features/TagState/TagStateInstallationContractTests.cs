@@ -454,7 +454,8 @@ public sealed class TagStateInstallationContractTests
             relationshipMetrics,
             relationshipFlags,
             relationshipBands);
-        var ownership = new OwnershipResolver(relationships, relationshipTypes.GetId("Owns"));
+        int ownershipTypeId = relationshipTypes.GetId("Owns");
+        DefaultRelationshipRules.Install(relationships);
 
         var shapes = new ItemShapeRegistry();
         int shapeId = shapes.Register("tag_state_1x1", new ItemShapeDefinition
@@ -478,7 +479,7 @@ public sealed class TagStateInstallationContractTests
             ShapeId = shapeId,
             AbilityGrants = new[] { new ItemAbilityGrant { SlotIndex = 0, AbilityId = abilityId } },
         });
-        var inventory = new InventoryRuntimeService(world, shapes, layouts, itemDefinitions, ownership);
+        var inventory = new InventoryRuntimeService(world, shapes, layouts, itemDefinitions, relationships, ownershipTypeId);
 
         Entity actor = world.Create(new AbilityStateBuffer(), new InventoryEquipmentDirtyTag());
         Entity equipment = inventory.CreateContainer(actor, layoutId, ItemContainerPurpose.Equipment);

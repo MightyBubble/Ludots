@@ -2,15 +2,23 @@
   "types": [
     {
       "id": "Owns",
-      "isSymmetric": false
+      "isSymmetric": false,
+      "role": "Ownership",
+      "rules": {
+        "maxIncoming": 1,
+        "onFull": "Replace",
+        "acyclic": true
+      }
     },
     {
       "id": "Controls",
-      "isSymmetric": false
+      "isSymmetric": false,
+      "role": "ControlGrant"
     },
     {
       "id": "MemberOf",
-      "isSymmetric": false
+      "isSymmetric": false,
+      "role": "Membership"
     }
   ],
   "metrics": [],

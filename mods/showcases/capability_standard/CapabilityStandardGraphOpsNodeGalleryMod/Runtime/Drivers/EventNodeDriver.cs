@@ -75,7 +75,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
-        if (ctx.EventBus == null || ctx.EffectRequests == null || ctx.Ownership == null || ctx.Knowledge == null)
+        if (ctx.EventBus == null || ctx.EffectRequests == null || ctx.Relationships == null || ctx.OwnsTypeId < 0 || ctx.Knowledge == null)
         {
             throw new InvalidOperationException($"Event gallery '{ctx.Vignette.Op}' requires host event/ownership/knowledge services.");
         }
@@ -427,7 +427,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         }
 
         Entity current = ctx.SimActors[target];
-        while (ctx.Ownership!.TryGetDirectOwner(current, out Entity owner) && owner != Entity.Null)
+        while (ctx.Relationships!.TryGetSingleSource(current, ctx.OwnsTypeId, out Entity owner) && owner != Entity.Null)
         {
             int ownerIndex = GraphOpsNodeActorBinding.IndexOf(ctx, owner);
             int ownedIndex = GraphOpsNodeActorBinding.IndexOf(ctx, current);
@@ -924,9 +924,9 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 continue;
             }
 
-            if (!ctx.Ownership!.TryGetDirectOwner(entity, out _))
+            if (!ctx.Relationships!.TryGetSingleSource(entity, ctx.OwnsTypeId, out _))
             {
-                ctx.Ownership.EnsureOwnership(ctx.Caster, entity);
+                ctx.Relationships!.EnsureLink(ctx.Caster, entity, ctx.OwnsTypeId);
             }
 
             ctx.Knowledge!.Upsert(ctx.Viewer, entity, CreateDisclosure(ctx.Viewer));

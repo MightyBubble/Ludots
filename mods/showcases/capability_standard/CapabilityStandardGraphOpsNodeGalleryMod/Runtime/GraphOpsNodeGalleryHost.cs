@@ -71,7 +71,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         public TagOps TagOps { get; private set; } = null!;
         public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
     public ISpatialQueryService SpatialQueries { get; private set; } = null!;
-    public OwnershipResolver? Ownership { get; private set; }
+    public int OwnsTypeId { get; private set; } = -1;
     public KnowledgeProjectionStore Knowledge { get; private set; } = null!;
     public GameplayEventBus EventBus { get; private set; } = null!;
     public GraphCallbackService GraphCallbacks { get; private set; } = null!;
@@ -184,7 +184,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             TagOps = TagOps,
             EventBus = EventBus,
             GraphCallbacks = GraphCallbacks,
-            Ownership = Ownership,
+            OwnsTypeId = OwnsTypeId,
             Knowledge = Knowledge,
             Coords = Coords,
             SpatialQueries = SpatialQueries,
@@ -270,8 +270,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         EnsureGalleryRelationshipCatalog();
         EnsureDispatchPreset();
         RegisterCollectionKeys();
-        int ownsType = RelationshipTypes.Register("Owns");
-        Ownership = new OwnershipResolver(Relationships, ownsType);
+        OwnsTypeId = Relationships.Roles.OwnershipTypeId;
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
         EnsureHostileCasterAndEnemyTeams();
         _itemDefinitions = RequireEngineService(engine, CoreServiceKeys.ItemDefinitionRegistry);

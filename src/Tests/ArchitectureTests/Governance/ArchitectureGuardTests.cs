@@ -1617,18 +1617,19 @@ namespace Ludots.Tests.Architecture.Governance
             string containerPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "ItemComponents.cs");
             string inventoryPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "InventoryRuntimeService.cs");
             string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
+            string linkRulesPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "RelationshipRuntime.Rules.cs");
             string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Relationships", "catalog.json");
             string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "ownership_cascade", "OwnershipCascadeShowcaseMod", "mod.json");
 
             Assert.That(File.Exists(containerPath), Is.True, $"Missing {containerPath}");
             Assert.That(File.Exists(inventoryPath), Is.True, $"Missing {inventoryPath}");
-            Assert.That(File.Exists(ownershipPath), Is.True, $"Missing {ownershipPath}");
+            Assert.That(File.Exists(ownershipPath), Is.False, "Ownership is read and written through relationship edges; no ownership-specific resolver.");
             Assert.That(File.Exists(relationshipCatalogPath), Is.True, $"Missing {relationshipCatalogPath}");
             Assert.That(File.Exists(showcasePath), Is.True, $"Missing AAC-5 showcase mod {showcasePath}");
 
             string container = File.ReadAllText(containerPath);
             string inventory = File.ReadAllText(inventoryPath);
-            string ownership = File.ReadAllText(ownershipPath);
+            string linkRules = File.ReadAllText(linkRulesPath);
             string catalog = File.ReadAllText(relationshipCatalogPath);
 
             Assert.Multiple(() =>
@@ -1636,14 +1637,13 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(container, Does.Contain("public struct ItemContainerCm"));
                 Assert.That(container, Does.Not.Contain("public Entity Owner"));
                 Assert.That(container, Does.Not.Contain("OwnerKind"));
-                Assert.That(inventory, Does.Contain("OwnershipResolver"));
-                Assert.That(inventory, Does.Contain("_ownership.EnsureOwnership"));
-                Assert.That(inventory, Does.Contain("_ownership.IsOwnedBy"));
+                Assert.That(inventory, Does.Contain("_relationships.EnsureLink("));
+                Assert.That(inventory, Does.Contain("_relationships.IsUpstreamOf("));
                 Assert.That(inventory, Does.Not.Contain("ItemContainerOwnerKind"));
-                Assert.That(ownership, Does.Contain("RelationshipRuntime"));
-                Assert.That(ownership, Does.Contain("CollectIncoming"));
-                Assert.That(ownership, Does.Contain("CollectOutgoing"));
+                Assert.That(linkRules, Does.Not.Contain("_roles"), "Link rules come from the catalog, never from a relationship role.");
+                Assert.That(linkRules, Does.Not.Contain("Ownership"), "Link rules come from the catalog, never from a relationship role.");
                 Assert.That(catalog, Does.Contain("\"Owns\""));
+                Assert.That(catalog, Does.Contain("\"maxIncoming\": 1"));
             });
         }
 
@@ -1995,7 +1995,7 @@ namespace Ludots.Tests.Architecture.Governance
             string exchangeRuntimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
             string progressionPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Progression", "ProgressionRequirementEvaluator.cs");
             string scopePath = Path.Combine(repoRoot, "src", "Core", "Association", "ScopeKey.cs");
-            string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
+            string ownershipQueriesPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "RelationshipRuntime.Rules.cs");
             string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
 
             string commandSourceEligibility = File.ReadAllText(commandSourceEligibilityPath);
@@ -2004,7 +2004,7 @@ namespace Ludots.Tests.Architecture.Governance
             string exchangeRuntime = File.ReadAllText(exchangeRuntimePath);
             string progression = File.ReadAllText(progressionPath);
             string scope = File.ReadAllText(scopePath);
-            string ownership = File.ReadAllText(ownershipPath);
+            string ownershipQueries = File.ReadAllText(ownershipQueriesPath);
             string gameEngine = File.ReadAllText(gameEnginePath);
 
             Assert.Multiple(() =>
@@ -2017,10 +2017,10 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(exchangeModel, Does.Contain("AttributeCost"));
                 Assert.That(progression, Does.Contain("ScopeResolver"));
                 Assert.That(progression, Does.Contain("ResolveMembers"));
-                Assert.That(ownership, Does.Contain("RelationshipRuntime"));
-                Assert.That(ownership, Does.Contain("CollectIncoming"));
-                Assert.That(ownership, Does.Contain("CollectOutgoing"));
-                Assert.That(gameEngine, Does.Contain("GetId(\"Owns\")"));
+                Assert.That(ownershipQueries, Does.Contain("CollectIncoming"));
+                Assert.That(ownershipQueries, Does.Contain("CollectOutgoing"));
+                Assert.That(gameEngine, Does.Contain("RelationshipRoleBindings.Resolve("));
+                Assert.That(gameEngine, Does.Not.Contain("GetId(\"Owns\")"));
                 Assert.That(scope, Does.Contain("RoleSlot"));
             });
         }

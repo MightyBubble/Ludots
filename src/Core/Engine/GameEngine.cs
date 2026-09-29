@@ -891,25 +891,16 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 entityCollectionStore);
             relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
-            // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
-            // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
-            // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
-            // are pure data — profiles referencing them fail fast at their own load site instead.
-            int ownsRelationshipTypeId = relationshipTypeRegistry.GetId("Owns");
-            int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
-            int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
-            var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
-            ownershipResolver.BindIdentityProjection(World);
-            relationshipRuntime.BindParticipantIdentityProjection(
-                ownershipResolver,
-                ownsRelationshipTypeId,
-                memberOfRelationshipTypeId);
+            relationshipRuntime.Rules.InstallFromCatalog(relationshipCatalog);
+            var relationshipRoles = RelationshipRoleBindings.Resolve(relationshipCatalog, relationshipTypeRegistry);
+            int memberOfRelationshipTypeId = relationshipRoles.MembershipTypeId;
+            int ownsRelationshipTypeId = relationshipRoles.OwnershipTypeId;
+            relationshipRuntime.BindParticipantIdentityProjection(relationshipRoles);
             var controlDomainQuery = new ControlDomainQuery(
                 World,
                 relationshipRuntime,
-                ownershipResolver,
                 ownsRelationshipTypeId,
-                controlsRelationshipTypeId);
+                relationshipRoles.ControlGrantTypeId);
             var domainStanceQuery = DomainStanceQuery.Create(
                 relationshipRuntime,
                 memberOfRelationshipTypeId,
@@ -1130,7 +1121,7 @@ namespace Ludots.Core.Engine
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
-            var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, ownershipResolver);
+            var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, relationshipRuntime, ownsRelationshipTypeId);
             var exchangeRuntime = new ExchangeRuntime(
                 World,
                 exchangeOperations,
@@ -2045,7 +2036,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
             SetService(CoreServiceKeys.RngStreamService, rngStreams);
             SetService(CoreServiceKeys.RngPickService, rngPickService);
-            SetService(CoreServiceKeys.OwnershipResolver, ownershipResolver);
             SetService(CoreServiceKeys.InventoryRuntimeService, inventoryRuntime);
             SetService(CoreServiceKeys.ExchangeOperationRegistry, exchangeOperations);
             SetService(CoreServiceKeys.ExchangeScopedOperationStore, exchangeScopedOperations);
@@ -2416,8 +2406,8 @@ namespace Ludots.Core.Engine
                 presenterDefinitions,
                 componentAuthoringContext,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
-                ownership: ownershipResolver,
                 relationships: relationshipRuntime,
+                ownsTypeId: ownsRelationshipTypeId,
                 memberOfTypeId: memberOfRelationshipTypeId);
             var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
@@ -2444,12 +2434,11 @@ namespace Ludots.Core.Engine
                 WorldSizeSpec,
                 presentationTimingDiagnostics,
                 componentAuthoringContext,
-                ownership: ownershipResolver,
                 playerLookup: playerEntityLookup,
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
-                ownsTypeId: relationshipTypeRegistry.GetId("Owns"),
+                ownsTypeId: ownsRelationshipTypeId,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
                 initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);
@@ -2978,7 +2967,6 @@ namespace Ludots.Core.Engine
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
                         GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                        GetService(CoreServiceKeys.OwnershipResolver),
                         GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
                 SetMapEntitiesSuspended(mid, true);
 
@@ -3155,7 +3143,6 @@ namespace Ludots.Core.Engine
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
                     GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                    GetService(CoreServiceKeys.OwnershipResolver),
                     GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
             SetMapEntitiesSuspended(inner, true);
 

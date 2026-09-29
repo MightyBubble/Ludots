@@ -503,8 +503,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, CreateProxyProfileCatalog());
             Entity m01 = world.Create();
             Entity m99 = world.Create();
-            harness.Ownership.EnsureOwnership(harness.P1Rep, m01);
-            harness.Ownership.EnsureOwnership(harness.P2Rep, m99);
+            harness.Relationships.EnsureLink(harness.P1Rep, m01, harness.OwnsTypeId);
+            harness.Relationships.EnsureLink(harness.P2Rep, m99, harness.OwnsTypeId);
 
             harness.AddTag(harness.P2Rep, TriggerTag);
             harness.Runtime.Update();
@@ -877,7 +877,7 @@ namespace Ludots.Tests.GAS
             public World World = null!;
             public RelationshipRuntime Relationships = null!;
             public RelationshipChangeBuffer Changes = null!;
-            public OwnershipResolver Ownership = null!;
+            public int OwnsTypeId;
             public TagOps TagOps = null!;
             public AssociationControlProfileRuntime Runtime = null!;
             public EntityCollectionStore Store = null!;
@@ -929,8 +929,8 @@ namespace Ludots.Tests.GAS
                     relationships.EnsureLink(p2Rep, p1Rep, allyTypeId);
                 }
 
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var domains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
                 var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
@@ -944,7 +944,7 @@ namespace Ludots.Tests.GAS
                     Changes = changes,
                     World = world,
                     Relationships = relationships,
-                    Ownership = ownership,
+                    OwnsTypeId = ownsTypeId,
                     TagOps = tagOps,
                     Runtime = runtime,
                     Store = store,

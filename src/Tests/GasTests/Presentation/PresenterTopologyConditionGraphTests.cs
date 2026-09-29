@@ -45,7 +45,6 @@ namespace Ludots.Tests.Presentation
 
         private RelationshipRuntime _relationships = null!;
         private RelationshipTypeRegistry _relationshipTypes = null!;
-        private OwnershipResolver _ownership = null!;
         private ControlDomainQuery _controlDomains = null!;
         private KnowledgeProjectionStore _knowledgeStore = null!;
         private int _ownsTypeId;
@@ -71,8 +70,8 @@ namespace Ludots.Tests.Presentation
                 new RelationshipReverseIndex(_world));
             _ownsTypeId = _relationshipTypes.Register("Owns");
             _controlsTypeId = _relationshipTypes.Register("Controls");
-            _ownership = new OwnershipResolver(_relationships, _ownsTypeId);
-            _controlDomains = new ControlDomainQuery(_world, _relationships, _ownership, _ownsTypeId, _controlsTypeId);
+            DefaultRelationshipRules.Install(_relationships);
+            _controlDomains = new ControlDomainQuery(_world, _relationships, _ownsTypeId, _controlsTypeId);
             _knowledgeStore = new KnowledgeProjectionStore();
 
             var api = new GasGraphRuntimeApi(
@@ -112,7 +111,7 @@ namespace Ludots.Tests.Presentation
             Entity p2Rep = _world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity referee = _world.Create();
             Entity unit = _world.Create();
-            _ownership.EnsureOwnership(p1Rep, unit);
+            _relationships.EnsureLink(p1Rep, unit, _ownsTypeId);
             _relationships.EnsureLink(p2Rep, p1Rep, _controlsTypeId);
             _knowledgeStore.Upsert(referee, unit, CreateDisclosure(referee));
             return (p1Rep, p2Rep, referee, unit);

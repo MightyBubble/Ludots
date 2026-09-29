@@ -49,8 +49,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 state.Target,
                 state.Source,
                 in state.Snapshot,
-                services.Ownership,
                 services.Relationships,
+                services.OwnsTypeId,
                 services.MemberOfTypeId);
         }
 

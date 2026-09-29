@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -10,7 +9,7 @@ using Ludots.Core.Gameplay.Relationships.Config;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
-    public sealed class RelationshipRuntime
+    public sealed partial class RelationshipRuntime
     {
         private static readonly QueryDescription RelationshipEntityQuery = new QueryDescription()
             .WithAll<RelationshipInstanceCm>();
@@ -23,9 +22,8 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
         private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
-        private OwnershipResolver? _identityOwnership;
-        private int _identityOwnsTypeId = -1;
-        private int _identityMemberOfTypeId = -1;
+        private readonly RelationshipTypeRuleRegistry _rules;
+        private RelationshipRoleBindings? _roles;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -45,43 +43,49 @@ namespace Ludots.Core.Gameplay.Relationships
             _bands = bands ?? throw new ArgumentNullException(nameof(bands));
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
+            _rules = new RelationshipTypeRuleRegistry(types);
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
         }
 
-        public void BindParticipantIdentityProjection(OwnershipResolver ownership, int ownsTypeId, int memberOfTypeId)
+        public void BindParticipantIdentityProjection(RelationshipRoleBindings roles)
         {
-            _identityOwnership = ownership ?? throw new ArgumentNullException(nameof(ownership));
-            if (ownsTypeId < 0)
+            ArgumentNullException.ThrowIfNull(roles);
+            ValidateTypeId(roles.OwnershipTypeId);
+            ValidateTypeId(roles.MembershipTypeId);
+            ValidateTypeId(roles.ControlGrantTypeId);
+            if (!_rules.TryGet(roles.OwnershipTypeId, out RelationshipTypeRule ownershipRule) || ownershipRule.MaxIncoming != 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(ownsTypeId));
+                throw new InvalidOperationException(
+                    $"PlayerOwner is projected from the single root reached along '{_types.Get(roles.OwnershipTypeId).Name}'; " +
+                    "declare rules.maxIncoming: 1 on that type in Relationships/catalog.json.");
             }
 
-            if (memberOfTypeId < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(memberOfTypeId));
-            }
-
-            _identityOwnsTypeId = ownsTypeId;
-            _identityMemberOfTypeId = memberOfTypeId;
+            _roles = roles;
         }
+
+        public RelationshipRoleBindings Roles => _roles
+            ?? throw new InvalidOperationException(
+                "Relationship roles are not bound; the engine binds them from Relationships/catalog.json at install.");
+
+        public RelationshipTypeRuleRegistry Rules => _rules;
 
         private void ProjectParticipantIdentity(Entity source, Entity target, int typeId)
         {
-            if (_identityOwnership == null)
+            if (_roles == null)
             {
                 return;
             }
 
-            if (typeId == _identityOwnsTypeId)
+            if (typeId == _roles.OwnershipTypeId)
             {
-                ParticipantIdentityProjector.SyncPlayerOwner(_world, target, _identityOwnership);
+                ProjectPlayerOwnerSubtree(target, typeId);
                 return;
             }
 
-            if (typeId == _identityMemberOfTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
+            if (typeId == _roles.MembershipTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
             {
-                ParticipantIdentityProjector.SyncTeam(_world, source, this, _identityMemberOfTypeId);
+                ParticipantIdentityProjector.SyncTeam(_world, source, this, _roles.MembershipTypeId);
             }
         }
 
@@ -241,14 +245,19 @@ namespace Ludots.Core.Gameplay.Relationships
             EnsureAliveInRuntimeWorld(source, target);
 
             int validatedTypeId = ValidateTypeId(typeId);
-            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
-
-            if (set.HasType(validatedTypeId))
+            if (HasLink(source, target, validatedTypeId))
             {
                 MaterializeRelationshipEntity(source, target, validatedTypeId);
                 return;
             }
 
+            if (_rules.TryGet(validatedTypeId, out RelationshipTypeRule rule))
+            {
+                RejectLinkBreakingRule(source, target, validatedTypeId, in rule);
+                MakeRoomForLink(source, target, validatedTypeId, in rule);
+            }
+
+            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
             set.Set(validatedTypeId, RelationshipEdge.CreateDefault(_metrics));
             if (hasExisting)
             {

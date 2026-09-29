@@ -17,7 +17,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private readonly World _world;
         private readonly RelationshipRuntime _relationships;
-        private readonly OwnershipResolver _ownership;
+        private readonly int _ownsTypeId;
         private readonly int _controlsTypeId;
         private readonly List<Entity> _ownedScratch = new(32);
         private readonly EntityKeyedSoaTable<DomainCacheEntry> _domainCache = new(initialCapacity: 256);
@@ -27,26 +27,13 @@ namespace Ludots.Core.Gameplay.Relationships
         public ControlDomainQuery(
             World world,
             RelationshipRuntime relationships,
-            OwnershipResolver ownership,
             int ownsTypeId,
             int controlsTypeId)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
-            _ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
-            if (ownsTypeId != ownership.OwnsTypeId)
-            {
-                throw new ArgumentException(
-                    $"ControlDomainQuery ownsTypeId {ownsTypeId} must match the OwnershipResolver owns type {ownership.OwnsTypeId}.",
-                    nameof(ownsTypeId));
-            }
-
-            if (controlsTypeId < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(controlsTypeId));
-            }
-
-            _controlsTypeId = controlsTypeId;
+            _ownsTypeId = relationships.RequireRelationshipTypeId(ownsTypeId);
+            _controlsTypeId = relationships.RequireRelationshipTypeId(controlsTypeId);
         }
 
         /// <summary>Relationship topology change signal; any edge mutation invalidates previously collected results.</summary>
@@ -284,7 +271,7 @@ namespace Ludots.Core.Gameplay.Relationships
             bool hasDomain = false;
             Entity current = target;
             int guard = 0;
-            while (_ownership.TryGetDirectOwner(current, out Entity owner))
+            while (_relationships.TryGetSingleSource(current, _ownsTypeId, out Entity owner))
             {
                 if (_world.Has<PlayerIdentity>(owner))
                 {
@@ -319,13 +306,13 @@ namespace Ludots.Core.Gameplay.Relationships
         /// <summary>Direct owner via the reverse index (owns edges have at most one live source per target).</summary>
         private bool TryGetDirectOwnerViaIndex(Entity owned, out Entity owner)
         {
-            return _relationships.ReverseIndex.TryGetFirstIncoming(owned, _ownership.OwnsTypeId, out owner);
+            return _relationships.ReverseIndex.TryGetFirstIncoming(owned, _ownsTypeId, out owner);
         }
 
         private int AppendOwnedSubtree(Entity owner, Span<Entity> buffer, int written)
         {
             _ownedScratch.Clear();
-            _ownership.CollectOwned(owner, _ownedScratch);
+            _relationships.CollectDownstream(owner, _ownsTypeId, _ownedScratch);
             for (int i = 0; i < _ownedScratch.Count && written < buffer.Length; i++)
             {
                 written = AppendUnique(buffer, written, _ownedScratch[i]);

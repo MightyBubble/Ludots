@@ -365,14 +365,14 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
-        OwnershipResolver ownership = RequireOwnership(engine);
+        RelationshipRuntime relationships = RequireRelationships(engine);
         PlayerEntityLookup players = RequirePlayers(engine);
         FrontlineReplicationApplier[] appliers =
         {
-            new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
         };
         string[] templateIds =
         {
@@ -741,7 +741,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             healthId,
             crystalId,
             runtime.TagBinder,
-            RequireOwnership(engine),
+            RequireRelationships(engine),
             RequirePlayers(engine));
         var values = new ReplicationStateVector(
             FrontlineReplicationPayload.PackInts(23000, 15000),
@@ -991,14 +991,14 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
-        OwnershipResolver ownership = RequireOwnership(engine);
+        RelationshipRuntime relationships = RequireRelationships(engine);
         PlayerEntityLookup players = RequirePlayers(engine);
         FrontlineReplicationApplier[] appliers =
         {
-            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, relationships, players),
         };
         string[] templateIds =
         {
@@ -1078,7 +1078,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             RequireAttribute(config.HealthAttribute),
             RequireAttribute(config.CrystalAttribute),
             runtime.TagBinder,
-            RequireOwnership(engine),
+            RequireRelationships(engine),
             RequirePlayers(engine));
         var values = new ReplicationStateVector(
             FrontlineReplicationPayload.PackInts(7000, 9000),
@@ -1136,7 +1136,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             healthId,
             crystalId,
             runtime.TagBinder,
-            RequireOwnership(engine),
+            RequireRelationships(engine),
             RequirePlayers(engine));
         var crystalApplier = new FrontlineCrystalNodeReplicationApplier(
             in specs[(int)FrontlineReplicationKind.CrystalNode],
@@ -1146,7 +1146,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             healthId,
             crystalId,
             runtime.TagBinder,
-            RequireOwnership(engine),
+            RequireRelationships(engine),
             RequirePlayers(engine));
 
         FrontlineSideConfig localSide = config.Sides[0];
@@ -2247,9 +2247,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 StringComparer.Ordinal),
         }).ToArray();
 
-    private static OwnershipResolver RequireOwnership(GameEngine engine) =>
-        engine.GetService(CoreServiceKeys.OwnershipResolver)
-        ?? throw new InvalidOperationException("OwnershipResolver is unavailable.");
+    private static RelationshipRuntime RequireRelationships(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.RelationshipRuntime)
+        ?? throw new InvalidOperationException("RelationshipRuntime is unavailable.");
 
     private static PlayerEntityLookup RequirePlayers(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.PlayerEntityLookup)

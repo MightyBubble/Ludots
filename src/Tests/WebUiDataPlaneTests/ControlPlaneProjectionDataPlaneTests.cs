@@ -174,7 +174,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 				new RelationshipReverseIndex(world));
 			int ownsTypeId = types.Register(ControlPlaneProjectionShowcaseIds.OwnsRelationshipType);
 			int controlsTypeId = types.Register(ControlPlaneProjectionShowcaseIds.ControlsRelationshipType);
-			var domains = new ControlDomainQuery(world, relationships, new OwnershipResolver(relationships, ownsTypeId), ownsTypeId, controlsTypeId);
+			var domains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
 			var view = new ControlPlaneView(store, domains);
 
 			var state = new ControlPlaneProjectionScenarioState

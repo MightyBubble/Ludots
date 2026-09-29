@@ -450,7 +450,7 @@ namespace Ludots.Tests.GAS
         {
             public World World = null!;
             public RelationshipRuntime Relationships = null!;
-            public OwnershipResolver Ownership = null!;
+            public int OwnsTypeId;
             public CommandIntentProfileRegistry Intents = null!;
             public StringIntRegistry ProfileIds = null!;
             public int HostileTypeId;
@@ -479,8 +479,8 @@ namespace Ludots.Tests.GAS
                 int hostileTypeId = types.Register("Hostile", isSymmetric: true);
                 int friendlyTypeId = types.Register("Friendly", isSymmetric: true);
                 types.Register("Neutral", isSymmetric: true);
-                var ownership = new OwnershipResolver(relationships, ownsTypeId);
-                var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+                DefaultRelationshipRules.Install(relationships);
+                var controlDomains = new ControlDomainQuery(world, relationships, ownsTypeId, controlsTypeId);
                 var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
                 {
                     StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
@@ -515,7 +515,7 @@ namespace Ludots.Tests.GAS
                     World = world,
                     Abilities = abilities,
                     Relationships = relationships,
-                    Ownership = ownership,
+                    OwnsTypeId = ownsTypeId,
                     Intents = intents,
                     ProfileIds = profileIds,
                     HostileTypeId = hostileTypeId,
@@ -541,7 +541,7 @@ namespace Ludots.Tests.GAS
                     slots.AddAbility(abilityIds[i]);
                 }
 
-                Ownership.EnsureOwnership(ownerRep, actor);
+                Relationships.EnsureLink(ownerRep, actor, OwnsTypeId);
                 return actor;
             }
 
@@ -554,7 +554,7 @@ namespace Ludots.Tests.GAS
                     container.AddTag(TagRegistry.Register(tags[i]));
                 }
 
-                Ownership.EnsureOwnership(ownerRep, entity);
+                Relationships.EnsureLink(ownerRep, entity, OwnsTypeId);
                 return entity;
             }
 
