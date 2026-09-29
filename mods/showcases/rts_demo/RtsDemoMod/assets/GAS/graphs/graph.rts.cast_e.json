@@ -31,21 +31,16 @@
         "op": "HaltReturnInt"
       },
       {
-        "id": "roster_q",
-        "op": "QueryAllMapEntities"
+        "id": "members_caster",
+        "op": "LoadCaster"
       },
       {
-        "id": "roster_f",
-        "op": "QueryFilterTemplate",
-        "template": "rts_war3_peasant"
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
       }
     ],
     "controlEdges": [
-      {
-        "from": "slot",
-        "fromPort": "next",
-        "to": "roster_q"
-      },
       {
         "from": "submit",
         "fromPort": "next",
@@ -57,12 +52,17 @@
         "to": "halt"
       },
       {
-        "from": "roster_q",
+        "from": "slot",
         "fromPort": "next",
-        "to": "roster_f"
+        "to": "members_caster"
       },
       {
-        "from": "roster_f",
+        "from": "members_caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
         "fromPort": "next",
         "to": "submit"
       }
@@ -79,6 +79,12 @@
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "members_caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
       }
     ]
   }
