@@ -16,6 +16,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -38,7 +39,6 @@ public sealed class PanelFireballShowcaseAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FireballSharedMod",
     };
 
@@ -60,7 +60,6 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("InputHandler missing.");
         Assert.That(liveInput.HasContext("Default_Gameplay"), Is.True);
         Assert.That(liveInput.HasAction("SkillQ"), Is.True);
-        Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null);
         Assert.That(IsTeamHostile(engine, 1, 2), Is.True);
 
         World world = engine.World;
@@ -79,6 +78,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         AssertPanelValues(panelHost, panel, health: 100f, mana: 80f, attack: 25f);
         AssertSkinMounted(engine, skinMod);
 
+        AimPointerAt(engine, input, target);
         PressButton(engine, input, "<Keyboard>/q");
         TickUntil(
             engine,
@@ -112,6 +112,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PanelHost missing.");
         PanelInstanceHandle panel = FindPanel(panelHost, hero);
 
+        AimPointerAt(engine, input, target);
         PressButton(engine, input, "<Keyboard>/q");
         TickUntil(
             engine,
@@ -269,7 +270,16 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
+        engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)new CentimeterScreenProjector());
         return backend;
+    }
+
+    private static void AimPointerAt(GameEngine engine, TestInputBackend backend, Entity entity)
+    {
+        IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+            ?? throw new InvalidOperationException("ScreenProjector missing.");
+        WorldPositionCm position = engine.World.Get<WorldPositionCm>(entity);
+        backend.MousePosition = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value));
     }
 
     private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
@@ -399,17 +409,10 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
     private static string BuildFireballDiagnostics(GameEngine engine, World world, Entity hero, Entity target)
     {
-        string lastOrder = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? lastOrderObj)
-            ? lastOrderObj?.ToString() ?? "<null>"
-            : "<missing>";
-        InputOrderMappingSystem? mapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
         string localSeat = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localRep)
             ? $"{localRep.Id}:{localRep.WorldId}:{localRep.Version}"
             : "<missing>";
         return string.Join(" | ",
-            $"mapping={(mapping == null ? "<missing>" : mapping.InteractionMode.ToString())}",
-            $"activation={mapping?.LastActivationResult.State.ToString() ?? "<missing>"}",
-            $"lastOrder={lastOrder}",
             $"localSeat={localSeat}",
             $"heroMP={ReadAttribute(world, hero, "Mana"):0.###}",
             $"targetHP={ReadAttribute(world, target, "Health"):0.###}",
@@ -450,7 +453,9 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         public bool GetButton(string devicePath) =>
             _buttons.TryGetValue(devicePath, out bool isDown) && isDown;
 
-        public Vector2 GetMousePosition() => Vector2.Zero;
+        public Vector2 MousePosition { get; set; }
+
+        public Vector2 GetMousePosition() => MousePosition;
 
         public float GetMouseWheel() => 0f;
 
@@ -468,5 +473,11 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         }
 
         public string GetCharBuffer() => string.Empty;
+    }
+
+    private sealed class CentimeterScreenProjector : IScreenProjector
+    {
+        public Vector2 WorldToScreen(Vector3 worldPosition) =>
+            new(960f + worldPosition.X * 100f, 540f + worldPosition.Z * 100f);
     }
 }
