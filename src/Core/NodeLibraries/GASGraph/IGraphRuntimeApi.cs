@@ -136,7 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// the order kernel drains the buffer in its own system-group phase. The rep is the
         /// acting representative (graph caster); target may be null for ground-only facts.
         /// </summary>
-        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm, System.ReadOnlySpan<Entity> members)
+        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, in Ludots.Core.Gameplay.GAS.Orders.GroundLayout layout, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
@@ -145,7 +145,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pushes one cast intent into the per-tick submission buffer (constitution §12);
         /// the drain resolves the cast order type id from the config-key symbol id.
         /// </summary>
-        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId, System.ReadOnlySpan<Entity> members)
+        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
@@ -160,11 +160,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Replaces the local camera stack with the named virtual camera; a collection follow
+        /// reads <paramref name="rep"/>'s collection.
+        /// </summary>
+        void ActivateVirtualCamera(Entity rep, int cameraKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+        }
+
+        /// <summary>
         /// Pushes one engage intent into the per-tick submission buffer (constitution §12);
         /// the drain runs the profile's EQS query around the target and lands per-actor
         /// move-then-cast with the assigned ring point.
         /// </summary>
-        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, System.ReadOnlySpan<Entity> members)
+        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }

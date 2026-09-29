@@ -722,6 +722,7 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.SubmitCast,
                 GraphNodeOp.SubmitEngageBatch,
                 GraphNodeOp.SubmitResponseChainOrder,
+                GraphNodeOp.ActivateVirtualCamera,
                 GraphNodeOp.QueryFilterKnowledgeVisible,
                 GraphNodeOp.QueryFilterSelectable,
             };

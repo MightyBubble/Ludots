@@ -2141,6 +2141,7 @@ namespace Ludots.Core.Engine
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
+            _gasGraphRuntimeApi.BindVirtualCameras(virtualCameraRegistry, GlobalContext);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
             var providerServices = new ProviderServices();
             SetService(CoreServiceKeys.ProviderServices, providerServices);

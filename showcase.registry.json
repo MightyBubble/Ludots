@@ -11095,6 +11095,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateVirtualCamera",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateVirtualCameraEntryMod",
+      "projectPath": "CapabilityStandardGraphOpActivateVirtualCameraEntryMod.csproj",
+      "title": "图里切镜头",
+      "summary": "开场是俯瞰全场的远景，图点名一台近景机位，镜头拉近到指挥和木桩身边。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ActivateVirtualCamera"
+      ],
+      "binding": "capability_standard_graph_op_ActivateVirtualCamera",
+      "preset": "capability_standard_graph_op_ActivateVirtualCamera_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ActivateVirtualCamera.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ActivateVirtualCamera",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ActivateVirtualCamera/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ActivateVirtualCamera/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

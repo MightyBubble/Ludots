@@ -46,6 +46,8 @@ public sealed class GraphOpsNodeDriverContext
     public EntityCollectionStore? Collections { get; set; }
     public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? CommandIntents { get; set; }
     public Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState? ResponseChainPrompt { get; set; }
+    public Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? VirtualCameras { get; set; }
+    public Dictionary<string, object>? Globals { get; set; }
 
     /// <summary>
     /// Set by drivers whose wave leaves engine-side work that is not an EffectRequest (e.g. queued

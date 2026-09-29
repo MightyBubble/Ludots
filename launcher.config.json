@@ -2724,6 +2724,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
         "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateVirtualCamera",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateVirtualCameraEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateVirtualCameraEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

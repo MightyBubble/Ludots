@@ -373,6 +373,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitCast or
                 GraphNodeOp.SubmitEngageBatch or
                 GraphNodeOp.SubmitResponseChainOrder or
+                GraphNodeOp.ActivateVirtualCamera or
                 GraphNodeOp.BindQueryCollection or
                 GraphNodeOp.ReadCalendarEnabled or
                 GraphNodeOp.ReadCalendarDayIndex or
@@ -974,6 +975,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
             Register(GraphNodeOp.SubmitResponseChainOrder, HandleSubmitResponseChainOrder, "SubmitResponseChainOrder graph opcode.");
+            Register(GraphNodeOp.ActivateVirtualCamera, HandleActivateVirtualCamera, "ActivateVirtualCamera graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
@@ -1840,6 +1842,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasTarget ? s.E[ins.A] : Entity.Null,
                 hasTarget,
                 s.TargetPosCm,
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitCommandIntent)),
+                SubmitGroundLayout.Decode(ins.C, ins.Imm),
                 s.Targets.Slice(0, s.TargetList.Count));
         }
 
@@ -1861,12 +1865,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasGround,
                 s.TargetPosCm,
                 ins.Imm,
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitCast)),
                 s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleSubmitResponseChainOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.SubmitResponseChainOrder(s.Caster, ins.Imm);
+        }
+
+        private static void HandleActivateVirtualCamera(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ActivateVirtualCamera(s.Caster, ins.Imm);
         }
 
         private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1889,6 +1899,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.E[ins.B],
                 Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackQueryKeyId(ins.Imm),
                 Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm),
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitEngageBatch)),
                 s.Targets.Slice(0, s.TargetList.Count));
         }
 

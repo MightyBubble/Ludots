@@ -293,6 +293,12 @@
 - [替自己下移动令](SubmitAssignedOrder.md) — 行为图不等玩家发话，直接往订单队列里塞一道移动令。
 - [认出移动令的编号](LoadOrderTypeId.md) — 图里先把移动令的编号认出来，认得出才指挥得动。
 
+## 镜头
+
+> 作者语义与全量字段见手册分册 [视野与相机 · infra-03](../mod-editor-prd/config/infra-03-vision-camera.md)。
+
+- [图里切镜头](ActivateVirtualCamera.md) — 开场是俯瞰全场的远景，图点名一台近景机位，镜头拉近到指挥和木桩身边。
+
 ## 集合写入
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。

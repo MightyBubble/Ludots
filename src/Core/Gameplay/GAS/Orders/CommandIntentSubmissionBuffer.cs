@@ -171,6 +171,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Entity Target,
         bool HasTarget,
         IntVector2 GroundCm,
+        OrderSubmitMode SubmitMode,
+        GroundLayout Layout,
         int MemberOffset = 0,
         int MemberCount = 0);
 
@@ -187,6 +189,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         bool HasGround,
         IntVector2 GroundCm,
         int OrderTypeKeyId,
+        OrderSubmitMode SubmitMode,
         int MemberOffset = 0,
         int MemberCount = 0);
 
@@ -203,6 +206,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Entity Target,
         int ProfileKeyId,
         int OrderTypeKeyId,
+        OrderSubmitMode SubmitMode,
         int MemberOffset = 0,
         int MemberCount = 0);
+
+    /// <summary>How actors sharing one ground point spread onto a centered grid around it.</summary>
+    public enum GroundLayoutAssignment : byte
+    {
+        None = 0,
+        /// <summary>Grid slots follow the actors' current positions relative to the move direction.</summary>
+        PreserveRelative = 1,
+        /// <summary>Grid slots follow the submitted actor order.</summary>
+        ActorOrder = 2,
+    }
+
+    /// <summary>
+    /// Ground layout of one command intent: when two or more dispatched ground-point orders share
+    /// the intent's ground point, each actor gets its own grid slot <see cref="SpacingCm"/> apart.
+    /// </summary>
+    public readonly record struct GroundLayout(GroundLayoutAssignment Assignment, int SpacingCm);
 }

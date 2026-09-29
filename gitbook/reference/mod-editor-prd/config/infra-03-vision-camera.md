@@ -58,6 +58,8 @@
 
 迷雾层注册供视野系统周期重算；相机预设注册后由相机运行系统消费，按 id 激活。**生效级别：重启**；运行期切预设（如叙事相机激活）走运行时 API 而非改表。
 
+触发图里切镜头用节点 `ActivateVirtualCamera`，`camera` 写预设 id。切过去会替换当前的镜头栈；预设要跟随集合时，跟的是跑这张图的玩家代表实体上的那个集合。视角模式（战术、跟随、观察）就是每个模式一个交互状态，状态的 `onActivated` 图里调这个节点。
+
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
@@ -67,6 +69,8 @@
 | rigKind 非法 | 启动失败 |
 | min > max（距离/俯仰） | 启动失败 |
 | edgePanMarginPx ≤ 0 | 启动失败 |
+| `ActivateVirtualCamera` 没写 `camera` | 图编译失败，指明图和节点 |
+| `ActivateVirtualCamera` 点名的预设不存在 | 图运行时报 `VirtualCameraUnknown`，点名预设 id |
 
 ## 6. 实例
 

@@ -259,4 +259,23 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
         }
     }
+
+    [Test]
+    public void ActivateVirtualCameraVignette_RequestsTheNamedCamera()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ActivateVirtualCamera");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        Assert.That(
+            runtime.Context.Globals![Ludots.Core.Scripting.CoreServiceKeys.VirtualCameraRequest.Name],
+            Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>()
+                .With.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.Id)).EqualTo("Camera.GraphOps.CloseUp")
+                .And.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.ReplaceActiveStack)).True);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
 }

@@ -3709,6 +3709,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateVirtualCamera_raylib",
+      "name": "Graph Op ActivateVirtualCamera Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ActivateVirtualCamera"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

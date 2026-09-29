@@ -39,6 +39,15 @@ namespace Ludots.Core.Input.Orders
         private readonly CommandIntentRoute[] _routeScratch;
         private readonly Entity[] _dispatchScratch;
         private readonly Order[] _orderScratch;
+        private readonly int[] _layoutOrderIndex;
+        private readonly Ludots.Platform.Abstractions.WorldCmInt2[] _layoutPositions;
+        private readonly int[] _layoutSlotByActor;
+        private readonly int[] _layoutActorIndices;
+        private readonly int[] _layoutSlotIndices;
+        private readonly Int128[] _layoutActorForward;
+        private readonly Int128[] _layoutActorLateral;
+        private readonly Int128[] _layoutSlotForward;
+        private readonly Int128[] _layoutSlotLateral;
         private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
         private readonly Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner? _engage;
@@ -91,6 +100,15 @@ namespace Ludots.Core.Input.Orders
             _routeScratch = new CommandIntentRoute[scratchCapacity];
             _dispatchScratch = new Entity[scratchCapacity];
             _orderScratch = new Order[scratchCapacity];
+            _layoutOrderIndex = new int[scratchCapacity];
+            _layoutPositions = new Ludots.Platform.Abstractions.WorldCmInt2[scratchCapacity];
+            _layoutSlotByActor = new int[scratchCapacity];
+            _layoutActorIndices = new int[scratchCapacity];
+            _layoutSlotIndices = new int[scratchCapacity];
+            _layoutActorForward = new Int128[scratchCapacity];
+            _layoutActorLateral = new Int128[scratchCapacity];
+            _layoutSlotForward = new Int128[scratchCapacity];
+            _layoutSlotLateral = new Int128[scratchCapacity];
             _eqsQueries = eqsQueries;
             _engage = eqsQueries != null && abilities != null && castAbilityOrderTypeId > 0 && moveToOrderTypeId > 0
                 ? new Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner(world, orders, abilities, castAbilityOrderTypeId, moveToOrderTypeId)
@@ -218,6 +236,7 @@ namespace Ludots.Core.Input.Orders
                     CommandSource = Entity.Null,
                     Target = submission.HasTarget && _world.IsAlive(submission.Target) ? submission.Target : Entity.Null,
                     Args = args,
+                    SubmitMode = submission.SubmitMode,
                 };
                 OrderSubmitResult result = _orders.SubmitAssigned(ref order);
                 if (!OrderSubmitResultSemantics.IsAccepted(result))
@@ -377,6 +396,7 @@ namespace Ludots.Core.Input.Orders
                     CommandSource = Entity.Null,
                     Target = submission.Target,
                     Args = new OrderArgs { I0 = submission.Slot },
+                    SubmitMode = submission.SubmitMode,
                 };
 
                 Ludots.Core.Gameplay.GAS.Orders.OrderContinuationStateInstaller.EnsureInstalled(_world, actor);
@@ -503,10 +523,16 @@ namespace Ludots.Core.Input.Orders
                     return Reject("dispatched actor has no resolved route");
                 }
 
-                _orderScratch[i] = BuildOrder(dispatchedActor, owner.PlayerId, in _routeScratch[routeIndex], in facts, groundWorldCm);
+                _orderScratch[i] = BuildOrder(dispatchedActor, owner.PlayerId, in _routeScratch[routeIndex], in facts, groundWorldCm, submission.SubmitMode);
             }
 
             Span<Order> dispatchOrders = _orderScratch.AsSpan(0, dispatchCount);
+            if (submission.Layout.Assignment != GroundLayoutAssignment.None &&
+                !TryApplyGroundLayout(submission.Layout, dispatchOrders, groundWorldCm))
+            {
+                return false;
+            }
+
             if (routing.SharedOrderId && dispatchCount > 1)
             {
                 OrderSubmitResult result = _orders.TryEnqueueSharedBatch(dispatchOrders);
@@ -583,7 +609,8 @@ namespace Ludots.Core.Input.Orders
             int playerId,
             in CommandIntentRoute route,
             in CommandIntentTargetFacts facts,
-            Vector3 groundWorldCm)
+            Vector3 groundWorldCm,
+            OrderSubmitMode submitMode)
         {
             var args = new OrderArgs();
             Entity target = Entity.Null;
@@ -618,7 +645,73 @@ namespace Ludots.Core.Input.Orders
                 CommandSource = Entity.Null,
                 Target = target,
                 Args = args,
+                SubmitMode = submitMode,
             };
+        }
+
+        /// <summary>
+        /// Spreads the dispatched ground-point orders onto a centered grid around the intent's ground
+        /// point. With <see cref="GroundLayoutAssignment.PreserveRelative"/> the slots
+        /// follow the actors' positions across the move direction; when the ground point is the
+        /// group's own centroid there is no move direction and the slots follow submitted order.
+        /// </summary>
+        private bool TryApplyGroundLayout(GroundLayout layout, Span<Order> orders, Vector3 groundWorldCm)
+        {
+            int count = 0;
+            for (int i = 0; i < orders.Length; i++)
+            {
+                ref readonly Order order = ref orders[i];
+                if (order.Target == Entity.Null &&
+                    order.Args.Spatial.Kind == OrderSpatialKind.WorldCm &&
+                    order.Args.Spatial.Mode == OrderCollectionMode.Single)
+                {
+                    _layoutOrderIndex[count++] = i;
+                }
+            }
+
+            if (count <= 1)
+            {
+                return true;
+            }
+
+            bool preserved = false;
+            if (layout.Assignment == GroundLayoutAssignment.PreserveRelative)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Entity actor = orders[_layoutOrderIndex[i]].Actor;
+                    if (!_world.TryGet(actor, out Ludots.Core.Components.WorldPositionCm position))
+                    {
+                        return Reject("ground layout: actor carries no world position");
+                    }
+
+                    _layoutPositions[i] = position.Value.ToWorldCmInt2();
+                }
+
+                preserved = MoveTargetLayoutPlanner.TryComputePositionPreservingSlots(
+                    _layoutPositions.AsSpan(0, count),
+                    groundWorldCm,
+                    layout.SpacingCm,
+                    _layoutSlotByActor.AsSpan(0, count),
+                    _layoutActorIndices.AsSpan(0, count),
+                    _layoutSlotIndices.AsSpan(0, count),
+                    _layoutActorForward.AsSpan(0, count),
+                    _layoutActorLateral.AsSpan(0, count),
+                    _layoutSlotForward.AsSpan(0, count),
+                    _layoutSlotLateral.AsSpan(0, count));
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                ref Order order = ref orders[_layoutOrderIndex[i]];
+                order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
+                    groundWorldCm,
+                    preserved ? _layoutSlotByActor[i] : i,
+                    count,
+                    layout.SpacingCm);
+            }
+
+            return true;
         }
 
         private static int IndexOfRoute(ReadOnlySpan<Entity> routedActors, ReadOnlySpan<CommandIntentRoute> routes, Entity actor)

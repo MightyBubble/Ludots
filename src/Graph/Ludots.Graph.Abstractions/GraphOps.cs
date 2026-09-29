@@ -522,6 +522,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SubmitResponseChainOrder = 529,
 
+        /// <summary>
+        /// Replace the local camera stack with the virtual camera named by Imm (config key id of
+        /// a <c>Camera/virtual_cameras.json</c> entry). Follow kind and collection come from that
+        /// definition; a collection follow reads the caster's collection.
+        /// </summary>
+        ActivateVirtualCamera = 530,
+
     }
 
     public static class GraphNodeOpParser

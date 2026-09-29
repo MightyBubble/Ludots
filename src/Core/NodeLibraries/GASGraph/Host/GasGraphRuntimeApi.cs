@@ -151,6 +151,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
+        private Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? _virtualCameras;
+        private System.Collections.Generic.Dictionary<string, object>? _virtualCameraGlobals;
         private CalendarRuntime? _calendar;
         private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
@@ -1139,7 +1141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// Pushes one command intent into the submission buffer; routing happens when the
         /// order kernel drains the buffer in its own system-group phase (constitution §12).
         /// </summary>
-        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm, System.ReadOnlySpan<Entity> members)
+        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, in Ludots.Core.Gameplay.GAS.Orders.GroundLayout layout, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1147,7 +1149,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 rep,
                 hasTarget ? target : Entity.Null,
                 hasTarget,
-                groundCm), members);
+                groundCm,
+                submitMode,
+                layout), members);
         }
 
         /// <summary>
@@ -1162,6 +1166,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             bool hasGround,
             in Ludots.Platform.Abstractions.IntVector2 groundCm,
             int orderTypeKeyId,
+            Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode,
             System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
@@ -1173,14 +1178,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 hasTarget,
                 hasGround,
                 groundCm,
-                orderTypeKeyId), members);
+                orderTypeKeyId,
+                submitMode), members);
         }
 
         /// <summary>
         /// Pushes one engage intent into the submission buffer; the drain runs the profile's
         /// EQS query around the target and lands per-actor move-then-cast (constitution §12).
         /// </summary>
-        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, System.ReadOnlySpan<Entity> members)
+        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1189,7 +1195,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 slot,
                 target,
                 profileKeyId,
-                orderTypeKeyId), members);
+                orderTypeKeyId,
+                submitMode), members);
         }
 
         /// <summary>
@@ -2342,6 +2349,51 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void BindVirtualCameras(
+            Ludots.Core.Gameplay.Camera.VirtualCameraRegistry registry,
+            System.Collections.Generic.Dictionary<string, object> globals)
+        {
+            _virtualCameras = registry ?? throw new ArgumentNullException(nameof(registry));
+            _virtualCameraGlobals = globals ?? throw new ArgumentNullException(nameof(globals));
+        }
+
+        public void ActivateVirtualCamera(Entity rep, int cameraKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateVirtualCamera));
+            if (_virtualCameras == null || _virtualCameraGlobals == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+            }
+
+            string cameraId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(cameraKeyId);
+            if (string.IsNullOrWhiteSpace(cameraId) || !_virtualCameras.TryGet(cameraId, out var definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.VirtualCameraUnknown: ActivateVirtualCamera names '{cameraId}', which Camera/virtual_cameras.json does not declare.");
+            }
+
+            Entity followOwner = Entity.Null;
+            if (Ludots.Core.Gameplay.Camera.CameraFollowTargetFactory.RequiresEntityCollection(definition.FollowTargetKind))
+            {
+                if (_world == null || !_world.IsAlive(rep))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.VirtualCameraFollowOwnerDead: virtual camera '{cameraId}' follows a collection, but the caster {rep} is not alive.");
+                }
+
+                followOwner = rep;
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = cameraId,
+                FollowCollectionOwnerOverride = followOwner,
+                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true,
+            };
         }
 
         public void BindResponseChain(

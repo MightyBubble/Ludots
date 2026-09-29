@@ -191,13 +191,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // Input-edge order bridge (constitution §12): TriggerGraph-only — the submit op is
             // the graph side of the intent buffer and never routes inline.
-            Add(rows, GraphNodeOp.SubmitCommandIntent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portTargetCondition, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SubmitCommandIntent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portTargetCondition, imm: GraphOperandRole.Immediate, worldSideEffect: true);
             string[] portSlotTargetGround = { GraphControlFlowPorts.Value, GraphControlFlowPorts.Target, GraphControlFlowPorts.Condition };
             string[] portSlotTarget = { GraphControlFlowPorts.Value, GraphControlFlowPorts.Target };
             // Cast side of the §12 order bridge: slot lands as Args.I0 on each active-set member.
             Add(rows, GraphNodeOp.SubmitCast, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTargetGround, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SubmitEngageBatch, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTarget, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SubmitResponseChainOrder, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.ActivateVirtualCamera, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // to the caller; GraphReturnWriter must not steal collection writes). Optional source
             // resolves the owner entity (defaults to caster) — map-domain observers writing another
             // rep's collection declare it explicitly.

@@ -406,6 +406,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCommandIntent:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
+                    ValidateSubmitGroundLayout(node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
                     {
@@ -415,6 +417,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitEngageBatch:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
                     RequireNonEmpty(node.EngageProfile, "engageProfile", node, graphId, diagnostics);
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -422,6 +425,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCast:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
@@ -725,6 +729,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.SubmitResponseChainOrder:
                     RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ActivateVirtualCamera:
+                    RequireNonEmpty(node.Camera, "camera", node, graphId, diagnostics);
+                    break;
 
                 case GraphNodeOp.LoadEntityPosValid:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -853,6 +860,41 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             _ = controlEdges;
+        }
+
+        private static void ValidateSubmitGroundLayout(GraphControlFlowNode node, string graphId, List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Layout == null)
+            {
+                if (node.LayoutSpacingCm != 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                        $"Node '{node.Id}' sets layoutSpacingCm without a layout.", node.Id));
+                }
+
+                return;
+            }
+
+            if (!SubmitGroundLayout.IsKnown(node.Layout))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                    $"Node '{node.Id}' layout must be '{SubmitGroundLayout.PreserveRelativeName}' or '{SubmitGroundLayout.ActorOrderName}' (got '{node.Layout}').", node.Id));
+            }
+
+            if (node.LayoutSpacingCm <= 0)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                    $"Node '{node.Id}' layout '{node.Layout}' needs a positive layoutSpacingCm.", node.Id));
+            }
+        }
+
+        private static void ValidateSubmitQueue(GraphControlFlowNode node, string graphId, List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Queue != null && !SubmitQueueFlags.IsKnown(node.Queue))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitQueue,
+                    $"Node '{node.Id}' queue must be '{SubmitQueueFlags.OnQueueModifierName}' or '{SubmitQueueFlags.AlwaysName}' (got '{node.Queue}').", node.Id));
+            }
         }
 
         private static void RequireNonEmpty(
@@ -1492,6 +1534,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCommandIntent:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
+                    instruction.C = SubmitGroundLayout.Encode(node.Layout);
+                    instruction.Imm = node.LayoutSpacingCm;
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1503,6 +1548,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitEngageBatch:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
                     instruction.Imm = RequireSymbol(node.EngageProfile, "engageProfile", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.OrderTypeKey, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     instruction.A = ResolveValueInput(
@@ -1514,6 +1560,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCast:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
                     instruction.Imm = RequireSymbol(node.OrderTypeKey, "orderTypeKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
@@ -1939,6 +1986,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadOrderTypeId:
                 case GraphNodeOp.SubmitResponseChainOrder:
                     instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ActivateVirtualCamera:
+                    instruction.Imm = RequireSymbol(node.Camera, "camera", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadEntityPosValid:

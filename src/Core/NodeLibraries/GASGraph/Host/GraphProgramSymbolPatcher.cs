@@ -170,6 +170,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DeactivateContext:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateVirtualCamera:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
 
                     case GraphNodeOp.WriteCollection:
                         // The collection key resolves in the EntityCollectionStore key space,

@@ -48,6 +48,7 @@ DRIVER_LABELS = {
     "collectionWrite": "集合写入",
     "order": "订单与行为",
     "responseChain": "响应链",
+    "virtualCamera": "镜头",
 }
 
 HANDBOOK_BY_DRIVER = {
@@ -71,6 +72,7 @@ HANDBOOK_BY_DRIVER = {
     "order": ("gr-op-14-control-flow.md", "脚本控制流 · gr-op-14"),
     "commandIntent": ("input-01-command-intent.md", "命令意图 · input-01"),
     "responseChain": ("fx-07-response-chain.md", "响应链 · fx-07"),
+    "virtualCamera": ("infra-03-vision-camera.md", "视野与相机 · infra-03"),
 }
 
 ALL_KINDS = [
@@ -333,6 +335,7 @@ FAMILY_USE_CASES = {
     "blackboard": "跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。",
     "script": "跨帧等待（读条、喝药回满）、子图复用、循环收口。",
     "sandbox": "多节点串成完整小玩法的组合示范，可整段抄走改。",
+    "virtualCamera": "切视角模式（战术、跟随、观察）、进入某个交互状态时换机位；跟随集合的机位跟的是跑这张图的玩家自己的集合。",
     "activity": "地图事件发生后把一次拍板摆到玩家面前：补给超限、过境商队、归属通报这类 CK3 弹层的调度入口。",
 }
 

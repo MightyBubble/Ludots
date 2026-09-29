@@ -3543,6 +3543,22 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "ActivateVirtualCamera",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_ActivateVirtualCamera",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.ActivateVirtualCameraVignette_RequestsTheNamedCamera"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "SubmitCommandIntent",
       "authorableKinds": [
         "TriggerGraph"
