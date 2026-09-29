@@ -37,6 +37,13 @@ public sealed partial class MassNavigationFlowSolverState
     private readonly int _parallelWorkerCount;
 
     private readonly float[] _staticCost;
+    private readonly float[] _staticObstacleAvoidance;
+    private readonly int[] _obstacleAvoidanceVisitGeneration;
+    private int _obstacleAvoidanceVisitCounter;
+    private float[] _obstacleAvoidanceOffsetX = Array.Empty<float>();
+    private float[] _obstacleAvoidanceOffsetY = Array.Empty<float>();
+    private bool[] _obstacleAvoidanceOffsetContributes = Array.Empty<bool>();
+    private int _obstacleAvoidanceOffsetRadiusCells;
     private readonly float[] _cost;
     private readonly float[] _obsX;
     private readonly float[] _obsY;
@@ -113,6 +120,7 @@ public sealed partial class MassNavigationFlowSolverState
     private int _crowdStampCursor;
     private int _flowRefreshCursor = int.MaxValue;
     private int _staticCostRevision;
+    private bool _staticCostDirty = true;
     private float _worldOriginXCm;
     private float _worldOriginYcm;
     private float _worldMinXCm = float.NegativeInfinity;
@@ -169,6 +177,16 @@ public sealed partial class MassNavigationFlowSolverState
     public int GridHeight => _gridHeight;
     public int MaxObstacleCount => _maxObstacleCount;
     public int ParallelWorkerCount => _parallelWorkerCount;
+    internal int StaticObstacleCostRevision => _staticCostRevision;
+    internal int FlowStateCount => _flowStates.Count;
+    internal ReadOnlySpan<float> GetFlowField(int flowStateIndex, out float targetXCm, out float targetYCm)
+    {
+        FlowRuntimeState flowState = _flowStates[flowStateIndex];
+        TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+        targetXCm = team.TargetX;
+        targetYCm = team.TargetY;
+        return flowState.Flow;
+    }
     internal int AvoidanceNeighborScratchCapacity => _avoidanceNeighborScratch.Length;
     internal int OrcaLineScratchCapacity => _orcaLineScratch.Length;
     internal int OrcaProjectionLineScratchCapacity => _orcaProjectionLineScratch.Length;
@@ -216,6 +234,8 @@ public sealed partial class MassNavigationFlowSolverState
         _playAreaMaxYCm = solver.PlayAreaMaxYCm;
 
         _staticCost = new float[_gridCellCount];
+        _staticObstacleAvoidance = new float[_gridCellCount * 2];
+        _obstacleAvoidanceVisitGeneration = new int[_gridCellCount];
         _cost = new float[_gridCellCount];
         _obsX = new float[_maxObstacleCount];
         _obsY = new float[_maxObstacleCount];
@@ -326,9 +346,18 @@ public sealed partial class MassNavigationFlowSolverState
 
     public void SetWorldOrigin(float originXCm, float originYCm)
     {
+        if (_worldOriginXCm == originXCm && _worldOriginYcm == originYCm)
+        {
+            return;
+        }
+
         _worldOriginXCm = originXCm;
         _worldOriginYcm = originYCm;
         RefreshObstacleLocalFrame();
+        if (ObstacleCount > 0)
+        {
+            MarkStaticCostDirty();
+        }
     }
 
     public void SetWorldBounds(float minXCm, float maxXCm, float minYCm, float maxYCm)
@@ -640,9 +669,12 @@ public sealed partial class MassNavigationFlowSolverState
         return changed;
     }
 
+    /// <summary>
+    /// 显式重建请求：静态障碍图与排斥表按当前 Semantics 重算，版本号前进使所有流场缓存失效。
+    /// </summary>
     public void RequestFlowRebuild()
     {
-        MarkFlowDirty();
+        MarkStaticCostDirty();
     }
 
     public void ResetRuntimeObstaclesFromWorld(ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles)
@@ -653,22 +685,41 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlowSolverState runtime obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.");
         }
 
+        for (int i = 0; i < obstacles.Length; i++)
+        {
+            MassNavigationObstacleSnapshot obstacle = obstacles[i];
+            if (!(obstacle.RadiusCm > 0f) || !float.IsFinite(obstacle.RadiusCm))
+            {
+                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle radius requires a finite radiusCm > 0.");
+            }
+
+            if (!float.IsFinite(obstacle.WorldXCm) || !float.IsFinite(obstacle.WorldYCm))
+            {
+                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle position must be finite.");
+            }
+        }
+
         int previousCount = ObstacleCount;
+        bool changed = obstacles.Length != previousCount;
         ObstacleCount = obstacles.Length;
         for (int i = 0; i < obstacles.Length; i++)
         {
             MassNavigationObstacleSnapshot obstacle = obstacles[i];
-            if (!(obstacle.RadiusCm > 0f))
+            Vector2 localCm = WorldToLocalCm(new Vector2(obstacle.WorldXCm, obstacle.WorldYCm));
+            if (!changed &&
+                (_obsX[i] != localCm.X || _obsY[i] != localCm.Y || _obsRadius[i] != obstacle.RadiusCm))
             {
-                throw new InvalidOperationException("MassNavigationFlowSolverState runtime obstacle radius requires radiusCm > 0.");
+                changed = true;
             }
 
-            Vector2 localCm = WorldToLocalCm(new Vector2(obstacle.WorldXCm, obstacle.WorldYCm));
             CacheObstacle(i, localCm.X, localCm.Y, obstacle.RadiusCm);
         }
 
         ClearStaleObstacles(ObstacleCount, previousCount);
-        ForceFlowRebuild();
+        if (changed)
+        {
+            MarkStaticCostDirty();
+        }
     }
 
     private void ClearRuntimeObstacles()
@@ -676,6 +727,10 @@ public sealed partial class MassNavigationFlowSolverState
         int previousCount = ObstacleCount;
         ObstacleCount = 0;
         ClearStaleObstacles(0, previousCount);
+        if (previousCount > 0)
+        {
+            MarkStaticCostDirty();
+        }
     }
 
     public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
@@ -1176,29 +1231,29 @@ public sealed partial class MassNavigationFlowSolverState
         MassNavigationFlowTuning tuning,
         bool refreshFlow,
         bool refreshCrowd,
-        bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
         return AdvanceFlowPipeline(
             tuning,
             refreshFlow,
             refreshCrowd,
-            refreshObstacles,
             agentSliceIndex: 0,
             agentSliceCount: 1,
             observeFlowFieldRebuild);
     }
 
     /// <summary>
-    /// 错峰流场刷新：一次刷新请求把 flow state 集合按 cadence 分片步切 chunk，
-    /// 每个 fixed tick 只重建一个 chunk（grid 级工作、与 agent 分片窗口无关），
-    /// 跨一个轮次完成全量重建；期间分片步读到的新旧场差异与 15Hz 离散化同级。
+    /// 错峰流场刷新：一轮刷新把 flow state 集合按 cadence 分片步切 chunk，
+    /// 每个 fixed tick 只重建一个 chunk（grid 级工作、与 agent 分片窗口无关）。
+    /// 一轮开始时才消费刷新请求；轮内到达的失效请求保留到本轮走完后再开下一轮，
+    /// 保证分片时每一轮都能走到最后一个 flow state。cadence 的刷新标志在同一 agent 分片轮次内恒定，
+    /// 只在分片轮次首步读取一次，避免同一标志在轮内反复触发。静态障碍图失效时在本 tick 立即重建，
+    /// 不等轮次，因为单位步进直接读它做目标避障。
     /// </summary>
     public bool AdvanceFlowPipeline(
         MassNavigationFlowTuning tuning,
         bool refreshFlow,
         bool refreshCrowd,
-        bool refreshObstacles,
         int agentSliceIndex,
         int agentSliceCount,
         Action<double>? observeFlowFieldRebuild = null)
@@ -1209,37 +1264,39 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow flow pipeline slice {agentSliceIndex}/{agentSliceCount} is outside the valid cadence slice range.");
         }
 
-        bool shouldRefreshObstacles = _flowDirty || refreshObstacles;
-        bool shouldRefreshCrowd = _flowDirty || refreshCrowd;
-        bool shouldRefreshFlow = _flowDirty || refreshFlow;
-        if (!shouldRefreshObstacles && !shouldRefreshCrowd && !shouldRefreshFlow && _flowRefreshCursor >= _flowStates.Count)
+        int stateCount = _flowStates.Count;
+        bool passActive = _flowRefreshCursor < stateCount;
+        bool roundRefreshRequested = agentSliceIndex == 0 && (refreshFlow || refreshCrowd);
+        if (roundRefreshRequested && passActive)
+        {
+            _flowDirty = true;
+        }
+
+        bool passRequested = _flowDirty || roundRefreshRequested;
+        if (!_staticCostDirty && !passActive && !passRequested)
         {
             return false;
         }
 
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
         LastFlowRefreshStateCount = 0;
-        if (shouldRefreshObstacles || shouldRefreshCrowd || shouldRefreshFlow)
+        if (_staticCostDirty)
         {
-            if (shouldRefreshObstacles)
-            {
-                RebuildStaticObstacleCost();
-            }
-
-            _flowRefreshCursor = 0;
+            RebuildStaticObstacleCost();
         }
 
-        int stateCount = _flowStates.Count;
+        if (!passActive && passRequested)
+        {
+            _flowRefreshCursor = 0;
+            _flowDirty = false;
+        }
+
         if (stateCount <= 0)
         {
             _flowRefreshCursor = int.MaxValue;
             _flowDirty = false;
-            LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
-            observeFlowFieldRebuild?.Invoke(LastFlowFieldRebuildMs);
-            return true;
         }
-
-        if (_flowRefreshCursor < stateCount)
+        else if (_flowRefreshCursor < stateCount)
         {
             // 单 slice 步只重建一个 chunk 的 flow state；chunk 上限把整个刷新摊到
             // 约两个轮次内，避免单 tick 吸收多个 grid 级重建。
@@ -1250,48 +1307,14 @@ public sealed partial class MassNavigationFlowSolverState
             int crowdStampBudgetUnits = tuning.Enabled ? tuning.IterationsPerStep : 0;
             for (int i = _flowRefreshCursor; i < stateEnd; i++)
             {
-                FlowRuntimeState flowState = _flowStates[i];
-                TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
-                if (!team.HasAuthoredTarget)
-                {
-                    // No scenario-authored sink: idle authored agents hold position and
-                    // never sample the flow, so the field stays zeroed.
-                    if (flowState.LastComputedCostRevision != -1)
-                    {
-                        Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
-                        flowState.LastComputedCostRevision = -1;
-                        flowState.LastComputedTargetX = float.NaN;
-                        flowState.LastComputedTargetY = float.NaN;
-                    }
-
-                    continue;
-                }
-
-                if (crowdStampBudgetUnits == 0 &&
-                    flowState.LastComputedCostRevision == _staticCostRevision &&
-                    flowState.LastComputedTargetX == team.TargetX &&
-                    flowState.LastComputedTargetY == team.TargetY)
-                {
-                    continue;
-                }
-
-                RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
-                ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
-                flowState.LastComputedCostRevision = _staticCostRevision;
-                flowState.LastComputedTargetX = team.TargetX;
-                flowState.LastComputedTargetY = team.TargetY;
+                RefreshFlowState(_flowStates[i], crowdStampBudgetUnits);
             }
 
             LastFlowRefreshStateCount = stateEnd - _flowRefreshCursor;
             _flowRefreshCursor = stateEnd;
             if (_flowRefreshCursor >= stateCount)
             {
-                _flowDirty = false;
-                if (crowdStampBudgetUnits > 0 && UnitCount > 0)
-                {
-                    int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
-                    _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;
-                }
+                AdvanceCrowdStampCursor(crowdStampBudgetUnits);
             }
         }
 
@@ -1636,25 +1659,59 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void ComputeFlowFields(int crowdStampBudgetUnits)
+    private void ForceFlowRebuild()
     {
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        RebuildStaticObstacleCost();
         for (int i = 0; i < _flowStates.Count; i++)
         {
-            FlowRuntimeState flowState = _flowStates[i];
-            TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
-            if (!team.HasAuthoredTarget)
-            {
-                Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
-                flowState.LastComputedCostRevision = -1;
-                flowState.LastComputedTargetX = float.NaN;
-                flowState.LastComputedTargetY = float.NaN;
-                continue;
-            }
-
-            RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
-            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
+            RefreshFlowState(_flowStates[i], crowdStampBudgetUnits: 0);
         }
 
+        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
+        _flowRefreshCursor = int.MaxValue;
+        _flowDirty = false;
+    }
+
+    /// <summary>
+    /// 流场只由“哪些格子被挡住”和目标点决定；人群印记只加代价，除非把某格推过阻挡阈值，
+    /// 否则阻挡集合与静态障碍图一致，可直接复用共享的障碍排斥场，并在输入未变时跳过重算。
+    /// </summary>
+    private void RefreshFlowState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
+    {
+        TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+        if (!team.HasAuthoredTarget)
+        {
+            return;
+        }
+
+        bool crowdBlocksCells = crowdStampBudgetUnits > 0 && StampCrowdCostForState(flowState, crowdStampBudgetUnits);
+        if (!crowdBlocksCells &&
+            !flowState.LastComputedCrowdBlocksCells &&
+            flowState.LastComputedCostRevision == _staticCostRevision &&
+            flowState.LastComputedTargetX == team.TargetX &&
+            flowState.LastComputedTargetY == team.TargetY)
+        {
+            return;
+        }
+
+        if (crowdBlocksCells)
+        {
+            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY, _cost, precomputedObstacleAvoidance: null);
+        }
+        else
+        {
+            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY, _staticCost, _staticObstacleAvoidance);
+        }
+
+        flowState.LastComputedCostRevision = _staticCostRevision;
+        flowState.LastComputedTargetX = team.TargetX;
+        flowState.LastComputedTargetY = team.TargetY;
+        flowState.LastComputedCrowdBlocksCells = crowdBlocksCells;
+    }
+
+    private void AdvanceCrowdStampCursor(int crowdStampBudgetUnits)
+    {
         if (crowdStampBudgetUnits > 0 && UnitCount > 0)
         {
             int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
@@ -1662,37 +1719,177 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void ForceFlowRebuild()
+    private void MarkStaticCostDirty()
     {
-        RebuildStaticObstacleCost();
-        long start = System.Diagnostics.Stopwatch.GetTimestamp();
-        ComputeFlowFields(crowdStampBudgetUnits: 0);
-        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
-        _flowDirty = false;
+        _staticCostDirty = true;
+        _flowDirty = true;
     }
 
+    /// <summary>
+    /// 只在每个障碍的格子包围盒内做点在圆内判定，排斥场只在包围盒外扩邻域半径内计算；
+    /// 包围盒外的格子不可能被挡住、邻域里也没有阻挡格，结果与逐格全量扫描逐位一致。
+    /// </summary>
     private void RebuildStaticObstacleCost()
     {
         _staticCostRevision++;
-        for (int y = 0; y < _gridHeight; y++)
+        _staticCostDirty = false;
+        Array.Fill(_staticCost, 1f);
+        Array.Clear(_staticObstacleAvoidance);
+        float blockedCellCost = Semantics.Solver.FlowBlockedCellCost;
+        for (int i = 0; i < ObstacleCount; i++)
         {
-            for (int x = 0; x < _gridWidth; x++)
+            if (!TryGetObstacleCellBounds(i, paddingCells: 0, out int minX, out int maxX, out int minY, out int maxY))
             {
-                float wx = (x + 0.5f) * _flowCellSizeCm;
-                float wy = (y + 0.5f) * _flowCellSizeCm;
-                _staticCost[(y * _gridWidth) + x] = IsObstacle(wx, wy) ? Semantics.Solver.FlowBlockedCellCost : 1f;
+                continue;
+            }
+
+            float obstacleX = _obsX[i];
+            float obstacleY = _obsY[i];
+            float obstacleR2 = _obsR2[i];
+            for (int y = minY; y <= maxY; y++)
+            {
+                float dy = ((y + 0.5f) * _flowCellSizeCm) - obstacleY;
+                int rowBase = y * _gridWidth;
+                for (int x = minX; x <= maxX; x++)
+                {
+                    float dx = ((x + 0.5f) * _flowCellSizeCm) - obstacleX;
+                    if ((dx * dx) + (dy * dy) < obstacleR2)
+                    {
+                        _staticCost[rowBase + x] = blockedCellCost;
+                    }
+                }
+            }
+        }
+
+        RebuildObstacleAvoidanceOffsetTable();
+        int neighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
+        int visitGeneration = NextObstacleAvoidanceVisitGeneration();
+        for (int i = 0; i < ObstacleCount; i++)
+        {
+            if (!TryGetObstacleCellBounds(i, neighborRadiusCells, out int minX, out int maxX, out int minY, out int maxY))
+            {
+                continue;
+            }
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                int rowBase = y * _gridWidth;
+                for (int x = minX; x <= maxX; x++)
+                {
+                    int idx = rowBase + x;
+                    if (_obstacleAvoidanceVisitGeneration[idx] == visitGeneration)
+                    {
+                        continue;
+                    }
+
+                    _obstacleAvoidanceVisitGeneration[idx] = visitGeneration;
+                    ComputeObstacleAvoidance(_staticCost, x, y, out float avoidX, out float avoidY);
+                    _staticObstacleAvoidance[idx << 1] = avoidX;
+                    _staticObstacleAvoidance[(idx << 1) + 1] = avoidY;
+                }
             }
         }
     }
 
-    private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
+    private int NextObstacleAvoidanceVisitGeneration()
     {
-        Array.Copy(_staticCost, _cost, _staticCost.Length);
-        if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
+        if (_obstacleAvoidanceVisitCounter == int.MaxValue)
         {
-            return;
+            Array.Clear(_obstacleAvoidanceVisitGeneration);
+            _obstacleAvoidanceVisitCounter = 0;
         }
 
+        return ++_obstacleAvoidanceVisitCounter;
+    }
+
+    /// <summary>
+    /// 邻域里每个偏移的排斥贡献只取决于偏移本身，按与逐格计算相同的表达式预先算好；
+    /// 累加顺序不变，所以查表结果与逐格开方、除法逐位一致。
+    /// </summary>
+    private void RebuildObstacleAvoidanceOffsetTable()
+    {
+        int radius = Semantics.Solver.FlowObstacleNeighborRadiusCells;
+        int side = (radius * 2) + 1;
+        int entryCount = side * side;
+        if (_obstacleAvoidanceOffsetX.Length != entryCount)
+        {
+            _obstacleAvoidanceOffsetX = new float[entryCount];
+            _obstacleAvoidanceOffsetY = new float[entryCount];
+            _obstacleAvoidanceOffsetContributes = new bool[entryCount];
+        }
+
+        int entry = 0;
+        for (int offsetY = -radius; offsetY <= radius; offsetY++)
+        {
+            for (int offsetX = -radius; offsetX <= radius; offsetX++, entry++)
+            {
+                float ovx = -offsetX;
+                float ovy = -offsetY;
+                float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
+                bool contributes = (offsetX != 0 || offsetY != 0) && obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq;
+                _obstacleAvoidanceOffsetContributes[entry] = contributes;
+                if (!contributes)
+                {
+                    _obstacleAvoidanceOffsetX[entry] = 0f;
+                    _obstacleAvoidanceOffsetY[entry] = 0f;
+                    continue;
+                }
+
+                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
+                float obstacleDist = obstacleDistSq * invObstacleDist;
+                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
+                _obstacleAvoidanceOffsetX[entry] = (ovx * invObstacleDist) * obstacleWeight;
+                _obstacleAvoidanceOffsetY[entry] = (ovy * invObstacleDist) * obstacleWeight;
+            }
+        }
+
+        _obstacleAvoidanceOffsetRadiusCells = radius;
+    }
+
+    private bool TryGetObstacleCellBounds(int obstacleIndex, int paddingCells, out int minX, out int maxX, out int minY, out int maxY)
+    {
+        double radius = _obsRadius[obstacleIndex];
+        double obstacleX = _obsX[obstacleIndex];
+        double obstacleY = _obsY[obstacleIndex];
+        double margin = 1 + paddingCells;
+        minY = maxY = 0;
+        return TryClampCellRange(
+                Math.Floor((obstacleX - radius) / _flowCellSizeCm) - margin,
+                Math.Floor((obstacleX + radius) / _flowCellSizeCm) + margin,
+                _gridWidth,
+                out minX,
+                out maxX) &&
+            TryClampCellRange(
+                Math.Floor((obstacleY - radius) / _flowCellSizeCm) - margin,
+                Math.Floor((obstacleY + radius) / _flowCellSizeCm) + margin,
+                _gridHeight,
+                out minY,
+                out maxY);
+    }
+
+    private static bool TryClampCellRange(double low, double high, int cellCount, out int min, out int max)
+    {
+        min = 0;
+        max = 0;
+        if (high < 0d || low > cellCount - 1)
+        {
+            return false;
+        }
+
+        min = low <= 0d ? 0 : (int)low;
+        max = high >= cellCount - 1 ? cellCount - 1 : (int)high;
+        return true;
+    }
+
+    private bool StampCrowdCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
+    {
+        Array.Copy(_staticCost, _cost, _staticCost.Length);
+        if (UnitCount <= 0)
+        {
+            return false;
+        }
+
+        bool blocksCells = false;
         int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
         for (int sample = 0; sample < budget; sample++)
         {
@@ -1703,8 +1900,10 @@ public sealed partial class MassNavigationFlowSolverState
             }
 
             int offset = unitIndex << 1;
-            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+            blocksCells |= StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
         }
+
+        return blocksCells;
     }
 
     private bool CanFlowStateObserveAgent(FlowRuntimeState flowState, int agentIndex)
@@ -1714,10 +1913,12 @@ public sealed partial class MassNavigationFlowSolverState
             (_layerInteractionMasks[agentIndex] & flowState.CategoryMask) != 0u;
     }
 
-    private void StampCrowdCost(float xCm, float yCm)
+    private bool StampCrowdCost(float xCm, float yCm)
     {
         int gx = Math.Clamp((int)(xCm / _flowCellSizeCm), 0, _gridWidth - 1);
         int gy = Math.Clamp((int)(yCm / _flowCellSizeCm), 0, _gridHeight - 1);
+        float blockedThreshold = Semantics.Solver.FlowBlockedCellThreshold;
+        bool blocksCells = false;
         for (int oy = -1; oy <= 1; oy++)
         {
             int ny = gy + oy;
@@ -1736,7 +1937,7 @@ public sealed partial class MassNavigationFlowSolverState
                 }
 
                 int idx = rowBase + nx;
-                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
+                if (_cost[idx] > blockedThreshold)
                 {
                     continue;
                 }
@@ -1745,8 +1946,11 @@ public sealed partial class MassNavigationFlowSolverState
                     ? Semantics.Solver.CrowdStampCenterCost
                     : Semantics.Solver.CrowdStampNeighborCost;
                 _cost[idx] += penalty;
+                blocksCells |= _cost[idx] > blockedThreshold;
             }
         }
+
+        return blocksCells;
     }
 
     private void MarkFlowDirty()
@@ -1831,7 +2035,12 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void ComputeFlow(float[] flow, float targetX, float targetY)
+    private void ComputeFlow(
+        float[] flow,
+        float targetX,
+        float targetY,
+        float[] blockedCost,
+        float[]? precomputedObstacleAvoidance)
     {
         for (int y = 0; y < _gridHeight; y++)
         {
@@ -1839,7 +2048,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 int idx = (y * _gridWidth) + x;
                 int flowIndex = idx << 1;
-                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
+                if (blockedCost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
                     flow[flowIndex] = 0f;
                     flow[flowIndex + 1] = 0f;
@@ -1862,40 +2071,16 @@ public sealed partial class MassNavigationFlowSolverState
                 dx *= invDist;
                 dy *= invDist;
 
-                float avoidX = 0f;
-                float avoidY = 0f;
-                int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
-                for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)
+                float avoidX;
+                float avoidY;
+                if (precomputedObstacleAvoidance != null)
                 {
-                    for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)
-                    {
-                        if (offsetX == 0 && offsetY == 0)
-                        {
-                            continue;
-                        }
-
-                        int nx = x + offsetX;
-                        int ny = y + offsetY;
-                        if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)
-                        {
-                            continue;
-                        }
-
-                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                        {
-                            float ovx = -offsetX;
-                            float ovy = -offsetY;
-                            float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
-                            {
-                                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
-                                float obstacleDist = obstacleDistSq * invObstacleDist;
-                                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
-                                avoidX += (ovx * invObstacleDist) * obstacleWeight;
-                                avoidY += (ovy * invObstacleDist) * obstacleWeight;
-                            }
-                        }
-                    }
+                    avoidX = precomputedObstacleAvoidance[flowIndex];
+                    avoidY = precomputedObstacleAvoidance[flowIndex + 1];
+                }
+                else
+                {
+                    ComputeObstacleAvoidance(blockedCost, x, y, out avoidX, out avoidY);
                 }
 
                 float flowX = dx + (avoidX * Semantics.Solver.FlowObstacleAvoidanceWeight);
@@ -1911,6 +2096,40 @@ public sealed partial class MassNavigationFlowSolverState
                     float invFlow = SafeInverseSqrt(flowLengthSq);
                     flow[flowIndex] = flowX * invFlow;
                     flow[flowIndex + 1] = flowY * invFlow;
+                }
+            }
+        }
+    }
+
+    private void ComputeObstacleAvoidance(float[] blockedCost, int x, int y, out float avoidX, out float avoidY)
+    {
+        avoidX = 0f;
+        avoidY = 0f;
+        int radius = _obstacleAvoidanceOffsetRadiusCells;
+        float blockedThreshold = Semantics.Solver.FlowBlockedCellThreshold;
+        int entry = 0;
+        for (int offsetY = -radius; offsetY <= radius; offsetY++)
+        {
+            int ny = y + offsetY;
+            if ((uint)ny >= (uint)_gridHeight)
+            {
+                entry += (radius * 2) + 1;
+                continue;
+            }
+
+            int rowBase = ny * _gridWidth;
+            for (int offsetX = -radius; offsetX <= radius; offsetX++, entry++)
+            {
+                int nx = x + offsetX;
+                if (!_obstacleAvoidanceOffsetContributes[entry] || (uint)nx >= (uint)_gridWidth)
+                {
+                    continue;
+                }
+
+                if (blockedCost[rowBase + nx] > blockedThreshold)
+                {
+                    avoidX += _obstacleAvoidanceOffsetX[entry];
+                    avoidY += _obstacleAvoidanceOffsetY[entry];
                 }
             }
         }
@@ -3066,7 +3285,8 @@ public sealed partial class MassNavigationFlowSolverState
                 "(Reset/ResetAuthoredAgents/AppendAuthoredAgents); SetUnitRuntimeProfile must not allocate.");
         }
 
-        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));
+        int flowCellCount = _teamStates[teamStateIndex].HasAuthoredTarget ? _gridCellCount : 0;
+        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, flowCellCount));
         return _flowStates.Count - 1;
     }
 
