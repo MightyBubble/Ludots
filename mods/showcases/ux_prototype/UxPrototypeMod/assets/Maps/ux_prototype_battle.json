@@ -12,6 +12,7 @@
     "Raylib.Background:Deep",
     "Raylib.DebugGuides:Off"
   ],
+  "ContinuousHeightmapAsset": "assets/terrain/ux_prototype_flat.height",
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.UxPrototypeTactical",
     "TargetXCm": 3840,
