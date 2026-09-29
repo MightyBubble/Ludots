@@ -335,7 +335,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 as Ludots.Core.EntityCollections.EntityCollectionStore
                 ?? throw new InvalidOperationException("Superweapon context showcase requires the collection store.");
-            int routedKeyId = collections.KeyRegistry.Register("collection.ui.command.hover");
+            int routedKeyId = collections.KeyRegistry.Register(SuperweaponContextShowcaseIds.TargetsCollectionKey);
 
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;
