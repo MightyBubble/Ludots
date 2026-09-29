@@ -13,8 +13,8 @@
   "HeartbeatIntervalTicks": 6,
   "Entities": [
     {
-      "template": "ballista_crew",
-      "instanceId": "ballista_1",
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_1",
       "PositionXCm": 0,
       "PositionYCm": 0,
       "Overrides": {
@@ -24,20 +24,20 @@
       }
     },
     {
-      "template": "ballista_wolf",
-      "instanceId": "wolf_1",
+      "Template": "ballista_wolf",
+      "InstanceId": "wolf_1",
       "PositionXCm": 400,
       "PositionYCm": 0
     },
     {
-      "template": "ballista_tower",
-      "instanceId": "tower_1",
+      "Template": "ballista_tower",
+      "InstanceId": "tower_1",
       "PositionXCm": 400,
       "PositionYCm": 600
     },
     {
-      "template": "ballista_crew",
-      "instanceId": "ballista_2",
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_2",
       "PositionXCm": -400,
       "PositionYCm": 300,
       "Overrides": {
@@ -47,8 +47,8 @@
       }
     },
     {
-      "template": "ballista_crew",
-      "instanceId": "ballista_3",
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_3",
       "PositionXCm": -400,
       "PositionYCm": -300,
       "Overrides": {
