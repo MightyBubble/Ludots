@@ -12,7 +12,7 @@
 
 这次三套全部删掉。敌我只剩一种事实：**两个队伍代表实体之间有没有某种关系边**。关系类型名由数据声明，Core 不认识任何一个名字。
 
-不在这次范围：战斗姿态 `CombatStance`（"固守 / 主动出击 / 停火"这类单位行为模式）和 AI 的 `AI/stances.json`。它们是"单位怎么打"，不是"谁是敌人"。战斗姿态 mod 判断敌人本来就是查关系边（`HasLink(我方队伍, 对方队伍, CombatStance.Hostile)`），这次就是把它的做法推广到全引擎。
+不在这次范围：战斗姿态 `CombatStance`（"固守 / 主动出击 / 停火"这类单位行为模式）和 AI 的 `AI/stances.json`。它们是"单位怎么打"，不是"谁是敌人"。战斗姿态 mod 判断敌人本来就是查关系边，这次就是把它的做法推广到全引擎；它原先自己声明的 `CombatStance.Hostile` 也并掉，改查共用的 `Hostile`。
 
 ## 2. 结构
 
@@ -33,7 +33,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 - `TeamRelationQuery`：Core 服务，唯一的"敌我"查询入口。`Has(源队伍, 目标队伍, 关系类型)` 就是查两个队伍代表实体之间有没有这条边。
 - `RelationFilter`：装载期把作者写的字符串编译成"不筛选"或"一个关系类型编号"，热路径只比整数。
-- `Hostile`、`Friendly` 两个类型由 `mods/LudotsCoreMod/assets/Relationships/catalog.json` 声明，不放进引擎默认目录 `assets/Relationships/catalog.json`：Core 默认资源按 RFC-0065 不带"敌对 / 盟友"这类场景词。Core 代码也不引用这两个名字。mod 可以声明自己的类型（比如战斗姿态的 `CombatStance.Hostile`），筛选里直接写那个名字。
+- `Hostile`、`Friendly` 两个类型由 `mods/LudotsCoreMod/assets/Relationships/catalog.json` 声明，不放进引擎默认目录 `assets/Relationships/catalog.json`：Core 默认资源按 RFC-0065 不带"敌对 / 盟友"这类场景词。Core 代码也不引用这两个名字。mod 可以声明自己的类型，筛选里直接写那个名字；但目录里只许写有人读的类型，意思和 `Hostile` 一样的不许另起一个名字。
 
 ## 3. 详情
 
@@ -64,7 +64,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 | 位置 | 旧 | 新 |
 |---|---|---|
-| 地图队伍关系 | `{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}` | 原条目去掉 `Attitude`、`TypeId` 不变（参与关系照旧存在），另加一条 `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}` |
+| 地图队伍关系 | `{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}` | 整条换成 `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}`。`*.Participant` 这类没人读的占位类型和边一律删掉，玩家属于哪个队伍由 `Players[]` 自动建 `MemberOf` 边，不再写 `PlayerTeams` |
 | 地图玩家关系 / 玩家-队伍关系 | 带 `Attitude` | 去掉 `Attitude`，`TypeId` 不变 |
 | 效果 / 投射物 / AI / 命令来源筛选 | `"Hostile"` / `"Friendly"` / `"All"` | 写法不变，含义变成"关系类型名或 All"，名字必须已在关系目录里声明 |
 | 自动选目标（技能 `input`、输入映射） | `"autoTargetPolicy": "NearestEnemyInRange"` | `"autoTargetPolicy": "NearestInRange"` + 必填 `"autoTargetRelation": "Hostile"`（光标选目标同理：`cursorTargetRelation`） |
@@ -93,7 +93,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 | 地图忘了写 1、2 关系 | 引擎默认敌对，照样开打 | 两队互不识别为敌人；技能打不到，验收会暴露 |
 | 群体导航同队互相让路 | 同方暗规则算友好 | 配置写了同队 `Friendly` 自边，`cooperativeRelation: Friendly` |
 | 右键敌方单位 = 攻击 | 意图规则 `stance: ["Hostile"]` | `relation: ["Hostile"]` |
-| 战斗姿态"只还击敌人" | 查 `CombatStance.Hostile` 边 | 不变 |
+| 战斗姿态"只还击敌人" | 查 `CombatStance.Hostile` 边 | 改查 `Hostile` 边，`CombatStance.Hostile` 类型删除 |
 
 ## 5. 边界
 

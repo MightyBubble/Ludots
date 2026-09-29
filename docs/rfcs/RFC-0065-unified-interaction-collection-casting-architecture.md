@@ -2,6 +2,10 @@
 > user-facing shorthand, formal SelectionRuntime is retired, and EntityCollectionStore /
 > `collection.command.source` is authoritative. Any remaining text describing dual-track
 > SelectionRuntime transition is historical context, not permission to add fallback.
+> Stance is retired as well: there is no DomainStanceQuery, stance catalog or `GetStance`.
+> Friend/foe is answered only by relationship edges between team representatives
+> (`TeamRelationQuery.Has`, types such as `Hostile`/`Friendly` declared in relationship catalogs);
+> every "stance" mention below is historical wording, not a contract to implement.
 # RFC-0065 统一交互—集合—施法架构（Unified Interaction · Entity Collection · Casting）
 
 Status: Proposed（新 Epic SSOT，整合并取代 RFC-0061/0062/0063/0064 的分散叙述）
