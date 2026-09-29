@@ -14,15 +14,21 @@
     { "id": "MemberOf", "isSymmetric": false }
   ],
   "metrics": [], "flags": [], "bands": [], "reasons": [], "callbacks": [], "synergies": [],
-  "knowledgeGrants": [],
-  "stance": {
-    "stanceTypes": ["Hostile", "Friendly", "Neutral"],
-    "sameDomainStance": "Friendly", "sameTeamStance": "Friendly", "defaultStance": "Neutral"
-  }
+  "knowledgeGrants": []
 }
 ```
 
-mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：`"types": [ { "id": "LudotsCore.Participant", "isSymmetric": false } ]`。
+mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：
+
+```json
+"types": [
+  { "id": "LudotsCore.Participant", "isSymmetric": false },
+  { "id": "Hostile", "isSymmetric": false },
+  { "id": "Friendly", "isSymmetric": false }
+]
+```
+
+敌我没有专门的配置块。"A 队把 B 队当敌人"就是 A 队代表实体到 B 队代表实体之间有一条 `Hostile` 边；想让"友好"包含自己队伍，地图里写一条 A 到 A 的 `Friendly` 自边。`Hostile`、`Friendly` 只是 LudotsCoreMod 声明的两个普通关系类型，Core 代码不认这两个名字，mod 可以声明自己的类型（比如战斗姿态 mod 的 `CombatStance.Hostile`），技能、AI、命令的筛选里直接写那个名字。
 
 ## 2. 字段与行为
 
@@ -36,7 +42,6 @@ mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：`"types": [ { "id
 | callbacks | Id、TypeId、MetricId、Min/Max 可空、EventKey、ExitEventKey、八组 tag 列表 | 度量区间进出发事件 |
 | synergies | Id、RequireAllTags、MinimumCount=1、ApplyTagsToTeam、EventKey | 组合协同 |
 | knowledgeGrants | Id、TypeId、CollectionKey、Presence/Position、Attribute/Relationship/Tag 引用、ObservedTick、ExpiryTick、ConfidencePermille=1000 | 关系知识授予 |
-| stance | StanceTypes、SameDomain/SameTeam/Default | 姿态词表与缺省——整对象替换 |
 
 ## 3. 文件结构
 
@@ -44,7 +49,7 @@ mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：`"types": [ { "id
 
 ## 4. 运行时加载效果
 
-管线按目录装载，九块分别按 id 覆盖合并（stance 整对象替换）；加载完成后关系系统装配，图节点的关系符号（relationshipType/metric/reason/flag，gr-02 字段族）引用此目录解析。
+管线按目录装载，八块分别按 id 覆盖合并；加载完成后关系系统装配，图节点的关系符号（relationshipType/metric/reason/flag，gr-02 字段族）引用此目录解析。
 
 ## 5. 异常处理
 

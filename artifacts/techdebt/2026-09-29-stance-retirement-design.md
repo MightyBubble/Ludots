@@ -25,7 +25,7 @@ Maps/*.json                          RelationshipRuntime               目标解
   ParticipantRelationships.Teams     队伍代表之间的关系边               实体集合查询
   {TeamA, TeamB, TypeId, Symmetric}→ TeamRelationQuery                 图节点 QueryFilterRelationship
 MassNavigationConfig.json            队伍编号 → 代表实体 → 查边          AI 目标筛选
-  teamRelationships.relationships                                     命令来源资格
+  teamRelationships[]                                                 命令来源资格
 效果/AI/命令/图里的筛选字段          RelationFilter（装载期编译）       命令意图规则
   "Hostile" / "Friendly" / "All"      All 或 一个关系类型编号            群体导航"合作"判定
                                                                       呈现层敌我着色
@@ -33,7 +33,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 - `TeamRelationQuery`：Core 服务，唯一的"敌我"查询入口。`Has(源队伍, 目标队伍, 关系类型)` 就是查两个队伍代表实体之间有没有这条边。
 - `RelationFilter`：装载期把作者写的字符串编译成"不筛选"或"一个关系类型编号"，热路径只比整数。
-- 引擎默认目录 `assets/Relationships/catalog.json` 多声明 `Hostile`、`Friendly` 两个类型，这是数据，Core 代码不引用这两个名字。mod 可以声明自己的类型（比如战斗姿态的 `CombatStance.Hostile`），筛选里直接写那个名字。
+- `Hostile`、`Friendly` 两个类型由 `mods/LudotsCoreMod/assets/Relationships/catalog.json` 声明，不放进引擎默认目录 `assets/Relationships/catalog.json`：Core 默认资源按 RFC-0065 不带"敌对 / 盟友"这类场景词。Core 代码也不引用这两个名字。mod 可以声明自己的类型（比如战斗姿态的 `CombatStance.Hostile`），筛选里直接写那个名字。
 
 ## 3. 详情
 
@@ -64,9 +64,10 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 | 位置 | 旧 | 新 |
 |---|---|---|
-| 地图队伍关系 | `{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}` | `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}` |
+| 地图队伍关系 | `{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}` | 原条目去掉 `Attitude`、`TypeId` 不变（参与关系照旧存在），另加一条 `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}` |
 | 地图玩家关系 / 玩家-队伍关系 | 带 `Attitude` | 去掉 `Attitude`，`TypeId` 不变 |
 | 效果 / 投射物 / AI / 命令来源筛选 | `"Hostile"` / `"Friendly"` / `"All"` | 写法不变，含义变成"关系类型名或 All"，名字必须已在关系目录里声明 |
+| 自动选目标（技能 `input`、输入映射） | `"autoTargetPolicy": "NearestEnemyInRange"` | `"autoTargetPolicy": "NearestInRange"` + 必填 `"autoTargetRelation": "Hostile"`（光标选目标同理：`cursorTargetRelation`） |
 | 命令意图规则 | `"target": {"stance": ["Hostile"]}` | `"target": {"relation": ["Hostile"]}` |
 | 图节点 `QueryFilterRelationship` | `"relationshipMode": "Hostile"` | `"relationshipType": "Hostile"`，走现有关系类型符号补丁 |
 | 群体导航配置 | `teamRelationships: {defaultRelationship, relationships[{teamA,teamB,attitude}]}` + `relationshipPolicy.cooperativeStance` | `teamRelationships: [{teamA,teamB,relation,symmetric}]`（没有默认）+ `relationshipPolicy.cooperativeRelation` |
@@ -76,7 +77,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 ### 3.4 呈现层敌我着色
 
-`PresentPhaseInput/Result` 去掉 `TeamRelationship`，改成 `IsFriendly` / `IsHostile` 两个布尔值，由呈现层的"观察者队伍 → 目标队伍"关系查询得出。用哪两个关系类型算"友好 / 敌对"，由 `assets/Presentation` 下的呈现配置声明（`friendlyRelation` / `hostileRelation`）。不在 Core 里写名字。
+`PresentPhaseInput/Result` 去掉 `TeamRelationship`，改成 `IsFriendly` / `IsHostile` 两个布尔值，由呈现层的"观察者队伍 → 目标队伍"关系查询得出。用哪两个关系类型算"友好 / 敌对"，由 `game.json` 的 `presentation.teamRelationColors`（`friendlyRelation` / `hostileRelation`）声明，LudotsCoreMod 写的是 `Friendly` / `Hostile`。引擎据此注册 `PresentTeamRelationClassifier` 服务，只有表现体着色用它；世界 HUD 的可读性只看知识投影，不看敌我。
 
 ### 3.5 性能
 

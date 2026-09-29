@@ -22,7 +22,7 @@
   "groupPolicy": { "kind": "independent" },
   "rules": [
     { "priority": 30, "actor": { "hasAbilityWithCategory": "Ability.Attack" },
-      "target": { "stance": "Aggressive" },
+      "target": { "relation": ["Hostile"] },
       "route": { "orderTypeKey": "attackTarget" } },
     { "priority": 20,
       "actor": { "hasAbilityWithCategory": "Ability.Train" },
@@ -37,7 +37,7 @@
 | `groupPolicy.kind` | 编组策略；内置仅 `independent`（逐演员独立），新 kind 由 mod 代码注册 |
 | `rules[].priority` | 数值大者先裁决，命中即止 |
 | `actor` | 演员侧条件：`hasAbilityWithCategory` / `allTags` / `anyTags` |
-| `target` | 目标侧条件：`allTags` / `anyTags` / `stance` / `hasEntity`（true/false/unset 三态） |
+| `target` | 目标侧条件：`allTags` / `anyTags` / `relation`（关系类型名列表：本方队伍到目标队伍有其中任一条边才命中） / `hasEntity`（true/false/unset 三态） |
 | `route.orderTypeKey` | 路由终点一：直接落订单类型 |
 | `route.slot` | 路由终点二：`byAbilityCategory:<category>` 或 `contextGroup:<id>` 取技能槽 |
 

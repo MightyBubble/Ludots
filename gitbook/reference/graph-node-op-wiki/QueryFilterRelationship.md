@@ -15,14 +15,14 @@
 | 可用图种 | Effect / Score / Validation / Derived |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体） |
-| 特殊写法 | imm 填整数立即数 |
+| 特殊写法 | dst 填符号名（编译期解析） |
 
 手册分册（全量字段与语义）：[空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)
 
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/QueryFilterRelationship.json`）：
 
 ```json
-{"id": "relFilter", "op": "QueryFilterRelationship", "relationshipMode": "Hostile"}
+{"id": "relFilter", "op": "QueryFilterRelationship", "relationshipType": "Hostile"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：

@@ -74,11 +74,12 @@ participant relationship 的正式真相是 entity relationship：
 - player-player：player representative entity 与 player representative entity
 - player-team：player representative entity 与 team representative entity
 
-`TeamManager` 和 lookup service 只允许作为派生缓存存在：
+敌我也只是 team-team 关系边：地图 `ParticipantRelationships.Teams` 里写 `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}`，就是 1 队代表和 2 队代表之间两条 `Hostile` 边。没有"同队默认友好""没写默认敌对"这类暗规则；想让友好包含自己队伍，就写一条 `TeamA == TeamB` 的 `Friendly` 自边。技能、AI、命令、群体导航、呈现着色全部通过 `TeamRelationQuery`（队伍编号 → 代表实体 → 查边）回答敌我，不另存队伍关系表。
+
+lookup service 只允许作为派生缓存存在：
 
 - `TeamEntityLookup`：`TeamId -> representative entity`
 - `PlayerEntityLookup`：`PlayerId -> representative entity`
-- `TeamManager`：从 focused map/session 的 participant relationship 派生出的 team hot-path cache
 
 focused map 切换时，lookup object identity 必须稳定；系统拿到的是同一个 service object，由新 session 内容覆盖，而不是替换 service 实例。
 
@@ -86,7 +87,7 @@ focused map 切换时，lookup object identity 必须稳定；系统拿到的是
 
 - `src/Core/Gameplay/Teams/TeamEntityLookup.cs`
 - `src/Core/Gameplay/Teams/PlayerEntityLookup.cs`
-- `src/Core/Gameplay/Teams/TeamManager.cs`
+- `src/Core/Gameplay/Teams/TeamRelationQuery.cs`
 - `src/Core/Engine/GameEngine.MapLoadLifecycle.cs`
 
 ## 5. Local Seats & Possession
