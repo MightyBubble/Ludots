@@ -4529,15 +4529,15 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                 if (loadedGraphRuntime != null)
                 {
+                    IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                     IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
                 {
-                    pathService = navMeshService;
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                 }
             }
             else if (loadedGraphRuntime != null)
