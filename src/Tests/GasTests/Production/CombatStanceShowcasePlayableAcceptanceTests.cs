@@ -138,18 +138,14 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         Assert.That(players.TryGet(1, out Entity localPlayer), Is.True);
         Assert.That(players.TryGet(2, out Entity hostilePlayer), Is.True);
 
-        int participantTypeId = types.GetId("CombatStance.Participant");
-        int hostileTypeId = types.GetId("CombatStance.Hostile");
+        int hostileTypeId = types.GetId("Hostile");
+        int memberOfTypeId = types.GetId("MemberOf");
         Assert.Multiple(() =>
         {
-            Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, hostileTypeId), Is.True);
             Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, hostileTypeId), Is.True);
-            Assert.That(relationships.HasLink(localPlayer, hostilePlayer, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostilePlayer, localPlayer, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(localPlayer, friendlyTeam, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, participantTypeId), Is.True);
+            Assert.That(relationships.HasLink(localPlayer, friendlyTeam, memberOfTypeId), Is.True);
+            Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, memberOfTypeId), Is.True);
         });
     }
 

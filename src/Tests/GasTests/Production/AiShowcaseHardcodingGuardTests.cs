@@ -23,7 +23,6 @@ public sealed class AiShowcaseHardcodingGuardTests
         "new ActuatorReadiness",
         "new AimGate",
         "new UtilityAiTargetPriority",
-        "TeamManager.SetRelationship",
         "RelationshipRuntime(",
         "EnsureLink("
     };
@@ -48,8 +47,7 @@ public sealed class AiShowcaseHardcodingGuardTests
                     "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Maps/utility_autocast_showcase.json"
                 },
                 MapFile: "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Maps/utility_autocast_showcase.json",
-                ParticipantRelationshipTypeId: "UtilityAutocast.Participant",
-                HostileRelationshipTypeId: null))
+                HostileRelationshipTypeId: "Hostile"))
             .SetName("UtilityAutocastShowcase_CSharpDoesNotHardcodeBehavior");
 
         yield return new TestCaseData(new ShowcaseGuardCase(
@@ -66,12 +64,10 @@ public sealed class AiShowcaseHardcodingGuardTests
                     "mods/CombatStanceBehaviorMod/assets/CombatStance/behavior.json",
                     "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/CombatStanceShowcase/scenario.json",
                     "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/Entities/templates.json",
-                    "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/Maps/combat_stance_showcase.json",
-                    "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/Relationships/catalog.json"
+                    "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/Maps/combat_stance_showcase.json"
                 },
                 MapFile: "mods/showcases/combat_stance/CombatStanceShowcaseMod/assets/Maps/combat_stance_showcase.json",
-                ParticipantRelationshipTypeId: "CombatStance.Participant",
-                HostileRelationshipTypeId: "CombatStance.Hostile"))
+                HostileRelationshipTypeId: "Hostile"))
             .SetName("CombatStanceShowcase_CSharpDoesNotHardcodeBehavior");
     }
 
@@ -125,9 +121,6 @@ public sealed class AiShowcaseHardcodingGuardTests
         AssertNonEmptyArray(root, "Teams", guardCase.Name);
         AssertNonEmptyArray(root, "Players", guardCase.Name);
         Assert.That(root.TryGetProperty("ParticipantRelationships", out JsonElement relationships), Is.True, $"{guardCase.Name} map must use map-owned participant relationships.");
-        AssertParticipantRelationshipArray(relationships, "Teams", guardCase);
-        AssertParticipantRelationshipArray(relationships, "Players", guardCase);
-        AssertParticipantRelationshipArray(relationships, "PlayerTeams", guardCase);
         AssertSemanticTeamRelationships(relationships, guardCase);
     }
 
@@ -138,34 +131,8 @@ public sealed class AiShowcaseHardcodingGuardTests
         Assert.That(value.GetArrayLength(), Is.GreaterThan(0), $"{showcaseName} map '{propertyName}' must not be empty.");
     }
 
-    private static void AssertParticipantRelationshipArray(JsonElement relationships, string propertyName, ShowcaseGuardCase guardCase)
-    {
-        AssertNonEmptyArray(relationships, propertyName, guardCase.Name);
-        bool hasParticipantEntry = false;
-        int index = 0;
-        foreach (JsonElement entry in relationships.GetProperty(propertyName).EnumerateArray())
-        {
-            Assert.That(entry.TryGetProperty("TypeId", out JsonElement typeId), Is.True, $"{guardCase.Name} ParticipantRelationships.{propertyName}[{index}] requires TypeId.");
-            if (!string.Equals(typeId.GetString(), guardCase.ParticipantRelationshipTypeId, StringComparison.Ordinal))
-            {
-                index++;
-                continue;
-            }
-
-            hasParticipantEntry = true;
-            index++;
-        }
-
-        Assert.That(hasParticipantEntry, Is.True, $"{guardCase.Name} ParticipantRelationships.{propertyName} must include '{guardCase.ParticipantRelationshipTypeId}'.");
-    }
-
     private static void AssertSemanticTeamRelationships(JsonElement relationships, ShowcaseGuardCase guardCase)
     {
-        if (guardCase.HostileRelationshipTypeId == null)
-        {
-            return;
-        }
-
         JsonElement teams = relationships.GetProperty("Teams");
         int index = 0;
         foreach (JsonElement entry in teams.EnumerateArray())
@@ -217,6 +184,5 @@ public sealed class AiShowcaseHardcodingGuardTests
         string[] AllowedSourceFiles,
         string[] RequiredDataFiles,
         string MapFile,
-        string ParticipantRelationshipTypeId,
-        string? HostileRelationshipTypeId);
+        string HostileRelationshipTypeId);
 }

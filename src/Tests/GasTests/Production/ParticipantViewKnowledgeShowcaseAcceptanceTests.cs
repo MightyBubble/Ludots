@@ -60,9 +60,9 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod did not install KnowledgeProjectionResolver.");
         RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
             ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
-        int participantTypeId = relationshipTypes.GetId(ParticipantViewCapabilityIds.RelationshipType);
+        int knowledgeShareTypeId = relationshipTypes.GetId("ParticipantViews.KnowledgeShare");
         int healthAttributeId = AttributeRegistry.GetId("Health");
-        Assert.That(participantTypeId, Is.GreaterThanOrEqualTo(0));
+        Assert.That(knowledgeShareTypeId, Is.GreaterThanOrEqualTo(0));
         Assert.That(healthAttributeId, Is.GreaterThanOrEqualTo(0));
 
         Entity playerOne = session.PlayerEntityLookup.Get(1);
@@ -75,7 +75,7 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         Entity hostileUnknownUnit = RequireEntity(session, "unit-crimson-alpha-1");
 
         ParticipantKnowledgeSnapshot playerOwn = Resolve(engine, resolver, playerOne, ownUnit);
-        AssertLiveSelfKnowledge(playerOwn, playerOne, healthAttributeId, participantTypeId);
+        AssertLiveSelfKnowledge(playerOwn, playerOne, healthAttributeId, knowledgeShareTypeId);
 
         ParticipantKnowledgeSnapshot playerAlly = Resolve(engine, resolver, playerOne, allyDisclosedUnit);
         Assert.That(playerAlly.IsDisclosed, Is.True, "Player 1 should learn Player 2's authored collection only through relation disclosure.");
@@ -83,7 +83,7 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         Assert.That(playerAlly.Presence, Is.EqualTo(KnowledgePresence.HiddenWithSource));
         Assert.That(playerAlly.Position, Is.EqualTo(KnowledgePositionAccess.LastKnown));
         Assert.That(playerAlly.AttributeMask.ContainsId(healthAttributeId), Is.True);
-        Assert.That(playerAlly.RelationshipTypeMask.ContainsId(participantTypeId), Is.True);
+        Assert.That(playerAlly.RelationshipTypeMask.ContainsId(knowledgeShareTypeId), Is.True);
 
         ParticipantKnowledgeSnapshot playerNeutralRumor = Resolve(engine, resolver, playerOne, neutralRumorUnit);
         Assert.That(playerNeutralRumor.IsDisclosed, Is.True, "The neutral NPC should expose only its finite rumor collection.");
@@ -99,8 +99,8 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         ParticipantKnowledgeSnapshot teamOwn = Resolve(engine, resolver, teamOne, ownUnit);
         ParticipantKnowledgeSnapshot teamAlly = Resolve(engine, resolver, teamOne, allyDisclosedUnit);
         ParticipantKnowledgeSnapshot teamNeutral = Resolve(engine, resolver, teamOne, neutralRumorUnit);
-        AssertLiveSelfKnowledge(teamOwn, teamOne, healthAttributeId, participantTypeId);
-        AssertLiveSelfKnowledge(teamAlly, teamOne, healthAttributeId, participantTypeId);
+        AssertLiveSelfKnowledge(teamOwn, teamOne, healthAttributeId, knowledgeShareTypeId);
+        AssertLiveSelfKnowledge(teamAlly, teamOne, healthAttributeId, knowledgeShareTypeId);
         Assert.That(teamNeutral.IsKnown, Is.False, "Team view should differ from Player 1 by not inheriting Player 1's NPC disclosure.");
     }
 
@@ -169,14 +169,14 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         ParticipantKnowledgeSnapshot snapshot,
         Entity expectedSource,
         int healthAttributeId,
-        int participantTypeId)
+        int knowledgeShareTypeId)
     {
         Assert.That(snapshot.IsKnown, Is.True);
         Assert.That(snapshot.IsLiveVisible, Is.True);
         Assert.That(snapshot.IsDisclosed, Is.False);
         Assert.That(snapshot.Source, Is.EqualTo(expectedSource));
         Assert.That(snapshot.AttributeMask.ContainsId(healthAttributeId), Is.True);
-        Assert.That(snapshot.RelationshipTypeMask.ContainsId(participantTypeId), Is.True);
+        Assert.That(snapshot.RelationshipTypeMask.ContainsId(knowledgeShareTypeId), Is.True);
     }
 
     private static Entity RequireEntity(MapSession session, string instanceId)

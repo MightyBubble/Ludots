@@ -361,7 +361,7 @@ namespace Ludots.Tests.GAS
             RegisterTemplateKeysFromFile(setup.TemplateKeys, templatesPath);
             RelationshipCatalogConfig relationshipCatalog = JsonSerializer.Deserialize<RelationshipCatalogConfig>(
                 File.ReadAllText(catalogPath),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+                Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogPipelineLoader.SerializerOptions)!;
             RelationshipCatalogInstaller.Install(
                 relationshipCatalog,
                 setup.RelationshipTypes,

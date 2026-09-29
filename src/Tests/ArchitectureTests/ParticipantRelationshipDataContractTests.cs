@@ -113,7 +113,13 @@ namespace Ludots.Tests.Architecture
                 string relativeMapPath = ToRepoRelativePath(repoRoot, mapPath);
                 ValidateRelationshipTypeIds(relativeMapPath, relationships, "Teams", declaredTypeIds, failures);
                 ValidateRelationshipTypeIds(relativeMapPath, relationships, "Players", declaredTypeIds, failures);
-                ValidateRelationshipTypeIds(relativeMapPath, relationships, "PlayerTeams", declaredTypeIds, failures);
+                foreach (JsonProperty section in relationships.EnumerateObject())
+                {
+                    if (section.Name != "Teams" && section.Name != "Players")
+                    {
+                        failures.Add($"{relativeMapPath}: ParticipantRelationships.{section.Name} is not a participant relationship section.");
+                    }
+                }
             }
 
             Assert.That(

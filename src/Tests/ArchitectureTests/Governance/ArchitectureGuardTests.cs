@@ -454,6 +454,66 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void RelationshipCatalogs_DeclareOnlyConsumedVocabulary()
+        {
+            var repoRoot = FindRepoRoot();
+            var catalogSections = new HashSet<string>(StringComparer.Ordinal) { "types", "metrics", "flags" };
+            var projectionSections = new HashSet<string>(StringComparer.Ordinal) { "knowledgeGrants" };
+            var hits = FindForbiddenSourceTokens(
+                repoRoot,
+                new[] { Path.Combine(repoRoot, "src", "Core"), Path.Combine(repoRoot, "mods") },
+                new[] { "PlayerTeamRelationshipBindingData" });
+
+            foreach (string assetRoot in new[] { Path.Combine(repoRoot, "assets"), Path.Combine(repoRoot, "mods") })
+            {
+                foreach (string file in Directory.EnumerateFiles(assetRoot, "*.json", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal) ||
+                        !relative.Contains("/Relationships/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    HashSet<string>? allowed = relative.EndsWith("/catalog.json", StringComparison.Ordinal)
+                        ? catalogSections
+                        : relative.EndsWith("/projection.json", StringComparison.Ordinal) ? projectionSections : null;
+                    if (allowed == null || JsonNode.Parse(File.ReadAllText(file)) is not JsonObject root)
+                    {
+                        continue;
+                    }
+
+                    foreach (KeyValuePair<string, JsonNode?> section in root)
+                    {
+                        if (!allowed.Contains(section.Key))
+                        {
+                            hits.Add($"{relative}: section '{section.Key}' has no reader");
+                        }
+                    }
+
+                    if (root["types"] is JsonArray types)
+                    {
+                        foreach (JsonNode? type in types)
+                        {
+                            string id = type?["id"]?.GetValue<string>() ?? string.Empty;
+                            if (id == "Participant" || id.EndsWith(".Participant", StringComparison.Ordinal))
+                            {
+                                hits.Add($"{relative}: relationship type '{id}' is a placeholder edge nothing queries");
+                            }
+                        }
+                    }
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Relationship catalogs may only declare vocabulary some consumer reads; placeholder participant types and retired sections must not return:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Issue200_CoreKnowledgeProjection_RemainsEntityCentricWithoutPlayerOrTeamVisibilityPaths()
         {
             var repoRoot = FindRepoRoot();

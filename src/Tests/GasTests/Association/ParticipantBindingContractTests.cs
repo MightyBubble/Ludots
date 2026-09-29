@@ -56,7 +56,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             int allianceType = types.Register("Alliance");
             int rivalryType = types.Register("Rivalry");
-            int membershipType = types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -105,7 +104,7 @@ namespace Ludots.Tests.GAS
             Assert.That(relationships.HasLink(teamTwo, teamOne, allianceType), Is.True);
             Assert.That(relationships.HasLink(playerOne, playerTwo, rivalryType), Is.True);
             Assert.That(relationships.HasLink(playerTwo, playerOne, rivalryType), Is.False);
-            Assert.That(relationships.HasLink(playerOne, teamOne, membershipType), Is.True);
+            Assert.That(relationships.HasLink(playerOne, teamOne, types.GetId("MemberOf")), Is.True);
 
             int commandPower = AttributeRegistry.GetId("CommandPower");
             Assert.That(world.Get<AttributeBuffer>(teamOne).GetCurrent(commandPower), Is.EqualTo(50f));
@@ -132,7 +131,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             ApplyInvalidScenario(map, scenario);
@@ -849,7 +847,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             int ownsType = types.GetId("Owns");
@@ -890,7 +887,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             int ownsType = types.GetId("Owns");
@@ -920,7 +916,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             int allianceType = types.Register("Alliance");
             int rivalryType = types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -954,7 +949,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -975,7 +969,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -997,7 +990,6 @@ namespace Ludots.Tests.GAS
             var types = new RelationshipTypeRegistry();
             types.Register("Alliance");
             types.Register("Rivalry");
-            types.Register("Membership");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -1041,16 +1033,6 @@ namespace Ludots.Tests.GAS
                             PlayerA = 7,
                             PlayerB = 8,
                             TypeId = "Rivalry",
-                            Symmetric = false,
-                        },
-                    },
-                    PlayerTeams =
-                    {
-                        new PlayerTeamRelationshipBindingData
-                        {
-                            PlayerId = 7,
-                            TeamId = 10,
-                            TypeId = "Membership",
                             Symmetric = false,
                         },
                     },

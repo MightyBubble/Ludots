@@ -539,8 +539,8 @@ namespace GasTests
                     { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.local", "isLocal": true }
                   ],
                   "participantRelationships": {
-                    "playerTeams": [
-                      { "playerId": 7, "teamId": 10, "typeId": "Membership" }
+                    "teams": [
+                      { "teamA": 10, "teamB": 10, "typeId": "Alliance" }
                     ]
                   }
                 }
@@ -558,7 +558,7 @@ namespace GasTests
                   ],
                   "participantRelationships": {
                     "teams": [
-                      { "teamA": 10, "teamB": 20, "typeId": "Alliance", "attitude": "Friendly" }
+                      { "teamA": 10, "teamB": 20, "typeId": "Alliance" }
                     ]
                   }
                 }
@@ -571,8 +571,7 @@ namespace GasTests
                 Assert.That(cfg!.Entities.Select(e => e.InstanceId), Is.EquivalentTo(new[] { "team.alpha", "player.local", "team.beta" }));
                 Assert.That(cfg.Teams.Select(t => t.TeamId), Is.EquivalentTo(new[] { 10, 20 }));
                 Assert.That(cfg.Players.Select(p => p.PlayerId), Is.EquivalentTo(new[] { 7 }));
-                Assert.That(cfg.ParticipantRelationships.PlayerTeams.Count, Is.EqualTo(1));
-                Assert.That(cfg.ParticipantRelationships.Teams.Count, Is.EqualTo(1));
+                Assert.That(cfg.ParticipantRelationships.Teams.Count, Is.EqualTo(2));
             }
             finally
             {
