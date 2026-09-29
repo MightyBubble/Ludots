@@ -27,6 +27,7 @@ import {
 } from './ai-topology-editor/hfsmTransitions';
 import { computeTopologyTreeLayout } from './ai-topology-editor/topologyLayout';
 import { diskSaveStatus, STUDIO_THEME } from './authoring-studio/authoringTheme';
+import { readStudioMod, writeStudioMod } from './authoring-studio/useStudioMod';
 import { Button } from '@/components/ui/Button';
 import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 
@@ -114,6 +115,13 @@ function emptyHfsm(id: string): HfsmMachine {
 function readTopologySource(): string {
   const params = new URLSearchParams(window.location.search);
   return params.get('source')?.trim() || 'core';
+}
+
+/** 深链的 ?source= 优先；否则沿用工作室记住的 Mod（见 useStudioMod），都没有才落回 core。 */
+function seedTopologySource(): string {
+  const fromUrl = readTopologySource();
+  if (fromUrl !== 'core') return fromUrl;
+  return readStudioMod() ?? 'core';
 }
 
 function uniqueId(prefix: string, existing: Set<string>): string {
@@ -299,7 +307,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     : '图画布编辑 AI/hfsm.json · 虚线=层级 · 黄线=转移 · 双击叶子进函数图';
 
   const [sources, setSources] = useState<CatalogSource[]>([]);
-  const [sourceId, setSourceId] = useState(readTopologySource);
+  const [sourceId, setSourceId] = useState(seedTopologySource);
   const [items, setItems] = useState<Array<BtTree | HfsmMachine>>([]);
   const [selectedId, setSelectedId] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('');
@@ -683,39 +691,8 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
       error={error}
       actions={
         <>
-          <label className="flex items-center gap-2 text-xs text-studio-muted">
-            数据源
-            <select
-              className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-              value={sourceId}
-              onChange={(e) => setSourceId(e.target.value)}
-            >
-              {sources.map((s) => {
-                const exists = isBt ? s.behaviorTrees.exists : s.hfsm.exists;
-                return (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.id}){exists ? '' : ' · 尚未写出'}
-                  </option>
-                );
-              })}
-              {sources.length === 0 ? <option value="core">Core</option> : null}
-            </select>
-          </label>
-          {!isBt ? (
-            <label className="flex items-center gap-2 text-xs text-studio-muted">
-              连线模式
-              <select
-                className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-                value={connectMode}
-                onChange={(e) => setConnectMode(e.target.value as 'child' | 'transition')}
-              >
-                <option value="child">层级（Compound→子状态）</option>
-                <option value="transition">转移（状态→状态）</option>
-              </select>
-            </label>
-          ) : null}
           <Button variant="ghost" size="sm" onClick={() => void loadItems(sourceId)}>
-            重新加载
+            重载
           </Button>
           <Button
             variant="primary"
@@ -739,6 +716,28 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     >
       <div className="flex h-full">
         <aside className="flex w-56 shrink-0 flex-col space-y-2 overflow-auto border-r border-studio-elevated bg-studio-surface p-3">
+          <label className="block text-xs text-studio-muted">
+            Mod
+            <select
+              className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
+              value={sourceId}
+              onChange={(e) => {
+                setSourceId(e.target.value);
+                if (e.target.value !== 'core') writeStudioMod(e.target.value);
+              }}
+            >
+              {sources.map((s) => {
+                const exists = isBt ? s.behaviorTrees.exists : s.hfsm.exists;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.id}){exists ? '' : ' · 尚未写出'}
+                  </option>
+                );
+              })}
+              {sources.length === 0 ? <option value="core">Core</option> : null}
+            </select>
+          </label>
+
           <div className="text-[10px] uppercase tracking-wide text-studio-muted">拓扑清单</div>
           {items.map((row) => (
             <button
@@ -842,7 +841,18 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 中键平移 · 左键框选 · 右键添加节点 · 从节点下方拖线连接
               </div>
-              <div className="absolute right-3 top-3 z-10 flex gap-2">
+              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+                {!isBt ? (
+                  <select
+                    className="rounded border border-studio-fill bg-studio-bg px-2 py-1 text-xs text-studio-label"
+                    value={connectMode}
+                    onChange={(e) => setConnectMode(e.target.value as 'child' | 'transition')}
+                    aria-label="连线模式"
+                  >
+                    <option value="child">层级（Compound→子状态）</option>
+                    <option value="transition">转移（状态→状态）</option>
+                  </select>
+                ) : null}
                 <Button variant="ghost" onClick={() => setPaletteOpen((v) => !v)}>
                   添加节点
                 </Button>

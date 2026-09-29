@@ -12,6 +12,7 @@ import { RichTextArea, RunSpan } from './RichTextArea';
 import { Button } from '@/components/ui/Button';
 import { fieldControlClass } from '@/components/ui/Field';
 import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
+import { readStudioMod, writeStudioMod } from '../authoring-studio/useStudioMod';
 import './textBank.css';
 
 type ModInfo = { id: string; name?: string };
@@ -112,8 +113,10 @@ export function TextBankPage() {
       const clean = list.filter((m) => !!m.id);
       setMods(clean);
       if (clean.length > 0) {
-        // 与对话房同一默认 Mod：叙事展示包自带词条/双语表，首屏有真数据可看。
-        setModId(clean.some((m) => m.id === 'NarrativeShowcaseMod') ? 'NarrativeShowcaseMod' : clean[0]!.id);
+        // 工作室记住的 Mod 优先；首次进编辑器才落回叙事展示包（自带词条/双语表，首屏有真数据）。
+        const remembered = readStudioMod();
+        const fallback = clean.some((m) => m.id === 'NarrativeShowcaseMod') ? 'NarrativeShowcaseMod' : clean[0]!.id;
+        setModId(remembered && clean.some((m) => m.id === remembered) ? remembered : fallback);
       }
     })();
   }, []);
@@ -337,13 +340,23 @@ export function TextBankPage() {
     >
     <div className="text-bank-page">
       <div className="text-bank-toolbar">
-        <select className={fieldControlClass} value={modId} onChange={(e) => setModId(e.target.value)}>
-          {mods.map((mod) => (
-            <option key={mod.id} value={mod.id}>
-              {mod.name ?? mod.id}
-            </option>
-          ))}
-        </select>
+        <label className="flex items-center gap-2 text-xs text-studio-muted" aria-label="Mod">
+          Mod
+          <select
+            className={fieldControlClass}
+            value={modId}
+            onChange={(e) => {
+              setModId(e.target.value);
+              writeStudioMod(e.target.value);
+            }}
+          >
+            {mods.map((mod) => (
+              <option key={mod.id} value={mod.id}>
+                {mod.name ?? mod.id}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="text-bank-group">
           <input
             className={`${fieldControlClass} min-w-[220px]`}

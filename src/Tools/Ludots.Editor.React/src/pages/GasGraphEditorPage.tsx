@@ -48,6 +48,7 @@ import {
   type GraphEditorDialect,
 } from './gas-graph-editor/graphEditorDialect';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
+import { writeStudioMod } from './authoring-studio/useStudioMod';
 import { EventEntryInspector, type InputActionView } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
 import {
@@ -781,7 +782,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
   const [edges, setEdges] = React.useState<Edge<GasEdgeData>[]>([]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = React.useState<string | null>(null);
-  const [status, setStatus] = React.useState<string>('Idle');
+  const [status, setStatus] = React.useState<string>('待命');
   const [diagnosticsText, setDiagnosticsText] = React.useState<string>('');
   const [busy, setBusy] = React.useState(false);
   const [debugMounts, setDebugMounts] = React.useState<DebugMount[]>([]);
@@ -2158,25 +2159,6 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       status={status}
       actions={
         <>
-          <label className="flex items-center gap-2 text-xs text-studio-muted">
-            mod
-            <input
-              value={modId}
-              onChange={(e) => setModId(e.target.value)}
-              className="w-56 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs text-studio-muted">
-            图
-            <input
-              value={graphId}
-              onChange={(e) => setGraphId(e.target.value)}
-              className="w-64 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-            />
-          </label>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void loadGraph()}>
-            加载
-          </Button>
           <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void onValidate()}>
             校验
           </Button>
@@ -2233,6 +2215,42 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
           </button>
         ) : (
         <div className="flex min-h-0 flex-col border-r border-studio-elevated">
+          <div className="space-y-2 border-b border-studio-elevated bg-studio-surface p-3">
+            <label className="block text-xs text-studio-muted">
+              Mod
+              <input
+                list="studio-graph-mods"
+                value={modId}
+                onChange={(e) => setModId(e.target.value)}
+                className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px] text-studio-label"
+              />
+              <datalist id="studio-graph-mods">
+                {catalogModsForDialect.map((m) => (
+                  <option key={m.id} value={m.id} />
+                ))}
+              </datalist>
+            </label>
+            <label className="block text-xs text-studio-muted">
+              图
+              <input
+                value={graphId}
+                onChange={(e) => setGraphId(e.target.value)}
+                className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px] text-studio-label"
+              />
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              disabled={busy}
+              onClick={() => {
+                writeStudioMod(modId);
+                void loadGraph();
+              }}
+            >
+              加载
+            </Button>
+          </div>
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
               mods={catalogModsForDialect}

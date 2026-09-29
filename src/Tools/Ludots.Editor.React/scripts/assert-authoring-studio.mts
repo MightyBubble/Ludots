@@ -231,4 +231,18 @@ assert(runPage.includes('/api/launcher/state'), 'run page must read launcher sta
 assert(runPage.includes('agent-bridge'), 'run page must surface the live-debug agent bridge channel');
 assert(!/\bstatus=\{status\}/.test(runPage), 'run page footer must show a real fact — bare `status={status}` leaks the deprecated window.status global');
 
+const storyContract = readFileSync(join(here, '../src/pages/StoryAuthoringPage.tsx'), 'utf8');
+assert(storyContract.includes('WorkspaceLayout'), 'dialogue/timeline rooms must follow the workspace layout contract');
+assert(storyContract.includes('DialogueTreeInspector'), 'dialogue inspector renders in the layout inspector rail, not inside the canvas');
+assert(!storyContract.includes('pageClass'), 'story rooms must not keep the legacy pageClass shell');
+assert(!storyContract.includes('目标 Mod'), 'mod picker label is Mod everywhere');
+assert(storyContract.includes('writeStudioMod'), 'story rooms share the studio mod memory');
+assert(topologyCopy.includes('writeStudioMod'), 'topology room shares the studio mod memory');
+assert(!topologyCopy.includes('重新加载'), 'topology reload button is 重载 like every room');
+assert(topologyCopy.includes('aria-label="连线模式"'), 'topology connect mode is a canvas tool, not a header control');
+assert(gasPageCopy.includes('datalist id="studio-graph-mods"'), 'blueprint mod/graph inputs live in the rail with catalog suggestions');
+assert(!gasPageCopy.includes("'Idle'"), 'blueprint status starts in Chinese');
+const studioMod = readFileSync(join(here, '../src/pages/authoring-studio/useStudioMod.ts'), 'utf8');
+assert(studioMod.includes('localStorage'), 'studio mod memory persists in browser-local storage');
+
 console.log('assert-authoring-studio: ok');

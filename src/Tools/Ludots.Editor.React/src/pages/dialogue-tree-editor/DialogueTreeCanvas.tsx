@@ -53,6 +53,9 @@ type Props = {
   selectedNodeId: string;
   onSelectNode: (nodeId: string) => void;
   onChange: (tree: DialogueTree) => void;
+};
+
+type InspectorProps = Props & {
   speakers: readonly SpeakerRow[];
   speakerNameOf: (speakerId: string) => string | undefined;
   defaultTextOf: (token: string) => string;
@@ -69,14 +72,6 @@ export function DialogueTreeCanvas({
   selectedNodeId,
   onSelectNode,
   onChange,
-  speakers,
-  speakerNameOf,
-  defaultTextOf,
-  portraitAssetIds,
-  drafts,
-  onDraft,
-  onClearDraft,
-  onQuickAddSpeaker,
 }: Props) {
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
   const treeRef = useRef(tree);
@@ -116,11 +111,6 @@ export function DialogueTreeCanvas({
   useEffect(() => {
     requestAnimationFrame(() => reactFlowRef.current?.fitView({ padding: 0.18 }));
   }, [tree.id]);
-
-  const selectedNode = useMemo(
-    () => tree.nodes.find((node) => node.id === selectedNodeId) ?? null,
-    [tree.nodes, selectedNodeId],
-  );
 
   const commit = useCallback(
     (nextNodes: DialogueCanvasNode[], nextEdges: Edge[], base = treeRef.current) => {
@@ -177,20 +167,6 @@ export function DialogueTreeCanvas({
     onSelectNode(id);
   };
 
-  const patchNode = (next: DialogueNode) => {
-    onChange({
-      ...tree,
-      nodes: tree.nodes.map((node) => (node.id === next.id ? next : node)),
-    });
-  };
-
-  const addChoice = () => {
-    if (!selectedNode) return;
-    const used = new Set(tree.nodes.flatMap((node) => (node.choices ?? []).map((choice) => choice.id)));
-    const choice: DialogueChoice = { id: uniqueChoiceId(used), lineId: '' };
-    patchNode({ ...selectedNode, choices: [...(selectedNode.choices ?? []), choice], nextNode: undefined });
-  };
-
   const relayout = () => {
     const flow = dialogueToFlow(tree, lines);
     setNodes(flow.nodes);
@@ -199,9 +175,8 @@ export function DialogueTreeCanvas({
   };
 
   return (
-    <div className="grid h-full min-h-[32rem] grid-cols-12 gap-0 overflow-hidden rounded-lg border border-studio-elevated">
-      <div className="relative col-span-8 bg-studio-bg">
-        <ReactFlow
+    <div className="relative h-full min-h-[32rem] overflow-hidden rounded-lg border border-studio-elevated bg-studio-bg">
+      <ReactFlow
           nodes={paintedNodes}
           edges={edges}
           nodeTypes={nodeTypes}
@@ -258,77 +233,111 @@ export function DialogueTreeCanvas({
             maskColor="color-mix(in srgb, var(--studio-bg) 55%, transparent)"
             nodeColor={(node) => (node.type === 'dialogueChoice' ? STUDIO_THEME.yellow : STUDIO_THEME.blue)}
           />
-        </ReactFlow>
-        <div className="absolute right-3 top-3 z-10 flex gap-2">
-          <Button variant="ghost" onClick={addStatement}>
-            加一句
-          </Button>
-          <Button variant="ghost" onClick={relayout}>
-            自动排版
-          </Button>
-        </div>
+      </ReactFlow>
+      <div className="absolute right-3 top-3 z-10 flex gap-2">
+        <Button variant="ghost" onClick={addStatement}>
+          加一句
+        </Button>
+        <Button variant="ghost" onClick={relayout}>
+          自动排版
+        </Button>
       </div>
-      <aside className="col-span-4 space-y-3 overflow-auto border-l border-studio-elevated bg-studio-surface p-4">
-        <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
-        <label className={labelClass}>
-          对话 ID
-          <input
-            className={fieldControlClass}
-            value={tree.id}
-            onChange={(e) => onChange({ ...tree, id: e.target.value })}
-          />
-        </label>
-        <label className={labelClass}>
-          显示名
-          <input
-            className={fieldControlClass}
-            value={tree.displayName ?? ''}
-            onChange={(e) => onChange({ ...tree, displayName: e.target.value })}
-          />
-        </label>
-        <label className={labelClass}>
-          入口节点
-          <select
-            className={fieldControlClass}
-            value={tree.entryNode}
-            onChange={(e) => onChange({ ...tree, entryNode: e.target.value })}
-          >
-            {tree.nodes.map((node) => (
-              <option key={node.id} value={node.id}>
-                {node.id}
-              </option>
-            ))}
-          </select>
-        </label>
-        {selectedNode ? (
-          <StatementInspector
-            tree={tree}
-            node={selectedNode}
-            lines={lines}
-            speakers={speakers}
-            speakerNameOf={speakerNameOf}
-            defaultTextOf={defaultTextOf}
-            portraitAssetIds={portraitAssetIds}
-            drafts={drafts}
-            onDraft={onDraft}
-            onClearDraft={onClearDraft}
-            onQuickAddSpeaker={onQuickAddSpeaker}
-            onChange={patchNode}
-            onAddChoice={addChoice}
-            onRemoveChoice={(choiceId) => onChange(removeDialogueChoice(tree, selectedNode.id, choiceId))}
-            canRemove={tree.nodes.length > 1}
-            onRemove={() => {
-              onChange(removeDialogueStatement(tree, selectedNode.id));
-              onSelectNode('');
-            }}
-          />
-        ) : (
-          <p className="text-xs text-studio-muted">
-            蓝头是说话，黄头是选项。线从下口接到上口，线上不写字。黄线是选项，蓝线是接下句。
-            选中节点后直接在右边写说话人和正文，保存时自动进台词本和文本表。
-          </p>
-        )}
-      </aside>
+    </div>
+  );
+}
+
+export function DialogueTreeInspector({
+  tree,
+  lines,
+  selectedNodeId,
+  onSelectNode,
+  onChange,
+  speakers,
+  speakerNameOf,
+  defaultTextOf,
+  portraitAssetIds,
+  drafts,
+  onDraft,
+  onClearDraft,
+  onQuickAddSpeaker,
+}: InspectorProps) {
+  const selectedNode = tree.nodes.find((node) => node.id === selectedNodeId) ?? null;
+
+  const patchNode = (next: DialogueNode) => {
+    onChange({
+      ...tree,
+      nodes: tree.nodes.map((node) => (node.id === next.id ? next : node)),
+    });
+  };
+
+  const addChoice = () => {
+    if (!selectedNode) return;
+    const used = new Set(tree.nodes.flatMap((node) => (node.choices ?? []).map((choice) => choice.id)));
+    const choice: DialogueChoice = { id: uniqueChoiceId(used), lineId: '' };
+    patchNode({ ...selectedNode, choices: [...(selectedNode.choices ?? []), choice], nextNode: undefined });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
+      <label className={labelClass}>
+        对话 ID
+        <input
+          className={fieldControlClass}
+          value={tree.id}
+          onChange={(e) => onChange({ ...tree, id: e.target.value })}
+        />
+      </label>
+      <label className={labelClass}>
+        显示名
+        <input
+          className={fieldControlClass}
+          value={tree.displayName ?? ''}
+          onChange={(e) => onChange({ ...tree, displayName: e.target.value })}
+        />
+      </label>
+      <label className={labelClass}>
+        入口节点
+        <select
+          className={fieldControlClass}
+          value={tree.entryNode}
+          onChange={(e) => onChange({ ...tree, entryNode: e.target.value })}
+        >
+          {tree.nodes.map((node) => (
+            <option key={node.id} value={node.id}>
+              {node.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      {selectedNode ? (
+        <StatementInspector
+          tree={tree}
+          node={selectedNode}
+          lines={lines}
+          speakers={speakers}
+          speakerNameOf={speakerNameOf}
+          defaultTextOf={defaultTextOf}
+          portraitAssetIds={portraitAssetIds}
+          drafts={drafts}
+          onDraft={onDraft}
+          onClearDraft={onClearDraft}
+          onQuickAddSpeaker={onQuickAddSpeaker}
+          onChange={patchNode}
+          onAddChoice={addChoice}
+          onRemoveChoice={(choiceId) => onChange(removeDialogueChoice(tree, selectedNode.id, choiceId))}
+          canRemove={tree.nodes.length > 1}
+          onRemove={() => {
+            onChange(removeDialogueStatement(tree, selectedNode.id));
+            onSelectNode('');
+          }}
+        />
+      ) : (
+        <p className="text-xs text-studio-muted">
+          蓝头是说话，黄头是选项。线从下口接到上口，线上不写字。黄线是选项，蓝线是接下句。
+          选中节点后直接在这里写说话人和正文，保存时自动进台词本和文本表。
+        </p>
+      )}
     </div>
   );
 }

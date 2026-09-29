@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { diskSaveStatus } from './authoring-studio/authoringTheme';
 import { Button } from '@/components/ui/Button';
-import { pageClass } from '@/components/ui/chrome';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
+import { DialogueTreeInspector } from './dialogue-tree-editor/DialogueTreeCanvas';
+import { readStudioMod, writeStudioMod } from './authoring-studio/useStudioMod';
 import { fieldControlClass, } from '@/components/ui/Field';
 import { DialogueTreeCanvas } from './dialogue-tree-editor/DialogueTreeCanvas';
 import {
@@ -86,7 +88,7 @@ function asArray<T>(value: unknown): T[] {
 
 export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ tool }) => {
   const [mods, setMods] = useState<ModInfo[]>([]);
-  const [modId, setModId] = useState('NarrativeShowcaseMod');
+  const [modId, setModId] = useState(() => readStudioMod() ?? 'NarrativeShowcaseMod');
   const [catalogs, setCatalogs] = useState<CatalogInfo[]>([]);
   const [catalogId, setCatalogId] = useState(() => defaultCatalogId(tool));
   const [items, setItems] = useState<unknown[]>([]);
@@ -861,7 +863,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     if (!selected || advancedJson || !FORM_CATALOGS.has(catalogId)) return null;
     if (catalogId === 'lines') return renderLineForm(selected as LineRow);
     if (catalogId === 'speakers') return renderSpeakerForm(selected as SpeakerRow);
-    if (catalogId === 'sequences') return renderSequenceForm(selected as SequenceRow);
+    if (catalogId === 'sequences') return tool === 'timeline' ? null : renderSequenceForm(selected as SequenceRow);
     return null;
   })();
 
@@ -873,26 +875,61 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     setItemsText(text);
   };
 
-  return (
-    <div className={`${pageClass} overflow-hidden p-6 font-sans`}>
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        <h1 className="text-xl text-studio-label">
-          {tool === 'timeline' ? '时间轴' : tool === 'dialogue' ? '对话' : '叙事配置'}
-        </h1>
-        <span className="text-xs text-studio-muted">
-          {tool === 'timeline'
-            ? '演出序列：镜头 / 字幕 / 信号轨。拖块改时长，保存进 Sequencer/sequences.json。'
-            : tool === 'dialogue'
-              ? '对话是树：节点里直接选说话人、写正文，保存时台词本和文本表自动同步。'
-              : '台词 / 对话树 / 演出序列；换肤只动 panelTheme + CSS'}
-        </span>
-      </div>
+  const timelineRow = tool === 'timeline' && catalogId === 'sequences' && selected ? (selected as SequenceRow) : null;
+  const timelineTracks: TrackRow[] = timelineRow ? asArray<TrackRow>(timelineRow.tracks) : [];
+  const timelineTrackIndex = Math.min(Math.max(0, selectedTrackIndex), Math.max(0, timelineTracks.length - 1));
+  const timelineTrack = timelineTracks[timelineTrackIndex];
+  const updateTimelineTrack = (idx: number, next: TrackRow) => {
+    if (!timelineRow) return;
+    const copy = timelineTracks.slice();
+    copy[idx] = next;
+    replaceSelected({ ...timelineRow, tracks: copy });
+  };
 
-      <div className="grid h-[calc(100%-3rem)] grid-cols-12 gap-4">
-        <aside className="col-span-3 space-y-3 overflow-auto">
+  return (
+    <WorkspaceLayout
+      title={tool === 'timeline' ? '时间轴' : tool === 'dialogue' ? '对话' : '叙事配置'}
+      blurb={
+        tool === 'timeline'
+          ? '演出序列：镜头 / 字幕 / 信号轨。拖块改时长，保存进 Sequencer/sequences.json。保存只改磁盘；正在玩的局要重开才会按新树走。'
+          : tool === 'dialogue'
+            ? '对话是树：节点里直接选说话人、写正文，保存时台词本和文本表自动同步。正在玩的局要重开才会按新树走。'
+            : '台词 / 对话树 / 演出序列的作者面；保存只改磁盘，写入前先过引擎校验。'
+      }
+      status={status}
+      error={error}
+      actions={
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              tool === 'dialogue' ? void loadDialogueAuthoringState(modId) : void loadCatalog(modId, catalogId)
+            }
+          >
+            重载
+          </Button>
+          <label className="flex items-center gap-1 text-xs text-studio-muted">
+            <input type="checkbox" checked={advancedJson} onChange={(e) => setAdvancedJson(e.target.checked)} />
+            高级 JSON
+          </label>
+          <Button variant="primary" size="sm" onClick={() => void save()}>
+            保存
+          </Button>
+        </>
+      }
+      rail={
+        <div className="space-y-3">
           <label className={labelClass}>
-            目标 Mod
-            <select className={fieldClass} value={modId} onChange={(e) => setModId(e.target.value)}>
+            Mod
+            <select
+              className={fieldClass}
+              value={modId}
+              onChange={(e) => {
+                setModId(e.target.value);
+                writeStudioMod(e.target.value);
+              }}
+            >
               {mods.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.id}
@@ -950,69 +987,229 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
               有 {Object.keys(drafts).length + newSpeakers.length} 处节点草稿未保存。
             </p>
           ) : null}
-        </aside>
+        </div>
+      }
+      inspector={
+        dialogueTree && !advancedJson ? (
+          <DialogueTreeInspector
+            tree={dialogueTree}
+            lines={linePreviews}
+            selectedNodeId={selectedDialogueNodeId}
+            onSelectNode={setSelectedDialogueNodeId}
+            onChange={(next) => replaceSelected(next)}
+            speakers={speakerRows}
+            speakerNameOf={speakerNameOf}
+            defaultTextOf={defaultTextOf}
+            portraitAssetIds={portraitAssetIds}
+            drafts={drafts}
+            onDraft={handleDraft}
+            onClearDraft={clearDraft}
+            onQuickAddSpeaker={handleQuickAddSpeaker}
+          />
+        ) : timelineRow && !advancedJson ? (
+          <div className="space-y-3">
+            <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={labelClass}>
+                演出 ID
+                <input
+                  className={fieldClass}
+                  value={timelineRow.id}
+                  onChange={(e) => replaceSelected({ ...timelineRow, id: e.target.value })}
+                />
+              </label>
+              <label className={labelClass}>
+                显示名词条
+                <input
+                  className={fieldClass}
+                  value={timelineRow.displayNameToken ?? timelineRow.displayName ?? ''}
+                  onChange={(e) => replaceSelected({ ...timelineRow, displayNameToken: e.target.value })}
+                />
+              </label>
+              <label className={labelClass}>
+                时钟倍率
+                <input
+                  className={fieldClass}
+                  type="number"
+                  step="0.1"
+                  value={timelineRow.clock?.rate ?? 1}
+                  onChange={(e) => replaceSelected({ ...timelineRow, clock: { rate: Number(e.target.value) || 1 } })}
+                />
+              </label>
+              <label className="flex items-center gap-2 pt-5 text-xs text-studio-muted">
+                <input
+                  type="checkbox"
+                  checked={!!timelineRow.clearCameraOnComplete}
+                  onChange={(e) => replaceSelected({ ...timelineRow, clearCameraOnComplete: e.target.checked })}
+                />
+                结束时清镜头
+              </label>
+            </div>
 
-        <main className="col-span-9 flex min-h-0 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={() => void save()}>
-              保存
-            </Button>
-            {tool === 'dialogue' ? (
-              <Button variant="ghost" onClick={() => void loadDialogueAuthoringState(modId)}>
-                重载
+            <div className="flex items-center justify-between border-t border-studio-elevated pt-2">
+              <h3 className="text-xs text-studio-yellow">选中轨道属性</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const nextTracks = [
+                    ...timelineTracks,
+                    { type: 'Camera', profile: '', start: timelineTracks.reduce((m, t) => Math.max(m, (t.start || 0) + (t.duration || 0)), 0), duration: 2 },
+                  ];
+                  replaceSelected({ ...timelineRow, tracks: nextTracks });
+                  setSelectedTrackIndex(nextTracks.length - 1);
+                }}
+              >
+                + 加轨道
               </Button>
+            </div>
+
+            {timelineTrack ? (
+              <div className="grid grid-cols-2 gap-2">
+                <label className={labelClass}>
+                  类型
+                  <select
+                    className={fieldClass}
+                    value={timelineTrack.type}
+                    onChange={(e) => updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, type: e.target.value })}
+                  >
+                    <option value="Camera">Camera 镜头</option>
+                    <option value="Subtitle">Subtitle 字幕</option>
+                    <option value="Signal">Signal 信号</option>
+                  </select>
+                </label>
+                <label className={labelClass}>
+                  开始秒
+                  <input
+                    className={fieldClass}
+                    type="number"
+                    step="0.1"
+                    value={timelineTrack.start}
+                    onChange={(e) =>
+                      updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, start: Number(e.target.value) || 0 })
+                    }
+                  />
+                </label>
+                {timelineTrack.type !== 'Signal' ? (
+                  <label className={labelClass}>
+                    持续秒
+                    <input
+                      className={fieldClass}
+                      type="number"
+                      step="0.1"
+                      value={timelineTrack.duration ?? 2}
+                      onChange={(e) =>
+                        updateTimelineTrack(timelineTrackIndex, {
+                          ...timelineTrack,
+                          duration: Number(e.target.value) || 0.2,
+                        })
+                      }
+                    />
+                  </label>
+                ) : null}
+                {timelineTrack.type === 'Camera' ? (
+                  <label className={labelClass}>
+                    镜头配置（VirtualCamera）
+                    <input
+                      className={fieldClass}
+                      value={timelineTrack.profile ?? ''}
+                      onChange={(e) => updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, profile: e.target.value })}
+                    />
+                  </label>
+                ) : null}
+                {timelineTrack.type === 'Subtitle' ? (
+                  <>
+                    <label className={labelClass}>
+                      台词 ID
+                      <input
+                        className={fieldClass}
+                        value={timelineTrack.lineId ?? ''}
+                        onChange={(e) => updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, lineId: e.target.value })}
+                      />
+                    </label>
+                    <label className={labelClass}>
+                      表现配置
+                      <input
+                        className={fieldClass}
+                        value={timelineTrack.presentationProfile ?? ''}
+                        onChange={(e) =>
+                          updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, presentationProfile: e.target.value })
+                        }
+                      />
+                    </label>
+                  </>
+                ) : null}
+                {timelineTrack.type === 'Signal' ? (
+                  <>
+                    <label className={labelClass}>
+                      事件 ID
+                      <input
+                        className={fieldClass}
+                        value={timelineTrack.eventId ?? ''}
+                        onChange={(e) => updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, eventId: e.target.value })}
+                      />
+                    </label>
+                    <label className={labelClass}>
+                      动作图
+                      <input
+                        className={fieldClass}
+                        value={timelineTrack.actionGraphId ?? ''}
+                        onChange={(e) =>
+                          updateTimelineTrack(timelineTrackIndex, { ...timelineTrack, actionGraphId: e.target.value })
+                        }
+                      />
+                    </label>
+                  </>
+                ) : null}
+                <Button
+                  variant="danger"
+                  className="col-span-2"
+                  onClick={() => {
+                    const copy = timelineTracks.filter((_, i) => i !== timelineTrackIndex);
+                    replaceSelected({ ...timelineRow, tracks: copy });
+                    setSelectedTrackIndex(Math.max(0, timelineTrackIndex - 1));
+                  }}
+                >
+                  删除此轨道
+                </Button>
+              </div>
             ) : (
-              <Button variant="ghost" onClick={() => void loadCatalog(modId, catalogId)}>
-                重载
-              </Button>
+              <p className="text-xs text-studio-muted">先在时间轴上选中一块，或「+ 加轨道」。</p>
             )}
-            <label className="flex items-center gap-2 text-xs text-studio-muted">
-              <input type="checkbox" checked={advancedJson} onChange={(e) => setAdvancedJson(e.target.checked)} />
-              高级 JSON
-            </label>
-            {status && <span className="text-xs text-studio-blue">{status}</span>}
-            {error && <span className="text-xs text-studio-red">{error}</span>}
           </div>
-
-          {dialogueTree && !advancedJson ? (
-            <div className="min-h-0 flex-1">
-              <DialogueTreeCanvas
-                tree={dialogueTree}
-                lines={linePreviews}
-                selectedNodeId={selectedDialogueNodeId}
-                onSelectNode={setSelectedDialogueNodeId}
-                onChange={(next) => replaceSelected(next)}
-                speakers={speakerRows}
-                speakerNameOf={speakerNameOf}
-                defaultTextOf={defaultTextOf}
-                portraitAssetIds={portraitAssetIds}
-                drafts={drafts}
-                onDraft={handleDraft}
-                onClearDraft={clearDraft}
-                onQuickAddSpeaker={handleQuickAddSpeaker}
-              />
-            </div>
-          ) : formBody && !advancedJson ? (
-            <div className="max-h-[75vh] overflow-auto rounded-lg border border-studio-elevated bg-studio-surface p-4">
-              {formBody}
-            </div>
-          ) : (
-            <textarea
-              className="h-[70vh] w-full rounded-md border border-studio-elevated bg-studio-bg p-3 font-mono text-sm leading-relaxed"
-              value={jsonViewValue}
-              onChange={(e) => onJsonChange(e.target.value)}
-              spellCheck={false}
-            />
-          )}
-
-          <p className="text-xs text-studio-muted">
-            {tool === 'dialogue'
-              ? '保存会一起写对话树 / 台词本 / 说话人 / 文案词条 / 语言表，写入前先过引擎校验。正在玩的局要重开才会按新树走。'
-              : `写入 ${catalogs.find((c) => c.id === catalogId)?.relativePath ?? '…'}。保存只改磁盘；正在玩的局要重开才会按新树走。`}
-          </p>
-        </main>
-      </div>
-    </div>
+        ) : null
+      }
+    >
+      {dialogueTree && !advancedJson ? (
+        <div className="h-full p-3">
+          <DialogueTreeCanvas
+            tree={dialogueTree}
+            lines={linePreviews}
+            selectedNodeId={selectedDialogueNodeId}
+            onSelectNode={setSelectedDialogueNodeId}
+            onChange={(next) => replaceSelected(next)}
+          />
+        </div>
+      ) : timelineRow && !advancedJson ? (
+        <div className="h-full overflow-auto p-4">
+          <SequencerTimelineEditor
+            tracks={timelineTracks}
+            selectedIndex={timelineTrackIndex}
+            onSelect={setSelectedTrackIndex}
+            onChangeTrack={updateTimelineTrack}
+          />
+        </div>
+      ) : formBody && !advancedJson ? (
+        <div className="h-full overflow-auto p-4">{formBody}</div>
+      ) : (
+        <textarea
+          className="h-full w-full resize-none bg-studio-bg p-3 font-mono text-sm leading-relaxed outline-none"
+          value={jsonViewValue}
+          onChange={(e) => onJsonChange(e.target.value)}
+          spellCheck={false}
+        />
+      )}
+    </WorkspaceLayout>
   );
 };
 
