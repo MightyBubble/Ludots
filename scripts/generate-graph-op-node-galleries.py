@@ -140,6 +140,18 @@ def collect_team_bindings(actors: list, template_teams: dict[str, int]) -> list[
     ]
 
 
+def team_relationships(teams: list[dict]) -> dict:
+    team_ids = [binding["TeamId"] for binding in teams]
+    edges = [
+        {"TeamA": team_id, "TeamB": team_id, "TypeId": "Friendly", "Symmetric": False}
+        for team_id in team_ids
+    ]
+    for index, team_a in enumerate(team_ids):
+        for team_b in team_ids[index + 1:]:
+            edges.append({"TeamA": team_a, "TeamB": team_b, "TypeId": "Hostile", "Symmetric": True})
+    return {"Teams": edges, "Players": [], "PlayerTeams": []}
+
+
 def map_variables_from_vignette(op: str, vignette: dict) -> list[dict]:
     raw = vignette.get("variables") or []
     if op in MAP_VAR_OPS and not raw:
@@ -241,6 +253,7 @@ def write_map(
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
+        payload["ParticipantRelationships"] = team_relationships(teams)
     dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">

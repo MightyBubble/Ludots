@@ -79,6 +79,30 @@
       "RepresentativeInstanceId": "camera_team_2"
     }
   ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "Hostile",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
   "Players": [
     {
       "PlayerId": 1,

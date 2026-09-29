@@ -70,5 +70,17 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "ui-player-aggregate-faction-owner"
     }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

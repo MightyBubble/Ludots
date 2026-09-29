@@ -66,6 +66,18 @@
       "RepresentativeInstanceId": "ballista_1"
     }
   ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
   "Players": [
     {
       "PlayerId": 1,

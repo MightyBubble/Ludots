@@ -71,7 +71,12 @@
         "TeamA": 1,
         "TeamB": 1,
         "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
         "Symmetric": true
       }
     ],

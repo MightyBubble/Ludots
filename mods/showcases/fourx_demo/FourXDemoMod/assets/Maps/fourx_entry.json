@@ -87,5 +87,59 @@
       "TeamId": 4,
       "RepresentativeInstanceId": "fourx-nomad-caravan"
     }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 3,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 4,
+        "TeamB": 4,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 3,
+        "TypeId": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 4,
+        "TypeId": "Hostile",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

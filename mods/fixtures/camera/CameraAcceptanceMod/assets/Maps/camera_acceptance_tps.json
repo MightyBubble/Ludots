@@ -71,6 +71,18 @@
       "RepresentativeInstanceId": "camera-acceptance-local-player"
     }
   ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
   "Players": [
     {
       "PlayerId": 1,

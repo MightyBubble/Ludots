@@ -78,21 +78,36 @@
         "TeamA": 1,
         "TeamB": 1,
         "TypeId": "GraphScore.Participant",
-        "Attitude": "Friendly",
         "Symmetric": true
       },
       {
         "TeamA": 2,
         "TeamB": 2,
         "TypeId": "GraphScore.Participant",
-        "Attitude": "Friendly",
         "Symmetric": true
       },
       {
         "TeamA": 1,
         "TeamB": 2,
         "TypeId": "GraphScore.Participant",
-        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "Hostile",
         "Symmetric": true
       }
     ],

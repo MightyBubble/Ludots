@@ -88,5 +88,17 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "marker"
     }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

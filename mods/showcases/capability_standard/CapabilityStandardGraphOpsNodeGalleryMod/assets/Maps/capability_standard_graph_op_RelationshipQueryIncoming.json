@@ -138,5 +138,17 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "self"
     }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "Friendly",
+        "Symmetric": false
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

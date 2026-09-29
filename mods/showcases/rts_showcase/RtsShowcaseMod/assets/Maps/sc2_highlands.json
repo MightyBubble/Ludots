@@ -148,21 +148,36 @@
         "TeamA": 2,
         "TeamB": 2,
         "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
         "Symmetric": true
       },
       {
         "TeamA": 3,
         "TeamB": 3,
         "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
         "Symmetric": true
       },
       {
         "TeamA": 2,
         "TeamB": 3,
         "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 3,
+        "TypeId": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "Hostile",
         "Symmetric": true
       }
     ],
