@@ -1022,6 +1022,12 @@ namespace Ludots.Tests.Architecture
     "visualSnapshotBufferCapacity": 16384,
     "visualProxyBufferCapacity": 16384,
     "skinnedVisualBatchCapacity": 2048,
+    "gpuSkinned": {
+      "maxBatches": 32,
+      "maxUniquePoses": 64,
+      "maxBoneSlots": 256,
+      "posePhaseBuckets": 8
+    },
     "presentationRequestCapacity": 16384,
     "clearTransientVisualProjectionCapacity": 8192,
     "instancedBatchRequestCapacity": 2048,
@@ -1073,6 +1079,10 @@ namespace Ludots.Tests.Architecture
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 32768,
+    "gpuSkinned": {
+      "maxBatches": 64,
+      "maxUniquePoses": 128
+    },
     "presentationRequestCapacity": 131072,
     "clearTransientVisualProjectionCapacity": 16384,
     "instancedBatchRequestCapacity": 8192,
@@ -1112,6 +1122,10 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.VisualSnapshotBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.GpuSkinned.MaxBatches, Is.EqualTo(64));
+            Assert.That(config.Presentation.GpuSkinned.MaxUniquePoses, Is.EqualTo(128));
+            Assert.That(config.Presentation.GpuSkinned.MaxBoneSlots, Is.EqualTo(256));
+            Assert.That(config.Presentation.GpuSkinned.PosePhaseBuckets, Is.EqualTo(8));
             Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.ClearTransientVisualProjectionCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.InstancedBatchRequestCapacity, Is.EqualTo(8192));
@@ -1248,6 +1262,13 @@ namespace Ludots.Tests.Architecture
                 VisualSnapshotBufferCapacity = 16384,
                 VisualProxyBufferCapacity = 16384,
                 SkinnedVisualBatchCapacity = 2048,
+                GpuSkinned = new GpuSkinnedRuntimeConfig
+                {
+                    MaxBatches = 64,
+                    MaxUniquePoses = 128,
+                    MaxBoneSlots = 1024,
+                    PosePhaseBuckets = 16,
+                },
                 PresentationRequestCapacity = 16384,
                 ClearTransientVisualProjectionCapacity = 8192,
                 InstancedBatchRequestCapacity = 2048,
