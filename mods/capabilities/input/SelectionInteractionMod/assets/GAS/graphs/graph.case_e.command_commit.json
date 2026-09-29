@@ -38,7 +38,8 @@
       },
       {
         "id": "submit",
-        "op": "SubmitCommandIntent"
+        "op": "SubmitCommandIntent",
+        "queue": "onQueueModifier"
       },
       {
         "id": "ok",

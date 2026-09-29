@@ -10,7 +10,8 @@
     "orderQueueCapacity": 16384,
     "orderAdmissionResultCapacity": 32768,
     "orderAdmissionRejectionCapacity": 16384,
-    "orderTerminalResultCapacity": 16384
+    "orderTerminalResultCapacity": 16384,
+    "commandIntentScratchCapacity": 16384
   },
   "commandSource": {
     "acquisition": {
