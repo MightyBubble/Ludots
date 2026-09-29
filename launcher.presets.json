@@ -2556,6 +2556,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "tcg_prompt_raylib",
+      "name": "TCG Prompt Raylib",
+      "selectors": [
+        "$tcg_prompt_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_skin_markup_raylib",
       "name": "Panel Markup Skin Raylib",
       "selectors": [
@@ -3666,6 +3675,46 @@
       "name": "Graph Op SubInt Raylib",
       "selectors": [
         "$capability_standard_graph_op_SubInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitResponseChainOrder_raylib",
+      "name": "Graph Op SubmitResponseChainOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitResponseChainOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "ballista_route_by_target_raylib",
+      "name": "Ballista Route By Target Raylib",
+      "selectors": [
+        "$ballista_units",
+        "$ballista_route_by_target",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "total_war_flow_raylib",
+      "name": "Total War Flow Raylib",
+      "selectors": [
+        "$total_war_flow",
+        "$ballista_units",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateVirtualCamera_raylib",
+      "name": "Graph Op ActivateVirtualCamera Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ActivateVirtualCamera"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

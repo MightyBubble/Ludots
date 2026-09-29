@@ -47,11 +47,31 @@
   "Entities": [
     {
       "InstanceId": "dsp-hero-a",
-      "Template": "dsp_hero_a"
+      "Template": "dsp_hero_a",
+      "Relations": [
+        {
+          "To": "dsp-hero-a",
+          "Type": "Friendly"
+        },
+        {
+          "To": "dsp-hero-b",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "dsp-hero-b",
-      "Template": "dsp_hero_b"
+      "Template": "dsp_hero_b",
+      "Relations": [
+        {
+          "To": "dsp-hero-b",
+          "Type": "Friendly"
+        },
+        {
+          "To": "dsp-hero-a",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -76,33 +96,6 @@
       "RepresentativeInstanceId": "dsp-hero-b"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  },
   "DefaultCamera": {
     "TargetXCm": 0,
     "TargetYCm": 0,

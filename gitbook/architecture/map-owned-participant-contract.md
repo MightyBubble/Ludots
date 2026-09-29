@@ -26,7 +26,7 @@ team/player representative entity 可以是 logical entity。Core 不得因为 p
 - `EntitySpawnData.InstanceId`
 - `MapConfig.Teams`
 - `MapConfig.Players`
-- `MapConfig.ParticipantRelationships`
+- `EntitySpawnData.Relations`（代表实体身上的关系实例）
 
 最小语义：
 
@@ -68,17 +68,27 @@ map load 时，Core 通过 `MapLoadEntityIndex` 把 participant binding 解析�
 
 ## 4. Relationship Truth
 
-participant relationship 的正式真相是 entity relationship：
+participant relationship 的正式真相是 entity relationship，写法和其它地图实体之间的初始关系完全一样：写在代表实体的 `Relations` 上，没有专门的队伍关系配置段。
 
-- team-team：team representative entity 与 team representative entity
-- player-player：player representative entity 与 player representative entity
-- player-team：player representative entity 与 team representative entity
+- team-team、player-player：在一方代表实体的 `Relations` 里写 `{ "To": "<另一方代表的 InstanceId>", "Type": "<关系类型>" }`
+- player-team：不用写，绑定时按 `Players[*].TeamId` 自动建 `MemberOf(玩家代表 → 队伍代表)`
 
-`TeamManager` 和 lookup service 只允许作为派生缓存存在：
+边是有方向的。"1 队和 2 队互为敌人"要写两条：1 队代表写一条指向 2 队代表的 `Hostile`，2 队代表写一条指回来的 `Hostile`。没有"同队默认友好""没写默认敌对"这类暗规则；想让友好包含自己队伍，就在队伍代表的 `Relations` 里写一条 `To` 指向自己的 `Friendly`。
+
+```json
+{ "InstanceId": "team-red", "Template": "logical.team",
+  "Relations": [
+    { "To": "team-red", "Type": "Friendly" },
+    { "To": "team-blue", "Type": "Hostile" }
+  ] }
+```
+
+技能、AI、命令、群体导航、呈现着色全部通过 `TeamRelationQuery`（队伍编号 → 代表实体 → 查边）回答敌我，不另存队伍关系表。地图里出现 `ParticipantRelationships` 段会在加载时直接报错。
+
+lookup service 只允许作为派生缓存存在：
 
 - `TeamEntityLookup`：`TeamId -> representative entity`
 - `PlayerEntityLookup`：`PlayerId -> representative entity`
-- `TeamManager`：从 focused map/session 的 participant relationship 派生出的 team hot-path cache
 
 focused map 切换时，lookup object identity 必须稳定；系统拿到的是同一个 service object，由新 session 内容覆盖，而不是替换 service 实例。
 
@@ -86,7 +96,7 @@ focused map 切换时，lookup object identity 必须稳定；系统拿到的是
 
 - `src/Core/Gameplay/Teams/TeamEntityLookup.cs`
 - `src/Core/Gameplay/Teams/PlayerEntityLookup.cs`
-- `src/Core/Gameplay/Teams/TeamManager.cs`
+- `src/Core/Gameplay/Teams/TeamRelationQuery.cs`
 - `src/Core/Engine/GameEngine.MapLoadLifecycle.cs`
 
 ## 5. Local Seats & Possession
@@ -115,7 +125,7 @@ GameConfig.startupLocalSeats | LoadMapCommand.LocalSeats | save localSeats | lob
   -> 输入 / Cast / 下令显式按 seat（或 RequireSolePossessedRep）
 ```
 
-进图顺序：`LoadEntitiesAndIndex` → `ParticipantBindingResolver.Resolve` → `PublishFocused` / `PublishLocalSeats`。  
+进图顺序：`LoadEntitiesAndIndex` → `InstanceRelationMaterializer.Materialize`（落实体关系，含队伍/玩家代表之间的边）→ `ParticipantBindingResolver.Resolve`（身份与 `MemberOf`/`Owns`）→ `PublishFocused` / `PublishLocalSeats`。  
 LogicView **不是**每个 Participant 的必有字段；当前实现对有本机占有的 seat 自动 `EnsureDefaultView`。
 
 正式路径禁止：
@@ -146,11 +156,14 @@ Core 必须在 map load 期间显式失败，禁止 silent fallback：
 - blank / whitespace / non-trimmed authored `InstanceId`
 - player 引用未绑定 `TeamId`
 - launch context `LocalSeats[].playerId` 引用未绑定 player
-- participant relationship 缺少有效 `TypeId`
+- 实体 `Relations` 缺少 `To`/`Type`、`To` 找不到实体、`Type` 未在关系目录声明
+- 地图出现 `ParticipantRelationships` 段
 
 相关源码：
 
 - `src/Core/Gameplay/Teams/ParticipantBindingResolver.cs`
+- `src/Core/Gameplay/Relationships/InstanceRelationMaterializer.cs`
+- `src/Core/Map/MapManager.cs`
 - `src/Core/Systems/MapLoadEntityIndex.cs`
 
 ## 7. Session Boundary
@@ -160,7 +173,6 @@ participant-focused runtime state属于 map session：
 - `MapSession.TeamEntityLookup`
 - `MapSession.PlayerEntityLookup`
 - `MapSession` 上的 seat/possession 快照（见 ClientLocalSeat 合同）
-- `MapSession.TeamRelationships`
 - `MapSession.LaunchContext`
 
 focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的 participant state；map unload 时必须清理 focused lookup 与 ClientLocalSeatRegistry 的 map-scoped possession，避免把上一张图的 participant cache 当成当前图真相。

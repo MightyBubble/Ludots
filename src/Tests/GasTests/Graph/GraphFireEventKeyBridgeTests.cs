@@ -44,7 +44,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int keyId = ConfigKeyRegistry.Register("Custom.FireEvent");
             var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.FireEvent") };
@@ -66,7 +66,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int keyId = ConfigKeyRegistry.Register("Custom.CollisionEvent");
             var globalTrigger = new RecordingTrigger { EventKey = new EventKey("Custom.CollisionEvent") };
@@ -89,7 +89,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int keyId = ConfigKeyRegistry.Register("Custom.GlobalEvent");
             var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
@@ -102,7 +102,7 @@ namespace Ludots.Tests.Gas.Graph
             using World world = World.Create();
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             int keyId = ConfigKeyRegistry.Register("Custom.InvalidScope");
 
             Entity dead = world.Create();
@@ -122,7 +122,7 @@ namespace Ludots.Tests.Gas.Graph
             Entity scope = world.Create(new MapEntity { MapId = new MapId(" ") });
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             int keyId = ConfigKeyRegistry.Register("Custom.EmptyMap");
 
             var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, keyId));
@@ -149,7 +149,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             var ex = Assert.Throws<InvalidOperationException>(() => api.FireEventKey(scope, 999_999));
             Assert.That(ex!.Message, Does.StartWith("GAS.GRAPH.ERR.EventKeyNameUnknown"));
@@ -163,7 +163,7 @@ namespace Ludots.Tests.Gas.Graph
             Entity scope = world.Create(new AttributeBuffer(), new MapEntity { MapId = mapId });
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             int keyId = ConfigKeyRegistry.Register("Custom.DerivedEvent");
             var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.DerivedEvent") };
             manager.RegisterMapTriggers(mapId, new Trigger[] { trigger });
@@ -190,7 +190,7 @@ namespace Ludots.Tests.Gas.Graph
             Entity scope = world.Create(new AttributeBuffer(), new MapEntity { MapId = mapId });
             var manager = new TriggerManager();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             int keyId = ConfigKeyRegistry.Register("Custom.EffectEvent");
             var trigger = new RecordingTrigger { EventKey = new EventKey("Custom.EffectEvent") };
             manager.RegisterMapTriggers(mapId, new Trigger[] { trigger });

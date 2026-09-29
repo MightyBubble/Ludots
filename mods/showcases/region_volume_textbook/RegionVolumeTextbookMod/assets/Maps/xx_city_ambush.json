@@ -26,7 +26,17 @@
   "Entities": [
     {
       "InstanceId": "textbook_army",
-      "Template": "textbook.army"
+      "Template": "textbook.army",
+      "Relations": [
+        {
+          "To": "textbook_army",
+          "Type": "Friendly"
+        },
+        {
+          "To": "goblin_camp",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "textbook_scout",
@@ -40,7 +50,17 @@
     },
     {
       "InstanceId": "goblin_camp",
-      "Template": "textbook.goblin_camp"
+      "Template": "textbook.goblin_camp",
+      "Relations": [
+        {
+          "To": "goblin_camp",
+          "Type": "Friendly"
+        },
+        {
+          "To": "textbook_army",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [

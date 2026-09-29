@@ -112,7 +112,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_MergesCommandSourceMovePathPreviewOrderKeys()
+        public void GameEngine_MergesCommandSourceAndMassNavigationOrderContracts()
         {
             string repoRoot = FindRepoRoot();
             using var coreEngine = new GameEngine();
@@ -124,10 +124,6 @@ namespace Ludots.Tests.Architecture
             CommandSourceAcquisitionConfig coreCommandSource = coreConfig.CommandSource
                 ?? throw new InvalidOperationException("Core command-source config was not merged.");
 
-            Assert.That(
-                coreCommandSource.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "moveTo" }),
-                "LudotsCoreMod should author the generic move path preview contract.");
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That("collection.command.source", Is.EqualTo("collection.command.source"));
 
@@ -147,10 +143,6 @@ namespace Ludots.Tests.Architecture
             CommandSourceAcquisitionConfig massNavigationCommandSource = massNavigationConfig.CommandSource
                 ?? throw new InvalidOperationException("MassNavigation command-source config was not merged.");
 
-            Assert.That(
-                massNavigationCommandSource.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "massNavigationMove" }),
-                "MassNavigationMod should author only its formal order key for command-source move path preview.");
             EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             Assert.That(collections.KeyRegistry.GetId("collection.command.source"), Is.GreaterThan(0));
@@ -1022,6 +1014,12 @@ namespace Ludots.Tests.Architecture
     "visualSnapshotBufferCapacity": 16384,
     "visualProxyBufferCapacity": 16384,
     "skinnedVisualBatchCapacity": 2048,
+    "gpuSkinned": {
+      "maxBatches": 32,
+      "maxUniquePoses": 64,
+      "maxBoneSlots": 256,
+      "posePhaseBuckets": 8
+    },
     "presentationRequestCapacity": 16384,
     "clearTransientVisualProjectionCapacity": 8192,
     "instancedBatchRequestCapacity": 2048,
@@ -1047,7 +1045,6 @@ namespace Ludots.Tests.Architecture
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,
@@ -1073,6 +1070,10 @@ namespace Ludots.Tests.Architecture
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 32768,
+    "gpuSkinned": {
+      "maxBatches": 64,
+      "maxUniquePoses": 128
+    },
     "presentationRequestCapacity": 131072,
     "clearTransientVisualProjectionCapacity": 16384,
     "instancedBatchRequestCapacity": 8192,
@@ -1112,6 +1113,10 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.VisualSnapshotBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.GpuSkinned.MaxBatches, Is.EqualTo(64));
+            Assert.That(config.Presentation.GpuSkinned.MaxUniquePoses, Is.EqualTo(128));
+            Assert.That(config.Presentation.GpuSkinned.MaxBoneSlots, Is.EqualTo(256));
+            Assert.That(config.Presentation.GpuSkinned.PosePhaseBuckets, Is.EqualTo(8));
             Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.ClearTransientVisualProjectionCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.InstancedBatchRequestCapacity, Is.EqualTo(8192));
@@ -1168,17 +1173,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(meshes.TryGetDescriptor(cueMeshAssetId, out MeshAssetDescriptor cue), Is.True);
             Assert.That(cue.Type, Is.EqualTo(MeshAssetType.Primitive));
 
-            var presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) as PresenterDefinitionRegistry
-                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
-            CueMarkerAuthoredVisual authored = CueMarkerAuthoredVisual.Resolve(meshes, presenters);
-            Assert.That(authored.MeshAssetId, Is.EqualTo(cueMeshAssetId));
-            Assert.That(authored.Scale, Is.EqualTo(new System.Numerics.Vector3(0.2f, 0.2f, 0.2f)));
-            Assert.That(authored.AnchorOffset.Y, Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(authored.LifetimeSeconds, Is.EqualTo(0.35f).Within(0.001f));
-
             var constructorMeshes = new MeshAssetRegistry();
             Assert.That(
-                constructorMeshes.GetId(WellKnownMeshKeys.CueMarker),
+                constructorMeshes.GetId("cue_marker"),
                 Is.EqualTo(0),
                 "cue_marker must not be dual-registered in MeshAssetRegistry constructor; mesh_assets.json is the mesh SSOT.");
             Assert.That(constructorMeshes.GetId(WellKnownMeshKeys.Cube), Is.GreaterThan(0));
@@ -1248,6 +1245,13 @@ namespace Ludots.Tests.Architecture
                 VisualSnapshotBufferCapacity = 16384,
                 VisualProxyBufferCapacity = 16384,
                 SkinnedVisualBatchCapacity = 2048,
+                GpuSkinned = new GpuSkinnedRuntimeConfig
+                {
+                    MaxBatches = 64,
+                    MaxUniquePoses = 128,
+                    MaxBoneSlots = 1024,
+                    PosePhaseBuckets = 16,
+                },
                 PresentationRequestCapacity = 16384,
                 ClearTransientVisualProjectionCapacity = 8192,
                 InstancedBatchRequestCapacity = 2048,
@@ -1275,7 +1279,6 @@ namespace Ludots.Tests.Architecture
                 {
                     InitialZoomNormalized = 1f,
                     WheelZoomNormalizedStep = 0.08f,
-                    ButtonZoomNormalizedStep = 0.18f,
                     ZoomSliderEnabled = true,
                     ModeToggleEnabled = true,
                     RotateToggleEnabled = true,
@@ -1284,6 +1287,10 @@ namespace Ludots.Tests.Architecture
                     MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
                     MinZoomExplicitHalfExtentCm = 750f,
                     MaxZoomExplicitHalfExtentCm = 0f,
+                    Actions = new MinimapActionsConfig
+                    {
+                        Zoom = "Minimap.Zoom",
+                    },
                 },
             };
         }

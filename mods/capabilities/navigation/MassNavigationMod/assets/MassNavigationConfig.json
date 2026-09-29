@@ -171,19 +171,19 @@
       }
     ]
   },
-  "teamRelationships": {
-    "defaultRelationship": "Hostile",
-    "relationships": [
-      {
-        "teamA": 3,
-        "teamB": 4,
-        "attitude": "Neutral",
-        "symmetric": true
-      }
-    ]
-  },
+  "teamRelationships": [
+    { "teamA": 1, "teamB": 1, "relation": "Friendly", "symmetric": false },
+    { "teamA": 2, "teamB": 2, "relation": "Friendly", "symmetric": false },
+    { "teamA": 3, "teamB": 3, "relation": "Friendly", "symmetric": false },
+    { "teamA": 4, "teamB": 4, "relation": "Friendly", "symmetric": false },
+    { "teamA": 1, "teamB": 2, "relation": "Hostile", "symmetric": true },
+    { "teamA": 1, "teamB": 3, "relation": "Hostile", "symmetric": true },
+    { "teamA": 1, "teamB": 4, "relation": "Hostile", "symmetric": true },
+    { "teamA": 2, "teamB": 3, "relation": "Hostile", "symmetric": true },
+    { "teamA": 2, "teamB": 4, "relation": "Hostile", "symmetric": true }
+  ],
   "relationshipPolicy": {
-    "cooperativeStance": "Friendly"
+    "cooperativeRelation": "Friendly"
   },
   "flow": {
     "enabled": false,

@@ -69,7 +69,13 @@
         "FacingDirection": {
           "AngleRad": 0.0
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "vfx_forge_anchor_01",
+          "Type": "Friendly"
+        }
+      ]
     }
   ]
 }

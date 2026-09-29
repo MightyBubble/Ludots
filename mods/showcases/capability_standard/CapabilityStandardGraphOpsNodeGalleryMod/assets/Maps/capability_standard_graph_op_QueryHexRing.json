@@ -38,7 +38,17 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "innerEast",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "innerEast",
@@ -61,7 +71,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "innerEast",
+          "Type": "Friendly"
+        },
+        {
+          "To": "caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "innerSouth",

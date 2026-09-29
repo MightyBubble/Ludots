@@ -28,7 +28,17 @@
             "Y": 920
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "entityquery-tactics-player-commander",
+          "Type": "Friendly"
+        },
+        {
+          "To": "entityquery-tactics-enemy-commander",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "entityquery_tactics_enemy_commander_owner",
@@ -40,7 +50,17 @@
             "Y": 920
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "entityquery-tactics-enemy-commander",
+          "Type": "Friendly"
+        },
+        {
+          "To": "entityquery-tactics-player-commander",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "entityquery_tactics_ally_squad",
@@ -290,32 +310,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "entityquery-tactics-player-commander"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  }
+  ]
 }

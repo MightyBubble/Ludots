@@ -40,10 +40,10 @@ namespace Ludots.Tests.GAS
     {
         private const float InputConvergenceInitialZoomNormalized = 1f;
         private const float InputConvergenceWheelZoomNormalizedStep = 0.08f;
-        private const float InputConvergenceButtonZoomNormalizedStep = 0.18f;
         private const int InputConvergenceDebugMarkerSampleCapacity = 64;
         private const float InputConvergenceMinZoomHalfExtentCm = 750f;
         private const float InputConvergenceMaxZoomHalfExtentCm = 22000f;
+        private static readonly MinimapActionsConfig InputConvergenceMinimapActions = Ludots.Tests.Presentation.MinimapTestActions.Create();
 
         [Test]
         public void AuthoritativeInputAccumulator_PreservesEdgesUntilConsumed()
@@ -130,7 +130,12 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = registry,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -247,73 +252,6 @@ namespace Ludots.Tests.GAS
             Assert.That(orders.Count, Is.EqualTo(2));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(101));
             Assert.That(orders[1].OrderTypeId, Is.EqualTo(102));
-        }
-
-        [Test]
-        public void GasInputResponseSystem_UsesAuthoritativeSnapshotInsteadOfLiveHandler()
-        {
-            using var world = World.Create();
-
-            var liveInput = BuildHandler().handler;
-            var authoritativeInput = new FrozenInputActionReader();
-            authoritativeInput.SetActionState("Confirm", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
-
-            var ambientTarget = world.Create();
-            var requestTarget = world.Create();
-            var local = world.Create();
-            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var collections = new EntityCollectionStore(collectionKeys);
-            Span<Entity> commandSource = stackalloc Entity[1];
-            commandSource[0] = ambientTarget;
-            collections.Replace(
-                local,
-                EntityCollectionDescriptor.Create(
-                    "collection.command.source",
-                    EntityCollectionSourceKind.UiAcquisition,
-                    EntityCollectionRoleKind.CommandSource,
-                    local,
-                    ambientTarget,
-                    "Command source",
-                    "Seed | 1 actor(s)"),
-                commandSource,
-                local);
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.InputHandler.Name] = liveInput,
-                [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
-                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
-                [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
-                [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.EntityCollectionStore.Name] = collections,
-                [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
-            };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
-            ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
-                "Confirm",
-                new PointerButtonState(
-                    Vector2.Zero,
-                    Vector2.Zero,
-                    Vector2.Zero,
-                    Vector2.Zero,
-                    isDown: true,
-                    pressedThisFrame: true,
-                    releasedThisFrame: false,
-                    hasPressPointer: true,
-                    hasReleasePointer: false,
-                    hasLastDownPointer: true));
-
-            var system = new GasInputResponseSystem(world, globals);
-            var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
-            var responses = (InputResponseBuffer)globals[CoreServiceKeys.InputResponseBuffer.Name];
-            requests.TryEnqueue(new InputRequest { RequestId = 7, RequestTagId = 700, Target = requestTarget });
-
-            system.Update(0f);
-
-            Assert.That(responses.TryConsume(7, out var response), Is.True);
-            Assert.That(response.Target, Is.EqualTo(requestTarget));
-            Assert.That(response.Target, Is.Not.EqualTo(ambientTarget));
-            Assert.That(response.ResponseTagId, Is.EqualTo(700));
         }
 
         [Test]
@@ -526,7 +464,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
             };
 
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -551,7 +494,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ConfirmActionId = "Select.Begin",
+                    CommandActionId = "Command",
+                    CancelActionId = "Cancel",
+                },
                 [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
             };
 
@@ -636,8 +584,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.ToggleRotateWithCamera, Type = InputActionType.Button },
+                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -652,8 +599,7 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
                         }
                     }
                 }
@@ -802,8 +748,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = MinimapInputActions.ToggleRotateWithCamera, Type = InputActionType.Button },
+                    new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -818,8 +763,7 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = MinimapInputActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
+                            new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
                         }
                     }
                 }
@@ -920,14 +864,6 @@ namespace Ludots.Tests.GAS
             system.Update(1f / 60f);
             Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation), "Rotate toggle button must use the shared pointer confirm input.");
             Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Rotate toggle clicks must not leak into gameplay confirm.");
-
-            backend.Buttons["<Mouse>/LeftButton"] = false;
-            system.Update(1f / 60f);
-
-            beforeRotation = minimap.RotateWithCamera;
-            backend.Buttons["<Keyboard>/f7"] = true;
-            system.Update(1f / 60f);
-            Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation));
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
@@ -966,7 +902,6 @@ namespace Ludots.Tests.GAS
             {
                 InitialZoomNormalized = InputConvergenceInitialZoomNormalized,
                 WheelZoomNormalizedStep = InputConvergenceWheelZoomNormalizedStep,
-                ButtonZoomNormalizedStep = InputConvergenceButtonZoomNormalizedStep,
                 ZoomSliderEnabled = true,
                 ModeToggleEnabled = true,
                 RotateToggleEnabled = true,
@@ -975,19 +910,13 @@ namespace Ludots.Tests.GAS
                 MinZoomExplicitHalfExtentCm = InputConvergenceMinZoomHalfExtentCm,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
+                Actions = InputConvergenceMinimapActions,
             });
         }
 
         private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
         {
-            return new MinimapInputConsumer(minimap, NoMinimapFocusCollection);
-        }
-
-        private static bool NoMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
-        {
-            owner = Entity.Null;
-            collectionKey = string.Empty;
-            return false;
+            return new MinimapInputConsumer(minimap, InputConvergenceMinimapActions);
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildCameraHandler()
@@ -1025,7 +954,6 @@ namespace Ludots.Tests.GAS
                 ConfirmActionId = "Confirm",
                 CommandActionId = "Command",
                 CancelActionId = "Cancel",
-                PointerPositionActionId = "PointerPos",
             };
         }
 

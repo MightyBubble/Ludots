@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -21,12 +20,6 @@ namespace Ludots.Tests.GAS
         private const string DutyAttribute = "Tests.Kinship.Duty";
         private const string BloodTag = "Tests.Kinship.Blood";
         private const string PatriarchTag = "Tests.Kinship.Patriarch";
-
-        private static readonly JsonSerializerOptions CatalogOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() },
-        };
 
         [Test]
         public void TypeTemplate_FromCatalogJson_MaterializesInitialAttributesAndBirthTags()
@@ -285,7 +278,7 @@ namespace Ludots.Tests.GAS
 
         private static RelationshipCatalogConfig LoadCatalog(string json)
         {
-            return JsonNode.Parse(json)!.Deserialize<RelationshipCatalogConfig>(CatalogOptions)
+            return JsonNode.Parse(json)!.Deserialize<RelationshipCatalogConfig>(RelationshipCatalogPipelineLoader.SerializerOptions)
                 ?? throw new InvalidOperationException("Failed to deserialize relationship catalog fixture.");
         }
 

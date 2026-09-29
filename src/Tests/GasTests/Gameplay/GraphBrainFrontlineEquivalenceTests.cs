@@ -110,7 +110,7 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Gameplay.Relationships.RelationshipBandRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipChangeBuffer(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipReverseIndex(world));
-            var entityQueries = new Ludots.Core.EntityQueries.EntitySetQueryRuntime(world, tagOps, relationships);
+            var entityQueries = new Ludots.Core.EntityQueries.EntitySetQueryRuntime(world, tagOps, relationships, new Ludots.Core.Gameplay.Teams.TeamRelationQuery(relationships, new Ludots.Core.Gameplay.Teams.TeamEntityLookup()));
             var api = new GasGraphRuntimeApi(
                 world,
                 effectRequests: effects,

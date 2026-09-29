@@ -1,5 +1,37 @@
 [
   {
+    "id": "Effect.GraphOps.ChainOpening",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "categories": [
+      "Effect.GraphOps.ChainSpell"
+    ]
+  },
+  {
+    "id": "Effect.GraphOps.ChainCounter",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "categories": [
+      "Effect.GraphOps.ChainCounter"
+    ]
+  },
+  {
     "id": "Effect.GraphOp.DispatchStub",
     "presetType": "ApplyForce2D",
     "lifetime": "Instant",

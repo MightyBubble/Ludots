@@ -1,0 +1,47 @@
+[
+  {
+    "id": "tcg_prompt_hero",
+    "initialInteractionContext": "interaction.context.tcg_prompt.duel",
+    "components": {
+      "Name": { "Value": "你的英雄" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": -400, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 100, "MaxHealth": 100 } },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {},
+      "ResponseChainListener": {
+        "responses": [
+          {
+            "category": "Effect.Tcg.Spell",
+            "type": "PromptInput",
+            "priority": 100,
+            "effect": "Effect.Tcg.CounterBlast"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "tcg_prompt_mage",
+    "components": {
+      "Name": { "Value": "敌方法师" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": { "base": { "Health": 100, "MaxHealth": 100 } },
+      "AbilityStateBuffer": { "abilityIds": ["Ability.Tcg.Fireball"] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

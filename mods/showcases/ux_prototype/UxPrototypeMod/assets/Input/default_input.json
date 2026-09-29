@@ -1,5 +1,6 @@
 {
   "actions": [
+    { "id": "UxPrototype.Command", "name": "UxPrototype_Command", "type": "Button" },
     { "id": "Stop", "name": "UxPrototype_Stop", "type": "Button" },
     { "id": "QueueModifier", "name": "UxPrototype_QueueModifier", "type": "Button" },
     { "id": "ModePlay", "name": "UxPrototype_ModePlay", "type": "Button" },
@@ -13,6 +14,7 @@
       "name": "UX Prototype Controls",
       "priority": 85,
       "bindings": [
+        { "actionId": "UxPrototype.Command", "path": "<Mouse>/rightButton" },
         { "actionId": "Stop", "path": "<Keyboard>/s" },
         { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
         { "actionId": "ModePlay", "path": "<Keyboard>/f1" },

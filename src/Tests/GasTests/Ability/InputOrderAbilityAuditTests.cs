@@ -2050,8 +2050,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 defs,
@@ -2130,8 +2128,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 effectRequests,
                 4096,
                 defs,
@@ -2200,8 +2196,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 effectRequests,
                 16,
                 definitions,
@@ -2272,8 +2266,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 16,
                 definitions,
@@ -2332,8 +2324,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 defs,
@@ -2394,8 +2384,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 16,
                 definitions,
@@ -2513,8 +2501,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 defs,
@@ -2590,8 +2576,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 16,
                 definitions,
@@ -2669,8 +2653,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 missingEffectRequests,
                 16,
                 definitions,
@@ -2763,8 +2745,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 effectRequests,
                 16,
                 definitions,
@@ -2851,8 +2831,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 definitions,
@@ -2940,8 +2918,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 defs,

@@ -33,7 +33,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "MobaDemoMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" },
+                    new[] { "LudotsCoreMod", "MobaDemoMod" },
                     true))
                 .SetName("ProdModSmoke_MobaDemoMod");
 

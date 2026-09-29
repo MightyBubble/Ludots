@@ -255,7 +255,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_InputGateMissingPayload_IsRejected()
+        public void CompileAbility_UnknownTimelineItemKind_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -270,8 +270,9 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("payloadA"));
-            That(ex.Message, Does.Contain("InputGate"));
+            That(ex!.Message, Does.Contain("Ability.Test.Strict"));
+            That(ex.Message, Does.Contain("exec.items[0].kind"));
+            That(ex.Message, Does.Contain("Unknown ExecItemKind 'InputGate'"));
         }
 
         [Test]

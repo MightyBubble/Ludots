@@ -209,6 +209,95 @@ public sealed class RtsAimGraphAcceptanceTests
             "抬起后框选命中写入命令源集合（图路径，采集系统对 rts 已退役）");
     }
 
+    [Test]
+    public void RightClickGround_MovesUnitsAndPinsBarracksRallyToTheClickedSpot_StopHaltsUnits()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new HeadlessBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(MapId),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+        TickUntil(engine, 60, () => engine.CurrentMapSession != null);
+
+        Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        Entity footman = FindPlayerOneEntityByName(engine, "Footman");
+        Entity barracks = FindPlayerOneEntityByName(engine, "Barracks");
+        Entity peasant = FindPlayerOneEntityByName(engine, "Peasant");
+        var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            as EntityCollectionStore
+            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+        store.Replace(
+            rep,
+            EntityCollectionDescriptor.Create("collection.command.source", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            new[] { footman, peasant, barracks },
+            rep);
+
+        var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            as OrderTypeRegistry
+            ?? throw new InvalidOperationException("OrderTypeRegistry service is missing.");
+        int moveToId = orderTypes.GetId("moveTo");
+        BlackboardStoredTargetKeys rallyKeys = orderTypes.Get(orderTypes.GetId("setSpawnTarget")).PersistentStoredTargetKeys;
+        var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
+            as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem
+            ?? throw new InvalidOperationException("CommandIntentBufferDrain service is missing.");
+
+        var clickedGround = new Vector2(2600f, -2600f);
+        backend.SetMousePosition(clickedGround);
+        backend.SetButton("<Mouse>/RightButton", true);
+        TickUntil(engine, 30, () => drain.LastDrainedCount > 0);
+        string rightClickDrain = $"accepted={drain.LastAcceptedCount} rejected={drain.LastRejectedCount} reason={drain.LastRejectionReason}";
+        backend.SetButton("<Mouse>/RightButton", false);
+        Tick(engine, 4);
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
+            string.Join(" | ", engine.TriggerManager.Errors));
+
+        Assert.That(ActiveOrderTypeId(engine, footman), Is.EqualTo(moveToId), $"右键地面：步兵收到移动令（{rightClickDrain}）");
+        Assert.That(ActiveOrderTypeId(engine, peasant), Is.EqualTo(moveToId), "右键地面：农民收到移动令");
+        Vector3 footmanGoal = engine.World.Get<OrderBuffer>(footman).ActiveOrder.Order.Args.Spatial.WorldCm;
+        Vector3 peasantGoal = engine.World.Get<OrderBuffer>(peasant).ActiveOrder.Order.Args.Spatial.WorldCm;
+        Assert.That(Vector3.Distance(footmanGoal, peasantGoal), Is.GreaterThan(1f), "同批单位摊开站位，不挤同一个点");
+
+        Assert.That(
+            BlackboardStoredTargetOps.TryRead(engine.World, barracks, in rallyKeys, out BlackboardStoredTargetSnapshot rally) &&
+            rally.Kind == BlackboardStoredTargetKind.Point,
+            "右键地面：兵营记下集结点");
+        Assert.That(rally.WorldPositionCm.X, Is.EqualTo(clickedGround.X).Within(1f), "集结点就在点击处，不跟着单位摊开");
+        Assert.That(rally.WorldPositionCm.Z, Is.EqualTo(clickedGround.Y).Within(1f), "集结点就在点击处，不跟着单位摊开");
+
+        backend.SetButton("<Keyboard>/s", true);
+        Tick(engine, 3);
+        backend.SetButton("<Keyboard>/s", false);
+        Tick(engine, 3);
+
+        Assert.That(ActiveOrderTypeId(engine, footman), Is.Not.EqualTo(moveToId), "按 S：步兵停下");
+        Assert.That(ActiveOrderTypeId(engine, peasant), Is.Not.EqualTo(moveToId), "按 S：农民停下");
+    }
+
+    private static int ActiveOrderTypeId(GameEngine engine, Entity entity)
+    {
+        return engine.World.TryGet(entity, out OrderBuffer orders) && orders.HasActive
+            ? orders.ActiveOrder.Order.OrderTypeId
+            : 0;
+    }
+
+    private static Entity FindPlayerOneEntityByName(GameEngine engine, string name)
+    {
+        Entity found = Entity.Null;
+        engine.World.Query(
+            new Arch.Core.QueryDescription().WithAll<Ludots.Core.Components.Name, Ludots.Core.Gameplay.Components.PlayerOwner>(),
+            (Entity e, ref Ludots.Core.Components.Name entityName, ref Ludots.Core.Gameplay.Components.PlayerOwner owner) =>
+            {
+                if (found == Entity.Null && owner.PlayerId == 1 && string.Equals(entityName.Value, name, StringComparison.Ordinal))
+                {
+                    found = e;
+                }
+            });
+        return found != Entity.Null
+            ? found
+            : throw new InvalidOperationException($"rts_entry 应存在玩家1的 {name}");
+    }
+
     private static Entity SpawnOwnedUnit(GameEngine engine)
     {
         // rts_entry 出生表里已有玩家单位；取一个带 PlayerOwner 的活体作为活跃集成员

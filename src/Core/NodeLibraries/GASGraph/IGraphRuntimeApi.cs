@@ -37,17 +37,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void EndDerivedAttributeWrites(Entity entity, ref AttributeBuffer attributes, bool commit);
     }
 
-    /// <summary>
-    /// Protocol constants for <see cref="IGraphRuntimeApi.GetRelationship"/>.
-    /// Decouples Graph VM from concrete TeamRelationship enum.
-    /// </summary>
-    public static class GraphRelationship
-    {
-        public const int Neutral = 0;
-        public const int Friendly = 1;
-        public const int Hostile = 2;
-    }
-
     public interface IGraphRuntimeApi
     {
         bool TryGetGridPos(Entity entity, out IntVector2 gridPos);
@@ -147,7 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// the order kernel drains the buffer in its own system-group phase. The rep is the
         /// acting representative (graph caster); target may be null for ground-only facts.
         /// </summary>
-        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm)
+        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, in Ludots.Core.Gameplay.GAS.Orders.GroundLayout layout, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
@@ -156,9 +145,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pushes one cast intent into the per-tick submission buffer (constitution §12);
         /// the drain resolves the cast order type id from the config-key symbol id.
         /// </summary>
-        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId)
+        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
+        /// <summary>
+        /// Answers the response-chain prompt waiting on the rep's player with one of the
+        /// configured response-chain order types.
+        /// </summary>
+        void SubmitResponseChainOrder(Entity rep, int orderTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ResponseChainUnavailable");
+        }
+
+        /// <summary>
+        /// Replaces the local camera stack with the named virtual camera; a collection follow
+        /// reads <paramref name="rep"/>'s collection.
+        /// </summary>
+        void ActivateVirtualCamera(Entity rep, int cameraKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
         }
 
         /// <summary>
@@ -166,7 +173,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// the drain runs the profile's EQS query around the target and lands per-actor
         /// move-then-cast with the assigned ring point.
         /// </summary>
-        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
@@ -344,7 +351,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
@@ -437,11 +444,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int GetTeamId(Entity entity);
         /// <summary>Get the EntityLayer.Category bits for an entity. Returns 0 if no EntityLayer.</summary>
         uint GetEntityLayerCategory(Entity entity);
-        /// <summary>
-        /// Get relationship between two teams.
-        /// Returns one of the <see cref="GraphRelationship"/> constants.
-        /// </summary>
-        int GetRelationship(int teamA, int teamB);
         void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");

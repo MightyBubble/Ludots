@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
         public AutoTargetPolicy AutoTargetPolicy;
         public bool HasAutoTargetRangeCm;
         public int AutoTargetRangeCm;
+        public string? AutoTargetRelation;
     }
 
     public sealed class AbilityPresentationConfig

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "tw.death_explosion",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Once",
+    "shape": "Sphere",
+    "renderMode": "Primitive",
+    "blendMode": "Additive",
+    "maxParticles": 160,
+    "seed": 2026092201,
+    "durationSeconds": 0.9,
+    "emissionRatePerSecond": 0,
+    "burstCount": 96,
+    "shapeRadius": 0.35,
+    "shapeThickness": 0.8,
+    "startLife": [
+      0.35,
+      0.85
+    ],
+    "startSpeed": [
+      2.2,
+      6.4
+    ],
+    "startSize": [
+      0.12,
+      0.4
+    ],
+    "startColor": [
+      1.0,
+      0.74,
+      0.28,
+      1.0
+    ],
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.3
+      },
+      {
+        "position": 0.18,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.0
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.86,
+          0.42,
+          1.0
+        ]
+      },
+      {
+        "position": 0.4,
+        "color": [
+          1.0,
+          0.34,
+          0.1,
+          0.85
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.12,
+          0.08,
+          0.04,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      1.6,
+      0.0
+    ],
+    "drag": 0.22,
+    "worldSpace": true,
+    "primitive": "Sphere",
+    "shapeAngleRadians": 0.6
+  },
+  {
+    "id": "tw.death_smoke",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Once",
+    "shape": "Sphere",
+    "renderMode": "Primitive",
+    "blendMode": "Alpha",
+    "maxParticles": 64,
+    "seed": 2026092202,
+    "durationSeconds": 1.4,
+    "emissionRatePerSecond": 0,
+    "burstCount": 28,
+    "shapeRadius": 0.25,
+    "shapeThickness": 0.7,
+    "startLife": [
+      0.7,
+      1.3
+    ],
+    "startSpeed": [
+      0.4,
+      1.4
+    ],
+    "startSize": [
+      0.3,
+      0.7
+    ],
+    "startColor": [
+      0.28,
+      0.26,
+      0.24,
+      0.8
+    ],
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.4
+      },
+      {
+        "position": 0.5,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.2
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          0.34,
+          0.32,
+          0.3,
+          0.85
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.2,
+          0.2,
+          0.2,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      0.5,
+      0.0
+    ],
+    "drag": 0.5,
+    "worldSpace": true,
+    "primitive": "Sphere",
+    "shapeAngleRadians": 0.6
+  }
+]

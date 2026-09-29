@@ -45,7 +45,6 @@ namespace ChampionSkillSandboxMod.Triggers
             }
 
             engine.GlobalContext[InstalledKey] = true;
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
             var stressControl = new ChampionSkillStressControlState();
             var stressTelemetry = new ChampionSkillStressTelemetry();
             engine.GlobalContext[ChampionSkillStressControlState.GlobalKey] = stressControl;

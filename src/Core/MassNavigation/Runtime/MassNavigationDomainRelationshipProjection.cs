@@ -1,5 +1,5 @@
 using Arch.Core;
-using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
@@ -18,36 +18,36 @@ internal sealed class MassNavigationIdentityDomainRelationshipProjection : IMass
     public bool IsCooperative(int sourceDomainId, int targetDomainId) => sourceDomainId == targetDomainId;
 }
 
-internal sealed class MassNavigationDomainStanceProjection : IMassNavigationDomainRelationshipProjection
+internal sealed class MassNavigationDomainRelationProjection : IMassNavigationDomainRelationshipProjection
 {
-    private readonly DomainStanceQuery _stances;
+    private readonly TeamRelationQuery _teamRelations;
     private readonly Dictionary<int, Entity> _domainById;
-    private readonly int _cooperativeStanceId;
+    private readonly int _cooperativeRelationTypeId;
     private readonly int _capacity;
 
-    public MassNavigationDomainStanceProjection(
-        DomainStanceQuery stances,
+    public MassNavigationDomainRelationProjection(
+        TeamRelationQuery teamRelations,
         int capacity,
-        string cooperativeStance)
+        string cooperativeRelation)
     {
-        _stances = stances ?? throw new ArgumentNullException(nameof(stances));
+        _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
         if (capacity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(capacity));
         }
 
-        if (string.IsNullOrWhiteSpace(cooperativeStance) ||
-            !stances.TryResolveStanceId(cooperativeStance, out _cooperativeStanceId))
+        if (string.IsNullOrWhiteSpace(cooperativeRelation) ||
+            !teamRelations.Types.TryGetId(cooperativeRelation, out _cooperativeRelationTypeId))
         {
             throw new InvalidOperationException(
-                $"MassNavigation relationship policy cooperative stance '{cooperativeStance}' is not registered in DomainStanceQuery.");
+                $"MassNavigation relationshipPolicy.cooperativeRelation '{cooperativeRelation}' is not a registered relationship type.");
         }
 
         _capacity = capacity;
         _domainById = new Dictionary<int, Entity>(capacity);
     }
 
-    public uint Revision => _stances.Revision;
+    public uint Revision => _teamRelations.Revision;
 
     public void ValidateResetDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds)
     {
@@ -76,7 +76,7 @@ internal sealed class MassNavigationDomainStanceProjection : IMassNavigationDoma
     {
         Entity source = RequireDomain(sourceDomainId);
         Entity target = RequireDomain(targetDomainId);
-        return _stances.GetStance(source, target) == _cooperativeStanceId;
+        return _teamRelations.Has(source, target, _cooperativeRelationTypeId);
     }
 
     private void ValidateDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds, bool includeExistingDomains)

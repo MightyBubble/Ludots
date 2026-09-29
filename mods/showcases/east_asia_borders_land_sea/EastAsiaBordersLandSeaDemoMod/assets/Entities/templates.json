@@ -19,7 +19,7 @@
       "OrderBuffer": {},
       "OrderSpatialPayloadBuffer": {},
       "AttributeBuffer": { "base": { "Health": 100 } },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": ["massNavigation.agent"],
@@ -43,7 +43,7 @@
       "OrderBuffer": {},
       "OrderSpatialPayloadBuffer": {},
       "AttributeBuffer": { "base": { "Health": 100 } },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": ["massNavigation.agent"],
@@ -55,9 +55,14 @@
   },
   {
     "id": "east_asia_local_player",
+    "initialInteractionContext": "interaction.context.east_asia.battle",
     "components": {
       "Name": { "Value": "EastAsia.LocalPlayer" },
       "PlayerOwner": { "PlayerId": 1 },
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
       "CommandSourceDragState": {}
     }
   }

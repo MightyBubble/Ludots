@@ -43,9 +43,6 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
             return Task.CompletedTask;
         }
 
-        // 竞技场 Q/E 技能通过按键施放（input mapping），技能栏 overlay 是纯显示且无点击交互，
-        // 在竞技场里没有信息增益——显式关闭（CoreInputMod.SkillBarEnabled）。
-        engine.GlobalContext["CoreInputMod.SkillBarEnabled"] = false;
         EnsureObserverVisibilitySystem(engine);
         EnsurePressurePlateDoorSystem(engine);
         bool mapFocused = CapabilityStandardCrowdPhysicsArenaMapFocus.IsStartupMapFocused(engine);

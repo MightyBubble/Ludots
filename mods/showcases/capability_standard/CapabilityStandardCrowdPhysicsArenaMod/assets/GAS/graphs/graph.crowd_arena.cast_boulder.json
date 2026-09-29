@@ -1,0 +1,122 @@
+[
+  {
+    "id": "graph.crowd_arena.cast_boulder",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_cast",
+        "action": "SkillE",
+        "start": "pointer_x",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "to_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "casters",
+        "op": "InvokeGraph",
+        "functionName": "graph.crowd_arena.boulder_holders"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "to_ground"
+      },
+      {
+        "from": "to_ground",
+        "fromPort": "next",
+        "to": "casters"
+      },
+      {
+        "from": "casters",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "to_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "to_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "to_ground",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

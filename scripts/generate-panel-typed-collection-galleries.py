@@ -214,7 +214,11 @@ def write_maps(host: Path) -> None:
     for item in CATALOG:
         mid = map_id(item["slug"])
         entities = [
-            {"InstanceId": "collection-bags-hero", "Template": "collection_bags_hero"},
+            {
+                "InstanceId": "collection-bags-hero",
+                "Template": "collection_bags_hero",
+                "Relations": [{"To": "collection-bags-hero", "Type": "Friendly"}],
+            },
             {"InstanceId": "collection-bags-apprentice", "Template": "collection_bags_apprentice"},
         ]
         if item["slug"] == "inventory_aggregate":
@@ -224,6 +228,7 @@ def write_maps(host: Path) -> None:
             ])
         dump(maps_dir / f"{mid}.json", {
             "Id": mid,
+            "World": {"WidthCm": 1638400, "HeightCm": 1638400, "CellSizeCm": 100},
             "Tags": ["showcase", "panel", "typed-collection-bag", item["slug"]],
             "TriggerGraphs": [
                 {"graph": open_graph_id(item["slug"]), "scopeInstanceId": "collection-bags-hero"}
@@ -235,14 +240,6 @@ def write_maps(host: Path) -> None:
             "Players": [
                 {"PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "collection-bags-hero"}
             ],
-            "ParticipantRelationships": {
-                "Teams": [
-                    {"TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant",
-                     "Attitude": "Friendly", "Symmetric": True}
-                ],
-                "Players": [],
-                "PlayerTeams": [],
-            },
             "DefaultCamera": {
                 "TargetXCm": 110, "TargetYCm": 0, "Yaw": 45, "Pitch": 35,
                 "DistanceCm": 1100, "FovYDeg": 50

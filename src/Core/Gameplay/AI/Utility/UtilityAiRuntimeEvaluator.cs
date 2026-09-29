@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         private readonly InfluenceFieldRegistry? _influenceFields;
         private readonly IReadOnlyList<string>? _influenceFieldKeys;
         private readonly Entity[] _targets;
+        private readonly TeamRelationQuery? _teamRelations;
 
         public UtilityAiRuntimeEvaluator(
             World world,
@@ -36,7 +37,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
             IGraphRuntimeApi? graphApi,
             InfluenceFieldRegistry? influenceFields = null,
             IReadOnlyList<string>? influenceFieldKeys = null,
-            int targetCapacity = 256)
+            int targetCapacity = 256,
+            TeamRelationQuery? teamRelations = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -45,6 +47,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             _influenceFields = influenceFields;
             _influenceFieldKeys = influenceFieldKeys;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
+            _teamRelations = teamRelations;
         }
 
         public bool TryEvaluate(
@@ -488,9 +491,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 switch (op.Kind)
                 {
                     case UtilityAiTargetFilterOpKind.Relationship:
+                        if (_teamRelations == null)
+                        {
+                            throw new InvalidOperationException("Utility AI relationship target filter requires TeamRelationQuery.");
+                        }
+
                         if (!_world.TryGet(actor, out Team actorTeam) ||
                             !_world.TryGet(target, out Team targetTeam) ||
-                            !RelationshipFilterUtil.Passes(op.Relationship, actorTeam.Id, targetTeam.Id))
+                            !_teamRelations.Passes(in op.Relationship, actorTeam.Id, targetTeam.Id))
                         {
                             rejectReason = UtilityAiFilterRejectReason.Relationship;
                             return false;

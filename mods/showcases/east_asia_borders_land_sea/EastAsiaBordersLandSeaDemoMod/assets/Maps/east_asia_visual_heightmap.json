@@ -7,6 +7,10 @@
   ],
   "TriggerGraphs": [
     {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "local_player"
+    },
+    {
       "graph": "Graph.EastAsiaBorders.Boot",
       "scopeInstanceId": "army.1"
     },
@@ -78,7 +82,13 @@
   "Entities": [
     {
       "InstanceId": "player_team",
-      "Template": "east_asia_player_team"
+      "Template": "east_asia_player_team",
+      "Relations": [
+        {
+          "To": "player_team",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "local_player",

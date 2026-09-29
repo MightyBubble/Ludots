@@ -5,6 +5,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Networking.Configuration;
@@ -90,6 +91,8 @@ namespace Ludots.Core.Config
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
         public CommandSourceAcquisitionConfig? CommandSource { get; set; }
+
+        public InteractionActionBindings? InteractionActions { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 

@@ -916,119 +916,97 @@ namespace Ludots.Tests.Presentation
         public void WorldHudPresentBehavior_ProjectsKnownAudienceFromKnowledgeNotTeamRelationship()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity ownerAudience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+            Entity hostileAudience = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPresenterKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+            UpsertPresenterKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+            var behavior = new WorldHudPresentBehavior();
+            var ownerGlobals = new Dictionary<string, object>
             {
-                Entity owner = world.Create(
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
-                Entity ownerAudience = world.Create(
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 });
-                Entity hostileAudience = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
-
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
-
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
-                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
-                UpsertPresenterKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
-                UpsertPresenterKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
-
-                var behavior = new WorldHudPresentBehavior();
-                var ownerGlobals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1, "seat.0");
-                var hostileGlobals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1, "seat.0");
-
-                bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PresentPhaseResult ownerPhase);
-                bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PresentPhaseResult hostilePhase);
-
-                Assert.That(ownerVisible, Is.True);
-                Assert.That(ownerPhase.IsOwnedByAudience, Is.True);
-                Assert.That(ownerPhase.ShouldPresent, Is.True);
-                Assert.That(ownerPhase.AllowWorldHudProjection, Is.True);
-
-                Assert.That(hostileVisible, Is.True, "Knowledge projection is the HUD readability authority; team hostility is styling-only.");
-                Assert.That(hostilePhase.IsHostile, Is.True);
-                Assert.That(hostilePhase.ShouldPresent, Is.True);
-                Assert.That(hostilePhase.AllowWorldHudProjection, Is.True);
-            }
-            finally
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1, "seat.0");
+            var hostileGlobals = new Dictionary<string, object>
             {
-                TeamManager.Clear();
-            }
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1, "seat.0");
+
+            bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PresentPhaseResult ownerPhase);
+            bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PresentPhaseResult hostilePhase);
+
+            Assert.That(ownerVisible, Is.True);
+            Assert.That(ownerPhase.IsOwnedByAudience, Is.True);
+            Assert.That(ownerPhase.ShouldPresent, Is.True);
+            Assert.That(ownerPhase.AllowWorldHudProjection, Is.True);
+
+            Assert.That(hostileVisible, Is.True, "Knowledge projection is the HUD readability authority.");
+            Assert.That(hostilePhase.ShouldPresent, Is.True);
+            Assert.That(hostilePhase.AllowWorldHudProjection, Is.True);
         }
 
         [Test]
         public void WorldHudPresentBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
+            Entity target = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity hostileAudience = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPresenterKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+            var behavior = new WorldHudPresentBehavior();
+            var globals = new Dictionary<string, object>
             {
-                Entity target = world.Create(
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
-                Entity hostileAudience = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, hostileAudience, 1, "seat.0");
 
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+            bool transientTextProjected = behavior.TryResolveProjection(
+                world,
+                globals,
+                target,
+                LODLevel.High,
+                WorldHudItemKind.Text,
+                ReadOnlySpan<int>.Empty,
+                out PresentPhaseResult transientTextPhase);
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
+            bool attributeTextProjected = behavior.TryResolveProjection(
+                world,
+                globals,
+                target,
+                LODLevel.High,
+                WorldHudItemKind.Text,
+                requiredAttributes,
+                out PresentPhaseResult attributeTextPhase);
 
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
-                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
-                UpsertPresenterKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+            Assert.That(transientTextProjected, Is.True);
+            Assert.That(transientTextPhase.ShouldPresent, Is.True);
+            Assert.That(transientTextPhase.AllowWorldHudProjection, Is.True);
 
-                var behavior = new WorldHudPresentBehavior();
-                var globals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, hostileAudience, 1, "seat.0");
-
-                bool transientTextProjected = behavior.TryResolveProjection(
-                    world,
-                    globals,
-                    target,
-                    LODLevel.High,
-                    WorldHudItemKind.Text,
-                    ReadOnlySpan<int>.Empty,
-                    out PresentPhaseResult transientTextPhase);
-                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
-                bool attributeTextProjected = behavior.TryResolveProjection(
-                    world,
-                    globals,
-                    target,
-                    LODLevel.High,
-                    WorldHudItemKind.Text,
-                    requiredAttributes,
-                    out PresentPhaseResult attributeTextPhase);
-
-                Assert.That(transientTextProjected, Is.True);
-                Assert.That(transientTextPhase.IsHostile, Is.True);
-                Assert.That(transientTextPhase.ShouldPresent, Is.True);
-                Assert.That(transientTextPhase.AllowWorldHudProjection, Is.True);
-
-                Assert.That(attributeTextProjected, Is.False);
-                Assert.That(attributeTextPhase.RequiresAttributeProjection, Is.True);
-                Assert.That(attributeTextPhase.AllowWorldHudProjection, Is.False);
-            }
-            finally
-            {
-                TeamManager.Clear();
-            }
+            Assert.That(attributeTextProjected, Is.False);
+            Assert.That(attributeTextPhase.RequiresAttributeProjection, Is.True);
+            Assert.That(attributeTextPhase.AllowWorldHudProjection, Is.False);
         }
 
         [Test]
@@ -1062,45 +1040,35 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPresentBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
+        public void WorldHudPresentBehavior_ProjectsAllyAudienceFromProjection()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity allyAudience = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+
+            var projectionStore = new KnowledgeProjectionStore();
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPresenterKnowledge(projectionStore, allyAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+            var behavior = new WorldHudPresentBehavior();
+            var globals = new Dictionary<string, object>
             {
-                Entity owner = world.Create(
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
-                Entity allyAudience = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, allyAudience, 1, "seat.0");
 
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Friendly);
-                var projectionStore = new KnowledgeProjectionStore();
-                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
-                UpsertPresenterKnowledge(projectionStore, allyAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
 
-                var behavior = new WorldHudPresentBehavior();
-                var globals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, allyAudience, 1, "seat.0");
-
-                bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
-
-                Assert.That(projected, Is.True);
-                Assert.That(phase.IsFriendly, Is.True);
-                Assert.That(phase.HasKnowledgeProjection, Is.True);
-                Assert.That(phase.ShouldPresent, Is.True);
-                Assert.That(phase.AllowWorldHudProjection, Is.True);
-            }
-            finally
-            {
-                TeamManager.Clear();
-            }
+            Assert.That(projected, Is.True);
+            Assert.That(phase.HasKnowledgeProjection, Is.True);
+            Assert.That(phase.ShouldPresent, Is.True);
+            Assert.That(phase.AllowWorldHudProjection, Is.True);
         }
 
         [Test]
@@ -1293,383 +1261,345 @@ namespace Ludots.Tests.Presentation
         public void PresenterEmitSystem_WorldBar_UsesWorldHudPresentBehaviorProjection()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
-            {
-                var instances = new PresenterEntityRuntime(world);
-                var definitions = new PresenterDefinitionRegistry();
-                var requests = new PresentationRequestBuffer();
-                var soundRequests = new SoundRequestBuffer();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var soundRequests = new SoundRequestBuffer();
 
-                int definitionId = definitions.Register(
-                    "presenter.entity.worldbar",
-                    new PresenterDefinition
-                    {
-                        Behaviors =
-                        [
-                            new BehaviorSlot
+            int definitionId = definitions.Register(
+                "presenter.entity.worldbar",
+                new PresenterDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
                             {
-                                SlotIndex = 0,
-                                Kind = BehaviorKind.AssetBinding,
-                                ActiveByDefault = true,
-                                AssetBinding = new AssetBindingConfig
-                                {
-                                    AssetKind = AssetKind.WorldHud,
-                                    Mobility = VisualMobility.Movable,
-                                    LocalScale = new Vector3(40f, 6f, 1f),
-                                    AssetIdParamKey = -1,
-                                },
+                                AssetKind = AssetKind.WorldHud,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = new Vector3(40f, 6f, 1f),
+                                AssetIdParamKey = -1,
                             },
-                        ],
-                    });
+                        },
+                    ],
+                });
 
-                Entity owner = world.Create(
-                    new PresentationStableId { Value = 601 },
-                    new VisualTransform
-                    {
-                        Position = new Vector3(1f, 2f, 3f),
-                        Rotation = Quaternion.Identity,
-                        Scale = Vector3.One,
-                    },
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
-
-                Entity ownerAudience = world.Create(
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 });
-                Entity hostileAudience = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
-
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
-
-                instances.BindDefinitions(definitions);
-                Entity presenter = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
-                world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
-
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
-                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
-                UpsertPresenterKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
-                UpsertPresenterKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
-
-                var ownerGlobals = new Dictionary<string, object>
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 601 },
+                new VisualTransform
                 {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1, "seat.0");
-                using var behaviorSystem = new PresenterBehaviorSystem(
-                    world,
-                    instances,
-                    definitions,
-                    new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
-                    new PresentationOwnerChangeBuffer(8),
-                    soundRequests);
-                behaviorSystem.Update(0f);
+                    Position = new Vector3(1f, 2f, 3f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
 
-                using (var ownerSystem = new PresenterEmitSystem(
-                           world,
-                           instances,
-                           definitions,
-                           requests,
-                           ownerGlobals))
-                {
-                    ownerSystem.Update(0.016f);
-                }
+            Entity ownerAudience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+            Entity hostileAudience = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
 
-                Assert.That(requests.Count, Is.EqualTo(1), "Owner audience should receive projected world HUD output.");
-                requests.Clear();
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
 
-                // Owner emit clears retained dirty; re-mark so the hostile audience pass re-evaluates projection.
-                instances.MarkTransformDrivenEmitDirty(presenter);
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPresenterKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+            UpsertPresenterKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
 
-                var hostileGlobals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1, "seat.0");
-
-                using (var hostileSystem = new PresenterEmitSystem(
-                           world,
-                           instances,
-                           definitions,
-                           requests,
-                           hostileGlobals))
-                {
-                    hostileSystem.Update(0.016f);
-                }
-
-                Assert.That(
-                    requests.Count,
-                    Is.EqualTo(1),
-                    "Known hostile audience still receives world HUD when knowledge projection authorizes readability.");
-            }
-            finally
+            var ownerGlobals = new Dictionary<string, object>
             {
-                TeamManager.Clear();
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1, "seat.0");
+            using var behaviorSystem = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                soundRequests);
+            behaviorSystem.Update(0f);
+
+            using (var ownerSystem = new PresenterEmitSystem(
+                       world,
+                       instances,
+                       definitions,
+                       requests,
+                       ownerGlobals))
+            {
+                ownerSystem.Update(0.016f);
             }
+
+            Assert.That(requests.Count, Is.EqualTo(1), "Owner audience should receive projected world HUD output.");
+            requests.Clear();
+
+            // Owner emit clears retained dirty; re-mark so the hostile audience pass re-evaluates projection.
+            instances.MarkTransformDrivenEmitDirty(presenter);
+
+            var hostileGlobals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1, "seat.0");
+
+            using (var hostileSystem = new PresenterEmitSystem(
+                       world,
+                       instances,
+                       definitions,
+                       requests,
+                       hostileGlobals))
+            {
+                hostileSystem.Update(0.016f);
+            }
+
+            Assert.That(
+                requests.Count,
+                Is.EqualTo(1),
+                "Known hostile audience still receives world HUD when knowledge projection authorizes readability.");
         }
 
         [Test]
         public void PresenterEmitSystem_WorldBar_UsesRelationGrantedAttributeProjection()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
-            {
-                const int durabilityAttributeId = 7;
-                const string publicMapObjectsKey = "collection.public_map_objects";
-                var instances = new PresenterEntityRuntime(world);
-                var definitions = new PresenterDefinitionRegistry();
-                var requests = new PresentationRequestBuffer();
-                var soundRequests = new SoundRequestBuffer();
+            const int durabilityAttributeId = 7;
+            const string publicMapObjectsKey = "collection.public_map_objects";
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var soundRequests = new SoundRequestBuffer();
 
-                int definitionId = definitions.Register(
-                    "presenter.entity.relation-granted-worldbar",
-                    new PresenterDefinition
-                    {
-                        Behaviors =
-                        [
-                            new BehaviorSlot
-                            {
-                                SlotIndex = 0,
-                                Kind = BehaviorKind.AttributeBinding,
-                                ActiveByDefault = true,
-                                AttributeBinding = new AttributeBindingConfig
-                                {
-                                    AttributeId = durabilityAttributeId,
-                                    TargetParamKey = WellKnownPresenterParamKeys.BarFillRatio,
-                                    Mode = ValueSourceKind.AttributeRatio,
-                                    Thresholds = Array.Empty<ThresholdMapping>(),
-                                },
-                            },
-                            new BehaviorSlot
-                            {
-                                SlotIndex = 1,
-                                Kind = BehaviorKind.AssetBinding,
-                                ActiveByDefault = true,
-                                AssetBinding = new AssetBindingConfig
-                                {
-                                    AssetKind = AssetKind.WorldHud,
-                                    Mobility = VisualMobility.Movable,
-                                    LocalScale = new Vector3(40f, 6f, 1f),
-                                    MaterialParamKey = -1,
-                                    AssetIdParamKey = -1,
-                                },
-                            },
-                        ],
-                    });
-
-                var ownerAttributes = new AttributeBuffer();
-                ownerAttributes.SetBase(durabilityAttributeId, 100f);
-                ownerAttributes.SetCurrent(durabilityAttributeId, 100f);
-                Entity owner = world.Create(
-                    ownerAttributes,
-                    new PresentationStableId { Value = 701 },
-                    new VisualTransform
-                    {
-                        Position = new Vector3(1f, 2f, 3f),
-                        Rotation = Quaternion.Identity,
-                        Scale = Vector3.One,
-                    },
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
-
-                Entity viewer = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
-                Entity grantSource = world.Create();
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
-
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
-                var projectionResolver = CreateRelationGrantedProjectionResolver(
-                    world,
-                    viewer,
-                    grantSource,
-                    owner,
-                    durabilityAttributeId,
-                    "PublicMap",
-                    publicMapObjectsKey,
-                    projectionStore);
-                var globals = new Dictionary<string, object>
+            int definitionId = definitions.Register(
+                "presenter.entity.relation-granted-worldbar",
+                new PresenterDefinition
                 {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AttributeBinding,
+                            ActiveByDefault = true,
+                            AttributeBinding = new AttributeBindingConfig
+                            {
+                                AttributeId = durabilityAttributeId,
+                                TargetParamKey = WellKnownPresenterParamKeys.BarFillRatio,
+                                Mode = ValueSourceKind.AttributeRatio,
+                                Thresholds = Array.Empty<ThresholdMapping>(),
+                            },
+                        },
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 1,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.WorldHud,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = new Vector3(40f, 6f, 1f),
+                                MaterialParamKey = -1,
+                                AssetIdParamKey = -1,
+                            },
+                        },
+                    ],
+                });
 
-                instances.BindDefinitions(definitions);
-                Entity presenter = instances.Create(
-                    definitionId,
-                    owner,
-                    scopeId: 9201,
-                    PresentationAnchorKind.Entity,
-                    Vector3.Zero,
-                    stableId: 8201,
-                    Entity.Null,
-                    default);
-                world.Get<PresenterState>(presenter).BehaviorActiveMask = (1u << 0) | (1u << 1);
+            var ownerAttributes = new AttributeBuffer();
+            ownerAttributes.SetBase(durabilityAttributeId, 100f);
+            ownerAttributes.SetCurrent(durabilityAttributeId, 100f);
+            Entity owner = world.Create(
+                ownerAttributes,
+                new PresentationStableId { Value = 701 },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 2f, 3f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
 
-                using var behaviorSystem = new PresenterBehaviorSystem(
-                    world,
-                    instances,
-                    definitions,
-                    new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
-                    new PresentationOwnerChangeBuffer(8),
-                    soundRequests);
-                behaviorSystem.Update(0f);
+            Entity viewer = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+            Entity grantSource = world.Create();
 
-                using var emitSystem = new PresenterEmitSystem(
-                    world,
-                    instances,
-                    definitions,
-                    requests,
-                    globals);
-                emitSystem.Update(0.016f);
-
-                Assert.That(requests.Count, Is.EqualTo(1));
-            }
-            finally
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            var projectionResolver = CreateRelationGrantedProjectionResolver(
+                world,
+                viewer,
+                grantSource,
+                owner,
+                durabilityAttributeId,
+                "PublicMap",
+                publicMapObjectsKey,
+                projectionStore);
+            var globals = new Dictionary<string, object>
             {
-                TeamManager.Clear();
-            }
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(
+                definitionId,
+                owner,
+                scopeId: 9201,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 8201,
+                Entity.Null,
+                default);
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = (1u << 0) | (1u << 1);
+
+            using var behaviorSystem = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                soundRequests);
+            behaviorSystem.Update(0f);
+
+            using var emitSystem = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                globals);
+            emitSystem.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
         }
 
         [Test]
         public void WorldHudPresentBehavior_ProjectsAttributeHudFromRelationGrantedKnowledge()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
+            const int durabilityAttributeId = 7;
+            const string publicMapObjectsKey = "collection.public_map_objects";
+
+            Entity viewer = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+            Entity grantSource = world.Create();
+            var mapObjectAttributes = new AttributeBuffer();
+            mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
+            Entity mapObject = world.Create(
+                mapObjectAttributes,
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            var projectionResolver = CreateRelationGrantedProjectionResolver(
+                world,
+                viewer,
+                grantSource,
+                mapObject,
+                durabilityAttributeId,
+                "PublicMap",
+                publicMapObjectsKey,
+                projectionStore);
+            var globals = new Dictionary<string, object>
             {
-                const int durabilityAttributeId = 7;
-                const string publicMapObjectsKey = "collection.public_map_objects";
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
-                Entity viewer = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
-                Entity grantSource = world.Create();
-                var mapObjectAttributes = new AttributeBuffer();
-                mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
-                Entity mapObject = world.Create(
-                    mapObjectAttributes,
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
+            var behavior = new WorldHudPresentBehavior();
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
 
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
-                var projectionResolver = CreateRelationGrantedProjectionResolver(
-                    world,
-                    viewer,
-                    grantSource,
-                    mapObject,
-                    durabilityAttributeId,
-                    "PublicMap",
-                    publicMapObjectsKey,
-                    projectionStore);
-                var globals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
+            bool projected = behavior.TryResolveProjection(
+                world,
+                globals,
+                mapObject,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PresentPhaseResult phase);
 
-                var behavior = new WorldHudPresentBehavior();
-                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
-
-                bool projected = behavior.TryResolveProjection(
-                    world,
-                    globals,
-                    mapObject,
-                    LODLevel.High,
-                    WorldHudItemKind.Bar,
-                    requiredAttributes,
-                    out PresentPhaseResult phase);
-
-                Assert.That(projected, Is.True);
-                Assert.That(phase.IsHostile, Is.True, "Team hostility remains a styling fact.");
-                Assert.That(phase.HasKnowledgeProjection, Is.True);
-                Assert.That(phase.RequiresAttributeProjection, Is.True);
-                Assert.That(phase.HasAttributeProjection, Is.True);
-                Assert.That(phase.AllowWorldHudProjection, Is.True);
-            }
-            finally
-            {
-                TeamManager.Clear();
-            }
+            Assert.That(projected, Is.True);
+            Assert.That(phase.HasKnowledgeProjection, Is.True);
+            Assert.That(phase.RequiresAttributeProjection, Is.True);
+            Assert.That(phase.HasAttributeProjection, Is.True);
+            Assert.That(phase.AllowWorldHudProjection, Is.True);
         }
 
         [Test]
         public void WorldHudPresentBehavior_RelationGrantCompletesExistingProjectionAttributeMask()
         {
             using var world = World.Create();
-            TeamManager.Clear();
 
-            try
+            const int durabilityAttributeId = 7;
+            const string publicMapObjectsKey = "collection.public_map_objects";
+
+            Entity viewer = world.Create(
+                new Team { Id = 20 },
+                new PlayerOwner { PlayerId = 20 });
+            Entity grantSource = world.Create();
+            var mapObjectAttributes = new AttributeBuffer();
+            mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
+            Entity mapObject = world.Create(
+                mapObjectAttributes,
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            UpsertPresenterKnowledge(
+                projectionStore,
+                viewer,
+                mapObject,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                KnowledgeIdMask256.Empty);
+            var projectionResolver = CreateRelationGrantedProjectionResolver(
+                world,
+                viewer,
+                grantSource,
+                mapObject,
+                durabilityAttributeId,
+                "PublicMap",
+                publicMapObjectsKey,
+                projectionStore);
+            var globals = new Dictionary<string, object>
             {
-                const int durabilityAttributeId = 7;
-                const string publicMapObjectsKey = "collection.public_map_objects";
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
-                Entity viewer = world.Create(
-                    new Team { Id = 20 },
-                    new PlayerOwner { PlayerId = 20 });
-                Entity grantSource = world.Create();
-                var mapObjectAttributes = new AttributeBuffer();
-                mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
-                Entity mapObject = world.Create(
-                    mapObjectAttributes,
-                    new Team { Id = 10 },
-                    new PlayerOwner { PlayerId = 10 },
-                    new CullState { IsVisible = true, LOD = LODLevel.High });
+            var behavior = new WorldHudPresentBehavior();
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
 
-                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
-                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
-                UpsertPresenterKnowledge(
-                    projectionStore,
-                    viewer,
-                    mapObject,
-                    KnowledgePresence.LiveVisible,
-                    KnowledgePositionAccess.Live,
-                    KnowledgeIdMask256.Empty);
-                var projectionResolver = CreateRelationGrantedProjectionResolver(
-                    world,
-                    viewer,
-                    grantSource,
-                    mapObject,
-                    durabilityAttributeId,
-                    "PublicMap",
-                    publicMapObjectsKey,
-                    projectionStore);
-                var globals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
+            bool projected = behavior.TryResolveProjection(
+                world,
+                globals,
+                mapObject,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PresentPhaseResult phase);
 
-                var behavior = new WorldHudPresentBehavior();
-                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
-
-                bool projected = behavior.TryResolveProjection(
-                    world,
-                    globals,
-                    mapObject,
-                    LODLevel.High,
-                    WorldHudItemKind.Bar,
-                    requiredAttributes,
-                    out PresentPhaseResult phase);
-
-                Assert.That(projected, Is.True);
-                Assert.That(phase.HasKnowledgeProjection, Is.True);
-                Assert.That(phase.HasAttributeProjection, Is.True);
-                Assert.That(phase.AllowWorldHudProjection, Is.True);
-            }
-            finally
-            {
-                TeamManager.Clear();
-            }
+            Assert.That(projected, Is.True);
+            Assert.That(phase.HasKnowledgeProjection, Is.True);
+            Assert.That(phase.HasAttributeProjection, Is.True);
+            Assert.That(phase.AllowWorldHudProjection, Is.True);
         }
 
         private static string FindRepoRoot()

@@ -1,0 +1,57 @@
+[
+  {
+    "id": "tcg_prompt_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "tcg_prompt_hero" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "tcg_prompt_unit_root", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "tcg_prompt_hero" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "tcg_prompt_mage" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "tcg_prompt_unit_root", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "tcg_prompt_mage" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "tcg_prompt_unit_root",
+    "children": [
+      {
+        "definitionId": "tcg_prompt_unit_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.2, 0],
+            "localScale": [1.8, 2.4, 1.8]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tcg_prompt_unit_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "tcg_prompt.unit_cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  }
+]

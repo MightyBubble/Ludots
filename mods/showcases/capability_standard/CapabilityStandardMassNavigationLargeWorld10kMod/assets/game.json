@@ -10,7 +10,8 @@
     "orderQueueCapacity": 16384,
     "orderAdmissionResultCapacity": 32768,
     "orderAdmissionRejectionCapacity": 16384,
-    "orderTerminalResultCapacity": 16384
+    "orderTerminalResultCapacity": 16384,
+    "commandIntentScratchCapacity": 16384
   },
   "commandSource": {
     "acquisition": {
@@ -18,10 +19,7 @@
     },
     "targetFilter": {
       "relationFilter": "Friendly"
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "massNavigationMove"
-    ]
+    }
   },
   "presentation": {
     "presenterInstanceCapacity": 131072,
@@ -49,7 +47,6 @@
     "minimap": {
       "initialZoomNormalized": 0.12,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,

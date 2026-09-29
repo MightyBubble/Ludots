@@ -28,7 +28,6 @@
 | 描边 | `worldSpline.border` + `worldSpline.border.width` | 有边/无边进入样条请求 |
 | 弯曲 | `worldSpline.p0`–`p3` | 弯带控制点进入样条请求 |
 | 闪光大小/颜色 | cue presenter 的 `localScale` / `style.color` | 小绿块 vs 大黄块进入载荷 |
-| 闪光寿命 | Core presenter `cue_marker` 的 `lifecycle.durationSeconds` | 应答链瞬态标记读这份数据；`lifetimeSeconds<=0` 失败响 |
 
 拍摄机位 `08_decal_fields` / `09_spline_ribbons` / `10_cue_flashes` 仍可用来构图，但 **P0–P2 不把 GPU 截图当作本包合同**。故事脚印仍是 `07_beach_decals`。
 
@@ -37,7 +36,7 @@
 - 编排仍是 Presenter `AssetBinding`。禁止再写 Prefab 零件。
 - 印记尺寸必须进 `VisualProxy.Scale`。适配器侧投影盒子如何消费该缩放是 P3 合同。
 - 带子走 `AssetKind.Spline` 绘制请求，类型是 `SplineRibbonRequest`。
-- 击中闪光用叶子网格 `cue_marker`（`mesh_assets.json` 唯一注册），缩放与寿命来自 Core presenter `cue_marker`，与应答链同一条瞬态网格路。
+- 击中闪光用叶子网格 `cue_marker`（`mesh_assets.json` 唯一注册），大小和颜色写在展台自己的 presenter 里。
 - 规则命令是 `CreatePresenter`，不是已删除的 Performer 词。
 
 ## 4. 场景

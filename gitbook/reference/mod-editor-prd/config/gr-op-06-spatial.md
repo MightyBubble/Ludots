@@ -48,7 +48,7 @@ kind 缩写同 gr-op-01。TargetList 指查询管线的目标列表值线。
 | QueryLimit | L+Q+SC | list + imm | TargetList | 截断到前 N |
 | QueryFilterNotEntity | L | source | TargetList | 管线中剔除 source 实体 |
 | QueryFilterLayer | L | imm 层掩码 | TargetList | 只留命中层，`layerMask` |
-| QueryFilterRelationship | L | source + imm | TargetList | 按关系类型留/剔，接 source 判关系 |
+| QueryFilterRelationship | L+SC | source + imm | TargetList | 按关系类型留/剔，接 source 判关系 |
 
 全部形状查询节点带 `queryCapacityPolicy`（SpatialCapacityFlags）：`RequireComplete` 或 `AllowTruncated`。
 

@@ -2,15 +2,29 @@
   "profiles": [
     {
       "id": "interaction.context.crowd.battle",
-      "activeCollectionKey": "collection.command.source",
       "commandIntentId": "intent.command.default",
+      "inputContextId": "CaseE.Controls",
       "bindings": [
-        "Select.Begin",
-        "Select.End"
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelectEnd",
+        "CaseE.Command",
+        "QueueModifier",
+        "ModifierSubtract",
+        "SkillQ",
+        "SkillE"
       ],
       "triggers": [
         {
-          "trigger": "graph.core.select_begin"
+          "trigger": "graph.crowd_arena.box_begin"
+        },
+        {
+          "trigger": "graph.case_e.command_commit"
+        },
+        {
+          "trigger": "graph.crowd_arena.cast_shockwave"
+        },
+        {
+          "trigger": "graph.crowd_arena.cast_boulder"
         }
       ]
     }

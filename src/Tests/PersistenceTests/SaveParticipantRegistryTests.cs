@@ -97,7 +97,6 @@ public sealed class SaveParticipantRegistryTests
             "rng",
             "sequencer",
             "tasks",
-            "teams",
             "timeFlow"
         }));
     }
@@ -265,36 +264,6 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(target.DayIndex, Is.EqualTo(1));
         Assert.That(target.TicksIntoDay, Is.EqualTo(5));
         Assert.That(target.ProjectActive().Year, Is.EqualTo(1));
-    }
-
-    [Test]
-    public void TeamParticipantRestoresDefaultAndAsymmetricRelationships()
-    {
-        TeamRelationshipSnapshot original = TeamManager.CaptureSnapshot();
-        try
-        {
-            TeamManager.Clear();
-            TeamManager.DefaultRelationship = TeamRelationship.Hostile;
-            TeamManager.SetRelationship(1, 2, TeamRelationship.Friendly);
-            TeamManager.SetRelationship(2, 1, TeamRelationship.Neutral);
-
-            ISaveParticipant participant = CoreSaveParticipants.CreateTeamParticipant();
-            JsonNode state = participant.CaptureState();
-
-            TeamManager.Clear();
-            TeamManager.DefaultRelationship = TeamRelationship.Neutral;
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-
-            participant.RestoreState(state);
-
-            Assert.That(TeamManager.DefaultRelationship, Is.EqualTo(TeamRelationship.Hostile));
-            Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Friendly));
-            Assert.That(TeamManager.GetRelationship(2, 1), Is.EqualTo(TeamRelationship.Neutral));
-        }
-        finally
-        {
-            TeamManager.RestoreSnapshot(original);
-        }
     }
 
     [Test]

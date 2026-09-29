@@ -54,7 +54,8 @@ namespace Ludots.Core.Input.Interaction
         int OrderTypeId,
         int RouteKind,
         int RouteParamId,
-        CommandIntentTargetShape TargetShape)
+        CommandIntentTargetShape TargetShape,
+        bool ExactGroundPoint = false)
     {
         /// <summary>Sentinel for "no rule matched" in group results.</summary>
         public static readonly CommandIntentRoute None = new(
@@ -83,7 +84,7 @@ namespace Ludots.Core.Input.Interaction
     /// Knowledge gate for target facts (RFC-0065 INT-2, DEC-14): true when <paramref name="viewerRep"/>
     /// is allowed to command-target <paramref name="target"/> (<c>CanTargetCommand</c> semantics).
     /// <paramref name="viewerRep"/> is the acting side's control domain rep — proxy control gates from
-    /// the acting domain, matching stance evaluation.
+    /// the acting domain, matching relation evaluation.
     /// </summary>
     public delegate bool CommandIntentTargetGate(Entity viewerRep, Entity target);
 
@@ -125,17 +126,19 @@ namespace Ludots.Core.Input.Interaction
         public string HasAbilityWithCategory { get; set; }
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
+        public List<string> NoneTags { get; set; }
     }
 
     /// <summary>
     /// Target-side predicate shorthand. <c>HasEntity</c> is tri-state: null matches both ground and
-    /// entity hits, true/false match exactly. Stance names resolve to relationship type ids at install.
+    /// entity hits, true/false match exactly. <c>Relation</c> names relationship types (any-of) from the
+    /// acting domain's team to the target's team and resolves to type ids at install.
     /// </summary>
     public sealed class CommandIntentTargetPredicateDefinition
     {
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
-        public List<string> Stance { get; set; }
+        public List<string> Relation { get; set; }
         public bool? HasEntity { get; set; }
     }
 
@@ -148,5 +151,11 @@ namespace Ludots.Core.Input.Interaction
         public string OrderTypeKey { get; set; } = string.Empty;
         public string Slot { get; set; }
         public CommandIntentTargetShape? TargetShape { get; set; }
+
+        /// <summary>
+        /// Keeps this route's ground point exactly where the pointer hit even when the submitting graph
+        /// spreads the batch into a ground layout (rally points stay on the clicked spot while movers fan out).
+        /// </summary>
+        public bool ExactGroundPoint { get; set; }
     }
 }
