@@ -882,7 +882,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       : emptyVariableDraft());
     setVariableStatus(hosts.length > 1
       ? `Shared variables from ${hosts.map((item) => item.mapId).join(', ')}.`
-      : `Loaded ${rows.length} variables from ${host.mapId}.`);
+      : `已加载 ${host.mapId} 的 ${rows.length} 个变量。`);
   }, [modId]);
 
   const schemaFor = React.useCallback(
@@ -1104,7 +1104,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedVariable(null);
-      setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
+      setStatus(`已加载 ${loaded.id}（${loaded.kind}）。`);
       try {
         await loadMapVariables(loaded.id);
       } catch (mapVarErr) {
@@ -1152,7 +1152,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         throw new Error(payload.error ?? `Catalog load failed (${res.status})`);
       }
       setCatalog(payload.mods as CatalogMod[]);
-      setCatalogStatus(`Loaded ${payload.mods.length} mods with graphs`);
+      setCatalogStatus(`目录已刷新：${payload.mods.length} 个含图 Mod。`);
     } catch (err) {
       setCatalog([]);
       setCatalogStatus(err instanceof Error ? err.message : String(err));
@@ -1250,7 +1250,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
     if (dialect === 'bt' || dialect === 'fsm') {
       const params = new URLSearchParams({ mod: modId, graph: target });
       navigate(`/gas-graphs?${params.toString()}`);
-      setStatus(`Opened Func Graph ${target} in Graph Editor.`);
+      setStatus(`已打开函数图 ${target}。`);
       return;
     }
     setGraphId(target);
@@ -1393,7 +1393,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         reactFlowRef.current?.fitView({ padding: 0.16, duration: 240, minZoom: 0.12, maxZoom: 1.75 });
       });
     });
-    setStatus('Auto-arranged. Save Layout to keep it.');
+    setStatus('已自动排版；「保存布局」才会落盘。');
   }, [edges, nodes]);
 
   const addSwitchCase = React.useCallback(() => {
@@ -2163,16 +2163,16 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       actions={
         <>
           <Link to={dialectPath('func')} className={dialectNavClass('func')}>
-            Graph Editor
+            函数图
           </Link>
           <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
-            BT Editor
+            行为树
           </Link>
           <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
-            FSM Editor
+            状态机
           </Link>
           <label className="flex items-center gap-2 text-xs text-studio-muted">
-            modId
+            mod
             <input
               value={modId}
               onChange={(e) => setModId(e.target.value)}
@@ -2180,7 +2180,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             />
           </label>
           <label className="flex items-center gap-2 text-xs text-studio-muted">
-            graphId
+            图
             <input
               value={graphId}
               onChange={(e) => setGraphId(e.target.value)}
@@ -2188,22 +2188,22 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             />
           </label>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => void loadGraph()}>
-            Load
+            加载
           </Button>
           <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void onValidate()}>
-            Validate
+            校验
           </Button>
           <Button variant="primary" size="sm" disabled={busy || !currentGraph} onClick={() => void onSave()}>
-            Save
+            保存
           </Button>
           <Button variant="ghost" size="sm" disabled={busy || nodes.length === 0} onClick={applyAutoLayout}>
-            Auto Layout
+            自动排版
           </Button>
           <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void saveLayout()}>
-            Save Layout
+            保存布局
           </Button>
           <Button variant="ghost" size="sm" onClick={() => void loadCatalog()}>
-            Refresh Tree
+            刷新目录
           </Button>
           <Button
             variant="ghost"
@@ -2211,13 +2211,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             className="border-studio-yellow/50 text-studio-yellow hover:bg-studio-yellow/15"
             onClick={() => void refreshDebugMounts()}
           >
-            Refresh Live
+            刷新实时
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setLeftRailCollapsed((v) => !v)} title="Toggle catalog / variables rail">
-            {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
+            {leftRailCollapsed ? '展目录' : '收目录'}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setRightRailCollapsed((v) => !v)} title="Toggle inspector rail">
-            {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
+            {rightRailCollapsed ? '展检查器' : '收检查器'}
           </Button>
         </>
       }
@@ -2446,7 +2446,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                           addAuthoringNode(availableNodes[0].op, { x: paletteMenu.flowX, y: paletteMenu.flowY });
                         }
                       }}
-                      placeholder="Find node"
+                      placeholder="找节点…"
                       aria-label="Find graph node"
                       className="min-w-0 flex-1 bg-transparent text-xs text-studio-label outline-none placeholder:text-studio-muted"
                     />
@@ -2551,7 +2551,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show inspector"
           >
-            <span className="[writing-mode:vertical-rl]">Inspector</span>
+            <span className="[writing-mode:vertical-rl]">检查器</span>
           </button>
         ) : (
         <aside className="flex min-h-0 flex-col border-l border-studio-elevated bg-studio-surface/80">
@@ -2609,7 +2609,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select anchor</option>
+                              <option value="">选锚点</option>
                               {options.map((anchor) => (
                                 <option key={anchor} value={anchor}>{anchor}</option>
                               ))}
@@ -2729,7 +2729,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select kind</option>
+                              <option value="">选类型</option>
                               {options.map((kind) => (
                                 <option key={kind} value={kind}>{kind}</option>
                               ))}
@@ -2752,7 +2752,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 })}
                 {selectedData.descriptor ? (
                   <div className="rounded border border-studio-elevated bg-studio-bg/80 p-2">
-                    <div className="mb-1 text-studio-muted">Descriptor ports</div>
+                    <div className="mb-1 text-studio-muted">描述符端口</div>
                     <div className="font-mono text-[10px] text-studio-blue">
                       in: {[...new Set([
                         ...selectedData.descriptor.linearInputPorts,
@@ -2790,7 +2790,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => setSwitchCaseValue(event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select member</option>
+                              <option value="">选成员</option>
                               {boundEnum.members.map((member) => (
                                 <option key={member.name} value={member.name}>{member.name} ({member.value})</option>
                               ))}
@@ -2800,7 +2800,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       }
                       return (
                         <label className="block">
-                          <div className="mb-1 text-studio-muted">Case value</div>
+                          <div className="mb-1 text-studio-muted">case 值</div>
                           <input
                             type="number"
                             step="1"
@@ -2812,13 +2812,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       );
                     })()}
                     <label className="block">
-                      <div className="mb-1 text-studio-muted">Target node</div>
+                      <div className="mb-1 text-studio-muted">目标节点</div>
                       <select
                         value={switchCaseTarget}
                         onChange={(event) => setSwitchCaseTarget(event.target.value)}
                         className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
-                        <option value="">Select target</option>
+                        <option value="">选目标</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
                           <option key={node.id} value={node.id}>{node.id}</option>
                         ))}
@@ -2840,13 +2840,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       {(selectedData.controlOutputPorts ?? []).filter((port) => port.startsWith('child:')).join(', ') || 'none yet'}
                     </div>
                     <label className="block">
-                      <div className="mb-1 text-studio-muted">Target node</div>
+                      <div className="mb-1 text-studio-muted">目标节点</div>
                       <select
                         value={btChildTarget}
                         onChange={(event) => setBtChildTarget(event.target.value)}
                         className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
-                        <option value="">Select target</option>
+                        <option value="">选目标</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
                           <option key={node.id} value={node.id}>{node.id}</option>
                         ))}
@@ -2884,7 +2884,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   <div className="font-mono text-studio-label">{selectedEdge.data?.kind ?? 'edge'}</div>
                 </div>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">From node</div>
+                  <div className="mb-1 text-studio-muted">来源节点</div>
                   <input
                     value={selectedEdge.source}
                     onChange={(e) => updateSelectedEdgeField('source', e.target.value)}
@@ -2892,7 +2892,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">From port</div>
+                  <div className="mb-1 text-studio-muted">来源端口</div>
                   <input
                     value={selectedEdge.sourceHandle ?? ''}
                     onChange={(e) => updateSelectedEdgeField('sourceHandle', e.target.value)}

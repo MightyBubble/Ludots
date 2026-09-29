@@ -189,7 +189,7 @@ export function GraphCatalogTree({
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Filter mods / graphs"
+          placeholder="过滤 mod / 图…"
           aria-label="Filter graph catalog"
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-[11px] text-studio-label outline-none placeholder:text-studio-muted"
         />

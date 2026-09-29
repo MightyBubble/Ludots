@@ -202,6 +202,11 @@ for (const rel of [
   assert(text.includes('WorkspaceLayout'), `${rel} must follow the workspace layout contract (#1699 L1-L3)`);
   assert(!text.includes('window.alert'), `${rel} must surface errors in the status bar, not window.alert`);
 }
+const gasDialect = readFileSync(join(here, '../src/pages/gas-graph-editor/graphEditorDialect.ts'), 'utf8');
+assert(!gasDialect.includes('Ludots Graph Editor'), 'dialect titles speak facts in Chinese, no product-name circulars');
+assert(!gasDialect.includes('double-click to open'), 'dialect subtitles must be concrete Chinese, not English filler');
+const gasPageCopy = readFileSync(join(here, '../src/pages/GasGraphEditorPage.tsx'), 'utf8');
+assert(!gasPageCopy.includes('>Load<') && !gasPageCopy.includes('>Validate</') && !gasPageCopy.includes('>Auto Layout'), 'blueprint buttons use terse Chinese verbs');
 const llmLib = readFileSync(join(here, '../src/components/agent/llm.ts'), 'utf8');
 assert(!llmLib.includes('sk-'), 'llm layer must not ship a default API key');
 assert(llmLib.includes('localStorage'), 'llm config must stay in browser-local storage');

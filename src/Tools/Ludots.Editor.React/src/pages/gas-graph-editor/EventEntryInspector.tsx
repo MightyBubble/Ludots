@@ -103,7 +103,7 @@ export function EventEntryInspector({
   return (
     <div className="space-y-2 rounded border border-studio-red/40 bg-studio-red/15 p-2">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-red">Event entry</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-red">事件入口</div>
         {onAdd ? (
           <button
             type="button"

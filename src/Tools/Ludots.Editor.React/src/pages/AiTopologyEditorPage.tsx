@@ -293,7 +293,7 @@ function flowToHfsm(
 export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind }) => {
   const navigate = useNavigate();
   const isBt = kind === 'behavior-trees';
-  const title = isBt ? '行为树拓扑' : '状态机拓扑';
+  const title = isBt ? '行为树' : '状态机';
   const subtitle = isBt
     ? '图画布编辑 AI/behavior_trees.json · 拖线挂子节点 · 双击叶子进函数图'
     : '图画布编辑 AI/hfsm.json · 虚线=层级 · 黄线=转移 · 双击叶子进函数图';

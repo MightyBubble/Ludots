@@ -21,7 +21,7 @@ export function DialogueChoiceNode({ data, selected }: NodeProps<Node<DialogueCh
         style={{ background: STUDIO_THEME.blue }}
       />
       <div className="dialogue-nc-head">
-        <span>Multiple Choice</span>
+        <span>选项</span>
       </div>
       <div className="dialogue-nc-choice-row">
         {data.choices.map((choice) => (
