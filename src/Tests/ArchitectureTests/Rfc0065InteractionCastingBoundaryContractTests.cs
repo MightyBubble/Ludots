@@ -82,8 +82,13 @@ namespace Ludots.Tests.Architecture
                 Path.Combine(configsRoot, "UI")
             };
 
+            const string StanceExemptionPath = "assets/Relationships/projection.json";
+            bool teamManagerBridgeAlive =
+                typeof(EntityCollectionStore).Assembly.GetType("Ludots.Core.Gameplay.Teams.TeamManager") != null;
+
             var violations = new List<string>();
             int scannedFiles = 0;
+            bool stanceExemptionApplied = false;
             foreach (string root in roots)
             {
                 Assert.That(Directory.Exists(root), Is.True, $"Missing Core default config directory {root}");
@@ -91,16 +96,13 @@ namespace Ludots.Tests.Architecture
                 {
                     scannedFiles++;
                     JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
-                    if (node is JsonObject rootObject &&
-                        string.Equals(
-                            ToRepoRelativePath(repoRoot, file),
-                            "assets/Relationships/catalog.json",
-                            StringComparison.Ordinal))
+                    if (teamManagerBridgeAlive &&
+                        node is JsonObject rootObject &&
+                        string.Equals(ToRepoRelativePath(repoRoot, file), StanceExemptionPath, StringComparison.Ordinal))
                     {
-                        // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)
-                        // is TeamManager bridge-period reserved vocabulary (handoff §二.5) and is
-                        // retired together with the bridge; everything else in the file is scanned.
-                        rootObject.Remove("stance");
+                        // The stance section (Hostile/Friendly/Neutral) is TeamManager bridge-period vocabulary
+                        // and retires together with the bridge; everything else in the file is scanned.
+                        stanceExemptionApplied = rootObject.Remove("stance");
                     }
 
                     CollectJsonScenarioWordViolations(node, ToRepoRelativePath(repoRoot, file), "$", violations);
@@ -108,6 +110,12 @@ namespace Ludots.Tests.Architecture
             }
 
             Assert.That(scannedFiles, Is.GreaterThan(0), "RFC-0065 asset scenario-word contract scanned no config files.");
+            if (teamManagerBridgeAlive)
+            {
+                Assert.That(stanceExemptionApplied, Is.True,
+                    $"The bridge-period stance exemption points at {StanceExemptionPath}, but no stance section was found there. " +
+                    "If the stance section moved, move the exemption with it; do not let it silently expire.");
+            }
             Assert.That(
                 violations,
                 Is.Empty,
