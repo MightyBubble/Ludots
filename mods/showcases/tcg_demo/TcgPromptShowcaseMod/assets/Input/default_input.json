@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "TcgPrompt.EndTurn", "name": "TcgPrompt_EndTurn", "type": "Button" },
+    { "id": "TcgPrompt.Pass", "name": "TcgPrompt_Pass", "type": "Button" },
+    { "id": "TcgPrompt.Negate", "name": "TcgPrompt_Negate", "type": "Button" },
+    { "id": "TcgPrompt.Activate", "name": "TcgPrompt_Activate", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "TcgPrompt.Controls",
+      "name": "TCG Prompt Controls",
+      "priority": 60,
+      "bindings": [
+        { "actionId": "TcgPrompt.EndTurn", "path": "<Keyboard>/e" },
+        { "actionId": "TcgPrompt.Pass", "path": "<Keyboard>/space" },
+        { "actionId": "TcgPrompt.Negate", "path": "<Keyboard>/n" },
+        { "actionId": "TcgPrompt.Activate", "path": "<Keyboard>/1" }
+      ]
+    }
+  ]
+}

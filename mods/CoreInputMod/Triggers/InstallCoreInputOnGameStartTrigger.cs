@@ -24,14 +24,12 @@ using Ludots.Platform.Abstractions;
 namespace CoreInputMod.Triggers
 {
     /// <summary>
-    /// Registers generic input systems on game start: CommandSourceAcquisition, GasInputResponse.
+    /// Registers generic input systems on game start.
     /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
     /// For camera, compose CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod as needed.
-    /// Mods can add callbacks via GlobalContext["CoreInputMod.CommandSourceAcquiredCallbacks"] to customize visual feedback.
     /// </summary>
     public sealed class InstallCoreInputOnGameStartTrigger : Trigger
     {
-        public const string CommandSourceAcquiredCallbacksKey = "CoreInputMod.CommandSourceAcquiredCallbacks";
         private readonly IModContext _ctx;
 
         public InstallCoreInputOnGameStartTrigger(IModContext ctx)
@@ -53,23 +51,12 @@ namespace CoreInputMod.Triggers
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
 
-            // The acquisition system that fired these retired with the input→order graph line;
-            // the registration point stays so dependent mods (camera follow, VFX hooks) can
-            // attach, and the graph selection commit path can invoke them once it lands.
-            if (!engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out var _))
-            {
-                engine.SetService(
-                    CoreInputServiceKeys.CommandSourceAcquiredCallbacks,
-                    new System.Collections.Generic.List<System.Action<Ludots.Platform.Abstractions.WorldCmInt2, Arch.Core.Entity>>());
-            }
-
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
 
             _ = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
 
-            engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(
                 engine.World,
@@ -88,7 +75,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
             RegisterAutoLocalOrderSource(engine);
 
-_ctx.Log("[CoreInputMod] GasInputResponse, SkillBar, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
+_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
 
 InstallDeclaredLocalOrderSources(engine);
             return Task.CompletedTask;

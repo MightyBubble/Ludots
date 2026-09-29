@@ -40,7 +40,6 @@ namespace CameraAcceptanceMod.Runtime
         private const string CommandSourceSummary = "Map-owned camera actors.";
 
         private CameraAcceptancePanelController? _panelController;
-        private bool _commandSourceAcquiredCallbacksInstalled;
         private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
@@ -70,23 +69,6 @@ namespace CameraAcceptanceMod.Runtime
 
             engine.GlobalContext[CameraAcceptanceIds.ProjectionSpawnCountKey] = next;
             return next;
-        }
-
-        public void InstallCommandSourceAcquiredCallbacks(GameEngine engine)
-        {
-            if (_commandSourceAcquiredCallbacksInstalled)
-            {
-                return;
-            }
-
-            if (!CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out var callbacks))
-            {
-                throw new System.InvalidOperationException(
-                    "CameraAcceptanceMod requires CoreInputMod command-source acquisition callbacks to be installed before GameStart handlers run.");
-            }
-
-            callbacks.Add((worldCm, entity) => HandleSelectionConfirmed(engine, worldCm, entity));
-            _commandSourceAcquiredCallbacksInstalled = true;
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -425,11 +407,6 @@ namespace CameraAcceptanceMod.Runtime
             renderDebug.DrawTerrain = !isHotpathMap;
             renderDebug.DrawDebugDraw = !isHotpathMap;
             _lastConfiguredMapId = mapId;
-        }
-
-        internal void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
-        {
-            HandleSelectionConfirmed(engine, worldCm, selectedEntity, Entity.Null);
         }
 
         internal void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity, Entity cueOwnerEntity)

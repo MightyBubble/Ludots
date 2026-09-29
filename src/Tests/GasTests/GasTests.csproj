@@ -32,6 +32,7 @@
     <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
     <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
+    <Compile Include="..\TestCommon\MinimapTestActions.cs" Link="MinimapTestActions.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\tools\FieldEditor\FieldEditor.csproj" />
     <ProjectReference Include="..\..\Graph\Ludots.Graph.Codegen\Ludots.Graph.Codegen.csproj" />

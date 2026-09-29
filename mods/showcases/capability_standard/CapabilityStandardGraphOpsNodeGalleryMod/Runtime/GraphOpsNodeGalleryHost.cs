@@ -67,6 +67,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
     public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer CommandIntents { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState ResponseChainPrompt { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
         public TagOps TagOps { get; private set; } = null!;
         public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
@@ -108,19 +109,20 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     /// <summary>
     /// Advances the headless-owned engine until the registered production
     /// EffectProcessingLoopSystem (plus AttributeCalculation) closes its slice and drains
-    /// EffectRequests. Engine ticks are cooperative (4ms budget per frame), so a single tick
+    /// EffectRequests, or parks on a response-chain prompt that only a player's answer can move.
+    /// Engine ticks are cooperative (4ms budget per frame), so a single tick
     /// can leave the settlement transaction open — swapping maps then would orphan half-settled
     /// effects. No-op when the gallery runs inside an externally ticked engine: that engine's
     /// own loop settles the queue, and ticking it here would double-settle.
     /// </summary>
-    public void SettleEffectRequests()
+    public void SettleEffectRequests(bool forceTick)
     {
         if (_ownedEngine == null)
         {
             return;
         }
 
-        for (int tick = 0; EffectSettlementOpen(); tick++)
+        for (int tick = 0; (forceTick && tick == 0) || EffectSettlementOpen(); tick++)
         {
             if (tick >= SettlementTickLimit)
             {
@@ -135,6 +137,11 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
 
     private bool EffectSettlementOpen()
     {
+        if (ResponseChainPrompt.IsOpen)
+        {
+            return false;
+        }
+
         if (EffectRequests.Count > 0)
         {
             return true;
@@ -181,6 +188,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Relationships = Relationships,
             Collections = Collections,
             CommandIntents = CommandIntents,
+            ResponseChainPrompt = ResponseChainPrompt,
             TagOps = TagOps,
             EventBus = EventBus,
             GraphCallbacks = GraphCallbacks,
@@ -260,6 +268,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
         CommandIntents = RequireEngineService(engine, CoreServiceKeys.CommandIntentSubmissions);
+        ResponseChainPrompt = RequireEngineService(engine, CoreServiceKeys.ResponseChainPromptState);
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
         _templateRegistry = engine.MapLoader.TemplateRegistry;

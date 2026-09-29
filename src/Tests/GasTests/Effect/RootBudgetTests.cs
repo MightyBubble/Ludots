@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ludots.Core.Gameplay.GAS.Input;
+using System;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -380,7 +381,7 @@ namespace Ludots.Tests.GAS
                 fanOutCommandCapacity: TestFanOutCommandCapacity,
                 budget: null,
                 templates: templates,
-                inputRequests: null,
+                promptState: null,
                 chainOrders: null,
                 telemetry: new ResponseChainTelemetryBuffer(),
                 orderRequests: new OrderRequestQueue(),

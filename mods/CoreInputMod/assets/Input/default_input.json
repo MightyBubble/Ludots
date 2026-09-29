@@ -11,21 +11,6 @@
       "type": "Button"
     },
     {
-      "id": "ResponseChainPass",
-      "name": "Gameplay_ResponseChainPass",
-      "type": "Button"
-    },
-    {
-      "id": "ResponseChainNegate",
-      "name": "Gameplay_ResponseChainNegate",
-      "type": "Button"
-    },
-    {
-      "id": "ResponseChainActivate",
-      "name": "Gameplay_ResponseChainActivate",
-      "type": "Button"
-    },
-    {
       "id": "ViewModeNext",
       "name": "Gameplay_ViewModeNext",
       "type": "Button"
@@ -112,18 +97,6 @@
         {
           "actionId": "Cancel",
           "path": "<Keyboard>/escape"
-        },
-        {
-          "actionId": "ResponseChainPass",
-          "path": "<Keyboard>/space"
-        },
-        {
-          "actionId": "ResponseChainNegate",
-          "path": "<Keyboard>/n"
-        },
-        {
-          "actionId": "ResponseChainActivate",
-          "path": "<Keyboard>/1"
         },
         {
           "actionId": "ViewModeNext",

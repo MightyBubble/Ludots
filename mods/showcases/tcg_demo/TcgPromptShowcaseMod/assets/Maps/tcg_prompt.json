@@ -1,0 +1,45 @@
+{
+  "Id": "tcg_prompt",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": ["showcase", "tcg", "response-chain"],
+  "TriggerGraphs": [
+    { "graph": "graph.tcg_prompt.hero_panels_open", "scopeInstanceId": "tcg-prompt-hero" },
+    { "graph": "graph.tcg_prompt.mage_panel_open", "scopeInstanceId": "tcg-prompt-mage" },
+    { "graph": "graph.tcg_prompt.mage_casts", "scopeInstanceId": "tcg-prompt-mage" },
+    { "graph": "graph.tcg_prompt.prompt_opened", "scopeInstanceId": "tcg-prompt-hero" },
+    { "graph": "graph.tcg_prompt.prompt_closed", "scopeInstanceId": "tcg-prompt-hero" }
+  ],
+  "Entities": [
+    { "InstanceId": "tcg-prompt-hero", "Template": "tcg_prompt_hero" },
+    { "InstanceId": "tcg-prompt-mage", "Template": "tcg_prompt_mage" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "tcg-prompt-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "tcg-prompt-mage" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "tcg-prompt-hero" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "tcg-prompt-mage" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 0,
+    "Pitch": 35,
+    "DistanceCm": 1600,
+    "FovYDeg": 50
+  }
+}

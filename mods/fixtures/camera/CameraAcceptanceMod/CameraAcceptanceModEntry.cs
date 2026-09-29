@@ -25,7 +25,6 @@ namespace CameraAcceptanceMod
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;
-                    runtime.InstallCommandSourceAcquiredCallbacks(engine);
                     var inputOwnership = new CameraAcceptanceInputOwnershipSystem(engine);
                     // #709 places AuthoritativeInputSnapshotSystem in LocalInput (replicated-client local intent group).
                     engine.InsertSystemBeforeRequired<AuthoritativeInputSnapshotSystem>(inputOwnership, SystemGroup.LocalInput);

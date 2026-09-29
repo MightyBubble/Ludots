@@ -130,8 +130,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
-                var inputResp = new InputResponseBuffer();
+                var promptState = new ResponseChainPromptState();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -148,7 +147,7 @@ namespace Ludots.Tests.GAS
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
+                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -158,7 +157,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
@@ -215,9 +214,8 @@ namespace Ludots.Tests.GAS
 
                 var empExec = default(AbilityExecSpec);
                 empExec.ClockId = GasClockId.Step;
-                empExec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0);
-                empExec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
-                empExec.SetItem(2, ExecItemKind.End, tick: 0);
+                empExec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
+                empExec.SetItem(1, ExecItemKind.End, tick: 0);
                 var empAbility = world.Create(new AbilityTemplate(), empExec);
 
                 var healExec = default(AbilityExecSpec);
@@ -286,13 +284,6 @@ namespace Ludots.Tests.GAS
                 sb.AppendLine("[MUD][SC2] 敌方探测对你施加【显形】。");
                 RunFrame(2);
 
-                var resp = new InputResponse
-                {
-                    RequestId = 4,
-                    ResponseTagId = 900,
-                    Target = enemy,
-                };
-                inputResp.TryAdd(resp);
                 incomingOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = orderCastAbility, Actor = player, Target = enemy, Args = new OrderArgs { I0 = 2 } });
                 sb.AppendLine("[MUD][SC2] 你投掷【EMP】命中目标敌人。");
                 RunFrame(3);
@@ -328,28 +319,29 @@ namespace Ludots.Tests.GAS
                 int attrHealth = 0;
 
                 int tplFireball = 70;
-                int tplChainOpen = 71;
+                int tplReflect = 71;
+                const int categoryFireball = 220;
+                const int categoryReflect = 230;
                 var templates = new EffectTemplateRegistry();
-                var dmg = default(EffectModifiers);
-                dmg.Add(attrHealth, ModifierOp.Add, -12f);
+                var fireballDamage = default(EffectModifiers);
+                fireballDamage.Add(attrHealth, ModifierOp.Add, -12f);
                 templates.Register(tplFireball, new EffectTemplateData
                 {
-                    CategoryId = 200,
+                    CategoryId = categoryFireball,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
-                    ParticipatesInResponse = false,
-                    Modifiers = dmg
-                });
-                templates.Register(tplChainOpen, new EffectTemplateData
-                {
-                    CategoryId = 220,
-                    LifetimeKind = EffectLifetimeKind.Instant,
-                    ClockId = GasClockId.Step,
-                    DurationTicks = 0,
-                    PeriodTicks = 0,
-                    ExpireCondition = default,
                     ParticipatesInResponse = true,
-                    Modifiers = default
+                    Modifiers = fireballDamage
+                });
+                var reflectDamage = default(EffectModifiers);
+                reflectDamage.Add(attrHealth, ModifierOp.Add, -12f);
+                templates.Register(tplReflect, new EffectTemplateData
+                {
+                    CategoryId = categoryReflect,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = reflectDamage
                 });
                 FinalizeEffectTemplates(templates);
 
@@ -358,8 +350,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
-                var inputResp = new InputResponseBuffer();
+                var promptState = new ResponseChainPromptState();
                 var admissionResults = new OrderAdmissionResultBuffer(128, 128);
                 var incomingOrders = new OrderQueue(64, admissionResults);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -368,8 +359,6 @@ namespace Ludots.Tests.GAS
                 var eventBus = new GameplayEventBus();
 
                 const int orderCastAbility = 100;
-                const int chainOpenEvent = 220;
-                const int inputRequestTag = 221;
 
                 var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
@@ -383,7 +372,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
@@ -393,23 +382,24 @@ namespace Ludots.Tests.GAS
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
 
-                var listenerEntity = world.Create();
-                unsafe
-                {
-                    var listener = new ResponseChainListener();
-                    listener.Add(chainOpenEvent, ResponseType.PromptInput, priority: 100, effectTemplateId: inputRequestTag);
-                    world.Add(listenerEntity, listener);
-                }
-
                 var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 50f);
-                var opponent = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var opponent = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 2 });
                 world.Get<AttributeBuffer>(opponent).SetBase(attrHealth, 50f);
+                unsafe
+                {
+                    var opponentTrap = new ResponseChainListener();
+                    opponentTrap.Add(categoryFireball, ResponseType.PromptInput, priority: 100, effectTemplateId: tplReflect);
+                    world.Add(opponent, opponentTrap);
+                    var playerTrap = new ResponseChainListener();
+                    playerTrap.Add(categoryReflect, ResponseType.PromptInput, priority: 100, effectTemplateId: tplReflect);
+                    world.Add(player, playerTrap);
+                }
 
                 string logPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "mud_ygo_chain_demo.log");
                 var sb = new StringBuilder();
                 sb.AppendLine("[MUD][YGO] 你进入决斗。");
-                sb.AppendLine("[MUD][YGO] 规则：打开连锁窗口后，双方轮流响应；双方连续 Pass 后 LIFO 结算。");
+                sb.AppendLine("[MUD][YGO] 规则：谁的陷阱想响应就问谁；发动后轮到对面；让过或无效即结算，从最新一环往回结算。");
 
                 byte lastPhase = 0;
                 int lastWindows = 0;
@@ -425,27 +415,25 @@ namespace Ludots.Tests.GAS
                     admissionEnd.Update(1f);
                     lastPhase = effectLoop.DebugProposalWindowPhase;
                     lastWindows = budget.ResponseWindows;
-                    sb.AppendLine($"[MUD][YGO][Step={gasClocks.StepNow}] PHP={world.Get<AttributeBuffer>(player).GetCurrent(attrHealth):F1} OPHP={world.Get<AttributeBuffer>(opponent).GetCurrent(attrHealth):F1} Windows={budget.ResponseWindows} Steps={budget.ResponseSteps} Creates={budget.ResponseCreates}");
+                    sb.AppendLine($"[MUD][YGO][Step={gasClocks.StepNow}] PHP={world.Get<AttributeBuffer>(player).GetCurrent(attrHealth):F1} OPHP={world.Get<AttributeBuffer>(opponent).GetCurrent(attrHealth):F1} Windows={budget.ResponseWindows} Steps={budget.ResponseSteps} Creates={budget.ResponseCreates} Prompted={promptState.PlayerId}");
                     eventBus.Update();
                 }
 
-                effectRequests.Publish(new EffectRequest { Source = player, Target = opponent, TemplateId = tplChainOpen });
-                sb.AppendLine("[MUD][YGO] 你发动【火球】。连锁窗口打开。");
+                effectRequests.Publish(new EffectRequest { Source = player, Target = opponent, TemplateId = tplFireball });
+                sb.AppendLine("[MUD][YGO] 你发动【火球】。对手的陷阱想响应，轮到对手。");
                 RunStep();
                 That(lastPhase, Is.EqualTo((byte)2));
                 That(lastWindows, Is.EqualTo(1));
+                That(promptState.PlayerId, Is.EqualTo(2));
 
-                chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = player, Args = new OrderArgs { I0 = tplFireball } });
-                sb.AppendLine("[MUD][YGO] 你追加连锁：结算【火球】伤害。");
+                chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = opponent, Args = new OrderArgs { I0 = tplReflect } });
+                sb.AppendLine("[MUD][YGO] 对手连锁：发动【反射】，要把伤害打回你身上。轮到你。");
                 RunStep();
+                That(lastPhase, Is.EqualTo((byte)2));
+                That(promptState.PlayerId, Is.EqualTo(1));
 
-                chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainNegate, Actor = opponent });
-                sb.AppendLine("[MUD][YGO] 对手连锁：发动【无效】（negate 上一个链结）。");
-                RunStep();
-
-                chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = player });
-                chainOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = opponent });
-                sb.AppendLine("[MUD][YGO] 双方 Pass，连锁窗口关闭，开始 LIFO 结算。");
+                chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainNegate, Actor = player });
+                sb.AppendLine("[MUD][YGO] 你连锁：发动【无效】，作废最新一环【反射】。连锁关闭，开始结算。");
                 RunStep();
                 That(lastPhase, Is.EqualTo((byte)0));
 
@@ -453,7 +441,8 @@ namespace Ludots.Tests.GAS
                 Console.WriteLine(sb.ToString());
                 Console.WriteLine($"[MUD][YGO] LogFile={logPath}");
 
-                That(world.Get<AttributeBuffer>(opponent).GetCurrent(attrHealth), Is.EqualTo(50f));
+                That(world.Get<AttributeBuffer>(player).GetCurrent(attrHealth), Is.EqualTo(50f), "reflect was negated");
+                That(world.Get<AttributeBuffer>(opponent).GetCurrent(attrHealth), Is.EqualTo(38f), "the fireball underneath still lands");
                 Pass("YGO chain demo complete");
             }
             finally
@@ -501,16 +490,15 @@ namespace Ludots.Tests.GAS
                 var budgetReset = new GasBudgetResetSystem(budget, orderAdmissionResults: admissionResults);
                 var admissionEnd = new OrderAdmissionGenerationEndSystem(admissionResults);
                 var eventBus = new GameplayEventBus();
-                var inputResp = new InputResponseBuffer();
                 var abilityDefs = new AbilityDefinitionRegistry();
 
                 const int orderCastAbility = 100;
 
-                var inputReq = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
+                var abilityExec = new AbilityExecSystem(world, clock, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,

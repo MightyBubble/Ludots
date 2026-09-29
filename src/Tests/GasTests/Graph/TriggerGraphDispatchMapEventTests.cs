@@ -171,7 +171,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             var listener = new RecordingTrigger { EventKey = new EventKey(EventName) };
             manager.RegisterMapTriggers(mapId, new Trigger[] { listener });
 
@@ -202,6 +202,50 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void DispatchMapEvent_ListenerSeesServicesFromBoundContextFactory()
+        {
+            var mapId = new MapId("dispatch_probe_services");
+            using var world = World.Create();
+            Entity caster = world.Create();
+
+            var manager = new TriggerManager { EventSchemas = BuildRegistry() };
+            var api = new GasGraphRuntimeApi(world);
+            api.BindTriggerManager(manager, () =>
+            {
+                var context = new ScriptContext();
+                context.Set(CoreServiceKeys.World, world);
+                return context;
+            });
+            var listener = new RecordingTrigger { EventKey = new EventKey(EventName) };
+            manager.RegisterMapTriggers(mapId, new Trigger[] { listener });
+
+            int eventKeyId = ConfigKeyRegistry.Register(EventName);
+            int amountKeyId = ConfigKeyRegistry.Register(AmountKey);
+            int graphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.Runtime.Services");
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 1, Imm = 7 },
+                new() { Op = (ushort)GraphNodeOp.StoreArgInt, A = 1, Imm = amountKeyId },
+                new() { Op = (ushort)GraphNodeOp.DispatchMapEvent, Imm = eventKeyId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(
+                graphId,
+                program,
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                new[] { EventName, AmountKey },
+                new[] { new TriggerGraphEntry("main", "MapLoaded", 0, once: false) });
+
+            ExecuteGraph(programs, graphId, world, caster, api, mapId);
+
+            Assert.That(listener.Seen, Is.Not.Null);
+            Assert.That(listener.Seen!.Get(CoreServiceKeys.World), Is.SameAs(world),
+                "graph-dispatched events must carry the engine services, or TriggerGraph mounts on them cannot run");
+        }
+
+        [Test]
         public void DispatchMapEvent_MissingRequiredParam_ThrowsAtRuntime()
         {
             var mapId = new MapId("dispatch_probe_missing");
@@ -210,7 +254,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int eventKeyId = ConfigKeyRegistry.Register(EventName);
             int graphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.Runtime.Missing");
@@ -242,7 +286,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int eventKeyId = ConfigKeyRegistry.Register(EventName);
             int amountKeyId = ConfigKeyRegistry.Register(AmountKey);
@@ -277,7 +321,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int eventKeyId = ConfigKeyRegistry.Register("Probe.Dispatch.Undeclared");
             int graphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.Runtime.Unknown");
@@ -307,7 +351,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             int eventKeyId = ConfigKeyRegistry.Register(EventName);
             int graphId = GraphIdRegistry.Register("Graph.Probe.Dispatch.Runtime.NoMap");

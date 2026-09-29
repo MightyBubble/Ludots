@@ -6568,6 +6568,29 @@
       ]
     },
     {
+      "id": "tcg_prompt",
+      "path": "mods/showcases/tcg_demo/TcgPromptShowcaseMod",
+      "title": "TCG 响应窗：要不要接招",
+      "summary": "按 E 结束回合，敌方法师朝你放火球；你场上盖着陷阱，牌桌停下来问你：空格让过、N 让火球作废、1 翻开反击同时反打法师。",
+      "tier": "T2",
+      "category": "demo",
+      "binding": "tcg_prompt_showcase",
+      "preset": "tcg_prompt_raylib",
+      "docsPath": "gitbook/reference/mod-editor-prd/reference/fx-07-response-chain.md",
+      "readmePath": null,
+      "acceptanceTest": "Ludots.Tests.GAS.Production.TcgPromptShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/tcg_prompt",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "tcg",
+        "response-chain",
+        "interaction",
+        "panel",
+        "showcase"
+      ]
+    },
+    {
       "id": "team_research",
       "path": "mods/showcases/team_research/TeamResearchShowcaseMod",
       "projectPath": "TeamResearchShowcaseMod.csproj",
@@ -10990,6 +11013,33 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubInt",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_SubInt/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_SubInt/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj",
+      "title": "替玩家回答响应窗口",
+      "summary": "指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SubmitResponseChainOrder"
+      ],
+      "binding": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "preset": "capability_standard_graph_op_SubmitResponseChainOrder_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubmitResponseChainOrder.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubmitResponseChainOrder/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }

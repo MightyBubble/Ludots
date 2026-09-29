@@ -94,6 +94,12 @@
 - [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
+## 响应链
+
+> 作者语义与全量字段见手册分册 [响应链 · fx-07](../mod-editor-prd/config/fx-07-response-chain.md)。
+
+- [替玩家回答响应窗口](SubmitResponseChainOrder.md) — 指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。
+
 ## 子图调用与事件派发
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。

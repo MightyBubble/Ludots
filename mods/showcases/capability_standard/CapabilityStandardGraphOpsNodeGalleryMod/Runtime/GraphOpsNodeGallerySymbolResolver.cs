@@ -182,6 +182,24 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             OrderTypeId = 102,
             Label = "Attack Target",
         });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainPass",
+            OrderTypeId = 1,
+            Label = "Pass",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainNegate",
+            OrderTypeId = 2,
+            Label = "Negate",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainActivateEffect",
+            OrderTypeId = 3,
+            Label = "Chain",
+        });
         return orderTypes;
     }
 

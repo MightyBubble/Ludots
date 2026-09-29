@@ -229,7 +229,6 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return;
             }
 
-            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = false;
             engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
             _showcaseHudSuppressed = true;
         }
@@ -241,7 +240,6 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return;
             }
 
-            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = true;
             engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
             _showcaseHudSuppressed = false;
         }

@@ -90,6 +90,7 @@ namespace Ludots.Core.Presentation.Minimap
     public sealed class MinimapInputConsumer : IInputFrameConsumer
     {
         private readonly MinimapRuntime _runtime;
+        private readonly MinimapActionsConfig _actions;
         private readonly MinimapFocusCollectionProvider _focusCollectionProvider;
         private string _focusCollectionKey;
         private int _focusCollectionKeyId;
@@ -104,9 +105,12 @@ namespace Ludots.Core.Presentation.Minimap
 
         public MinimapInputConsumer(
             MinimapRuntime runtime,
+            MinimapActionsConfig actions,
             MinimapFocusCollectionProvider focusCollectionProvider)
         {
             _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
+            _actions = actions ?? throw new System.ArgumentNullException(nameof(actions));
+            _actions.Validate();
             _focusCollectionProvider = focusCollectionProvider ?? throw new System.ArgumentNullException(nameof(focusCollectionProvider));
         }
 
@@ -117,7 +121,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            bool toggle = input.PressedThisFrame(MinimapInputActions.Toggle);
+            bool toggle = input.PressedThisFrame(_actions.Toggle);
             if (toggle && !_prevToggle)
             {
                 _runtime.Visible = !_runtime.Visible;
@@ -129,7 +133,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            bool presetToggle = input.PressedThisFrame(MinimapInputActions.TogglePreset);
+            bool presetToggle = input.PressedThisFrame(_actions.TogglePreset);
             if (presetToggle && !_prevPresetToggle)
             {
                 _runtime.ToggleRtsFollowCameraPreset();
@@ -137,7 +141,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             _prevPresetToggle = presetToggle;
 
-            bool rotateToggle = input.PressedThisFrame(MinimapInputActions.ToggleRotateWithCamera);
+            bool rotateToggle = input.PressedThisFrame(_actions.ToggleRotateWithCamera);
             if (rotateToggle && !_prevRotateToggle)
             {
                 _runtime.ToggleRotateWithCamera();
@@ -145,8 +149,8 @@ namespace Ludots.Core.Presentation.Minimap
 
             _prevRotateToggle = rotateToggle;
 
-            bool zoomIn = input.PressedThisFrame(MinimapInputActions.ZoomIn);
-            bool zoomOut = input.PressedThisFrame(MinimapInputActions.ZoomOut);
+            bool zoomIn = input.PressedThisFrame(_actions.ZoomIn);
+            bool zoomOut = input.PressedThisFrame(_actions.ZoomOut);
             if (zoomIn && !_prevZoomIn)
             {
                 _runtime.CycleZoom(-1);
@@ -160,7 +164,7 @@ namespace Ludots.Core.Presentation.Minimap
             _prevZoomIn = zoomIn;
             _prevZoomOut = zoomOut;
 
-            bool centerOnFocusPrimary = input.PressedThisFrame(MinimapInputActions.CenterOnFocusPrimary);
+            bool centerOnFocusPrimary = input.PressedThisFrame(_actions.CenterOnFocusPrimary);
             if (centerOnFocusPrimary &&
                 !_prevCenterOnFocusPrimary &&
                 TryResolveFocusPrimary(engine, out Entity focusPrimary))
@@ -170,7 +174,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             _prevCenterOnFocusPrimary = centerOnFocusPrimary;
 
-            Vector2 pan = input.ReadAction<Vector2>(MinimapInputActions.Pan);
+            Vector2 pan = input.ReadAction<Vector2>(_actions.Pan);
             if (pan.X != 0f || pan.Y != 0f)
             {
                 _runtime.PanNormalized(pan.X * deltaTime * 0.9f, pan.Y * deltaTime * 0.9f);
@@ -182,7 +186,7 @@ namespace Ludots.Core.Presentation.Minimap
         private void HandlePointerClick(GameEngine engine, PlayerInputHandler input)
         {
             InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(engine.GlobalContext, nameof(MinimapInputConsumer));
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
             bool insideField = _runtime.ContainsField(pointer);
             bool insideSlider = _runtime.ContainsZoomSlider(pointer);
             bool insidePresetToggle = _runtime.ContainsPresetToggle(pointer);
@@ -192,7 +196,7 @@ namespace Ludots.Core.Presentation.Minimap
             bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
             bool commandPressed = input.PressedThisFrame(bindings.CommandActionId);
-            float wheelDelta = input.ReadAction<float>(MinimapInputActions.Zoom);
+            float wheelDelta = input.ReadAction<float>(_actions.Zoom);
 
             if (insideInteractive)
             {
@@ -335,17 +339,5 @@ namespace Ludots.Core.Presentation.Minimap
 
             return _focusCollectionKeyId;
         }
-    }
-
-    public static class MinimapInputActions
-    {
-        public const string Toggle = "Minimap.Toggle";
-        public const string TogglePreset = "Minimap.TogglePreset";
-        public const string ToggleRotateWithCamera = "Minimap.ToggleRotateWithCamera";
-        public const string Zoom = "Minimap.Zoom";
-        public const string ZoomIn = "Minimap.ZoomIn";
-        public const string ZoomOut = "Minimap.ZoomOut";
-        public const string Pan = "Minimap.Pan";
-        public const string CenterOnFocusPrimary = "Minimap.CenterOnFocusPrimary";
     }
 }

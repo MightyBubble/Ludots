@@ -98,7 +98,6 @@ namespace Ludots.Core.Gameplay.GAS
             if (state.ProposalWindowPhase != 0) return false;
             if (state.EffectRequestCount != 0) return false;
             if (state.HasPendingEffects) return false;
-            if (state.InputRequestCount != 0) return false;
             if (state.ChainOrderCount != 0) return false;
             if (state.OrderRequestCount != 0) return false;
             return true;
@@ -128,7 +127,6 @@ namespace Ludots.Core.Gameplay.GAS
                 ctx.Set("ProposalWindowPhase", state.Value.ProposalWindowPhase);
                 ctx.Set("HasPendingEffects", state.Value.HasPendingEffects);
                 ctx.Set("EffectRequestCount", state.Value.EffectRequestCount);
-                ctx.Set("InputRequestCount", state.Value.InputRequestCount);
                 ctx.Set("ChainOrderCount", state.Value.ChainOrderCount);
                 ctx.Set("OrderRequestCount", state.Value.OrderRequestCount);
             }
