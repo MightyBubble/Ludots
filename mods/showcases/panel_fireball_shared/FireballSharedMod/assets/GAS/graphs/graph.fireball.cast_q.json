@@ -43,6 +43,10 @@
         "op": "LoadEntityPosValid"
       },
       {
+        "id": "pick_branch",
+        "op": "JumpIfFalse"
+      },
+      {
         "id": "casters",
         "op": "InvokeGraph",
         "functionName": "graph.fireball.caster_holders"
@@ -99,11 +103,6 @@
         "to": "pick_valid"
       },
       {
-        "from": "pick_valid",
-        "fromPort": "next",
-        "to": "casters"
-      },
-      {
         "from": "casters",
         "fromPort": "next",
         "to": "slot"
@@ -121,6 +120,21 @@
       {
         "from": "ok",
         "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "next",
+        "to": "pick_branch"
+      },
+      {
+        "from": "pick_branch",
+        "fromPort": "true",
+        "to": "casters"
+      },
+      {
+        "from": "pick_branch",
+        "fromPort": "false",
         "to": "halt"
       }
     ],
@@ -168,16 +182,16 @@
         "toPort": "target"
       },
       {
-        "from": "pick_valid",
-        "fromPort": "value",
-        "to": "submit",
-        "toPort": "condition"
-      },
-      {
         "from": "ok",
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "value",
+        "to": "pick_branch",
+        "toPort": "condition"
       }
     ]
   }

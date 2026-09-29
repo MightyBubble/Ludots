@@ -17,6 +17,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -111,6 +112,12 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost missing.");
         PanelInstanceHandle panel = FindPanel(panelHost, hero);
+
+        AimPointerAtWorldCm(engine, input, Fix64Vec2.FromFloat(100f, 900f));
+        PressButton(engine, input, "<Keyboard>/q");
+        Tick(engine, 30);
+        Assert.That(ReadAttribute(world, hero, "Mana"), Is.EqualTo(80f).Within(0.001f),
+            "Q with no enemy under the cursor casts nothing and spends no mana.");
 
         AimPointerAt(engine, input, target);
         PressButton(engine, input, "<Keyboard>/q");
@@ -276,10 +283,14 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
     private static void AimPointerAt(GameEngine engine, TestInputBackend backend, Entity entity)
     {
+        AimPointerAtWorldCm(engine, backend, engine.World.Get<WorldPositionCm>(entity).Value);
+    }
+
+    private static void AimPointerAtWorldCm(GameEngine engine, TestInputBackend backend, Fix64Vec2 worldCm)
+    {
         IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
             ?? throw new InvalidOperationException("ScreenProjector missing.");
-        WorldPositionCm position = engine.World.Get<WorldPositionCm>(entity);
-        backend.MousePosition = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value));
+        backend.MousePosition = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(worldCm));
     }
 
     private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
