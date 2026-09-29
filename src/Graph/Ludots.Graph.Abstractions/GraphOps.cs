@@ -374,7 +374,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Direct owned-collection write: owner = caster (the writing rep), entity list = the
         /// graph's current query result set (s.Targets), I[B] = op (0=replace, 1=add,
         /// 2=subtract, computed in-graph), Imm = collection key symbol patched to its key id.
-        /// Set semantics execute in the CollectionWrite primitive; membership change events
+        /// Set semantics execute in CollectionApplier; membership change events
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
