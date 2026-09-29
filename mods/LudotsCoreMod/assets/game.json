@@ -50,7 +50,6 @@
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,
@@ -60,14 +59,7 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
       "actions": {
-        "toggle": "Minimap.Toggle",
-        "togglePreset": "Minimap.TogglePreset",
-        "toggleRotateWithCamera": "Minimap.ToggleRotateWithCamera",
-        "zoom": "Minimap.Zoom",
-        "zoomIn": "Minimap.ZoomIn",
-        "zoomOut": "Minimap.ZoomOut",
-        "pan": "Minimap.Pan",
-        "centerOnFocusPrimary": "Minimap.CenterOnFocusPrimary"
+        "zoom": "Minimap.Zoom"
       }
     }
   },
@@ -99,9 +91,6 @@
     "acquisition": {
       "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "moveTo"
-    ]
+    }
   }
 }

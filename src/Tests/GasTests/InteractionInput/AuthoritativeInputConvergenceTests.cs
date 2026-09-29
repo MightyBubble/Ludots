@@ -40,7 +40,6 @@ namespace Ludots.Tests.GAS
     {
         private const float InputConvergenceInitialZoomNormalized = 1f;
         private const float InputConvergenceWheelZoomNormalizedStep = 0.08f;
-        private const float InputConvergenceButtonZoomNormalizedStep = 0.18f;
         private const int InputConvergenceDebugMarkerSampleCapacity = 64;
         private const float InputConvergenceMinZoomHalfExtentCm = 750f;
         private const float InputConvergenceMaxZoomHalfExtentCm = 22000f;
@@ -586,7 +585,6 @@ namespace Ludots.Tests.GAS
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
                     new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = InputConvergenceMinimapActions.ToggleRotateWithCamera, Type = InputActionType.Button },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -602,7 +600,6 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
                             new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = InputConvergenceMinimapActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
                         }
                     }
                 }
@@ -752,7 +749,6 @@ namespace Ludots.Tests.GAS
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
                     new() { Id = InputConvergenceMinimapActions.Zoom, Type = InputActionType.Axis1D },
-                    new() { Id = InputConvergenceMinimapActions.ToggleRotateWithCamera, Type = InputActionType.Button },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -768,7 +764,6 @@ namespace Ludots.Tests.GAS
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
                             new() { ActionId = InputConvergenceMinimapActions.Zoom, Path = "<Mouse>/ScrollY", Processors = new() },
-                            new() { ActionId = InputConvergenceMinimapActions.ToggleRotateWithCamera, Path = "<Keyboard>/f7", Processors = new() },
                         }
                     }
                 }
@@ -869,14 +864,6 @@ namespace Ludots.Tests.GAS
             system.Update(1f / 60f);
             Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation), "Rotate toggle button must use the shared pointer confirm input.");
             Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Rotate toggle clicks must not leak into gameplay confirm.");
-
-            backend.Buttons["<Mouse>/LeftButton"] = false;
-            system.Update(1f / 60f);
-
-            beforeRotation = minimap.RotateWithCamera;
-            backend.Buttons["<Keyboard>/f7"] = true;
-            system.Update(1f / 60f);
-            Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation));
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
@@ -915,7 +902,6 @@ namespace Ludots.Tests.GAS
             {
                 InitialZoomNormalized = InputConvergenceInitialZoomNormalized,
                 WheelZoomNormalizedStep = InputConvergenceWheelZoomNormalizedStep,
-                ButtonZoomNormalizedStep = InputConvergenceButtonZoomNormalizedStep,
                 ZoomSliderEnabled = true,
                 ModeToggleEnabled = true,
                 RotateToggleEnabled = true,
@@ -930,14 +916,7 @@ namespace Ludots.Tests.GAS
 
         private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
         {
-            return new MinimapInputConsumer(minimap, InputConvergenceMinimapActions, NoMinimapFocusCollection);
-        }
-
-        private static bool NoMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
-        {
-            owner = Entity.Null;
-            collectionKey = string.Empty;
-            return false;
+            return new MinimapInputConsumer(minimap, InputConvergenceMinimapActions);
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildCameraHandler()

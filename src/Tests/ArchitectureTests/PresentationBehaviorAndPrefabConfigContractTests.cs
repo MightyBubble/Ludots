@@ -112,7 +112,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_MergesCommandSourceMovePathPreviewOrderKeys()
+        public void GameEngine_MergesCommandSourceAndMassNavigationOrderContracts()
         {
             string repoRoot = FindRepoRoot();
             using var coreEngine = new GameEngine();
@@ -124,10 +124,6 @@ namespace Ludots.Tests.Architecture
             CommandSourceAcquisitionConfig coreCommandSource = coreConfig.CommandSource
                 ?? throw new InvalidOperationException("Core command-source config was not merged.");
 
-            Assert.That(
-                coreCommandSource.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "moveTo" }),
-                "LudotsCoreMod should author the generic move path preview contract.");
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That("collection.command.source", Is.EqualTo("collection.command.source"));
 
@@ -147,10 +143,6 @@ namespace Ludots.Tests.Architecture
             CommandSourceAcquisitionConfig massNavigationCommandSource = massNavigationConfig.CommandSource
                 ?? throw new InvalidOperationException("MassNavigation command-source config was not merged.");
 
-            Assert.That(
-                massNavigationCommandSource.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "massNavigationMove" }),
-                "MassNavigationMod should author only its formal order key for command-source move path preview.");
             EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             Assert.That(collections.KeyRegistry.GetId("collection.command.source"), Is.GreaterThan(0));
@@ -1053,7 +1045,6 @@ namespace Ludots.Tests.Architecture
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,
@@ -1288,7 +1279,6 @@ namespace Ludots.Tests.Architecture
                 {
                     InitialZoomNormalized = 1f,
                     WheelZoomNormalizedStep = 0.08f,
-                    ButtonZoomNormalizedStep = 0.18f,
                     ZoomSliderEnabled = true,
                     ModeToggleEnabled = true,
                     RotateToggleEnabled = true,
@@ -1299,14 +1289,7 @@ namespace Ludots.Tests.Architecture
                     MaxZoomExplicitHalfExtentCm = 0f,
                     Actions = new MinimapActionsConfig
                     {
-                        Toggle = "Minimap.Toggle",
-                        TogglePreset = "Minimap.TogglePreset",
-                        ToggleRotateWithCamera = "Minimap.ToggleRotateWithCamera",
                         Zoom = "Minimap.Zoom",
-                        ZoomIn = "Minimap.ZoomIn",
-                        ZoomOut = "Minimap.ZoomOut",
-                        Pan = "Minimap.Pan",
-                        CenterOnFocusPrimary = "Minimap.CenterOnFocusPrimary",
                     },
                 },
             };

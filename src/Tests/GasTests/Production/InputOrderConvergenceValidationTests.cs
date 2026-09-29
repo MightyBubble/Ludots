@@ -53,7 +53,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Contain("AuthoritativePointerButtonSnapshotSystem"));
             Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
             Assert.That(localInputNames, Does.Contain("AxisMoveOrderSystem"));
-            Assert.That(localInputNames, Does.Contain("TabTargetCycleSystem"));
             Assert.That(localInputNames, Does.Contain("ViewModeSwitchSystem"));
             Assert.That(localInputNames, Does.Contain("MobaInputModeSystem"));
             Assert.That(inputNames, Does.Contain("AutoInstalledLocalOrderSourceSystem"));
@@ -65,11 +64,9 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
-            Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
             Assert.That(presentationNames, Does.Not.Contain("MobaInputModeSystem"));
             Assert.That(presentationNames, Does.Contain("AbilityAimPresentationProjectionSystem"));
-            Assert.That(presentationNames, Does.Contain("CommandActorMovePathPresentationSystem"));
             Assert.That(presentationNames, Does.Contain("SkillBarOverlaySystem"));
             Assert.That(presentationNames, Does.Contain("WorldToVisualSyncSystem"));
             Assert.That(presentationNames, Does.Contain("TerrainHeightSyncSystem"));

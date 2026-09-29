@@ -178,7 +178,6 @@ namespace Ludots.Tests.Presentation
             {
                 InitialZoomNormalized = 1f,
                 WheelZoomNormalizedStep = 0.08f,
-                ButtonZoomNormalizedStep = 0.18f,
                 ZoomSliderEnabled = true,
                 ModeToggleEnabled = true,
                 RotateToggleEnabled = true,

@@ -785,85 +785,6 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void Epic322_CommandActorMovePathOverlayBridge_IsRemoved()
-        {
-            var repoRoot = FindRepoRoot();
-            string[] directories =
-            {
-                Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
-                Path.Combine(repoRoot, "docs", "architecture", "interaction")
-            };
-            string[] forbidden =
-            {
-                "SelectedMovePathOverlayBridge"
-            };
-
-            var hits = new List<string>();
-            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
-            {
-                string dir = directories[dirIndex];
-                if (!Directory.Exists(dir))
-                {
-                    continue;
-                }
-
-                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
-                {
-                    string ext = Path.GetExtension(file);
-                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
-                }
-            }
-
-            if (hits.Count > 0)
-            {
-                Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; the old direct overlay bridge must not return:\n" +
-                    string.Join("\n", hits));
-            }
-        }
-
-        [Test]
-        public void Epic322_CommandActorMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
-        {
-            var repoRoot = FindRepoRoot();
-            string file = Path.Combine(
-                repoRoot,
-                "mods",
-                "CoreInputMod",
-                "Systems",
-                "CommandActorMovePathPresentationSystem.cs");
-            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 command actor move path source {file}");
-
-            string[] forbidden =
-            {
-                "GroundOverlayBuffer",
-                "ScreenOverlayBuffer",
-                "GroundOverlayItem",
-                ".AddRect(",
-                ".AddText(",
-                ".TryAddLine(",
-                ".TryAdd(new GroundOverlayItem"
-            };
-
-            var hits = new List<string>();
-            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
-
-            if (hits.Count > 0)
-            {
-                Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; it must not read or write render buffers directly:\n" +
-                    string.Join("\n", hits));
-            }
-        }
-
-        [Test]
         public void Epic322_ShowcasePresentationSystems_PublishWorldFactsInsteadOfWritingRenderBuffers()
         {
             var repoRoot = FindRepoRoot();
@@ -1003,7 +924,6 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
             };
             string[] forbidden =
@@ -1287,7 +1207,6 @@ namespace Ludots.Tests.Architecture.Governance
             Type[] types =
             {
                 typeof(SpatialBoundsUtility),
-                typeof(TabTargetCycleSystem),
                 typeof(LocalOrderSourceHelper),
                 typeof(AxisMoveOrderSystem),
                 typeof(AuthoritativeInputSnapshotSystem),
@@ -1304,7 +1223,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] files =
             {
                 Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
             };
             for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)

@@ -13,7 +13,6 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Minimap
 {
-    public delegate bool MinimapFocusCollectionProvider(GameEngine engine, out Entity owner, out string collectionKey);
     public delegate bool MinimapKnowledgeViewerProvider(GameEngine engine, out Entity viewer);
 
     public sealed class MinimapPresentationSystem : ISystem<float>
@@ -91,93 +90,21 @@ namespace Ludots.Core.Presentation.Minimap
     {
         private readonly MinimapRuntime _runtime;
         private readonly MinimapActionsConfig _actions;
-        private readonly MinimapFocusCollectionProvider _focusCollectionProvider;
-        private string _focusCollectionKey;
-        private int _focusCollectionKeyId;
-        private bool _prevToggle;
-        private bool _prevCenterOnFocusPrimary;
-        private bool _prevZoomIn;
-        private bool _prevZoomOut;
-        private bool _prevPresetToggle;
-        private bool _prevRotateToggle;
         private bool _dragging;
         private bool _zoomSliderDragging;
 
-        public MinimapInputConsumer(
-            MinimapRuntime runtime,
-            MinimapActionsConfig actions,
-            MinimapFocusCollectionProvider focusCollectionProvider)
+        public MinimapInputConsumer(MinimapRuntime runtime, MinimapActionsConfig actions)
         {
             _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
             _actions = actions ?? throw new System.ArgumentNullException(nameof(actions));
             _actions.Validate();
-            _focusCollectionProvider = focusCollectionProvider ?? throw new System.ArgumentNullException(nameof(focusCollectionProvider));
         }
 
         public void Consume(GameEngine engine, PlayerInputHandler input, float deltaTime)
         {
-            if (engine.GetService(CoreServiceKeys.UiCaptured))
+            if (engine.GetService(CoreServiceKeys.UiCaptured) || !_runtime.Visible)
             {
                 return;
-            }
-
-            bool toggle = input.PressedThisFrame(_actions.Toggle);
-            if (toggle && !_prevToggle)
-            {
-                _runtime.Visible = !_runtime.Visible;
-            }
-
-            _prevToggle = toggle;
-            if (!_runtime.Visible)
-            {
-                return;
-            }
-
-            bool presetToggle = input.PressedThisFrame(_actions.TogglePreset);
-            if (presetToggle && !_prevPresetToggle)
-            {
-                _runtime.ToggleRtsFollowCameraPreset();
-            }
-
-            _prevPresetToggle = presetToggle;
-
-            bool rotateToggle = input.PressedThisFrame(_actions.ToggleRotateWithCamera);
-            if (rotateToggle && !_prevRotateToggle)
-            {
-                _runtime.ToggleRotateWithCamera();
-            }
-
-            _prevRotateToggle = rotateToggle;
-
-            bool zoomIn = input.PressedThisFrame(_actions.ZoomIn);
-            bool zoomOut = input.PressedThisFrame(_actions.ZoomOut);
-            if (zoomIn && !_prevZoomIn)
-            {
-                _runtime.CycleZoom(-1);
-            }
-
-            if (zoomOut && !_prevZoomOut)
-            {
-                _runtime.CycleZoom(1);
-            }
-
-            _prevZoomIn = zoomIn;
-            _prevZoomOut = zoomOut;
-
-            bool centerOnFocusPrimary = input.PressedThisFrame(_actions.CenterOnFocusPrimary);
-            if (centerOnFocusPrimary &&
-                !_prevCenterOnFocusPrimary &&
-                TryResolveFocusPrimary(engine, out Entity focusPrimary))
-            {
-                _runtime.CenterOnEntity(engine, focusPrimary);
-            }
-
-            _prevCenterOnFocusPrimary = centerOnFocusPrimary;
-
-            Vector2 pan = input.ReadAction<Vector2>(_actions.Pan);
-            if (pan.X != 0f || pan.Y != 0f)
-            {
-                _runtime.PanNormalized(pan.X * deltaTime * 0.9f, pan.Y * deltaTime * 0.9f);
             }
 
             HandlePointerClick(engine, input);
@@ -316,28 +243,6 @@ namespace Ludots.Core.Presentation.Minimap
                     input.SuppressActionThisFrame(entries[i].ActionId);
                 }
             }
-        }
-
-        private bool TryResolveFocusPrimary(GameEngine engine, out Entity focusPrimary)
-        {
-            focusPrimary = Entity.Null;
-            return _focusCollectionProvider(engine, out Entity owner, out string collectionKey) &&
-                   engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections) &&
-                   collections.TryGet(owner, ResolveFocusCollectionKeyId(collections, collectionKey), out EntityCollectionHandle handle) &&
-                   collections.TryGetEntityAt(handle, 0, out focusPrimary) &&
-                   focusPrimary != Entity.Null &&
-                   engine.World.IsAlive(focusPrimary);
-        }
-
-        private int ResolveFocusCollectionKeyId(EntityCollectionStore collections, string collectionKey)
-        {
-            if (!string.Equals(_focusCollectionKey, collectionKey, StringComparison.Ordinal) || _focusCollectionKeyId <= 0)
-            {
-                _focusCollectionKey = collectionKey;
-                _focusCollectionKeyId = collections.KeyRegistry.GetId(collectionKey);
-            }
-
-            return _focusCollectionKeyId;
         }
     }
 }

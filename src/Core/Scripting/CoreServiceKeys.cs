@@ -420,7 +420,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");
-        public static readonly ServiceKey<MinimapFocusCollectionProvider> MinimapFocusCollectionProvider = new("MinimapFocusCollectionProvider");
         public static readonly ServiceKey<MinimapKnowledgeViewerProvider> MinimapKnowledgeViewerProvider = new("MinimapKnowledgeViewerProvider");
         public static readonly ServiceKey<MinimapMarkerBuffer> MinimapMarkerBuffer = new("MinimapMarkerBuffer");
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
@@ -479,7 +478,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatDeviceBinding> ClientLocalSeatDeviceBinding = new("ClientLocalSeatDeviceBinding");
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatInputRuntime> ClientLocalSeatInputRuntime = new("ClientLocalSeatInputRuntime");
         public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
-        public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

@@ -245,34 +245,13 @@ namespace Ludots.Core.Presentation
 
     public sealed class MinimapActionsConfig
     {
-        private string? _toggle;
-        private string? _togglePreset;
-        private string? _toggleRotateWithCamera;
         private string? _zoom;
-        private string? _zoomIn;
-        private string? _zoomOut;
-        private string? _pan;
-        private string? _centerOnFocusPrimary;
 
-        public string Toggle { get => Require(_toggle, "toggle"); set => _toggle = value; }
-        public string TogglePreset { get => Require(_togglePreset, "togglePreset"); set => _togglePreset = value; }
-        public string ToggleRotateWithCamera { get => Require(_toggleRotateWithCamera, "toggleRotateWithCamera"); set => _toggleRotateWithCamera = value; }
         public string Zoom { get => Require(_zoom, "zoom"); set => _zoom = value; }
-        public string ZoomIn { get => Require(_zoomIn, "zoomIn"); set => _zoomIn = value; }
-        public string ZoomOut { get => Require(_zoomOut, "zoomOut"); set => _zoomOut = value; }
-        public string Pan { get => Require(_pan, "pan"); set => _pan = value; }
-        public string CenterOnFocusPrimary { get => Require(_centerOnFocusPrimary, "centerOnFocusPrimary"); set => _centerOnFocusPrimary = value; }
 
         public void Validate()
         {
-            _ = Toggle;
-            _ = TogglePreset;
-            _ = ToggleRotateWithCamera;
             _ = Zoom;
-            _ = ZoomIn;
-            _ = ZoomOut;
-            _ = Pan;
-            _ = CenterOnFocusPrimary;
         }
 
         private static string Require(string? value, string field)
@@ -290,7 +269,6 @@ namespace Ludots.Core.Presentation
     {
         private float? _initialZoomNormalized;
         private float? _wheelZoomNormalizedStep;
-        private float? _buttonZoomNormalizedStep;
         private bool? _zoomSliderEnabled;
         private bool? _modeToggleEnabled;
         private bool? _rotateToggleEnabled;
@@ -303,7 +281,6 @@ namespace Ludots.Core.Presentation
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
-        public float ButtonZoomNormalizedStep { get => _buttonZoomNormalizedStep ?? 0f; set => _buttonZoomNormalizedStep = value; }
         public bool ZoomSliderEnabled { get => _zoomSliderEnabled ?? false; set => _zoomSliderEnabled = value; }
         public bool ModeToggleEnabled { get => _modeToggleEnabled ?? false; set => _modeToggleEnabled = value; }
         public bool RotateToggleEnabled { get => _rotateToggleEnabled ?? false; set => _rotateToggleEnabled = value; }
@@ -334,13 +311,6 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.wheelZoomNormalizedStep must be > 0.");
-            }
-
-            float buttonStep = PresentationRuntimeConfig.RequireFinite(_buttonZoomNormalizedStep, "presentation.minimap.buttonZoomNormalizedStep");
-            if (buttonStep <= 0f)
-            {
-                throw new InvalidOperationException(
-                    "presentation.minimap.buttonZoomNormalizedStep must be > 0.");
             }
 
             PresentationRuntimeConfig.RequireBool(_zoomSliderEnabled, "presentation.minimap.zoomSliderEnabled");

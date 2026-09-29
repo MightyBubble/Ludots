@@ -350,41 +350,6 @@ namespace Ludots.Tests.GAS
 
 
 
-        [Test]
-        public void TabTargetCycleSystem_SkipsRuntimeDisabledCandidates()
-        {
-            using var world = World.Create();
-
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(
-                new Team { Id = 1 },
-                WorldPositionCm.FromCm(0, 0));
-            _ = world.Create(
-                new Team { Id = 2 },
-                WorldPositionCm.FromCm(500, 0),
-                new CommandSourceSelectableTag(),
-                CommandSourceSelectableState.Disabled);
-            var enabledEnemy = world.Create(
-                new Team { Id = 2 },
-                WorldPositionCm.FromCm(1000, 0),
-                new CommandSourceSelectableTag());
-
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.AuthoritativeInput.Name] = input,
-            };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
-
-            var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
-
-            input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
-            input.Update(1f / 60f);
-            system.Update(0f);
-
-            That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out var targetObj), Is.True);
-            That(targetObj, Is.EqualTo(enabledEnemy));
-        }
-
         private static InputConfigRoot CreateInputConfig()
         {
             return new InputConfigRoot
@@ -398,8 +363,6 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Select.Begin", Name = "Command Source Acquire", Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Additive, Name = CommandSourceModifierActionIds.Additive, Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Toggle, Name = CommandSourceModifierActionIds.Toggle, Type = InputActionType.Button },
-                    new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
-                    new() { Id = "TabTargetReverse", Name = "TabTargetReverse", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Name = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = AuthoritativeGroundPointerHelper.ActionId, Name = AuthoritativeGroundPointerHelper.ActionId, Type = InputActionType.Axis3D },
                 },

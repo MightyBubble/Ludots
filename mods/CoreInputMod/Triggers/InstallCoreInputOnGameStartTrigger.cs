@@ -47,10 +47,6 @@ namespace CoreInputMod.Triggers
                 return Task.CompletedTask;
             engine.SetService(CoreInputServiceKeys.Installed, true);
 
-            engine.SetService(
-                CoreServiceKeys.MinimapFocusCollectionProvider,
-                (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
-
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
 
@@ -63,11 +59,6 @@ namespace CoreInputMod.Triggers
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
-            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
-                engine.World,
-                engine.GlobalContext,
-                (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.LocalInput);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
@@ -75,7 +66,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
             RegisterAutoLocalOrderSource(engine);
 
-_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
+_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation, ViewMode registered");
 
 InstallDeclaredLocalOrderSources(engine);
             return Task.CompletedTask;
@@ -135,13 +126,6 @@ InstallDeclaredLocalOrderSources(engine);
 
             owner = local;
             return true;
-        }
-
-        private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
-        {
-            bool found = TryResolveLocalCommandSourceOwner(engine, out owner);
-            collectionKey = InputInteractionContextAccessor.CommandActorCollectionKey;
-            return found;
         }
 
         /// <summary>

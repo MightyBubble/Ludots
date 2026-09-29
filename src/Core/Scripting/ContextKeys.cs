@@ -86,7 +86,6 @@ namespace Ludots.Core.Scripting
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string ClientLocalSeatRegistry = "ClientLocalSeatRegistry";
         public const string LogicViewRegistry = "LogicViewRegistry";
-        public const string TabTargetEntity = "TabTargetEntity";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";

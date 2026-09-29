@@ -1602,18 +1602,7 @@ namespace Ludots.Core.Engine
             var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
             var inputFrameConsumers = new List<IInputFrameConsumer>
             {
-                new MinimapInputConsumer(
-                    minimapRuntime,
-                    presentationConfig.Minimap.Actions,
-                    static (GameEngine engine, out Entity owner, out string collectionKey) =>
-                    {
-                        owner = Entity.Null;
-                        collectionKey = string.Empty;
-                        return engine.TryGetService(
-                                   CoreServiceKeys.MinimapFocusCollectionProvider,
-                                   out MinimapFocusCollectionProvider provider) &&
-                               provider(engine, out owner, out collectionKey);
-                    })
+                new MinimapInputConsumer(minimapRuntime, presentationConfig.Minimap.Actions)
             };
             SetService(
                 CoreServiceKeys.MinimapKnowledgeViewerProvider,
