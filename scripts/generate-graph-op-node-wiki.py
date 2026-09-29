@@ -47,6 +47,7 @@ DRIVER_LABELS = {
     "sandbox": "组合短剧",
     "collectionWrite": "集合写入",
     "order": "订单与行为",
+    "responseChain": "响应链",
 }
 
 HANDBOOK_BY_DRIVER = {
@@ -69,6 +70,7 @@ HANDBOOK_BY_DRIVER = {
     "collectionWrite": ("map-02-triggers.md", "地图触发器 · map-02"),
     "order": ("gr-op-14-control-flow.md", "脚本控制流 · gr-op-14"),
     "commandIntent": ("input-01-command-intent.md", "命令意图 · input-01"),
+    "responseChain": ("fx-07-response-chain.md", "响应链 · fx-07"),
 }
 
 ALL_KINDS = [

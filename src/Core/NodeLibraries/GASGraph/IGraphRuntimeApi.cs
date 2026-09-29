@@ -151,6 +151,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Answers the response-chain prompt waiting on the rep's player with one of the
+        /// configured response-chain order types.
+        /// </summary>
+        void SubmitResponseChainOrder(Entity rep, int orderTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ResponseChainUnavailable");
+        }
+
+        /// <summary>
         /// Pushes one engage intent into the per-tick submission buffer (constitution §12);
         /// the drain runs the profile's EQS query around the target and lands per-actor
         /// move-then-cast with the assigned ring point.

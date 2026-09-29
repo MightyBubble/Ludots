@@ -58,7 +58,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Contain("MobaInputModeSystem"));
             Assert.That(inputNames, Does.Contain("AutoInstalledLocalOrderSourceSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
-            Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
             Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("MobaInputModeSystem")));
             Assert.That(localInputNames, Does.Not.Contain("ClockSystem"));
             Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
@@ -66,7 +65,6 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
-            Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
             Assert.That(presentationNames, Does.Not.Contain("MobaInputModeSystem"));
@@ -199,14 +197,11 @@ namespace Ludots.Tests.GAS.Production
             string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
             string inputMappingSystem = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingSystem.cs"));
             string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
-            string responseChainSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "ResponseChainHumanOrderSourceSystem.cs"));
             string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
 
             Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
             Assert.That(inputMappingSystem, Does.Not.Contain("orderTypeId <= 0) return false"));
             Assert.That(localOrderSource, Does.Not.Contain("? configOrderTypeId : 0"));
-            Assert.That(responseChainSource, Does.Not.Contain("GetValueOrDefault(\"chainPass\""));
-            Assert.That(responseChainSource, Does.Not.Contain("ResponseChainOrderTypes.Default"));
             Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
         }
 
@@ -219,7 +214,6 @@ namespace Ludots.Tests.GAS.Production
             string configMerger = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Config", "ConfigMerger.cs"));
             string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
             string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
-            string responseChainSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "ResponseChainHumanOrderSourceSystem.cs"));
             string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
 
             Assert.That(aiConfigLoader, Does.Contain("OrderTagId is outside the active AI order contract"));
@@ -229,8 +223,6 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
             Assert.That(localOrderSource, Does.Not.Contain("? v : 0"));
-            Assert.That(responseChainSource, Does.Not.Contain("GetValueOrDefault(\"chainPass\""));
-            Assert.That(responseChainSource, Does.Not.Contain("ResponseChainOrderTypes.Default"));
             Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
 
             Assert.That(abilityExecLoader, Does.Contain("field 'exec' is required"));

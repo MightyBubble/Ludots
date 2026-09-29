@@ -1,3 +1,4 @@
+using Ludots.Core.Gameplay.GAS.Input;
 using System;
 using System.IO;
 using Arch.Core;
@@ -209,7 +210,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests: null,
+                    promptState: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {

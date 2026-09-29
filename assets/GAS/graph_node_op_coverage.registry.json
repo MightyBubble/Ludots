@@ -3527,6 +3527,22 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "SubmitResponseChainOrder",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.SubmitResponseChainOrderVignette_AnswersTheWaitingWindow"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "SubmitCommandIntent",
       "authorableKinds": [
         "TriggerGraph"

@@ -45,6 +45,13 @@ public sealed class GraphOpsNodeDriverContext
     public RelationshipFlagRegistry? RelationshipFlags { get; set; }
     public EntityCollectionStore? Collections { get; set; }
     public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? CommandIntents { get; set; }
+    public Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState? ResponseChainPrompt { get; set; }
+
+    /// <summary>
+    /// Set by drivers whose wave leaves engine-side work that is not an EffectRequest (e.g. queued
+    /// response-chain answers); the headless host then ticks the engine at least once.
+    /// </summary>
+    public bool EffectSettlementRequested { get; set; }
     public TagOps? TagOps { get; set; }
     public GameplayEventBus? EventBus { get; set; }
     public GraphCallbackService? GraphCallbacks { get; set; }

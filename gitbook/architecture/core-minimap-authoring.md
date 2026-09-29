@@ -131,16 +131,20 @@ Core runtime 类型：`MinimapRuntime`。
 - `JumpCameraTo(GameEngine engine, Vector2 worldCm)`: RTS 点击/拖拽跳转相机。
 - `TryScreenToWorld` / `TryScreenToWorldClamped`: 小地图屏幕点到世界坐标。
 
-统一输入 action 常量在 `MinimapInputActions`：
+小地图读哪些输入动作，写在 `presentation.minimap.actions` 里，代码里没有写死的动作名。LudotsCoreMod 的 `game.json` 给出默认值，8 项少一项启动就报错，报错会点名缺的字段：
 
-- `Minimap.Toggle`
-- `Minimap.TogglePreset`
-- `Minimap.ToggleRotateWithCamera`
-- `Minimap.Zoom`
-- `Minimap.ZoomIn`
-- `Minimap.ZoomOut`
-- `Minimap.Pan`
-- `Minimap.CenterOnSelection`
+| 字段 | 默认动作 |
+| --- | --- |
+| `toggle` | `Minimap.Toggle` |
+| `togglePreset` | `Minimap.TogglePreset` |
+| `toggleRotateWithCamera` | `Minimap.ToggleRotateWithCamera` |
+| `zoom` | `Minimap.Zoom` |
+| `zoomIn` | `Minimap.ZoomIn` |
+| `zoomOut` | `Minimap.ZoomOut` |
+| `pan` | `Minimap.Pan` |
+| `centerOnFocusPrimary` | `Minimap.CenterOnFocusPrimary` |
+
+点击、拖拽用的确认键和命令键来自 `game.json` 的 `interactionActions`，鼠标位置用引擎保留的 `PointerPos` 动作。
 
 输入必须走统一 input 基建。滚轮、点击、拖拽、缩放条和 toggle 都通过 `MinimapInputConsumer` 消费，并在命中小地图交互区域时设置 pointer capture，防止穿透到相机或世界交互。
 
@@ -162,7 +166,17 @@ Core runtime 类型：`MinimapRuntime`。
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "actions": {
+        "toggle": "Minimap.Toggle",
+        "togglePreset": "Minimap.TogglePreset",
+        "toggleRotateWithCamera": "Minimap.ToggleRotateWithCamera",
+        "zoom": "Minimap.Zoom",
+        "zoomIn": "Minimap.ZoomIn",
+        "zoomOut": "Minimap.ZoomOut",
+        "pan": "Minimap.Pan",
+        "centerOnFocusPrimary": "Minimap.CenterOnFocusPrimary"
+      }
     }
   }
 }

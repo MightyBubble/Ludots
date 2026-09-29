@@ -239,4 +239,24 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
         }
     }
+
+    [Test]
+    public void SubmitResponseChainOrderVignette_AnswersTheWaitingWindow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitResponseChainOrder");
+        runtime.EnsureWorld();
+
+        runtime.Tick(0.35f);
+        Assert.That(runtime.Context.ResponseChainPrompt!.IsOpen, Is.True, "the opening spell leaves the window waiting on the caster's player");
+
+        runtime.Tick(0.35f);
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Context.ResponseChainPrompt.IsOpen, Is.False);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
 }

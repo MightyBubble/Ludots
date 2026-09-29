@@ -725,6 +725,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CompleteActiveOrder:
                     break;
                 case GraphNodeOp.LoadOrderTypeId:
+                case GraphNodeOp.SubmitResponseChainOrder:
                     RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
                     break;
 
@@ -1985,6 +1986,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadOrderTypeId:
+                case GraphNodeOp.SubmitResponseChainOrder:
                     instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 

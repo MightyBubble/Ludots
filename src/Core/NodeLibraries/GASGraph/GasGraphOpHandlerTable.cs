@@ -372,6 +372,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitCommandIntent or
                 GraphNodeOp.SubmitCast or
                 GraphNodeOp.SubmitEngageBatch or
+                GraphNodeOp.SubmitResponseChainOrder or
                 GraphNodeOp.BindQueryCollection or
                 GraphNodeOp.ReadCalendarEnabled or
                 GraphNodeOp.ReadCalendarDayIndex or
@@ -972,6 +973,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
             Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
+            Register(GraphNodeOp.SubmitResponseChainOrder, HandleSubmitResponseChainOrder, "SubmitResponseChainOrder graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
@@ -1858,6 +1860,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasGround,
                 s.TargetPosCm,
                 ins.Imm);
+        }
+
+        private static void HandleSubmitResponseChainOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SubmitResponseChainOrder(s.Caster, ins.Imm);
         }
 
         private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

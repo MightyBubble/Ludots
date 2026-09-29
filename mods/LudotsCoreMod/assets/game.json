@@ -58,7 +58,17 @@
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "actions": {
+        "toggle": "Minimap.Toggle",
+        "togglePreset": "Minimap.TogglePreset",
+        "toggleRotateWithCamera": "Minimap.ToggleRotateWithCamera",
+        "zoom": "Minimap.Zoom",
+        "zoomIn": "Minimap.ZoomIn",
+        "zoomOut": "Minimap.ZoomOut",
+        "pan": "Minimap.Pan",
+        "centerOnFocusPrimary": "Minimap.CenterOnFocusPrimary"
+      }
     }
   },
   "constants": {
@@ -76,6 +86,11 @@
     "attributes": {
       "health": "Health"
     }
+  },
+  "interactionActions": {
+    "confirmActionId": "Select.Begin",
+    "commandActionId": "Command",
+    "cancelActionId": "Cancel"
   },
   "commandSource": {
     "targetFilter": {

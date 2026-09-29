@@ -19,7 +19,6 @@ Gate 与派发骨架（教学骨架）：
 ```json
 "exec": { "clockId": "FixedFrame", "interruptAny": [ "Status.Stunned" ], "items": [
   { "kind": "EffectClip", "tick": 0, "duration": 60, "template": "Effect.Ex.Buff", "callerParamsIdx": 0, "dispatchTarget": "Target" },
-  { "kind": "InputGate", "tick": 0, "tag": "Input.Confirm", "payloadA": 0 },
   { "kind": "EventGate", "tick": 0, "tag": "Event.Impact", "payloadA": 30 },
   { "kind": "End", "tick": 0 } ] }
 ```
@@ -39,7 +38,6 @@ item 公共字段：`kind`、`tick` 必填；`duration`（Clip 时长）；`cloc
 | `TagClip` / `TagClipTarget` | tag + duration | 起点加 tag（自身/当前目标实体），到期自动移除（定时预约） |
 | `EventSignal` | tag=事件名 | 到点发布 GameplayEvent |
 | `TagSignal` / `TagSignalTarget` | tag；payloadA=0 加 / 1 删 | 到点瞬发加/删 tag（自身/当前目标实体；现状无枚举名，见 reference） |
-| `InputGate` / `TargetCollectionGate` | tag=请求 tag；payloadA=请求 id（0=用订单 id） | 挂起等玩家输入/外部目标收集；响应可回填目标 |
 | `EventGate` | tag=事件 tag；payloadA=超时 tick（0=无限等） | 挂起等事件；超时放行 |
 | `End` | tick | 收束：时间轴完成 |
 
@@ -55,7 +53,7 @@ item 公共字段：`kind`、`tick` 必填；`duration`（Clip 时长）；`cloc
 
 | 异常情形 | 系统响应 |
 |---|---|
-| items 超 16 / kind 或 tick 缺失 / 未知 kind / template 未注册 / InputGate 缺 payloadA | 启动失败 |
+| items 超 16 / kind 或 tick 缺失 / 未知 kind（含已删除的 InputGate、TargetCollectionGate）/ template 未注册 | 启动失败，报能力 id 与条目序号 |
 | 起播黑板无槽位键 / 效果发布时队列容量不足（上限见事实页） | 技能失败（MissingBlackboardSlot / SubmissionQueueFull） |
 
 ## 6. 实例

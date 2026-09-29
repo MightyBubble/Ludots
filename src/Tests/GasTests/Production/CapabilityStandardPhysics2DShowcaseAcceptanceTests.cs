@@ -168,12 +168,12 @@ namespace Ludots.Tests.GAS.Production
                     isDown: true,
                     pressedThisFrame: false,
                     releasedThisFrame: false);
-                frozen.SetActionValue(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
+                frozen.SetActionValue(ReservedInputActionIds.PointerPos, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
             }
             else if (input is PlayerInputHandler playerInput)
             {
                 playerInput.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y));
-                playerInput.InjectAction(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
+                playerInput.InjectAction(ReservedInputActionIds.PointerPos, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
                 playerInput.Update(1f / 60f);
             }
             else
