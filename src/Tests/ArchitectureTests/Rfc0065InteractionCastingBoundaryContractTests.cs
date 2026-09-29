@@ -764,20 +764,37 @@ namespace Ludots.Tests.Architecture
             Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
 
             string source = File.ReadAllText(runtimePath);
-            string collectIncomingBody = ExtractMethodBody(
+            string[] forwardingSignatures =
+            {
+                "public int CollectIncoming(Entity target, Span<Entity> buffer)",
+                "public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)",
+            };
+            string readingBody = ExtractMethodBody(
                 source,
-                "public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)");
+                "public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer, out int dropped)");
             Assert.Multiple(() =>
             {
-                Assert.That(collectIncomingBody, Does.Not.Contain("RelationshipQuery"),
-                    "The removed full-world RelationshipQuery fallback must not return to RelationshipRuntime.");
-                Assert.That(collectIncomingBody, Does.Not.Contain("QueryDescription"),
-                    "CollectIncoming must not define world queries; incoming edges come from the reverse index.");
-                Assert.That(collectIncomingBody, Does.Not.Contain("_world.Query"),
-                    "CollectIncoming must not iterate the world to collect incoming edges.");
-                Assert.That(collectIncomingBody, Does.Contain("_reverseIndex.CopyIncoming"),
+                AssertNoWorldScan(readingBody, "CollectIncoming(target, typeId, buffer, out dropped)");
+                Assert.That(readingBody, Does.Contain("_reverseIndex.CopyIncoming"),
                     "CollectIncoming must read the reverse adjacency index.");
+                foreach (string signature in forwardingSignatures)
+                {
+                    string body = ExtractMethodBody(source, signature);
+                    AssertNoWorldScan(body, signature);
+                    Assert.That(body, Does.Contain("return CollectIncoming("),
+                        $"{signature} must forward to the reverse-index overload instead of collecting on its own.");
+                }
             });
+
+            static void AssertNoWorldScan(string body, string overload)
+            {
+                Assert.That(body, Does.Not.Contain("RelationshipQuery"),
+                    $"{overload}: the removed full-world RelationshipQuery fallback must not return to RelationshipRuntime.");
+                Assert.That(body, Does.Not.Contain("QueryDescription"),
+                    $"{overload}: CollectIncoming must not define world queries; incoming edges come from the reverse index.");
+                Assert.That(body, Does.Not.Contain("_world.Query"),
+                    $"{overload}: CollectIncoming must not iterate the world to collect incoming edges.");
+            }
         }
 
         /// <summary>
