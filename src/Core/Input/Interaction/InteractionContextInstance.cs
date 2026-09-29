@@ -87,8 +87,10 @@ namespace Ludots.Core.Input.Interaction
         public int CommandIntentProfileId;
 
         /// <summary>
-        /// Collection key id in the <c>EntityCollectionStore</c> key space that context-bound
-        /// cast commits write and command intent routing reads while this context is active.
+        /// Collection key id in the <c>EntityCollectionStore</c> key space that command intent
+        /// routing reads while this context is active. Copied at mount from the profile's
+        /// <c>activeCollectionKey</c>, or from the collectionKey declared on the context's
+        /// submit graph when the profile leaves that field empty.
         /// </summary>
         public int ActiveCollectionKeyId;
 

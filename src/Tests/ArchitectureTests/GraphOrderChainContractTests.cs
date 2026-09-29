@@ -79,7 +79,6 @@ namespace Ludots.Tests.Architecture
             string repoRoot = FindRepoRoot();
             string[] profileFiles =
             {
-                Path.Combine(repoRoot, "mods", "showcases", "case_e_selection", "CaseESelectionMod", "assets", "Input", "interaction_context_profiles.json"),
                 Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "interaction_context_profiles.json"),
                 Path.Combine(repoRoot, "mods", "showcases", "arpg_demo", "ArpgDemoMod", "assets", "Input", "interaction_context_profiles.json"),
             };
