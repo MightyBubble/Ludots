@@ -7,6 +7,12 @@
   "Tags": [
     "crowd_physics_arena"
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "local_player"
+    }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
     "TargetXCm": 5000,

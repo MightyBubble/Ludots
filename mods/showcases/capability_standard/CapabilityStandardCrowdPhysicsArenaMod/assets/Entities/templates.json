@@ -17,6 +17,10 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
       "CommandSourceDragState": {},
       "WorldPositionCm": {
         "Value": {
@@ -83,7 +87,7 @@
           "Health": 100
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -140,7 +144,7 @@
           "Health": 260
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -197,7 +201,7 @@
           "Health": 100
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
@@ -254,7 +258,7 @@
           "Health": 260
         }
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": { "tags": ["Unit.Commandable"] },
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
