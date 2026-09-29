@@ -84,23 +84,8 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "RtsDemo.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsDemo.Participant",
-        "Symmetric": false
       }
     ]
   }

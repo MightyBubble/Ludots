@@ -25,9 +25,7 @@
   "Teams": [],
   "Players": [],
   "ParticipantRelationships": {
-    "Teams": [],
-    "Players": [],
-    "PlayerTeams": []
+    "Teams": []
   },
   "Boards": [
     {

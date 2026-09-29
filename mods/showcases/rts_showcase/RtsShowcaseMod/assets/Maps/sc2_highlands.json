@@ -147,24 +147,6 @@
       {
         "TeamA": 2,
         "TeamB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -179,28 +161,6 @@
         "TeamB": 3,
         "TypeId": "Hostile",
         "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
       }
     ]
   }

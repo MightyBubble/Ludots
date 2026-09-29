@@ -315,12 +315,6 @@
       {
         "TeamA": 1,
         "TeamB": 2,
-        "TypeId": "RoadNetwork.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
         "TypeId": "Hostile",
         "Symmetric": true
       },
@@ -336,8 +330,6 @@
         "TypeId": "Friendly",
         "Symmetric": false
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   }
 }

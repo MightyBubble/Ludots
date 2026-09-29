@@ -224,6 +224,7 @@ def write_maps(host: Path) -> None:
             ])
         dump(maps_dir / f"{mid}.json", {
             "Id": mid,
+            "World": {"WidthCm": 1638400, "HeightCm": 1638400, "CellSizeCm": 100},
             "Tags": ["showcase", "panel", "typed-collection-bag", item["slug"]],
             "TriggerGraphs": [
                 {"graph": open_graph_id(item["slug"]), "scopeInstanceId": "collection-bags-hero"}
@@ -237,11 +238,8 @@ def write_maps(host: Path) -> None:
             ],
             "ParticipantRelationships": {
                 "Teams": [
-                    {"TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant",
-                     "Attitude": "Friendly", "Symmetric": True}
+                    {"TeamA": 1, "TeamB": 1, "TypeId": "Friendly", "Symmetric": True}
                 ],
-                "Players": [],
-                "PlayerTeams": [],
             },
             "DefaultCamera": {
                 "TargetXCm": 110, "TargetYCm": 0, "Yaw": 45, "Pitch": 35,

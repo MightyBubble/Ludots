@@ -296,24 +296,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "EntityQueryTactics.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -329,8 +311,6 @@
         "TypeId": "Hostile",
         "Symmetric": true
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   }
 }

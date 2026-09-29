@@ -26,7 +26,7 @@
             "player:1"
           ],
           "Target": "entity:npc-amber-envoy",
-          "RelationshipType": "Participant"
+          "RelationshipType": "ParticipantViews.KnowledgeShare"
         }
       ],
       "Collections": [
@@ -78,7 +78,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -109,7 +109,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -140,7 +140,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -171,7 +171,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -202,7 +202,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         }
@@ -718,66 +718,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 4,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -828,52 +768,14 @@
       {
         "PlayerA": 1,
         "PlayerB": 2,
-        "TypeId": "Participant",
+        "TypeId": "ParticipantViews.KnowledgeShare",
         "Symmetric": true
       },
       {
         "PlayerA": 3,
         "PlayerB": 4,
-        "TypeId": "Participant",
+        "TypeId": "ParticipantViews.KnowledgeShare",
         "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 1,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 2,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 4,
-        "TeamId": 2,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 5,
-        "TeamId": 3,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 6,
-        "TeamId": 4,
-        "TypeId": "Participant",
-        "Symmetric": false
       }
     ]
   }

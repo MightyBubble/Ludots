@@ -149,7 +149,7 @@ def team_relationships(teams: list[dict]) -> dict:
     for index, team_a in enumerate(team_ids):
         for team_b in team_ids[index + 1:]:
             edges.append({"TeamA": team_a, "TeamB": team_b, "TypeId": "Hostile", "Symmetric": True})
-    return {"Teams": edges, "Players": [], "PlayerTeams": []}
+    return {"Teams": edges}
 
 
 def map_variables_from_vignette(op: str, vignette: dict) -> list[dict]:

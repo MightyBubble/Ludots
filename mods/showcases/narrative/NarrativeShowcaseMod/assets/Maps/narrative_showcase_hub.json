@@ -162,42 +162,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -230,28 +194,6 @@
         "TeamB": 3,
         "TypeId": "Hostile",
         "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": false
       }
     ]
   }

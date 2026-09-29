@@ -82,9 +82,7 @@
         "TypeId": "Hostile",
         "Symmetric": true
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   },
   "Players": [
     {

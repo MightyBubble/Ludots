@@ -73,9 +73,7 @@
         "TypeId": "Hostile",
         "Symmetric": true
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   },
   "TriggerGraphs": [
     {

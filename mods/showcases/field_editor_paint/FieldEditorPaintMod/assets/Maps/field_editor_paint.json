@@ -86,18 +86,10 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   },
   "DefaultCamera": {
     "TargetXCm": 500,

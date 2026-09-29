@@ -14,24 +14,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "TcgDemo.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "TcgDemo.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "TcgDemo.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -47,8 +29,6 @@
         "TypeId": "Hostile",
         "Symmetric": true
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   }
 }

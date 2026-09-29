@@ -53,24 +53,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -85,21 +67,6 @@
         "TeamB": 2,
         "TypeId": "Hostile",
         "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": false
       }
     ]
   }

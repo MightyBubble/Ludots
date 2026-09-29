@@ -110,60 +110,6 @@
       {
         "TeamA": 1,
         "TeamB": 1,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 4,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 4,
-        "TypeId": "LudotsCore.Participant",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 1,
         "TypeId": "Friendly",
         "Symmetric": true
       },
@@ -221,9 +167,7 @@
         "TypeId": "Friendly",
         "Symmetric": false
       }
-    ],
-    "Players": [],
-    "PlayerTeams": []
+    ]
   },
   "DefaultCamera": {
     "TargetXCm": 150,
