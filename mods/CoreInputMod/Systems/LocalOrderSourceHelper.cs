@@ -387,6 +387,7 @@ namespace CoreInputMod.Systems
                 intents,
                 dispatch,
                 collections,
+                CoreInputCollectionKeys.CommandSource,
                 landingAbilities,
                 TryGetCommandSourceOwner,
                 TryGetPlayerRepresentative);

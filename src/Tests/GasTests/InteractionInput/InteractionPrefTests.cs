@@ -435,6 +435,7 @@ namespace Ludots.Tests.GAS
                     intents.Intents,
                     harness.Dispatch,
                     collections,
+                    "collection.command.source",
                     intents.Abilities,
                     (out Entity owner) =>
                     {

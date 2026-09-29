@@ -2007,6 +2007,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandIntents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2141,6 +2142,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2294,6 +2296,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2485,6 +2488,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2623,6 +2627,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2742,6 +2747,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2915,6 +2921,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3056,6 +3063,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3172,6 +3180,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3301,6 +3310,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3414,6 +3424,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 profileHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {

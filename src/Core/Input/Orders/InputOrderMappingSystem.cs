@@ -322,6 +322,7 @@ namespace Ludots.Core.Input.Orders
         private CastDispatchProfileRegistry? _castDispatchProfiles;
         private ICommandActorExpander? _commandActorExpander;
         private EntityCollectionStore? _entityCollections;
+        private int _commandActorCollectionKeyId;
         private ActiveActorCollectionOwnerProvider? _activeActorCollectionOwnerProvider;
         private PlayerRepresentativeProvider? _playerRepresentativeProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
@@ -571,6 +572,7 @@ namespace Ludots.Core.Input.Orders
             CommandIntentProfileRegistry commandIntentProfiles,
             CastDispatchProfileRegistry castDispatchProfiles,
             EntityCollectionStore entityCollections,
+            string commandActorCollectionKey,
             Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry abilityDefinitions,
             ActiveActorCollectionOwnerProvider? activeActorCollectionOwnerProvider = null,
             PlayerRepresentativeProvider? playerRepresentativeProvider = null)
@@ -580,6 +582,14 @@ namespace Ludots.Core.Input.Orders
             _commandIntentProfiles = commandIntentProfiles ?? throw new ArgumentNullException(nameof(commandIntentProfiles));
             _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            if (string.IsNullOrWhiteSpace(commandActorCollectionKey))
+            {
+                throw new ArgumentException(
+                    "Command intent routing requires the collection key its mapped commands draw actors from.",
+                    nameof(commandActorCollectionKey));
+            }
+
+            _commandActorCollectionKeyId = entityCollections.KeyRegistry.Register(commandActorCollectionKey);
             _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
             _playerRepresentativeProvider = playerRepresentativeProvider;
             SetAbilityDefinitionRegistry(abilityDefinitions);
@@ -1738,8 +1748,17 @@ namespace Ludots.Core.Input.Orders
             }
             else
             {
-                _commandIntentActorsScratch[0] = actingRep;
-                actorCount = 1;
+                if (!_entityCollections.TryGet(actorCollectionOwner, _commandActorCollectionKeyId, out EntityCollectionHandle handle))
+                {
+                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
+                }
+
+                if (!TryEnsureCommandIntentScratch(handle))
+                {
+                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
+                }
+
+                actorCount = _entityCollections.CopyEntities(handle, 0, _commandIntentActorsScratch);
             }
             if (actorCount <= 0)
             {
