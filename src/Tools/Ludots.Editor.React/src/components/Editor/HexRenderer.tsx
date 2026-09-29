@@ -53,19 +53,19 @@ export const HexRenderer: React.FC = () => {
     const canvasCanSim = canvasMapLoaded;
     const canvasInputLocked = navPanelTab === 'simulation' ? !canvasCanSim : !canvasEditable;
     const canvasLockTitle = canvasSessionKind === 'local' && navPanelTab === 'simulation'
-        ? 'Simulation needs an opened repo board'
+        ? '模拟需要先打开仓库板'
         : canvasHasRepoSession && !canvasMapLoaded
-            ? 'Selected board is not open'
+            ? '所选板没有打开'
             : canvasSessionKind === 'empty'
-                ? 'No board open'
-                : 'Canvas is read-only';
+                ? '没有打开板'
+                : '画布只读';
     const canvasLockMessage = canvasSessionKind === 'local' && navPanelTab === 'simulation'
-        ? `${canvasSessionLabel ?? 'Local draft'} can be edited and exported. Open a repo board to run C# nav simulation.`
+        ? `${canvasSessionLabel ?? '本地草稿'} 可编辑可导出。要跑 C# 导航模拟，需先打开仓库板。`
         : canvasHasRepoSession && !canvasMapLoaded
-            ? `Canvas still contains ${loadedMapId}/${loadedBoardName}. Open ${selectedMapId ?? 'a map'}/${selectedBoardName ?? 'a board'} from Map And Board before editing or simulating.`
+            ? `画布里还是 ${loadedMapId}/${loadedBoardName}。编辑或模拟前，先从「地图与板」打开 ${selectedMapId ?? '地图'}/${selectedBoardName ?? '板'}。`
             : canvasSessionKind === 'empty'
-                ? 'Select a map and board, then open it from Map And Board before editing.'
-                : 'This board is loaded for viewing, but terrain edits are disabled by its board metadata.';
+                ? '先选地图与板，再从「地图与板」打开，然后才能编辑。'
+                : '这块板只供查看，板元数据禁止改地形。';
     const visibleBakedNavTiles = React.useMemo(() => {
         const filtered = new Map<string, BakedNavTileVisual>();
         bakedNavTiles.forEach((visual, key) => {
@@ -1670,18 +1670,18 @@ export const HexRenderer: React.FC = () => {
             }}
         >
             {!canvasHasVisibleSession ? (
-                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
-                    <div className="max-w-[420px] rounded-lg border border-slate-700 bg-slate-900/95 p-5 text-center text-slate-200 shadow-2xl">
-                        <div className="text-sm font-semibold text-white">No Board Open</div>
-                        <div className="mt-2 text-xs leading-5 text-slate-400">
-                            Select a map and board in the top bar, then use Map And Board / Board Session / Open Selected before editing terrain, baking nav, or running simulation.
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-studio-bg">
+                    <div className="max-w-[420px] rounded-lg border border-studio-elevated bg-studio-surface/95 p-5 text-center text-studio-label shadow-2xl">
+                        <div className="text-sm font-semibold text-studio-label">还没打开板</div>
+                        <div className="mt-2 text-xs leading-5 text-studio-muted">
+                            在顶栏选地图与板，再经「地图与板 / 板会话」打开所选；然后才能编辑地形、烘焙导航、跑模拟。
                         </div>
                     </div>
                 </div>
             ) : canvasInputLocked ? (
-                <div className="pointer-events-none absolute left-1/2 top-28 z-20 w-[340px] -translate-x-1/2 rounded-lg border border-amber-700/70 bg-slate-950/90 p-3 text-center text-amber-100 shadow-2xl backdrop-blur-md">
+                <div className="pointer-events-none absolute left-1/2 top-28 z-20 w-[340px] -translate-x-1/2 rounded-lg border border-studio-yellow/70 bg-studio-bg/90 p-3 text-center text-studio-label shadow-2xl backdrop-blur-md">
                     <div className="text-xs font-semibold">{canvasLockTitle}</div>
-                    <div className="mt-1 text-[11px] leading-4 text-amber-100/80">{canvasLockMessage}</div>
+                    <div className="mt-1 text-[11px] leading-4 text-studio-secondary/80">{canvasLockMessage}</div>
                 </div>
             ) : null}
         </div>

@@ -120,6 +120,8 @@ Windows：
 
 蓝图房是唯一例外：Mod 是带目录建议的自由输入（datalist），因为新图可以落在尚未有 `graphs.json` 的 Mod 里；「加载」随输入放在左栏顶。表格房（文本）的 Mod 选择器在表格工具栏首位，同样标「Mod」。导航入口只有顶栏一处——房内不再摆通往兄弟房间的链接。
 
+地图房与面板房也已并入同一契约：地图房是画布中心编辑器，工具面板浮在画布上（Mod/地图/板选择器在画布顶栏，错误走状态栏 `setError`，不再 alert），配色全部走 studio token；面板房（Panel Authoring）的旧 hero 页与 upa-* 私有主题已删，页面即「模板清单 / 表面画布 / 检查器」三段。两房禁私有色（slate/emerald/amber/sky 一律映射 token）、禁英文 chrome、禁 window.alert，由断言钉死。
+
 ### 3.4 文本（对照 SC2 编辑器的 Text 模块）
 
 文本房是一张表：行是词条 id，列是语言。台词、说话人名、界面文案都引用词条键；这间房改的就是键背后的文字本体（`Presentation/text_tokens.json` 登记 id 和参数个数，`Presentation/text_locales.json` 按语言存模板）。

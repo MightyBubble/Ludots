@@ -135,6 +135,12 @@ const studioSurfaces = [
   'src/components/agent/ToolCard.tsx',
   'src/components/agent/llm.ts',
   'src/components/agent/tools.ts',
+  'src/components/Editor/EditorLayout.tsx',
+  'src/components/Editor/Toolbar.tsx',
+  'src/components/Editor/HexRenderer.tsx',
+  'src/components/Editor/Minimap.tsx',
+  'src/pages/UiPanelAuthoringPage.tsx',
+  'src/pages/ui-panel-authoring/authoring.css',
 ];
 const bannedPalette = /violet-|indigo-|fuchsia-|purple-|cyan-|sky-|#a78bfa|#e879f9|#c084fc|#a855f7|#7c3aed|#8b5cf6|#22d3ee|#67e8f9|#a78bfa/;
 for (const rel of studioSurfaces) {
@@ -244,5 +250,21 @@ assert(gasPageCopy.includes('datalist id="studio-graph-mods"'), 'blueprint mod/g
 assert(!gasPageCopy.includes("'Idle'"), 'blueprint status starts in Chinese');
 const studioMod = readFileSync(join(here, '../src/pages/authoring-studio/useStudioMod.ts'), 'utf8');
 assert(studioMod.includes('localStorage'), 'studio mod memory persists in browser-local storage');
+
+const editorLayout = readFileSync(join(here, '../src/components/Editor/EditorLayout.tsx'), 'utf8');
+assert(editorLayout.includes('WorkspaceLayout'), 'map room must follow the workspace layout contract');
+assert(!editorLayout.includes('w-screen'), 'map room must not double-frame inside the studio shell');
+const mapToolbar = readFileSync(join(here, '../src/components/Editor/Toolbar.tsx'), 'utf8');
+assert(!mapToolbar.includes('alert('), 'map room errors go to the status bar via setError, never alert()');
+assert(!mapToolbar.includes('>Ludots Editor<'), 'map room has no private brand header — the shell owns titles');
+assert(!/(slate|emerald|amber|sky)-\d{2,3}/.test(mapToolbar), 'map toolbar must use studio tokens, not a private slate/emerald/amber palette');
+const mapHex = readFileSync(join(here, '../src/components/Editor/HexRenderer.tsx'), 'utf8');
+assert(!/(slate|emerald|amber)-\d{2,3}/.test(mapHex), 'map canvas chrome must use studio tokens');
+const panelPage = readFileSync(join(here, '../src/pages/UiPanelAuthoringPage.tsx'), 'utf8');
+assert(panelPage.includes('WorkspaceLayout'), 'panel room must follow the workspace layout contract');
+assert(!panelPage.includes('window.alert'), 'panel room export errors go to the status bar');
+assert(!panelPage.includes('和你原型的对应'), 'panel room must not ship conversation residue asides');
+const panelCss = readFileSync(join(here, '../src/pages/ui-panel-authoring/authoring.css'), 'utf8');
+assert(!panelCss.includes('--upa-'), 'panel room keeps no private upa-* theme variables — studio tokens only');
 
 console.log('assert-authoring-studio: ok');
