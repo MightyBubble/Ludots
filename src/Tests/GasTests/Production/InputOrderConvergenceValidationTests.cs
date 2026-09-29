@@ -41,7 +41,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }),
                 assetsRoot);
             engine.Start();
 
@@ -53,11 +53,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(localInputNames, Does.Contain("AuthoritativePointerButtonSnapshotSystem"));
             Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
             Assert.That(localInputNames, Does.Contain("AxisMoveOrderSystem"));
-            Assert.That(localInputNames, Does.Contain("ViewModeSwitchSystem"));
-            Assert.That(localInputNames, Does.Contain("MobaInputModeSystem"));
-            Assert.That(inputNames, Does.Contain("AutoInstalledLocalOrderSourceSystem"));
+            Assert.That(localInputNames, Does.Not.Contain("MobaInputModeSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
-            Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("MobaInputModeSystem")));
             Assert.That(localInputNames, Does.Not.Contain("ClockSystem"));
             Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
             Assert.That(localInputNames, Does.Not.Contain("Physics2DSimulationSystem"));
@@ -66,8 +63,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
             Assert.That(presentationNames, Does.Not.Contain("MobaInputModeSystem"));
-            Assert.That(presentationNames, Does.Contain("AbilityAimPresentationProjectionSystem"));
-            Assert.That(presentationNames, Does.Contain("SkillBarOverlaySystem"));
             Assert.That(presentationNames, Does.Contain("WorldToVisualSyncSystem"));
             Assert.That(presentationNames, Does.Contain("TerrainHeightSyncSystem"));
         }

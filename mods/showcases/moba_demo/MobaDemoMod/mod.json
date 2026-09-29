@@ -1,12 +1,11 @@
 {
   "name": "MobaDemoMod",
   "version": "1.0.0",
-  "description": "MOBA demo gameplay: selection + click-to-move + QWER abilities.",
+  "description": "MOBA demo gameplay: right-click to move the champion, QWER abilities in smart-cast or aim-first style.",
   "main": "bin/net9.0/MobaDemoMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["moba", "demo", "gameplay"]

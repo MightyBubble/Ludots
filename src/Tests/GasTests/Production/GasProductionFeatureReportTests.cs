@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS.Production
             var scenarios = new List<ScenarioResult>();
             try
             {
-                scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }, "entry", RunMobaScenario));
+                scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", RunMobaScenario));
                 scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_modify", RunTcgModifyScenario));
                 scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_hook", RunTcgHookScenario));
                 scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", RunArpgScenario));
