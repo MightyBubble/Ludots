@@ -40,6 +40,7 @@ namespace Ludots.Core.Presentation
         private int? _runtimeEntityLifecycleReceiptQueueCapacity;
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
+        private PresentationTeamRelationColorsConfig? _teamRelationColors;
 
         public int PresenterInstanceCapacity { get => _presenterInstanceCapacity ?? 0; set => _presenterInstanceCapacity = value; }
         public int GasPresentationEventCapacity { get => _gasPresentationEventCapacity ?? 0; set => _gasPresentationEventCapacity = value; }
@@ -85,6 +86,12 @@ namespace Ludots.Core.Presentation
         {
             get => _minimap ?? throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
             set => _minimap = value;
+        }
+
+        public PresentationTeamRelationColorsConfig TeamRelationColors
+        {
+            get => _teamRelationColors ?? throw new InvalidOperationException("presentation.teamRelationColors must be explicitly configured.");
+            set => _teamRelationColors = value;
         }
 
         public void Validate()
@@ -133,8 +140,14 @@ namespace Ludots.Core.Presentation
                 throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
             }
 
+            if (_teamRelationColors == null)
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors must be explicitly configured.");
+            }
+
             _cameraCulling.Validate();
             _minimap.Validate();
+            _teamRelationColors.Validate();
         }
 
         internal static int RequirePositive(int? value, string path)
@@ -165,6 +178,25 @@ namespace Ludots.Core.Presentation
             }
 
             return value.Value;
+        }
+    }
+
+    public sealed class PresentationTeamRelationColorsConfig
+    {
+        public string FriendlyRelation { get; set; } = string.Empty;
+        public string HostileRelation { get; set; } = string.Empty;
+
+        public void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(FriendlyRelation))
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors.friendlyRelation must name a relationship type.");
+            }
+
+            if (string.IsNullOrWhiteSpace(HostileRelation))
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors.hostileRelation must name a relationship type.");
+            }
         }
     }
 

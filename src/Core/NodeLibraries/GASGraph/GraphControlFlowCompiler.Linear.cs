@@ -491,7 +491,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (op.NodeOp == GraphNodeOp.QueryFilterRelationship)
                     {
-                        RequireNonEmpty(node.RelationshipMode, "relationshipMode", node, graphId, diagnostics);
+                        RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
                     }
 
                     break;
@@ -1674,7 +1674,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = ParseLinearRelationshipFilterMode(node.RelationshipMode, node, graphId, diagnostics);
+                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
 
                 case GraphNodeOp.TargetListGet:
@@ -2236,42 +2236,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return Enum.TryParse(trimmed, ignoreCase: false, out surface) &&
                    Enum.IsDefined(typeof(GraphPresentationTextSurface), surface) &&
                    string.Equals(surface.ToString(), trimmed, StringComparison.Ordinal);
-        }
-
-        private static int ParseLinearRelationshipFilterMode(
-            string? mode,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(mode))
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                    $"Node '{node.Id}' requires a non-empty relationshipMode.", node.Id));
-                return 0;
-            }
-
-            return mode switch
-            {
-                "Hostile" => 1,
-                "Friendly" => 2,
-                "Neutral" => 3,
-                "NotFriendly" => 4,
-                "NotHostile" => 5,
-                _ => AddLinearUnsupportedRelationshipMode(mode, node, graphId, diagnostics),
-            };
-        }
-
-        private static int AddLinearUnsupportedRelationshipMode(
-            string mode,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                $"Node '{node.Id}' has unsupported relationshipMode '{mode}'. Supported: Hostile, Friendly, Neutral, NotFriendly, NotHostile.",
-                node.Id));
-            return 0;
         }
 
         private static byte RequirePayloadPresetSymbol(

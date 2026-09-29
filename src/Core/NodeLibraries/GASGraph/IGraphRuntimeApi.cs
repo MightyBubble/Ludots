@@ -37,17 +37,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void EndDerivedAttributeWrites(Entity entity, ref AttributeBuffer attributes, bool commit);
     }
 
-    /// <summary>
-    /// Protocol constants for <see cref="IGraphRuntimeApi.GetRelationship"/>.
-    /// Decouples Graph VM from concrete TeamRelationship enum.
-    /// </summary>
-    public static class GraphRelationship
-    {
-        public const int Neutral = 0;
-        public const int Friendly = 1;
-        public const int Hostile = 2;
-    }
-
     public interface IGraphRuntimeApi
     {
         bool TryGetGridPos(Entity entity, out IntVector2 gridPos);
@@ -344,7 +333,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
@@ -437,11 +426,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int GetTeamId(Entity entity);
         /// <summary>Get the EntityLayer.Category bits for an entity. Returns 0 if no EntityLayer.</summary>
         uint GetEntityLayerCategory(Entity entity);
-        /// <summary>
-        /// Get relationship between two teams.
-        /// Returns one of the <see cref="GraphRelationship"/> constants.
-        /// </summary>
-        int GetRelationship(int teamA, int teamB);
         void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");

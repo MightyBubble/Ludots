@@ -117,7 +117,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ? (_dueEffectsThisSlice.Count - _dueCursor) + (_snapshotCount - _cursor)
             : 0;
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue? effectRequests = null, GasBudget? budget = null, EffectTemplateRegistry? templates = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, GasPresentationEventBuffer? presentationEvents = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue? effectRequests = null, GasBudget? budget = null, EffectTemplateRegistry? templates = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, GasPresentationEventBuffer? presentationEvents = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null, Ludots.Core.Gameplay.Teams.TeamRelationQuery? teamRelations = null) : base(world)
         {
             if (snapshotCapacity <= 0)
             {
@@ -154,6 +154,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.LifecycleServices = lifecycleServices;
             _builtinRuntime.Exchange = exchangeRuntime;
             _builtinRuntime.Relationships = relationshipRuntime;
+            _builtinRuntime.TeamRelations = teamRelations;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;

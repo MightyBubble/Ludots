@@ -613,7 +613,13 @@ namespace Ludots.Core.Engine
             }
 
             TryGetService(CoreServiceKeys.GraphActionCatalog, out GraphActionCatalog? actions);
-            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation, actions, _graphFunctionCatalog);
+            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(
+                ConfigPipeline,
+                atoms,
+                validation,
+                actions,
+                _graphFunctionCatalog,
+                GetService(CoreServiceKeys.RelationshipTypeRegistry));
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
             Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
@@ -856,7 +862,6 @@ namespace Ludots.Core.Engine
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
             var gasBudget = new GasBudget();
             var gasDiagnostics = new GasDiagnosticEventBuffer();
-            TeamManager.DefaultRelationship = TeamRelationship.Hostile;
             var teamEntityLookup = new TeamEntityLookup();
             var playerEntityLookup = new PlayerEntityLookup();
             var relationshipTypeRegistry = new RelationshipTypeRegistry();
@@ -910,10 +915,7 @@ namespace Ludots.Core.Engine
                 ownershipResolver,
                 ownsRelationshipTypeId,
                 controlsRelationshipTypeId);
-            var domainStanceQuery = DomainStanceQuery.Create(
-                relationshipRuntime,
-                memberOfRelationshipTypeId,
-                relationshipCatalog.Stance);
+            var teamRelationQuery = new TeamRelationQuery(relationshipRuntime, teamEntityLookup);
             var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
             // Infrastructure flag marking profile-granted edges (RFC-0065 CTRL-4b); registration is idempotent.
             int grantedRelationshipFlagId = relationshipFlagRegistry.Register(AssociationControlProfileRuntime.GrantedFlagName);
@@ -927,7 +929,7 @@ namespace Ludots.Core.Engine
                 grantedRelationshipFlagId);
             relationshipRuntime.InstallTagOps(tagOps);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
-            var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
+            var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime, teamRelationQuery);
             var effectTemplateRegistry = new EffectTemplateRegistry();
             effectTemplateRegistry.SetConflictReport(ConflictReport);
             var gasConditions = new GasConditionRegistry();
@@ -1765,7 +1767,7 @@ namespace Ludots.Core.Engine
                 tagOps,
                 abilityDefinitions,
                 controlDomainQuery,
-                domainStanceQuery,
+                teamRelationQuery,
                 orderTypeRegistry,
                 commandIntentTargetGate.CanTarget);
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
@@ -2029,6 +2031,7 @@ namespace Ludots.Core.Engine
             }
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
+            SetService(CoreServiceKeys.RelationshipTypeRegistry, relationshipTypeRegistry);
             RebuildAiRuntime();
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
             SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
@@ -2050,7 +2053,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ExchangeOperationRegistry, exchangeOperations);
             SetService(CoreServiceKeys.ExchangeScopedOperationStore, exchangeScopedOperations);
             SetService(CoreServiceKeys.ExchangeRuntime, exchangeRuntime);
-            SetService(CoreServiceKeys.RelationshipTypeRegistry, relationshipTypeRegistry);
             SetService(CoreServiceKeys.RelationshipMetricRegistry, relationshipMetricRegistry);
             SetService(CoreServiceKeys.RelationshipFlagRegistry, relationshipFlagRegistry);
             SetService(CoreServiceKeys.RelationshipBandRegistry, relationshipBandRegistry);
@@ -2059,7 +2061,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
             SetService(CoreServiceKeys.ControlDomainQuery, controlDomainQuery);
-            SetService(CoreServiceKeys.DomainStanceQuery, domainStanceQuery);
+            SetService(CoreServiceKeys.TeamRelationQuery, teamRelationQuery);
+            SetService(CoreServiceKeys.PresentTeamRelationClassifier, new Ludots.Core.Presentation.Presenters.PresentTeamRelationClassifier(teamRelationQuery, presentationConfig.TeamRelationColors));
             SetService(CoreServiceKeys.AssociationControlProfileRuntime, associationControlProfileRuntime);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.PlayerEntityLookup, playerEntityLookup);
@@ -2375,7 +2378,8 @@ namespace Ludots.Core.Engine
                     graphProgramRegistry,
                     gasGraphApi,
                     orderQueue,
-                    orderTerminalResults),
+                    orderTerminalResults,
+                    teamRelationQuery),
                 SystemGroup.PostMovement);
             RegisterPhysics2DSystems(
                 clock,
@@ -2419,7 +2423,7 @@ namespace Ludots.Core.Engine
                 ownership: ownershipResolver,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId);
-            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
+            var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry, teamRelations: teamRelationQuery);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
             RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
@@ -2427,7 +2431,8 @@ namespace Ludots.Core.Engine
                 effectRequestQueue,
                 SpatialQueries,
                 gasRuntimeCapacity.ProjectileCollisionCandidateCapacity,
-                gasRuntimeCapacity.ProjectileRuntimeEntityCapacity), SystemGroup.EffectProcessing);
+                gasRuntimeCapacity.ProjectileRuntimeEntityCapacity,
+                teamRelationQuery), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
                     World,
@@ -2978,8 +2983,7 @@ namespace Ludots.Core.Engine
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
                         GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                        GetService(CoreServiceKeys.OwnershipResolver),
-                        GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
+                        GetService(CoreServiceKeys.OwnershipResolver)));
                 SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
@@ -3155,8 +3159,7 @@ namespace Ludots.Core.Engine
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
                     GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                    GetService(CoreServiceKeys.OwnershipResolver),
-                    GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
+                    GetService(CoreServiceKeys.OwnershipResolver)));
             SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)

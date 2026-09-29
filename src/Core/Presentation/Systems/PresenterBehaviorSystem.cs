@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -81,7 +82,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Entity[] _graphTargets = new Entity[GraphVmLimits.MaxTargets];
         private readonly int[] _graphCallStack = new int[GraphVmLimits.MaxCallStackDepth];
         private readonly HashSet<long> _warnedGraphBindings = new();
-        private readonly PresentPhaseResolver _phaseResolver = new();
+        private PresentPhaseResolver? _relationPhaseResolver;
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private readonly TrailMeshRuntime? _trailMesh;
         private float _trailElapsedSeconds;
@@ -3278,28 +3279,45 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             }
 
-            PresentAudienceContext audience = _phaseResolver.CreateAudienceContext(World, viewer);
+            PresentPhaseResolver phaseResolver = RequireRelationPhaseResolver();
+            PresentAudienceContext audience = phaseResolver.CreateAudienceContext(World, viewer);
             if (!audience.HasViewerTeam && !audience.HasViewerOwner)
             {
                 return false;
             }
 
-            PresentPhaseInput input = _phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
-            if (!input.HasTeamRelationship && !input.IsOwnedByAudience)
+            PresentPhaseInput input = phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
+            if (!(audience.HasViewerTeam && input.HasOwnerTeam) && !input.IsOwnedByAudience)
             {
                 return false;
             }
 
-            PresentPhaseResult result = _phaseResolver.Resolve(in input);
-            color = result.IsOwnedByAudience
+            PresentPhaseResult result = phaseResolver.Resolve(in input);
+            color = result.IsFriendly
                 ? TeamColorResolver.Team1Color
-                : result.TeamRelationship switch
-            {
-                TeamRelationship.Friendly => TeamColorResolver.Team1Color,
-                TeamRelationship.Hostile => TeamColorResolver.Team2Color,
-                _ => TeamColorResolver.DefaultColor,
-            };
+                : result.IsHostile
+                    ? TeamColorResolver.Team2Color
+                    : TeamColorResolver.DefaultColor;
             return true;
+        }
+
+        private PresentPhaseResolver RequireRelationPhaseResolver()
+        {
+            if (_relationPhaseResolver != null)
+            {
+                return _relationPhaseResolver;
+            }
+
+            if (_globals == null ||
+                !_globals.TryGetValue(CoreServiceKeys.PresentTeamRelationClassifier.Name, out object? value) ||
+                value is not PresentTeamRelationClassifier classifier)
+            {
+                throw new InvalidOperationException(
+                    "Presenter viewer-relation colouring requires the PresentTeamRelationClassifier service.");
+            }
+
+            _relationPhaseResolver = new PresentPhaseResolver(classifier);
+            return _relationPhaseResolver;
         }
 
         private float ResolveFacingRadians(Entity owner)

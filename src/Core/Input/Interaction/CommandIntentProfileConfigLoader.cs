@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     /// Loader for <c>Input/command_intent_profiles.json</c> (RFC-0065 INT-1). Follows the
     /// <c>FilterProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge through
     /// the shared <see cref="ConfigPipeline"/>, structural validation fails fast. Duplicate rule
-    /// priorities within a profile are rejected here (DEC-14 explicit total order); tag/stance/order
+    /// priorities within a profile are rejected here (DEC-14 explicit total order); tag/relation/order
     /// key resolution happens at registry install.
     /// </summary>
     public sealed class CommandIntentProfileConfigLoader
@@ -162,7 +162,7 @@ namespace Ludots.Core.Input.Interaction
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");
                     ValidatePredicateStrings(rule.Target?.AllTags, $"{rulePath}.target.allTags");
                     ValidatePredicateStrings(rule.Target?.AnyTags, $"{rulePath}.target.anyTags");
-                    ValidatePredicateStrings(rule.Target?.Stance, $"{rulePath}.target.stance");
+                    ValidatePredicateStrings(rule.Target?.Relation, $"{rulePath}.target.relation");
                 }
             }
         }

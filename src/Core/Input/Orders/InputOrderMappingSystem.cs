@@ -189,15 +189,16 @@ namespace Ludots.Core.Input.Orders
     /// <param name="actor">The caster entity.</param>
     /// <param name="policy">The auto-target policy.</param>
     /// <param name="rangeCm">Search range in world centimeters.</param>
+    /// <param name="relation">Authored relation filter: <c>All</c> or a relationship type name.</param>
     /// <param name="target">The found target entity.</param>
     /// <returns>True if a valid target was found.</returns>
-    public delegate bool AutoTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, out Entity target);
+    public delegate bool AutoTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target);
 
     /// <summary>
     /// Delegate for resolving an entity near the current cursor ground point.
     /// The implementation should use logical spatial queries instead of screen hover.
     /// </summary>
-    public delegate bool CursorTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, Vector3 cursorWorldCm, out Entity target);
+    public delegate bool CursorTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, string relation, Vector3 cursorWorldCm, out Entity target);
 
     /// <summary>
     /// Delegate for resolving a context-scored mapping into a concrete cast slot and target.
@@ -2812,7 +2813,7 @@ namespace Ludots.Core.Input.Orders
             return mapping.CursorTargetPolicy != AutoTargetPolicy.None &&
                    mapping.CursorTargetRangeCm > 0 &&
                    _cursorTargetProvider != null &&
-                   _cursorTargetProvider(actor, mapping.CursorTargetPolicy, mapping.CursorTargetRangeCm, cursorWorldCm, out target) &&
+                   _cursorTargetProvider(actor, mapping.CursorTargetPolicy, mapping.CursorTargetRangeCm, RequireRelation(mapping.CursorTargetRelation, mapping, "cursorTargetRelation"), cursorWorldCm, out target) &&
                    target != Entity.Null;
         }
 
@@ -2822,7 +2823,7 @@ namespace Ludots.Core.Input.Orders
             if (mapping.AutoTargetPolicy == AutoTargetPolicy.None ||
                 mapping.AutoTargetRangeCm <= 0 ||
                 _autoTargetProvider == null ||
-                !_autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target))
+                !_autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, RequireRelation(mapping.AutoTargetRelation, mapping, "autoTargetRelation"), out target))
             {
                 target = default;
                 return false;
@@ -2833,6 +2834,17 @@ namespace Ludots.Core.Input.Orders
                 nameof(target),
                 $"Auto-target provider for input mapping '{mapping.ActionId}'");
             return true;
+        }
+
+        private static string RequireRelation(string? relation, InputOrderMapping mapping, string field)
+        {
+            if (string.IsNullOrWhiteSpace(relation))
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' requires {field} ('All' or a relationship type) for automatic target resolution.");
+            }
+
+            return relation;
         }
 
         private static void RequireValidConfiguredTargetResolver(InputOrderMapping mapping, OrderTargetType targetType)

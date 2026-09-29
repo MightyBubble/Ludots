@@ -284,7 +284,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
         public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
         public static readonly ServiceKey<ControlDomainQuery> ControlDomainQuery = new("ControlDomainQuery");
-        public static readonly ServiceKey<DomainStanceQuery> DomainStanceQuery = new("DomainStanceQuery");
+        public static readonly ServiceKey<TeamRelationQuery> TeamRelationQuery = new("TeamRelationQuery");
+        public static readonly ServiceKey<Ludots.Core.Presentation.Presenters.PresentTeamRelationClassifier> PresentTeamRelationClassifier = new("PresentTeamRelationClassifier");
         public static readonly ServiceKey<AssociationControlProfileRuntime> AssociationControlProfileRuntime = new("AssociationControlProfileRuntime");
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");

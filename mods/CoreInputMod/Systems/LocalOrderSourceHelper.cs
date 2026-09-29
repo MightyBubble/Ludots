@@ -626,7 +626,14 @@ namespace CoreInputMod.Systems
                     $"{nameof(LocalOrderSourceHelper)} requires {CoreServiceKeys.ControlDomainQuery.Name} before auto-target routing can resolve knowledge-gated command targets.");
             }
 
-            resolver = new AutoTargetResolver(_world, spatialQueries, controlDomains, RequireCommandTargetGate().CanTarget);
+            if (!_globals.TryGetValue(CoreServiceKeys.TeamRelationQuery.Name, out var teamRelationsObj) ||
+                teamRelationsObj is not TeamRelationQuery teamRelations)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {CoreServiceKeys.TeamRelationQuery.Name} before auto-target routing can filter candidates by relation.");
+            }
+
+            resolver = new AutoTargetResolver(_world, spatialQueries, controlDomains, teamRelations, RequireCommandTargetGate().CanTarget);
             return true;
         }
 
@@ -765,6 +772,11 @@ namespace CoreInputMod.Systems
                     overrideMapping.AutoTargetRangeCm = inputOverride.AutoTargetRangeCm;
                 }
 
+                if (inputOverride.AutoTargetRelation != null)
+                {
+                    overrideMapping.AutoTargetRelation = inputOverride.AutoTargetRelation;
+                }
+
                 _cache.Add(cacheKey, overrideMapping);
                 return true;
             }
@@ -779,21 +791,24 @@ namespace CoreInputMod.Systems
             private readonly World _world;
             private readonly ISpatialQueryService _spatialQueries;
             private readonly ControlDomainQuery _controlDomains;
+            private readonly TeamRelationQuery _teamRelations;
             private readonly CommandIntentTargetGate _targetGate;
 
             public AutoTargetResolver(
                 World world,
                 ISpatialQueryService spatialQueries,
                 ControlDomainQuery controlDomains,
+                TeamRelationQuery teamRelations,
                 CommandIntentTargetGate targetGate)
             {
                 _world = world;
                 _spatialQueries = spatialQueries;
                 _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+                _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
                 _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             }
 
-            public bool TryResolve(Entity actor, AutoTargetPolicy policy, int rangeCm, out Entity target)
+            public bool TryResolve(Entity actor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target)
             {
                 if (!_world.IsAlive(actor) ||
                     policy == AutoTargetPolicy.None ||
@@ -805,10 +820,10 @@ namespace CoreInputMod.Systems
                 }
 
                 WorldCmInt2 center = _world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
-                return TryResolveNear(actor, policy, center, rangeCm, out target);
+                return TryResolveNear(actor, center, rangeCm, _teamRelations.ParseFilter(relation), out target);
             }
 
-            public bool TryResolveCursor(Entity actor, AutoTargetPolicy policy, int rangeCm, Vector3 cursorWorldCm, out Entity target)
+            public bool TryResolveCursor(Entity actor, AutoTargetPolicy policy, int rangeCm, string relation, Vector3 cursorWorldCm, out Entity target)
             {
                 if (!_world.IsAlive(actor) ||
                     policy == AutoTargetPolicy.None ||
@@ -821,10 +836,10 @@ namespace CoreInputMod.Systems
                 WorldCmInt2 center = new(
                     (int)MathF.Round(cursorWorldCm.X, MidpointRounding.AwayFromZero),
                     (int)MathF.Round(cursorWorldCm.Z, MidpointRounding.AwayFromZero));
-                return TryResolveNear(actor, policy, center, rangeCm, out target);
+                return TryResolveNear(actor, center, rangeCm, _teamRelations.ParseFilter(relation), out target);
             }
 
-            private bool TryResolveNear(Entity actor, AutoTargetPolicy policy, in WorldCmInt2 center, int rangeCm, out Entity target)
+            private bool TryResolveNear(Entity actor, in WorldCmInt2 center, int rangeCm, in RelationFilter relation, out Entity target)
             {
                 target = Entity.Null;
                 if (!_controlDomains.TryResolveControlDomain(actor, out Entity viewerRep))
@@ -832,7 +847,7 @@ namespace CoreInputMod.Systems
                     return false;
                 }
 
-                int actorTeamId = _world.TryGet(actor, out Team actorTeam) ? actorTeam.Id : 0;
+                int actorTeamId = _teamRelations.ResolveTeamId(actor);
                 Span<Entity> candidates = stackalloc Entity[128];
                 int candidateCount = _spatialQueries.QueryRadius(center, rangeCm, candidates).Count;
                 if (candidateCount <= 0)
@@ -852,17 +867,9 @@ namespace CoreInputMod.Systems
                         continue;
                     }
 
-                    if (policy == AutoTargetPolicy.NearestEnemyInRange)
+                    if (!_teamRelations.Passes(in relation, actorTeamId, _teamRelations.ResolveTeamId(candidate)))
                     {
-                        if (actorTeamId == 0 || !_world.TryGet(candidate, out Team candidateTeam))
-                        {
-                            continue;
-                        }
-
-                        if (!RelationshipFilterUtil.Passes(RelationshipFilter.Hostile, actorTeamId, candidateTeam.Id))
-                        {
-                            continue;
-                        }
+                        continue;
                     }
 
                     WorldCmInt2 candidatePos = _world.Get<WorldPositionCm>(candidate).ToWorldCmInt2();

@@ -28,12 +28,14 @@ namespace Ludots.Core.EntityQueries
         private readonly World _world;
         private readonly TagOps _tagOps;
         private readonly RelationshipRuntime _relationships;
+        private readonly TeamRelationQuery _teamRelations;
 
-        public EntitySetQueryRuntime(World world, TagOps tagOps, RelationshipRuntime relationships)
+        public EntitySetQueryRuntime(World world, TagOps tagOps, RelationshipRuntime relationships, TeamRelationQuery teamRelations)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
             _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
+            _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
         }
 
         public int CollectMapEntities(Span<Entity> destination)
@@ -132,7 +134,7 @@ namespace Ludots.Core.EntityQueries
             return write;
         }
 
-        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
             count = ClampCount(entities, count);
             if (!_world.IsAlive(reference) || !_world.Has<Team>(reference))
@@ -150,7 +152,7 @@ namespace Ludots.Core.EntityQueries
                     continue;
                 }
 
-                if (!RelationshipFilterUtil.Passes(filter, sourceTeamId, _world.Get<Team>(entity).Id))
+                if (!_teamRelations.Has(sourceTeamId, _world.Get<Team>(entity).Id, relationTypeId))
                 {
                     continue;
                 }

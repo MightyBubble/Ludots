@@ -14,6 +14,10 @@
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
+    "teamRelationColors": {
+      "friendlyRelation": "Friendly",
+      "hostileRelation": "Hostile"
+    },
     "gpuSkinned": {
       "maxBatches": 64,
       "maxUniquePoses": 128,

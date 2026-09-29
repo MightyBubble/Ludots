@@ -390,6 +390,12 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
+            if (!_globals.TryGetValue(CoreServiceKeys.TeamRelationQuery.Name, out var teamRelationsObj) ||
+                teamRelationsObj is not Ludots.Core.Gameplay.Teams.TeamRelationQuery teamRelations)
+            {
+                throw new InvalidOperationException("Ability aim presentation requires CoreServiceKeys.TeamRelationQuery.");
+            }
+
             GameSession? session = _globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
                                    sessionObj is GameSession resolvedSession
                 ? resolvedSession
@@ -431,6 +437,7 @@ namespace CoreInputMod.Systems
                 inputCollectionKeys.AbilityAimAffectedKeyId,
                 spatialQueries,
                 events,
+                teamRelations,
                 session,
                 graphPrograms,
                 graphApi,

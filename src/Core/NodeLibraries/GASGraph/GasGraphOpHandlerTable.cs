@@ -2096,7 +2096,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.Targets,
                 s.TargetList.Count,
                 s.E[ins.A],
-                ParseRelationshipFilterMode(ins.Imm)));
+                ins.Dst));
         }
 
         // ── Aggregation ──
@@ -2799,19 +2799,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static int ResolveQueryTypeId(byte encoded)
         {
             return encoded == byte.MaxValue ? RelationshipTypeRegistry.AnyTypeId : encoded;
-        }
-
-        private static RelationshipFilter ParseRelationshipFilterMode(int mode)
-        {
-            return mode switch
-            {
-                1 => RelationshipFilter.Hostile,
-                2 => RelationshipFilter.Friendly,
-                3 => RelationshipFilter.Neutral,
-                4 => RelationshipFilter.NotFriendly,
-                5 => RelationshipFilter.NotHostile,
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported graph relationship filter mode.")
-            };
         }
 
         private static void HandleAddInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

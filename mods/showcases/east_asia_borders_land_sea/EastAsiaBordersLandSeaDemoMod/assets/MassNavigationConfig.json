@@ -105,12 +105,11 @@
       }
     ]
   },
-  "teamRelationships": {
-    "defaultRelationship": "Friendly",
-    "relationships": []
-  },
+  "teamRelationships": [
+    { "teamA": 1, "teamB": 1, "relation": "Friendly", "symmetric": false }
+  ],
   "relationshipPolicy": {
-    "cooperativeStance": "Friendly"
+    "cooperativeRelation": "Friendly"
   },
   "flow": {
     "enabled": false,

@@ -1086,6 +1086,27 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 hasAny = true;
             }
 
+            if (inputObj["autoTargetRelation"] is JsonValue autoTargetRelationNode)
+            {
+                string relation = autoTargetRelationNode.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(relation))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.autoTargetRelation must name 'All' or a relationship type.");
+                }
+
+                result.AutoTargetRelation = relation;
+                hasAny = true;
+            }
+
+            if (result.HasAutoTargetPolicy &&
+                result.AutoTargetPolicy != AutoTargetPolicy.None &&
+                result.AutoTargetRelation == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' input.autoTargetPolicy {result.AutoTargetPolicy} requires input.autoTargetRelation.");
+            }
+
             if (!hasAny)
             {
                 throw new InvalidOperationException($"Ability '{id}' in '{path}' input must declare at least one override field.");

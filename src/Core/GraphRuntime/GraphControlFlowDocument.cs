@@ -216,7 +216,6 @@ namespace Ludots.Core.GraphRuntime
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }
-        public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }
         public string? Flag { get; set; }
         /// <summary>Event payload slot index for LoadEventPayloadInt (0..1) / LoadEventPayloadFloat (0..3).</summary>

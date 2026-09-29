@@ -8,7 +8,8 @@
       "argsTemplate": { "i0": 0 },
       "requireTarget": true,
       "targetType": "Entity",
-      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetPolicy": "NearestInRange",
+      "autoTargetRelation": "Hostile",
       "autoTargetRangeCm": 1000,
       "isSkillMapping": true,
       "modifierBehavior": "IgnoreModifier"

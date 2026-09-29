@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             string relativePath = "Relationships/catalog.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            // #1570 切6：knowledgeGrants/stance 是迷雾/控制面的投影配置，物理上住在
+            // knowledgeGrants 是迷雾的投影配置，物理上住在
             // Relationships/projection.json（catalog 声明同路径，DeepObject 合并）；
             // catalog.json 只承载关系词汇。
             var projectionEntry = new ConfigCatalogEntry("Relationships/projection.json", ConfigMergePolicy.DeepObject);
@@ -49,7 +49,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             var synergyOrder = new List<string>();
             var knowledgeGrants = new Dictionary<string, RelationshipKnowledgeGrantConfig>(StringComparer.OrdinalIgnoreCase);
             var knowledgeGrantOrder = new List<string>();
-            DomainStanceConfig? stance = null;
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -73,10 +72,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 }
 
                 MergeById(fragment.KnowledgeGrants, knowledgeGrants, knowledgeGrantOrder, static item => item.Id);
-                if (fragment.Stance != null)
-                {
-                    stance = fragment.Stance;
-                }
             }
 
             return new RelationshipCatalogConfig
@@ -85,7 +80,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 Metrics = Materialize(metricOrder, metrics),
                 Flags = Materialize(flagOrder, flags),
                 KnowledgeGrants = Materialize(knowledgeGrantOrder, knowledgeGrants),
-                Stance = stance,
             };
         }
 

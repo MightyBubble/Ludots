@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
@@ -39,6 +40,7 @@ public sealed class GraphOpsNodeDriverContext
     public EffectRequestQueue? EffectRequests { get; set; }
     public RelationshipRuntime? Relationships { get; set; }
     public RelationshipTypeRegistry? RelationshipTypes { get; set; }
+    public TeamRelationQuery? TeamRelations { get; set; }
     public RelationshipMetricRegistry? RelationshipMetrics { get; set; }
     public RelationshipFlagRegistry? RelationshipFlags { get; set; }
     public EntityCollectionStore? Collections { get; set; }

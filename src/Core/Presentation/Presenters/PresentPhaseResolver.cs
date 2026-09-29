@@ -1,6 +1,5 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
@@ -12,6 +11,17 @@ namespace Ludots.Core.Presentation.Presenters
     /// </summary>
     public sealed class PresentPhaseResolver
     {
+        private readonly PresentTeamRelationClassifier? _teamRelations;
+
+        /// <param name="teamRelations">
+        /// Viewer → owner team relation classifier. Without one the resolver reports no team relation
+        /// facts; ownership still marks the audience's own entities friendly.
+        /// </param>
+        public PresentPhaseResolver(PresentTeamRelationClassifier? teamRelations = null)
+        {
+            _teamRelations = teamRelations;
+        }
+
         public PresentAudienceContext CreateAudienceContext(
             Entity viewer,
             Team? viewerTeam = null,
@@ -101,10 +111,11 @@ namespace Ludots.Core.Presentation.Presenters
             PlayerOwner? ownerOwner = null,
             bool hasRelationshipLink = false)
         {
-            TeamRelationship? teamRelationship = null;
-            if (audience.HasViewerTeam && ownerTeam.HasValue)
+            bool isFriendlyTeam = false;
+            bool isHostileTeam = false;
+            if (_teamRelations != null && audience.HasViewerTeam && ownerTeam.HasValue)
             {
-                teamRelationship = TeamManager.GetRelationship(audience.ViewerTeam.Id, ownerTeam.Value.Id);
+                _teamRelations.Classify(audience.ViewerTeam.Id, ownerTeam.Value.Id, out isFriendlyTeam, out isHostileTeam);
             }
 
             bool isOwnedByAudience = audience.HasViewerOwner
@@ -129,9 +140,9 @@ namespace Ludots.Core.Presentation.Presenters
                 RequiresAttributeProjection = requiresAttributeProjection,
                 HasAttributeProjection = hasAttributeProjection,
                 HasRelationshipLink = hasRelationshipLink,
-                HasTeamRelationship = teamRelationship.HasValue,
                 IsOwnedByAudience = isOwnedByAudience,
-                TeamRelationship = teamRelationship ?? default,
+                IsFriendlyTeam = isFriendlyTeam,
+                IsHostileTeam = isHostileTeam,
                 Projection = projection,
                 LOD = cullState.LOD,
             };
@@ -215,9 +226,8 @@ namespace Ludots.Core.Presentation.Presenters
             bool isVisible = revealHidden || (input.IsVisible && hasVision && !isCulled);
             LODLevel lod = input.LOD;
 
-            bool isFriendly = input.IsOwnedByAudience
-                || (input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Friendly);
-            bool isHostile = input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Hostile;
+            bool isFriendly = input.IsOwnedByAudience || input.IsFriendlyTeam;
+            bool isHostile = input.IsHostileTeam;
             bool shouldPresent = isVisible && !isCulled;
             // Attribute HUD is readable when knowledge authorizes the attributes, or the audience
             // explicitly reveals hidden (full-map / benchmark showcases). Team/ownership stay styling facts.
@@ -234,7 +244,6 @@ namespace Ludots.Core.Presentation.Presenters
                 RequiresAttributeProjection = input.RequiresAttributeProjection,
                 HasAttributeProjection = input.HasAttributeProjection,
                 LOD = lod,
-                TeamRelationship = input.TeamRelationship,
                 IsOwnedByAudience = input.IsOwnedByAudience,
                 HasRelationshipLink = input.HasRelationshipLink,
                 IsFriendly = isFriendly,

@@ -63,6 +63,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public bool OwnsSimulationWorld => _ownsWorld;
     public RelationshipRuntime Relationships { get; private set; } = null!;
     public RelationshipTypeRegistry RelationshipTypes { get; private set; } = null!;
+    public TeamRelationQuery TeamRelations { get; private set; } = null!;
     public RelationshipMetricRegistry RelationshipMetrics { get; private set; } = null!;
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
@@ -189,6 +190,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Coords = Coords,
             SpatialQueries = SpatialQueries,
             RelationshipTypes = RelationshipTypes,
+            TeamRelations = TeamRelations,
             RelationshipMetrics = RelationshipMetrics,
             RelationshipFlags = RelationshipFlags,
             BuiltinHandlers = _builtinHandlers,
@@ -255,6 +257,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TagOps = RequireEngineService(engine, CoreServiceKeys.TagOps);
         Relationships = RequireEngineService(engine, CoreServiceKeys.RelationshipRuntime);
         RelationshipTypes = RequireEngineService(engine, CoreServiceKeys.RelationshipTypeRegistry);
+        TeamRelations = RequireEngineService(engine, CoreServiceKeys.TeamRelationQuery);
         RelationshipMetrics = RequireEngineService(engine, CoreServiceKeys.RelationshipMetricRegistry);
         RelationshipFlags = RequireEngineService(engine, CoreServiceKeys.RelationshipFlagRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
@@ -273,15 +276,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         int ownsType = RelationshipTypes.Register("Owns");
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
-        EnsureHostileCasterAndEnemyTeams();
         _itemDefinitions = RequireEngineService(engine, CoreServiceKeys.ItemDefinitionRegistry);
         _inventoryRuntime = RequireEngineService(engine, CoreServiceKeys.InventoryRuntimeService);
-    }
-
-    private static void EnsureHostileCasterAndEnemyTeams()
-    {
-        TeamManager.SetRelationship(1, 2, TeamRelationship.Hostile);
-        TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
 
     private void FinishResolver(

@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Scoring;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -78,19 +79,22 @@ namespace Ludots.Core.Gameplay.AI.Config
         private readonly AiConfigValidationContext? _validation;
         private readonly GraphActionCatalog? _actions;
         private readonly GraphFunctionCatalog? _functions;
+        private readonly RelationshipTypeRegistry? _relationshipTypes;
 
         public AiConfigLoader(
             ConfigPipeline pipeline,
             AtomRegistry atoms,
             AiConfigValidationContext? validation = null,
             GraphActionCatalog? actions = null,
-            GraphFunctionCatalog? functions = null)
+            GraphFunctionCatalog? functions = null,
+            RelationshipTypeRegistry? relationshipTypes = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _atoms = atoms ?? throw new ArgumentNullException(nameof(atoms));
             _validation = validation;
             _actions = actions;
             _functions = functions;
+            _relationshipTypes = relationshipTypes;
         }
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
@@ -594,40 +598,54 @@ namespace Ludots.Core.Gameplay.AI.Config
             GameplayTagContainer tags = default;
             if (string.Equals(kind, "SourceSelf", StringComparison.OrdinalIgnoreCase))
             {
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SourceSelf, 0, 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SourceSelf, 0, 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "SpatialRadius", StringComparison.OrdinalIgnoreCase))
             {
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, RequirePositiveInt(obj, "RadiusCm", path), 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, RequirePositiveInt(obj, "RadiusCm", path), 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "Relationship", StringComparison.OrdinalIgnoreCase))
             {
-                var relationship = RelationshipFilterUtil.Parse(RequireString(obj, "Value", path));
+                if (_relationshipTypes == null)
+                {
+                    throw Fail($"{path}.Value", "Relationship target filters require the relationship type registry.");
+                }
+
+                RelationFilter relationship;
+                try
+                {
+                    relationship = RelationFilter.Parse(RequireString(obj, "Value", path), _relationshipTypes);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw Fail($"{path}.Value", ex.Message);
+                }
+
                 return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, relationship, in tags);
             }
 
             if (string.Equals(kind, "HasAllTags", StringComparison.OrdinalIgnoreCase))
             {
                 tags = ReadTagMask(obj, "Tags", path);
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.HasAllTags, 0, 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.HasAllTags, 0, 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "HasNoneTags", StringComparison.OrdinalIgnoreCase))
             {
                 tags = ReadTagMask(obj, "Tags", path);
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.HasNoneTags, 0, 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.HasNoneTags, 0, 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "LayerAny", StringComparison.OrdinalIgnoreCase))
             {
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.LayerAny, RequirePositiveInt(obj, "Mask", path), 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.LayerAny, RequirePositiveInt(obj, "Mask", path), 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "DistanceMax", StringComparison.OrdinalIgnoreCase))
             {
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.DistanceMax, RequirePositiveInt(obj, "MaxCm", path), 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.DistanceMax, RequirePositiveInt(obj, "MaxCm", path), 0, RelationFilter.All, in tags);
             }
 
             if (string.Equals(kind, "RecentAttacker", StringComparison.OrdinalIgnoreCase))
@@ -638,7 +656,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.TtlSteps", "TtlSteps must be positive.");
                 }
 
-                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.RecentAttacker, ttl, 0, RelationshipFilter.All, in tags);
+                return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.RecentAttacker, ttl, 0, RelationFilter.All, in tags);
             }
 
             throw Fail($"{path}.Kind", $"Unsupported target filter op '{kind}'.");

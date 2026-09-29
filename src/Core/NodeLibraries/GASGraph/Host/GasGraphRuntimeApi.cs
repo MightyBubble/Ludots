@@ -1994,9 +1994,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().FilterTeam(entities, count, teamId);
         }
 
-        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
-            return RequireEntityQueries().FilterTeamRelationship(entities, count, reference, filter);
+            return RequireEntityQueries().FilterTeamRelationship(entities, count, reference, relationTypeId);
         }
 
         public int FilterTemplate(Span<Entity> entities, int count, int templateKeyId)
@@ -2121,10 +2121,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return 0;
         }
 
-        public int GetRelationship(int teamA, int teamB)
-        {
-            return (int)TeamManager.GetRelationship(teamA, teamB);
-        }
         public void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(EnsureRelationshipLink));

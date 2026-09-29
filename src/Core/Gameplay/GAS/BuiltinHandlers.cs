@@ -214,7 +214,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
@@ -267,7 +268,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
