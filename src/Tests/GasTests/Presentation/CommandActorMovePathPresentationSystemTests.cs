@@ -233,9 +233,7 @@ namespace Ludots.Tests.GAS
                 };
                 var collectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var collections = new EntityCollectionStore(collectionKeys);
-                Entity viewer = world.Create(new Ludots.Core.Input.Interaction.InteractionContextInstance
-                {
-                });
+                Entity viewer = world.Create(new Ludots.Core.Input.Interaction.InteractionContextInstance());
 
                 var events = new PresentationEventStream(512);
                 PresentationEventKeyRegistry.Register(CommandActorMovePathPresentationSystem.LineEventKey);
@@ -270,7 +268,7 @@ namespace Ludots.Tests.GAS
             {
                 Entity actor = World.Create(position, OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
                 var descriptor = EntityCollectionDescriptor.Create(
-                    "selected",
+                    InputInteractionContextAccessor.CommandActorCollectionKey,
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource,
                     contextEntity: _viewer,
