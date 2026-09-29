@@ -46,7 +46,7 @@ mod 增量示例（`mods/LudotsCoreMod/assets/Relationships/catalog.json`，同�
 }
 ```
 
-敌我没有专门的配置块。"A 队把 B 队当敌人"就是 A 队代表实体到 B 队代表实体之间有一条 `Hostile` 边；想让"友好"包含自己队伍，地图里写一条 A 到 A 的 `Friendly` 自边。`Hostile`、`Friendly` 只是 LudotsCoreMod 声明的两个普通关系类型，Core 代码不认这两个名字；技能、AI、命令、表现的筛选里直接写类型名。
+敌我没有专门的配置块。"A 队把 B 队当敌人"就是 A 队代表实体到 B 队代表实体之间有一条 `Hostile` 边；这条边写在 A 队代表实体的 `Relations` 上（`{ "To": "<B 队代表>", "Type": "Hostile" }`），反方向要在 B 队代表上再写一条；想让"友好"包含自己队伍，就在 A 队代表上写一条 `To` 指向自己的 `Friendly`。`Hostile`、`Friendly` 只是 LudotsCoreMod 声明的两个普通关系类型，Core 代码不认这两个名字；技能、AI、命令、表现的筛选里直接写类型名。
 
 目录里只声明有人读的类型。两个队伍之间"有关系就行"的占位边没有任何功能读取，不要声明，也不要在地图里画。
 

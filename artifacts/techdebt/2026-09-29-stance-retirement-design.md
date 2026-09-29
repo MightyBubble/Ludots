@@ -22,8 +22,8 @@
 Relationships/catalog.json           RelationshipTypeRegistry          技能效果目标筛选
   types: Hostile / Friendly / ...  →   名字 → 编号（装载期）           投射物碰撞筛选
 Maps/*.json                          RelationshipRuntime               目标解析扇出
-  ParticipantRelationships.Teams     队伍代表之间的关系边               实体集合查询
-  {TeamA, TeamB, TypeId, Symmetric}→ TeamRelationQuery                 图节点 QueryFilterRelationship
+  队伍代表实体的 Relations           队伍代表之间的关系边               实体集合查询
+  {To, Type}                       → TeamRelationQuery                 图节点 QueryFilterRelationship
 MassNavigationConfig.json            队伍编号 → 代表实体 → 查边          AI 目标筛选
   teamRelationships[]                                                 命令来源资格
 效果/AI/命令/图里的筛选字段          RelationFilter（装载期编译）       命令意图规则
@@ -44,7 +44,7 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 | `DomainStanceQuery`、`DomainStanceConfig`、`RelationshipCatalogConfig.Stance`、`assets/Relationships/projection.json` 及其目录登记、`CoreServiceKeys.DomainStanceQuery` | `TeamRelationQuery` |
 | `TeamManager`、`TeamRelationship`、`TeamConfig`、`RelationshipEntry`、`TeamRelationshipSnapshot`、`MapSession.TeamRelationships`、`ParticipantBindingResult.TeamRelationships`、存档里的队伍关系段、`GameEngine` 里"默认敌对" | 关系边本身（存档已经保存关系边） |
 | `RelationshipFilter`、`RelationshipFilterUtil`、`GraphRelationshipFilterMode`、`GraphRelationship` 常量、`IGraphRuntimeApi.GetRelationship`、图编译器的字符串→编号表、图执行器的编号→枚举表 | `RelationFilter` + 符号补丁把关系类型名换成编号 |
-| 地图 `ParticipantRelationships.*.Attitude` 字段 | 队伍条目的 `TypeId` 直接写关系类型 |
+| 地图 `ParticipantRelationships` 整段（含 `Attitude`、`PlayerTeams`） | 代表实体自己的 `Relations`，和其它实体之间的初始关系同一种写法 |
 | 立场桥接的双写（`ParticipantBindingResolver.ResolveStanceType`） | 无 |
 | `CommandSourceEligibility` 里写死的 `"Hostile"`、`CoreInputMod` 本地命令里写死的 `RelationshipFilter.Hostile` | 命令来源数据里的 `relationFilter` |
 
@@ -57,15 +57,16 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 - 没有队伍（没有 `Team` 组件或 `Team.Id == 0`）就是"没有关系"，要求某种关系的筛选不通过。这是事实，不是兜底。
 - `Team.Id > 0` 却找不到队伍代表实体：数据错误，直接抛异常。
-- 同队、自己：不再有暗规则。想让"友好"包含自己队伍，地图里写 `TeamA == TeamB` 的 `Friendly` 自边。现有地图大多已经写了。
+- 同队、自己：不再有暗规则。想让"友好"包含自己队伍，就在队伍代表的 `Relations` 里写一条 `To` 指向自己的 `Friendly`。现有地图都已迁过去。
 - 反向筛选（"非友好""非敌对"）和"中立"：现有数据没有一处用到，这次不提供。"中立"就是两边之间既没有敌对边也没有友好边。
 
 ### 3.3 作者写法
 
 | 位置 | 旧 | 新 |
 |---|---|---|
-| 地图队伍关系 | `{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}` | 整条换成 `{"TeamA":1,"TeamB":2,"TypeId":"Hostile","Symmetric":true}`。`*.Participant` 这类没人读的占位类型和边一律删掉，玩家属于哪个队伍由 `Players[]` 自动建 `MemberOf` 边，不再写 `PlayerTeams` |
-| 地图玩家关系 / 玩家-队伍关系 | 带 `Attitude` | 去掉 `Attitude`，`TypeId` 不变 |
+| 地图队伍关系 | `ParticipantRelationships.Teams: [{"TeamA":1,"TeamB":2,"TypeId":"RtsDemo.Participant","Attitude":"Hostile"}]` | 1 队代表实体写 `"Relations": [{ "To": "<2 队代表>", "Type": "Hostile" }]`，2 队代表写指回来的一条。`*.Participant` 这类没人读的占位边删掉 |
+| 地图玩家关系 | `ParticipantRelationships.Players` | 同样写在玩家代表实体的 `Relations` 上 |
+| 玩家-队伍关系 | `PlayerTeams` | 不写，`Players[]` 自动建 `MemberOf` 边 |
 | 效果 / 投射物 / AI / 命令来源筛选 | `"Hostile"` / `"Friendly"` / `"All"` | 写法不变，含义变成"关系类型名或 All"，名字必须已在关系目录里声明 |
 | 自动选目标（技能 `input`、输入映射） | `"autoTargetPolicy": "NearestEnemyInRange"` | `"autoTargetPolicy": "NearestInRange"` + 必填 `"autoTargetRelation": "Hostile"`（光标选目标同理：`cursorTargetRelation`） |
 | 命令意图规则 | `"target": {"stance": ["Hostile"]}` | `"target": {"relation": ["Hostile"]}` |
@@ -97,8 +98,9 @@ MassNavigationConfig.json            队伍编号 → 代表实体 → 查边   
 
 ## 5. 边界
 
-- 只查队伍级关系。玩家之间的关系边（`ParticipantRelationships.Players`）照旧存在，给外交、社交这类玩法用，不参与敌我筛选。
-- 关系是有方向的：1→2 敌对不等于 2→1 敌对。地图条目 `Symmetric: true` 就是写两条边，和以前一致。
+- 只查队伍级关系。玩家代表之间的关系边照旧存在（写在玩家代表的 `Relations` 上），给外交、社交这类玩法用，不参与敌我筛选。
+- 关系是有方向的：1→2 敌对不等于 2→1 敌对，双向就在两边各写一条。
+- 地图里再出现 `ParticipantRelationships` 段，加载时直接报错。
 - 不做关系缓存。需要时再按关系边修订号做失效缓存，不另立概念。
 - 旧存档里的队伍关系段不再读取（仓库规则：不做向后兼容）。
 - `CombatStance`、`AI/stances.json` 保持原样，见概述。
