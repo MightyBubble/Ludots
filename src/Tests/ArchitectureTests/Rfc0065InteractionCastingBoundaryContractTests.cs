@@ -91,18 +91,6 @@ namespace Ludots.Tests.Architecture
                 {
                     scannedFiles++;
                     JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
-                    if (node is JsonObject rootObject &&
-                        string.Equals(
-                            ToRepoRelativePath(repoRoot, file),
-                            "assets/Relationships/catalog.json",
-                            StringComparison.Ordinal))
-                    {
-                        // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)
-                        // is TeamManager bridge-period reserved vocabulary (handoff §二.5) and is
-                        // retired together with the bridge; everything else in the file is scanned.
-                        rootObject.Remove("stance");
-                    }
-
                     CollectJsonScenarioWordViolations(node, ToRepoRelativePath(repoRoot, file), "$", violations);
                 }
             }
@@ -445,11 +433,11 @@ namespace Ludots.Tests.Architecture
             string eligibility = File.ReadAllText(eligibilityPath);
             Assert.Multiple(() =>
             {
-                Assert.That(eligibility, Does.Contain("CoreServiceKeys.ControlDomainQuery"));
-                Assert.That(eligibility, Does.Contain("CoreServiceKeys.DomainStanceQuery"));
+                Assert.That(eligibility, Does.Contain("CoreServiceKeys.TeamRelationQuery"));
                 Assert.That(eligibility, Does.Not.Contain("TryGet(selector, out Team"));
                 Assert.That(eligibility, Does.Not.Contain("TryGet(candidate, out Team"));
                 Assert.That(eligibility, Does.Not.Contain("RelationshipFilterUtil.Passes"));
+                Assert.That(eligibility, Does.Not.Contain("DomainStanceQuery"));
             });
 
             string templatesPath = Path.Combine(

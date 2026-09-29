@@ -136,6 +136,7 @@ namespace Ludots.Core.EntityQueries
 
         public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
+            _teamRelations.Types.Get(relationTypeId);
             count = ClampCount(entities, count);
             if (!_world.IsAlive(reference) || !_world.Has<Team>(reference))
             {

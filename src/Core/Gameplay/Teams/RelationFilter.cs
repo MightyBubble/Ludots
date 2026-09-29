@@ -41,9 +41,8 @@ namespace Ludots.Core.Gameplay.Teams
         /// Load-time compilation of an authored filter: the literal <see cref="AllKeyword"/> or the name of a
         /// relationship type registered by the relationship catalog.
         /// </summary>
-        public static RelationFilter Parse(string authored, RelationshipTypeRegistry types)
+        public static RelationFilter Parse(string authored, RelationshipTypeRegistry? types)
         {
-            ArgumentNullException.ThrowIfNull(types);
             if (string.IsNullOrEmpty(authored))
             {
                 throw new ArgumentException("Relation filter must be explicitly authored.", nameof(authored));
@@ -57,6 +56,12 @@ namespace Ludots.Core.Gameplay.Teams
             if (string.Equals(authored, AllKeyword, StringComparison.Ordinal))
             {
                 return All;
+            }
+
+            if (types == null)
+            {
+                throw new InvalidOperationException(
+                    $"Relation filter '{authored}' names a relationship type, but no relationship type registry was provided.");
             }
 
             if (!types.TryGetId(authored, out int typeId))

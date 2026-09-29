@@ -11,14 +11,6 @@
     {
       "id": "MemberOf",
       "isSymmetric": false
-    },
-    {
-      "id": "Hostile",
-      "isSymmetric": false
-    },
-    {
-      "id": "Friendly",
-      "isSymmetric": false
     }
   ],
   "metrics": [],

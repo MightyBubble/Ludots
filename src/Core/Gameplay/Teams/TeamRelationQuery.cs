@@ -44,6 +44,7 @@ namespace Ludots.Core.Gameplay.Teams
 
         public bool Has(int sourceTeamId, int targetTeamId, int relationTypeId)
         {
+            _relationships.TypeRegistry.Get(relationTypeId);
             if (sourceTeamId <= 0 || targetTeamId <= 0)
             {
                 return false;

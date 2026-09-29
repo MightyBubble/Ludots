@@ -1907,12 +1907,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} is required.");
             }
 
-            if (_relationshipTypes == null)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: {fieldPath} requires RelationshipTypeRegistry.");
-            }
-
             try
             {
                 return RelationFilter.Parse(raw, _relationshipTypes);

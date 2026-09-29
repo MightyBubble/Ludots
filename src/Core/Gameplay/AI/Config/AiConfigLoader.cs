@@ -608,11 +608,6 @@ namespace Ludots.Core.Gameplay.AI.Config
 
             if (string.Equals(kind, "Relationship", StringComparison.OrdinalIgnoreCase))
             {
-                if (_relationshipTypes == null)
-                {
-                    throw Fail($"{path}.Value", "Relationship target filters require the relationship type registry.");
-                }
-
                 RelationFilter relationship;
                 try
                 {

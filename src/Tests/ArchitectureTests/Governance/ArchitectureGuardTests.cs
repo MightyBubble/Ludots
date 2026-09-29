@@ -386,6 +386,74 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void TeamFriendFoe_IsAnsweredOnlyByAuthoredRelationshipEdges()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] sourceRoots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] forbiddenSource =
+            {
+                "TeamManager",
+                "TeamRelationship.",
+                "TeamRelationshipSnapshot",
+                "DomainStanceQuery",
+                "DomainStanceProjection",
+                "RelationshipFilter.",
+                "RelationshipFilterUtil",
+                "NearestEnemyInRange"
+            };
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, sourceRoots, forbiddenSource);
+
+            string[] forbiddenMapKeys = { "Attitude" };
+            string[] forbiddenRelationshipKeys =
+            {
+                "stance",
+                "stanceTypes",
+                "sameTeamStance",
+                "sameDomainStance",
+                "defaultStance",
+                "cooperativeStance"
+            };
+            foreach (string assetRoot in new[] { Path.Combine(repoRoot, "assets"), Path.Combine(repoRoot, "mods") })
+            {
+                foreach (string file in Directory.EnumerateFiles(assetRoot, "*.json", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) || relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    bool isMap = relative.Contains("/Maps/", StringComparison.Ordinal);
+                    bool isRelationshipConfig = relative.Contains("/Relationships/", StringComparison.Ordinal) ||
+                                                relative.EndsWith("MassNavigationConfig.json", StringComparison.Ordinal);
+                    if (!isMap && !isRelationshipConfig)
+                    {
+                        continue;
+                    }
+
+                    JsonNode? root = JsonNode.Parse(File.ReadAllText(file));
+                    if (root == null)
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenJsonKeys(repoRoot, file, root, "$", isMap ? forbiddenMapKeys : forbiddenRelationshipKeys, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Team friend/foe is an authored relationship edge between team representatives; no stance projection, " +
+                "global team relationship table or implicit same-team rule may answer it:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Issue200_CoreKnowledgeProjection_RemainsEntityCentricWithoutPlayerOrTeamVisibilityPaths()
         {
             var repoRoot = FindRepoRoot();
