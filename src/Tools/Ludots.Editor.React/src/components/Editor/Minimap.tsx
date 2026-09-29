@@ -300,18 +300,18 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
     return (
         <div
             ref={containerRef}
-            className={`${embedded ? 'mx-auto w-[220px]' : 'absolute right-4 top-4 z-40 w-[228px]'} select-none rounded-lg border border-slate-700/80 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-md ${className}`}
+            className={`${embedded ? 'mx-auto w-[220px]' : 'absolute right-4 top-4 z-40 w-[228px]'} select-none rounded-lg border border-studio-elevated/80 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-md ${className}`}
         >
             <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Minimap</div>
-                    <div className="text-xs text-slate-300">{hasCanvasSession ? `${terrain.widthChunks}x${terrain.heightChunks} chunks` : 'no board open'}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">小地图</div>
+                    <div className="text-xs text-studio-secondary">{hasCanvasSession ? `${terrain.widthChunks}x${terrain.heightChunks} 区块` : '没打开板'}</div>
                 </div>
                 <div className="rounded border border-amber-700/60 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100">
-                    dirty {navDirtyChunks.size}
+                    脏区块 {navDirtyChunks.size}
                 </div>
             </div>
-            <div className="relative aspect-square w-full overflow-hidden rounded border border-slate-700 bg-black">
+            <div className="relative aspect-square w-full overflow-hidden rounded border border-studio-elevated bg-black">
                 <canvas
                     ref={terrainCanvasRef}
                     width={200}
@@ -330,15 +330,15 @@ export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = 
                 />
                 {!hasCanvasSession ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70 px-4 text-center text-[11px] text-slate-400">
-                        Open a board to enable minimap.
+                        打开一块板后小地图可用。
                     </div>
                 ) : null}
-                <div className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-300">
-                    {hasCanvasSession ? boardMetrics.topology : 'empty'}
+                <div className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-studio-secondary">
+                    {hasCanvasSession ? boardMetrics.topology : '无会话'}
                 </div>
             </div>
             <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                <span>{hasCanvasSession ? cameraInfo : 'canvas empty'}</span>
+                <span>{hasCanvasSession ? cameraInfo : '753b5e034e3a7a7a'}</span>
                 <span>{activeCategory}</span>
             </div>
         </div>

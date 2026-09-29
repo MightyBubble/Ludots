@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, FileWarning, Folder, Workflow } from 'lucide-react';
+import { graphKindLabel } from './graphEditorDialect';
 
 export type CatalogGraph = {
   id: string;
@@ -93,7 +94,7 @@ function TreeBranch({
         {hasChildren ? (
           <button
             type="button"
-            aria-label={isOpen ? `Collapse ${node.label}` : `Expand ${node.label}`}
+            aria-label={isOpen ? `收起 ${node.label}` : `展开 ${node.label}`}
             onClick={() => onToggle(node.key)}
             className="rounded p-0.5 text-studio-muted hover:bg-studio-elevated hover:text-studio-label"
           >
@@ -112,7 +113,7 @@ function TreeBranch({
           >
             <Workflow size={11} className="shrink-0 text-studio-yellow" aria-hidden="true" />
             <span className="truncate font-mono">{node.label}</span>
-            <span className="ml-auto shrink-0 text-[9px] uppercase text-studio-muted">{node.graph.kind}</span>
+            <span className="ml-auto shrink-0 text-[9px] text-studio-muted">{graphKindLabel(node.graph.kind)}</span>
           </button>
         ) : (
           <button
@@ -183,20 +184,20 @@ export function GraphCatalogTree({
   return (
     <aside className="flex min-h-0 flex-col border-r border-studio-elevated bg-studio-bg/80">
       <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
-        Graphs
+        图
       </div>
       <div className="border-b border-studio-elevated px-2 py-2">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Filter mods / graphs"
-          aria-label="Filter graph catalog"
+          placeholder="过滤 mod / 图…"
+          aria-label="过滤图目录"
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 text-[11px] text-studio-label outline-none placeholder:text-studio-muted"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
         {mods.length === 0 ? (
-          <div className="px-1 text-[11px] text-studio-muted">{status || 'No mods with graphs.json.'}</div>
+          <div className="px-1 text-[11px] text-studio-muted">{status || '没有含 graphs.json 的 Mod。'}</div>
         ) : (
           mods
             .filter((mod) => {

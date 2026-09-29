@@ -27,7 +27,9 @@ export function DialogueSayNode({ data, selected }: NodeProps<Node<DialogueSayDa
       </div>
       <div className="dialogue-nc-body">
         <div className="dialogue-nc-id">{data.nodeId}</div>
-        {data.speakerId ? <div className="dialogue-nc-speaker">{data.speakerId}</div> : null}
+        {data.speakerName || data.speakerId ? (
+          <div className="dialogue-nc-speaker">{data.speakerName || data.speakerId}</div>
+        ) : null}
         <div className="dialogue-nc-line">{data.linePreview || data.lineId || '还没挂台词'}</div>
       </div>
       <Handle

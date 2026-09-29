@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -34,18 +34,21 @@ import {
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
 import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
-import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import {
   catalogGraphMatchesDialect,
   dialectPath,
   dialectTitle,
+  graphKindLabel,
   isFunctionGraphPortalOp,
   isOpAllowedInDialect,
   preferredDialectForGraphId,
   type GraphEditorDialect,
 } from './gas-graph-editor/graphEditorDialect';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
+import { writeStudioMod } from './authoring-studio/useStudioMod';
 import { EventEntryInspector, type InputActionView } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
 import {
@@ -779,7 +782,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
   const [edges, setEdges] = React.useState<Edge<GasEdgeData>[]>([]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = React.useState<string | null>(null);
-  const [status, setStatus] = React.useState<string>('Idle');
+  const [status, setStatus] = React.useState<string>('待命');
   const [diagnosticsText, setDiagnosticsText] = React.useState<string>('');
   const [busy, setBusy] = React.useState(false);
   const [debugMounts, setDebugMounts] = React.useState<DebugMount[]>([]);
@@ -844,7 +847,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setDeclaredVariables([]);
       setVariableMapId(null);
       setVariableDraft(emptyVariableDraft());
-      setVariableStatus('This graph is not mounted on a map, so it has no map variables.');
+      setVariableStatus('此图未挂地图，没有地图变量。');
       return;
     }
     const signature = (host: (typeof hosts)[0]) => JSON.stringify(host.variables);
@@ -881,7 +884,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       : emptyVariableDraft());
     setVariableStatus(hosts.length > 1
       ? `Shared variables from ${hosts.map((item) => item.mapId).join(', ')}.`
-      : `Loaded ${rows.length} variables from ${host.mapId}.`);
+      : `已加载 ${host.mapId} 的 ${rows.length} 个变量。`);
   }, [modId]);
 
   const schemaFor = React.useCallback(
@@ -1103,7 +1106,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedVariable(null);
-      setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
+      setStatus(`已加载 ${loaded.id}（${graphKindLabel(loaded.kind)}）。`);
       try {
         await loadMapVariables(loaded.id);
       } catch (mapVarErr) {
@@ -1151,7 +1154,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         throw new Error(payload.error ?? `Catalog load failed (${res.status})`);
       }
       setCatalog(payload.mods as CatalogMod[]);
-      setCatalogStatus(`Loaded ${payload.mods.length} mods with graphs`);
+      setCatalogStatus(`目录已刷新：${payload.mods.length} 个含图 Mod。`);
     } catch (err) {
       setCatalog([]);
       setCatalogStatus(err instanceof Error ? err.message : String(err));
@@ -1249,7 +1252,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
     if (dialect === 'bt' || dialect === 'fsm') {
       const params = new URLSearchParams({ mod: modId, graph: target });
       navigate(`/gas-graphs?${params.toString()}`);
-      setStatus(`Opened Func Graph ${target} in Graph Editor.`);
+      setStatus(`已打开函数图 ${target}。`);
       return;
     }
     setGraphId(target);
@@ -1392,7 +1395,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         reactFlowRef.current?.fitView({ padding: 0.16, duration: 240, minZoom: 0.12, maxZoom: 1.75 });
       });
     });
-    setStatus('Auto-arranged. Save Layout to keep it.');
+    setStatus('已自动排版；「保存布局」才会落盘。');
   }, [edges, nodes]);
 
   const addSwitchCase = React.useCallback(() => {
@@ -2003,7 +2006,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
   };
 
   const saveMapVariables = async (nextRows: GraphVariableRow[]) => {
-    if (!variableMapId) throw new Error('This graph is not mounted on a map.');
+    if (!variableMapId) throw new Error('此图未挂地图。');
     const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/maps/${encodeURIComponent(variableMapId)}/variables`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2149,129 +2152,56 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
     addAuthoringNode(op, position, { instanceId });
   };
 
-  const dialectNavClass = (target: GraphEditorDialect) =>
-    target === dialect
-      ? 'rounded-md border border-studio-blue bg-studio-blue/15 px-2 py-1 text-xs font-semibold text-studio-blue'
-      : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
-
   return (
-    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
-      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
-        <div className="min-w-40">
-          <div className="text-sm font-semibold text-studio-label">{titles.title}</div>
-          <div className="text-[10px] text-studio-muted">{titles.subtitle}</div>
-        </div>
-        <Link to="/" className="rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
-          工作室
-        </Link>
-        <Link to={dialectPath('func')} className={dialectNavClass('func')}>
-          Graph Editor
-        </Link>
-        <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
-          BT Editor
-        </Link>
-        <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
-          FSM Editor
-        </Link>
-        <label className="flex items-center gap-2 text-xs text-studio-muted">
-          modId
-          <input
-            value={modId}
-            onChange={(e) => setModId(e.target.value)}
-            className="w-72 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-xs text-studio-muted">
-          graphId
-          <input
-            value={graphId}
-            onChange={(e) => setGraphId(e.target.value)}
-            className="w-80 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void loadGraph()}
-          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Load
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void onValidate()}
-          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
-        >
-          Validate
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void onSave()}
-          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          disabled={busy || nodes.length === 0}
-          onClick={applyAutoLayout}
-          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Auto Layout
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void saveLayout()}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Save Layout
-        </button>
-        <button
-          type="button"
-          onClick={() => void loadCatalog()}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-        >
-          Refresh Tree
-        </button>
-        <button
-          type="button"
-          onClick={() => void refreshDebugMounts()}
-          className="rounded border border-studio-yellow/50 px-3 py-1 text-xs font-semibold text-studio-yellow hover:bg-studio-yellow/15"
-        >
-          Refresh Live
-        </button>
-        <button
-          type="button"
-          onClick={() => setLeftRailCollapsed((v) => !v)}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-          title="Toggle catalog / variables rail"
-        >
-          {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRightRailCollapsed((v) => !v)}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-          title="Toggle inspector rail"
-        >
-          {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
-        </button>
-        <div className="text-xs text-studio-muted">{status}</div>
-      </header>
+    <WorkspaceLayout
+      title={titles.title}
+      blurb={titles.subtitle}
+      status={status}
+      actions={
+        <>
+          <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void onValidate()}>
+            校验
+          </Button>
+          <Button variant="primary" size="sm" disabled={busy || !currentGraph} onClick={() => void onSave()}>
+            保存
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy || nodes.length === 0} onClick={applyAutoLayout}>
+            自动排版
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void saveLayout()}>
+            保存布局
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void loadCatalog()}>
+            刷新目录
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border-studio-yellow/50 text-studio-yellow hover:bg-studio-yellow/15"
+            onClick={() => void refreshDebugMounts()}
+          >
+            刷新实时
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLeftRailCollapsed((v) => !v)} title="Toggle catalog / variables rail">
+            {leftRailCollapsed ? '展目录' : '收目录'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setRightRailCollapsed((v) => !v)} title="Toggle inspector rail">
+            {rightRailCollapsed ? '展检查器' : '收检查器'}
+          </Button>
+        </>
+      }
+    >
 
       <div
         className={[
-          'grid min-h-0 flex-1',
+          'grid h-full',
           leftRailCollapsed && rightRailCollapsed
             ? 'grid-cols-[32px_minmax(0,1fr)_32px]'
             : leftRailCollapsed
-              ? 'grid-cols-[32px_minmax(0,1fr)_240px]'
+              ? 'grid-cols-[32px_minmax(0,1fr)_320px]'
               : rightRailCollapsed
-                ? 'grid-cols-[220px_minmax(0,1fr)_32px]'
-                : 'grid-cols-[220px_minmax(0,1fr)_280px]',
+                ? 'grid-cols-[256px_minmax(0,1fr)_32px]'
+                : 'grid-cols-[256px_minmax(0,1fr)_320px]',
         ].join(' ')}
       >
         {leftRailCollapsed ? (
@@ -2281,10 +2211,46 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show catalog and variables"
           >
-            <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
+            <span className="[writing-mode:vertical-rl] rotate-180">目录</span>
           </button>
         ) : (
         <div className="flex min-h-0 flex-col border-r border-studio-elevated">
+          <div className="space-y-2 border-b border-studio-elevated bg-studio-surface p-3">
+            <label className="block text-xs text-studio-muted">
+              Mod
+              <input
+                list="studio-graph-mods"
+                value={modId}
+                onChange={(e) => setModId(e.target.value)}
+                className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px] text-studio-label"
+              />
+              <datalist id="studio-graph-mods">
+                {catalogModsForDialect.map((m) => (
+                  <option key={m.id} value={m.id} />
+                ))}
+              </datalist>
+            </label>
+            <label className="block text-xs text-studio-muted">
+              图
+              <input
+                value={graphId}
+                onChange={(e) => setGraphId(e.target.value)}
+                className="mt-1 w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px] text-studio-label"
+              />
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              disabled={busy}
+              onClick={() => {
+                writeStudioMod(modId);
+                void loadGraph();
+              }}
+            >
+              加载
+            </Button>
+          </div>
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
               mods={catalogModsForDialect}
@@ -2390,13 +2356,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 />
               </ReactFlow>
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
-                Middle-drag to pan · Left-drag to box-select · Right-click to add a node
+                中键拖动平移 · 左键框选 · 右键加节点
               </div>
               {(debugEnabled || rightRailCollapsed) ? (
                 <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-studio-yellow/30 bg-studio-bg/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
                   <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-studio-yellow">
                     <span>
-                      Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                      实时调试 · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
                         ?? debugMounts[0]?.executionBackend
                         ?? 'Interpret'}
                     </span>
@@ -2412,7 +2378,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
                     />
                     <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
-                      {debugEnabled ? 'Stop' : 'Watch'}
+                      {debugEnabled ? '停止' : '观察'}
                     </button>
                   </div>
                   <div className="mt-1 text-[10px] text-studio-muted">{debugStatus}</div>
@@ -2454,7 +2420,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                     </div>
                   ) : null}
                   <div className="mt-1 max-h-16 overflow-auto rounded border border-studio-elevated bg-studio-bg p-1.5 font-mono text-[10px]">
-                    {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
+                    {debugEvents.length === 0 ? '还没有轨迹变化。' : debugEvents.slice(-16).map((event) => (
                       <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                         #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                         {event.controlPort ? ` →${event.controlPort}` : ''}
@@ -2485,8 +2451,8 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                           addAuthoringNode(availableNodes[0].op, { x: paletteMenu.flowX, y: paletteMenu.flowY });
                         }
                       }}
-                      placeholder="Find node"
-                      aria-label="Find graph node"
+                      placeholder="找节点…"
+                      aria-label="找节点"
                       className="min-w-0 flex-1 bg-transparent text-xs text-studio-label outline-none placeholder:text-studio-muted"
                     />
                     <span className="text-[10px] text-studio-muted">Enter</span>
@@ -2500,7 +2466,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       >
                         <Plus size={12} className="text-studio-red" aria-hidden="true" />
                         <span className="font-mono">Event</span>
-                        <span className="ml-auto text-[10px] text-studio-red">entry</span>
+                        <span className="ml-auto text-[10px] text-studio-red">入口</span>
                       </button>
                     ) : null}
                     {availableNodes.slice(0, 24).map((entry) => (
@@ -2512,10 +2478,10 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       >
                         <Plus size={12} className="text-studio-blue" aria-hidden="true" />
                         <span className="font-mono">{entry.op}</span>
-                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">sugar</span> : null}
+                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">语法糖</span> : null}
                       </button>
                     ))}
-                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">No runtime node matches.</div> : null}
+                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">没有匹配的节点。</div> : null}
                   </div>
                 </div>
               ) : null}
@@ -2590,12 +2556,12 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show inspector"
           >
-            <span className="[writing-mode:vertical-rl]">Inspector</span>
+            <span className="[writing-mode:vertical-rl]">检查器</span>
           </button>
         ) : (
         <aside className="flex min-h-0 flex-col border-l border-studio-elevated bg-studio-surface/80">
           <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
-            Inspector
+            检查器
           </div>
           <div className="space-y-3 overflow-auto p-3 text-xs">
             {selectedData ? (
@@ -2648,7 +2614,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select anchor</option>
+                              <option value="">选锚点</option>
                               {options.map((anchor) => (
                                 <option key={anchor} value={anchor}>{anchor}</option>
                               ))}
@@ -2669,7 +2635,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select payload key</option>
+                              <option value="">选载荷键</option>
                               {options.map((key) => (
                                 <option key={key} value={key}>{key}</option>
                               ))}
@@ -2711,7 +2677,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select text key</option>
+                              <option value="">选文本键</option>
                               {options.map((id) => {
                                 const meta = textKeyCatalog.find((candidate) => candidate.id === id);
                                 const suffix = meta?.preview
@@ -2748,7 +2714,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select placed instance</option>
+                              <option value="">选放置实例</option>
                               {options.map((id) => (
                                 <option key={id} value={id}>{id}</option>
                               ))}
@@ -2768,7 +2734,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select kind</option>
+                              <option value="">选类型</option>
                               {options.map((kind) => (
                                 <option key={kind} value={kind}>{kind}</option>
                               ))}
@@ -2791,7 +2757,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 })}
                 {selectedData.descriptor ? (
                   <div className="rounded border border-studio-elevated bg-studio-bg/80 p-2">
-                    <div className="mb-1 text-studio-muted">Descriptor ports</div>
+                    <div className="mb-1 text-studio-muted">描述符端口</div>
                     <div className="font-mono text-[10px] text-studio-blue">
                       in: {[...new Set([
                         ...selectedData.descriptor.linearInputPorts,
@@ -2829,7 +2795,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => setSwitchCaseValue(event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select member</option>
+                              <option value="">选成员</option>
                               {boundEnum.members.map((member) => (
                                 <option key={member.name} value={member.name}>{member.name} ({member.value})</option>
                               ))}
@@ -2839,7 +2805,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       }
                       return (
                         <label className="block">
-                          <div className="mb-1 text-studio-muted">Case value</div>
+                          <div className="mb-1 text-studio-muted">case 值</div>
                           <input
                             type="number"
                             step="1"
@@ -2851,13 +2817,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       );
                     })()}
                     <label className="block">
-                      <div className="mb-1 text-studio-muted">Target node</div>
+                      <div className="mb-1 text-studio-muted">目标节点</div>
                       <select
                         value={switchCaseTarget}
                         onChange={(event) => setSwitchCaseTarget(event.target.value)}
                         className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
-                        <option value="">Select target</option>
+                        <option value="">选目标</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
                           <option key={node.id} value={node.id}>{node.id}</option>
                         ))}
@@ -2879,13 +2845,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       {(selectedData.controlOutputPorts ?? []).filter((port) => port.startsWith('child:')).join(', ') || 'none yet'}
                     </div>
                     <label className="block">
-                      <div className="mb-1 text-studio-muted">Target node</div>
+                      <div className="mb-1 text-studio-muted">目标节点</div>
                       <select
                         value={btChildTarget}
                         onChange={(event) => setBtChildTarget(event.target.value)}
                         className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
-                        <option value="">Select target</option>
+                        <option value="">选目标</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
                           <option key={node.id} value={node.id}>{node.id}</option>
                         ))}
@@ -2912,13 +2878,9 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 ) : null}
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={removeSelectedGraphNode}
-                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
-                >
+                <Button variant="danger" className="w-full" onClick={removeSelectedGraphNode}>
                   删除此节点
-                </button>
+                </Button>
               </>
             ) : selectedEdge ? (
               <>
@@ -2927,7 +2889,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   <div className="font-mono text-studio-label">{selectedEdge.data?.kind ?? 'edge'}</div>
                 </div>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">From node</div>
+                  <div className="mb-1 text-studio-muted">来源节点</div>
                   <input
                     value={selectedEdge.source}
                     onChange={(e) => updateSelectedEdgeField('source', e.target.value)}
@@ -2935,7 +2897,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">From port</div>
+                  <div className="mb-1 text-studio-muted">来源端口</div>
                   <input
                     value={selectedEdge.sourceHandle ?? ''}
                     onChange={(e) => updateSelectedEdgeField('sourceHandle', e.target.value)}
@@ -2943,7 +2905,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">To node</div>
+                  <div className="mb-1 text-studio-muted">目标节点</div>
                   <input
                     value={selectedEdge.target}
                     onChange={(e) => updateSelectedEdgeField('target', e.target.value)}
@@ -2952,7 +2914,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 </label>
                 {selectedEdge.data?.kind === 'value' ? (
                   <label className="block">
-                    <div className="mb-1 text-studio-muted">To port</div>
+                    <div className="mb-1 text-studio-muted">目标端口</div>
                     <input
                       value={selectedEdge.targetHandle ?? ''}
                       onChange={(e) => updateSelectedEdgeField('targetHandle', e.target.value)}
@@ -2960,24 +2922,20 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                     />
                   </label>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={removeSelectedGraphEdge}
-                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
-                >
+                <Button variant="danger" className="w-full" onClick={removeSelectedGraphEdge}>
                   删除此连线
-                </button>
+                </Button>
               </>
             ) : (
               <div className="space-y-2">
-                <div className="text-studio-muted">Select a node or an Event card.</div>
+                <div className="text-studio-muted">选中节点或事件卡后在此显示。</div>
                 {graph?.kind === 'TriggerGraph' ? (
                   <button
                     type="button"
                     onClick={() => addEventEntry()}
                     className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                   >
-                    Add Event
+                    新增事件
                   </button>
                 ) : null}
               </div>
@@ -2985,10 +2943,10 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
           </div>
 
           <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
-            Diagnostics
+            诊断
           </div>
           <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-studio-yellow">
-            {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
+            {diagnosticsText || '点「校验」或「保存」跑 Bridge 编译器。'}
           </pre>
 
           {graph ? (
@@ -3006,12 +2964,12 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
 
           {debugEnabled ? (
             <div className="border-t border-studio-elevated px-3 py-2 text-[10px] leading-4 text-studio-muted">
-              Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
+              观察时实时调试停靠在画布下方——半屏也能读清节点链。
             </div>
           ) : (
             <>
           <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-yellow">
-            Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+            实时调试 · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
               ?? 'Interpret'}
           </div>
@@ -3024,12 +2982,12 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
               />
               <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
-                {debugEnabled ? 'Stop' : 'Watch'}
+                {debugEnabled ? '停止' : '观察'}
               </button>
             </div>
             <div className="text-[10px] text-studio-muted">{debugStatus}</div>
             <div className="max-h-28 overflow-auto rounded border border-studio-elevated bg-studio-bg p-2 font-mono text-[10px]">
-              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
+              {debugEvents.length === 0 ? '还没有轨迹变化。' : debugEvents.slice(-24).map((event) => (
                 <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                   #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                   {event.controlPort ? ` →${event.controlPort}` : ''}
@@ -3043,6 +3001,6 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         </aside>
         )}
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 };
