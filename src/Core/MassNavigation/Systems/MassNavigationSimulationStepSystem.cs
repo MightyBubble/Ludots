@@ -99,6 +99,8 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
             }
         }
 
+        simulation.MaintainOrderCoverageWindow();
+
         _timingDiagnostics?.ObserveMassNavigation(
             simulation.LastGroupTargetUpdateMs,
             simulation.LastFlowFieldRebuildMs,
