@@ -21,10 +21,6 @@
   align-items: center;
 }
 
-.text-bank-toolbar .text-bank-group-right {
-  margin-left: auto;
-}
-
 .text-bank-empty {
   flex: 1;
   min-height: 240px;
@@ -252,16 +248,6 @@
   100% {
     background: transparent;
   }
-}
-
-.text-bank-status {
-  font-size: 12px;
-  color: var(--studio-secondary);
-  min-height: 16px;
-}
-
-.text-bank-status .text-bank-status-error {
-  color: var(--studio-red);
 }
 
 .text-bank-issues {

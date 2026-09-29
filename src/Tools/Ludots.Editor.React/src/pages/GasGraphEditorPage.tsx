@@ -35,6 +35,7 @@ import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor
 import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
 import { Button } from '@/components/ui/Button';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import {
   catalogGraphMatchesDialect,
@@ -2155,123 +2156,83 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
 
   return (
-    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
-      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
-        <div className="min-w-40">
-          <div className="text-sm font-semibold text-studio-label">{titles.title}</div>
-          <div className="text-[10px] text-studio-muted">{titles.subtitle}</div>
-        </div>
-        <Link to="/" className="rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
-          工作室
-        </Link>
-        <Link to={dialectPath('func')} className={dialectNavClass('func')}>
-          Graph Editor
-        </Link>
-        <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
-          BT Editor
-        </Link>
-        <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
-          FSM Editor
-        </Link>
-        <label className="flex items-center gap-2 text-xs text-studio-muted">
-          modId
-          <input
-            value={modId}
-            onChange={(e) => setModId(e.target.value)}
-            className="w-72 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-xs text-studio-muted">
-          graphId
-          <input
-            value={graphId}
-            onChange={(e) => setGraphId(e.target.value)}
-            className="w-80 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void loadGraph()}
-          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Load
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void onValidate()}
-          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
-        >
-          Validate
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void onSave()}
-          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          disabled={busy || nodes.length === 0}
-          onClick={applyAutoLayout}
-          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Auto Layout
-        </button>
-        <button
-          type="button"
-          disabled={busy || !currentGraph}
-          onClick={() => void saveLayout()}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated disabled:opacity-50"
-        >
-          Save Layout
-        </button>
-        <button
-          type="button"
-          onClick={() => void loadCatalog()}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-        >
-          Refresh Tree
-        </button>
-        <button
-          type="button"
-          onClick={() => void refreshDebugMounts()}
-          className="rounded border border-studio-yellow/50 px-3 py-1 text-xs font-semibold text-studio-yellow hover:bg-studio-yellow/15"
-        >
-          Refresh Live
-        </button>
-        <button
-          type="button"
-          onClick={() => setLeftRailCollapsed((v) => !v)}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-          title="Toggle catalog / variables rail"
-        >
-          {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRightRailCollapsed((v) => !v)}
-          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
-          title="Toggle inspector rail"
-        >
-          {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
-        </button>
-        <div className="text-xs text-studio-muted">{status}</div>
-      </header>
+    <WorkspaceLayout
+      title={titles.title}
+      blurb={titles.subtitle}
+      status={status}
+      actions={
+        <>
+          <Link to={dialectPath('func')} className={dialectNavClass('func')}>
+            Graph Editor
+          </Link>
+          <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
+            BT Editor
+          </Link>
+          <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
+            FSM Editor
+          </Link>
+          <label className="flex items-center gap-2 text-xs text-studio-muted">
+            modId
+            <input
+              value={modId}
+              onChange={(e) => setModId(e.target.value)}
+              className="w-56 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-studio-muted">
+            graphId
+            <input
+              value={graphId}
+              onChange={(e) => setGraphId(e.target.value)}
+              className="w-64 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
+            />
+          </label>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void loadGraph()}>
+            Load
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void onValidate()}>
+            Validate
+          </Button>
+          <Button variant="primary" size="sm" disabled={busy || !currentGraph} onClick={() => void onSave()}>
+            Save
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy || nodes.length === 0} onClick={applyAutoLayout}>
+            Auto Layout
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy || !currentGraph} onClick={() => void saveLayout()}>
+            Save Layout
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void loadCatalog()}>
+            Refresh Tree
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="border-studio-yellow/50 text-studio-yellow hover:bg-studio-yellow/15"
+            onClick={() => void refreshDebugMounts()}
+          >
+            Refresh Live
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLeftRailCollapsed((v) => !v)} title="Toggle catalog / variables rail">
+            {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setRightRailCollapsed((v) => !v)} title="Toggle inspector rail">
+            {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
+          </Button>
+        </>
+      }
+    >
 
       <div
         className={[
-          'grid min-h-0 flex-1',
+          'grid h-full',
           leftRailCollapsed && rightRailCollapsed
             ? 'grid-cols-[32px_minmax(0,1fr)_32px]'
             : leftRailCollapsed
-              ? 'grid-cols-[32px_minmax(0,1fr)_240px]'
+              ? 'grid-cols-[32px_minmax(0,1fr)_320px]'
               : rightRailCollapsed
-                ? 'grid-cols-[220px_minmax(0,1fr)_32px]'
-                : 'grid-cols-[220px_minmax(0,1fr)_280px]',
+                ? 'grid-cols-[256px_minmax(0,1fr)_32px]'
+                : 'grid-cols-[256px_minmax(0,1fr)_320px]',
         ].join(' ')}
       >
         {leftRailCollapsed ? (
@@ -3035,6 +2996,6 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         </aside>
         )}
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 };

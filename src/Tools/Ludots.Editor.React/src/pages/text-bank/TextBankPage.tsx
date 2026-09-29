@@ -11,6 +11,7 @@ import {
 import { RichTextArea, RunSpan } from './RichTextArea';
 import { Button } from '@/components/ui/Button';
 import { fieldControlClass } from '@/components/ui/Field';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 import './textBank.css';
 
 type ModInfo = { id: string; name?: string };
@@ -316,6 +317,24 @@ export function TextBankPage() {
   };
 
   return (
+    <WorkspaceLayout
+      title="文本"
+      blurb="一张表改所有文案：行是词条，列是语言；缺翻译标红，保存过引擎校验。"
+      status={status}
+      error={error}
+      actions={
+        <>
+          {loaded ? (
+            <Button variant="ghost" onClick={() => void loadBank(modId)} disabled={!dirty}>
+              放弃修改
+            </Button>
+          ) : null}
+          <Button variant="primary" onClick={() => void save()} disabled={!loaded}>
+            {dirty ? '校验并保存' : '保存'}
+          </Button>
+        </>
+      }
+    >
     <div className="text-bank-page">
       <div className="text-bank-toolbar">
         <select className={fieldControlClass} value={modId} onChange={(e) => setModId(e.target.value)}>
@@ -350,16 +369,6 @@ export function TextBankPage() {
           />
           <Button variant="ghost" onClick={addLocale}>
             + 加语言
-          </Button>
-        </div>
-        <div className="text-bank-group text-bank-group-right">
-          {loaded ? (
-            <Button variant="ghost" onClick={() => void loadBank(modId)} disabled={!dirty}>
-              放弃修改
-            </Button>
-          ) : null}
-          <Button variant="primary" onClick={() => void save()} disabled={!loaded}>
-            {dirty ? '校验并保存' : '保存'}
           </Button>
         </div>
       </div>
@@ -522,9 +531,6 @@ export function TextBankPage() {
         )}
       </div>
 
-      <div className="text-bank-status">
-        {error ? <span className="text-bank-status-error">{error}</span> : status}
-      </div>
       {showSaveIssues && issues.length > 0 ? (
         <ul className="text-bank-issues">
           {issues.slice(0, 30).map((issue) => (
@@ -536,5 +542,6 @@ export function TextBankPage() {
         </ul>
       ) : null}
     </div>
+    </WorkspaceLayout>
   );
 }

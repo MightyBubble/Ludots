@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { labelClass } from '@/components/ui/chrome';
 import { fieldControlClass } from '@/components/ui/Field';
-import { pageClass } from '@/components/ui/chrome';
+import { WorkspaceLayout } from '@/components/ui/WorkspaceLayout';
 
 type LauncherPreset = {
   id: string;
@@ -177,16 +177,14 @@ export function RunPage() {
   const presetId = customSelection ? '' : (snapshot?.selectedPresetId ?? '');
 
   return (
-    <div className={`${pageClass} overflow-auto p-6 font-sans`}>
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        <h1 className="text-xl text-studio-label">开局</h1>
-        <span className="text-xs text-studio-muted">
-          勾 Mod、选 preset 与平台，一键开局。再开一局会替换上一局；改完内容要重开才生效。
-        </span>
-      </div>
-
-      <div className="grid grid-cols-12 gap-4">
-        <aside className="col-span-4 space-y-3">
+    <WorkspaceLayout
+      title="开局"
+      blurb="勾 Mod、选 preset 与平台，一键开局。再开一局会替换上一局；改完内容要重开才生效。"
+      railWidthClass="w-80"
+      status={status}
+      error={error}
+      rail={
+        <div className="space-y-3">
           <label className={labelClass}>
             平台
             <select
@@ -260,9 +258,10 @@ export function RunPage() {
               ? '游戏在跑 · live debug 通道已通（去蓝图房看实时图执行）'
               : '未检测到运行中的游戏。开局后这里会点亮 agent bridge。'}
           </div>
-        </aside>
-
-        <main className="col-span-8 space-y-2">
+        </div>
+      }
+    >
+      <div className="h-full space-y-2 overflow-auto p-4">
           <input
             className={fieldControlClass}
             placeholder="搜 Mod id 或名字…"
@@ -287,9 +286,8 @@ export function RunPage() {
             })}
             {visibleMods.length === 0 ? <li className="px-2 py-4 text-xs text-studio-muted">没有匹配的 Mod。</li> : null}
           </ul>
-        </main>
       </div>
-    </div>
+    </WorkspaceLayout>
   );
 }
 

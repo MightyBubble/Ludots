@@ -192,6 +192,16 @@ for (const uiFile of readdirSync(uiDir)) {
 const shellPage = readFileSync(join(here, '../src/pages/authoring-studio/AuthoringShell.tsx'), 'utf8');
 assert(shellPage.includes('AgentDock'), 'studio shell must host the agent copilot dock (#1699 S3)');
 assert(shellPage.includes('data-agent-dock-toggle'), 'shell must offer the dock toggle affordance');
+for (const rel of [
+  'src/pages/run/RunPage.tsx',
+  'src/pages/text-bank/TextBankPage.tsx',
+  'src/pages/AiTopologyEditorPage.tsx',
+  'src/pages/GasGraphEditorPage.tsx',
+]) {
+  const text = readFileSync(join(here, '..', rel), 'utf8');
+  assert(text.includes('WorkspaceLayout'), `${rel} must follow the workspace layout contract (#1699 L1-L3)`);
+  assert(!text.includes('window.alert'), `${rel} must surface errors in the status bar, not window.alert`);
+}
 const llmLib = readFileSync(join(here, '../src/components/agent/llm.ts'), 'utf8');
 assert(!llmLib.includes('sk-'), 'llm layer must not ship a default API key');
 assert(llmLib.includes('localStorage'), 'llm config must stay in browser-local storage');
