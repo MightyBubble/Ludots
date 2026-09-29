@@ -2,13 +2,23 @@
   "profiles": [
     {
       "id": "interaction.context.rts.battle",
+      "commandIntentId": "intent.command.default",
       "inputContextId": "Rts_Gameplay",
       "bindings": [
+        "Command",
+        "Stop",
+        "QueueModifier",
         "Rts.AimCancel",
         "Rts.SelectBegin",
         "Rts.SelectEnd"
       ],
       "triggers": [
+        {
+          "trigger": "graph.rts.command_commit"
+        },
+        {
+          "trigger": "graph.rts.stop"
+        },
         {
           "trigger": "graph.rts.aim_q_begin"
         },

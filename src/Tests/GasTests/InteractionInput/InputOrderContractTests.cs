@@ -410,11 +410,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             string repoRoot = FindRepoRoot();
             string inputPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "default_input.json");
-            string mappingPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "input_order_mappings.json");
+            string contextPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "interaction_context_profiles.json");
             string gamePath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "game.json");
 
             Assert.That(File.Exists(inputPath), Is.True, $"Missing RTS input config: {inputPath}");
-            Assert.That(File.Exists(mappingPath), Is.True, $"Missing RTS mapping config: {mappingPath}");
+            Assert.That(File.Exists(contextPath), Is.True, $"Missing RTS interaction contexts: {contextPath}");
             Assert.That(File.Exists(gamePath), Is.True, $"Missing RTS game config: {gamePath}");
 
             var jsonOptions = new JsonSerializerOptions
@@ -429,23 +429,23 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Is.True,
                 "RtsDemoMod must register its gameplay context explicitly.");
 
-            using var mappingStream = File.OpenRead(mappingPath);
-            var mappingConfig = InputOrderMappingLoader.LoadFromStream(mappingStream);
-            var actionIds = inputConfig.Actions.Select(action => action.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var mapping in mappingConfig.Mappings)
-            {
-                Assert.That(actionIds.Contains(mapping.ActionId), Is.True, $"RTS mapping action '{mapping.ActionId}' is not declared in default_input.json.");
-            }
-
-            Assert.That(mappingConfig.Mappings.Any(ReferencesOrderTypeKey("moveTo")),
-                Is.True,
-                "RTS local command path must resolve to an explicit move order.");
+            var actionIds = inputConfig.Actions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
+            using var contextDoc = JsonDocument.Parse(File.ReadAllText(contextPath));
+            JsonElement battle = contextDoc.RootElement.GetProperty("profiles").EnumerateArray()
+                .Single(profile => profile.GetProperty("id").GetString() == "interaction.context.rts.battle");
+            string[] bindings = battle.GetProperty("bindings").EnumerateArray().Select(element => element.GetString()!).ToArray();
+            string[] triggers = battle.GetProperty("triggers").EnumerateArray()
+                .Select(element => element.GetProperty("trigger").GetString()!)
+                .ToArray();
             Assert.Multiple(() =>
             {
-                Assert.That(mappingConfig.GroupMoveTargetLayout.Mode, Is.EqualTo(GroupMoveTargetLayoutMode.Grid));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.Assignment, Is.EqualTo(GroupMoveTargetAssignmentMode.PreserveRelative));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.SpacingCm, Is.EqualTo(140));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo", "attackTarget" }));
+                Assert.That(battle.GetProperty("commandIntentId").GetString(), Is.EqualTo("intent.command.default"));
+                Assert.That(bindings, Does.Contain("Command").And.Contain("Stop").And.Contain("QueueModifier"));
+                Assert.That(triggers, Does.Contain("graph.rts.command_commit").And.Contain("graph.rts.stop"));
+                foreach (string binding in bindings)
+                {
+                    Assert.That(actionIds, Does.Contain(binding), $"RTS battle binding '{binding}' is not declared in default_input.json.");
+                }
             });
 
             using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
