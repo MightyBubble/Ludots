@@ -66,6 +66,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TryRoute_ActorNoneTags_SkipsRuleWhileActorCarriesBlockedTag()
+        {
+            const string BlockedTag = "progression.blocked_form";
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            harness.Intents.Install(Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = TestProfileId,
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 20,
+                        Actor = new CommandIntentActorPredicateDefinition
+                        {
+                            HasAbilityWithCategory = WeaponAbilityTag,
+                            NoneTags = new List<string> { BlockedTag },
+                        },
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
+                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", TargetShape = CommandIntentTargetShape.WorldPositionCm },
+                    },
+                    Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity actor = harness.CreateActor(p1Rep, WeaponAbilityId);
+            var ground = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            int profileId = harness.ProfileId(TestProfileId);
+
+            Assert.That(harness.Intents.TryRoute(profileId, actor, p1Rep, in ground, out CommandIntentRoute untagged), Is.True);
+            Assert.That(untagged.OrderTypeId, Is.EqualTo(harness.CastAbilityOrderId),
+                "An actor without a tag container carries none of the blocked tags.");
+
+            world.Add(actor, new GameplayTagContainer());
+            world.Get<GameplayTagContainer>(actor).AddTag(TagRegistry.Register(BlockedTag));
+
+            Assert.That(harness.Intents.TryRoute(profileId, actor, p1Rep, in ground, out CommandIntentRoute blocked), Is.True);
+            Assert.That(blocked.OrderTypeId, Is.EqualTo(harness.MoveToOrderId),
+                "A blocked tag on the actor must skip the rule and fall through to the next one.");
+        }
+
+        [Test]
         public void Install_DuplicatePriority_Throws()
         {
             using var world = World.Create();

@@ -248,6 +248,14 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
+            if (rule.HasActorNoneTags &&
+                _world.IsAlive(actorEntity) &&
+                _world.Has<GameplayTagContainer>(actorEntity) &&
+                _tagOps.Intersects(ref _world.Get<GameplayTagContainer>(actorEntity), in rule.ActorNoneTags, TagSense.Effective))
+            {
+                return false;
+            }
+
             if (rule.ActorAbilityCategoryId != 0 && !HasAbilityWithCategory(actorEntity, rule.ActorAbilityCategoryId))
             {
                 return false;
@@ -413,6 +421,7 @@ namespace Ludots.Core.Input.Interaction
             {
                 rule.HasActorAllTags = TryBuildMask(profileId, actor.AllTags, ref rule.ActorAllTags);
                 rule.HasActorAnyTags = TryBuildMask(profileId, actor.AnyTags, ref rule.ActorAnyTags);
+                rule.HasActorNoneTags = TryBuildMask(profileId, actor.NoneTags, ref rule.ActorNoneTags);
                 if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithCategory))
                 {
                     rule.ActorAbilityCategoryId = ResolveAbilityCategoryId(profileId, actor.HasAbilityWithCategory);
@@ -478,7 +487,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.None,
                     0,
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             if (slot.StartsWith("byAbilityTag:", StringComparison.Ordinal))
@@ -501,7 +511,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.ByAbilityCategory,
                     ResolveAbilityCategoryId(profileId, categoryName),
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             if (slot.StartsWith(ContextGroupSelectorPrefix, StringComparison.Ordinal))
@@ -526,7 +537,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.ContextGroup,
                     groupId,
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             // DEC-14: semantic routing forbids bare slot indices (bySlotIndex / slotN / anything else).
@@ -609,6 +621,8 @@ namespace Ludots.Core.Input.Interaction
             public GameplayTagContainer ActorAnyTags;
             public bool HasActorAllTags;
             public bool HasActorAnyTags;
+            public GameplayTagContainer ActorNoneTags;
+            public bool HasActorNoneTags;
             public int ActorAbilityCategoryId;
             public GameplayTagContainer TargetAllTags;
             public GameplayTagContainer TargetAnyTags;

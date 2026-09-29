@@ -54,7 +54,8 @@ namespace Ludots.Core.Input.Interaction
         int OrderTypeId,
         int RouteKind,
         int RouteParamId,
-        CommandIntentTargetShape TargetShape)
+        CommandIntentTargetShape TargetShape,
+        bool ExactGroundPoint = false)
     {
         /// <summary>Sentinel for "no rule matched" in group results.</summary>
         public static readonly CommandIntentRoute None = new(
@@ -125,6 +126,7 @@ namespace Ludots.Core.Input.Interaction
         public string HasAbilityWithCategory { get; set; }
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
+        public List<string> NoneTags { get; set; }
     }
 
     /// <summary>
@@ -149,5 +151,11 @@ namespace Ludots.Core.Input.Interaction
         public string OrderTypeKey { get; set; } = string.Empty;
         public string Slot { get; set; }
         public CommandIntentTargetShape? TargetShape { get; set; }
+
+        /// <summary>
+        /// Keeps this route's ground point exactly where the pointer hit even when the submitting graph
+        /// spreads the batch into a ground layout (rally points stay on the clicked spot while movers fan out).
+        /// </summary>
+        public bool ExactGroundPoint { get; set; }
     }
 }

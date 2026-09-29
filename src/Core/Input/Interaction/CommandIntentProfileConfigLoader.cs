@@ -160,6 +160,7 @@ namespace Ludots.Core.Input.Interaction
 
                     ValidatePredicateStrings(rule.Actor?.AllTags, $"{rulePath}.actor.allTags");
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");
+                    ValidatePredicateStrings(rule.Actor?.NoneTags, $"{rulePath}.actor.noneTags");
                     ValidatePredicateStrings(rule.Target?.AllTags, $"{rulePath}.target.allTags");
                     ValidatePredicateStrings(rule.Target?.AnyTags, $"{rulePath}.target.anyTags");
                     ValidatePredicateStrings(rule.Target?.Relation, $"{rulePath}.target.relation");

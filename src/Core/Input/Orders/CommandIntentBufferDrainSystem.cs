@@ -39,6 +39,7 @@ namespace Ludots.Core.Input.Orders
         private readonly CommandIntentRoute[] _routeScratch;
         private readonly Entity[] _dispatchScratch;
         private readonly Order[] _orderScratch;
+        private readonly bool[] _orderExactGroundPoint;
         private readonly int[] _layoutOrderIndex;
         private readonly Ludots.Platform.Abstractions.WorldCmInt2[] _layoutPositions;
         private readonly int[] _layoutSlotByActor;
@@ -100,6 +101,7 @@ namespace Ludots.Core.Input.Orders
             _routeScratch = new CommandIntentRoute[scratchCapacity];
             _dispatchScratch = new Entity[scratchCapacity];
             _orderScratch = new Order[scratchCapacity];
+            _orderExactGroundPoint = new bool[scratchCapacity];
             _layoutOrderIndex = new int[scratchCapacity];
             _layoutPositions = new Ludots.Platform.Abstractions.WorldCmInt2[scratchCapacity];
             _layoutSlotByActor = new int[scratchCapacity];
@@ -524,6 +526,7 @@ namespace Ludots.Core.Input.Orders
                 }
 
                 _orderScratch[i] = BuildOrder(dispatchedActor, owner.PlayerId, in _routeScratch[routeIndex], in facts, groundWorldCm, submission.SubmitMode);
+                _orderExactGroundPoint[i] = _routeScratch[routeIndex].ExactGroundPoint;
             }
 
             Span<Order> dispatchOrders = _orderScratch.AsSpan(0, dispatchCount);
@@ -661,7 +664,8 @@ namespace Ludots.Core.Input.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 ref readonly Order order = ref orders[i];
-                if (order.Target == Entity.Null &&
+                if (!_orderExactGroundPoint[i] &&
+                    order.Target == Entity.Null &&
                     order.Args.Spatial.Kind == OrderSpatialKind.WorldCm &&
                     order.Args.Spatial.Mode == OrderCollectionMode.Single)
                 {
