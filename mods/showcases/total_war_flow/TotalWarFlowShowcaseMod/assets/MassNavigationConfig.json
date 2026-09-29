@@ -1,0 +1,212 @@
+{
+  "mapId": "total_war_flow_field",
+  "world": {
+    "solverWindowWidthCm": 20000,
+    "solverWindowHeightCm": 20000,
+    "streamingChunkSizeCm": 6400,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 2000,
+    "workAreaMaxWidthCm": 20000,
+    "workAreaMaxHeightCm": 20000,
+    "activeHotZoneId": "central",
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Battlefield",
+        "centerXCm": 10000,
+        "centerYCm": 10000,
+        "widthCm": 20000,
+        "heightCm": 20000
+      }
+    ]
+  },
+  "solver": {
+    "fieldWidthCm": 20000,
+    "fieldHeightCm": 20000,
+    "flowCellSizeCm": 100,
+    "maxObstacleCount": 64,
+    "parallelWorkerCount": 1,
+    "separationHashCellSizeCm": 100,
+    "separationHashMinSearchRadiusCells": 2,
+    "hardResolveHashCellSizeCm": 50,
+    "hardResolveHashMinSearchRadiusCells": 1,
+    "playAreaMinXCm": 50,
+    "playAreaMaxXCm": 19950,
+    "playAreaMinYCm": 50,
+    "playAreaMaxYCm": 19950
+  },
+  "presentation": {
+    "requiredMeshAssetIds": [],
+    "blockerPresenterId": "mass_navigation_blocker",
+    "hotspotPresenterId": "mass_navigation_hotspot_marker",
+    "blockerTemplateId": "mass_navigation_blocker",
+    "hotspotTemplateId": "mass_navigation_hotspot_marker",
+    "teams": []
+  },
+  "scenario": {
+    "agentsPerTeam": 0,
+    "teams": [
+      {
+        "id": 1,
+        "name": "Player Company"
+      },
+      {
+        "id": 2,
+        "name": "Hostiles"
+      }
+    ],
+    "spawnLayout": {
+      "kind": "QuadrantSpread",
+      "orbitRadiusCm": 3650,
+      "randomSeed": 12648430
+    }
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": false,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 256,
+      "groupMembershipAgentCapacity": 160000,
+      "movePlanExecutionGroupCapacity": 256,
+      "routeStateCapacity": 1024,
+      "routeMaxExpandedPerRequest": 2048,
+      "routeWaypointCapacityPerAgent": 64,
+      "loadedChunkCapacity": 256,
+      "displacedAgentCapacity": 64,
+      "groupMemberCapacity": 16384,
+      "movePlanExecutionMemberCapacity": 16384,
+      "relationshipDomainCapacity": 4
+    }
+  },
+  "cadence": {
+    "simulationHz": 15,
+    "targetUpdateHz": 15,
+    "flowStepHz": 5,
+    "flowCrowdStampHz": 5,
+    "flowObstacleStampHz": 2,
+    "hardResolveHz": 10,
+    "entitySyncHz": 15,
+    "maxStepsPerFixedTick": 1,
+    "hardResolveCandidateThresholdAgents": 1
+  },
+  "agentProfiles": {
+    "defaultProfileId": "tw.agent",
+    "profiles": [
+      {
+        "id": "tw.agent",
+        "heavy": false,
+        "visualScale": 1,
+        "speedCmPerSecond": 300,
+        "everyNth": 0,
+        "nthOffset": 0
+      }
+    ]
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": []
+  },
+  "relationshipPolicy": {
+    "cooperativeStance": "Friendly"
+  },
+  "flow": {
+    "enabled": false,
+    "iterationsPerStep": 4096
+  },
+  "arrival": {
+    "enabled": true,
+    "timeoutMs": 1500,
+    "progressDistanceCm": 60,
+    "wakePushDistanceCm": 80,
+    "maxRetryCount": 2
+  },
+  "avoidance": {
+    "mode": "Separation",
+    "dominantMassRatio": 2.25,
+    "friendlyResponseScale": 1.1,
+    "friendlyResponseMin": 0.35,
+    "friendlyResponseMax": 2.75,
+    "nonFriendlyResponseScale": 1.25,
+    "nonFriendlyResponseMin": 0.25,
+    "nonFriendlyResponseMax": 3.25,
+    "dominantPushResponseScale": 1.6,
+    "dominantPushResponseMin": 0.15,
+    "dominantPushResponseMax": 4.5,
+    "friendlyCorrectionShareMin": 0.18,
+    "friendlyCorrectionShareMax": 0.82,
+    "dominantCorrectionOtherMassWeight": 1.8,
+    "dominantCorrectionShareMin": 0.05,
+    "dominantCorrectionShareMax": 0.95,
+    "nonFriendlyCorrectionOtherMassWeight": 1.2,
+    "nonFriendlyCorrectionShareMin": 0.08,
+    "nonFriendlyCorrectionShareMax": 0.92
+  },
+  "semantics": {
+    "obstacle": {
+      "hardResolveCandidateDistanceCm": 100,
+      "softPushPaddingCm": 350,
+      "softPushForceScale": 8
+    },
+    "targetProjection": {
+      "teamTargetClearanceCm": 60,
+      "groupCenterClearanceCm": 60,
+      "teamSlotClearanceCm": 45,
+      "groupSlotClearanceCm": 50,
+      "looseTargetClearanceCm": 50
+    },
+    "group": {
+      "spawnSpacingCm": 46,
+      "spawnJitterCm": 12,
+      "teamSlotSpacingCm": 90,
+      "pullDeadZoneCm": 50,
+      "pullClampCm": 2000,
+      "arrivedRadiusCm": 150,
+      "groupedAgentArriveThresholdCm": 200,
+      "looseArriveThresholdCm": 300,
+      "unitTargetStopThresholdCm": 50,
+      "groupedAgentFlowSlowRadiusCm": 400,
+      "nearSlotBlend": 0.82,
+      "farSlotBlend": 0.38,
+      "nearSlotBlendDistanceSq": 4000000
+    },
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    },
+    "steering": {
+      "separationRadiusCm": 200,
+      "goalArrivalRadiusCm": 1200,
+      "flowObstacleAvoidanceScale": 1.2,
+      "groupedAgentSeparationScale": 2,
+      "looseSeparationScale": 4,
+      "velocityBlendPerSecond": 5
+    },
+    "solver": {
+      "minNavMass": 0.001,
+      "minVisualScale": 0.01,
+      "maxStepDtSeconds": 0.05,
+      "parallelStepMinAgents": 2048,
+      "hardResolveMaxSeparatesPerAgentPass": 2,
+      "directionEpsilonSq": 0.0001,
+      "normalizationEpsilonSq": 1e-06,
+      "inverseSqrtMinValue": 1e-08,
+      "entitySyncPositionEpsilonSq": 0.25,
+      "entitySyncVelocityEpsilonSq": 0.01,
+      "facingVelocityEpsilonSq": 0.01,
+      "flowBlockedCellCost": 99999,
+      "flowBlockedCellThreshold": 9999,
+      "flowTargetStopDistanceSq": 1,
+      "flowObstacleNeighborRadiusCells": 4,
+      "flowObstacleNeighborWeight": 5,
+      "flowObstacleAvoidanceWeight": 1.5,
+      "crowdStampCenterCost": 8,
+      "crowdStampNeighborCost": 3,
+      "coincidentPairHashBucketCount": 1024,
+      "coincidentPairHashPrimeA": 73856093,
+      "coincidentPairHashPrimeB": 19349663
+    }
+  },
+  "streaming": {
+    "retainSeconds": 6,
+    "radiusCm": 16000
+  }
+}

@@ -1729,7 +1729,6 @@ namespace Ludots.Core.Input.Orders
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
 
-            int activeCollectionKeyId = activeContext.ActiveCollectionKeyId;
 
             int actorCount;
             if (_hasExplicitActivationContext)
@@ -1739,16 +1738,8 @@ namespace Ludots.Core.Input.Orders
             }
             else
             {
-                if (!_entityCollections.TryGet(actorCollectionOwner, activeCollectionKeyId, out EntityCollectionHandle handle))
-                {
-                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
-                }
-
-                if (!TryEnsureCommandIntentScratch(handle))
-                {
-                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
-                }
-                actorCount = _entityCollections.CopyEntities(handle, 0, _commandIntentActorsScratch);
+                _commandIntentActorsScratch[0] = actingRep;
+                actorCount = 1;
             }
             if (actorCount <= 0)
             {

@@ -1,0 +1,163 @@
+{
+ "Id": "total_war_flow_field",
+ "Variables": [
+  {
+   "name": "tw.phase",
+   "type": "int",
+   "initial": 0
+  },
+  {
+   "name": "tw.kills",
+   "type": "int",
+   "initial": 0
+  }
+ ],
+ "Boards": [
+  {
+   "Name": "default",
+   "SpatialType": "Grid",
+   "WidthCm": 20000,
+   "HeightCm": 20000,
+   "Grid": {
+    "CellSizeCm": 100
+   },
+   "TerrainHeightStepCm": 250,
+   "TerrainProjectAsRamp": true,
+   "NavBakePolicy": {
+    "HeightSource": "continuous-heightmap"
+   }
+  }
+ ],
+ "DefaultCamera": {
+  "TargetXCm": 10000,
+  "TargetYCm": 10000,
+  "Yaw": 0,
+  "Pitch": 58,
+  "DistanceCm": 16000,
+  "FovYDeg": 48
+ },
+ "Tags": [
+  "showcase",
+  "input",
+  "total-war",
+  "context-flow",
+  "Feature.NavMesh:On"
+ ],
+ "HeartbeatIntervalTicks": 6,
+ "ContinuousHeightmap": {
+  "Asset": "assets/terrain/tw_hills.height",
+  "WorldWidthCm": 20000
+ },
+ "Entities": [
+  {
+   "Template": "tw_commander",
+   "InstanceId": "tw-commander",
+   "PositionXCm": 10000,
+   "PositionYCm": 10000,
+   "Overrides": {
+    "PlayerIdentity": {
+     "PlayerId": 1
+    }
+   },
+   "Relations": [
+    {
+     "To": "tw-commander",
+     "Type": "Friendly"
+    },
+    {
+     "To": "tw-hostiles-anchor",
+     "Type": "Hostile"
+    }
+   ]
+  },
+  {
+   "Template": "tw_marine",
+   "InstanceId": "tw-marine-1",
+   "PositionXCm": 9700,
+   "PositionYCm": 10100
+  },
+  {
+   "Template": "tw_marine",
+   "InstanceId": "tw-marine-2",
+   "PositionXCm": 9700,
+   "PositionYCm": 9900
+  },
+  {
+   "Template": "tw_wolf",
+   "InstanceId": "wolf_1",
+   "PositionXCm": 10400,
+   "PositionYCm": 10000
+  },
+  {
+   "Template": "ballista_tower",
+   "InstanceId": "tower_1",
+   "PositionXCm": 10400,
+   "PositionYCm": 10600
+  },
+  {
+   "Template": "ballista_team_anchor",
+   "InstanceId": "tw-hostiles-anchor",
+   "PositionXCm": 12000,
+   "PositionYCm": 12000,
+   "Overrides": {
+    "Name": {
+     "Value": "Hostiles Anchor"
+    }
+   },
+   "Relations": [
+    {
+     "To": "tw-hostiles-anchor",
+     "Type": "Friendly"
+    },
+    {
+     "To": "tw-commander",
+     "Type": "Hostile"
+    }
+   ]
+  }
+ ],
+ "Teams": [
+  {
+   "TeamId": 1,
+   "Name": "Player",
+   "RepresentativeInstanceId": "tw-commander"
+  },
+  {
+   "TeamId": 2,
+   "RepresentativeInstanceId": "tw-hostiles-anchor"
+  }
+ ],
+ "Players": [
+  {
+   "PlayerId": 1,
+   "TeamId": 1,
+   "RepresentativeInstanceId": "tw-commander"
+  }
+ ],
+ "TriggerGraphs": [
+  {
+   "graph": "tw.startup",
+   "scopeInstanceId": "tw-commander"
+  },
+  {
+   "graph": "tw.roster_sync",
+   "scopeInstanceId": "tw-commander"
+  },
+  {
+   "graph": "tw.panel.setup",
+   "scopeInstanceId": "tw-commander"
+  },
+  {
+   "graph": "tw.kills",
+   "scopeInstanceId": "tw-commander"
+  },
+  {
+   "graph": "tw.death.fx",
+   "scopeInstanceId": "tw-commander"
+  }
+ ],
+ "DeathRule": {
+  "attribute": "Ballista.Health",
+  "onZero": "destroy"
+ }
+}

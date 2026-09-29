@@ -111,7 +111,7 @@ namespace CoreInputMod.Systems
         public void Update(in float dt)
         {
             Entity collectionOwner = ResolveCommandSourceOwner();
-            string collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(_world, _globals, collectionOwner);            Entity collectionContext = Entity.Null;
+            string collectionKey = InputInteractionContextAccessor.CommandActorCollectionKey;            Entity collectionContext = Entity.Null;
             Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, collectionKey, out EntityCollectionView commandSourceView)
                 ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
                 : Entity.Null;

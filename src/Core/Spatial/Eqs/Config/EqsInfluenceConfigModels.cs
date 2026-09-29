@@ -121,7 +121,8 @@ namespace Ludots.Core.Spatial.Eqs.Config
             string? fieldKey,
             OverlapShape overlapShape,
             int extentCm,
-            WorldCmInt2? reference)
+            WorldCmInt2? reference,
+            string? agentTypeId)
         {
             Kind = kind ?? throw new ArgumentNullException(nameof(kind));
             PreferNear = preferNear;
@@ -134,6 +135,7 @@ namespace Ludots.Core.Spatial.Eqs.Config
             OverlapShape = overlapShape;
             ExtentCm = extentCm;
             Reference = reference;
+            AgentTypeId = agentTypeId;
         }
 
         public string Kind { get; }
@@ -147,6 +149,7 @@ namespace Ludots.Core.Spatial.Eqs.Config
         public OverlapShape OverlapShape { get; }
         public int ExtentCm { get; }
         public WorldCmInt2? Reference { get; }
+        public string? AgentTypeId { get; }
     }
 
     public sealed class EqsSelectionConfig

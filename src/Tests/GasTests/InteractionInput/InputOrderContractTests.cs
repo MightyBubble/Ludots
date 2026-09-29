@@ -1983,7 +1983,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             world.Add(localPlayer, new InteractionContextInstance
             {
                 ContextEntity = localPlayer,
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
                 CommandIntentProfileId = 0,
             });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
@@ -2125,7 +2124,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.capacity"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(
@@ -2282,7 +2280,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.parallel_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2470,7 +2467,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.mixed_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2613,7 +2609,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.programmatic"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2734,7 +2729,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.none_target"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2907,7 +2901,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_batch"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -3049,7 +3042,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.routed_only"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
@@ -3166,7 +3158,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_authorization"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
@@ -3296,7 +3287,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.test"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -3402,7 +3392,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = actor,
                 CommandIntentProfileId = profileHarness.ProfileId(CommandIntentProfileTests.TestProfileId),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
@@ -3507,7 +3496,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new()
                     {
                         Id = InteractionContextIds.Default,
-                        ActiveCollectionKey = "collection.command.source",
                     },
                 },
             }, collectionKeys,

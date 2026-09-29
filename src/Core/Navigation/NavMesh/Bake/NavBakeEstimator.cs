@@ -168,9 +168,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             // real world extents per target — hex HexWidth/RowSpacing and edge tiles differ
             // from ChunkSizeCells*step, and only the footprint the baker will actually
             // rasterize may drive the budget or the reject thresholds.
+            bool continuousHeight = context.ContinuousHeightmap != null;
             int maxTileSizeXVoxels = 0;
             int maxTileSizeZVoxels = 0;
-            if (context.Algorithm == NavBakeAlgorithmKind.Recast && context.Targets.Count > 0)
+            if (!continuousHeight && context.Algorithm == NavBakeAlgorithmKind.Recast && context.Targets.Count > 0)
             {
                 foreach (NavBakeTileCoord target in context.Targets)
                 {
@@ -188,13 +189,37 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
                 AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
+                int profileTileX = maxTileSizeXVoxels;
+                int profileTileZ = maxTileSizeZVoxels;
+                int profileCellCm = cellCm;
+                if (continuousHeight && context.Algorithm == NavBakeAlgorithmKind.Recast)
+                {
+                    float resolvedMeters = RecastNavTileBaker.ResolveRecastCellSizeMeters(
+                        agentProfile,
+                        navProfile,
+                        SpatialScaleDefaults.CentimetersToMeters(cellCm),
+                        decoupleFromTerrain: true);
+                    profileCellCm = Math.Max(1, (int)MathF.Round(resolvedMeters * SpatialScaleDefaults.CellCm));
+                    profileTileX = 0;
+                    profileTileZ = 0;
+                    foreach (NavBakeTileCoord target in context.Targets)
+                    {
+                        RecastNavTileBaker.ComputeTileFootprintBounds(
+                            context.Terrain, target.ChunkX, target.ChunkY,
+                            out float tminX, out float tminZ, out float tmaxX, out float tmaxZ);
+                        profileTileX = Math.Max(profileTileX, (int)MathF.Ceiling((tmaxX - tminX) / resolvedMeters));
+                        profileTileZ = Math.Max(profileTileZ, (int)MathF.Ceiling((tmaxZ - tminZ) / resolvedMeters));
+                    }
+                }
+
                 NavBakeProfileEstimate profile = EstimateProfile(
                     agentProfile,
                     navProfile,
-                    maxTileSizeXVoxels,
-                    maxTileSizeZVoxels,
+                    profileTileX,
+                    profileTileZ,
                     context.Algorithm,
-                    cellCm);
+                    profileCellCm,
+                    cellSizeAlreadyResolved: continuousHeight);
                 profiles.Add(profile);
                 recastColumnBudgetTotal = checked(recastColumnBudgetTotal + (long)targetTileCount * layerCount * profile.RecastColumnBudgetPerTile);
             }
@@ -295,7 +320,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int tileWidthVoxels,
             int tileHeightVoxels,
             NavBakeAlgorithmKind algorithm,
-            int terrainCellCm)
+            int terrainCellCm,
+            bool cellSizeAlreadyResolved = false)
         {
             if (navProfile.MaxClimbCm < 0)
             {
@@ -318,7 +344,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 // Match RecastNavTileBaker: agent-radius clamp for tactical maps, but never
                 // finer than LogicTerrain cell size (continental / strategy boards).
                 float agentCellSizeCm = MathF.Max(5f, MathF.Min(50f, agentProfile.RadiusCm / 3f));
-                recastCellSizeCm = MathF.Max(agentCellSizeCm, terrainCellCm);
+                recastCellSizeCm = cellSizeAlreadyResolved
+                    ? terrainCellCm
+                    : MathF.Max(agentCellSizeCm, terrainCellCm);
                 recastCellHeightCm = MathF.Max(recastCellSizeCm * 0.5f, MathF.Max(1f, navProfile.MaxClimbCm));
                 // The real baker allocates (tileSizeX + 2*border) x (tileSizeZ + 2*border)
                 // solid columns and throws past MaxRecastVoxelsPerAxis per axis or

@@ -26,6 +26,10 @@
         {
           "To": "ballista_1",
           "Type": "Friendly"
+        },
+        {
+          "To": "ballista-route-hostiles-anchor",
+          "Type": "Hostile"
         }
       ]
     },
@@ -42,26 +46,25 @@
       "PositionYCm": 600
     },
     {
-      "Template": "ballista_crew",
-      "InstanceId": "ballista_2",
-      "PositionXCm": -400,
-      "PositionYCm": 300,
+      "Template": "ballista_team_anchor",
+      "InstanceId": "ballista-route-hostiles-anchor",
+      "PositionXCm": 2000,
+      "PositionYCm": 2000,
       "Overrides": {
-        "Team": {
-          "Id": 1
+        "Name": {
+          "Value": "Hostiles Anchor"
         }
-      }
-    },
-    {
-      "Template": "ballista_crew",
-      "InstanceId": "ballista_3",
-      "PositionXCm": -400,
-      "PositionYCm": -300,
-      "Overrides": {
-        "Team": {
-          "Id": 1
+      },
+      "Relations": [
+        {
+          "To": "ballista-route-hostiles-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ballista_1",
+          "Type": "Hostile"
         }
-      }
+      ]
     }
   ],
   "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
@@ -70,6 +73,10 @@
       "TeamId": 1,
       "Name": "Player",
       "RepresentativeInstanceId": "ballista_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "ballista-route-hostiles-anchor"
     }
   ],
   "Players": [

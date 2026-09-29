@@ -412,7 +412,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     }
 
-                    RequireCollectionKeyWhenAuthored(node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SubmitEngageBatch:
@@ -420,12 +419,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    RequireCollectionKeyWhenAuthored(node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SubmitCast:
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
-                    RequireCollectionKeyWhenAuthored(node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
                     {
@@ -856,49 +853,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             _ = controlEdges;
-        }
-
-        private static void RequireCollectionKeyWhenAuthored(
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (node.CollectionKey != null)
-            {
-                RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
-            }
-        }
-
-        /// <summary>
-        /// Optional routing collection key on a submit op. Command intent stores the symbol
-        /// in Imm; cast and engage already use Imm, so they store it in ImmF. Patch replaces
-        /// the symbol with the collection key id.
-        /// </summary>
-        private static void EncodeAuthoredCollectionKey(
-            ref GraphInstruction instruction,
-            GraphControlFlowNode node,
-            Dictionary<string, int> symbolToIndex,
-            List<string> symbols,
-            string graphId,
-            List<GraphDiagnostic> diagnostics,
-            bool inImmediate)
-        {
-            if (string.IsNullOrWhiteSpace(node.CollectionKey))
-            {
-                return;
-            }
-
-            int symbol = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
-            if (inImmediate)
-            {
-                instruction.Imm = symbol;
-            }
-            else
-            {
-                instruction.ImmF = BitConverter.Int32BitsToSingle(symbol);
-            }
-
-            instruction.Flags = (byte)(instruction.Flags | GraphInstructionFlags.CollectionKeyAuthored);
         }
 
         private static void RequireNonEmpty(
@@ -1546,7 +1500,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
-                    EncodeAuthoredCollectionKey(ref instruction, node, symbolToIndex, symbols, graphId, diagnostics, inImmediate: true);
                     break;
 
                 case GraphNodeOp.SubmitEngageBatch:
@@ -1558,12 +1511,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    EncodeAuthoredCollectionKey(ref instruction, node, symbolToIndex, symbols, graphId, diagnostics, inImmediate: false);
                     break;
 
                 case GraphNodeOp.SubmitCast:
                     instruction.Imm = RequireSymbol(node.OrderTypeKey, "orderTypeKey", node, symbolToIndex, symbols, graphId, diagnostics);
-                    EncodeAuthoredCollectionKey(ref instruction, node, symbolToIndex, symbols, graphId, diagnostics, inImmediate: false);
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
