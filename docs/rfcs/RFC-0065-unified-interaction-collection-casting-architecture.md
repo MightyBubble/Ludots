@@ -39,7 +39,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
                  inputContextId/commandIntentId
 [L4 Cast]        InputCastSpec（box/polygon/ray/lasso × screen/world/minimap）→ raw hits collection
 [L5 Filter]      FilterProfile（graph/condition DSL，association query）→ filtered
-[L6 Collection]  CollectionWrite → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
+[L6 Collection]  CollectionApplier → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
 [L7 View/Panel]  EntityView profile + PanelRouter + AggregationProfile → HUD/面板投影
 [L8 Commit]      施法键：CastCommitProfile（激活 ops：pushFrame/popFrame/submitOrder）+ ClientCastPreference
                  pointer 命令：CommandIntentProfile（actor 谓词 × target 谓词 → route，显式全序，DEC-14）
@@ -135,7 +135,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 （本决策取代早期草案中的 `handbackPolicy` 枚举——那是把「归还」误当成 Core 需要认识的操作。）
 
-- **CollectionWrite 按域路由**：写入永远落在被指挥单位所属控制域的 rep entity 上。我框选 `[m01(自有), m99(代理)]`，物理写入是 `(P1Rep, key)=[m01]` 与 `(P2Rep, key)=[m99]`——我此刻对 P2 域 controls 可达，因此有权维护它的域，队友的化身 entity 照常走它自己的框选基建。
+- **CollectionApplier 按域路由**：写入永远落在被指挥单位所属控制域的 rep entity 上。我框选 `[m01(自有), m99(代理)]`，物理写入是 `(P1Rep, key)=[m01]` 与 `(P2Rep, key)=[m99]`——我此刻对 P2 域 controls 可达，因此有权维护它的域，队友的化身 entity 照常走它自己的框选基建。
 - **「我的当前选中」是 ControlPlaneView**：对 `controls` 可达域集合的**组合只读视图**（EntityView 的 domainScope 扩展），不是物理合并的集合。Order fan-out 与 HUD 消费该视图。
 - **任何原因**导致 controls 边消失（掉线结束、心控解除、演出归还——association 层一概不知道原因），组合视图即时收缩；对方域内 collection 保持其最新状态，client 重新 bind 即所见即所得。「归还」是拓扑变化的涌现行为，零专用代码路径。
 - 「掉线」「心灵控制」「剧本演出接管」都只是 mod 侧打 tag / 增删边的领域 trigger；**association/collection 基建对这些语义零感知**，schema 里不出现任何场景词汇。
@@ -1081,7 +1081,7 @@ CTRL-1..CTRL-10 按原文；修订：
 | CTRL-1b | `controls` 为查询期视图（DEC-1） |
 | CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PresentPhaseResolver / lifecycle snapshot / #499 publisher / `SelectionEligibility.CanAcquire` 的 `Team`+`RelationshipFilter` 直读 / CoreInputMod `LocalOrderSourceHelper` 的 NearestEnemyInRange resolver） |
 | CTRL-4b | AssociationControlProfile = 通用「谓词 → 边增删」规则引擎，复用 condition DSL，schema 零业务词汇（DEC-4；无 handback/policy 字段） |
-| CTRL-4c | CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain（DEC-4） |
+| CTRL-4c | CollectionApplier 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain（DEC-4） |
 | CTRL-4d | ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图（DEC-4，衔接 ORD-4） |
 
 ### Phase 4 — Provenance & Presenter（继承 PROV，修订）
