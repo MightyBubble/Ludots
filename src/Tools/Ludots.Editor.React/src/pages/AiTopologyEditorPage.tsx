@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Background,
   Controls,
@@ -714,15 +714,6 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               </select>
             </label>
           ) : null}
-          <Link to="/gas-graphs" className="rounded border border-studio-blue/40 px-2 py-1 text-xs text-studio-blue hover:bg-studio-blue/10">
-            函数图
-          </Link>
-          <Link
-            to={isBt ? '/fsm-editor' : '/bt-editor'}
-            className="rounded border border-studio-red/40 px-2 py-1 text-xs text-studio-red hover:bg-studio-red/10"
-          >
-            {isBt ? '状态机' : '行为树'}
-          </Link>
           <Button variant="ghost" size="sm" onClick={() => void loadItems(sourceId)}>
             重新加载
           </Button>

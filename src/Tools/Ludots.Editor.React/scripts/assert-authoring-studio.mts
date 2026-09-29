@@ -207,6 +207,21 @@ assert(!gasDialect.includes('Ludots Graph Editor'), 'dialect titles speak facts 
 assert(!gasDialect.includes('double-click to open'), 'dialect subtitles must be concrete Chinese, not English filler');
 const gasPageCopy = readFileSync(join(here, '../src/pages/GasGraphEditorPage.tsx'), 'utf8');
 assert(!gasPageCopy.includes('>Load<') && !gasPageCopy.includes('>Validate</') && !gasPageCopy.includes('>Auto Layout'), 'blueprint buttons use terse Chinese verbs');
+assert(!gasPageCopy.includes('dialectNavClass'), 'room navigation lives in the shell nav only — no duplicate dialect-link clusters');
+for (const banned of ['No runtime node matches.', 'Middle-drag to pan', 'Live Debug · ', 'No trace changes yet.', 'Add Event', '>To node<', '>To port<', '>Inspector<', '>Diagnostics<']) {
+  assert(!gasPageCopy.includes(banned), `blueprint room chrome must be Chinese: banned "${banned}"`);
+}
+const gasComponents = readdirSync(join(here, '../src/pages/gas-graph-editor')).filter((f) => f.endsWith('.tsx'));
+for (const comp of gasComponents) {
+  const text = readFileSync(join(here, '../src/pages/gas-graph-editor', comp), 'utf8');
+  for (const banned of ['Select mounted entry', 'Pick a registered event', 'Not eligible', 'Parity mismatch', '>Variables<', '>Placed instances<', '>Add<', '>Update<', '>Delete<']) {
+    assert(!text.includes(banned), `gas-graph-editor/${comp} chrome must be Chinese: banned "${banned}"`);
+  }
+}
+const topologyCopy = readFileSync(join(here, '../src/pages/AiTopologyEditorPage.tsx'), 'utf8');
+assert(!topologyCopy.includes('to="/gas-graphs"'), 'topology room must not re-link sibling rooms — the shell nav is the only entrance');
+const catalogTree = readFileSync(join(here, '../src/pages/gas-graph-editor/GraphCatalogTree.tsx'), 'utf8');
+assert(catalogTree.includes('graphKindLabel'), 'catalog tree must localize graph-kind chips through graphKindLabel');
 const llmLib = readFileSync(join(here, '../src/components/agent/llm.ts'), 'utf8');
 assert(!llmLib.includes('sk-'), 'llm layer must not ship a default API key');
 assert(llmLib.includes('localStorage'), 'llm config must stay in browser-local storage');
@@ -214,5 +229,6 @@ const runPage = readFileSync(join(here, '../src/pages/run/RunPage.tsx'), 'utf8')
 assert(runPage.includes('/api/launch'), 'run page must launch through the bridge contract (#1699)');
 assert(runPage.includes('/api/launcher/state'), 'run page must read launcher state through the bridge contract');
 assert(runPage.includes('agent-bridge'), 'run page must surface the live-debug agent bridge channel');
+assert(!/\bstatus=\{status\}/.test(runPage), 'run page footer must show a real fact — bare `status={status}` leaks the deprecated window.status global');
 
 console.log('assert-authoring-studio: ok');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -41,6 +41,7 @@ import {
   catalogGraphMatchesDialect,
   dialectPath,
   dialectTitle,
+  graphKindLabel,
   isFunctionGraphPortalOp,
   isOpAllowedInDialect,
   preferredDialectForGraphId,
@@ -845,7 +846,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setDeclaredVariables([]);
       setVariableMapId(null);
       setVariableDraft(emptyVariableDraft());
-      setVariableStatus('This graph is not mounted on a map, so it has no map variables.');
+      setVariableStatus('此图未挂地图，没有地图变量。');
       return;
     }
     const signature = (host: (typeof hosts)[0]) => JSON.stringify(host.variables);
@@ -1104,7 +1105,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedVariable(null);
-      setStatus(`已加载 ${loaded.id}（${loaded.kind}）。`);
+      setStatus(`已加载 ${loaded.id}（${graphKindLabel(loaded.kind)}）。`);
       try {
         await loadMapVariables(loaded.id);
       } catch (mapVarErr) {
@@ -2004,7 +2005,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
   };
 
   const saveMapVariables = async (nextRows: GraphVariableRow[]) => {
-    if (!variableMapId) throw new Error('This graph is not mounted on a map.');
+    if (!variableMapId) throw new Error('此图未挂地图。');
     const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/maps/${encodeURIComponent(variableMapId)}/variables`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2150,11 +2151,6 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
     addAuthoringNode(op, position, { instanceId });
   };
 
-  const dialectNavClass = (target: GraphEditorDialect) =>
-    target === dialect
-      ? 'rounded-md border border-studio-blue bg-studio-blue/15 px-2 py-1 text-xs font-semibold text-studio-blue'
-      : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
-
   return (
     <WorkspaceLayout
       title={titles.title}
@@ -2162,15 +2158,6 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
       status={status}
       actions={
         <>
-          <Link to={dialectPath('func')} className={dialectNavClass('func')}>
-            函数图
-          </Link>
-          <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
-            行为树
-          </Link>
-          <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
-            状态机
-          </Link>
           <label className="flex items-center gap-2 text-xs text-studio-muted">
             mod
             <input
@@ -2242,7 +2229,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
             className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show catalog and variables"
           >
-            <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
+            <span className="[writing-mode:vertical-rl] rotate-180">目录</span>
           </button>
         ) : (
         <div className="flex min-h-0 flex-col border-r border-studio-elevated">
@@ -2351,13 +2338,13 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 />
               </ReactFlow>
               <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
-                Middle-drag to pan · Left-drag to box-select · Right-click to add a node
+                中键拖动平移 · 左键框选 · 右键加节点
               </div>
               {(debugEnabled || rightRailCollapsed) ? (
                 <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-studio-yellow/30 bg-studio-bg/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
                   <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-studio-yellow">
                     <span>
-                      Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+                      实时调试 · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
                         ?? debugMounts[0]?.executionBackend
                         ?? 'Interpret'}
                     </span>
@@ -2373,7 +2360,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
                     />
                     <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
-                      {debugEnabled ? 'Stop' : 'Watch'}
+                      {debugEnabled ? '停止' : '观察'}
                     </button>
                   </div>
                   <div className="mt-1 text-[10px] text-studio-muted">{debugStatus}</div>
@@ -2415,7 +2402,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                     </div>
                   ) : null}
                   <div className="mt-1 max-h-16 overflow-auto rounded border border-studio-elevated bg-studio-bg p-1.5 font-mono text-[10px]">
-                    {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
+                    {debugEvents.length === 0 ? '还没有轨迹变化。' : debugEvents.slice(-16).map((event) => (
                       <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                         #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                         {event.controlPort ? ` →${event.controlPort}` : ''}
@@ -2447,7 +2434,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                         }
                       }}
                       placeholder="找节点…"
-                      aria-label="Find graph node"
+                      aria-label="找节点"
                       className="min-w-0 flex-1 bg-transparent text-xs text-studio-label outline-none placeholder:text-studio-muted"
                     />
                     <span className="text-[10px] text-studio-muted">Enter</span>
@@ -2461,7 +2448,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       >
                         <Plus size={12} className="text-studio-red" aria-hidden="true" />
                         <span className="font-mono">Event</span>
-                        <span className="ml-auto text-[10px] text-studio-red">entry</span>
+                        <span className="ml-auto text-[10px] text-studio-red">入口</span>
                       </button>
                     ) : null}
                     {availableNodes.slice(0, 24).map((entry) => (
@@ -2473,10 +2460,10 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                       >
                         <Plus size={12} className="text-studio-blue" aria-hidden="true" />
                         <span className="font-mono">{entry.op}</span>
-                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">sugar</span> : null}
+                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">语法糖</span> : null}
                       </button>
                     ))}
-                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">No runtime node matches.</div> : null}
+                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">没有匹配的节点。</div> : null}
                   </div>
                 </div>
               ) : null}
@@ -2556,7 +2543,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         ) : (
         <aside className="flex min-h-0 flex-col border-l border-studio-elevated bg-studio-surface/80">
           <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
-            Inspector
+            检查器
           </div>
           <div className="space-y-3 overflow-auto p-3 text-xs">
             {selectedData ? (
@@ -2630,7 +2617,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select payload key</option>
+                              <option value="">选载荷键</option>
                               {options.map((key) => (
                                 <option key={key} value={key}>{key}</option>
                               ))}
@@ -2672,7 +2659,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select text key</option>
+                              <option value="">选文本键</option>
                               {options.map((id) => {
                                 const meta = textKeyCatalog.find((candidate) => candidate.id === id);
                                 const suffix = meta?.preview
@@ -2709,7 +2696,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
                               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
-                              <option value="">Select placed instance</option>
+                              <option value="">选放置实例</option>
                               {options.map((id) => (
                                 <option key={id} value={id}>{id}</option>
                               ))}
@@ -2900,7 +2887,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-studio-muted">To node</div>
+                  <div className="mb-1 text-studio-muted">目标节点</div>
                   <input
                     value={selectedEdge.target}
                     onChange={(e) => updateSelectedEdgeField('target', e.target.value)}
@@ -2909,7 +2896,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 </label>
                 {selectedEdge.data?.kind === 'value' ? (
                   <label className="block">
-                    <div className="mb-1 text-studio-muted">To port</div>
+                    <div className="mb-1 text-studio-muted">目标端口</div>
                     <input
                       value={selectedEdge.targetHandle ?? ''}
                       onChange={(e) => updateSelectedEdgeField('targetHandle', e.target.value)}
@@ -2923,14 +2910,14 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
               </>
             ) : (
               <div className="space-y-2">
-                <div className="text-studio-muted">Select a node or an Event card.</div>
+                <div className="text-studio-muted">选中节点或事件卡后在此显示。</div>
                 {graph?.kind === 'TriggerGraph' ? (
                   <button
                     type="button"
                     onClick={() => addEventEntry()}
                     className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                   >
-                    Add Event
+                    新增事件
                   </button>
                 ) : null}
               </div>
@@ -2938,10 +2925,10 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
           </div>
 
           <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
-            Diagnostics
+            诊断
           </div>
           <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-studio-yellow">
-            {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
+            {diagnosticsText || '点「校验」或「保存」跑 Bridge 编译器。'}
           </pre>
 
           {graph ? (
@@ -2959,12 +2946,12 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
 
           {debugEnabled ? (
             <div className="border-t border-studio-elevated px-3 py-2 text-[10px] leading-4 text-studio-muted">
-              Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
+              观察时实时调试停靠在画布下方——半屏也能读清节点链。
             </div>
           ) : (
             <>
           <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-yellow">
-            Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
+            实时调试 · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
               ?? 'Interpret'}
           </div>
@@ -2977,12 +2964,12 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
               />
               <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
-                {debugEnabled ? 'Stop' : 'Watch'}
+                {debugEnabled ? '停止' : '观察'}
               </button>
             </div>
             <div className="text-[10px] text-studio-muted">{debugStatus}</div>
             <div className="max-h-28 overflow-auto rounded border border-studio-elevated bg-studio-bg p-2 font-mono text-[10px]">
-              {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
+              {debugEvents.length === 0 ? '还没有轨迹变化。' : debugEvents.slice(-24).map((event) => (
                 <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                   #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                   {event.controlPort ? ` →${event.controlPort}` : ''}

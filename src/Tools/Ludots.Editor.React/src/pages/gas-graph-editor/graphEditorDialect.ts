@@ -1,5 +1,17 @@
 export type GraphEditorDialect = 'func' | 'bt' | 'fsm';
 
+export const GRAPH_KIND_LABELS: Record<string, string> = {
+  TriggerGraph: '事件',
+  Effect: '效果',
+  Query: '查询',
+  Score: '评分',
+  Validation: '校验',
+  Derived: '派生',
+  Script: '脚本',
+};
+
+export const graphKindLabel = (kind: string): string => GRAPH_KIND_LABELS[kind] ?? kind;
+
 const BT_SUGARS = new Set([
   'BtSequence',
   'BtSelector',

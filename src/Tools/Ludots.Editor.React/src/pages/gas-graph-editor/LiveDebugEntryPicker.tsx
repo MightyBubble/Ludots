@@ -31,7 +31,7 @@ export function LiveDebugEntryPicker({
       onChange={(event) => onChange(event.target.value)}
       className={className ?? 'min-w-0 flex-1 rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px]'}
     >
-      <option value="">Select mounted entry</option>
+      <option value="">选挂载入口</option>
       {mounts.map((mount) => {
         const story = lookupEntryStory(annotations, mount.entryLabel);
         return (

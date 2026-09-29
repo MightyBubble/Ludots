@@ -175,13 +175,14 @@ export function RunPage() {
 
   const platformId = snapshot?.selectedPlatformId ?? '';
   const presetId = customSelection ? '' : (snapshot?.selectedPresetId ?? '');
+  const statusLine = mods.length > 0 ? `已列 ${mods.length} 个 Mod` : '正在拉取 Mod 清单…';
 
   return (
     <WorkspaceLayout
       title="开局"
       blurb="勾 Mod、选 preset 与平台，一键开局。再开一局会替换上一局；改完内容要重开才生效。"
       railWidthClass="w-80"
-      status={status}
+      status={statusLine}
       error={error}
       rail={
         <div className="space-y-3">

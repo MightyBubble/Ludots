@@ -110,11 +110,11 @@ export function EventEntryInspector({
             onClick={onAdd}
             className="rounded border border-studio-red/50 px-2 py-0.5 text-[10px] text-studio-label hover:bg-studio-red/20"
           >
-            Add Event
+            新增事件
           </button>
         ) : null}
       </div>
-      <Field label="Starts on">
+      <Field label="触发方式">
         <div className="flex gap-1">
           {(['event', 'action'] as const).map((kind) => (
             <button
@@ -125,20 +125,20 @@ export function EventEntryInspector({
                 ? 'flex-1 rounded border border-studio-red bg-studio-red/40 px-2 py-1 font-semibold text-studio-label'
                 : 'flex-1 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-muted hover:bg-studio-surface'}
             >
-              {kind === 'event' ? 'a game event' : 'an input action'}
+              {kind === 'event' ? '游戏事件' : '输入动作'}
             </button>
           ))}
         </div>
       </Field>
       {triggerKind === 'event' ? (
         <>
-          <Field label="Event schema">
+          <Field label="事件 schema">
             <select
               value={catalogValue}
               onChange={(event) => setTrigger('event', event.target.value)}
               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
             >
-              <option value="">{eventSchemas.length === 0 ? 'No schemas loaded' : 'Pick a registered event…'}</option>
+              <option value="">{eventSchemas.length === 0 ? '未装载 schema' : '选择已注册事件…'}</option>
               {eventSchemas.map((schema) => (
                 <option key={schema.name} value={schema.name}>
                   {schema.name} · {schema.scope}
@@ -146,7 +146,7 @@ export function EventEntryInspector({
               ))}
             </select>
           </Field>
-          <Field label="Event name">
+          <Field label="事件名">
             <TextInput
               value={triggerName}
               placeholder="EntityDied"
@@ -155,19 +155,19 @@ export function EventEntryInspector({
           </Field>
           {triggerName && !schemaNames.has(triggerName) ? (
             <p className="rounded border border-studio-yellow/40 bg-studio-yellow/10 p-2 text-[11px] leading-5 text-studio-secondary">
-              This name is not in the schema catalog. Payload pins stay untyped until you pick a registered event.
+              这个名字不在 schema 目录里。选中已注册事件之前，载荷引脚保持无类型。
             </p>
           ) : null}
         </>
       ) : (
         <>
-          <Field label="Input action">
+          <Field label="输入动作">
             <select
               value={actionIds.has(triggerName) ? triggerName : ''}
               onChange={(event) => setTrigger('action', event.target.value)}
               className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
             >
-              <option value="">{inputActions.length === 0 ? 'No input actions loaded' : 'Pick a registered action…'}</option>
+              <option value="">{inputActions.length === 0 ? '未装载输入动作' : '选择已注册动作…'}</option>
               {inputActions.map((action) => (
                 <option key={action.id} value={action.id}>
                   {action.id} · {action.type}
@@ -177,54 +177,54 @@ export function EventEntryInspector({
           </Field>
           {triggerName && !actionIds.has(triggerName) ? (
             <p className="rounded border border-studio-red/50 bg-studio-red/15 p-2 text-[11px] leading-5 text-studio-label">
-              <span className="font-mono">{triggerName}</span> is not a registered input action. Pick one from the list
-              or add it to a mod's <span className="font-mono">Input/default_input.json</span>.
+              <span className="font-mono">{triggerName}</span> 不是已注册的输入动作。从列表选一个，或写进对应 Mod 的
+              <span className="font-mono">Input/default_input.json</span>。
             </p>
           ) : null}
           <p className="rounded border border-studio-red/30 bg-studio-bg/80 p-2 text-[11px] leading-5 text-studio-secondary">
-            This entry listens to the action itself, so it does not join the event bus. Leave the
-            <span className="font-mono"> Action </span> payload filter below empty.
+            此入口直接监听动作本身，不进事件总线。下方
+            <span className="font-mono"> Action </span> 载荷过滤留空即可。
           </p>
         </>
       )}
       {selectedSchema ? (
         <div className="rounded border border-studio-red/30 bg-studio-bg/80 p-2 text-[11px] leading-5 text-studio-secondary">
           <div className="mb-1 font-semibold text-studio-label">
-            Payload pins
+            载荷引脚
             {triggerKind === 'action'
               ? <span className="ml-1 font-mono font-normal text-studio-muted">{INPUT_ACTION_SCHEMA_NAME}</span>
               : null}
           </div>
           {selectedSchema.parameters.length === 0 ? (
-            <div>No parameters.</div>
+            <div>无参数。</div>
           ) : (
             <ul className="space-y-0.5 font-mono text-[10px]">
               {selectedSchema.parameters.map((param) => (
                 <li key={param.key}>
                   {param.name}
                   <span className="text-studio-muted"> : {param.type}</span>
-                  {param.optional ? <span className="text-studio-muted"> (optional)</span> : null}
-                  {param.type === 'String' ? <span className="text-studio-yellow"> — String pin not wired yet</span> : null}
+                  {param.optional ? <span className="text-studio-muted">（可选）</span> : null}
+                  {param.type === 'String' ? <span className="text-studio-yellow">—— String 引脚尚未接线</span> : null}
                 </li>
               ))}
             </ul>
           )}
         </div>
       ) : null}
-      <Field label="Label">
+      <Field label="标签">
         <TextInput
           value={entry.label}
           placeholder="on_raider_died"
           onChange={(label) => onChange({ ...entry, label })}
         />
       </Field>
-      <Field label="Starts at">
+      <Field label="起点节点">
         <select
           value={entry.start}
           onChange={(event) => onChange({ ...entry, start: event.target.value })}
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         >
-          <option value="">Wire Then, or pick a node</option>
+          <option value="">接 Then 端，或选一个节点</option>
           {startChoices.map((id) => (
             <option key={id} value={id}>{id}</option>
           ))}
@@ -236,52 +236,52 @@ export function EventEntryInspector({
           checked={Boolean(entry.once)}
           onChange={(event) => onChange({ ...entry, once: event.target.checked })}
         />
-        <span className="text-studio-muted">Once</span>
+        <span className="text-studio-muted">只触发一次</span>
       </label>
-      <Field label="If already running">
+      <Field label="已在运行时">
         <select
           value={entry.refire === EVENT_REFIRE_RESTART ? EVENT_REFIRE_RESTART : EVENT_REFIRE_IGNORE}
           onChange={(event) => onChange({ ...entry, refire: event.target.value })}
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         >
-          <option value={EVENT_REFIRE_IGNORE}>ignore — keep the current run</option>
-          <option value={EVENT_REFIRE_RESTART}>restart — drop it and start over</option>
+          <option value={EVENT_REFIRE_IGNORE}>忽略——保留当前运行</option>
+          <option value={EVENT_REFIRE_RESTART}>重启——丢弃重来</option>
         </select>
       </Field>
       <div className="border-t border-studio-red/40 pt-2 text-[10px] font-semibold uppercase tracking-wide text-studio-red">
-        Who can fire this
+        谁能触发
       </div>
-      <Field label="Instance (exact placed unit)">
+      <Field label="实例（精确放置单位）">
         <select
           value={filters.instanceId ?? ''}
           onChange={(event) => patchFilters({ instanceId: event.target.value || null })}
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         >
-          <option value="">any source</option>
+          <option value="">任意来源</option>
           {instanceOptions.map((instanceId) => (
             <option key={instanceId} value={instanceId}>{instanceId}</option>
           ))}
         </select>
       </Field>
-      <Field label="Variable (exact map variable)">
+      <Field label="变量（精确地图变量）">
         <select
           value={filters.varName ?? ''}
           onChange={(event) => patchFilters({ varName: event.target.value || null })}
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         >
-          <option value="">any variable</option>
+          <option value="">任意变量</option>
           {variableOptions.map((varName) => (
             <option key={varName} value={varName}>{varName}</option>
           ))}
         </select>
       </Field>
-      <Field label="Region">
+      <Field label="区域">
         <TextInput value={filters.region ?? ''} placeholder="raid_circle" onChange={(region) => patchFilters({ region })} />
       </Field>
-      <Field label="Action carried by the event payload">
+      <Field label="事件载荷携带的 Action">
         {triggerKind === 'action' ? (
           <div className="rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[11px] leading-5 text-studio-muted">
-            Not applicable — this entry already starts on an input action.
+            不适用——此入口已由输入动作触发。
           </div>
         ) : (
           <TextInput
@@ -294,7 +294,7 @@ export function EventEntryInspector({
       <Field label="Tag">
         <TextInput value={filters.tag ?? ''} onChange={(tag) => patchFilters({ tag })} />
       </Field>
-      <Field label="Team">
+      <Field label="队伍">
         <input
           type="number"
           step="1"
@@ -303,19 +303,19 @@ export function EventEntryInspector({
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         />
       </Field>
-      <Field label="Count direction">
+      <Field label="计数方向">
         <select
           value={filters.direction ?? ''}
           onChange={(event) => patchFilters({ direction: event.target.value || null })}
           className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
         >
-          <option value="">none</option>
+          <option value="">不限</option>
           {EVENT_DIRECTIONS.map((direction) => (
             <option key={direction} value={direction}>{direction}</option>
           ))}
         </select>
       </Field>
-      <Field label="Count threshold">
+      <Field label="计数阈值">
         <input
           type="number"
           value={filters.threshold ?? ''}
@@ -324,8 +324,7 @@ export function EventEntryInspector({
         />
       </Field>
       <p className="rounded border border-studio-red/30 bg-studio-bg/80 p-2 text-[11px] leading-5 text-studio-secondary">
-        This card only decides when the chain starts. The named pins above hand over what
-        happened this time; drag one onto a value input to place the read node.
+        这张卡只决定链何时启动。上面的命名引脚交出本次发生的内容；把引脚拖到值输入上即可放置读取节点。
       </p>
     </div>
   );
