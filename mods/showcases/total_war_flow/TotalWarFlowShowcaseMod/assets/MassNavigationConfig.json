@@ -101,12 +101,9 @@
       }
     ]
   },
-  "teamRelationships": {
-    "defaultRelationship": "Hostile",
-    "relationships": []
-  },
+  "teamRelationships": [],
   "relationshipPolicy": {
-    "cooperativeStance": "Friendly"
+    "cooperativeRelation": "Friendly"
   },
   "flow": {
     "enabled": false,

@@ -1,5 +1,8 @@
 {
  "Id": "total_war_flow_field",
+ "Tuning": {
+  "LoadedChunkCapacity": 256
+ },
  "Variables": [
   {
    "name": "tw.phase",
