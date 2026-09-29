@@ -86,6 +86,29 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 来源：`mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod/assets/Presentation/presenters.json:236-303`（lsw.unit_chill_bar，paramDefaults 声明 lsw.chill.visible，Int，默认 0）。
 
+### InteractionContextBinding — 交互上下文绑定
+
+- **是什么**：读 owner 实体挂载的 `InteractionContextInstances`，把指定 context profile 是否激活写成黑板 Int 参数（可 `invertLogic`）。写法与 TagBinding 相同，源是交互上下文实例，不是 GAS tag。一次性瞬态装饰（框选矩形这类帧内出现、停用即毁）由全局规则订阅 `ContextActivated` / `ContextDeactivated` 建销；要随存盘 / 热插拔恢复的持续性装饰才用这条行为。边界见 [交互上下文档案](../mod-editor-prd/reference/input-03-interaction-context.md)。
+- **怎么写**：`kind: "InteractionContextBinding"` + `contextBinding`（`contextProfileId` / `targetParamKey` / `invertLogic`）。
+- **跑/证据**：Core 快照消解 `InteractionContextBinding_SnapshotResolvesFromOwnerMountedInstances_AndTracksPerfMarker`（`src/Tests/PresentationTests/Presenter/PresenterBehaviorKindTests.cs`）。Case E 框选矩形是瞬态装饰，走全局规则建销，不走本行为。
+
+配置形态（schema 三个字段：必填 `contextProfileId` 与 `targetParamKey`，可选 `invertLogic`；**尚无生产 mod 以此 behavior 装载**——装载与每帧快照消解合同由上述测试锁定）：
+
+```jsonc
+{
+  "slot": "contextState",
+  "kind": "InteractionContextBinding",
+  "activeByDefault": true,
+  "contextBinding": {
+    "contextProfileId": "<InteractionContextProfileRegistry 中的档案 id>",
+    "targetParamKey": "<写入黑板的 Int 参数键>",
+    "invertLogic": false
+  }
+}
+```
+
+来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs` 的 `InteractionContextBindingFields`；运行时 `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs` 的 `ApplyOwnerInteractionContextWork`。
+
 ### Animator — 动画状态机
 
 - **是什么**：状态机驱动骨骼动画（控制器/档案/通道注册表），速度与状态参数统一走 presenter 黑板；反馈事件写回黑板供规则消费。
@@ -373,7 +396,7 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 ### Extension — 扩展行为
 
-- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 13 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
+- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 14 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
 - **怎么写**：`kind: "<ModId>.<Key>"` + `execution.lane`（必填，必须与注册 descriptor 的 lane 一致，不一致装载 fail-loud）。放行 lane 只有四条：Bootstrap / ContinuousTick / OwnerAttributeDirty / OwnerTagDirty；后两条还必须带 `execution.trigger`（`attributeId` 或 `tagId`，解析不到正 id 即失败）。挂在 child instance 上的扩展行为只认 Bootstrap / ContinuousTick 两条 lane。槽位白名单是通用字段（slot / kind / activeByDefault / activationCondition / execution / style / motion），没有内建行为那种同名载荷对象；handler 里读写自定义数据走参数黑板（`IPresenterBehaviorOps` 的参数读写）。
 - **跑/证据**：preset `capability_standard_presenter_behavior_extension_showcase_raylib`；headless 验收 `PresenterBehaviorExtension_PlayerSeesCloudDriftTickFromModBehavior`；架构文档 [Presenter Behavior Extension](../../architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md)。
 

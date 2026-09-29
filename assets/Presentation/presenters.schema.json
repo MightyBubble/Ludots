@@ -203,7 +203,7 @@
           "enum": [
             "AssetBinding", "AttributeBinding", "TagBinding", "Animator",
             "Attachment", "Sound", "Material", "Spline",
-            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh", "ScreenRect"
+            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh", "ScreenRect", "InteractionContextBinding"
           ]
         },
         "activeByDefault": { "type": "boolean" },
@@ -309,6 +309,16 @@
           "properties": {
             "tagId": { "type": "string" },
             "tag": { "type": "string" },
+            "targetParamKey": { "type": "string", "minLength": 1 },
+            "invertLogic": { "type": "boolean" }
+          }
+        },
+        "contextBinding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contextProfileId", "targetParamKey"],
+          "properties": {
+            "contextProfileId": { "type": "string", "minLength": 1 },
             "targetParamKey": { "type": "string", "minLength": 1 },
             "invertLogic": { "type": "boolean" }
           }

@@ -69,6 +69,7 @@ namespace Ludots.Tests.Architecture.Governance
                 nameof(BehaviorKind.InstancedBatch),
                 nameof(BehaviorKind.TrailMesh),
                 nameof(BehaviorKind.ScreenRect),
+                nameof(BehaviorKind.InteractionContextBinding),
                 nameof(BehaviorKind.Extension),
             };
 
@@ -91,6 +92,7 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
             Assert.That((byte)BehaviorKind.TrailMesh, Is.EqualTo(14));
             Assert.That((byte)BehaviorKind.ScreenRect, Is.EqualTo(15));
+            Assert.That((byte)BehaviorKind.InteractionContextBinding, Is.EqualTo(16));
             Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 
