@@ -1,0 +1,8 @@
+{
+  "name": "SupplyCircleAcceptanceMod",
+  "version": "1.0.0",
+  "description": "水晶塔补给圈：圈里的人按势力抽签，被俘或逃回都去最近的城。",
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
