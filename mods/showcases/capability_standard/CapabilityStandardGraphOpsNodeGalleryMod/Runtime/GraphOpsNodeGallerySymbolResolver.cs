@@ -113,15 +113,9 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _ = templates.Register(GraphOpsVisualTemplates.Ally);
         _ = templates.Register(GraphOpsVisualTemplates.Target);
         var types = new RelationshipTypeRegistry();
-        types.Register("SocialBond");
-        types.Register("Owns");
-        types.Register("Controls");
-        types.Register("MemberOf");
         var metrics = new RelationshipMetricRegistry();
-        metrics.Register("Loyalty", -100, 100, 0);
         var flags = new RelationshipFlagRegistry();
-        flags.Register("Trusted");
-        flags.Register("Estranged");
+        RegisterStandaloneRelationshipCatalogs(assetsRoot, types, metrics, flags);
         var presets = new TargetDispatchPresetRegistry();
         presets.Register(
             TargetToResolvedPreset,
@@ -143,6 +137,41 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             LoadPresentationTextCatalog(assetsRoot),
             CreateStandaloneOrderTypes(),
             LoadStandaloneEqsQueries(assetsRoot));
+    }
+
+    private static void RegisterStandaloneRelationshipCatalogs(
+        string assetsRoot,
+        RelationshipTypeRegistry types,
+        RelationshipMetricRegistry metrics,
+        RelationshipFlagRegistry flags)
+    {
+        string repoRoot = GraphOpsHeadlessGameEngine.FindRepoRoot(assetsRoot);
+        string[] catalogPaths =
+        {
+            Path.Combine(repoRoot, "assets", "Relationships", "catalog.json"),
+            Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Relationships", "catalog.json"),
+            Path.Combine(assetsRoot, "Relationships", "catalog.json"),
+        };
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+        };
+        var bands = new RelationshipBandRegistry();
+        for (int i = 0; i < catalogPaths.Length; i++)
+        {
+            string path = catalogPaths[i];
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("Gallery standalone compile requires the relationship catalog layer.", path);
+            }
+
+            var catalog = JsonSerializer.Deserialize<Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogConfig>(
+                    File.ReadAllText(path),
+                    options)
+                ?? throw new InvalidOperationException($"Relationship catalog '{path}' is empty.");
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, metrics, flags, bands);
+        }
     }
 
     private static Ludots.Core.Spatial.Eqs.EqsQueryRegistry? LoadStandaloneEqsQueries(string assetsRoot)
