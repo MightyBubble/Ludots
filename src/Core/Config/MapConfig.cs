@@ -76,7 +76,6 @@ namespace Ludots.Core.Config
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
         public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
         public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();
-        public ParticipantRelationshipConfig ParticipantRelationships { get; set; } = new ParticipantRelationshipConfig();
 
         /// <summary>
         /// Board configurations for this map. Each board is a spatial domain.
@@ -247,28 +246,6 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string RepresentativeInstanceId { get; set; }
-    }
-
-    public class ParticipantRelationshipConfig
-    {
-        public List<TeamRelationshipBindingData> Teams { get; set; } = new List<TeamRelationshipBindingData>();
-        public List<PlayerRelationshipBindingData> Players { get; set; } = new List<PlayerRelationshipBindingData>();
-    }
-
-    public class TeamRelationshipBindingData
-    {
-        public int TeamA { get; set; }
-        public int TeamB { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        public bool Symmetric { get; set; } = true;
-    }
-
-    public class PlayerRelationshipBindingData
-    {
-        public int PlayerA { get; set; }
-        public int PlayerB { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        public bool Symmetric { get; set; } = true;
     }
 
     public class ParamOverrideData

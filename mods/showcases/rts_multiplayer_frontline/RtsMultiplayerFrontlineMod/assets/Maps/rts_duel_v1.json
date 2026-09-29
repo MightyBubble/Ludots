@@ -72,7 +72,17 @@
         "Name": {
           "Value": "Northern Team"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "north_team",
+          "Type": "Friendly"
+        },
+        {
+          "To": "south_team",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_frontline_player_representative",
@@ -90,7 +100,17 @@
         "Name": {
           "Value": "Southern Team"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "south_team",
+          "Type": "Friendly"
+        },
+        {
+          "To": "north_team",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_frontline_player_representative",
@@ -387,27 +407,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "south_player"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

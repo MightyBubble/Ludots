@@ -51,7 +51,17 @@
             "Y": 600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera_team_1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera_team_2",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "camera_team_2",
@@ -66,7 +76,17 @@
             "Y": 4600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera_team_2",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera_team_1",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -79,28 +99,6 @@
       "RepresentativeInstanceId": "camera_team_2"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

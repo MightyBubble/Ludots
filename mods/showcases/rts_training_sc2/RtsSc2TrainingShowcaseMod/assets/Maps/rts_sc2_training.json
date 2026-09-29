@@ -49,7 +49,13 @@
         "Name": {
           "Value": "Gateway"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "sc2_training_gateway",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_zealot",
@@ -78,15 +84,5 @@
       "TeamId": 3,
       "RepresentativeInstanceId": "sc2_training_gateway"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

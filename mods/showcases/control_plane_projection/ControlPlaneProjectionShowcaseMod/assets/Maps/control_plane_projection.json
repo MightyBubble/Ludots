@@ -25,7 +25,13 @@
         "Name": {
           "Value": "Emerald Compact"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-rep",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "p1-rep",
@@ -172,16 +178,6 @@
       "RepresentativeInstanceId": "team-rep"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

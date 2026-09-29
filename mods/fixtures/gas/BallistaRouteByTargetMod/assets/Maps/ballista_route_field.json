@@ -21,7 +21,13 @@
         "PlayerIdentity": {
           "PlayerId": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ballista_1",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "template": "ballista_wolf",
@@ -66,16 +72,6 @@
       "RepresentativeInstanceId": "ballista_1"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

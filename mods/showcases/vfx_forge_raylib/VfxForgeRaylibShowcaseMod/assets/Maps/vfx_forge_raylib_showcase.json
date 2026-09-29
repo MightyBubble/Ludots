@@ -48,16 +48,6 @@
       "RepresentativeInstanceId": "vfx_forge_anchor_01"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,
@@ -79,7 +69,13 @@
         "FacingDirection": {
           "AngleRad": 0.0
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "vfx_forge_anchor_01",
+          "Type": "Friendly"
+        }
+      ]
     }
   ]
 }

@@ -39,11 +39,31 @@
   "Entities": [
     {
       "InstanceId": "graph-score-caster",
-      "Template": "graph_score_caster"
+      "Template": "graph_score_caster",
+      "Relations": [
+        {
+          "To": "graph-score-caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "graph-score-full-dummy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "graph-score-full-dummy",
-      "Template": "graph_score_full_dummy"
+      "Template": "graph_score_full_dummy",
+      "Relations": [
+        {
+          "To": "graph-score-full-dummy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "graph-score-caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "graph-score-wounded-dummy",
@@ -71,27 +91,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "graph-score-full-dummy"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

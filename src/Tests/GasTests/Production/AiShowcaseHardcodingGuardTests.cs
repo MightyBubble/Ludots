@@ -109,10 +109,10 @@ public sealed class AiShowcaseHardcodingGuardTests
             Assert.That(new FileInfo(file).Length, Is.GreaterThan(2), $"{guardCase.Name} behavior data file '{guardCase.RequiredDataFiles[i]}' must not be empty.");
         }
 
-        AssertMapUsesParticipantRelationships(repoRoot, guardCase);
+        AssertMapAuthorsHostileTeamEdge(repoRoot, guardCase);
     }
 
-    private static void AssertMapUsesParticipantRelationships(string repoRoot, ShowcaseGuardCase guardCase)
+    private static void AssertMapAuthorsHostileTeamEdge(string repoRoot, ShowcaseGuardCase guardCase)
     {
         string mapPath = Path.Combine(repoRoot, guardCase.MapFile.Replace('/', Path.DirectorySeparatorChar));
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(mapPath));
@@ -120,8 +120,32 @@ public sealed class AiShowcaseHardcodingGuardTests
 
         AssertNonEmptyArray(root, "Teams", guardCase.Name);
         AssertNonEmptyArray(root, "Players", guardCase.Name);
-        Assert.That(root.TryGetProperty("ParticipantRelationships", out JsonElement relationships), Is.True, $"{guardCase.Name} map must use map-owned participant relationships.");
-        AssertSemanticTeamRelationships(relationships, guardCase);
+        var teamRepresentatives = new HashSet<string>(StringComparer.Ordinal);
+        foreach (JsonElement team in root.GetProperty("Teams").EnumerateArray())
+        {
+            teamRepresentatives.Add(team.GetProperty("RepresentativeInstanceId").GetString()!);
+        }
+
+        foreach (JsonElement entity in root.GetProperty("Entities").EnumerateArray())
+        {
+            if (!entity.TryGetProperty("InstanceId", out JsonElement owner) ||
+                !teamRepresentatives.Contains(owner.GetString()!) ||
+                !entity.TryGetProperty("Relations", out JsonElement relations))
+            {
+                continue;
+            }
+
+            foreach (JsonElement relation in relations.EnumerateArray())
+            {
+                if (string.Equals(relation.GetProperty("Type").GetString(), guardCase.HostileRelationshipTypeId, StringComparison.Ordinal) &&
+                    teamRepresentatives.Contains(relation.GetProperty("To").GetString()!))
+                {
+                    return;
+                }
+            }
+        }
+
+        Assert.Fail($"{guardCase.Name} map must author a '{guardCase.HostileRelationshipTypeId}' relation between team representatives.");
     }
 
     private static void AssertNonEmptyArray(JsonElement root, string propertyName, string showcaseName)
@@ -129,25 +153,6 @@ public sealed class AiShowcaseHardcodingGuardTests
         Assert.That(root.TryGetProperty(propertyName, out JsonElement value), Is.True, $"{showcaseName} map requires '{propertyName}'.");
         Assert.That(value.ValueKind, Is.EqualTo(JsonValueKind.Array), $"{showcaseName} map '{propertyName}' must be an array.");
         Assert.That(value.GetArrayLength(), Is.GreaterThan(0), $"{showcaseName} map '{propertyName}' must not be empty.");
-    }
-
-    private static void AssertSemanticTeamRelationships(JsonElement relationships, ShowcaseGuardCase guardCase)
-    {
-        JsonElement teams = relationships.GetProperty("Teams");
-        int index = 0;
-        foreach (JsonElement entry in teams.EnumerateArray())
-        {
-            Assert.That(entry.TryGetProperty("TypeId", out JsonElement typeId), Is.True, $"{guardCase.Name} ParticipantRelationships.Teams[{index}] requires TypeId.");
-            if (!string.Equals(typeId.GetString(), guardCase.HostileRelationshipTypeId, StringComparison.Ordinal))
-            {
-                index++;
-                continue;
-            }
-
-            return;
-        }
-
-        Assert.Fail($"{guardCase.Name} ParticipantRelationships.Teams must include semantic hostile relationship '{guardCase.HostileRelationshipTypeId}'.");
     }
 
     private static bool IsBuildOutput(string relativePath)

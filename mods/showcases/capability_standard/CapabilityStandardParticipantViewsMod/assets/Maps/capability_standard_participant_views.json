@@ -240,7 +240,21 @@
             "Morale": 72
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-azure",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-crimson",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-emerald",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "team-crimson",
@@ -255,7 +269,21 @@
             "Morale": 61
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-crimson",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-azure",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-amber",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "team-amber",
@@ -270,7 +298,21 @@
             "Morale": 88
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-amber",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-crimson",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-emerald",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "team-emerald",
@@ -285,7 +327,21 @@
             "Morale": 80
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-emerald",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-azure",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-amber",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "player-azure-alpha",
@@ -299,7 +355,13 @@
             "Focus": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-azure-beta",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-azure-beta",
@@ -313,7 +375,13 @@
             "Focus": 68
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-azure-alpha",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-crimson-alpha",
@@ -327,7 +395,13 @@
             "Focus": 91
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-crimson-beta",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-crimson-beta",
@@ -341,7 +415,13 @@
             "Focus": 63
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-crimson-alpha",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-amber-alpha",
@@ -712,71 +792,5 @@
       "TeamId": 4,
       "RepresentativeInstanceId": "player-emerald-alpha"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 4,
-        "TeamB": 4,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 4,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "ParticipantViews.KnowledgeShare",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 3,
-        "PlayerB": 4,
-        "TypeId": "ParticipantViews.KnowledgeShare",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

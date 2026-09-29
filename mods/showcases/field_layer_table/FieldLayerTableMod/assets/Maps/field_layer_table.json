@@ -47,7 +47,13 @@
   "Entities": [
     {
       "InstanceId": "table_hero",
-      "Template": "field_table_hero"
+      "Template": "field_table_hero",
+      "Relations": [
+        {
+          "To": "table_hero",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "marker_r1",
@@ -75,16 +81,6 @@
       "RepresentativeInstanceId": "table_hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 400,
     "TargetYCm": 50,

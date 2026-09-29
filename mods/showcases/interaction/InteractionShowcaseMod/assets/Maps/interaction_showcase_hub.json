@@ -62,7 +62,17 @@
             "Y": 1260
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "interaction-commander",
+          "Type": "Friendly"
+        },
+        {
+          "To": "interaction-enemy-skirmisher-a",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "interaction_arcweaver_forms_demo",
@@ -95,7 +105,17 @@
             "Y": 900
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "interaction-enemy-skirmisher-a",
+          "Type": "Friendly"
+        },
+        {
+          "To": "interaction-commander",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "interaction_enemy_raider",
@@ -164,27 +184,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "interaction-enemy-skirmisher-a"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

@@ -39,11 +39,31 @@
   "Entities": [
     {
       "InstanceId": "combat-stance-team-one",
-      "Template": "combat_stance_team_one"
+      "Template": "combat_stance_team_one",
+      "Relations": [
+        {
+          "To": "combat-stance-team-one",
+          "Type": "Friendly"
+        },
+        {
+          "To": "combat-stance-team-two",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "combat-stance-team-two",
-      "Template": "combat_stance_team_two"
+      "Template": "combat_stance_team_two",
+      "Relations": [
+        {
+          "To": "combat-stance-team-two",
+          "Type": "Friendly"
+        },
+        {
+          "To": "combat-stance-team-one",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "combat-stance-player-one",
@@ -115,27 +135,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "combat-stance-player-two"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

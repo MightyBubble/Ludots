@@ -43,7 +43,7 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Entity brute = FindEntity(world, "Utility Autocast Enemy Brute");
         Entity scout = FindEntity(world, "Utility Autocast Enemy Scout");
 
-        AssertParticipantRelationships(engine);
+        AssertTeamRelationEdges(engine);
 
         float injuredBefore = ReadHealth(world, injuredAlly);
         float healthyBefore = ReadHealth(world, healthyAlly);
@@ -98,7 +98,7 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         return engine;
     }
 
-    private static void AssertParticipantRelationships(GameEngine engine)
+    private static void AssertTeamRelationEdges(GameEngine engine)
     {
         TeamEntityLookup teams = engine.GetService(CoreServiceKeys.TeamEntityLookup)
             ?? throw new InvalidOperationException("TeamEntityLookup missing.");

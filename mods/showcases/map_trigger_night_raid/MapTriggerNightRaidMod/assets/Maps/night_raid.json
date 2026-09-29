@@ -57,7 +57,25 @@
   "Entities": [
     {
       "InstanceId": "night_raid_hero",
-      "Template": "night_raid_hero"
+      "Template": "night_raid_hero",
+      "Relations": [
+        {
+          "To": "night_raid_hero",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_wave1_anchor",
+          "Type": "Hostile"
+        },
+        {
+          "To": "night_raid_wave2_anchor",
+          "Type": "Hostile"
+        },
+        {
+          "To": "boss_camp",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "night_raid_raid_circle",
@@ -69,15 +87,69 @@
     },
     {
       "InstanceId": "night_raid_wave1_anchor",
-      "Template": "night_raid_wave1_anchor"
+      "Template": "night_raid_wave1_anchor",
+      "Relations": [
+        {
+          "To": "night_raid_wave1_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_wave2_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_hero",
+          "Type": "Hostile"
+        },
+        {
+          "To": "boss_camp",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "night_raid_wave2_anchor",
-      "Template": "night_raid_wave2_anchor"
+      "Template": "night_raid_wave2_anchor",
+      "Relations": [
+        {
+          "To": "night_raid_wave2_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_wave1_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_hero",
+          "Type": "Hostile"
+        },
+        {
+          "To": "boss_camp",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "boss_camp",
-      "Template": "night_raid_boss_camp"
+      "Template": "night_raid_boss_camp",
+      "Relations": [
+        {
+          "To": "night_raid_wave1_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_wave2_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "night_raid_hero",
+          "Type": "Hostile"
+        },
+        {
+          "To": "boss_camp",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -105,70 +177,6 @@
       "RepresentativeInstanceId": "night_raid_hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 4,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 4,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 4,
-        "TeamB": 4,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 150,
     "TargetYCm": 0,

@@ -55,7 +55,13 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "target",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -63,15 +69,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "target"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

@@ -41,8 +41,9 @@ namespace Ludots.Core.Gameplay.Teams
     public static class ParticipantBindingResolver
     {
         /// <summary>
-        /// Binds map participants and materializes the control-plane topology. Team, player and
-        /// player-team relationships are relationship edges of the authored type between representatives.
+        /// Binds map participants and materializes the control-plane topology (MemberOf, Owns).
+        /// Relationships between teams or players are authored as instance relations on their
+        /// representative entities, not here.
         /// </summary>
         public static ParticipantBindingResult Resolve(
             MapSession session,
@@ -143,7 +144,6 @@ namespace Ludots.Core.Gameplay.Teams
                 session.LaunchContext,
                 playerLookup);
 
-            ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes);
             BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
 
             return new ParticipantBindingResult(
@@ -468,45 +468,6 @@ namespace Ludots.Core.Gameplay.Teams
             globals[CoreServiceKeys.PlayerEntityLookup.Name] = source;
         }
 
-        private static void ResolveRelationships(
-            string mapId,
-            MapConfig mapConfig,
-            TeamEntityLookup teams,
-            PlayerEntityLookup players,
-            RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes)
-        {
-            ParticipantRelationshipConfig config = mapConfig.ParticipantRelationships ?? new ParticipantRelationshipConfig();
-            ValidateCollection(config.Teams, $"Map '{mapId}' ParticipantRelationships.Teams");
-            ValidateCollection(config.Players, $"Map '{mapId}' ParticipantRelationships.Players");
-
-            bool hasEntityRelationships =
-                config.Teams.Count > 0 ||
-                config.Players.Count > 0;
-            if (hasEntityRelationships && (relationships == null || relationshipTypes == null))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' declares participant relationships but RelationshipRuntime is unavailable.");
-            }
-
-            for (int i = 0; i < config.Teams.Count; i++)
-            {
-                TeamRelationshipBindingData binding = config.Teams[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.Teams[{i}] requires an object payload.");
-                Entity teamA = RequireTeam(teams, binding.TeamA, mapId, $"ParticipantRelationships.Teams[{i}].TeamA");
-                Entity teamB = RequireTeam(teams, binding.TeamB, mapId, $"ParticipantRelationships.Teams[{i}].TeamB");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.Teams[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, teamA, teamB, typeId, symmetric: binding.Symmetric);
-            }
-
-            for (int i = 0; i < config.Players.Count; i++)
-            {
-                PlayerRelationshipBindingData binding = config.Players[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.Players[{i}] requires an object payload.");
-                Entity playerA = RequirePlayer(players, binding.PlayerA, mapId, $"ParticipantRelationships.Players[{i}].PlayerA");
-                Entity playerB = RequirePlayer(players, binding.PlayerB, mapId, $"ParticipantRelationships.Players[{i}].PlayerB");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.Players[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, playerA, playerB, typeId, symmetric: binding.Symmetric);
-            }
-        }
-
         /// <summary>
         /// RFC-0065 CTRL-2: materializes the control-plane topology at participant binding time —
         /// <c>MemberOf(playerRep → teamRep)</c> for every bound player and <c>Owns(playerRep → unit)</c>
@@ -576,55 +537,6 @@ namespace Ludots.Core.Gameplay.Teams
             }
 
             OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
-        }
-
-        private static void EnsureRelationship(RelationshipRuntime relationships, Entity source, Entity target, int typeId, bool symmetric)
-        {
-            relationships.EnsureLink(source, target, typeId);
-            if (symmetric)
-            {
-                relationships.EnsureLink(target, source, typeId);
-            }
-        }
-
-        private static Entity RequireTeam(TeamEntityLookup lookup, int teamId, string mapId, string context)
-        {
-            if (teamId <= 0)
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} must be positive.");
-            }
-
-            if (!lookup.TryGet(teamId, out Entity entity))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} references unbound TeamId {teamId}.");
-            }
-
-            return entity;
-        }
-
-        private static Entity RequirePlayer(PlayerEntityLookup lookup, int playerId, string mapId, string context)
-        {
-            if (playerId <= 0)
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} must be positive.");
-            }
-
-            if (!lookup.TryGet(playerId, out Entity entity))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} references unbound PlayerId {playerId}.");
-            }
-
-            return entity;
-        }
-
-        private static int ResolveRelationshipType(RelationshipTypeRegistry registry, string mapId, string context, string typeId)
-        {
-            if (string.IsNullOrWhiteSpace(typeId))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context}.TypeId requires a non-empty relationship type id.");
-            }
-
-            return registry.GetId(typeId);
         }
 
         private static string RequireRepresentativeInstanceId(string mapId, string context, string instanceId)

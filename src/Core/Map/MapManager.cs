@@ -127,6 +127,7 @@ namespace Ludots.Core.Map
                         var jsonStr = fragments[fi].Node.ToJsonString();
                         RejectLegacyWorldExtentKeys(fragments[fi].Node, jsonPath);
                         RejectLegacyTriggerGraphMountKey(fragments[fi].Node, jsonPath);
+                        RejectParticipantRelationshipsKey(fragments[fi].Node, jsonPath);
                         ValidateHeartbeatIntervalTicks(fragments[fi].Node, jsonPath);
                         _ = MapVariableDeclarations.Parse(
                             fragments[fi].Node is JsonObject fragmentRoot &&
@@ -276,23 +277,6 @@ namespace Ludots.Core.Map
             }
             if (source.Teams != null) target.Teams.AddRange(source.Teams);
             if (source.Players != null) target.Players.AddRange(source.Players);
-            if (source.ParticipantRelationships != null)
-            {
-                if (target.ParticipantRelationships == null)
-                {
-                    target.ParticipantRelationships = new ParticipantRelationshipConfig();
-                }
-
-                if (source.ParticipantRelationships.Teams != null)
-                {
-                    target.ParticipantRelationships.Teams.AddRange(source.ParticipantRelationships.Teams);
-                }
-
-                if (source.ParticipantRelationships.Players != null)
-                {
-                    target.ParticipantRelationships.Players.AddRange(source.ParticipantRelationships.Players);
-                }
-            }
 
             if (source.Metadata != null)
             {
@@ -672,6 +656,23 @@ namespace Ludots.Core.Map
                     {
                         target.Relations.Add(relation);
                     }
+                }
+            }
+        }
+
+        private static void RejectParticipantRelationshipsKey(JsonNode fragment, string jsonPath)
+        {
+            if (fragment is not JsonObject root)
+            {
+                return;
+            }
+
+            foreach (var kvp in root)
+            {
+                if (string.Equals(kvp.Key, "ParticipantRelationships", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map config '{jsonPath}' declares '{kvp.Key}'. Relationships between teams or players are instance relations on their representative entities: write Entities[].Relations on the representative, e.g. {{ \"To\": \"<other representative InstanceId>\", \"Type\": \"Hostile\" }}.");
                 }
             }
         }

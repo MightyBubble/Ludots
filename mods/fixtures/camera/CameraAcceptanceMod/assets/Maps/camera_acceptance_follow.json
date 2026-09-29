@@ -41,7 +41,13 @@
           }
         }
       },
-      "InstanceId": "camera-acceptance-local-player"
+      "InstanceId": "camera-acceptance-local-player",
+      "Relations": [
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",
@@ -90,16 +96,6 @@
       "RepresentativeInstanceId": "camera-acceptance-local-player"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

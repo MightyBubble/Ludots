@@ -41,7 +41,17 @@
           }
         }
       },
-      "InstanceId": "camera-acceptance-local-player"
+      "InstanceId": "camera-acceptance-local-player",
+      "Relations": [
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera-acceptance-dummy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",
@@ -56,7 +66,17 @@
             "Y": 2600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera-acceptance-dummy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",
@@ -83,28 +103,6 @@
       "RepresentativeInstanceId": "camera-acceptance-dummy"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

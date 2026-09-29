@@ -2,33 +2,11 @@
   "Id": "tcg_hook",
   "Tags": ["tcg_hook"],
   "Entities": [
-    { "Template": "tcg_hero", "InstanceId": "tcg-hook-hero" },
-    { "Template": "tcg_enemy", "InstanceId": "tcg-hook-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+    { "Template": "tcg_hero", "InstanceId": "tcg-hook-hero", "Relations": [ { "To": "tcg-hook-hero", "Type": "Friendly" }, { "To": "tcg-hook-enemy", "Type": "Hostile" } ] },
+    { "Template": "tcg_enemy", "InstanceId": "tcg-hook-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } }, "Relations": [ { "To": "tcg-hook-enemy", "Type": "Friendly" }, { "To": "tcg-hook-hero", "Type": "Hostile" } ] }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "tcg-hook-hero" },
     { "TeamId": 2, "RepresentativeInstanceId": "tcg-hook-enemy" }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

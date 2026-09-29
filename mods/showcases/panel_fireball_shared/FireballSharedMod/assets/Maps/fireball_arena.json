@@ -18,11 +18,31 @@
   "Entities": [
     {
       "InstanceId": "fireball-hero",
-      "Template": "fireball_hero"
+      "Template": "fireball_hero",
+      "Relations": [
+        {
+          "To": "fireball-hero",
+          "Type": "Friendly"
+        },
+        {
+          "To": "fireball-target",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "fireball-target",
-      "Template": "fireball_target"
+      "Template": "fireball_target",
+      "Relations": [
+        {
+          "To": "fireball-target",
+          "Type": "Friendly"
+        },
+        {
+          "To": "fireball-hero",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -42,28 +62,6 @@
       "RepresentativeInstanceId": "fireball-hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 100,
     "TargetYCm": 0,

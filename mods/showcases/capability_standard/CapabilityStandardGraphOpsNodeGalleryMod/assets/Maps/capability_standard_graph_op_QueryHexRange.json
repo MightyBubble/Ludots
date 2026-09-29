@@ -38,7 +38,17 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ring1a",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "ring1a",
@@ -61,7 +71,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ring1a",
+          "Type": "Friendly"
+        },
+        {
+          "To": "caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "ring1b",
@@ -188,27 +208,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "ring1a"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

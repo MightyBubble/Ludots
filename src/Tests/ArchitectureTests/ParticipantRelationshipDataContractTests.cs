@@ -94,7 +94,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void ParticipantRelationshipTypeIds_AreDeclaredInRelationshipCatalogData()
+        public void MapRelations_AreEntityInstanceRelationsWithDeclaredTypes()
         {
             string repoRoot = FindRepoRoot();
             HashSet<string> declaredTypeIds = LoadDeclaredRelationshipTypeIds(repoRoot);
@@ -104,20 +104,41 @@ namespace Ludots.Tests.Architecture
             {
                 using JsonDocument mapDocument = JsonDocument.Parse(File.ReadAllText(mapPath));
                 JsonElement mapRoot = mapDocument.RootElement;
-                if (!mapRoot.TryGetProperty("ParticipantRelationships", out JsonElement relationships) ||
-                    relationships.ValueKind != JsonValueKind.Object)
+                string relativeMapPath = ToRepoRelativePath(repoRoot, mapPath);
+                if (TryGetPropertyIgnoreCase(mapRoot, "ParticipantRelationships", out _))
+                {
+                    failures.Add($"{relativeMapPath}: ParticipantRelationships is not a map section; write the edge as Entities[].Relations on the representative entity.");
+                }
+
+                if (!TryGetArray(mapRoot, "Entities", out JsonElement entities))
                 {
                     continue;
                 }
 
-                string relativeMapPath = ToRepoRelativePath(repoRoot, mapPath);
-                ValidateRelationshipTypeIds(relativeMapPath, relationships, "Teams", declaredTypeIds, failures);
-                ValidateRelationshipTypeIds(relativeMapPath, relationships, "Players", declaredTypeIds, failures);
-                foreach (JsonProperty section in relationships.EnumerateObject())
+                foreach (JsonElement entity in entities.EnumerateArray())
                 {
-                    if (section.Name != "Teams" && section.Name != "Players")
+                    if (!TryGetPropertyIgnoreCase(entity, "Relations", out JsonElement relations) ||
+                        relations.ValueKind != JsonValueKind.Array)
                     {
-                        failures.Add($"{relativeMapPath}: ParticipantRelationships.{section.Name} is not a participant relationship section.");
+                        continue;
+                    }
+
+                    TryGetString(entity, "InstanceId", out string owner);
+                    int index = 0;
+                    foreach (JsonElement relation in relations.EnumerateArray())
+                    {
+                        if (!TryGetPropertyIgnoreCase(relation, "Type", out JsonElement type) ||
+                            type.ValueKind != JsonValueKind.String ||
+                            string.IsNullOrWhiteSpace(type.GetString()))
+                        {
+                            failures.Add($"{relativeMapPath}: entity '{owner}' Relations[{index}].Type must be non-empty.");
+                        }
+                        else if (!declaredTypeIds.Contains(type.GetString()!))
+                        {
+                            failures.Add($"{relativeMapPath}: entity '{owner}' Relations[{index}].Type '{type.GetString()}' is not declared in relationship catalog data.");
+                        }
+
+                        index++;
                     }
                 }
             }
@@ -125,7 +146,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 failures,
                 Is.Empty,
-                "Participant relationship TypeId values must be declared by relationship catalog data before map load resolves them:" +
+                "Map relationships are instance relations on entities, and their types must be declared by relationship catalog data before map load resolves them:" +
                 Environment.NewLine +
                 string.Join(Environment.NewLine, failures));
         }
@@ -187,10 +208,12 @@ namespace Ludots.Tests.Architecture
         private static HashSet<string> LoadDeclaredRelationshipTypeIds(string repoRoot)
         {
             var declaredTypeIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (string catalogPath in Directory.EnumerateFiles(Path.Combine(repoRoot, "mods"), "catalog.json", SearchOption.AllDirectories)
-                         .Where(static path => path.Contains($"{Path.DirectorySeparatorChar}assets{Path.DirectorySeparatorChar}Relationships{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                         .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                         .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+            IEnumerable<string> catalogPaths = Directory.EnumerateFiles(Path.Combine(repoRoot, "mods"), "catalog.json", SearchOption.AllDirectories)
+                .Where(static path => path.Contains($"{Path.DirectorySeparatorChar}assets{Path.DirectorySeparatorChar}Relationships{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Append(Path.Combine(repoRoot, "assets", "Relationships", "catalog.json"));
+            foreach (string catalogPath in catalogPaths)
             {
                 using JsonDocument catalogDocument = JsonDocument.Parse(File.ReadAllText(catalogPath));
                 if (!TryGetArray(catalogDocument.RootElement, "types", out JsonElement types))
@@ -208,34 +231,6 @@ namespace Ludots.Tests.Architecture
             }
 
             return declaredTypeIds;
-        }
-
-        private static void ValidateRelationshipTypeIds(
-            string relativeMapPath,
-            JsonElement relationships,
-            string collectionName,
-            HashSet<string> declaredTypeIds,
-            List<string> failures)
-        {
-            if (!TryGetArray(relationships, collectionName, out JsonElement collection))
-            {
-                return;
-            }
-
-            int index = 0;
-            foreach (JsonElement binding in collection.EnumerateArray())
-            {
-                if (!TryGetString(binding, "TypeId", out string typeId) || string.IsNullOrWhiteSpace(typeId))
-                {
-                    failures.Add($"{relativeMapPath}: ParticipantRelationships.{collectionName}[{index}].TypeId must be non-empty.");
-                }
-                else if (!declaredTypeIds.Contains(typeId))
-                {
-                    failures.Add($"{relativeMapPath}: ParticipantRelationships.{collectionName}[{index}].TypeId '{typeId}' is not declared in relationship catalog data.");
-                }
-
-                index++;
-            }
         }
 
         private static bool TryGetEntityTeamId(JsonElement entity, Dictionary<string, int> templateTeams, out int teamId)
@@ -274,6 +269,24 @@ namespace Ludots.Tests.Architecture
             }
 
             array = default;
+            return false;
+        }
+
+        private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement value)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = property.Value;
+                        return true;
+                    }
+                }
+            }
+
+            value = default;
             return false;
         }
 

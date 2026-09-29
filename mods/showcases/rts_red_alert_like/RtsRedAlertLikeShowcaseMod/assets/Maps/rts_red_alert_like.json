@@ -62,7 +62,17 @@
             "Ore": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "allied_team_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "soviet_team_anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra_team_anchor",
@@ -89,7 +99,17 @@
             "Ore": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "soviet_team_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "allied_team_anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra_player_anchor",
@@ -475,27 +495,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "soviet_player_anchor"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

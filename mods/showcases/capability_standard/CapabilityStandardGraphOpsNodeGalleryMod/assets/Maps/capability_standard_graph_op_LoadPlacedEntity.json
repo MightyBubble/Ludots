@@ -55,7 +55,13 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "boss_camp",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Variables": [
@@ -70,15 +76,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "boss_camp"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

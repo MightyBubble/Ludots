@@ -45,7 +45,13 @@
   "Entities": [
     {
       "InstanceId": "graph-formal-text-guard",
-      "Template": "graph_formal_text_guard"
+      "Template": "graph_formal_text_guard",
+      "Relations": [
+        {
+          "To": "graph-formal-text-guard",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -60,15 +66,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "graph-formal-text-guard"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

@@ -28,7 +28,17 @@
             "Y": 920
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "relationship-liu-bei",
+          "Type": "Friendly"
+        },
+        {
+          "To": "relationship-rebel-captain",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "relationship_guan_yu",
@@ -62,7 +72,17 @@
             "Y": 860
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "relationship-rebel-captain",
+          "Type": "Friendly"
+        },
+        {
+          "To": "relationship-liu-bei",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "relationship_rebel_spearman",
@@ -85,27 +105,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "relationship-rebel-captain"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

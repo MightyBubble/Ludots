@@ -31,11 +31,31 @@
   "Entities": [
     {
       "Template": "animation_acceptance_tank",
-      "InstanceId": "animation-acceptance-tank"
+      "InstanceId": "animation-acceptance-tank",
+      "Relations": [
+        {
+          "To": "animation-acceptance-tank",
+          "Type": "Friendly"
+        },
+        {
+          "To": "animation-acceptance-humanoid",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "animation_acceptance_humanoid",
-      "InstanceId": "animation-acceptance-humanoid"
+      "InstanceId": "animation-acceptance-humanoid",
+      "Relations": [
+        {
+          "To": "animation-acceptance-humanoid",
+          "Type": "Friendly"
+        },
+        {
+          "To": "animation-acceptance-tank",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",
@@ -62,28 +82,6 @@
       "RepresentativeInstanceId": "animation-acceptance-humanoid"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

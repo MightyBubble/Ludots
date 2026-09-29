@@ -48,7 +48,17 @@
         "Name": {
           "Value": "Human Peasant"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "human_peasant",
+          "Type": "Friendly"
+        },
+        {
+          "To": "orc_barracks",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_barracks",
@@ -136,7 +146,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "orc_barracks",
+          "Type": "Friendly"
+        },
+        {
+          "To": "human_peasant",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_footman",
@@ -177,27 +197,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "orc_barracks"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

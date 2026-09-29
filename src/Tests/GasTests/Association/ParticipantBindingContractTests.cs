@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsRelationshipsAndLocalSeat()
+        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsMembershipAndLocalSeat()
         {
             using var world = World.Create();
             var map = CreateMap();
@@ -55,7 +55,6 @@ namespace Ludots.Tests.GAS
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
             int allianceType = types.Register("Alliance");
-            int rivalryType = types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -100,11 +99,8 @@ namespace Ludots.Tests.GAS
             Assert.That(focusedTeamLookup.Get(10), Is.EqualTo(teamOne));
             Assert.That(focusedPlayerLookup.Get(7), Is.EqualTo(playerOne));
 
-            Assert.That(relationships.HasLink(teamOne, teamTwo, allianceType), Is.True);
-            Assert.That(relationships.HasLink(teamTwo, teamOne, allianceType), Is.True);
-            Assert.That(relationships.HasLink(playerOne, playerTwo, rivalryType), Is.True);
-            Assert.That(relationships.HasLink(playerTwo, playerOne, rivalryType), Is.False);
             Assert.That(relationships.HasLink(playerOne, teamOne, types.GetId("MemberOf")), Is.True);
+            Assert.That(relationships.HasLink(teamOne, teamTwo, allianceType), Is.False, "Team-to-team edges are instance relations on the representatives, not participant binding output.");
 
             int commandPower = AttributeRegistry.GetId("CommandPower");
             Assert.That(world.Get<AttributeBuffer>(teamOne).GetCurrent(commandPower), Is.EqualTo(50f));
@@ -118,7 +114,6 @@ namespace Ludots.Tests.GAS
         [TestCase("duplicatePlayerRepresentative")]
         [TestCase("missingRepresentative")]
         [TestCase("unknownTeam")]
-        [TestCase("blankRelationshipType")]
         public void ParticipantBindingResolver_InvalidAuthoring_FailsExplicitly(string scenario)
         {
             using var world = World.Create();
@@ -129,8 +124,6 @@ namespace Ludots.Tests.GAS
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             ApplyInvalidScenario(map, scenario);
@@ -845,8 +838,6 @@ namespace Ludots.Tests.GAS
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             int ownsType = types.GetId("Owns");
@@ -885,8 +876,6 @@ namespace Ludots.Tests.GAS
             var session = new MapSession(new MapId(map.Id), map);
             var index = CreateEntityIndex(map.Id, world, out _, out _, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
             int ownsType = types.GetId("Owns");
@@ -911,6 +900,16 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var map = CreateMap();
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "team.alpha",
+                Relations = [new() { To = "team.beta", Type = "Alliance" }],
+            });
+            map.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "player.local",
+                Relations = [new() { To = "player.remote", Type = "Rivalry" }],
+            });
             var session = new MapSession(new MapId(map.Id), map);
             var index = CreateEntityIndex(map.Id, world, out _, out _, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -919,11 +918,12 @@ namespace Ludots.Tests.GAS
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
+            InstanceRelationMaterializer.Materialize(session, map, index, relationships, types, new RelationshipMetricRegistry());
             ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership);
             var teamRelations = new TeamRelationQuery(relationships, result.Teams);
 
-            Assert.That(teamRelations.Has(playerOne, playerTwo, allianceType), Is.True, "Player reps carry their team, so they read the authored team edge.");
-            Assert.That(teamRelations.Has(playerTwo, playerOne, allianceType), Is.True, "Symmetric team binding authors both directions.");
+            Assert.That(teamRelations.Has(playerOne, playerTwo, allianceType), Is.True, "Player reps carry their team, so they read the edge authored on the team representative.");
+            Assert.That(teamRelations.Has(playerTwo, playerOne, allianceType), Is.False, "Instance relations are directed; the reverse edge is authored on the other representative.");
             Assert.That(teamRelations.Has(playerOne, playerTwo, rivalryType), Is.False, "Player-to-player edges are not team relations.");
             Assert.That(teamRelations.Has(10, 10, allianceType), Is.False, "Same team carries no implicit relation.");
         }
@@ -947,8 +947,6 @@ namespace Ludots.Tests.GAS
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -967,8 +965,6 @@ namespace Ludots.Tests.GAS
             var session = new MapSession(new MapId(map.Id), map);
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -988,8 +984,6 @@ namespace Ludots.Tests.GAS
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
-            types.Register("Alliance");
-            types.Register("Rivalry");
             RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
             OwnershipResolver ownership = CreateOwnership(relationships, types);
 
@@ -1013,29 +1007,6 @@ namespace Ludots.Tests.GAS
                 {
                     new PlayerBindingData { PlayerId = 7, TeamId = 10, RepresentativeInstanceId = "player.local" },
                     new PlayerBindingData { PlayerId = 8, TeamId = 20, RepresentativeInstanceId = "player.remote" },
-                },
-                ParticipantRelationships = new ParticipantRelationshipConfig
-                {
-                    Teams =
-                    {
-                        new TeamRelationshipBindingData
-                        {
-                            TeamA = 10,
-                            TeamB = 20,
-                            TypeId = "Alliance",
-                            Symmetric = true,
-                        },
-                    },
-                    Players =
-                    {
-                        new PlayerRelationshipBindingData
-                        {
-                            PlayerA = 7,
-                            PlayerB = 8,
-                            TypeId = "Rivalry",
-                            Symmetric = false,
-                        },
-                    },
                 },
             };
         }
@@ -1117,9 +1088,6 @@ namespace Ludots.Tests.GAS
                     return;
                 case "unknownTeam":
                     map.Players[0].TeamId = 999;
-                    return;
-                case "blankRelationshipType":
-                    map.ParticipantRelationships.Teams[0].TypeId = string.Empty;
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);

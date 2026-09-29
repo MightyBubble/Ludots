@@ -20,7 +20,13 @@
   "Entities": [
     {
       "InstanceId": "collection-bags-hero",
-      "Template": "collection_bags_hero"
+      "Template": "collection_bags_hero",
+      "Relations": [
+        {
+          "To": "collection-bags-hero",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "collection-bags-apprentice",
@@ -40,16 +46,6 @@
       "RepresentativeInstanceId": "collection-bags-hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 110,
     "TargetYCm": 0,

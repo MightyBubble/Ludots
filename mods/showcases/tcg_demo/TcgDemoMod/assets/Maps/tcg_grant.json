@@ -12,34 +12,22 @@
             "Ability.Tcg.PowerBoost"
           ]
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "tcg-grant-hero",
+          "Type": "Friendly"
+        },
+        {
+          "To": "tcg-grant-enemy",
+          "Type": "Hostile"
+        }
+      ]
     },
-    { "Template": "tcg_enemy", "InstanceId": "tcg-grant-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+    { "Template": "tcg_enemy", "InstanceId": "tcg-grant-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } }, "Relations": [ { "To": "tcg-grant-enemy", "Type": "Friendly" }, { "To": "tcg-grant-hero", "Type": "Hostile" } ] }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "tcg-grant-hero" },
     { "TeamId": 2, "RepresentativeInstanceId": "tcg-grant-enemy" }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

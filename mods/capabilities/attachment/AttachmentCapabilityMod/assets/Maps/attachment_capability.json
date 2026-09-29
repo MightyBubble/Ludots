@@ -42,7 +42,13 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "tank-chassis",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "attachment_rider",
@@ -59,16 +65,6 @@
       "RepresentativeInstanceId": "tank-chassis"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

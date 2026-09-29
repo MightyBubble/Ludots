@@ -31,7 +31,21 @@
         "Name": {
           "Value": "Peasant"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "rts_entry_war3_peasant",
+          "Type": "Friendly"
+        },
+        {
+          "To": "rts_entry_zerg_drone",
+          "Type": "Hostile"
+        },
+        {
+          "To": "rts_entry_sc2_gateway",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_barracks",
@@ -144,7 +158,21 @@
         "Name": {
           "Value": "Gateway"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "rts_entry_sc2_gateway",
+          "Type": "Friendly"
+        },
+        {
+          "To": "rts_entry_war3_peasant",
+          "Type": "Hostile"
+        },
+        {
+          "To": "rts_entry_zerg_drone",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_probe",
@@ -173,7 +201,21 @@
         "Name": {
           "Value": "Drone"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "rts_entry_zerg_drone",
+          "Type": "Friendly"
+        },
+        {
+          "To": "rts_entry_war3_peasant",
+          "Type": "Hostile"
+        },
+        {
+          "To": "rts_entry_sc2_gateway",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -207,46 +249,6 @@
       "RepresentativeInstanceId": "rts_entry_sc2_gateway"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "ContinuousHeightmapAsset": "assets/terrain/rts_flat.height",
   "HeartbeatIntervalTicks": 6
 }

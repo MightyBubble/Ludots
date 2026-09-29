@@ -18,7 +18,17 @@
         "Name": {
           "Value": "Gateway Prime"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "protoss_gateway",
+          "Type": "Friendly"
+        },
+        {
+          "To": "zerg_drone",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_probe",
@@ -61,7 +71,17 @@
         "Name": {
           "Value": "Drone"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "zerg_drone",
+          "Type": "Friendly"
+        },
+        {
+          "To": "protoss_gateway",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_zerg_spawning_pool",
@@ -141,27 +161,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "zerg_drone"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }

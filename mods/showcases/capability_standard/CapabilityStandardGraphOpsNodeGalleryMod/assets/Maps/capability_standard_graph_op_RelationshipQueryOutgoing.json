@@ -38,7 +38,13 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "self",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "friend1",
@@ -138,15 +144,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "self"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

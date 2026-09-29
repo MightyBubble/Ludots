@@ -462,7 +462,13 @@ namespace Ludots.Tests.Architecture.Governance
             var hits = FindForbiddenSourceTokens(
                 repoRoot,
                 new[] { Path.Combine(repoRoot, "src", "Core"), Path.Combine(repoRoot, "mods") },
-                new[] { "PlayerTeamRelationshipBindingData" });
+                new[]
+                {
+                    "PlayerTeamRelationshipBindingData",
+                    "ParticipantRelationshipConfig",
+                    "TeamRelationshipBindingData",
+                    "PlayerRelationshipBindingData",
+                });
 
             foreach (string assetRoot in new[] { Path.Combine(repoRoot, "assets"), Path.Combine(repoRoot, "mods") })
             {

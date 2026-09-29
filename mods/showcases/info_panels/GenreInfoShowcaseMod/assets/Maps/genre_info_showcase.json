@@ -15,16 +15,6 @@
       "RepresentativeInstanceId": "genre_info_marine_01"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,
@@ -88,7 +78,13 @@
             "Y": -420
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "genre_info_marine_01",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "rts_marine",

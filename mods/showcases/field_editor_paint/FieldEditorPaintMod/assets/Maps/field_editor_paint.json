@@ -57,7 +57,13 @@
   "Entities": [
     {
       "InstanceId": "paint_hero",
-      "Template": "field_paint_hero"
+      "Template": "field_paint_hero",
+      "Relations": [
+        {
+          "To": "paint_hero",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "marker_paint_a",
@@ -81,16 +87,6 @@
       "RepresentativeInstanceId": "paint_hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 500,
     "TargetYCm": 150,

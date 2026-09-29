@@ -37,7 +37,13 @@
   "Entities": [
     {
       "InstanceId": "hierarchy_hero",
-      "Template": "field_hierarchy_hero"
+      "Template": "field_hierarchy_hero",
+      "Relations": [
+        {
+          "To": "hierarchy_hero",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "marker_zone_a1",
@@ -65,16 +71,6 @@
       "RepresentativeInstanceId": "hierarchy_hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 400,
     "TargetYCm": 50,

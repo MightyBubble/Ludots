@@ -53,7 +53,13 @@
   "Entities": [
     {
       "InstanceId": "player_team",
-      "Template": "mass_navigation_player_team"
+      "Template": "mass_navigation_player_team",
+      "Relations": [
+        {
+          "To": "player_team",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "local_player",
@@ -171,16 +177,6 @@
       "RepresentativeInstanceId": "player_team"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      }
-    ]
-  },
   "Players": [
     {
       "PlayerId": 1,

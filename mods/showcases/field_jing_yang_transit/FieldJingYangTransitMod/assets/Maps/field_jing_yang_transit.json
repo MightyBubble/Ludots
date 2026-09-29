@@ -72,7 +72,13 @@
   "Entities": [
     {
       "InstanceId": "transit_hero",
-      "Template": "field_transit_hero"
+      "Template": "field_transit_hero",
+      "Relations": [
+        {
+          "To": "transit_hero",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "marker_jing",
@@ -96,16 +102,6 @@
       "RepresentativeInstanceId": "transit_hero"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": true
-      }
-    ]
-  },
   "DefaultCamera": {
     "TargetXCm": 500,
     "TargetYCm": 150,

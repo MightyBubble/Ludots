@@ -47,7 +47,17 @@
             "Armor": 4
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "lsw-ezreal",
+          "Type": "Friendly"
+        },
+        {
+          "To": "lsw-dummy-garen",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_garen",
@@ -76,7 +86,17 @@
             "Armor": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "lsw-dummy-garen",
+          "Type": "Friendly"
+        },
+        {
+          "To": "lsw-ezreal",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -88,27 +108,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "lsw-dummy-garen"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Friendly",
-        "Symmetric": false
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  }
+  ]
 }
