@@ -3286,7 +3286,7 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             }
 
-            PresentPhaseInput input = phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
+            PresentPhaseInput input = phaseResolver.CreateInput(World, owner, in audience);
             if (!(audience.HasViewerTeam && input.HasOwnerTeam) && !input.IsOwnedByAudience)
             {
                 return false;

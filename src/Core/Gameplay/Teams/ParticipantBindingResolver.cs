@@ -479,12 +479,10 @@ namespace Ludots.Core.Gameplay.Teams
             ParticipantRelationshipConfig config = mapConfig.ParticipantRelationships ?? new ParticipantRelationshipConfig();
             ValidateCollection(config.Teams, $"Map '{mapId}' ParticipantRelationships.Teams");
             ValidateCollection(config.Players, $"Map '{mapId}' ParticipantRelationships.Players");
-            ValidateCollection(config.PlayerTeams, $"Map '{mapId}' ParticipantRelationships.PlayerTeams");
 
             bool hasEntityRelationships =
                 config.Teams.Count > 0 ||
-                config.Players.Count > 0 ||
-                config.PlayerTeams.Count > 0;
+                config.Players.Count > 0;
             if (hasEntityRelationships && (relationships == null || relationshipTypes == null))
             {
                 throw new InvalidOperationException($"Map '{mapId}' declares participant relationships but RelationshipRuntime is unavailable.");
@@ -506,15 +504,6 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity playerB = RequirePlayer(players, binding.PlayerB, mapId, $"ParticipantRelationships.Players[{i}].PlayerB");
                 int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.Players[{i}]", binding.TypeId);
                 EnsureRelationship(relationships!, playerA, playerB, typeId, symmetric: binding.Symmetric);
-            }
-
-            for (int i = 0; i < config.PlayerTeams.Count; i++)
-            {
-                PlayerTeamRelationshipBindingData binding = config.PlayerTeams[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.PlayerTeams[{i}] requires an object payload.");
-                Entity player = RequirePlayer(players, binding.PlayerId, mapId, $"ParticipantRelationships.PlayerTeams[{i}].PlayerId");
-                Entity team = RequireTeam(teams, binding.TeamId, mapId, $"ParticipantRelationships.PlayerTeams[{i}].TeamId");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.PlayerTeams[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, player, team, typeId, symmetric: binding.Symmetric);
             }
         }
 

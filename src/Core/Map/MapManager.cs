@@ -292,11 +292,6 @@ namespace Ludots.Core.Map
                 {
                     target.ParticipantRelationships.Players.AddRange(source.ParticipantRelationships.Players);
                 }
-
-                if (source.ParticipantRelationships.PlayerTeams != null)
-                {
-                    target.ParticipantRelationships.PlayerTeams.AddRange(source.ParticipantRelationships.PlayerTeams);
-                }
             }
 
             if (source.Metadata != null)

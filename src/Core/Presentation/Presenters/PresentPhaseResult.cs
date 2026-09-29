@@ -18,7 +18,6 @@ namespace Ludots.Core.Presentation.Presenters
         public bool HasAttributeProjection;
         public LODLevel LOD;
         public bool IsOwnedByAudience;
-        public bool HasRelationshipLink;
         public bool IsFriendly;
         public bool IsHostile;
     }

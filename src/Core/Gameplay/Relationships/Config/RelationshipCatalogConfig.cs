@@ -42,10 +42,6 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         public string Id { get; set; } = string.Empty;
     }
 
-
-
-
-
     public sealed class RelationshipKnowledgeGrantConfig : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;

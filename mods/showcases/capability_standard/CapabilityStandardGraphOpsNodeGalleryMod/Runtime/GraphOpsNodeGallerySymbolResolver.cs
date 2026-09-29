@@ -152,11 +152,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Relationships", "catalog.json"),
             Path.Combine(assetsRoot, "Relationships", "catalog.json"),
         };
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-        };
         var bands = new RelationshipBandRegistry();
         for (int i = 0; i < catalogPaths.Length; i++)
         {
@@ -168,7 +163,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
 
             var catalog = JsonSerializer.Deserialize<Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogConfig>(
                     File.ReadAllText(path),
-                    options)
+                    Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogPipelineLoader.SerializerOptions)
                 ?? throw new InvalidOperationException($"Relationship catalog '{path}' is empty.");
             RelationshipCatalogInstaller.RegisterCatalog(catalog, types, metrics, flags, bands);
         }

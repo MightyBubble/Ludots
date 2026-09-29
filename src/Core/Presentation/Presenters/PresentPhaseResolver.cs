@@ -63,8 +63,7 @@ namespace Ludots.Core.Presentation.Presenters
             in CullState cullState,
             bool hasVision,
             Team? ownerTeam = null,
-            PlayerOwner? ownerOwner = null,
-            bool hasRelationshipLink = false)
+            PlayerOwner? ownerOwner = null)
         {
             return CreateInput(
                 audience,
@@ -74,8 +73,7 @@ namespace Ludots.Core.Presentation.Presenters
                 default,
                 ReadOnlySpan<int>.Empty,
                 ownerTeam,
-                ownerOwner,
-                hasRelationshipLink);
+                ownerOwner);
         }
 
         public PresentPhaseInput CreateInput(
@@ -85,8 +83,7 @@ namespace Ludots.Core.Presentation.Presenters
             in PresentProjectionFacts projection,
             ReadOnlySpan<int> requiredAttributeIds,
             Team? ownerTeam = null,
-            PlayerOwner? ownerOwner = null,
-            bool hasRelationshipLink = false)
+            PlayerOwner? ownerOwner = null)
         {
             return CreateInput(
                 audience,
@@ -96,8 +93,7 @@ namespace Ludots.Core.Presentation.Presenters
                 projection,
                 requiredAttributeIds,
                 ownerTeam,
-                ownerOwner,
-                hasRelationshipLink);
+                ownerOwner);
         }
 
         private PresentPhaseInput CreateInput(
@@ -108,8 +104,7 @@ namespace Ludots.Core.Presentation.Presenters
             in PresentProjectionFacts projection,
             ReadOnlySpan<int> requiredAttributeIds,
             Team? ownerTeam = null,
-            PlayerOwner? ownerOwner = null,
-            bool hasRelationshipLink = false)
+            PlayerOwner? ownerOwner = null)
         {
             bool isFriendlyTeam = false;
             bool isHostileTeam = false;
@@ -139,7 +134,6 @@ namespace Ludots.Core.Presentation.Presenters
                 HasVision = hasVision,
                 RequiresAttributeProjection = requiresAttributeProjection,
                 HasAttributeProjection = hasAttributeProjection,
-                HasRelationshipLink = hasRelationshipLink,
                 IsOwnedByAudience = isOwnedByAudience,
                 IsFriendlyTeam = isFriendlyTeam,
                 IsHostileTeam = isHostileTeam,
@@ -152,7 +146,6 @@ namespace Ludots.Core.Presentation.Presenters
             World world,
             Entity owner,
             in PresentAudienceContext audience,
-            bool hasRelationshipLink = false,
             bool hasVision = true)
         {
             var cullState = new CullState
@@ -179,7 +172,7 @@ namespace Ludots.Core.Presentation.Presenters
                 ownerOwner = resolvedOwnerOwner;
             }
 
-            return CreateInput(audience, owner, in cullState, hasVision, ownerTeam, ownerOwner, hasRelationshipLink);
+            return CreateInput(audience, owner, in cullState, hasVision, ownerTeam, ownerOwner);
         }
 
         public PresentPhaseInput CreateInput(
@@ -187,8 +180,7 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner,
             in PresentAudienceContext audience,
             in PresentProjectionFacts projection,
-            ReadOnlySpan<int> requiredAttributeIds,
-            bool hasRelationshipLink = false)
+            ReadOnlySpan<int> requiredAttributeIds)
         {
             var cullState = new CullState
             {
@@ -214,7 +206,7 @@ namespace Ludots.Core.Presentation.Presenters
                 ownerOwner = resolvedOwnerOwner;
             }
 
-            return CreateInput(audience, owner, in cullState, in projection, requiredAttributeIds, ownerTeam, ownerOwner, hasRelationshipLink);
+            return CreateInput(audience, owner, in cullState, in projection, requiredAttributeIds, ownerTeam, ownerOwner);
         }
 
         public PresentPhaseResult Resolve(in PresentPhaseInput input)
@@ -245,7 +237,6 @@ namespace Ludots.Core.Presentation.Presenters
                 HasAttributeProjection = input.HasAttributeProjection,
                 LOD = lod,
                 IsOwnedByAudience = input.IsOwnedByAudience,
-                HasRelationshipLink = input.HasRelationshipLink,
                 IsFriendly = isFriendly,
                 IsHostile = isHostile,
             };

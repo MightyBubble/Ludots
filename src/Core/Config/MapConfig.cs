@@ -253,7 +253,6 @@ namespace Ludots.Core.Config
     {
         public List<TeamRelationshipBindingData> Teams { get; set; } = new List<TeamRelationshipBindingData>();
         public List<PlayerRelationshipBindingData> Players { get; set; } = new List<PlayerRelationshipBindingData>();
-        public List<PlayerTeamRelationshipBindingData> PlayerTeams { get; set; } = new List<PlayerTeamRelationshipBindingData>();
     }
 
     public class TeamRelationshipBindingData
@@ -270,14 +269,6 @@ namespace Ludots.Core.Config
         public int PlayerB { get; set; }
         public string TypeId { get; set; } = string.Empty;
         public bool Symmetric { get; set; } = true;
-    }
-
-    public class PlayerTeamRelationshipBindingData
-    {
-        public int PlayerId { get; set; }
-        public int TeamId { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        public bool Symmetric { get; set; }
     }
 
     public class ParamOverrideData
