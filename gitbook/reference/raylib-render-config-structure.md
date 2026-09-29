@@ -74,7 +74,7 @@ Quarks schema 的作者面（发射率、生命周期、尺寸区间、`spawnMod
 
 ## Presentation/presenters.json — 定义与出生规则
 
-定义（组合树：behaviors/children/paramDefaults）与规则（event × condition → command）的完整字段合同见 [Presenter-as-Actor 架构设计](../architecture/presenter-as-actor-architecture.md)与[快速上手](../architecture/presenter-quickstart.md)（JSON Schema：`assets/Presentation/presenters.schema.json`，覆盖 13 种 BehaviorKind、11 种 PresenterCommandKind、36 种 PresentationEventKind，枚举源 `src/Core/Presentation/Presenters/BehaviorSlot.cs`、`src/Core/Presentation/Presenters/PresenterCommandKind.cs`、`src/Platform/Ludots.Platform.Abstractions/PresentationEventKind.cs`）。
+定义（组合树：behaviors/children/paramDefaults）与规则（event × condition → command）的完整字段合同见 [Presenter-as-Actor 架构设计](../architecture/presenter-as-actor-architecture.md)与[快速上手](../architecture/presenter-quickstart.md)（JSON Schema：`assets/Presentation/presenters.schema.json`，覆盖 16 种 BehaviorKind、11 种 PresenterCommandKind、36 种 PresentationEventKind，枚举源 `src/Core/Presentation/Presenters/BehaviorSlot.cs`、`src/Core/Presentation/Presenters/PresenterCommandKind.cs`、`src/Platform/Ludots.Platform.Abstractions/PresentationEventKind.cs`）。
 
 ## 环境配置树 — 光照/雾/天空/阴影
 

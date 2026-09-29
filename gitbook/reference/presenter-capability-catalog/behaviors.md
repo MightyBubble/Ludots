@@ -394,9 +394,64 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 
 来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:753-757`；装载合同测试 `src/Tests/PresentationTests/Rendering/InstancedBatchContractTests.cs`。
 
+### TrailMesh — 刀光拖尾
+
+- **是什么**：行为激活时沿 presenter 变换，把 `baseOffset` / `tipOffset` 采成世界坐标样本，按寿命折算 `age01` 写入 `TrailMeshBuffer`。`PresenterBehaviorSystem`（经 `TrailMeshRuntime`）是 Core 侧唯一写入方；停用后存量按 `sampleLifetimeSeconds` 淡出。容量来自 `presentation.trailMeshCapacity`，必须在 `game.json` 显式配置，缺席或非正数启动失败。采样条带上限 `TrailMeshBuffer.MaxSamplesPerTrail`（32），`maxSamples` 必须落在 2..32。契约见 [Presenter 编译车道](../../architecture/presenter-compiled-lanes.md) TrailMesh 行。
+- **怎么写**：`kind: "TrailMesh"` + `trailMesh`（必填 `tipOffset`；可选 `baseOffset` / `maxSamples` / `sampleIntervalSeconds` / `sampleLifetimeSeconds` / `headColor` / `tailColor`）。`tipOffset` 不得与 `baseOffset` 相同。
+- **跑**：preset `engine_raylib_slash_trail`（画廊场景 `slash_trail` 用同一套 `TrailSampleHistory` 采样语义，不经 `presenters.json`）。
+- **证据**：装载 `Load_ParsesTrailMeshBehavior_WithAllFields`（`src/Tests/PresentationTests/Presenter/PresenterTrailMeshConfigTests.cs`）；激活采样 `TrailMesh_CueActivatesSampling_WeaponSwingWeavesArc_DeactivateFadesOut`（`src/Tests/PresentationTests/Presenter/PresenterTrailMeshBehaviorTests.cs`）；画廊讲解 [挥砍的刀光弧线](../engine-gallery-wiki/slash_trail.md)。
+
+配置形态（**尚无生产 mod 以此 behavior 装载**——引擎画廊 slash_trail 由场景代码直写 buffer；装载合同由上述测试锁定）：
+
+```jsonc
+{
+  "slot": "trail",
+  "kind": "TrailMesh",
+  "activeByDefault": false,
+  "trailMesh": {
+    "baseOffset": [0, 0, 0.1],
+    "tipOffset": [0, 0, 1.2],
+    "maxSamples": 20,
+    "sampleIntervalSeconds": 0.012,
+    "sampleLifetimeSeconds": 0.35,
+    "headColor": [0.7, 0.9, 1.0, 0.9],
+    "tailColor": [0.2, 0.4, 1.0, 0.0]
+  }
+}
+```
+
+来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs` 的 `TrailMeshFields`；运行时 `src/Core/Presentation/Presenters/TrailMeshRuntime.cs`。
+
+### ScreenRect — 屏幕矩形
+
+- **是什么**：屏幕空间矩形。两对角从黑板 float 参数读，每帧归一化后写进 `ScreenOverlayBuffer`。presenter 只画，角点由消费方写入（框选：按下角 + 当前指针角）。`fill` / `border` 可写死颜色，也可绑 `fillParamKey` / `borderParamKey`；`visibilityParamKey` 控制显隐。
+- **怎么写**：`kind: "ScreenRect"` + `screenRect`（必填四个角点参数键 `corner0XParamKey` / `corner0YParamKey` / `corner1XParamKey` / `corner1YParamKey`；可选 `fill` / `border` / `fillParamKey` / `borderParamKey` / `visibilityParamKey`）。
+- **跑**：preset `case_e_selection_raylib`。框选矩形由全局规则在 boxing context 激活时创建、停用时销毁。
+- **证据**：装载 `Load_ParsesScreenRectBehavior_WithCornerParamKeysAndColors`、发射 `Emit_WritesNormalizedRectFromParamCorners_AndFollowsParamChanges`（`src/Tests/PresentationTests/Presenter/PresenterScreenRectTests.cs`）；全链 `BoxSelectFullChain_SpawnContextTriggerPresenterRectHitRosterAndModifierSemantics`（`src/Tests/GasTests/Production/CaseESelectionShowcaseAcceptanceTests.cs`）。
+
+标准生产配置（框选矩形；四角来自 owner 黑板按下坐标与指针屏幕坐标）：
+
+```jsonc
+{
+  "slot": "screenRect",
+  "kind": "ScreenRect",
+  "activeByDefault": true,
+  "screenRect": {
+    "corner0XParamKey": "case_e.rect.pressX",
+    "corner0YParamKey": "case_e.rect.pressY",
+    "corner1XParamKey": "case_e.rect.pointerX",
+    "corner1YParamKey": "case_e.rect.pointerY",
+    "fill": [0.25, 0.55, 1, 0.45],
+    "border": [0.2, 0.55, 1, 1]
+  }
+}
+```
+
+来源：`mods/capabilities/input/SelectionInteractionMod/assets/Presentation/presenters.json:1-51`（`presenter.case_e.box_select_rectangle`）；字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs` 的 `ScreenRectFields`；运行时 `src/Core/Presentation/Systems/PresenterScreenRectSystem.cs`。
+
 ### Extension — 扩展行为
 
-- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 14 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
+- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 16 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
 - **怎么写**：`kind: "<ModId>.<Key>"` + `execution.lane`（必填，必须与注册 descriptor 的 lane 一致，不一致装载 fail-loud）。放行 lane 只有四条：Bootstrap / ContinuousTick / OwnerAttributeDirty / OwnerTagDirty；后两条还必须带 `execution.trigger`（`attributeId` 或 `tagId`，解析不到正 id 即失败）。挂在 child instance 上的扩展行为只认 Bootstrap / ContinuousTick 两条 lane。槽位白名单是通用字段（slot / kind / activeByDefault / activationCondition / execution / style / motion），没有内建行为那种同名载荷对象；handler 里读写自定义数据走参数黑板（`IPresenterBehaviorOps` 的参数读写）。
 - **跑/证据**：preset `capability_standard_presenter_behavior_extension_showcase_raylib`；headless 验收 `PresenterBehaviorExtension_PlayerSeesCloudDriftTickFromModBehavior`；架构文档 [Presenter Behavior Extension](../../architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md)。
 
