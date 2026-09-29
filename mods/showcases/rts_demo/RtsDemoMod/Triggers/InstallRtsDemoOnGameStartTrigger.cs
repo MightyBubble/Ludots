@@ -39,10 +39,6 @@ namespace RtsDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
             _ctx.Log("[RtsDemoMod] Ability definitions loaded via GAS/abilities.json");
 
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
-
             var saveParticipants = engine.GetService(CoreServiceKeys.SaveParticipants);
             saveParticipants?.Register(new Runtime.RtsSelectionSaveParticipant(engine));
 

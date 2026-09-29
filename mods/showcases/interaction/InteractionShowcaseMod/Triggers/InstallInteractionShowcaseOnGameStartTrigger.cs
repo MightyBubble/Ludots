@@ -54,7 +54,6 @@ namespace InteractionShowcaseMod.Triggers
 
             engine.GlobalContext[InstalledKey] = true;
             engine.GlobalContext[InteractionShowcaseStressTelemetry.GlobalKey] = _stressTelemetry;
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
             if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
             {
