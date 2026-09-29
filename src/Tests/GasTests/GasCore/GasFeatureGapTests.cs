@@ -273,65 +273,6 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  5. TeamManager asymmetric relationships
-        // ════════════════════════════════════════════════════════════════════
-
-        [Test]
-        public void TeamManager_AsymmetricRelationship_AViewsDifferentlyThanB()
-        {
-            TeamManager.Clear();
-
-            // A views B as Hostile, but B views A as Friendly (tribute/vassal)
-            TeamManager.SetRelationship(1, 2, TeamRelationship.Hostile);
-            TeamManager.SetRelationship(2, 1, TeamRelationship.Friendly);
-
-            That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
-            That(TeamManager.GetRelationship(2, 1), Is.EqualTo(TeamRelationship.Friendly));
-        }
-
-        [Test]
-        public void TeamManager_ThreeFactionSetup_AllPairsCorrect()
-        {
-            TeamManager.Clear();
-            TeamManager.DefaultRelationship = TeamRelationship.Neutral;
-
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
-
-            // Same team = always Friendly
-            That(TeamManager.GetRelationship(1, 1), Is.EqualTo(TeamRelationship.Friendly));
-            // Cross teams
-            That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
-            That(TeamManager.GetRelationship(2, 3), Is.EqualTo(TeamRelationship.Hostile));
-            That(TeamManager.GetRelationship(1, 3), Is.EqualTo(TeamRelationship.Hostile));
-            // Unknown team falls back to default
-            That(TeamManager.GetRelationship(1, 99), Is.EqualTo(TeamRelationship.Neutral));
-        }
-
-        [Test]
-        public void TeamManager_FourFactionAsymmetric_ComplexDiplomacy()
-        {
-            TeamManager.Clear();
-            TeamManager.DefaultRelationship = TeamRelationship.Neutral;
-
-            // Empire(1)↔Federation(2): Allied
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Friendly);
-            // Empire(1)↔Horde(3): At war
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
-            // Horde(3)→Nomads(4): Hostile, but Nomads(4)→Horde(3): Neutral (one-way threat)
-            TeamManager.SetRelationship(3, 4, TeamRelationship.Hostile);
-            TeamManager.SetRelationship(4, 3, TeamRelationship.Neutral);
-
-            That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Friendly));
-            That(TeamManager.GetRelationship(2, 1), Is.EqualTo(TeamRelationship.Friendly));
-            That(TeamManager.GetRelationship(1, 3), Is.EqualTo(TeamRelationship.Hostile));
-            That(TeamManager.GetRelationship(3, 4), Is.EqualTo(TeamRelationship.Hostile));
-            That(TeamManager.GetRelationship(4, 3), Is.EqualTo(TeamRelationship.Neutral), "Asymmetric: Nomads view Horde as Neutral");
-            That(TeamManager.GetRelationship(1, 4), Is.EqualTo(TeamRelationship.Neutral), "No explicit relationship = default Neutral");
-        }
-
-        // ════════════════════════════════════════════════════════════════════
         //  6. EffectStack component-level tests
         // ════════════════════════════════════════════════════════════════════
 

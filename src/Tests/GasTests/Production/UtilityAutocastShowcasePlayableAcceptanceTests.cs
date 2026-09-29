@@ -120,7 +120,9 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Assert.That(relationships.HasLink(hostilePlayer, localPlayer, participantTypeId), Is.True);
         Assert.That(relationships.HasLink(localPlayer, friendlyTeam, participantTypeId), Is.True);
         Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, participantTypeId), Is.True);
-        Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
+        int hostileTypeId = types.GetId("Hostile");
+        Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, hostileTypeId), Is.True);
+        Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, hostileTypeId), Is.True);
     }
 
     private static UtilityAiDecisionTrace TickUntilSubmittedOrder(

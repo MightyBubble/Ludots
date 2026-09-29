@@ -61,7 +61,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         Assert.That(liveInput.HasContext("Default_Gameplay"), Is.True);
         Assert.That(liveInput.HasAction("SkillQ"), Is.True);
         Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null);
-        Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
+        Assert.That(IsTeamHostile(engine, 1, 2), Is.True);
 
         World world = engine.World;
         Entity hero = FindEntity(world, "Hero");
@@ -413,8 +413,15 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             $"localSeat={localSeat}",
             $"heroMP={ReadAttribute(world, hero, "Mana"):0.###}",
             $"targetHP={ReadAttribute(world, target, "Health"):0.###}",
-            $"team12={TeamManager.GetRelationship(1, 2)}",
+            $"team12Hostile={IsTeamHostile(engine, 1, 2)}",
             $"errors={engine.TriggerManager.Errors.Count}");
+    }
+
+    private static bool IsTeamHostile(GameEngine engine, int sourceTeamId, int targetTeamId)
+    {
+        TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+            ?? throw new InvalidOperationException("TeamRelationQuery missing.");
+        return teamRelations.Has(sourceTeamId, targetTeamId, teamRelations.Types.GetId("Hostile"));
     }
 
     private static string FindRepoRoot()

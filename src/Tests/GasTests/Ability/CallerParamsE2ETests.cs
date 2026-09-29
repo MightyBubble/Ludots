@@ -376,7 +376,7 @@ namespace Ludots.Tests.GAS
                 },
                 new TargetFilterDescriptor
                 {
-                    RelationFilter = RelationshipFilter.All,
+                    RelationFilter = RelationFilter.All,
                 },
                 new TargetDispatchDescriptor
                 {
@@ -387,7 +387,8 @@ namespace Ludots.Tests.GAS
                 buffer,
                 candidateCount: 1,
                 budget,
-                commands);
+                commands,
+                teamRelations: null);
 
             That(count, Is.EqualTo(1));
             That(commands.Count, Is.EqualTo(1));

@@ -306,11 +306,6 @@ namespace Ludots.Tests.Presentation
                     CreateProfileSet(),
                     layer,
                     CreateSpawnLayout(randomSeed: 1234));
-                TeamManager.LoadConfig(new TeamConfig
-                {
-                    DefaultRelationship = "Friendly",
-                    Relationships = new List<RelationshipEntry>(),
-                });
 
                 using var world = World.Create();
                 var navGroups = new MassNavigationGroupRuntime(
@@ -363,11 +358,6 @@ namespace Ludots.Tests.Presentation
                     layer);
             }
 
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
             flow.ResetAuthoredAgents(seeds);
             for (int i = 0; i < agentCount; i++)
             {
@@ -420,11 +410,6 @@ namespace Ludots.Tests.Presentation
                     layer);
             }
 
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
 
             var serialFlow = CreateConfiguredFlow(parallelWorkerCount: 1);
             var parallelFlow = CreateConfiguredFlow(parallelWorkerCount: 4);
@@ -508,11 +493,6 @@ namespace Ludots.Tests.Presentation
                 CreateSeed(localX: 1_030f, localY: 1_000f, layer),
             });
             flow.MarkAgentDisplaced(0);
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
 
             using var world = World.Create();
             flow.Step(
@@ -550,11 +530,6 @@ namespace Ludots.Tests.Presentation
             }
 
             flow.ResetAuthoredAgents(seeds);
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
             for (int i = 0; i < agentCount; i++)
             {
                 flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
@@ -597,11 +572,6 @@ namespace Ludots.Tests.Presentation
                 CreateProfileSet(),
                 layer,
                 CreateSpawnLayout(randomSeed: 12_648_430));
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
 
             using var world = World.Create();
             var navGroups = CreateNavGroupRuntime(agentCount);
@@ -940,11 +910,6 @@ namespace Ludots.Tests.Presentation
             }
 
             flow.ResetAuthoredAgents(seeds);
-            TeamManager.LoadConfig(new TeamConfig
-            {
-                DefaultRelationship = "Friendly",
-                Relationships = new List<RelationshipEntry>(),
-            });
             return flow;
         }
 

@@ -1192,6 +1192,8 @@ namespace Ludots.Tests.GAS.Production
                 aimKeys.AbilityAimAffectedKeyId,
                 spatialQueries,
                 presentationEvents,
+                engine.GetService(CoreServiceKeys.TeamRelationQuery)
+                    ?? throw new InvalidOperationException("TeamRelationQuery service is missing."),
                 engine.GameSession);
             runtime.UpdateAiming(
                 actor,

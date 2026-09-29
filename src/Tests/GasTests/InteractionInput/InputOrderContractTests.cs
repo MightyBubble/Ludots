@@ -529,9 +529,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "requireTarget": false,
                       "targetType": "Position",
                       "isSkillMapping": true,
-                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRelation": "Hostile",
                       "autoTargetRangeCm": 600,
                       "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRelation": "Hostile",
                       "cursorTargetRangeCm": 320
                     }
                   ]
@@ -560,6 +562,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "targetType": "Entity",
                       "isSkillMapping": true,
                       "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRelation": "Hostile",
                       "cursorTargetRangeCm": 320
                     }
                   ]
@@ -569,6 +572,34 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
 
             Assert.That(ex!.Message, Does.Contain("cursorTargetPolicy requires targetType Position or Direction"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAutoTargetPolicyWithoutRelation()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": true,
+                      "targetType": "Entity",
+                      "isSkillMapping": true,
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRangeCm": 600
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("autoTargetRelation must name 'All' or a relationship type"));
         }
 
         [Test]
@@ -587,7 +618,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "requireTarget": false,
                       "targetType": "Direction",
                       "isSkillMapping": true,
-                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRelation": "Hostile",
                       "autoTargetRangeCm": 760
                     }
                   ]
@@ -713,7 +745,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Direction,
                         RequireTarget = false,
                         IsSkillMapping = true,
-                        CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        CursorTargetRelation = "Hostile",
                         CursorTargetRangeCm = 320
                     }
                 }
@@ -738,11 +771,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 entity = hovered;
                 return true;
             });
-            system.SetCursorTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, Vector3 cursorWorldCm, out Entity target) =>
+            system.SetCursorTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, Vector3 cursorWorldCm, out Entity target) =>
             {
                 target = enemy;
                 return resolvedActor == actor &&
-                       policy == AutoTargetPolicy.NearestEnemyInRange &&
+                       policy == AutoTargetPolicy.NearestInRange &&
+                       relation == "Hostile" &&
                        rangeCm == 320 &&
                        cursorWorldCm == new Vector3(1960f, 0f, 413f);
             });
@@ -779,7 +813,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -797,7 +832,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 entity = hovered;
                 return true;
             });
-            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target) =>
             {
                 target = default;
                 return false;
@@ -832,7 +867,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500,
                     },
                 },
@@ -843,7 +879,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
-            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, out Entity target) =>
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, string _, out Entity target) =>
             {
                 target = default;
                 return true;
@@ -1093,7 +1129,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        CursorTargetRelation = "Hostile",
                         CursorTargetRangeCm = 320
                     }
                 }
@@ -1776,7 +1813,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
                         CastModeOverride = CastModeType.AimCast,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 640,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -1831,7 +1869,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
                 Assert.That(remapped.CastModeOverride, Is.EqualTo(CastModeType.AimCast));
-                Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+                Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
                 Assert.That(remapped.ActorOrderRouting!.Candidates.Count, Is.EqualTo(1));
@@ -2317,9 +2355,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity localPlayer = commandHarness.CreatePlayerRep(1);
+            Entity targetOwner = commandHarness.CreatePlayerRep(2);
             Entity firstMoveActor = commandHarness.CreateActor(localPlayer);
             Entity attackActor = commandHarness.CreateActor(localPlayer, 2);
             Entity secondMoveActor = commandHarness.CreateActor(localPlayer);
@@ -3189,9 +3227,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity localPlayer = commandHarness.CreatePlayerRep(1);
+            Entity targetOwner = commandHarness.CreatePlayerRep(2);
             Entity commandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity secondCommandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
@@ -3324,11 +3362,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 });
-            Entity hostileOwner = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 3 });
             var profileHarness = CommandIntentProfileTests.Harness.Create(world);
             profileHarness.InstallStandardProfile();
-            profileHarness.Relationships.EnsureLink(localPlayer, hostileOwner, profileHarness.HostileTypeId);
+            Entity localPlayer = profileHarness.CreatePlayerRep(1);
+            Entity hostileOwner = profileHarness.CreatePlayerRep(5);
+            profileHarness.TeamRelations.Link(1, 5, profileHarness.TeamRelations.HostileTypeId);
 
             // Actor: slot 0 is a category-less filler, slot 1 carries the weapon ability —
             // slot landing must find slot 1, not slot 0.
@@ -4297,7 +4335,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -4318,7 +4357,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 return true;
             });
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
-            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target) =>
             {
                 autoTargetActor = resolvedActor;
                 target = enemy;
@@ -4369,7 +4408,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -4381,7 +4421,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(_ => 101);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 55);
-            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, out Entity target) =>
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, string ____, out Entity target) =>
             {
                 target = default;
                 return false;

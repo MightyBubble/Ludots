@@ -278,7 +278,8 @@ namespace Ludots.Tests.GAS.Production
             var ezrealRMapping = mapping.GetMapping("SkillR");
             Assert.That(ezrealRMapping, Is.Not.Null);
             Assert.That(ezrealRMapping!.TargetType, Is.EqualTo(OrderTargetType.Direction));
-            Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+            Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
+            Assert.That(ezrealRMapping.CursorTargetRelation, Is.EqualTo("Hostile"));
             Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
 
             var garenSlots = new EntityCommandPanelSlotView[8];
@@ -545,6 +546,9 @@ namespace Ludots.Tests.GAS.Production
 
             var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
                 ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
+            var relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
+            RelationFilter hostile = RelationFilter.Require(relationshipTypes.GetId("Hostile"));
 
             AssertEzrealProjectileEffect(
                 effects,
@@ -552,7 +556,7 @@ namespace Ludots.Tests.GAS.Production
                 expectedHitEffectKey: "Effect.Champion.Ezreal.MysticShotHit",
                 expectedTravelMode: ProjectileTravelMode.Direction,
                 expectedImpactPolicy: ProjectileImpactPolicy.DestroyOnFirstHit,
-                expectedRelationFilter: RelationshipFilter.Hostile,
+                expectedRelationFilter: hostile,
                 expectedMaxHitCount: 1);
             AssertEzrealProjectileEffect(
                 effects,
@@ -560,7 +564,7 @@ namespace Ludots.Tests.GAS.Production
                 expectedHitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit",
                 expectedTravelMode: ProjectileTravelMode.Direction,
                 expectedImpactPolicy: ProjectileImpactPolicy.DestroyOnFirstHit,
-                expectedRelationFilter: RelationshipFilter.Hostile,
+                expectedRelationFilter: hostile,
                 expectedMaxHitCount: 1);
             AssertEzrealProjectileEffect(
                 effects,
@@ -568,7 +572,7 @@ namespace Ludots.Tests.GAS.Production
                 expectedHitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
                 expectedTravelMode: ProjectileTravelMode.TrackTarget,
                 expectedImpactPolicy: ProjectileImpactPolicy.DestroyOnFirstHit,
-                expectedRelationFilter: RelationshipFilter.Hostile,
+                expectedRelationFilter: hostile,
                 expectedMaxHitCount: 1);
             AssertEzrealProjectileEffect(
                 effects,
@@ -576,7 +580,7 @@ namespace Ludots.Tests.GAS.Production
                 expectedHitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit",
                 expectedTravelMode: ProjectileTravelMode.Direction,
                 expectedImpactPolicy: ProjectileImpactPolicy.ContinueOnHit,
-                expectedRelationFilter: RelationshipFilter.Hostile,
+                expectedRelationFilter: hostile,
                 expectedMaxHitCount: 32);
         }
 
@@ -593,7 +597,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(abilities.TryGet(abilityId, out var ability), Is.True);
             Assert.That(ability.HasInputBindingOverride, Is.True);
             Assert.That(ability.InputBindingOverride.HasAutoTargetPolicy, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+            Assert.That(ability.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
+            Assert.That(ability.InputBindingOverride.AutoTargetRelation, Is.EqualTo("Hostile"));
             Assert.That(ability.InputBindingOverride.HasAutoTargetRangeCm, Is.True);
             Assert.That(ability.InputBindingOverride.AutoTargetRangeCm, Is.EqualTo(760));
 
@@ -1605,7 +1610,7 @@ namespace Ludots.Tests.GAS.Production
             string expectedHitEffectKey,
             ProjectileTravelMode expectedTravelMode,
             ProjectileImpactPolicy expectedImpactPolicy,
-            RelationshipFilter expectedRelationFilter,
+            RelationFilter expectedRelationFilter,
             int expectedMaxHitCount)
         {
             int effectId = EffectTemplateIdRegistry.GetId(effectKey);

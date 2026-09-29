@@ -21,7 +21,7 @@ namespace Ludots.Tests.GAS
     /// <summary>
     /// RFC-0065 INT-1/2/3 (DEC-14): CommandIntentProfile registry — explicit total order,
     /// dual-side predicate routing, group routing, and load-time fail-fast. All semantic
-    /// names (garrison/weapon/destructible/stances) are test data, never Core concepts.
+    /// names (garrison/weapon/destructible/relations) are test data, never Core concepts.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -49,10 +49,10 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
-            // Target is garrisonable AND destructible; neutral stance satisfies both rule 30 and rule 20.
+            // Target is garrisonable AND destructible; the authored neutral relation satisfies both rule 30 and rule 20.
             Entity target = harness.CreateTaggedEntity(p2Rep, GarrisonableTag, DestructibleTag);
 
             var facts = new CommandIntentTargetFacts(target, HasEntity: true);
@@ -157,8 +157,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity garrisonActor = harness.CreateActor(p1Rep, GarrisonAbilityId);
             Entity weaponActor = harness.CreateActor(p1Rep, WeaponAbilityId);
             Entity nakedActor = harness.CreateActor(p1Rep);
@@ -184,7 +184,7 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
             Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
 
             var groundFacts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
@@ -197,17 +197,17 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TryRoute_StancePredicate_HostileMatchesWeaponRule_FriendlyDoesNot()
+        public void TryRoute_RelationPredicate_HostileMatchesWeaponRule_FriendlyDoesNot()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity hostileRep = world.Create(new PlayerIdentity { PlayerId = 3 });
-            Entity friendlyRep = world.Create(new PlayerIdentity { PlayerId = 4 });
-            harness.Relationships.EnsureLink(p1Rep, hostileRep, harness.HostileTypeId);
-            harness.Relationships.EnsureLink(p1Rep, friendlyRep, harness.FriendlyTypeId);
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity hostileRep = harness.CreatePlayerRep(5);
+            Entity friendlyRep = harness.CreatePlayerRep(6);
+            harness.TeamRelations.Link(1, 5, harness.TeamRelations.HostileTypeId);
+            harness.TeamRelations.Link(1, 6, harness.TeamRelations.FriendlyTypeId);
 
             Entity actor = harness.CreateActor(p1Rep, WeaponAbilityId);
             Entity hostileTarget = harness.CreateTaggedEntity(hostileRep, DestructibleTag);
@@ -220,7 +220,7 @@ namespace Ludots.Tests.GAS
 
             var friendlyFacts = new CommandIntentTargetFacts(friendlyTarget, HasEntity: true);
             bool friendlyRouted = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in friendlyFacts, out _);
-            Assert.That(friendlyRouted, Is.False, "friendly stance is outside the weapon rule's stance set; no other rule matches.");
+            Assert.That(friendlyRouted, Is.False, "a friendly relation is outside the weapon rule's relation set; no other rule matches.");
         }
 
         [Test]
@@ -254,8 +254,8 @@ namespace Ludots.Tests.GAS
                 },
             }));
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity actor = harness.CreateActor(p1Rep);
             Entity target = harness.CreateTaggedEntity(p2Rep, DestructibleTag);
 
@@ -279,8 +279,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, (viewerRep, target) => target != deniedTarget);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
             deniedTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag, DestructibleTag);
 
@@ -300,8 +300,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, (_, _) => true);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
             Entity target = harness.CreateTaggedEntity(p2Rep, GarrisonableTag, DestructibleTag);
 
@@ -321,9 +321,9 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, (viewerRep, _) => viewerRep != blindRep);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            blindRep = world.Create(new PlayerIdentity { PlayerId = 2 });
-            Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            blindRep = harness.CreatePlayerRep(2);
+            Entity p3Rep = harness.CreatePlayerRep(3);
             Entity sightedActor = harness.CreateActor(p1Rep, GarrisonAbilityId);
             Entity blindActor = harness.CreateActor(blindRep, GarrisonAbilityId);
             Entity target = harness.CreateTaggedEntity(p3Rep, GarrisonableTag);
@@ -372,8 +372,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world, gate.CanTarget);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
             Entity knownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
             Entity unknownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
@@ -408,8 +408,8 @@ namespace Ludots.Tests.GAS
             Harness harness = Harness.Create(world);
             harness.InstallStandardProfile();
 
-            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p1Rep = harness.CreatePlayerRep(1);
+            Entity p2Rep = harness.CreatePlayerRep(2);
             var actors = new Entity[8];
             for (int i = 0; i < actors.Length; i++)
             {
@@ -448,13 +448,14 @@ namespace Ludots.Tests.GAS
 
         internal sealed class Harness
         {
+            public const string NeutralRelation = "Neutral";
+
             public World World = null!;
             public RelationshipRuntime Relationships = null!;
+            public TeamRelationTestHarness TeamRelations = null!;
             public OwnershipResolver Ownership = null!;
             public CommandIntentProfileRegistry Intents = null!;
             public StringIntRegistry ProfileIds = null!;
-            public int HostileTypeId;
-            public int FriendlyTypeId;
             public Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry Abilities = null!;
             public int CastAbilityOrderId;
             public int MoveToOrderId;
@@ -475,19 +476,13 @@ namespace Ludots.Tests.GAS
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
-                int memberOfTypeId = types.Register("MemberOf");
-                int hostileTypeId = types.Register("Hostile", isSymmetric: true);
-                int friendlyTypeId = types.Register("Friendly", isSymmetric: true);
-                types.Register("Neutral", isSymmetric: true);
+                int neutralTypeId = types.Register(NeutralRelation);
                 var ownership = new OwnershipResolver(relationships, ownsTypeId);
                 var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
-                var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
-                {
-                    StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
-                    SameDomainStance = "Friendly",
-                    SameTeamStance = "Friendly",
-                    DefaultStance = "Neutral",
-                });
+                TeamRelationTestHarness teamRelations = TeamRelationTestHarness.Over(world, relationships);
+                teamRelations.Link(1, 2, neutralTypeId);
+                teamRelations.Link(1, 3, neutralTypeId);
+                teamRelations.Link(2, 3, neutralTypeId);
 
                 var abilities = new AbilityDefinitionRegistry();
                 RegisterAbility(abilities, GarrisonAbilityId, GarrisonAbilityTag);
@@ -507,7 +502,7 @@ namespace Ludots.Tests.GAS
                     new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()),
                     abilities,
                     controlDomains,
-                    stances,
+                    teamRelations.Query,
                     orderTypes,
                     gate);
                 return new Harness
@@ -515,11 +510,10 @@ namespace Ludots.Tests.GAS
                     World = world,
                     Abilities = abilities,
                     Relationships = relationships,
+                    TeamRelations = teamRelations,
                     Ownership = ownership,
                     Intents = intents,
                     ProfileIds = profileIds,
-                    HostileTypeId = hostileTypeId,
-                    FriendlyTypeId = friendlyTypeId,
                     CastAbilityOrderId = 1,
                     MoveToOrderId = 2,
                 };
@@ -531,6 +525,11 @@ namespace Ludots.Tests.GAS
             }
 
             public int ProfileId(string name) => ProfileIds.GetId(name);
+
+            public Entity CreatePlayerRep(int playerIdAndTeamId)
+            {
+                return World.Create(new PlayerIdentity { PlayerId = playerIdAndTeamId }, new Team { Id = playerIdAndTeamId });
+            }
 
             public Entity CreateActor(Entity ownerRep, params int[] abilityIds)
             {
@@ -547,7 +546,7 @@ namespace Ludots.Tests.GAS
 
             public Entity CreateTaggedEntity(Entity ownerRep, params string[] tags)
             {
-                Entity entity = World.Create(new GameplayTagContainer());
+                Entity entity = World.Create(new GameplayTagContainer(), World.Get<Team>(ownerRep));
                 ref GameplayTagContainer container = ref World.Get<GameplayTagContainer>(entity);
                 for (int i = 0; i < tags.Length; i++)
                 {
@@ -574,7 +573,7 @@ namespace Ludots.Tests.GAS
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AllTags = new List<string> { GarrisonableTag },
-                                Stance = new List<string> { "Neutral", "Friendly" },
+                                Relation = new List<string> { NeutralRelation, TeamRelationTestHarness.FriendlyTypeName },
                             },
                             Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{GarrisonAbilityTag}", TargetShape = CommandIntentTargetShape.Entity },
                         },
@@ -585,7 +584,7 @@ namespace Ludots.Tests.GAS
                             Target = new CommandIntentTargetPredicateDefinition
                             {
                                 AnyTags = new List<string> { DestructibleTag },
-                                Stance = new List<string> { "Hostile", "Neutral" },
+                                Relation = new List<string> { TeamRelationTestHarness.HostileTypeName, NeutralRelation },
                             },
                             Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityCategory:{WeaponAbilityTag}", TargetShape = CommandIntentTargetShape.Entity },
                         },

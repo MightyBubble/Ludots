@@ -1477,7 +1477,9 @@ namespace Ludots.Tests.Presentation
                         engine.GlobalContext,
                         localPlayer,
                         entity,
-                        (commandSourceConfig.TargetFilter ?? throw new InvalidOperationException("commandSource.targetFilter is missing.")).ParseRelationFilter());
+                        (commandSourceConfig.TargetFilter ?? throw new InvalidOperationException("commandSource.targetFilter is missing.")).ParseRelationFilter(
+                            engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.")));
                 if (canAcquire)
                 {
                     eligible++;

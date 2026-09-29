@@ -142,7 +142,8 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands));
+                    commands,
+                    teamRelations: null));
 
             That(error!.Message, Does.StartWith(TargetResolverFanOutHelper.RootBudgetExceededError));
             That(commands.Count, Is.Zero);

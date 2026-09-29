@@ -153,13 +153,6 @@ public sealed class AiShowcaseHardcodingGuardTests
             }
 
             hasParticipantEntry = true;
-
-            if (string.Equals(propertyName, "Teams", StringComparison.Ordinal))
-            {
-                Assert.That(entry.TryGetProperty("Attitude", out JsonElement attitude), Is.True, $"{guardCase.Name} ParticipantRelationships.Teams[{index}] requires Attitude.");
-                Assert.That(attitude.GetString(), Is.Not.Empty, $"{guardCase.Name} ParticipantRelationships.Teams[{index}].Attitude must be explicit.");
-            }
-
             index++;
         }
 
@@ -184,8 +177,6 @@ public sealed class AiShowcaseHardcodingGuardTests
                 continue;
             }
 
-            Assert.That(entry.TryGetProperty("Attitude", out JsonElement attitude), Is.True, $"{guardCase.Name} ParticipantRelationships.Teams[{index}] requires Attitude.");
-            Assert.That(attitude.GetString(), Is.EqualTo("Hostile"), $"{guardCase.Name} semantic hostile relationship must declare hostile attitude.");
             return;
         }
 

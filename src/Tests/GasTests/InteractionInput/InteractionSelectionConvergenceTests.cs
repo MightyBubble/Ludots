@@ -685,43 +685,6 @@ namespace Ludots.Tests.GAS
             return collections;
         }
 
-        private static CommandSourceDomainHarness InstallCommandSourceDomainServices(
-            World world,
-            Dictionary<string, object> globals)
-        {
-            var types = new RelationshipTypeRegistry();
-            int ownsTypeId = types.Register("Owns");
-            int controlsTypeId = types.Register("Controls");
-            int memberOfTypeId = types.Register("MemberOf");
-            types.Register("Hostile", isSymmetric: true);
-            types.Register("Friendly", isSymmetric: true);
-            types.Register("Neutral", isSymmetric: true);
-            var relationships = new RelationshipRuntime(
-                world,
-                types,
-                new RelationshipMetricRegistry(),
-                new RelationshipFlagRegistry(),
-                new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 8),
-                new RelationshipReverseIndex(world));
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
-            var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
-            var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
-            {
-                StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
-                SameDomainStance = "Friendly",
-                SameTeamStance = "Friendly",
-                DefaultStance = "Neutral",
-            });
-            globals[CoreServiceKeys.ControlDomainQuery.Name] = controlDomains;
-            globals[CoreServiceKeys.DomainStanceQuery.Name] = stances;
-            return new CommandSourceDomainHarness(relationships, memberOfTypeId);
-        }
-
-        private readonly record struct CommandSourceDomainHarness(
-            RelationshipRuntime Relationships,
-            int MemberOfTypeId);
-
         private static void SeedCommandSource(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
         {
             var collections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) &&

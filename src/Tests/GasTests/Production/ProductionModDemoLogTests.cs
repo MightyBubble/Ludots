@@ -444,12 +444,12 @@ namespace Ludots.Tests.GAS.Production
 
                 // ── 阵营关系 ──
                 sb.AppendLine("[4X] 阵营关系:");
-                sb.AppendLine($"[4X]   Empire(1)↔Federation(2) = {TeamManager.GetRelationship(1, 2)}");
-                sb.AppendLine($"[4X]   Empire(1)↔Horde(3)      = {TeamManager.GetRelationship(1, 3)}");
-                sb.AppendLine($"[4X]   Empire(1)↔Nomads(4)     = {TeamManager.GetRelationship(1, 4)}");
-                sb.AppendLine($"[4X]   Federation(2)↔Horde(3)  = {TeamManager.GetRelationship(2, 3)}");
-                sb.AppendLine($"[4X]   Federation(2)↔Nomads(4) = {TeamManager.GetRelationship(2, 4)}");
-                sb.AppendLine($"[4X]   Horde(3)↔Nomads(4)      = {TeamManager.GetRelationship(3, 4)}");
+                sb.AppendLine($"[4X]   Empire(1)↔Federation(2) = {DescribeTeamRelation(engine, 1, 2)}");
+                sb.AppendLine($"[4X]   Empire(1)↔Horde(3)      = {DescribeTeamRelation(engine, 1, 3)}");
+                sb.AppendLine($"[4X]   Empire(1)↔Nomads(4)     = {DescribeTeamRelation(engine, 1, 4)}");
+                sb.AppendLine($"[4X]   Federation(2)↔Horde(3)  = {DescribeTeamRelation(engine, 2, 3)}");
+                sb.AppendLine($"[4X]   Federation(2)↔Nomads(4) = {DescribeTeamRelation(engine, 2, 4)}");
+                sb.AppendLine($"[4X]   Horde(3)↔Nomads(4)      = {DescribeTeamRelation(engine, 3, 4)}");
 
                 // ── Slot 0 (4101): BuildOutpost - CreateUnit ──
                 sb.AppendLine("[4X] Governor 施放【建造前哨】→ OutpostSite (CreateUnit: Unit.Outpost)。");
@@ -544,9 +544,9 @@ namespace Ludots.Tests.GAS.Production
 
                 // ── 阵营关系 ──
                 sb.AppendLine("[RTS] 阵营关系:");
-                sb.AppendLine($"[RTS]   Alliance(1)↔Axis(2)   = {TeamManager.GetRelationship(1, 2)}");
-                sb.AppendLine($"[RTS]   Alliance(1)↔Protoss(3)= {TeamManager.GetRelationship(1, 3)}");
-                sb.AppendLine($"[RTS]   Axis(2)↔Protoss(3)    = {TeamManager.GetRelationship(2, 3)}");
+                sb.AppendLine($"[RTS]   Alliance(1)↔Axis(2)   = {DescribeTeamRelation(engine, 1, 2)}");
+                sb.AppendLine($"[RTS]   Alliance(1)↔Protoss(3)= {DescribeTeamRelation(engine, 1, 3)}");
+                sb.AppendLine($"[RTS]   Axis(2)↔Protoss(3)    = {DescribeTeamRelation(engine, 2, 3)}");
 
                 int lumberMillBefore = CountEntitiesByName(world, "Lumber Mill");
                 float peasantMineralsBefore = world.Get<AttributeBuffer>(peasant).GetCurrent(mineralsId);
@@ -791,6 +791,20 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Assert.That(condition(), Is.True, because);
+        }
+
+        private static string DescribeTeamRelation(GameEngine engine, int teamA, int teamB)
+        {
+            TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+                ?? throw new InvalidOperationException("TeamRelationQuery missing.");
+            return $"{teamA}→{teamB}:{DescribeDirectedTeamRelation(teamRelations, teamA, teamB)} {teamB}→{teamA}:{DescribeDirectedTeamRelation(teamRelations, teamB, teamA)}";
+        }
+
+        private static string DescribeDirectedTeamRelation(TeamRelationQuery teamRelations, int sourceTeamId, int targetTeamId)
+        {
+            bool friendly = teamRelations.Has(sourceTeamId, targetTeamId, teamRelations.Types.GetId("Friendly"));
+            bool hostile = teamRelations.Has(sourceTeamId, targetTeamId, teamRelations.Types.GetId("Hostile"));
+            return friendly && hostile ? "Friendly+Hostile" : friendly ? "Friendly" : hostile ? "Hostile" : "None";
         }
 
         private static int CountEntitiesByName(World world, string entityName)

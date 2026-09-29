@@ -162,7 +162,7 @@ namespace Ludots.Tests.GAS.Production
                 steps.Add(new StepResult("TargetResolver ResolveTargets returns candidates", cand >= 2, $"Count={cand}"));
                 TargetResolverFanOutHelper.CollectFanOutTargets(
                     world, in ctx, in eTpl.TargetQuery, in eTpl.TargetFilter, in eTpl.TargetDispatch,
-                    engine.SpatialQueries, budget, cmds, tmpBuf);
+                    engine.SpatialQueries, budget, cmds, tmpBuf, engine.GetService(CoreServiceKeys.TeamRelationQuery));
                 steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count}"));
             }
 

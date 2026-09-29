@@ -793,7 +793,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships);
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships, new Ludots.Core.Gameplay.Teams.TeamRelationQuery(relationships, new Ludots.Core.Gameplay.Teams.TeamEntityLookup()));
             var templateKeys = new EntityTemplateKeyRegistry();
             var targetDispatchPresets = new TargetDispatchPresetRegistry();
             var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
