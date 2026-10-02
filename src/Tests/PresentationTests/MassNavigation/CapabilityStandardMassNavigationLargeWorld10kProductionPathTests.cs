@@ -1593,12 +1593,14 @@ namespace Ludots.Tests.Presentation
         private static void AssertLocalScenarioAgentsAreCommandable(GameEngine engine)
         {
             Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Assert.That(engine.World.TryGet(localPlayer, out PlayerIdentity localIdentity), Is.True);
             var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             MassNavigationSimulationRuntime simulation = RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
 
             int totalAgents = 0;
             int controllableAgents = 0;
-            int missingProjection = 0;
+            int missingTeam = 0;
+            int ownerMismatch = 0;
             var query = new QueryDescription().WithAll<MassNavigationAgent>();
             engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _) =>
             {
@@ -1609,9 +1611,16 @@ namespace Ludots.Tests.Presentation
                     controllableAgents++;
                 }
 
-                if (!engine.World.Has<PlayerOwner>(entity) || !engine.World.Has<Team>(entity))
+                if (!engine.World.Has<Team>(entity))
                 {
-                    missingProjection++;
+                    missingTeam++;
+                }
+
+                bool ownedByLocal = engine.World.TryGet(entity, out PlayerOwner owner) &&
+                    owner.PlayerId == localIdentity.PlayerId;
+                if (ownedByLocal != controllable)
+                {
+                    ownerMismatch++;
                 }
             });
 
@@ -1621,9 +1630,13 @@ namespace Ludots.Tests.Presentation
                 Is.EqualTo(simulation.AgentsPerTeam),
                 "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
             Assert.That(
-                missingProjection,
+                missingTeam,
                 Is.Zero,
-                "MassNavigation agents project PlayerOwner and Team from their ownership and membership edges.");
+                "Every MassNavigation agent projects Team from its membership edge.");
+            Assert.That(
+                ownerMismatch,
+                Is.Zero,
+                "PlayerOwner is projected exactly for agents the local player owns; teams without a bound player carry no PlayerOwner.");
         }
 
         private static void AssertProjectedParticipant(GameEngine engine, Entity entity, Entity localPlayer, string diagnostics)

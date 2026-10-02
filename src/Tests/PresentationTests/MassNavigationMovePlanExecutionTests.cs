@@ -108,6 +108,96 @@ public sealed class MassNavigationMovePlanExecutionTests
         });
     }
 
+    [Test]
+    public void Execution_SameMembersInShiftedQueryOrder_DoesNotRecommitGroup()
+    {
+        using var engine = new GameEngine();
+        string repoRoot = FindRepoRoot();
+        engine.InitializeWithConfigPipeline(
+            new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+            Path.Combine(repoRoot, "assets"));
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
+
+        int profileId = MassNavigationProfileRegistry.Register("light");
+        var layer = new MassNavigationAgentLayer(1u, 1u);
+        var agents = new Entity[2];
+        var seeds = new MassNavigationAgentSeed[2];
+        for (int i = 0; i < agents.Length; i++)
+        {
+            float x = 1_000f + i * 200f;
+            agents[i] = engine.World.Create(
+                new MassNavigationAgent { ProfileId = profileId },
+                WorldPositionCm.FromCmFloat(x, 1_000f),
+                new EntityLayer(layer.CategoryMask, layer.InteractionMask),
+                new FacingDirection { AngleRad = 0f });
+            seeds[i] = new MassNavigationAgentSeed(
+                relationshipDomainId: MassNavigationOrderChainTests.LocalTeamId,
+                localPositionXCm: x,
+                localPositionYCm: 1_000f,
+                heavy: false,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer);
+        }
+
+        simulation.RebuildFromAuthoredAgents(engine.World, agents, seeds, new[] { true, true });
+        for (int i = 0; i < agents.Length; i++)
+        {
+            engine.World.Set(agents[i], new MovePlanExecutionIntent
+            {
+                CommandGroupToken = 41,
+                TargetWorldCm = new Vector2(2_000f, 1_500f),
+                StopRadiusCm = 25f,
+                HasTarget = 1,
+                Mode = MovePlanExecutionMode.CommandGroup,
+            });
+        }
+
+        var mapId = new MapId(config.MapId);
+        engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
+        var binding = new MassNavigationRuntimeBinding();
+        binding.Activate(mapId, simulation);
+        binding.MarkPrepared(mapId, simulation);
+        engine.SetService(MassNavigationKeys.RuntimeBinding, binding);
+
+        var system = new MassNavigationMovePlanExecutionSystem(engine, config);
+        int[] initialOrder = CollectQueryAgentIndices(engine.World);
+        system.Update(0f);
+        Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
+
+        engine.World.Add(agents[initialOrder[1]], new ChunkShiftMarker());
+        Assert.That(CollectQueryAgentIndices(engine.World), Is.EqualTo(new[] { initialOrder[1], initialOrder[0] }),
+            "Test setup must reverse ECS query order for the unchanged member set.");
+
+        system.Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(41, out bool arrived), Is.True);
+            Assert.That(arrived, Is.False);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out _, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(1, out _, out _), Is.True);
+        });
+    }
+
+    private static int[] CollectQueryAgentIndices(World world)
+    {
+        var indices = new List<int>();
+        var query = new QueryDescription().WithAll<MassNavigationAgentIndex, MovePlanExecutionIntent>();
+        world.Query(in query, (ref MassNavigationAgentIndex index) => indices.Add(index.Value));
+        return indices.ToArray();
+    }
+
+    private struct ChunkShiftMarker;
+
     private static string FindRepoRoot()
     {
         string current = TestContext.CurrentContext.WorkDirectory;

@@ -131,6 +131,60 @@ public class MassNavigationIdleHoldContractTests
         Assert.That(arrived, Is.True, "settled 的掉队成员不应阻断编组到位");
     }
 
+    [Test]
+    public void OrderRecommit_SameMembersReordered_KeepsMembersMoving()
+    {
+        MassNavigationProfileRegistry.Reset();
+        using World world = World.Create();
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 2;
+        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 2;
+        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 2;
+
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
+
+        int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.idleHoldRecommit");
+        Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
+        Entity second = world.Create(new MassNavigationAgent { ProfileId = profileId });
+        var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+        simulation.RebuildFromAuthoredAgents(
+            world,
+            new[] { first, second },
+            new[]
+            {
+                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+            },
+            new[] { true, true });
+
+        var destination = new Vector2(20_000f, 20_000f);
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(simulation, orderToken: 101, new[] { 0, 1 }, teamId: 1, destination);
+        for (int frame = 0; frame < 20; frame++)
+        {
+            simulation.NavGroupRuntime.UpdateTargets(simulation.MassNavigationFlow, simulation.FrameIndex);
+            simulation.StepNavigationForTests(world, 0.05f, runHardResolve: true);
+        }
+
+        MassNavigationFlowSolverState flow = simulation.GetFlowSolverForTests();
+        Assert.That(flow.GetVelocityCmPerSecond(0).Length(), Is.GreaterThan(0f), "前置：成员应已在行进");
+        Assert.That(flow.GetVelocityCmPerSecond(1).Length(), Is.GreaterThan(0f), "前置：成员应已在行进");
+
+        // 执行侧按 ECS 查询顺序收集成员，同一批成员每帧可能换序重提。
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(simulation, orderToken: 101, new[] { 1, 0 }, teamId: 1, destination);
+
+        for (int i = 0; i < 2; i++)
+        {
+            Assert.That(flow.IsUnitSettled(i), Is.False, $"agent {i} 换序重提后不应被驻停");
+            Assert.That(flow.GetVelocityCmPerSecond(i).Length(), Is.GreaterThan(0f), $"agent {i} 换序重提后速度被清零");
+        }
+
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(101, out bool arrived), Is.True);
+        Assert.That(arrived, Is.False);
+    }
+
     private static void ResetWithSeeds(MassNavigationFlowSolverState flow, float[] spawnX, float[] spawnY)
     {
         var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);

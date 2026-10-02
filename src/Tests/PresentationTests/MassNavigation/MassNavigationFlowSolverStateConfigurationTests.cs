@@ -786,6 +786,10 @@ namespace Ludots.Tests.Presentation
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;
+            MassNavigationHotZoneConfig activeHotZone = config.World!.HotZones
+                .Single(zone => zone.Id == config.World.ActiveHotZoneId);
+            activeHotZone.CenterXCm = 0;
+            activeHotZone.CenterYCm = 0;
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
