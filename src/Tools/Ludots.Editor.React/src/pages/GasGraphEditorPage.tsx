@@ -34,7 +34,7 @@ import {
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
 import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
-import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
 import {
   catalogGraphMatchesDialect,
@@ -2912,13 +2912,9 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                 ) : null}
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={removeSelectedGraphNode}
-                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
-                >
+                <Button variant="danger" className="w-full" onClick={removeSelectedGraphNode}>
                   删除此节点
-                </button>
+                </Button>
               </>
             ) : selectedEdge ? (
               <>
@@ -2960,13 +2956,9 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
                     />
                   </label>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={removeSelectedGraphEdge}
-                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
-                >
+                <Button variant="danger" className="w-full" onClick={removeSelectedGraphEdge}>
                   删除此连线
-                </button>
+                </Button>
               </>
             ) : (
               <div className="space-y-2">
