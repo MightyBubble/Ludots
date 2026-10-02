@@ -45,6 +45,7 @@ export type DialogueSayData = {
   lineId: string;
   linePreview?: string;
   speakerId?: string;
+  speakerName?: string;
   isEntry: boolean;
   isFinish: boolean;
   hasChoices: boolean;
@@ -69,7 +70,7 @@ export type DialogueCanvasNode = Node<DialogueCanvasData>;
 
 export type DialogueEdgeKind = 'next' | 'choice' | 'hub';
 
-export type LinePreview = { id: string; speakerId?: string; textToken?: string };
+export type LinePreview = { id: string; speakerId?: string; textToken?: string; text?: string; speakerName?: string };
 
 export function choiceHubId(statementId: string): string {
   return `${statementId}${CHOICE_HUB_SUFFIX}`;
@@ -106,7 +107,7 @@ export function hubWidth(choiceCount: number): number {
 function previewOf(lineId: string, lines: readonly LinePreview[]): string | undefined {
   const row = lines.find((line) => line.id === lineId);
   if (!row) return undefined;
-  return row.textToken || lineId;
+  return row.text || row.textToken || lineId;
 }
 
 function layoutDialogueNodes(
@@ -305,6 +306,7 @@ export function dialogueToFlow(
         lineId: node.lineId,
         linePreview: previewOf(node.lineId, lines),
         speakerId: line?.speakerId,
+        speakerName: line?.speakerName,
         isEntry: node.id === tree.entryNode,
         isFinish,
         hasChoices,
