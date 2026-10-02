@@ -120,6 +120,41 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.MergedConfig.PanelTheme, Is.EqualTo("kit-amber").IgnoreCase);
         }
 
+        [Test]
+        public void GateDialogue_AllowedNode_PortraitOverrideBeatsSpeakerMapping()
+        {
+            var frameTimesMs = new List<double>();
+            using GameEngine engine = CreateEngine();
+            DialogueRuntime dialogue = engine.GetService(CoreServiceKeys.DialogueRuntime)
+                ?? throw new InvalidOperationException("DialogueRuntime missing.");
+
+            engine.LoadMap(MapId);
+            TickUntil(engine, frameTimesMs,
+                () => dialogue.HasActiveDialogue,
+                maxFrames: 120,
+                "Map focus should auto-start Dialogue.AuthorKit.Gate.");
+
+            Assert.That(dialogue.TryGetActiveView(out DialogueView open), Is.True);
+            Assert.That(open.PortraitImageId, Is.EqualTo("portrait.speaker.guard"),
+                "Nodes without override follow the speaker portrait mapping.");
+
+            int writeIndex = IndexOfChoice(open, "write_pass");
+            dialogue.ChooseOption(writeIndex);
+            TickUntil(engine, frameTimesMs,
+                () => dialogue.TryGetActiveView(out DialogueView recorded) && recorded.NodeId == "recorded",
+                maxFrames: 60,
+                "write_pass must land on the recorded node.");
+            dialogue.ChooseOption(0);
+            Assert.That(dialogue.TryGetActiveView(out DialogueView openAgain), Is.True);
+            int enterIndex = IndexOfChoice(openAgain, "ask_enter");
+            dialogue.ChooseOption(enterIndex);
+
+            Assert.That(dialogue.TryGetActiveView(out DialogueView allowed), Is.True);
+            Assert.That(allowed.NodeId, Is.EqualTo("allowed"));
+            Assert.That(allowed.PortraitImageId, Is.EqualTo("portrait.speaker.guard.nod"),
+                "Node-level portrait override must beat the speaker mapping.");
+        }
+
         private static bool PanelChoicesVisible(GameEngine engine)
         {
             PanelActivationApi activation = engine.GetService(CoreServiceKeys.PanelActivationApi)
