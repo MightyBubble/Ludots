@@ -10,5 +10,11 @@
     "kind": "Portrait",
     "path": "DialogueAuthorKitShowcaseMod:assets/Presentation/portraits/traveler.png",
     "glyphFallback": "TR"
+  },
+  {
+    "id": "portrait.speaker.guard.nod",
+    "kind": "Portrait",
+    "path": "DialogueAuthorKitShowcaseMod:assets/Presentation/portraits/guard.png",
+    "glyphFallback": "GG"
   }
 ]
