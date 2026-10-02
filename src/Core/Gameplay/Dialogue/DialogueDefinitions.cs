@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.Dialogue
         public string LineId { get; set; } = string.Empty;
         public string PresentationProfile { get; set; } = string.Empty;
         public string CameraId { get; set; } = string.Empty;
+        public string PortraitImageId { get; set; } = string.Empty;
         public string NextNode { get; set; } = string.Empty;
         public float AutoAdvanceSeconds { get; set; }
         public string OnEnterActionGraphId { get; set; } = string.Empty;

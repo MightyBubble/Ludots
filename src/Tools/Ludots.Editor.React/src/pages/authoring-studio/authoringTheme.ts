@@ -21,26 +21,6 @@ export const STUDIO_THEME = {
   onYellow: 'var(--studio-bg)',
 } as const;
 
-export const STUDIO_ROLE = {
-  structure: STUDIO_THEME.blue,
-  control: STUDIO_THEME.yellow,
-  event: STUDIO_THEME.red,
-} as const;
-
-export const STUDIO_CHROME = {
-  page: 'h-full bg-studio-bg text-studio-label',
-  field:
-    'mt-1 w-full rounded-md border border-studio-elevated bg-studio-bg px-2 py-1.5 text-sm text-studio-label',
-  label: 'block text-xs text-studio-muted',
-  btnPrimary:
-    'rounded-md bg-studio-blue px-3 py-1.5 text-sm font-semibold text-studio-label hover:brightness-110 disabled:opacity-50',
-  btnGhost:
-    'rounded-md border border-studio-elevated bg-studio-surface px-3 py-1.5 text-sm text-studio-label hover:bg-studio-elevated',
-  btnDanger: 'rounded-md border border-studio-red/50 px-3 py-1.5 text-sm text-studio-red hover:bg-studio-red/10 disabled:opacity-50',
-  navOn: 'rounded-md bg-studio-elevated px-2 py-1 text-xs text-studio-label',
-  navOff: 'rounded-md px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated hover:text-studio-label',
-} as const;
-
 export function diskSaveStatus(path: string): string {
   return `已写入 ${path}。正在玩的局要重开才会按这份走。`;
 }
@@ -51,4 +31,7 @@ export const TOOL_ACCENT: Record<string, StudioAccent> = {
   fsm: 'yellow',
   dialogue: 'blue',
   timeline: 'yellow',
+  map: 'blue',
+  panels: 'yellow',
+  run: 'red',
 };

@@ -14,14 +14,18 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './dialogueTree.css';
-import { STUDIO_CHROME, STUDIO_THEME } from '../authoring-studio/authoringTheme';
+import { STUDIO_THEME } from '../authoring-studio/authoringTheme';
+import { Button } from '@/components/ui/Button';
+import { labelClass } from '@/components/ui/chrome';
+import { fieldControlClass } from '@/components/ui/Field';
 import { DialogueChoiceNode } from './DialogueChoiceNode';
 import { DialogueFlowEdge } from './DialogueFlowEdge';
 import { DialogueSayNode } from './DialogueSayNode';
+import { StatementInspector } from './StatementInspector';
+import type { LineDraft, SpeakerDraft, SpeakerRow } from './inlineAuthoring';
 import {
   applyFlowToDialogue,
   canvasOwnerId,
-  choiceHandle,
   choiceHubId,
   dialogueToFlow,
   isChoiceHubId,
@@ -49,9 +53,31 @@ type Props = {
   selectedNodeId: string;
   onSelectNode: (nodeId: string) => void;
   onChange: (tree: DialogueTree) => void;
+  speakers: readonly SpeakerRow[];
+  speakerNameOf: (speakerId: string) => string | undefined;
+  defaultTextOf: (token: string) => string;
+  portraitAssetIds: readonly string[];
+  drafts: Record<string, LineDraft>;
+  onDraft: (key: string, patch: LineDraft) => void;
+  onClearDraft: (key: string) => void;
+  onQuickAddSpeaker: (draft: SpeakerDraft) => string | null;
 };
 
-export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, onChange }: Props) {
+export function DialogueTreeCanvas({
+  tree,
+  lines,
+  selectedNodeId,
+  onSelectNode,
+  onChange,
+  speakers,
+  speakerNameOf,
+  defaultTextOf,
+  portraitAssetIds,
+  drafts,
+  onDraft,
+  onClearDraft,
+  onQuickAddSpeaker,
+}: Props) {
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
   const treeRef = useRef(tree);
   treeRef.current = tree;
@@ -234,36 +260,36 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
           />
         </ReactFlow>
         <div className="absolute right-3 top-3 z-10 flex gap-2">
-          <button type="button" className={STUDIO_CHROME.btnGhost} onClick={addStatement}>
+          <Button variant="ghost" onClick={addStatement}>
             加一句
-          </button>
-          <button type="button" className={STUDIO_CHROME.btnGhost} onClick={relayout}>
+          </Button>
+          <Button variant="ghost" onClick={relayout}>
             自动排版
-          </button>
+          </Button>
         </div>
       </div>
       <aside className="col-span-4 space-y-3 overflow-auto border-l border-studio-elevated bg-studio-surface p-4">
         <div className="text-[10px] uppercase tracking-wide text-studio-muted">检查器</div>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           对话 ID
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.id}
             onChange={(e) => onChange({ ...tree, id: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           显示名
           <input
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.displayName ?? ''}
             onChange={(e) => onChange({ ...tree, displayName: e.target.value })}
           />
         </label>
-        <label className={STUDIO_CHROME.label}>
+        <label className={labelClass}>
           入口节点
           <select
-            className={STUDIO_CHROME.field}
+            className={fieldControlClass}
             value={tree.entryNode}
             onChange={(e) => onChange({ ...tree, entryNode: e.target.value })}
           >
@@ -276,8 +302,17 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
         </label>
         {selectedNode ? (
           <StatementInspector
+            tree={tree}
             node={selectedNode}
             lines={lines}
+            speakers={speakers}
+            speakerNameOf={speakerNameOf}
+            defaultTextOf={defaultTextOf}
+            portraitAssetIds={portraitAssetIds}
+            drafts={drafts}
+            onDraft={onDraft}
+            onClearDraft={onClearDraft}
+            onQuickAddSpeaker={onQuickAddSpeaker}
             onChange={patchNode}
             onAddChoice={addChoice}
             onRemoveChoice={(choiceId) => onChange(removeDialogueChoice(tree, selectedNode.id, choiceId))}
@@ -290,163 +325,10 @@ export function DialogueTreeCanvas({ tree, lines, selectedNodeId, onSelectNode, 
         ) : (
           <p className="text-xs text-studio-muted">
             蓝头是说话，黄头是选项。线从下口接到上口，线上不写字。黄线是选项，蓝线是接下句。
+            选中节点后直接在右边写说话人和正文，保存时自动进台词本和文本表。
           </p>
         )}
       </aside>
-    </div>
-  );
-}
-
-function StatementInspector({
-  node,
-  lines,
-  onChange,
-  onAddChoice,
-  onRemoveChoice,
-  canRemove,
-  onRemove,
-}: {
-  node: DialogueNode;
-  lines: readonly LinePreview[];
-  onChange: (node: DialogueNode) => void;
-  onAddChoice: () => void;
-  onRemoveChoice: (choiceId: string) => void;
-  canRemove: boolean;
-  onRemove: () => void;
-}) {
-  const lineIds = lines.map((line) => line.id);
-  return (
-    <div className="space-y-3">
-      <label className={STUDIO_CHROME.label}>
-        节点 ID
-        <input className={STUDIO_CHROME.field} value={node.id} readOnly />
-      </label>
-      <label className={STUDIO_CHROME.label}>
-        台词
-        <select
-          className={STUDIO_CHROME.field}
-          value={node.lineId}
-          onChange={(e) => onChange({ ...node, lineId: e.target.value })}
-        >
-          <option value="">选择台词</option>
-          {(node.lineId && !lineIds.includes(node.lineId) ? [node.lineId, ...lineIds] : lineIds).map((id) => (
-            <option key={id} value={id}>
-              {id}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className={STUDIO_CHROME.label}>
-        表现配置
-        <input
-          className={STUDIO_CHROME.field}
-          value={node.presentationProfile ?? ''}
-          onChange={(e) => onChange({ ...node, presentationProfile: e.target.value })}
-        />
-      </label>
-      <label className={STUDIO_CHROME.label}>
-        镜头
-        <input
-          className={STUDIO_CHROME.field}
-          value={node.cameraId ?? ''}
-          onChange={(e) => onChange({ ...node, cameraId: e.target.value })}
-        />
-      </label>
-      <label className={STUDIO_CHROME.label}>
-        进句动作图
-        <input
-          className={STUDIO_CHROME.field}
-          value={node.onEnterActionGraphId ?? ''}
-          onChange={(e) => onChange({ ...node, onEnterActionGraphId: e.target.value })}
-        />
-      </label>
-      <label className={STUDIO_CHROME.label}>
-        自动接下句（秒，0 表示等玩家）
-        <input
-          className={STUDIO_CHROME.field}
-          type="number"
-          min={0}
-          step={0.1}
-          value={node.autoAdvanceSeconds ?? 0}
-          onChange={(e) => onChange({ ...node, autoAdvanceSeconds: Number(e.target.value) || 0 })}
-        />
-      </label>
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-studio-muted">选项（黄头节点下口）</div>
-        <button type="button" className={STUDIO_CHROME.btnGhost} onClick={onAddChoice}>
-          + 加选项
-        </button>
-      </div>
-      {(node.choices ?? []).map((choice, index) => (
-        <div key={choice.id} className="space-y-2 rounded-md border border-studio-elevated p-2">
-          <label className={STUDIO_CHROME.label}>
-            选项 ID
-            <input
-              className={STUDIO_CHROME.field}
-              value={choice.id}
-              onChange={(e) => {
-                const choices = (node.choices ?? []).slice();
-                choices[index] = { ...choice, id: e.target.value };
-                onChange({ ...node, choices });
-              }}
-            />
-          </label>
-          <label className={STUDIO_CHROME.label}>
-            台词
-            <select
-              className={STUDIO_CHROME.field}
-              value={choice.lineId}
-              onChange={(e) => {
-                const choices = (node.choices ?? []).slice();
-                choices[index] = { ...choice, lineId: e.target.value };
-                onChange({ ...node, choices });
-              }}
-            >
-              <option value="">选择台词</option>
-              {(choice.lineId && !lineIds.includes(choice.lineId) ? [choice.lineId, ...lineIds] : lineIds).map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={STUDIO_CHROME.label}>
-            条件图
-            <input
-              className={STUDIO_CHROME.field}
-              value={choice.conditionGraphId ?? ''}
-              onChange={(e) => {
-                const choices = (node.choices ?? []).slice();
-                choices[index] = { ...choice, conditionGraphId: e.target.value };
-                onChange({ ...node, choices });
-              }}
-            />
-          </label>
-          <label className={STUDIO_CHROME.label}>
-            动作图
-            <input
-              className={STUDIO_CHROME.field}
-              value={choice.actionGraphId ?? ''}
-              onChange={(e) => {
-                const choices = (node.choices ?? []).slice();
-                choices[index] = { ...choice, actionGraphId: e.target.value };
-                onChange({ ...node, choices });
-              }}
-            />
-          </label>
-          <p className="text-[10px] text-studio-muted">下一句从选项节点「{choiceHandle(choice.id)}」口往下拉。</p>
-          <button
-            type="button"
-            className={STUDIO_CHROME.btnDanger}
-            onClick={() => onRemoveChoice(choice.id)}
-          >
-            删除此选项
-          </button>
-        </div>
-      ))}
-      <button type="button" className={STUDIO_CHROME.btnDanger} disabled={!canRemove} onClick={onRemove}>
-        删除此句
-      </button>
     </div>
   );
 }
