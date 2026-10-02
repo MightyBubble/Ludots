@@ -1,4 +1,4 @@
-export type AuthoringToolId = 'blueprint' | 'bt' | 'fsm' | 'dialogue' | 'timeline';
+export type AuthoringToolId = 'blueprint' | 'bt' | 'fsm' | 'dialogue' | 'text' | 'timeline';
 
 export type AuthoringTool = {
   id: AuthoringToolId;
@@ -10,7 +10,7 @@ export type AuthoringTool = {
 };
 
 /**
- * 作者工作室正门只列这五件。地图、面板、场编辑、技能数值不进这张表。
+ * 作者工作室正门只列这六件。地图、面板、场编辑、技能数值不进这张表。
  * 路径别名留给旧书签：/gas-graphs、/story-authoring。
  */
 export const AUTHORING_TOOLS: readonly AuthoringTool[] = [
@@ -45,6 +45,14 @@ export const AUTHORING_TOOLS: readonly AuthoringTool[] = [
     title: '对话',
     blurb: '说话节点连成树。黄线是选项，蓝线接下句。条件和副作用进蓝图。',
     hint: 'Dialogue/ · Story/lines.json',
+  },
+  {
+    id: 'text',
+    path: '/text-bank',
+    aliases: [],
+    title: '文本',
+    blurb: '一张表改所有文案。行是词条，列是语言；就地加粗、上色，缺翻译标红。',
+    hint: 'Presentation/text_tokens.json · text_locales.json',
   },
   {
     id: 'timeline',
