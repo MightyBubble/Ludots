@@ -105,7 +105,7 @@ namespace Ludots.Core.Gameplay.GAS
                     runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentBefore)
                         ? currentBefore
                         : 0f;
-                runtime.EffectSideEffects.StageModifiers(context.Target, in modifiers, context.Source);
+                runtime.EffectSideEffects.StageModifiers(context.Target, in modifiers);
                 float stagedAfter = primaryAttrId >= 0 &&
                     runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentAfter)
                         ? currentAfter
@@ -115,7 +115,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             float before = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
-            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps, context.Source);
+            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
             float after = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
             runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
@@ -137,16 +137,16 @@ namespace Ludots.Core.Gameplay.GAS
             if (transaction?.IsActive == true)
             {
                 if (HasAssignedAttribute(templateData.PresetAttribute0))
-                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx, context.Source);
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
                 if (HasAssignedAttribute(templateData.PresetAttribute1))
-                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy, context.Source);
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
                 return;
             }
 
             if (HasAssignedAttribute(templateData.PresetAttribute0))
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps, context.Source);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
             if (HasAssignedAttribute(templateData.PresetAttribute1))
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps, context.Source);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
         public static void HandleSpatialQuery(

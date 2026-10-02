@@ -127,7 +127,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
                             {
                                 Target = entity,
-                                Source = dirtyFlags.GetAttributeSource(i),
                                 AttributeId = i,
                                 OldValue = 0f,
                                 NewValue = newValue
@@ -152,7 +151,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
                                 {
                                     Target = entity,
-                                    Source = dirtyFlags.GetAttributeSource(i),
                                     AttributeId = i,
                                     OldValue = oldValue,
                                     NewValue = newValue

@@ -69,7 +69,6 @@ namespace Ludots.Tests.GAS
                 provenance));
 
             That(world.Get<AttributeBuffer>(entity).GetCurrent(healthId), Is.EqualTo(100f));
-            That(world.Get<DirtyFlags>(entity).GetAttributeSource(healthId), Is.EqualTo(Entity.Null));
         }
 
         [Test]
