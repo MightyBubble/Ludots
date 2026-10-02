@@ -266,6 +266,11 @@ namespace Ludots.Core.Gameplay.Dialogue
                 out string speakerName,
                 out string portraitImageId,
                 out string standingImageId);
+            if (!string.IsNullOrWhiteSpace(node.PortraitImageId))
+            {
+                portraitImageId = node.PortraitImageId;
+                standingImageId = node.PortraitImageId;
+            }
             view = new DialogueView(
                 _active.Definition.Id,
                 string.IsNullOrWhiteSpace(_active.Definition.DisplayToken)
