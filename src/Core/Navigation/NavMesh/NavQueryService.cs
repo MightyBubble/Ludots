@@ -55,23 +55,61 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
 
+        /// <summary>
+        /// 瓦片网格原点（世界厘米）。烘焙按地形世界位置切块，因此板锚定居中世界时首个瓦片
+        /// 落在负半轴；寻址必须减去该原点，否则负半轴坐标会被钳到 chunk 0 而指向错误瓦片。
+        /// </summary>
+        private readonly Fix64 _gridOriginXcm;
+
+        private readonly Fix64 _gridOriginYcm;
+
         public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
             : this(
                 store,
                 layer,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                Fix64.Zero,
+                Fix64.Zero)
         {
         }
 
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            int tileWidthCm,
+            int tileHeightCm,
+            int gridOriginXcm,
+            int gridOriginYcm)
+            : this(
+                store,
+                layer,
+                areaCosts,
+                Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                Fix64.FromInt(gridOriginXcm),
+                Fix64.FromInt(gridOriginYcm))
+        {
+        }
+
+        private NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            Fix64 tileWidthCm,
+            Fix64 tileHeightCm,
+            Fix64 gridOriginXcm,
+            Fix64 gridOriginYcm)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _gridOriginXcm = gridOriginXcm;
+            _gridOriginYcm = gridOriginYcm;
         }
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
@@ -141,8 +179,8 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            var xFix = Fix64.FromInt(worldXcm);
-            var zFix = Fix64.FromInt(worldZcm);
+            var xFix = Fix64.FromInt(worldXcm) - _gridOriginXcm;
+            var zFix = Fix64.FromInt(worldZcm) - _gridOriginYcm;
             int cx = (xFix / _tileWidthCm).ToInt();
             int cz = (zFix / _tileHeightCm).ToInt();
 
