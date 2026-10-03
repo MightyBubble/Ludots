@@ -227,7 +227,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
+            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps", "links" });
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
@@ -330,6 +330,48 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException("NavMeshBakeConfig.areas must be an explicit array.");
             }
 
+            if (root.TryGetPropertyValue("links", out JsonNode? linksNode) && linksNode is not null)
+            {
+                if (linksNode is not JsonArray links)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.links must be an array.");
+                }
+
+                var linkValidator = new NavLinkConfigValidator(
+                    hasLayer: layerId =>
+                    {
+                        for (int i = 0; i < layers.Count; i++)
+                        {
+                            if (layers[i] is JsonObject candidate &&
+                                candidate["id"] is JsonValue value &&
+                                value.TryGetValue<string>(out string? id) &&
+                                string.Equals(id, layerId, StringComparison.Ordinal))
+                            {
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    },
+                    hasAgentProfile: profileId =>
+                    {
+                        for (int i = 0; i < profiles.Count; i++)
+                        {
+                            if (profiles[i] is JsonObject candidate &&
+                                candidate["id"] is JsonValue value &&
+                                value.TryGetValue<string>(out string? id) &&
+                                string.Equals(id, profileId, StringComparison.Ordinal))
+                            {
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    });
+
+                linkValidator.Validate(links, "NavMeshBakeConfig.links");
+            }
+
             for (int i = 0; i < areas.Count; i++)
             {
                 if (areas[i] is not JsonObject area)
@@ -390,114 +432,25 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
 
         private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)
-            => RequireOnlyProperties(obj, path, allowed, Array.Empty<string>());
+            => NavMeshJsonStrict.RequireOnlyProperties(obj, path, allowed, Array.Empty<string>());
 
-        /// <summary>Unknown-key rejection is absolute; `optional` keys are validated when
-        /// present but carry no presence requirement, so new vocabulary lands without
-        /// forcing every existing navmesh.json to repeat it.</summary>
         private static void RequireOnlyProperties(JsonObject obj, string path, string[] allowed, string[] optional)
-        {
-            foreach (var property in obj)
-            {
-                bool known = false;
-                for (int i = 0; i < allowed.Length; i++)
-                {
-                    if (string.Equals(property.Key, allowed[i], StringComparison.Ordinal))
-                    {
-                        known = true;
-                        break;
-                    }
-                }
-
-                for (int i = 0; !known && i < optional.Length; i++)
-                {
-                    if (string.Equals(property.Key, optional[i], StringComparison.Ordinal))
-                    {
-                        known = true;
-                        break;
-                    }
-                }
-
-                if (!known)
-                {
-                    throw new InvalidOperationException($"{path} contains unknown property '{property.Key}'.");
-                }
-            }
-
-            for (int i = 0; i < allowed.Length; i++)
-            {
-                if (!obj.ContainsKey(allowed[i]))
-                {
-                    throw new InvalidOperationException($"{path} must explicitly define '{allowed[i]}'.");
-                }
-            }
-        }
+            => NavMeshJsonStrict.RequireOnlyProperties(obj, path, allowed, optional);
 
         private static string RequireString(JsonObject obj, string key, string path)
-        {
-            if (obj[key] is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
-            {
-                throw new InvalidOperationException($"{path}.{key} must be a non-empty string.");
-            }
-
-            if (!string.Equals(text.Trim(), text, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException($"{path}.{key} must not contain leading or trailing whitespace.");
-            }
-
-            return text;
-        }
+            => NavMeshJsonStrict.RequireString(obj, key, path);
 
         private static void RequireNumber(JsonObject obj, string key, string path)
-        {
-            if (obj[key] is not JsonValue value ||
-                (!value.TryGetValue<int>(out _) &&
-                 !value.TryGetValue<float>(out _) &&
-                 !value.TryGetValue<double>(out _)))
-            {
-                throw new InvalidOperationException($"{path}.{key} must be a number.");
-            }
-        }
+            => NavMeshJsonStrict.RequireNumber(obj, key, path);
 
         private static int RequireInt(JsonObject obj, string key, string path)
-        {
-            if (obj[key] is not JsonValue value || !value.TryGetValue<int>(out int number))
-            {
-                throw new InvalidOperationException($"{path}.{key} must be an integer.");
-            }
-
-            return number;
-        }
+            => NavMeshJsonStrict.RequireInt(obj, key, path);
 
         private static float RequireFloat(JsonObject obj, string key, string path)
-        {
-            if (obj[key] is not JsonValue value)
-            {
-                throw new InvalidOperationException($"{path}.{key} must be a number.");
-            }
-
-            if (value.TryGetValue<float>(out float number))
-            {
-                return number;
-            }
-
-            if (value.TryGetValue<double>(out double numberDouble))
-            {
-                return (float)numberDouble;
-            }
-
-            throw new InvalidOperationException($"{path}.{key} must be a number.");
-        }
+            => NavMeshJsonStrict.RequireFloat(obj, key, path);
 
         private static bool RequireBool(JsonObject obj, string key, string path)
-        {
-            if (obj[key] is not JsonValue value || !value.TryGetValue<bool>(out bool flag))
-            {
-                throw new InvalidOperationException($"{path}.{key} must be a boolean.");
-            }
-
-            return flag;
-        }
+            => NavMeshJsonStrict.RequireBool(obj, key, path);
     }
 
     public sealed record NavMeshBakeConfigContext(
