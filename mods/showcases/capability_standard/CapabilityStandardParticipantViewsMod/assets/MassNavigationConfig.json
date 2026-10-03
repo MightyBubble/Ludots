@@ -59,7 +59,7 @@
     "relationships": []
   },
   "flow": {
-    "iterationsPerStep": 16
+    "crowdStampBudgetUnits": 0
   },
   "semantics": {
     "route": {
