@@ -1,9 +1,9 @@
 # 图能力唯一入口
 
-**图能力相关的进度、还开着的活、不该合的 PR，只认本页。**  
+**图驱动四条线的进度总账：图能力、输入→下令、UI 面板、Activity 内容。** 图能力相关的进度、还开着的活、不该合的 PR，只认本页；另外三条线的登记见 §3.6。  
 不要另写交接，不要从旧审计开工，不要再开一张「总入口」票。
 
-规矩在这两页，不在本页改：[图怎么分层](graph-layering-flow-and-behavior.md)、[纯计算和可挂起动作怎么分开](graph-funclib-actionlib-contract.md)。  
+规矩在这两页，不在本页改：[图怎么分层](graph-layering-flow-and-behavior.md)、[纯计算和可挂起动作怎么分开](graph-funclib-actionlib-contract.md)。跨线结构（六不变量）的正本是 [引擎管线宪法](engine-pipeline-constitution.md)。  
 展厅列表看 [能力标准展厅](capability-standard-showcases.md)。打分短剧怎么验收看 [残血的分更高](../acceptance/graph-score-wounded-priority.md)。  
 旧审计在 `docs/audits/`，那是当时的本子。和本页打架，听本页的。
 
@@ -30,7 +30,7 @@
 已合主干    →  护盾演示 / 内存门槛 / 干净构建；只剩关单
 先别关的总账 →  每个节点都要能写能看；作者只走一条边
 分层        →  架子有了，墙没有，另开活，别和上面捆
-不要碰的    →  打分预算、面板、助手、过期审计草稿
+另三条线    →  输入 / 面板 / Activity，登记在 §3.6，从总账开工
 ```
 
 ---
@@ -173,7 +173,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 - 过期审计草稿，已经被后来的本子取代。卫生上该关，不是功能缺口。https://github.com/MightyBubble/Ludots/pull/961
 - 打分预算是另一件事。打分短剧已经能玩，别和预算捆。https://github.com/MightyBubble/Ludots/pull/723
-- 面板是另一条线。https://github.com/MightyBubble/Ludots/issues/886
+- 面板、输入、Activity 三条线**不是「不要碰」，是登记进了 §3.6 总账**——从总账开工，别当这轮图能力的回锅。旧号 #886 的入口职责由 §3.6 接管。
 - 助手工具无关。https://github.com/MightyBubble/Ludots/pull/947
 
 把本页和这次图基建收口写进仓库，走 https://github.com/MightyBubble/Ludots/pull/969 。这不是单纯文档改动；它同时收紧了登记、显式结束、动作宿主和压力门。合进去之后，入口就是本页，不再是那张 PR。
@@ -183,6 +183,19 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 脚本方言拓宽时的自审正本：`artifacts/gas-composition-gate.md`。后开的活不许覆盖它。  
 这次图基建收口自己的自审：`artifacts/gas-composition-gate-pr969-graph-closeout.md`。
 打分短剧自己的自审：`artifacts/gas-composition-gate-graph-score-showcase.md`。
+
+### 3.6 另外三条线的总账（2026-09-20 起并入本页）
+
+四条线共用一套跨线结构，正本是 [引擎管线宪法](engine-pipeline-constitution.md)（六不变量 + 一条管线 + 进门费五问）。本节只记进度与还开着的活；域字段听各线合同。统一收口按四阶段交付，总单 https://github.com/MightyBubble/Ludots/issues/1583 。
+
+| 线 | 现状 | 还开着的 |
+|---|---|---|
+| 输入→下令 | 分支统一进 PR #1607（`codex/input-order-graph-unified`，基底 `graph-order-migration`，收编切0/切1、stage1、宪法分支；PR #1530 系随之退场）。已交付：**集合单一写点**（CollectionApplier 收编 ContextBound/DomainRouted/CollectionWrite，`EntityCollectionKeys` 常量表清零，键声明化 `Input/collection_keys.json`——宪法不变量三落地）、#1597 QueryFilterControllable(483) 退役归还编号、Q2 byAbilityCategory 槽路由、Q4 按目标结算公式、切片③弩车 GROUND 全链（纯 JSON）。宪法两份随该 PR 进主干 | 线主票 #1398：D1–D14 已清，D15（context 生命周期全图化——出口图+总线事件+节拍挂载，退役 whileActive）开着；Wolf/Tower 效果链断点排查中；`InteractionContextIds.Default` 稳态锚点与其余特权键拆除、瞄准/蓄力/指示器图化、SubmitCast 继续 |
+| UI 面板 | A 线（graph-pinned 原生面板）合同完备：模板严格加载、pin 投影、13 种 subject 集合、四皮三主题、显隐单一写者；G12 12 案可装载有测试。B 线（WebUI PanelKit）合同+描述符在，浏览器呈现靠 mod 手写。**事件链（#1013 下半段）零生产接线——面板能看不能点** | 交互链四刀（U1 门控接管+UiCaptured 退役、U2 事件→语义动作、U3 scope 生命周期+实例受众、U4 手柄焦点）= 阶段 1/2（#1585/#1586）；#1014 关单、#1010 票面重写在阶段 0（#1584） |
+| Activity 内容 | 运行时 A1–A9 已关（schema、实体化、信号、门条件、单层结算、派发三路径）；交付线 #1487 被 CI 离线源红卡住，main 上验收引用缺失 mod 必红 | v5 设计定稿待拍板（#1394，三不变量与管线宪法同源）；#1487 合入与 CI 修复在阶段 0（#1584） |
+| 呈现 | presenter scope 模型、指示器 presenter 化合同已落地；四皮三主题 0 C# 换肤有零编码主用例 | web 皮肤（PanelWebSkinSystem）无直接自动化测试；registry 13 条 artifactDir 死链待清（阶段 0） |
+
+收口判据：Case E、Activity、对话面板三种内容走同六段管线、零线特供执行器；第四种内容靠纯数据 + 图进门。守卫（宪法符合性架构测试）在阶段 3（#1587）上线。
 
 ---
 

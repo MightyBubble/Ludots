@@ -610,7 +610,7 @@ def build(out_dir: Path) -> int:
     # --- 结构自验 ---
     print("-- 结构自验")
     required = [
-        "index.html", "gallery.html", "tests.html", "diagrams.html", "panels.html",
+        "index.html", "gallery.html", "tests.html", "diagrams.html", "panels.html", "input-ui.html",
         "graph-op-wiki.html", "raylib-engine.html", "engine-manual.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
