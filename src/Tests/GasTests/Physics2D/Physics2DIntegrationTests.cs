@@ -136,6 +136,43 @@ namespace GasTests
         }
 
         [Test]
+        public void ApplyImpulses_MissingVelocity2DOnDynamicBody_DoesNotAbortPhysicsStep()
+        {
+            using var world = World.Create();
+
+            int shape = _shapeStorage.RegisterBox(50f, 50f);
+            // 动态体缺 Velocity2D(授权管线之外的实体可能如此);BuildPhysicsWorldSystem2D 的快照按零速容忍它。
+            world.Create(
+                new Position2D { Value = Fix64Vec2.Zero },
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
+            world.Create(
+                new Position2D { Value = Fix64Vec2.FromFloat(25f, 0f) },
+                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
+
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(32));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
+            var apply = new ApplyImpulsesSystem2D(world);
+
+            build.Update(0f);
+            spatial.Update(0f);
+            narrow.Update(0f);
+
+            int activePairs = 0;
+            var q = new QueryDescription().WithAll<CollisionPair>();
+            world.Query(in q, (ref CollisionPair pair) =>
+            {
+                if (pair.IsActive && pair.ContactCount > 0) activePairs++;
+            });
+            Assert.That(activePairs, Is.GreaterThanOrEqualTo(1), "前置条件:两盒重叠,接触对已激活");
+
+            Assert.DoesNotThrow(() => apply.Update(1f / 60f));
+        }
+
+        [Test]
         public void DynamicCircles_ResolveOverlapAcrossPhysicsSteps()
         {
             using var world = World.Create();
