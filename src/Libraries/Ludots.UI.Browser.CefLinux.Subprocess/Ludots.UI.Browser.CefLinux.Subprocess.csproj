@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Ludots.UI.Browser.CefLinux.Subprocess</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ludots.UI.Browser.CefLinux.Core\Ludots.UI.Browser.CefLinux.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    launcher 发布 provider 包时固定传 /p:GenerateRuntimeConfigurationFiles=false，
+    子进程 exe 缺了 runtimeconfig 就无法作为 framework-dependent 宿主启动，这里补写一份固定内容。
+  -->
+  <Target Name="WriteSubprocessRuntimeConfig" AfterTargets="Publish">
+    <WriteLinesToFile
+      File="$([System.IO.Path]::Combine('$(PublishDir)', 'Ludots.UI.Browser.CefLinux.Subprocess.runtimeconfig.json'))"
+      Lines='{"runtimeOptions":{"tfm":"net9.0","framework":{"name":"Microsoft.NETCore.App","version":"9.0.0"}}}'
+      Overwrite="true" />
+  </Target>
+</Project>
