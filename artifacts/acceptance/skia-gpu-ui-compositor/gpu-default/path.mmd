@@ -1,0 +1,7 @@
+flowchart TD
+    A[Resolve launch plan for EntityCommandPanelShowcaseMod] --> B[Match RFC0065 recorder profile]
+    B --> C[Capture launch selectors and mod ordering]
+    C --> D[Write standard evidence files]
+    D --> E[Write simple PNG artifact frames]
+    E --> F[Return launcher recording result]
+    B -->|missing| X[Unsupported scenario]

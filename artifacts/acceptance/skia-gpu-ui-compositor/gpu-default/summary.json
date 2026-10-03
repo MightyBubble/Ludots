@@ -1,0 +1,49 @@
+{
+  "scenario": "rfc0065_entity_command_panel_showcase",
+  "adapter": "raylib",
+  "selectors": [
+    "preset:entity_command_panel_raylib"
+  ],
+  "root_mods": [
+    "EntityCommandPanelShowcaseMod"
+  ],
+  "ordered_mods": [
+    "LudotsCoreMod",
+    "EntityCommandPanelMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "EntityInfoPanelsMod",
+    "InteractionShowcaseMod",
+    "EntityCommandPanelShowcaseMod"
+  ],
+  "artifact_mode": "launcher-recorder-artifacts",
+  "claims_real_raylib_or_cef_recording": false,
+  "root_mod": "EntityCommandPanelShowcaseMod",
+  "showcase_scope": "trigger-controlled multi-instance command panels over the interaction sandbox",
+  "map_hint": "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/assets",
+  "expected_artifacts": [
+    "battle-report.md describes the launch-plan artifact recording and command-panel showcase scope.",
+    "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+    "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+    "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+    "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+  ],
+  "steps": [
+    {
+      "tick": 0,
+      "step": "000_launch_plan",
+      "status": "supported"
+    },
+    {
+      "tick": 1,
+      "step": "001_showcase_contract",
+      "status": "documented"
+    },
+    {
+      "tick": 2,
+      "step": "002_evidence_bundle",
+      "status": "complete"
+    }
+  ],
+  "normalized_signature": "rfc0065_entity_command_panel_showcase|adapter=raylib|roots=EntityCommandPanelShowcaseMod|selectors=preset:entity_command_panel_raylib|mode=launcher-recorder-artifacts"
+}

@@ -1,6 +1,6 @@
 # 3D 画面上贴一块 2D 仪表盘
 
-3D 场景照常渲染，`RaylibSkiaRenderer` 在上面合成 Skia 画出来的 HUD：标题面板、96 帧帧时柱状图、脉动罗盘——GPU 2D 矢量绘制，不是贴图 UI。
+3D 场景照常渲染，`RaylibSkiaGpuCanvasSurface` 在上面直绘 Skia HUD：标题面板、96 帧帧时柱状图、脉动罗盘——GPU 2D 矢量绘制，不是贴图 UI。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/engine_raylib_skia_overlay/poster.png" src="artifacts/evidence/engine_raylib_skia_overlay/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/engine_raylib_skia_overlay/play.mp4`。
@@ -13,10 +13,10 @@
 | scene id | `skia_overlay` |
 | preset | `engine_raylib_skia_overlay` |
 | 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/SkiaOverlayScene.cs` |
-| 承接渲染器 | `RaylibSkiaRenderer` + `SkiaRasterLayer`（分层光栅） |
+| 承接渲染器 | `RaylibSkiaGpuCanvasSurface`（GPU render-texture 直绘，默认）；`RaylibSkiaRenderer` + `SkiaRasterLayer` 为 `LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI=1` 时的光栅回退 |
 | 注册表条目 | `engine_raylib_skia_overlay`（`showcase.registry.json`，tier T1） |
 
-绘制走 `SKCanvas` 原语（圆角矩形、线、文字），`SkiaRasterLayer` 分层光栅后 `DrawTo` 合成到 `RaylibSkiaRenderer` 的画布，`RenderToScreen` 一次性上屏。字体直接 `SKTypeface.FromFamilyName("Consolas")`。宿主侧同一渲染器承接 Skia 覆盖层合同；UI 面板的工程形态见 [四皮面板：工程结构与换肤合同](../../architecture/panel-skins.md)。
+绘制走 `SKCanvas` 原语（圆角矩形、线、文字），默认直接渲染进 GPU render-texture 表面（`ResetContext` → `BeginTextureMode` → 绘制 → `Flush+Submit` → `Draw` 上屏），无整窗 CPU 光栅与纹理上传；字体直接 `SKTypeface.FromFamilyName("Consolas")`。宿主侧同一套 GPU 表面合同见 [Skia GPU 覆盖层适配指南](../../architecture/skia-gpu-overlay-adapter-guide.md)；UI 面板的工程形态见 [四皮面板：工程结构与换肤合同](../../architecture/panel-skins.md)。
 
 ## 这场演的是什么
 

@@ -1,0 +1,12 @@
+{"t":1,"tag":"build","event":"solution build 0 errors"}
+{"t":2,"tag":"unit","event":"SkiaUiRendererSurfaceTargetTests 4/4 pixel-equivalent"}
+{"t":3,"tag":"unit","event":"source contract tests 3/3 incl GPU UI default-on and BottomLeft origin"}
+{"t":4,"tag":"unit","event":"UiShowcaseTests 93/93; RaylibAdapterTests 312/312; ArchitectureTests green"}
+{"t":5,"tag":"realgl","event":"gallery GPU first run: HUD mirrored to bottom; root cause GRSurfaceOrigin.TopLeft + negative-height host flip"}
+{"t":6,"tag":"fix","event":"RaylibSkiaGpuCanvasSurface origin -> BottomLeft; contract test pinned"}
+{"t":7,"tag":"realgl","event":"gallery GPU rerun: panel (52,52,55) title white compass (254,200,91) bottom clean"}
+{"t":8,"tag":"realgl","event":"gallery raster fallback rerun: panel (49,49,50) visual parity with GPU"}
+{"t":9,"tag":"realgl","event":"official evidence re-recorded play.mp4+poster.png via record-engine-galleries.py"}
+{"t":10,"tag":"realgl","event":"blacksmith preset game process stable 75s+ with GPU UI compositor active"}
+{"t":11,"tag":"bench","event":"420 frames: GPU avg 0.554ms p95 0.664ms; raster fallback avg 3.614ms p95 4.749ms"}
+{"t":12,"tag":"baseline","event":"PresentationTests clean final run: 12 failed / 1155 passed / 1167 total; all 12 inside main baseline 13-red list; zero new failures; one flaky benchmark turned green"}
