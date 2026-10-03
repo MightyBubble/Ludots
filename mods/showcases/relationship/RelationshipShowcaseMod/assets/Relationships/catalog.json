@@ -63,5 +63,75 @@
     {
       "id": "FocusTarget"
     }
+  ],
+  "bands": [
+    {
+      "id": "RelationshipShowcase.Trusted",
+      "typeId": "SocialBond",
+      "metricId": "Loyalty",
+      "flagId": "Trusted",
+      "threshold": 60,
+      "comparison": "GreaterOrEqual"
+    }
+  ],
+  "callbacks": [
+    {
+      "id": "RelationshipShowcase.TrustedUnlocked",
+      "typeId": "SocialBond",
+      "metricId": "Loyalty",
+      "min": 60,
+      "eventKey": "RelationshipShowcase.TrustedUnlocked",
+      "addTagsToTarget": [
+        "State.Relationship.Showcase.Trusted"
+      ],
+      "removeTagsFromTarget": [
+        "State.Relationship.Showcase.Trusted"
+      ]
+    },
+    {
+      "id": "RelationshipShowcase.OathBondUnlocked",
+      "typeId": "SocialBond",
+      "metricId": "Support",
+      "min": 55,
+      "eventKey": "RelationshipShowcase.OathBondUnlocked",
+      "addTagsToSource": [
+        "State.Relationship.OathBond"
+      ],
+      "addTagsToTarget": [
+        "State.Relationship.OathBond"
+      ],
+      "removeTagsFromSource": [
+        "State.Relationship.OathBond"
+      ],
+      "removeTagsFromTarget": [
+        "State.Relationship.OathBond"
+      ]
+    },
+    {
+      "id": "RelationshipShowcase.FocusLocked",
+      "typeId": "Hostility",
+      "metricId": "Threat",
+      "min": 70,
+      "eventKey": "RelationshipShowcase.FocusLocked",
+      "addTagsToTarget": [
+        "State.Relationship.Showcase.FocusedByEnemy"
+      ],
+      "removeTagsFromTarget": [
+        "State.Relationship.Showcase.FocusedByEnemy"
+      ]
+    }
+  ],
+  "synergies": [
+    {
+      "id": "RelationshipShowcase.ShuSynergy",
+      "requireAllTags": [
+        "State.Relationship.Showcase.Trusted"
+      ],
+      "minimumCount": 2,
+      "applyTagsToTeam": [
+        "State.Relationship.Showcase.ShuSynergy"
+      ],
+      "eventKey": "RelationshipShowcase.SynergyActivated"
+    }
   ]
 }

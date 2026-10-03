@@ -65,6 +65,16 @@ namespace Ludots.Core.Gameplay.Relationships
                 flags.Register(catalog.Flags[i].Id);
             }
 
-                   }
+            for (int i = 0; i < catalog.Bands.Count; i++)
+            {
+                RelationshipBandConfig band = catalog.Bands[i];
+                bands.Register(new RelationshipBandDefinition(
+                    types.GetId(band.TypeId),
+                    metrics.GetId(band.MetricId),
+                    flags.GetId(band.FlagId),
+                    band.Threshold,
+                    band.Comparison));
+            }
+        }
     }
 }
