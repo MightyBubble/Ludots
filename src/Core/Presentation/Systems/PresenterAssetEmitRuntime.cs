@@ -231,6 +231,13 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     stableDrawCache.Remove(stableId);
                 }
+
+                // request path 的静态视觉以组合 stable id 进 StableDrawCache,销毁时必须一并驱逐,否则缓存只增不减。
+                stableDrawCache.Remove(PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
+                    state.StableId,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId));
             }
         }
 
