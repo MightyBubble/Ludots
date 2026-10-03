@@ -362,7 +362,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 "includeNeighborTiles",
                 "heightScaleMeters",
                 "minWalkableUpDot",
-                "cliffHeightThreshold");
+                "cliffHeightThreshold",
+                "bakeWorkerCount");
             int tileBudget = RequireInt(runtimeIncremental, "tileBudgetPerFixedTick", "NavMeshBakeConfig.runtimeIncremental");
             if (tileBudget <= 0)
             {
@@ -386,6 +387,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             if (cliff < 0)
             {
                 throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.cliffHeightThreshold must be >= 0.");
+            }
+
+            int bakeWorkers = RequireInt(runtimeIncremental, "bakeWorkerCount", "NavMeshBakeConfig.runtimeIncremental");
+            if (bakeWorkers <= 0)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.bakeWorkerCount must be > 0.");
             }
         }
 

@@ -10,6 +10,7 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly object _gate = new object();
         private readonly Dictionary<NavTileId, NavTile> _loaded = new Dictionary<NavTileId, NavTile>(256);
         private uint _revision;
+        private uint _loadedVersion;
 
         public NavTileStore(Func<NavTileId, Stream> openStream)
         {
@@ -23,6 +24,34 @@ namespace Ludots.Core.Navigation.NavMesh
                 lock (_gate)
                 {
                     return _revision;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 已加载 tile 集合的变化代数：GetOrLoad 新装入、Replace、Reload、Unload、Clear 都推进。
+        /// 与 <see cref="Revision"/>（烘焙发布语义，观察者用它触发 repath）分离，
+        /// 惰性加载不污染 Revision 观察者，查询侧缓存用它判断 tile 集合是否变化。
+        /// </summary>
+        public uint LoadedVersion
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _loadedVersion;
+                }
+            }
+        }
+
+        /// <summary>稳定读令牌：一次加锁读取 (Revision, LoadedVersion)，读前后一致才算稳定。</summary>
+        public (uint Revision, uint LoadedVersion) StableToken
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return (_revision, _loadedVersion);
                 }
             }
         }
@@ -74,10 +103,10 @@ namespace Ludots.Core.Navigation.NavMesh
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                uint revisionBefore = Revision;
+                (uint revisionBefore, uint loadedBefore) = StableToken;
                 T candidate = read();
-                uint revisionAfter = Revision;
-                if (revisionBefore == revisionAfter)
+                (uint revisionAfter, uint loadedAfter) = StableToken;
+                if (revisionBefore == revisionAfter && loadedBefore == loadedAfter)
                 {
                     result = candidate;
                     return true;
@@ -101,6 +130,7 @@ namespace Ludots.Core.Navigation.NavMesh
             {
                 if (_loaded.TryGetValue(id, out var loaded)) return loaded;
                 _loaded[id] = tile;
+                AdvanceLoadedVersion();
             }
 
             return tile;
@@ -113,6 +143,7 @@ namespace Ludots.Core.Navigation.NavMesh
             lock (_gate)
             {
                 _loaded[id] = tile;
+                AdvanceLoadedVersion();
                 AdvanceRevision();
             }
 
@@ -125,7 +156,9 @@ namespace Ludots.Core.Navigation.NavMesh
             lock (_gate)
             {
                 _loaded[tile.TileId] = tile;
-                return AdvanceRevision();
+                AdvanceLoadedVersion();
+                AdvanceRevision();
+                return _revision;
             }
         }
 
@@ -135,6 +168,7 @@ namespace Ludots.Core.Navigation.NavMesh
             {
                 if (_loaded.Remove(id))
                 {
+                    AdvanceLoadedVersion();
                     AdvanceRevision();
                 }
             }
@@ -150,14 +184,19 @@ namespace Ludots.Core.Navigation.NavMesh
                 }
 
                 _loaded.Clear();
+                AdvanceLoadedVersion();
                 AdvanceRevision();
             }
         }
 
-        private uint AdvanceRevision()
+        private void AdvanceRevision()
         {
             _revision = _revision == uint.MaxValue ? 1u : _revision + 1u;
-            return _revision;
+        }
+
+        private void AdvanceLoadedVersion()
+        {
+            _loadedVersion = _loadedVersion == uint.MaxValue ? 1u : _loadedVersion + 1u;
         }
     }
 }
