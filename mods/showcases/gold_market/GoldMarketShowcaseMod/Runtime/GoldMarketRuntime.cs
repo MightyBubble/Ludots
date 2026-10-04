@@ -110,7 +110,7 @@ public sealed class GoldMarketRuntime
         EnsureScenario(engine);
         TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
             ?? throw new InvalidOperationException("GoldMarketShowcase requires TagOps.");
-        AttributeMutationOps.SetCurrent(engine.World, _buyer, _goldAttributeId, _config!.RefillGold, tagOps, Entity.Null);
+        AttributeMutationOps.SetCurrent(engine.World, _buyer, _goldAttributeId, _config!.RefillGold, tagOps);
         _status = $"Gold refilled to {_config.RefillGold}.";
         PushLog(_status);
         RefreshPanelInternal(engine);
@@ -235,7 +235,7 @@ public sealed class GoldMarketRuntime
 
         TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
             ?? throw new InvalidOperationException("GoldMarketShowcase requires TagOps.");
-        AttributeMutationOps.SetCurrent(world, _buyer, _goldAttributeId, _config.StartingGold, tagOps, Entity.Null);
+        AttributeMutationOps.SetCurrent(world, _buyer, _goldAttributeId, _config.StartingGold, tagOps);
 
         InventoryRuntimeService inventory = engine.GetService(CoreServiceKeys.InventoryRuntimeService)
             ?? throw new InvalidOperationException("InventoryRuntimeService missing.");

@@ -67,7 +67,7 @@ namespace GasTests.GasCore
 
             Entity entity = CreateAttributeEntity();
             AttributeMutationOps.SetBase(_world, entity, idA, 100f, _tagOps);
-            AttributeMutationOps.SetCurrent(_world, entity, idB, 55f, _tagOps, Entity.Null);
+            AttributeMutationOps.SetCurrent(_world, entity, idB, 55f, _tagOps);
 
             That(AttributeReads.Base(_world, entity, idA), Is.EqualTo(100f));
             That(AttributeReads.Current(_world, entity, idA), Is.EqualTo(100f), "SetBase 同步落 current");
@@ -118,7 +118,7 @@ namespace GasTests.GasCore
         {
             int id = AttributeRegistry.RequireId("test.high.attr.80");
             Entity entity = CreateAttributeEntity();
-            AttributeMutationOps.SetCurrent(_world, entity, id, 55f, _tagOps, Entity.Null);
+            AttributeMutationOps.SetCurrent(_world, entity, id, 55f, _tagOps);
 
             var triggerQueue = new DeferredTriggerQueue(64);
             var collection = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps, _tagOps.DirtyEntities);
@@ -126,8 +126,7 @@ namespace GasTests.GasCore
             That(CountTriggers(triggerQueue), Is.EqualTo(1), "变异种值首变 0→55 触发一次（与内嵌车道同语义）");
             triggerQueue.Clear();
 
-            Entity caster = _world.Create();
-            AttributeMutationOps.SetCurrent(_world, entity, id, 60f, _tagOps, caster);
+            AttributeMutationOps.SetCurrent(_world, entity, id, 60f, _tagOps);
             collection.Update(0f);
 
             That(CountTriggers(triggerQueue), Is.EqualTo(1), "高槽位变更必须触发 AttributeChanged");
@@ -137,7 +136,6 @@ namespace GasTests.GasCore
                 AttributeChangedTrigger trigger = triggerQueue.GetAttributeTrigger(i);
                 if (trigger.AttributeId == id && trigger.OldValue == 55f && trigger.NewValue == 60f)
                 {
-                    That(trigger.Source, Is.EqualTo(caster), "高槽位也必须带上真正改值的写入者");
                     sawHigh = true;
                 }
             }
@@ -172,7 +170,7 @@ namespace GasTests.GasCore
             Entity entity = CreateAttributeEntity();
             int id = AttributeRegistry.RequireId("test.high.attr.70");
             InvalidOperationException ex = Throws<InvalidOperationException>(() =>
-                AttributeMutationOps.SetCurrent(_world, entity, id, 1f, _tagOps, Entity.Null))!;
+                AttributeMutationOps.SetCurrent(_world, entity, id, 1f, _tagOps))!;
             That(ex.Message, Does.Contain("HighLaneUnavailable"));
         }
     }
