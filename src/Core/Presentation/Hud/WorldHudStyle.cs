@@ -57,6 +57,8 @@ namespace Ludots.Core.Presentation.Hud
 
         /// <summary>image_assets.json 登记的语义图片 id;仅血条条目消费(Id0 承载解析后的源串)。</summary>
         public string? ImageAssetId;
+        /// <summary>text 居中锚:渲染时以锚点 X 为中心(与血条同语义),而非默认左锚。</summary>
+        public bool? TextAlignCenter;
         /// <summary>clip-path 异形预设;见 HudClipShape。</summary>
         public HudClipShape ClipShape;
 
@@ -67,7 +69,7 @@ namespace Ludots.Core.Presentation.Hud
             !FillGradientTo.HasValue && !BackgroundGradientTo.HasValue &&
             !Bold.HasValue && !Italic.HasValue &&
             !ShadowColor.HasValue && !ShadowOffsetX.HasValue && !ShadowOffsetY.HasValue && !ShadowBlur.HasValue &&
-            ImageAssetId == null && ClipShape == 0;
+            ImageAssetId == null && ClipShape == 0 && TextAlignCenter != true;
     }
 
     /// <summary>
@@ -88,7 +90,7 @@ namespace Ludots.Core.Presentation.Hud
         private const string Supported =
             "width, height, font-size, opacity, color, background-color, background, background-image, " +
             "translate, border, border-width, border-color, border-radius, padding, " +
-            "font-weight, font-style, text-shadow, box-shadow, image, clip-path";
+            "font-weight, font-style, text-align, text-shadow, box-shadow, image, clip-path";
 
         public static WorldHudStyle Parse(string css, string context)
         {
@@ -278,6 +280,14 @@ namespace Ludots.Core.Presentation.Hud
                         "bold" => true,
                         "normal" => false,
                         _ => ParseFontWeightNumber(value, context),
+                    };
+                    break;
+                case "text-align":
+                    style.TextAlignCenter = value.Trim() switch
+                    {
+                        "center" => true,
+                        "left" => false,
+                        _ => throw new InvalidOperationException($"{context}: css 'text-align' only supports center/left, got '{value}'."),
                     };
                     break;
                 case "font-style":

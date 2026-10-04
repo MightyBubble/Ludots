@@ -105,7 +105,7 @@ namespace Ludots.Tests.Presentation
             WorldHudStyle style = WorldHudStyleCss.Parse(
                 "border: 2px solid #FFFFFFFF; border-radius: 4px; padding: 3px; " +
                 "background: linear-gradient(to right, #101218, #282C38); color: linear-gradient(#E2493B, #FFB020); " +
-                "font-weight: bold; font-style: italic; text-shadow: 1px 2px 3px rgba(0,0,0,0.85)",
+                "font-weight: bold; font-style: italic; text-align: center; text-shadow: 1px 2px 3px rgba(0,0,0,0.85)",
                 "test");
 
             Assert.That(style.BorderWidth, Is.EqualTo(2f));
@@ -118,6 +118,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(style.FillGradientTo!.Value.X, Is.EqualTo(0xFF / 255f).Within(0.002f));
             Assert.That(style.Bold, Is.True);
             Assert.That(style.Italic, Is.True);
+            Assert.That(style.TextAlignCenter, Is.True);
             Assert.That(style.ShadowColor!.Value.W, Is.EqualTo(0.85f).Within(0.01f));
             Assert.That(style.ShadowOffsetX, Is.EqualTo(1f));
             Assert.That(style.ShadowOffsetY, Is.EqualTo(2f));
@@ -154,6 +155,7 @@ namespace Ludots.Tests.Presentation
         [TestCase("background: linear-gradient(to right, #fff)")]
         [TestCase("text-shadow: 1px red")]
         [TestCase("font-style: oblique")]
+        [TestCase("text-align: justify")]
         [TestCase("padding: 1px 2px 3px 4px 5px")]
         public void CssParser_TypographyRejectedDeclarations_FailFast(string css)
         {
@@ -173,8 +175,8 @@ namespace Ludots.Tests.Presentation
             var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
-            // 每单位现 5 元素:生命条/士气条/战况条/状态文本/名字板。
-            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素");
+            // 每单位 6 元素:士气条/生命条/战况条/名字板/首都星/盾徽。
+            Assert.That(worldHud.Count, Is.EqualTo(96), "16 单位 × 6 元素");
 
             int richBars = 0;
             int nameplates = 0;
@@ -189,12 +191,15 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.BackgroundGradientTo.W, Is.GreaterThan(0f), "战况条背景渐变");
                     Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "战况条阴影");
                 }
-                else if (item.Kind == WorldHudItemKind.Text && item.BoxBackground.W > 0.5f)
+                else if (item.Kind == WorldHudItemKind.Text)
                 {
                     nameplates++;
-                    Assert.That(item.StyleFlags & 0x01, Is.Not.Zero, "名字板粗体");
-                    Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "名字板文字阴影");
-                    Assert.That(item.Padding, Is.EqualTo(2f), "名字板留白");
+                    Assert.That(item.FontSize, Is.EqualTo(16), "名字 16px 裸字");
+                    Assert.That(item.StyleFlags & 0x01, Is.Not.Zero, "名字粗体");
+                    Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚");
+                    Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "名字投影");
+                    Assert.That(item.BoxBackground.W, Is.LessThan(0.5f), "名字无底板");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-52f).Within(0.001f), "名字悬于条组上方");
                 }
             }
 
@@ -211,11 +216,13 @@ namespace Ludots.Tests.Presentation
                     if (item.Width < 20f)
                     {
                         capitalIcons++;
-                        Assert.That(item.ScreenOffsetX, Is.EqualTo(-30f).Within(0.001f), "首都星左偏移");
+                        Assert.That(item.ScreenOffsetX, Is.EqualTo(0f).Within(0.001f), "首都星水平居中");
+                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-74f).Within(0.001f), "首都星居叠层顶");
                     }
                     else
                     {
                         shieldBadges++;
+                        Assert.That(item.ScreenOffsetX, Is.EqualTo(26f).Within(0.001f), "盾徽挂星标右侧");
                         Assert.That(item.ClipShape, Is.EqualTo(HudClipShape.Shield), "防御盾徽异形裁剪");
                     }
                 }
@@ -232,14 +239,15 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(registry.TryGet(registry.GetId("hud_css_styling_health_bar"), out PresenterDefinition bar), Is.True);
             WorldHudStyle barStyle = bar.Behaviors[0].AssetBinding.HudStyle;
-            Assert.That(barStyle.Width, Is.EqualTo(46f));
+            Assert.That(barStyle.Width, Is.EqualTo(36f));
             Assert.That(barStyle.Height, Is.EqualTo(5f));
-            Assert.That(barStyle.Translate!.Value, Is.EqualTo(new Vector2(0f, -26f)));
+            Assert.That(barStyle.Translate!.Value, Is.EqualTo(new Vector2(0f, -18f)));
 
-            Assert.That(registry.TryGet(registry.GetId("hud_css_styling_status_text"), out PresenterDefinition text), Is.True);
+            Assert.That(registry.TryGet(registry.GetId("hud_css_styling_nameplate"), out PresenterDefinition text), Is.True);
             WorldHudStyle textStyle = text.Behaviors[0].WorldText.HudStyle;
-            Assert.That(textStyle.FontSize, Is.EqualTo(13f));
-            Assert.That(textStyle.Opacity, Is.EqualTo(0.95f));
+            Assert.That(textStyle.FontSize, Is.EqualTo(16f));
+            Assert.That(textStyle.TextAlignCenter, Is.True, "名字裸字居中锚");
+            Assert.That(textStyle.BackgroundColor, Is.Null, "名字裸字无底板");
         }
 
         [Test]
@@ -386,7 +394,7 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(96), "16 单位 × 6 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;
@@ -395,20 +403,21 @@ namespace Ludots.Tests.Presentation
                 if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth <= 0.5f && item.Id0 <= 0)
                 {
                     bars++;
-                    Assert.That(item.Width, Is.EqualTo(46f), "css width 必须落到每个条目");
+                    Assert.That(item.Width, Is.EqualTo(36f), "css width 必须落到每个条目");
                     Assert.That(item.Height, Is.EqualTo(item.Height > 4f ? 5f : 3f), "css height(bar=5/morale=3)");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(item.Height > 4f ? -26f : -30f).Within(0.001f), "css translate 必须落到每个条目");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(item.Height > 4f ? -18f : -10f).Within(0.001f), "css translate 必须落到每个条目");
                 }
-                else if (item.Kind == WorldHudItemKind.Text && item.BoxBackground.W <= 0.5f)
+                else if (item.Kind == WorldHudItemKind.Text)
                 {
                     texts++;
-                    Assert.That(item.FontSize, Is.EqualTo(13), "css font-size 必须落到每个文本");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-34f).Within(0.001f));
+                    Assert.That(item.FontSize, Is.EqualTo(16), "css font-size 必须落到每个文本");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-52f).Within(0.001f));
+                    Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚标志随链路落到位");
                 }
             }
 
-            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条(战况条另计)");
-            Assert.That(texts, Is.EqualTo(16), "16 单位 × 状态文本(名字板另计)");
+            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条(战况条/图标另计)");
+            Assert.That(texts, Is.EqualTo(16), "16 单位 × 名字板");
 
             // 血量补丁经属性绑定写成填充率:95/100 与 8/100 必须出现在值里。
             float maxRatio = 0f;

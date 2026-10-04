@@ -631,13 +631,14 @@ namespace Ludots.Presentation.Skia
             _textPaint.Color = ToSkColor(item.Color0);
             CachedTextLayout layout = GetTextLayout(item.Text, fontSize, deco.StyleFlags);
             float baselineY = item.Y + fontSize;
+            float originX = ResolveTextOriginX(item.X, layout.Width, deco.StyleFlags);
 
             if (deco.BoxBackground.W > 0.001f)
             {
                 SKRect boxRect = new(
-                    item.X - deco.Padding - deco.BorderWidth,
+                    originX - deco.Padding - deco.BorderWidth,
                     item.Y - deco.Padding - deco.BorderWidth,
-                    item.X + layout.Width + deco.Padding + deco.BorderWidth,
+                    originX + layout.Width + deco.Padding + deco.BorderWidth,
                     item.Y + MathF.Max(1, fontSize) * 1.5f + deco.Padding + deco.BorderWidth);
                 _fillPaint.Color = ToSkColor(deco.BoxBackground);
                 DrawRoundedOrPlain(canvas, in boxRect, deco.CornerRadius, _fillPaint);
@@ -668,7 +669,7 @@ namespace Ludots.Presentation.Skia
                     {
                         canvas.DrawText(
                             run.Blob,
-                            item.X + run.XOffset + deco.ShadowOffsetX,
+                            originX + run.XOffset + deco.ShadowOffsetX,
                             baselineY + deco.ShadowOffsetY,
                             shadowPaint);
                     }
@@ -680,7 +681,7 @@ namespace Ludots.Presentation.Skia
                 CachedTextRun run = layout.Runs[i];
                 if (run.Blob != null)
                 {
-                    canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                    canvas.DrawText(run.Blob, originX + run.XOffset, baselineY, _textPaint);
                 }
             }
         }
@@ -1338,7 +1339,9 @@ namespace Ludots.Presentation.Skia
                     _textBatchBuckets[bucketIndex].Reset(layout, color);
                 }
 
-                _textBatchBuckets[bucketIndex].Add(item.X, item.Y + fontSize);
+                _textBatchBuckets[bucketIndex].Add(
+                    ResolveTextOriginX(item.X, _textBatchBuckets[bucketIndex].Layout.Width, item.Decoration.StyleFlags),
+                    item.Y + fontSize);
             }
 
             LastTextSpriteBatchBucketCount += bucketCount;
@@ -1529,15 +1532,24 @@ namespace Ludots.Presentation.Skia
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                 float baselineY = item.Y + fontSize;
                 CachedTextLayout layout = GetTextLayout(item.Text, fontSize, item.Decoration.StyleFlags);
+                float originX = ResolveTextOriginX(item.X, layout.Width, item.Decoration.StyleFlags);
                 for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
                 {
                     CachedTextRun run = layout.Runs[runIndex];
                     if (run.Blob != null)
                     {
-                        canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                        canvas.DrawText(run.Blob, originX + run.XOffset, baselineY, _textPaint);
                     }
                 }
             }
+        }
+
+        private const byte TextAlignCenterFlag = 0x04;
+
+        /// <summary>css text-align:center 的锚定语义:锚点 X 即文本水平中心(与血条一致);默认左锚。</summary>
+        private static float ResolveTextOriginX(float anchorX, float textWidth, byte styleFlags)
+        {
+            return (styleFlags & TextAlignCenterFlag) != 0 ? anchorX - textWidth * 0.5f : anchorX;
         }
 
         private static bool IsAsciiText(string text)
@@ -1585,7 +1597,9 @@ namespace Ludots.Presentation.Skia
 
                 CachedTextSprite cachedSprite = _textSpriteBatchBuckets[bucketIndex].Sprite;
                 float drawY = (item.Y + fontSize) - cachedSprite.BaselineY;
-                _textSpriteBatchBuckets[bucketIndex].Add(item.X, drawY);
+                _textSpriteBatchBuckets[bucketIndex].Add(
+                    ResolveTextOriginX(item.X, cachedSprite.TextWidth, item.Decoration.StyleFlags),
+                    drawY);
             }
 
             LastTextSpriteBatchBucketCount += bucketCount;
@@ -1786,7 +1800,9 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
                     float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
-                    orderBucket.AddVisible(item.X, orderDrawY);
+                    orderBucket.AddVisible(
+                        ResolveTextOriginX(item.X, orderBucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                        orderDrawY);
                     continue;
                 }
 
@@ -1799,7 +1815,9 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                     float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                    bucket.AddVisible(item.X, drawY);
+                    bucket.AddVisible(
+                        ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                        drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
                     entry.FontSize = fontSize;
@@ -1865,7 +1883,9 @@ namespace Ludots.Presentation.Skia
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
                 float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                bucket.AddVisible(item.X, drawY);
+                bucket.AddVisible(
+                    ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                    drawY);
             }
 
             state.LastVersion = laneVersion;
@@ -1925,7 +1945,10 @@ namespace Ludots.Presentation.Skia
             int bucketIndex = GetOrCreateRetainedTextSpriteBucket(state, key, item.Text!, fontSize, color, decoration);
             RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
             float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
-            int slotIndex = bucket.Add(stableId, item.X, drawY);
+            int slotIndex = bucket.Add(
+                stableId,
+                ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                drawY);
             RetainedTextSpriteEntry entry = new(bucketIndex, slotIndex, key, item.DirtySerial, fontSize, stamp);
             state.ItemsByStableId[stableId] = entry;
             if ((uint)orderIndex < (uint)state.OrderStableIds.Length)
@@ -2208,6 +2231,7 @@ namespace Ludots.Presentation.Skia
             sprite = new CachedTextSprite(
                 surface.Snapshot(),
                 baselineY + originY,
+                layout.Width,
                 offsetX: originX,
                 offsetY: originY);
             _textSpriteCache[key] = sprite;
@@ -3327,10 +3351,11 @@ namespace Ludots.Presentation.Skia
 
         private sealed class CachedTextSprite : IDisposable
         {
-            public CachedTextSprite(SKImage image, float baselineY, float offsetX = 0f, float offsetY = 0f)
+            public CachedTextSprite(SKImage image, float baselineY, float textWidth, float offsetX = 0f, float offsetY = 0f)
             {
                 Image = image;
                 BaselineY = baselineY;
+                TextWidth = textWidth;
                 OffsetX = offsetX;
                 OffsetY = offsetY;
             }
@@ -3338,6 +3363,9 @@ namespace Ludots.Presentation.Skia
             public SKImage Image { get; }
 
             public float BaselineY { get; }
+
+            /// <summary>纯字形测量宽(px),text-align:center 时用于锚点回中。</summary>
+            public float TextWidth { get; }
 
             /// <summary>阴影/底板烘焙进精灵后的左上外扩(px),绘制侧按此回贴锚点。</summary>
             public float OffsetX { get; }

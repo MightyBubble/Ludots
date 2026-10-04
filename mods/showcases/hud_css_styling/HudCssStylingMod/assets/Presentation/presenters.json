@@ -3,15 +3,11 @@
     "id": "hud_css_styling_unit_root",
     "children": [
       {
-        "definitionId": "hud_css_styling_health_bar",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_status_text",
-        "scopeTag": "structure"
-      },
-      {
         "definitionId": "hud_css_styling_morale_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_health_bar",
         "scopeTag": "structure"
       },
       {
@@ -62,7 +58,7 @@
           "renderPath": "None",
           "mobility": "Movable",
           "materialParamKey": "hud_css_styling.health.ratio",
-          "css": "width: 46px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -26px;"
+          "css": "width: 36px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -18px;"
         }
       },
       {
@@ -98,63 +94,6 @@
     ]
   },
   {
-    "id": "hud_css_styling_status_text",
-    "behaviors": [
-      {
-        "slot": "hud",
-        "kind": "WorldText",
-        "activeByDefault": true,
-        "worldText": {
-          "textToken": "hud.attribute.current_over_base",
-          "mode": "AttributeCurrentOverBase",
-          "valueParamKey": "hud_css_styling.health.current",
-          "secondaryValueParamKey": "hud_css_styling.health.max",
-          "css": "color: #FFE9A8; font-size: 13px; translate: 0 -34px; opacity: 0.95;"
-        }
-      },
-      {
-        "slot": "attachment",
-        "kind": "Attachment",
-        "activeByDefault": true,
-        "attachment": {
-          "target": "Parent",
-          "offset": [
-            0,
-            1.5,
-            0
-          ],
-          "rotationOffset": [
-            0,
-            0,
-            0,
-            1
-          ],
-          "inheritScale": false
-        }
-      },
-      {
-        "slot": "attributeCurrent",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "Health",
-          "targetParamKey": "hud_css_styling.health.current",
-          "mode": "Attribute"
-        }
-      },
-      {
-        "slot": "attributeBase",
-        "kind": "AttributeBinding",
-        "activeByDefault": true,
-        "attributeBinding": {
-          "attributeId": "Health",
-          "targetParamKey": "hud_css_styling.health.max",
-          "mode": "AttributeBase"
-        }
-      }
-    ]
-  },
-  {
     "id": "hud_css_styling_morale_bar",
     "behaviors": [
       {
@@ -165,7 +104,7 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "css": "width: 46px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -30px; opacity: 0.9;"
+          "css": "width: 36px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -10px; opacity: 0.9;"
         }
       },
       {
@@ -234,7 +173,7 @@
           "renderPath": "None",
           "mobility": "Movable",
           "materialParamKey": "hud_css_styling.health.ratio",
-          "css": "width: 46px; height: 7px; border: 1px solid rgba(255,255,255,0.55); border-radius: 4px; padding: 1px; background: linear-gradient(to right, rgba(16,18,24,0.9), rgba(40,44,56,0.9)); color: linear-gradient(to right, #E2493B, #FFB020); translate: 0 -38px; box-shadow: 1px 2px 3px rgba(0,0,0,0.6);"
+          "css": "width: 36px; height: 6px; border: 1px solid rgba(255,255,255,0.55); border-radius: 4px; padding: 1px; background: linear-gradient(to right, rgba(16,18,24,0.9), rgba(40,44,56,0.9)); color: linear-gradient(to right, #E2493B, #FFB020); translate: 0 -29px; box-shadow: 1px 2px 3px rgba(0,0,0,0.6);"
         }
       },
       {
@@ -281,7 +220,7 @@
           "mode": "AttributeCurrentOverBase",
           "valueParamKey": "hud_css_styling.health.current",
           "secondaryValueParamKey": "hud_css_styling.health.max",
-          "css": "color: #FFFFFF; font-size: 13px; font-weight: bold; background-color: rgba(10,12,18,0.75); border: 1px solid rgba(255,255,255,0.35); border-radius: 3px; padding: 2px; translate: 0 -52px; text-shadow: 1px 1px 2px rgba(0,0,0,0.85);"
+          "css": "color: #FFFFFF; font-size: 16px; font-weight: bold; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.9); translate: 0 -52px;"
         }
       },
       {
@@ -337,7 +276,7 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "css": "width: 18px; height: 18px; image: hud_css.icon.capital_star; translate: -30px -50px;"
+          "css": "width: 18px; height: 18px; image: hud_css.icon.capital_star; translate: 0 -74px;"
         }
       },
       {
@@ -373,7 +312,7 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "css": "width: 22px; height: 22px; image: hud_css.icon.defense_shield; clip-path: shield; border: 1px solid rgba(255,215,0,0.8); translate: 30px -50px;"
+          "css": "width: 20px; height: 20px; image: hud_css.icon.defense_shield; clip-path: shield; border: 1px solid rgba(255,215,0,0.8); translate: 26px -75px;"
         }
       },
       {

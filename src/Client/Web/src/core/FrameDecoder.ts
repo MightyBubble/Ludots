@@ -26,6 +26,7 @@ export interface ScreenHudDecoration {
   boxBackground?: [number, number, number, number];
   bold: boolean;
   italic: boolean;
+  textAlignCenter: boolean;
   shadowColor?: [number, number, number, number];
   shadowOffsetX: number;
   shadowOffsetY: number;
@@ -367,6 +368,7 @@ export class FrameDecoder {
       clipShape,
       bold: (styleFlags & 0x01) !== 0,
       italic: (styleFlags & 0x02) !== 0,
+      textAlignCenter: (styleFlags & 0x04) !== 0,
       shadowColor: shadowColor[3] > 0 ? shadowColor : undefined,
       shadowOffsetX: v.getFloat32(p + 96, true),
       shadowOffsetY: v.getFloat32(p + 100, true),

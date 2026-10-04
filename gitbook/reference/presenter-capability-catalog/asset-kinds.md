@@ -56,7 +56,7 @@ AssetKind 回答"这个 behavior 绑的是什么类别的可视输出"。作者�
 
 - **是什么**：一次性浮动战斗文字/提示（可配 `DefaultLifetime` 自动回收），带 yDrift 上浮。
 - **怎么写**：`WorldText` behavior。两格数值句用 `textToken` + `mode` + `valueParamKey`。多格句子用 `args`：数字孔引用 AttributeBinding 写好的参数键，名字孔用 `entityInfoTitle`。
-- **有限 CSS 样式**：`worldText.css` 支持 `font-size`、`color`、`opacity`、`translate`、`font-weight`（bold）、`font-style`（italic）、`background-color`+`padding`+`border`+`border-radius`（文字底板/名字板）、`text-shadow`（`x y 模糊 颜色`），语义与 WorldHud 的 css 相同（css 覆盖 `fontSize` 静态值，`colorParamKey` 动态绑定优先）。
+- **有限 CSS 样式**：`worldText.css` 支持 `font-size`、`color`、`opacity`、`translate`、`font-weight`（bold）、`font-style`（italic）、`background-color`+`padding`+`border`+`border-radius`（文字底板/名字板）、`text-shadow`（`x y 模糊 颜色`）、`text-align: center`（文字以锚点 X 为水平中心，与血条同锚定语义，默认左锚），语义与 WorldHud 的 css 相同（css 覆盖 `fontSize` 静态值，`colorParamKey` 动态绑定优先）。
 - **跑**：preset `presenter_blacksmith_showcase_raylib`；CSS 样式 showcase `hud_css_styling`。
 - **证据**：文本合同测试与验收见 [Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md) WorldText 章节。
 

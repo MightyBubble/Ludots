@@ -756,6 +756,7 @@ namespace Ludots.Core.Presentation.Systems
             byte flags = 0;
             if (style.Bold == true) flags |= 0x01;
             if (style.Italic == true) flags |= 0x02;
+            if (isText && style.TextAlignCenter == true) flags |= 0x04;
             item.StyleFlags = flags;
             item.ClipShape = style.ClipShape;
             item.ShadowColor = style.ShadowColor ?? default;

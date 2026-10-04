@@ -83,11 +83,13 @@ export class HudRenderer {
         const italic = deco?.italic ? 'italic ' : '';
         ctx.font = `${italic}${bold}${fontSize}px monospace`;
         const text = this.resolveHudText(item);
+        const centered = deco?.textAlignCenter === true;
+        ctx.textAlign = centered ? 'center' : 'left';
 
         if (deco && deco.boxBackground) {
           const pad = deco.padding + deco.borderWidth;
           const textW = ctx.measureText(text).width;
-          const boxX = item.sx - pad;
+          const boxX = (centered ? item.sx - textW / 2 : item.sx) - pad;
           const boxY = item.sy - pad;
           const boxW = textW + 2 * pad;
           const boxH = fontSize * 1.5 + 2 * pad;
@@ -114,6 +116,7 @@ export class HudRenderer {
 
         ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
         ctx.fillText(text, item.sx, item.sy + fontSize);
+        ctx.textAlign = 'left';
       }
     }
   }
