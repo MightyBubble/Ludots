@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Hud
         public Vector4 BackgroundGradientTo;
         public Vector4 BoxBackground;
         public byte StyleFlags;
+        public HudClipShape ClipShape;
         public Vector4 ShadowColor;
         public float ShadowOffsetX;
         public float ShadowOffsetY;
@@ -33,6 +34,7 @@ namespace Ludots.Core.Presentation.Hud
                 BackgroundGradientTo = item.BackgroundGradientTo,
                 BoxBackground = item.BoxBackground,
                 StyleFlags = item.StyleFlags,
+                ClipShape = item.ClipShape,
                 ShadowColor = item.ShadowColor,
                 ShadowOffsetX = item.ShadowOffsetX,
                 ShadowOffsetY = item.ShadowOffsetY,
@@ -52,6 +54,8 @@ namespace Ludots.Core.Presentation.Hud
         public float Width;
         public float Height;
         public float Value0;
+        /// <summary>图标条目:图片源在字符串表的 id(bar 车道此前未用 Id0,语义即图标)。</summary>
+        public int Id0;
         public ScreenHudDecoration Decoration;
     }
 

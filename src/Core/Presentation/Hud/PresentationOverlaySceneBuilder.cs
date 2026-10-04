@@ -216,7 +216,8 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color1,
                     item.StableId,
                     item.DirtySerial,
-                    item.Decoration);
+                    item.Decoration,
+                    ResolveBarImageSource(item.Id0));
             }
 
             for (int i = 0; i < dirtyTexts.Length; i++)
@@ -327,7 +328,8 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color1,
                     item.StableId,
                     item.DirtySerial,
-                    item.Decoration);
+                    item.Decoration,
+                    ResolveBarImageSource(item.Id0));
             }
 
             ReadOnlySpan<ScreenHudTextItem> texts = _screenHud.GetTextSpan();
@@ -433,6 +435,17 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             scene.SetTopMostMinimapMarkers(_minimapMarkers);
+        }
+
+        /// <summary>bar 条目的 Id0>0 即图标条目:把字符串表 id 解析成图片源串供渲染端取图。</summary>
+        private string? ResolveBarImageSource(int stringTableId)
+        {
+            if (stringTableId <= 0 || _worldHudStrings == null)
+            {
+                return null;
+            }
+
+            return _worldHudStrings.TryGet(stringTableId);
         }
 
         private string? ResolveScreenHudText(in ScreenHudTextItem item)

@@ -127,6 +127,28 @@ namespace Ludots.Tests.Presentation
             Assert.That(barStyle.ShadowColor!.Value.W, Is.EqualTo(0.6f).Within(0.01f));
         }
 
+        [TestCase("image: url(foo.png)")]
+        [TestCase("image: ")]
+        [TestCase("clip-path: polygon(0 0, 1 1)")]
+        [TestCase("clip-path: circle(50%)")]
+        public void CssParser_ImageAndClipRejectedDeclarations_FailFast(string css)
+        {
+            Assert.Throws<InvalidOperationException>(() => WorldHudStyleCss.Parse(css, "test"));
+        }
+
+        [Test]
+        public void CssParser_ImageAndClipShape_MapCorrectly()
+        {
+            WorldHudStyle style = WorldHudStyleCss.Parse(
+                "image: hud_css.icon.capital_star; clip-path: shield",
+                "test");
+            Assert.That(style.ImageAssetId, Is.EqualTo("hud_css.icon.capital_star"));
+            Assert.That(style.ClipShape, Is.EqualTo(HudClipShape.Shield));
+
+            WorldHudStyle diamond = WorldHudStyleCss.Parse("clip-path: diamond", "test2");
+            Assert.That(diamond.ClipShape, Is.EqualTo(HudClipShape.Diamond));
+        }
+
         [TestCase("border: 1px dashed black")]
         [TestCase("linear-gradient(to top, #fff, #000)")]
         [TestCase("background: linear-gradient(to right, #fff)")]
@@ -152,13 +174,13 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             // 每单位现 5 元素:生命条/士气条/战况条/状态文本/名字板。
-            Assert.That(worldHud.Count, Is.EqualTo(80), "16 单位 × 5 元素");
+            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素");
 
             int richBars = 0;
             int nameplates = 0;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
-                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth > 0.5f)
+                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth > 0.5f && item.Id0 <= 0)
                 {
                     richBars++;
                     Assert.That(item.CornerRadius, Is.EqualTo(4f), "战况条圆角");
@@ -179,6 +201,28 @@ namespace Ludots.Tests.Presentation
             Assert.That(richBars, Is.EqualTo(16), "16 个战况条带完整装饰");
             Assert.That(nameplates, Is.EqualTo(16), "16 个名字板带底板+阴影");
             Assert.That(screenHud.Count, Is.GreaterThan(0), "投影后屏幕缓冲有内容");
+
+            int capitalIcons = 0;
+            int shieldBadges = 0;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar && item.Id0 > 0)
+                {
+                    if (item.Width < 20f)
+                    {
+                        capitalIcons++;
+                        Assert.That(item.ScreenOffsetX, Is.EqualTo(-30f).Within(0.001f), "首都星左偏移");
+                    }
+                    else
+                    {
+                        shieldBadges++;
+                        Assert.That(item.ClipShape, Is.EqualTo(HudClipShape.Shield), "防御盾徽异形裁剪");
+                    }
+                }
+            }
+
+            Assert.That(capitalIcons, Is.EqualTo(16), "16 个首都星图标(Id0=图片源串)");
+            Assert.That(shieldBadges, Is.EqualTo(16), "16 个盾徽(盾形裁剪+金边)");
         }
 
         [Test]
@@ -342,13 +386,13 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(80), "16 单位 × 5 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
-                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth <= 0.5f)
+                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth <= 0.5f && item.Id0 <= 0)
                 {
                     bars++;
                     Assert.That(item.Width, Is.EqualTo(46f), "css width 必须落到每个条目");

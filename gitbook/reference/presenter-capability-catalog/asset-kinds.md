@@ -48,7 +48,7 @@ AssetKind 回答"这个 behavior 绑的是什么类别的可视输出"。作者�
 
 - **是什么**：血条、名字板等钉在世界坐标、随距离缩小的 HUD；引擎投影到屏幕后批量绘制。
 - **怎么写**：`assetKind: "WorldHud"`；铁匠铺的 hudbar/hudtext 基准是活样例（含 5 万级 hotpath 验收）。
-- **有限 CSS 样式**：`assetBinding.css` 声明血条样式，支持 `width`、`height`、`color`（前景，可为 `linear-gradient(to right, a, b)`）、`background`/`background-color`（背景，可为渐变）、`opacity`、`translate`（屏幕像素偏移，x/y 正方向为屏幕右/下，与相机距离无关）、`border`（宽/色，仅 solid）、`border-radius`、`padding`、`box-shadow`（`x y 模糊 颜色`）。css 覆盖静态 authored 值（`localScale`、`style.color`），动态参数绑定（`materialParamKey` 等）仍优先。未知属性、非法值、重复声明、`text-shadow` 与 `box-shadow` 同声明在加载期报错。
+- **有限 CSS 样式**：`assetBinding.css` 声明血条样式，支持 `width`、`height`、`color`（前景，可为 `linear-gradient(to right, a, b)`）、`background`/`background-color`（背景，可为渐变）、`opacity`、`translate`（屏幕像素偏移，x/y 正方向为屏幕右/下，与相机距离无关）、`border`（宽/色，仅 solid）、`border-radius`、`padding`、`box-shadow`（`x y 模糊 颜色`）、`image: <资产id>`（血条条目变图标：图片源走 image_assets.json，glyph 兜底生成 SVG）、`clip-path: shield|diamond|pennant|parallelogram|pointed-bottom`（异形底板预设）。css 覆盖静态 authored 值（`localScale`、`style.color`），动态参数绑定（`materialParamKey` 等）仍优先。未知属性、非法值、重复声明、`text-shadow` 与 `box-shadow` 同声明在加载期报错。
 - **跑**：preset `presenter_blacksmith_showcase_raylib`；CSS 样式 showcase `hud_css_styling`（验收 `HudCssStylingTests`）。
 - **证据**：`artifacts/acceptance/presentation-hotpath-harness/battle-report.md`（HUD hotpath 基线）；UAT 双视角表见 [Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md)。
 

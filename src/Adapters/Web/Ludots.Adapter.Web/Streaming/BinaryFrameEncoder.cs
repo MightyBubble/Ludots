@@ -404,7 +404,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteFloat(decoration.BoxBackground.Z);
             WriteFloat(decoration.BoxBackground.W);
             _buffer[_pos++] = decoration.StyleFlags;
-            _buffer[_pos++] = 0;
+            _buffer[_pos++] = (byte)decoration.ClipShape;
             _buffer[_pos++] = 0;
             _buffer[_pos++] = 0;
             WriteFloat(decoration.ShadowColor.X);

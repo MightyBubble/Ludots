@@ -16,6 +16,7 @@ const SEC_DEBUG_CIRCLES = 0x11;
 const SEC_DEBUG_BOXES = 0x12;
 
 export interface ScreenHudDecoration {
+  clipShape: number;
   radius: number;
   borderWidth: number;
   padding: number;
@@ -353,6 +354,7 @@ export class FrameDecoder {
     const bgGrad = readColor(p + 44);
     const boxBg = readColor(p + 60);
     const styleFlags = v.getUint8(p + 76);
+    const clipShape = v.getUint8(p + 77);
     const shadowColor = readColor(p + 80);
     return {
       radius: v.getFloat32(p, true),
@@ -362,6 +364,7 @@ export class FrameDecoder {
       fillGradientTo: fillGrad[3] >= 0 ? fillGrad : undefined,
       backgroundGradientTo: bgGrad[3] >= 0 ? bgGrad : undefined,
       boxBackground: boxBg[3] > 0 ? boxBg : undefined,
+      clipShape,
       bold: (styleFlags & 0x01) !== 0,
       italic: (styleFlags & 0x02) !== 0,
       shadowColor: shadowColor[3] > 0 ? shadowColor : undefined,

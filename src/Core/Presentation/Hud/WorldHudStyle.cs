@@ -6,6 +6,22 @@ using ExCSS;
 
 namespace Ludots.Core.Presentation.Hud
 {
+    /// <summary>clip-path 异形底板预设(按条目矩形归一化;wire 占装饰块一个保留字节)。</summary>
+    public enum HudClipShape : byte
+    {
+        None = 0,
+        /// <summary>尖底盾(EL2 场匾):底边中点向下收尖。</summary>
+        Shield = 1,
+        /// <summary>菱形(ES2 旗)。</summary>
+        Diamond = 2,
+        /// <summary>燕尾旗(全战):底边中央内凹。</summary>
+        Pennant = 3,
+        /// <summary>平行四边形(ES2 侧签)。</summary>
+        Parallelogram = 4,
+        /// <summary>下尖水滴(Civ7)。</summary>
+        PointedBottom = 5,
+    }
+
     /// <summary>
     /// 世界 HUD 的有限 CSS 样式(加载期解析,运行期只读)。
     /// 所有字段可空:未声明的属性沿用引擎默认值;声明即生效,不存在静默回退。
@@ -39,13 +55,19 @@ namespace Ludots.Core.Presentation.Hud
         public float? ShadowOffsetY;
         public float? ShadowBlur;
 
+        /// <summary>image_assets.json 登记的语义图片 id;仅血条条目消费(Id0 承载解析后的源串)。</summary>
+        public string? ImageAssetId;
+        /// <summary>clip-path 异形预设;见 HudClipShape。</summary>
+        public HudClipShape ClipShape;
+
         public bool IsEmpty =>
             !Width.HasValue && !Height.HasValue && !FontSize.HasValue && !Opacity.HasValue &&
             !Color.HasValue && !BackgroundColor.HasValue && !Translate.HasValue &&
             !CornerRadius.HasValue && !BorderWidth.HasValue && !Padding.HasValue && !BorderColor.HasValue &&
             !FillGradientTo.HasValue && !BackgroundGradientTo.HasValue &&
             !Bold.HasValue && !Italic.HasValue &&
-            !ShadowColor.HasValue && !ShadowOffsetX.HasValue && !ShadowOffsetY.HasValue && !ShadowBlur.HasValue;
+            !ShadowColor.HasValue && !ShadowOffsetX.HasValue && !ShadowOffsetY.HasValue && !ShadowBlur.HasValue &&
+            ImageAssetId == null && ClipShape == 0;
     }
 
     /// <summary>
@@ -66,7 +88,7 @@ namespace Ludots.Core.Presentation.Hud
         private const string Supported =
             "width, height, font-size, opacity, color, background-color, background, background-image, " +
             "translate, border, border-width, border-color, border-radius, padding, " +
-            "font-weight, font-style, text-shadow, box-shadow";
+            "font-weight, font-style, text-shadow, box-shadow, image, clip-path";
 
         public static WorldHudStyle Parse(string css, string context)
         {
@@ -280,9 +302,45 @@ namespace Ludots.Core.Presentation.Hud
                     style.ShadowOffsetY = dy;
                     style.ShadowBlur = blur;
                     break;
+                case "image":
+                    style.ImageAssetId = ParseImageAssetId(value, context);
+                    break;
+                case "clip-path":
+                    style.ClipShape = ParseClipShape(value, context);
+                    break;
                 default:
                     throw new InvalidOperationException(
                         $"{context}: css property '{name}' is not supported; supported: {Supported}.");
+            }
+        }
+
+        private static string ParseImageAssetId(string value, string context)
+        {
+            string id = value.Trim().TrimEnd(';');
+            if (id.Length == 0 ||
+                id.StartsWith("url(", StringComparison.OrdinalIgnoreCase) ||
+                id.Contains(' ') ||
+                id.Contains('('))
+            {
+                throw new InvalidOperationException(
+                    $"{context}: css 'image' requires a bare image asset id from Presentation/image_assets.json, got '{value}'.");
+            }
+
+            return id;
+        }
+
+        private static HudClipShape ParseClipShape(string value, string context)
+        {
+            switch (value.Trim())
+            {
+                case "shield": return HudClipShape.Shield;
+                case "diamond": return HudClipShape.Diamond;
+                case "pennant": return HudClipShape.Pennant;
+                case "parallelogram": return HudClipShape.Parallelogram;
+                case "pointed-bottom": return HudClipShape.PointedBottom;
+                default:
+                    throw new InvalidOperationException(
+                        $"{context}: css 'clip-path' supports named presets shield/diamond/pennant/parallelogram/pointed-bottom, got '{value}'.");
             }
         }
 

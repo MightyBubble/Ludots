@@ -39,6 +39,8 @@ namespace Ludots.Core.Presentation.Hud
         /// <summary>文字底板颜色(名字板);W<=0 表示无底板。血条忽略。</summary>
         public Vector4 BoxBackground;
         public byte StyleFlags;
+        /// <summary>clip-path 异形底板预设。</summary>
+        public HudClipShape ClipShape;
         /// <summary>W<=0 视为无阴影。</summary>
         public Vector4 ShadowColor;
         public float ShadowOffsetX;

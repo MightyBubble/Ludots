@@ -334,6 +334,7 @@ namespace Ludots.Core.Presentation.Hud
                    left.BackgroundGradientTo == right.BackgroundGradientTo &&
                    left.BoxBackground == right.BoxBackground &&
                    left.StyleFlags == right.StyleFlags &&
+                   left.ClipShape == right.ClipShape &&
                    left.ShadowColor == right.ShadowColor &&
                    left.ShadowOffsetX == right.ShadowOffsetX &&
                    left.ShadowOffsetY == right.ShadowOffsetY &&

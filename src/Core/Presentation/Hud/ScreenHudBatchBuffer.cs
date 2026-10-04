@@ -676,6 +676,7 @@ namespace Ludots.Core.Presentation.Hud
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Id0 = item.Id0,
                     Decoration = ScreenHudDecoration.FromWorld(in item),
                 });
             }
@@ -1420,6 +1421,7 @@ namespace Ludots.Core.Presentation.Hud
                    left.Width == right.Width &&
                    left.Height == right.Height &&
                    left.Value0 == right.Value0 &&
+                   left.Id0 == right.Id0 &&
                    left.Decoration.Equals(right.Decoration);
         }
 

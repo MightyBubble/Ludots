@@ -366,6 +366,7 @@ namespace Ludots.Core.Presentation.Systems
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Id0 = item.Id0,
                     Decoration = ScreenHudDecoration.FromWorld(in item),
                 };
                 bool accepted = _retainedProjectedBuild

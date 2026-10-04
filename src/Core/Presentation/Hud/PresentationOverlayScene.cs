@@ -505,7 +505,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 color,
             int stableId = 0,
             int dirtySerial = 0,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -573,7 +574,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 foreground,
             int stableId = 0,
             int dirtySerial = 0,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -593,7 +595,8 @@ namespace Ludots.Core.Presentation.Hud
                 Value0 = value,
                 Color0 = background,
                 Color1 = foreground,
-                Decoration = decoration
+                Decoration = decoration,
+                Text = imageSource
             };
             return TryStore(in item);
         }
@@ -656,7 +659,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 foreground,
             int stableId,
             int dirtySerial,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -676,7 +680,8 @@ namespace Ludots.Core.Presentation.Hud
                 Value0 = value,
                 Color0 = background,
                 Color1 = foreground,
-                Decoration = decoration
+                Decoration = decoration,
+                Text = imageSource
             };
             return TryUpsertStable(in item);
         }
@@ -690,7 +695,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 color,
             int stableId,
             int dirtySerial,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -801,7 +807,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 foreground,
             int stableId = 0,
             int dirtySerial = 0,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -821,7 +828,8 @@ namespace Ludots.Core.Presentation.Hud
                 Value0 = value,
                 Color0 = background,
                 Color1 = foreground,
-                Decoration = decoration
+                Decoration = decoration,
+                Text = imageSource
             };
             return TryAppend(in item);
         }
@@ -835,7 +843,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 color,
             int stableId = 0,
             int dirtySerial = 0,
-            in ScreenHudDecoration decoration = default)
+            in ScreenHudDecoration decoration = default,
+            string? imageSource = null)
         {
             if (string.IsNullOrWhiteSpace(text))
             {

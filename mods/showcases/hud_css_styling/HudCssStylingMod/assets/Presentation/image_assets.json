@@ -1,0 +1,12 @@
+[
+  {
+    "id": "hud_css.icon.capital_star",
+    "kind": "Icon",
+    "glyphFallback": "★"
+  },
+  {
+    "id": "hud_css.icon.defense_shield",
+    "kind": "Icon",
+    "glyphFallback": "⛨"
+  }
+]

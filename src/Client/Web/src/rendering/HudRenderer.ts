@@ -26,7 +26,12 @@ export class HudRenderer {
       const HUD_TEXT = 2;
 
       const deco = item.deco;
-      if (item.kind === HUD_BAR) {
+      if (item.kind === HUD_BAR && item.text) {
+        const img = this.obtainImage(item.text);
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, Math.round(item.sx), Math.round(item.sy), Math.round(item.width), Math.round(item.height));
+        }
+      } else if (item.kind === HUD_BAR) {
         const x = Math.round(item.sx);
         const y = Math.round(item.sy);
         const w = Math.round(item.width);
@@ -42,19 +47,19 @@ export class HudRenderer {
           ctx.shadowOffsetX = deco.shadowOffsetX;
           ctx.shadowOffsetY = deco.shadowOffsetY;
           ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, Math.max(0.01, item.c0a));
-          this.fillRounded(ctx, x, y, w, h, radius);
+          this.fillRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
           ctx.restore();
         }
 
         ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
           item.c0r, item.c0g, item.c0b, item.c0a, deco?.backgroundGradientTo);
-        this.fillRounded(ctx, ix, iy, iw, ih, radius);
+        this.fillRounded(ctx, ix, iy, iw, ih, radius, deco?.clipShape ?? 0);
 
         const fillW = Math.round(iw * item.v0);
         if (fillW > 0) {
           ctx.save();
           ctx.beginPath();
-          this.roundedPath(ctx, ix, iy, iw, ih, radius);
+          this.roundedPath(ctx, ix, iy, iw, ih, radius, deco?.clipShape ?? 0);
           ctx.clip();
           ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
             item.c1r, item.c1g, item.c1b, item.c1a, deco?.fillGradientTo);
@@ -65,12 +70,12 @@ export class HudRenderer {
         if (deco && deco.borderWidth > 0) {
           ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
           ctx.lineWidth = deco.borderWidth;
-          this.strokeRounded(ctx, x, y, w, h, radius);
+          this.strokeRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
           ctx.lineWidth = 1;
         } else {
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 1;
-          this.strokeRounded(ctx, x, y, w, h, radius);
+          this.strokeRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
         }
       } else if (item.kind === HUD_TEXT) {
         const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
@@ -87,11 +92,11 @@ export class HudRenderer {
           const boxW = textW + 2 * pad;
           const boxH = fontSize * 1.5 + 2 * pad;
           ctx.fillStyle = this.rgba(...deco.boxBackground);
-          this.fillRounded(ctx, boxX, boxY, boxW, boxH, deco.radius);
+          this.fillRounded(ctx, boxX, boxY, boxW, boxH, deco.radius, deco.clipShape ?? 0);
           if (deco.borderWidth > 0) {
             ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
             ctx.lineWidth = deco.borderWidth;
-            this.strokeRounded(ctx, boxX, boxY, boxW, boxH, deco.radius);
+            this.strokeRounded(ctx, boxX, boxY, boxW, boxH, deco.radius, deco.clipShape ?? 0);
             ctx.lineWidth = 1;
           }
         }
@@ -183,8 +188,38 @@ export class HudRenderer {
     }
   }
 
-  private roundedPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  private _imageCache = new Map<string, HTMLImageElement>();
+
+  private obtainImage(src: string): HTMLImageElement {
+    let img = this._imageCache.get(src);
+    if (!img) {
+      img = new Image();
+      img.src = src;
+      this._imageCache.set(src, img);
+    }
+    return img;
+  }
+
+  /** css clip-path 预设的归一化顶点(与 Skia 端 BuildItemPath 同一合同)。 */
+  private static readonly CLIP_POINTS: Record<number, number[]> = {
+    1: [0, 0, 1, 0, 1, 0.62, 0.5, 1, 0, 0.62],
+    2: [0.5, 0, 1, 0.5, 0.5, 1, 0, 0.5],
+    3: [0, 0, 1, 0, 1, 0.78, 0.5, 0.55, 0, 0.78],
+    4: [0.12, 0, 1, 0, 0.88, 1, 0, 1],
+    5: [0, 0, 1, 0, 1, 0.72, 0.5, 1, 0, 0.72],
+  };
+
+  private roundedPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
     ctx.beginPath();
+    const points = HudRenderer.CLIP_POINTS[clipShape];
+    if (points) {
+      ctx.moveTo(x + points[0] * w, y + points[1] * h);
+      for (let i = 2; i < points.length; i += 2) {
+        ctx.lineTo(x + points[i] * w, y + points[i + 1] * h);
+      }
+      ctx.closePath();
+      return;
+    }
     if (r > 0.5 && ctx.roundRect) {
       ctx.roundRect(x, y, w, h, r);
     } else {
@@ -192,13 +227,13 @@ export class HudRenderer {
     }
   }
 
-  private fillRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-    this.roundedPath(ctx, x, y, w, h, r);
+  private fillRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
+    this.roundedPath(ctx, x, y, w, h, r, clipShape);
     ctx.fill();
   }
 
-  private strokeRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-    this.roundedPath(ctx, x, y, w, h, r);
+  private strokeRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
+    this.roundedPath(ctx, x, y, w, h, r, clipShape);
     ctx.stroke();
   }
 

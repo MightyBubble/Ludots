@@ -1,0 +1,7 @@
+[
+  {
+    "Path": "Presentation/image_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

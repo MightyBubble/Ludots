@@ -2214,6 +2214,58 @@ namespace Ludots.Presentation.Skia
             return sprite;
         }
 
+        /// <summary>css clip-path 预设的归一化路径(0..1 坐标,乘以条目矩形)。</summary>
+        private static readonly float[][] ClipShapePoints =
+        {
+            Array.Empty<float>(),
+            // Shield:尖底盾——顶边全宽,底边中点收尖。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.62f, 0.5f, 1f, 0f, 0.62f },
+            // Diamond:菱形。
+            new[] { 0.5f, 0f, 1f, 0.5f, 0.5f, 1f, 0f, 0.5f },
+            // Pennant:燕尾——底边中央内凹。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.78f, 0.5f, 0.55f, 0f, 0.78f },
+            // Parallelogram:右斜平行四边形。
+            new[] { 0.12f, 0f, 1f, 0f, 0.88f, 1f, 0f, 1f },
+            // PointedBottom:下尖水滴。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.72f, 0.5f, 1f, 0f, 0.72f },
+        };
+
+        private static SKPath BuildItemPath(HudClipShape clipShape, in SKRect rect, float radius)
+        {
+            SKPath path = new();
+            if (clipShape != HudClipShape.None)
+            {
+                float[] points = ClipShapePoints[(int)clipShape];
+                for (int i = 0; i < points.Length; i += 2)
+                {
+                    float x = rect.Left + points[i] * rect.Width;
+                    float y = rect.Top + points[i + 1] * rect.Height;
+                    if (i == 0)
+                    {
+                        path.MoveTo(x, y);
+                    }
+                    else
+                    {
+                        path.LineTo(x, y);
+                    }
+                }
+
+                path.Close();
+                return path;
+            }
+
+            if (radius > 0.5f)
+            {
+                path.AddRoundRect(rect, radius, radius);
+            }
+            else
+            {
+                path.AddRect(rect);
+            }
+
+            return path;
+        }
+
         private static void DrawRoundedOrPlain(SKCanvas canvas, in SKRect rect, float radius, SKPaint paint)
         {
             if (radius > 0.5f)
@@ -2255,6 +2307,7 @@ namespace Ludots.Presentation.Skia
 
             LastBarSpriteCacheMisses++;
             ScreenHudDecoration deco = key.Decoration;
+            bool isIcon = !string.IsNullOrEmpty(key.ImageSource);
             bool hasShadow = deco.ShadowColor.W > 0.001f;
             float shadowMargin = hasShadow
                 ? MathF.Ceiling(MathF.Abs(deco.ShadowOffsetX) + MathF.Abs(deco.ShadowOffsetY) + deco.ShadowBlur)
@@ -2289,6 +2342,40 @@ namespace Ludots.Presentation.Skia
                     rect.Right + deco.ShadowOffsetX,
                     rect.Bottom + deco.ShadowOffsetY);
                 DrawRoundedOrPlain(spriteCanvas, in shadowRect, radius, shadowPaint);
+            }
+
+            // 图标条目:阴影(可选)→图片铺满矩形,不做底/填充/渐变;装饰块边框照常套在外圈。
+            if (isIcon)
+            {
+                if (UiImageSourceCache.TryGetResource(key.ImageSource, out UiImageSourceCache.UiImageResource? resource) && resource != null)
+                {
+                    using SKPath iconPath = BuildItemPath(deco.ClipShape, rect, radius);
+                    spriteCanvas.Save();
+                    spriteCanvas.ClipPath(iconPath);
+                    if (resource.RasterImage != null)
+                    {
+                        spriteCanvas.DrawImage(resource.RasterImage, rect);
+                    }
+                    else if (resource.SvgPicture != null)
+                    {
+                        spriteCanvas.DrawPicture(resource.SvgPicture);
+                    }
+
+                    spriteCanvas.Restore();
+                }
+
+                if (deco.BorderWidth > 0.01f)
+                {
+                    _strokePaint.StrokeWidth = deco.BorderWidth;
+                    _strokePaint.Color = deco.BorderColor.W > 0.001f ? ToSkColor(deco.BorderColor) : SKColors.Black;
+                    using SKPath borderPath = BuildItemPath(deco.ClipShape, rect, radius);
+                    spriteCanvas.DrawPath(borderPath, _strokePaint);
+                    _strokePaint.StrokeWidth = 1f;
+                }
+
+                image = surface.Snapshot();
+                _barSpriteCache[key] = image;
+                return new CachedBarSprite(image, shadowMargin, shadowMargin);
             }
 
             // 背景:双色渐变或纯色;渐变跨度取内框整宽。
@@ -2478,7 +2565,8 @@ namespace Ludots.Presentation.Skia
                 fillPx,
                 ToColorKey(ToSkColor(item.Color0)),
                 ToColorKey(ToSkColor(item.Color1)),
-                item.Decoration);
+                item.Decoration,
+                item.Text);
         }
 
         private static int QuantizeStrokeWidth(float strokeWidth)
@@ -2733,7 +2821,8 @@ namespace Ludots.Presentation.Skia
             int FillPx,
             uint BackgroundColor,
             uint ForegroundColor,
-            ScreenHudDecoration Decoration);
+            ScreenHudDecoration Decoration,
+            string? ImageSource);
 
         private readonly record struct TextLayoutCacheKey(string Text, int FontSize, byte StyleFlags);
 

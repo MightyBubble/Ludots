@@ -21,6 +21,14 @@
       {
         "definitionId": "hud_css_styling_nameplate",
         "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_capital_icon",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_shield_badge",
+        "scopeTag": "structure"
       }
     ],
     "behaviors": [
@@ -314,6 +322,78 @@
           "attributeId": "Health",
           "targetParamKey": "hud_css_styling.health.max",
           "mode": "AttributeBase"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_capital_icon",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 18px; height: 18px; image: hud_css.icon.capital_star; translate: -30px -50px;"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_shield_badge",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 22px; height: 22px; image: hud_css.icon.defense_shield; clip-path: shield; border: 1px solid rgba(255,215,0,0.8); translate: 30px -50px;"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
         }
       }
     ]

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
@@ -695,6 +696,51 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         /// <summary>
+        /// 图标源解析缓存:按字符串表实例弱引用持有 资产id→字符串表id,
+        /// 表实例随引擎重建时缓存自动失效。资产未登记/解析失败一律 fail-fast。
+        /// </summary>
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<WorldHudStringTable, Dictionary<string, int>> ImageStringIdCache = new();
+
+        private int ResolveImageStringId(string assetId)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out object? tableObj) ||
+                tableObj is not WorldHudStringTable table)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' requires WorldHudStringTable (PresentationWorldHudStrings service) at emit time.");
+            }
+
+            Dictionary<string, int> cache = ImageStringIdCache.GetOrCreateValue(table);
+            if (cache.TryGetValue(assetId, out int cached))
+            {
+                return cached;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.PresentationDisplayResolver.Name, out object? resolverObj) ||
+                resolverObj is not PresentationDisplayResolver resolver)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' requires PresentationDisplayResolver service at emit time.");
+            }
+
+            if (!resolver.TryResolveImageSource(assetId, out string source))
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' could not be resolved; register it in Presentation/image_assets.json.");
+            }
+
+            int id = table.GetOrRegisterSource(source);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' source could not be registered in WorldHudStringTable.");
+            }
+
+            cache[assetId] = id;
+            return id;
+        }
+
+        /// <summary>
         /// 把解析好的 css 排版声明落到条目装饰块。缺省字段写入"关闭"哨兵
         /// (渐变 W=-1、颜色 W=0),保证未声明样式时渲染路径与旧默认逐像素一致。
         /// </summary>
@@ -711,6 +757,7 @@ namespace Ludots.Core.Presentation.Systems
             if (style.Bold == true) flags |= 0x01;
             if (style.Italic == true) flags |= 0x02;
             item.StyleFlags = flags;
+            item.ClipShape = style.ClipShape;
             item.ShadowColor = style.ShadowColor ?? default;
             item.ShadowOffsetX = style.ShadowOffsetX ?? 0f;
             item.ShadowOffsetY = style.ShadowOffsetY ?? 0f;
@@ -762,6 +809,11 @@ namespace Ludots.Core.Presentation.Systems
                 ScreenOffsetY = translate.Y,
             };
             ApplyDecoration(ref item, in style, isText: false);
+            if (style.ImageAssetId != null)
+            {
+                item.Id0 = ResolveImageStringId(style.ImageAssetId);
+            }
+
             return item;
         }
 
