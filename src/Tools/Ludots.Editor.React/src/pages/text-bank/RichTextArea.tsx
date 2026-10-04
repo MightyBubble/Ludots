@@ -86,7 +86,7 @@ export function RichTextArea({
       <textarea
         ref={ref}
         className="text-bank-editor"
-        style={{ height: `${rows * 1.75}rem` }}
+        rows={rows}
         aria-label={ariaLabel}
         value={value}
         spellCheck={false}

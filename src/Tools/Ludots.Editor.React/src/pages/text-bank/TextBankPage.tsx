@@ -108,7 +108,10 @@ export function TextBankPage() {
       }));
       const clean = list.filter((m) => !!m.id);
       setMods(clean);
-      if (clean.length > 0) setModId(clean[0]!.id);
+      if (clean.length > 0) {
+        // 与对话房同一默认 Mod：叙事展示包自带词条/双语表，首屏有真数据可看。
+        setModId(clean.some((m) => m.id === 'NarrativeShowcaseMod') ? 'NarrativeShowcaseMod' : clean[0]!.id);
+      }
     })();
   }, []);
 
@@ -118,7 +121,12 @@ export function TextBankPage() {
     const tokensRes = await fetch(`/api/mods/${encodeURIComponent(targetMod)}/story/catalogs/text_tokens`);
     const tokensJson = await tokensRes.json();
     if (!tokensJson.ok) {
-      setError(tokensJson.error ?? 'text_tokens 加载失败');
+      // 缺表不是错误终态：进空表模式，加词条/加语言即可从零建表。
+      setTokens([]);
+      setLocaleRoot(null);
+      setLoaded(true);
+      setDirty(false);
+      setError('这个 Mod 还没有文本表（Presentation/text_tokens.json）。加第一条词条、再加一门语言即可从零建表；或者换个 Mod。');
       setStatus('');
       return;
     }
@@ -315,37 +323,43 @@ export function TextBankPage() {
             </option>
           ))}
         </select>
-        <input
-          className="text-bank-search"
-          type="text"
-          placeholder="搜索词条 id 或任意语言内容…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <button type="button" onClick={addToken}>
-          + 加词条
-        </button>
-        <input
-          className="text-bank-new-locale"
-          type="text"
-          placeholder="新语言代码,如 ja-JP"
-          value={newLocaleDraft}
-          onChange={(e) => setNewLocaleDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') addLocale();
-          }}
-        />
-        <button type="button" onClick={addLocale}>
-          + 加语言
-        </button>
-        <button type="button" className="text-bank-primary" onClick={() => void save()} disabled={!loaded}>
-          {dirty ? '校验并保存' : '保存'}
-        </button>
-        {loaded ? (
-          <button type="button" onClick={() => void loadBank(modId)} disabled={!dirty}>
-            放弃修改
+        <div className="text-bank-group">
+          <input
+            className="text-bank-search"
+            type="text"
+            placeholder="搜索词条 id 或任意语言内容…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+          <button type="button" onClick={addToken}>
+            + 加词条
           </button>
-        ) : null}
+        </div>
+        <div className="text-bank-group">
+          <input
+            className="text-bank-new-locale"
+            type="text"
+            placeholder="新语言代码,如 ja-JP"
+            value={newLocaleDraft}
+            onChange={(e) => setNewLocaleDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addLocale();
+            }}
+          />
+          <button type="button" onClick={addLocale}>
+            + 加语言
+          </button>
+        </div>
+        <div className="text-bank-group text-bank-group-right">
+          {loaded ? (
+            <button type="button" onClick={() => void loadBank(modId)} disabled={!dirty}>
+              放弃修改
+            </button>
+          ) : null}
+          <button type="button" className="text-bank-primary" onClick={() => void save()} disabled={!loaded}>
+            {dirty ? '校验并保存' : '保存'}
+          </button>
+        </div>
       </div>
 
       <div className="text-bank-locale-toggles">
@@ -398,6 +412,20 @@ export function TextBankPage() {
       </div>
 
       <div className="text-bank-body">
+        {tokens.length === 0 ? (
+          <div className="text-bank-empty">
+            <p className="text-bank-empty-title">还没有词条</p>
+            <p className="text-bank-empty-hint">
+              行是词条 id，列是语言。先加第一条词条，再用顶栏「+ 加语言」建一张语言表（第一门语言自动成为默认），保存时一起落 Presentation/。
+              有词条的 Mod 才需要语言表；引擎要求每门语言覆盖全部词条，缺了游戏起不来——所以这里和保存门都会拦。
+            </p>
+            <div className="text-bank-empty-actions">
+              <button type="button" onClick={addToken}>
+                + 加第一条词条
+              </button>
+            </div>
+          </div>
+        ) : (
         <table className="text-bank-table">
           <thead>
             <tr>
@@ -489,6 +517,7 @@ export function TextBankPage() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       <div className="text-bank-status">
