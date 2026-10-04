@@ -1,0 +1,6 @@
+{
+  "name": "PresenterSchemaStrictnessMod",
+  "version": "1.0.0",
+  "description": "Schema strictness fixture: each sample is a presenter definition whose numeric array field is malformed on purpose; the acceptance test asserts the loader rejects it with a path-bearing error. valid_absent_defaults.json is the positive control.",
+  "dependencies": {}
+}
