@@ -13,6 +13,14 @@
       {
         "definitionId": "hud_css_styling_morale_bar",
         "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_rich_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_nameplate",
+        "scopeTag": "structure"
       }
     ],
     "behaviors": [
@@ -202,6 +210,110 @@
         "command": {
           "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_rich_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 46px; height: 7px; border: 1px solid rgba(255,255,255,0.55); border-radius: 4px; padding: 1px; background: linear-gradient(to right, rgba(16,18,24,0.9), rgba(40,44,56,0.9)); color: linear-gradient(to right, #E2493B, #FFB020); translate: 0 -38px; box-shadow: 1px 2px 3px rgba(0,0,0,0.6);"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_nameplate",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "valueParamKey": "hud_css_styling.health.current",
+          "secondaryValueParamKey": "hud_css_styling.health.max",
+          "css": "color: #FFFFFF; font-size: 13px; font-weight: bold; background-color: rgba(10,12,18,0.75); border: 1px solid rgba(255,255,255,0.35); border-radius: 3px; padding: 2px; translate: 0 -52px; text-shadow: 1px 1px 2px rgba(0,0,0,0.85);"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.max",
+          "mode": "AttributeBase"
         }
       }
     ]

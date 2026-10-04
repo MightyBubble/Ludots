@@ -21,9 +21,31 @@ namespace Ludots.Core.Presentation.Hud
         public Vector4? BackgroundColor;
         public Vector2? Translate;
 
+        // 排版扩展(零值=关闭,默认渲染路径与未声明时逐像素一致):
+        public float? CornerRadius;
+        public float? BorderWidth;
+        public float? Padding;
+        /// <summary>边框颜色;未声明时边框沿用渲染端默认黑。W<=0 视为透明边框(即无边框)。</summary>
+        public Vector4? BorderColor;
+        /// <summary>血条前景(填充)渐变终点;仅 color 为双色 linear-gradient 时出现。</summary>
+        public Vector4? FillGradientTo;
+        /// <summary>背景渐变终点;background(-image) 为 linear-gradient 时出现。</summary>
+        public Vector4? BackgroundGradientTo;
+        public bool? Bold;
+        public bool? Italic;
+        /// <summary>阴影偏移/模糊(px)与颜色;W<=0 视为无阴影。文字=text-shadow,条=box-shadow。</summary>
+        public Vector4? ShadowColor;
+        public float? ShadowOffsetX;
+        public float? ShadowOffsetY;
+        public float? ShadowBlur;
+
         public bool IsEmpty =>
             !Width.HasValue && !Height.HasValue && !FontSize.HasValue && !Opacity.HasValue &&
-            !Color.HasValue && !BackgroundColor.HasValue && !Translate.HasValue;
+            !Color.HasValue && !BackgroundColor.HasValue && !Translate.HasValue &&
+            !CornerRadius.HasValue && !BorderWidth.HasValue && !Padding.HasValue && !BorderColor.HasValue &&
+            !FillGradientTo.HasValue && !BackgroundGradientTo.HasValue &&
+            !Bold.HasValue && !Italic.HasValue &&
+            !ShadowColor.HasValue && !ShadowOffsetX.HasValue && !ShadowOffsetY.HasValue && !ShadowBlur.HasValue;
     }
 
     /// <summary>
@@ -32,12 +54,19 @@ namespace Ludots.Core.Presentation.Hud
     /// 未知属性、重复声明、被解析器丢弃的残缺声明、非法值一律抛错——资产拼错必须当场失败。
     /// 支持的属性与值形:
     /// width/height/font-size: 正长度(px 可省略,其他单位拒绝);
-    /// opacity: 0..1;color/background-color: #RGB/#RGBA/#RRGGBB/#RRGGBBAA/rgb()/rgba();
-    /// translate: 两个长度。
+    /// opacity: 0..1;color/background-color: #RGB/#RGBA/#RRGGBB/#RRGGBBAA/rgb()/rgba()/标准色名
+    /// 或双色 linear-gradient(to right, a, b)(渐变终点进 *GradientTo);
+    /// translate: 两个长度;
+    /// border: &lt;宽&gt;px solid &lt;色&gt;;border-width/border-color 单独声明亦可;
+    /// border-radius/padding: 长度(padding 支持一至四值,取均匀内缩);
+    /// font-weight: bold;font-style: italic;text-shadow/box-shadow: x y 模糊 颜色。
     /// </summary>
     public static class WorldHudStyleCss
     {
-        private const string Supported = "width, height, font-size, opacity, color, background-color, translate";
+        private const string Supported =
+            "width, height, font-size, opacity, color, background-color, background, background-image, " +
+            "translate, border, border-width, border-color, border-radius, padding, " +
+            "font-weight, font-style, text-shadow, box-shadow";
 
         public static WorldHudStyle Parse(string css, string context)
         {
@@ -115,18 +144,296 @@ namespace Ludots.Core.Presentation.Hud
                     style.Opacity = ParseOpacity(value, context);
                     break;
                 case "color":
-                    style.Color = ParseColor(value, "color", context);
+                    if (value.TrimStart().StartsWith("linear-gradient(", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ParseGradient(value, context, out Vector4 from, out Vector4 to);
+                        style.Color = from;
+                        style.FillGradientTo = to;
+                    }
+                    else
+                    {
+                        style.Color = ParseColor(value, "color", context);
+                    }
+
                     break;
                 case "background-color":
-                    style.BackgroundColor = ParseColor(value, "background-color", context);
+                    // background 简写会补一条 initial;显式的 initial/transparent 等于未声明。
+                    if (!string.Equals(value.Trim(), "initial", StringComparison.OrdinalIgnoreCase))
+                    {
+                        style.BackgroundColor = ParseColor(value, "background-color", context);
+                    }
+
+                    break;
+                case "background-attachment":
+                case "background-origin":
+                case "background-clip":
+                case "background-repeat":
+                case "background-position":
+                case "background-size":
+                    // background 简写会带出这些长手;HUD 渐变按"起点锚定、不重复"渲染,
+                    // 只接受与该语义一致的默认值,其余显式声明一律拒绝。
+                    if (!IsDefaultBackgroundLonghand(name, value.Trim()))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: css '{name}' only supports the default value (HUD gradients are start-anchored, non-repeating), got '{value}'.");
+                    }
+
+                    break;
+                case "background":
+                case "background-image":
+                    if (value.TrimStart().StartsWith("linear-gradient(", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ParseGradient(value, context, out Vector4 from, out Vector4 to);
+                        style.BackgroundColor = from;
+                        style.BackgroundGradientTo = to;
+                    }
+                    else
+                    {
+                        style.BackgroundColor = ParseColor(value, name, context);
+                    }
+
                     break;
                 case "translate":
                     style.Translate = ParseTranslate(value, context);
+                    break;
+                case "border-top-width":
+                case "border-right-width":
+                case "border-bottom-width":
+                case "border-left-width":
+                    SetUniformFloat(ref style.BorderWidth, ParsePositiveLength(value, name, context), name, context);
+                    break;
+                case "border-top-style":
+                case "border-right-style":
+                case "border-bottom-style":
+                case "border-left-style":
+                    if (!string.Equals(value.Trim(), "solid", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"{context}: css '{name}' only supports 'solid', got '{value}'.");
+                    }
+
+                    break;
+                case "border-top-color":
+                case "border-right-color":
+                case "border-bottom-color":
+                case "border-left-color":
+                    SetUniformColor(ref style.BorderColor, ParseColor(value, name, context), name, context);
+                    break;
+                case "border-radius":
+                    style.CornerRadius = ParsePositiveLength(value, "border-radius", context);
+                    break;
+                case "border-top-left-radius":
+                case "border-top-right-radius":
+                case "border-bottom-left-radius":
+                case "border-bottom-right-radius":
+                    // ExCSS 会把 border-radius 展开成四角长手,且每角是"横 纵"两段;两段与四角必须全部一致。
+                    string[] cornerParts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (cornerParts.Length is < 1 or > 2)
+                    {
+                        throw new InvalidOperationException($"{context}: css '{name}' only supports one or two lengths, got '{value}'.");
+                    }
+
+                    float corner = ParsePositiveLength(cornerParts[0], name, context);
+                    for (int i = 1; i < cornerParts.Length; i++)
+                    {
+                        float next = ParsePositiveLength(cornerParts[i], name, context);
+                        if (MathF.Abs(next - corner) > 0.001f)
+                        {
+                            throw new InvalidOperationException($"{context}: css '{name}' horizontal/vertical radii must agree, got '{value}'.");
+                        }
+                    }
+
+                    SetUniformFloat(ref style.CornerRadius, corner, name, context);
+                    break;
+                case "padding-top":
+                case "padding-right":
+                case "padding-bottom":
+                case "padding-left":
+                    SetUniformFloat(ref style.Padding, ParsePositiveLength(value, name, context), name, context);
+                    break;
+                case "font-weight":
+                    style.Bold = value.Trim() switch
+                    {
+                        "bold" => true,
+                        "normal" => false,
+                        _ => ParseFontWeightNumber(value, context),
+                    };
+                    break;
+                case "font-style":
+                    style.Italic = value.Trim() switch
+                    {
+                        "italic" => true,
+                        "normal" => false,
+                        _ => throw new InvalidOperationException($"{context}: css 'font-style' only supports italic/normal, got '{value}'."),
+                    };
+                    break;
+                case "text-shadow":
+                case "box-shadow":
+                    if (style.ShadowColor.HasValue)
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: css 'text-shadow' and 'box-shadow' are mutually exclusive within one style.");
+                    }
+
+                    ParseShadow(value, name, context, out Vector4 shadowColor, out float dx, out float dy, out float blur);
+                    style.ShadowColor = shadowColor;
+                    style.ShadowOffsetX = dx;
+                    style.ShadowOffsetY = dy;
+                    style.ShadowBlur = blur;
                     break;
                 default:
                     throw new InvalidOperationException(
                         $"{context}: css property '{name}' is not supported; supported: {Supported}.");
             }
+        }
+
+        private static bool IsDefaultBackgroundLonghand(string name, string value)
+        {
+            return name switch
+            {
+                "background-attachment" => value is "scroll" or "initial",
+                "background-origin" => value is "padding-box" or "initial",
+                "background-clip" => value is "border-box" or "initial",
+                "background-repeat" => value is "no-repeat" or "repeat" or "initial",
+                "background-position" => value is "0% 0%" or "0 0" or "initial",
+                "background-size" => value is "auto" or "none" or "initial",
+                _ => false,
+            };
+        }
+
+        private static bool ParseFontWeightNumber(string value, string context)
+        {
+            if (!TryParseFloat(value.Trim(), out float weight) || !float.IsFinite(weight))
+            {
+                throw new InvalidOperationException($"{context}: css 'font-weight' only supports bold/normal/100..900, got '{value}'.");
+            }
+
+            return weight >= 600f;
+        }
+
+        private static void SetUniformFloat(ref float? slot, float v, string name, string context)
+        {
+            if (slot.HasValue && MathF.Abs(slot.Value - v) > 0.001f)
+            {
+                throw new InvalidOperationException($"{context}: css '{name}' sides must agree; only uniform values are supported.");
+            }
+
+            slot = v;
+        }
+
+        private static void SetUniformColor(ref Vector4? slot, Vector4 v, string name, string context)
+        {
+            if (slot.HasValue && MathF.Abs(slot.Value.X - v.X) + MathF.Abs(slot.Value.Y - v.Y) +
+                MathF.Abs(slot.Value.Z - v.Z) + MathF.Abs(slot.Value.W - v.W) > 0.001f)
+            {
+                throw new InvalidOperationException($"{context}: css '{name}' sides must agree; only uniform values are supported.");
+            }
+
+            slot = v;
+        }
+
+        private static void ParseGradient(string value, string context, out Vector4 from, out Vector4 to)
+        {
+            string trimmed = value.Trim();
+            if (!trimmed.StartsWith("linear-gradient(", StringComparison.OrdinalIgnoreCase) || !trimmed.EndsWith(')'))
+            {
+                throw new InvalidOperationException($"{context}: css gradient must be linear-gradient(a, b), got '{value}'.");
+            }
+
+            string inner = trimmed[..^1].Substring("linear-gradient(".Length);
+            List<string> parts = SplitTopLevel(inner, ',');
+            int index = 0;
+            if (parts.Count > 0 && parts[0].Trim().StartsWith("to ", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(parts[0].Trim(), "to right", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"{context}: css gradient direction only supports 'to right', got '{parts[0].Trim()}'.");
+                }
+
+                index = 1;
+            }
+
+            if (parts.Count - index != 2)
+            {
+                throw new InvalidOperationException($"{context}: css gradient requires exactly two colors, got '{value}'.");
+            }
+
+            from = ParseColor(parts[index].Trim(), "gradient", context);
+            to = ParseColor(parts[index + 1].Trim(), "gradient", context);
+        }
+
+        private static void ParseShadow(string value, string property, string context, out Vector4 color, out float dx, out float dy, out float blur)
+        {
+            List<string> parts = SplitTopLevel(value, ' ');
+            if (parts.Count is < 3 or > 4)
+            {
+                throw new InvalidOperationException($"{context}: css '{property}' requires 'x y [blur] color', got '{value}'.");
+            }
+
+            color = Vector4.Zero;
+            blur = 0f;
+            int lengths = 0;
+            float[] parsed = new float[3];
+            for (int i = 0; i < parts.Count; i++)
+            {
+                string part = parts[i].Trim();
+                if (part.StartsWith('#') ||
+                    part.StartsWith("rgb", StringComparison.OrdinalIgnoreCase))
+                {
+                    color = ParseColor(part, property, context);
+                    continue;
+                }
+
+                if (lengths == 3)
+                {
+                    throw new InvalidOperationException($"{context}: css '{property}' requires 'x y [blur] color', got '{value}'.");
+                }
+
+                parsed[lengths++] = ParsePxLength(part, property, context);
+            }
+
+            if (lengths < 2)
+            {
+                throw new InvalidOperationException($"{context}: css '{property}' requires at least x y offsets, got '{value}'.");
+            }
+
+            dx = parsed[0];
+            dy = parsed[1];
+            blur = lengths == 3 ? parsed[2] : 0f;
+        }
+
+        private static List<string> SplitTopLevel(string text, char separator)
+        {
+            List<string> parts = new();
+            int depth = 0;
+            int start = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c is '(' or '[')
+                {
+                    depth++;
+                }
+                else if (c is ')' or ']')
+                {
+                    depth--;
+                }
+                else if (c == separator && depth == 0)
+                {
+                    parts.Add(text[start..i]);
+                    start = i + 1;
+                }
+            }
+
+            parts.Add(text[start..]);
+            for (int i = parts.Count - 1; i >= 0; i--)
+            {
+                if (parts[i].Length == 0)
+                {
+                    parts.RemoveAt(i);
+                }
+            }
+
+            return parts;
         }
 
         private static float ParsePositiveLength(string value, string property, string context)

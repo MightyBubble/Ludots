@@ -215,7 +215,8 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color0,
                     item.Color1,
                     item.StableId,
-                    item.DirtySerial);
+                    item.DirtySerial,
+                    item.Decoration);
             }
 
             for (int i = 0; i < dirtyTexts.Length; i++)
@@ -237,7 +238,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                 }
             }
 
@@ -324,7 +326,8 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color0,
                     item.Color1,
                     item.StableId,
-                    item.DirtySerial);
+                    item.DirtySerial,
+                    item.Decoration);
             }
 
             ReadOnlySpan<ScreenHudTextItem> texts = _screenHud.GetTextSpan();
@@ -344,7 +347,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                         continue;
                     }
 
@@ -356,7 +360,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                 }
             }
         }

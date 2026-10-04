@@ -21,5 +21,6 @@ namespace Ludots.Core.Presentation.Hud
         public float Value1;
         public float Value2;
         public PresentationClipShape ClipShape;
+        public ScreenHudDecoration Decoration;
     }
 }

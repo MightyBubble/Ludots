@@ -2,6 +2,45 @@ using System.Numerics;
 
 namespace Ludots.Core.Presentation.Hud
 {
+    /// <summary>
+    /// css 排版装饰块(bar/text 共用一份字段布局,零值/哨兵=关闭)。
+    /// 渐变 W=-1 表示无渐变;颜色 W=0 表示无该层(边框色退默认、无底板、无阴影)。
+    /// </summary>
+    public struct ScreenHudDecoration
+    {
+        public float CornerRadius;
+        public float BorderWidth;
+        public float Padding;
+        public Vector4 BorderColor;
+        public Vector4 FillGradientTo;
+        public Vector4 BackgroundGradientTo;
+        public Vector4 BoxBackground;
+        public byte StyleFlags;
+        public Vector4 ShadowColor;
+        public float ShadowOffsetX;
+        public float ShadowOffsetY;
+        public float ShadowBlur;
+
+        public static ScreenHudDecoration FromWorld(in WorldHudItem item)
+        {
+            return new ScreenHudDecoration
+            {
+                CornerRadius = item.CornerRadius,
+                BorderWidth = item.BorderWidth,
+                Padding = item.Padding,
+                BorderColor = item.BorderColor,
+                FillGradientTo = item.FillGradientTo,
+                BackgroundGradientTo = item.BackgroundGradientTo,
+                BoxBackground = item.BoxBackground,
+                StyleFlags = item.StyleFlags,
+                ShadowColor = item.ShadowColor,
+                ShadowOffsetX = item.ShadowOffsetX,
+                ShadowOffsetY = item.ShadowOffsetY,
+                ShadowBlur = item.ShadowBlur,
+            };
+        }
+    }
+
     public struct ScreenHudBarItem
     {
         public int StableId;
@@ -13,6 +52,7 @@ namespace Ludots.Core.Presentation.Hud
         public float Width;
         public float Height;
         public float Value0;
+        public ScreenHudDecoration Decoration;
     }
 
     public struct ScreenHudTextItem
@@ -31,6 +71,7 @@ namespace Ludots.Core.Presentation.Hud
         public byte ValueBound;
         public int BoundAttributeId;
         public Arch.Core.Entity Owner;
+        public ScreenHudDecoration Decoration;
         public PresentationTextPacket Text;
     }
 }

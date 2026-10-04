@@ -320,7 +320,24 @@ namespace Ludots.Core.Presentation.Hud
                    left.Id0 == right.Id0 &&
                    left.Id1 == right.Id1 &&
                    left.FontSize == right.FontSize &&
-                   TextPacketEquals(in left.Text, in right.Text);
+                   TextPacketEquals(in left.Text, in right.Text) &&
+                   DecorationEquals(in left, in right);
+        }
+
+        private static bool DecorationEquals(in WorldHudItem left, in WorldHudItem right)
+        {
+            return left.CornerRadius == right.CornerRadius &&
+                   left.BorderWidth == right.BorderWidth &&
+                   left.Padding == right.Padding &&
+                   left.BorderColor == right.BorderColor &&
+                   left.FillGradientTo == right.FillGradientTo &&
+                   left.BackgroundGradientTo == right.BackgroundGradientTo &&
+                   left.BoxBackground == right.BoxBackground &&
+                   left.StyleFlags == right.StyleFlags &&
+                   left.ShadowColor == right.ShadowColor &&
+                   left.ShadowOffsetX == right.ShadowOffsetX &&
+                   left.ShadowOffsetY == right.ShadowOffsetY &&
+                   left.ShadowBlur == right.ShadowBlur;
         }
 
         private static bool WorldHudProjectionEquals(in WorldHudItem left, in WorldHudItem right)

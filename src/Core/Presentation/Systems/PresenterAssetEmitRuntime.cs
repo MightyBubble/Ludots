@@ -695,6 +695,29 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         /// <summary>
+        /// 把解析好的 css 排版声明落到条目装饰块。缺省字段写入"关闭"哨兵
+        /// (渐变 W=-1、颜色 W=0),保证未声明样式时渲染路径与旧默认逐像素一致。
+        /// </summary>
+        private static void ApplyDecoration(ref WorldHudItem item, in WorldHudStyle style, bool isText)
+        {
+            item.CornerRadius = style.CornerRadius ?? 0f;
+            item.BorderWidth = style.BorderWidth ?? 0f;
+            item.Padding = style.Padding ?? 0f;
+            item.BorderColor = style.BorderColor ?? default;
+            item.FillGradientTo = style.FillGradientTo ?? new Vector4(0f, 0f, 0f, -1f);
+            item.BackgroundGradientTo = style.BackgroundGradientTo ?? new Vector4(0f, 0f, 0f, -1f);
+            item.BoxBackground = isText ? (style.BackgroundColor ?? default) : default;
+            byte flags = 0;
+            if (style.Bold == true) flags |= 0x01;
+            if (style.Italic == true) flags |= 0x02;
+            item.StyleFlags = flags;
+            item.ShadowColor = style.ShadowColor ?? default;
+            item.ShadowOffsetX = style.ShadowOffsetX ?? 0f;
+            item.ShadowOffsetY = style.ShadowOffsetY ?? 0f;
+            item.ShadowBlur = style.ShadowBlur ?? 0f;
+        }
+
+        /// <summary>
         /// 世界 HUD 条目的唯一建条路径：请求车道（本类）与 retained 直写车道
         /// （PresenterEmitSystem）共用，保证两条车道产出的字段语义逐项一致。
         /// alpha 由请求车道按 LOD 传入；直写车道传 1。
@@ -723,7 +746,7 @@ namespace Ludots.Core.Presentation.Systems
             float height = style.Height ?? (scale.Y > 0f ? scale.Y : 6f);
             Vector2 translate = style.Translate ?? Vector2.Zero;
 
-            return new WorldHudItem
+            WorldHudItem item = new()
             {
                 Owner = state.OwnerEntity,
                 StableId = stableId,
@@ -738,6 +761,8 @@ namespace Ludots.Core.Presentation.Systems
                 ScreenOffsetX = translate.X,
                 ScreenOffsetY = translate.Y,
             };
+            ApplyDecoration(ref item, in style, isText: false);
+            return item;
         }
 
         /// <summary>同 <see cref="ComposeWorldHudBarItem"/>：世界文本条目的唯一建条路径。</summary>
@@ -811,7 +836,7 @@ namespace Ludots.Core.Presentation.Systems
 
             Vector2 translate = style.Translate ?? Vector2.Zero;
 
-            return new WorldHudItem
+            WorldHudItem item = new()
             {
                 Owner = state.OwnerEntity,
                 StableId = stableId,
@@ -830,6 +855,8 @@ namespace Ludots.Core.Presentation.Systems
                 ScreenOffsetY = translate.Y,
                 Text = packet,
             };
+            ApplyDecoration(ref item, in style, isText: true);
+            return item;
         }
 
         internal Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)

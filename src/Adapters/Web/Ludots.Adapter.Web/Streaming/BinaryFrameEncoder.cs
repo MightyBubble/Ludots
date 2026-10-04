@@ -241,7 +241,7 @@ namespace Ludots.Adapter.Web.Streaming
             for (int i = 0; i < count; i++)
             {
                 ref readonly var item = ref span[i];
-                EnsureCapacity(WireWorldHudItem.SizeInBytes);
+                EnsureCapacity(WireWorldHudItem.SizeInBytesWithDecoration);
                 _buffer[_pos++] = (byte)item.Kind;
                 WriteFloat(item.ScreenX); WriteFloat(item.ScreenY); WriteFloat(0f);
                 WriteFloat(item.Color0.X); WriteFloat(item.Color0.Y); WriteFloat(item.Color0.Z); WriteFloat(item.Color0.W);
@@ -254,6 +254,7 @@ namespace Ludots.Adapter.Web.Streaming
                 WriteInt32(item.Id1);
                 WriteInt32(item.FontSize);
                 WriteTextPacket(in item.Text);
+                WriteDecoration(item.Decoration);
                 if (item.Id0 > maxStringId)
                 {
                     maxStringId = item.Id0;
@@ -379,6 +380,40 @@ namespace Ludots.Adapter.Web.Streaming
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
+        }
+
+        private void WriteDecoration(in Ludots.Core.Presentation.Hud.ScreenHudDecoration decoration)
+        {
+            WriteFloat(decoration.CornerRadius);
+            WriteFloat(decoration.BorderWidth);
+            WriteFloat(decoration.Padding);
+            WriteFloat(decoration.BorderColor.X);
+            WriteFloat(decoration.BorderColor.Y);
+            WriteFloat(decoration.BorderColor.Z);
+            WriteFloat(decoration.BorderColor.W);
+            WriteFloat(decoration.FillGradientTo.X);
+            WriteFloat(decoration.FillGradientTo.Y);
+            WriteFloat(decoration.FillGradientTo.Z);
+            WriteFloat(decoration.FillGradientTo.W);
+            WriteFloat(decoration.BackgroundGradientTo.X);
+            WriteFloat(decoration.BackgroundGradientTo.Y);
+            WriteFloat(decoration.BackgroundGradientTo.Z);
+            WriteFloat(decoration.BackgroundGradientTo.W);
+            WriteFloat(decoration.BoxBackground.X);
+            WriteFloat(decoration.BoxBackground.Y);
+            WriteFloat(decoration.BoxBackground.Z);
+            WriteFloat(decoration.BoxBackground.W);
+            _buffer[_pos++] = decoration.StyleFlags;
+            _buffer[_pos++] = 0;
+            _buffer[_pos++] = 0;
+            _buffer[_pos++] = 0;
+            WriteFloat(decoration.ShadowColor.X);
+            WriteFloat(decoration.ShadowColor.Y);
+            WriteFloat(decoration.ShadowColor.Z);
+            WriteFloat(decoration.ShadowColor.W);
+            WriteFloat(decoration.ShadowOffsetX);
+            WriteFloat(decoration.ShadowOffsetY);
+            WriteFloat(decoration.ShadowBlur);
         }
 
         private void WriteTextPacket(in PresentationTextPacket packet)

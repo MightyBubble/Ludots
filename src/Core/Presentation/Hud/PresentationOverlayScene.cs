@@ -504,7 +504,8 @@ namespace Ludots.Core.Presentation.Hud
             int fontSize,
             in Vector4 color,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            in ScreenHudDecoration decoration = default)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -521,7 +522,8 @@ namespace Ludots.Core.Presentation.Hud
                 Y = y,
                 FontSize = fontSize,
                 Text = text,
-                Color0 = color
+                Color0 = color,
+                Decoration = decoration
             };
             return TryStore(in item);
         }
@@ -570,7 +572,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 background,
             in Vector4 foreground,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            in ScreenHudDecoration decoration = default)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -589,7 +592,8 @@ namespace Ludots.Core.Presentation.Hud
                 Height = height,
                 Value0 = value,
                 Color0 = background,
-                Color1 = foreground
+                Color1 = foreground,
+                Decoration = decoration
             };
             return TryStore(in item);
         }
@@ -651,7 +655,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 background,
             in Vector4 foreground,
             int stableId,
-            int dirtySerial)
+            int dirtySerial,
+            in ScreenHudDecoration decoration = default)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -670,7 +675,8 @@ namespace Ludots.Core.Presentation.Hud
                 Height = height,
                 Value0 = value,
                 Color0 = background,
-                Color1 = foreground
+                Color1 = foreground,
+                Decoration = decoration
             };
             return TryUpsertStable(in item);
         }
@@ -683,7 +689,8 @@ namespace Ludots.Core.Presentation.Hud
             int fontSize,
             in Vector4 color,
             int stableId,
-            int dirtySerial)
+            int dirtySerial,
+            in ScreenHudDecoration decoration = default)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -700,7 +707,8 @@ namespace Ludots.Core.Presentation.Hud
                 Y = y,
                 FontSize = fontSize,
                 Text = text,
-                Color0 = color
+                Color0 = color,
+                Decoration = decoration
             };
             return TryUpsertStable(in item);
         }
@@ -792,7 +800,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 background,
             in Vector4 foreground,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            in ScreenHudDecoration decoration = default)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -811,7 +820,8 @@ namespace Ludots.Core.Presentation.Hud
                 Height = height,
                 Value0 = value,
                 Color0 = background,
-                Color1 = foreground
+                Color1 = foreground,
+                Decoration = decoration
             };
             return TryAppend(in item);
         }
@@ -824,7 +834,8 @@ namespace Ludots.Core.Presentation.Hud
             int fontSize,
             in Vector4 color,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            in ScreenHudDecoration decoration = default)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -841,7 +852,8 @@ namespace Ludots.Core.Presentation.Hud
                 Y = y,
                 FontSize = fontSize,
                 Text = text,
-                Color0 = color
+                Color0 = color,
+                Decoration = decoration
             };
             return TryAppend(in item);
         }

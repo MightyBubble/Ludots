@@ -25,23 +25,89 @@ export class HudRenderer {
       const HUD_BAR = 1;
       const HUD_TEXT = 2;
 
+      const deco = item.deco;
       if (item.kind === HUD_BAR) {
         const x = Math.round(item.sx);
         const y = Math.round(item.sy);
         const w = Math.round(item.width);
         const h = Math.round(item.height);
+        const pad = deco ? deco.padding : 0;
+        const ix = x + pad, iy = y + pad, iw = Math.max(1, w - 2 * pad), ih = Math.max(1, h - 2 * pad);
+        const radius = deco ? deco.radius : 0;
 
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = this.rgba(item.c1r, item.c1g, item.c1b, item.c1a);
-        ctx.fillRect(x, y, Math.round(w * item.v0), h);
-        ctx.strokeStyle = 'black';
-        ctx.strokeRect(x, y, w, h);
+        if (deco && deco.shadowColor && deco.shadowBlur >= 0) {
+          ctx.save();
+          ctx.shadowColor = this.rgba(...deco.shadowColor);
+          ctx.shadowBlur = deco.shadowBlur;
+          ctx.shadowOffsetX = deco.shadowOffsetX;
+          ctx.shadowOffsetY = deco.shadowOffsetY;
+          ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, Math.max(0.01, item.c0a));
+          this.fillRounded(ctx, x, y, w, h, radius);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
+          item.c0r, item.c0g, item.c0b, item.c0a, deco?.backgroundGradientTo);
+        this.fillRounded(ctx, ix, iy, iw, ih, radius);
+
+        const fillW = Math.round(iw * item.v0);
+        if (fillW > 0) {
+          ctx.save();
+          ctx.beginPath();
+          this.roundedPath(ctx, ix, iy, iw, ih, radius);
+          ctx.clip();
+          ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
+            item.c1r, item.c1g, item.c1b, item.c1a, deco?.fillGradientTo);
+          ctx.fillRect(ix, iy, fillW, ih);
+          ctx.restore();
+        }
+
+        if (deco && deco.borderWidth > 0) {
+          ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
+          ctx.lineWidth = deco.borderWidth;
+          this.strokeRounded(ctx, x, y, w, h, radius);
+          ctx.lineWidth = 1;
+        } else {
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 1;
+          this.strokeRounded(ctx, x, y, w, h, radius);
+        }
       } else if (item.kind === HUD_TEXT) {
         const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
-        ctx.font = `${fontSize}px monospace`;
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+        const bold = deco?.bold ? 'bold ' : '';
+        const italic = deco?.italic ? 'italic ' : '';
+        ctx.font = `${italic}${bold}${fontSize}px monospace`;
         const text = this.resolveHudText(item);
+
+        if (deco && deco.boxBackground) {
+          const pad = deco.padding + deco.borderWidth;
+          const textW = ctx.measureText(text).width;
+          const boxX = item.sx - pad;
+          const boxY = item.sy - pad;
+          const boxW = textW + 2 * pad;
+          const boxH = fontSize * 1.5 + 2 * pad;
+          ctx.fillStyle = this.rgba(...deco.boxBackground);
+          this.fillRounded(ctx, boxX, boxY, boxW, boxH, deco.radius);
+          if (deco.borderWidth > 0) {
+            ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
+            ctx.lineWidth = deco.borderWidth;
+            this.strokeRounded(ctx, boxX, boxY, boxW, boxH, deco.radius);
+            ctx.lineWidth = 1;
+          }
+        }
+
+        if (deco && deco.shadowColor) {
+          ctx.save();
+          ctx.shadowColor = this.rgba(...deco.shadowColor);
+          ctx.shadowBlur = deco.shadowBlur;
+          ctx.shadowOffsetX = deco.shadowOffsetX;
+          ctx.shadowOffsetY = deco.shadowOffsetY;
+          ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+          ctx.fillText(text, item.sx, item.sy + fontSize);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
         ctx.fillText(text, item.sx, item.sy + fontSize);
       }
     }
@@ -115,6 +181,40 @@ export class HudRenderer {
         }
       }
     }
+  }
+
+  private roundedPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    ctx.beginPath();
+    if (r > 0.5 && ctx.roundRect) {
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+  }
+
+  private fillRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    this.roundedPath(ctx, x, y, w, h, r);
+    ctx.fill();
+  }
+
+  private strokeRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    this.roundedPath(ctx, x, y, w, h, r);
+    ctx.stroke();
+  }
+
+  private gradientOrColor(
+    ctx: CanvasRenderingContext2D,
+    x0: number, x1: number,
+    r: number, g: number, b: number, a: number,
+    to?: [number, number, number, number],
+  ): string | CanvasGradient {
+    if (to) {
+      const grad = ctx.createLinearGradient(x0, 0, x1, 0);
+      grad.addColorStop(0, this.rgba(r, g, b, a));
+      grad.addColorStop(1, this.rgba(...to));
+      return grad;
+    }
+    return this.rgba(r, g, b, a);
   }
 
   private rgba(r: number, g: number, b: number, a: number): string {

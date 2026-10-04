@@ -87,7 +87,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(style.Translate!.Value, Is.EqualTo(new Vector2(0f, -34f)));
         }
 
-        [TestCase("border: 1px solid black")]
         [TestCase("width: 5em")]
         [TestCase("opacity: 1.5")]
         [TestCase("color: not-a-color")]
@@ -98,6 +97,88 @@ namespace Ludots.Tests.Presentation
         public void CssParser_RejectedDeclarations_FailFast(string css)
         {
             Assert.Throws<InvalidOperationException>(() => WorldHudStyleCss.Parse(css, "test"));
+        }
+
+        [Test]
+        public void CssParser_TypographyDeclarations_MapEveryProperty()
+        {
+            WorldHudStyle style = WorldHudStyleCss.Parse(
+                "border: 2px solid #FFFFFFFF; border-radius: 4px; padding: 3px; " +
+                "background: linear-gradient(to right, #101218, #282C38); color: linear-gradient(#E2493B, #FFB020); " +
+                "font-weight: bold; font-style: italic; text-shadow: 1px 2px 3px rgba(0,0,0,0.85)",
+                "test");
+
+            Assert.That(style.BorderWidth, Is.EqualTo(2f));
+            Assert.That(style.BorderColor!.Value.W, Is.EqualTo(1f));
+            Assert.That(style.CornerRadius, Is.EqualTo(4f));
+            Assert.That(style.Padding, Is.EqualTo(3f));
+            Assert.That(style.BackgroundColor!.Value.X, Is.EqualTo(0x10 / 255f).Within(0.002f));
+            Assert.That(style.BackgroundGradientTo!.Value.X, Is.EqualTo(0x28 / 255f).Within(0.002f));
+            Assert.That(style.Color!.Value.X, Is.EqualTo(0xE2 / 255f).Within(0.002f));
+            Assert.That(style.FillGradientTo!.Value.X, Is.EqualTo(0xFF / 255f).Within(0.002f));
+            Assert.That(style.Bold, Is.True);
+            Assert.That(style.Italic, Is.True);
+            Assert.That(style.ShadowColor!.Value.W, Is.EqualTo(0.85f).Within(0.01f));
+            Assert.That(style.ShadowOffsetX, Is.EqualTo(1f));
+            Assert.That(style.ShadowOffsetY, Is.EqualTo(2f));
+            Assert.That(style.ShadowBlur, Is.EqualTo(3f));
+
+            WorldHudStyle barStyle = WorldHudStyleCss.Parse("box-shadow: 1px 1px 2px rgba(0,0,0,0.6)", "test2");
+            Assert.That(barStyle.ShadowColor!.Value.W, Is.EqualTo(0.6f).Within(0.01f));
+        }
+
+        [TestCase("border: 1px dashed black")]
+        [TestCase("linear-gradient(to top, #fff, #000)")]
+        [TestCase("background: linear-gradient(to right, #fff)")]
+        [TestCase("text-shadow: 1px red")]
+        [TestCase("font-style: oblique")]
+        [TestCase("padding: 1px 2px 3px 4px 5px")]
+        public void CssParser_TypographyRejectedDeclarations_FailFast(string css)
+        {
+            Assert.Throws<InvalidOperationException>(() => WorldHudStyleCss.Parse(css, "test"));
+        }
+
+        [Test]
+        public void ShowcaseMap_RichStyles_ReachItemsWithDecorations()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine(
+                "LudotsCoreMod", "CoreInputMod", "HudCssStylingMod");
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, "hud_css_styling_map", frames: 90);
+
+            using var projection = PresenterBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+            PresenterBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, projection, 4);
+
+            var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
+            var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
+
+            // 每单位现 5 元素:生命条/士气条/战况条/状态文本/名字板。
+            Assert.That(worldHud.Count, Is.EqualTo(80), "16 单位 × 5 元素");
+
+            int richBars = 0;
+            int nameplates = 0;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth > 0.5f)
+                {
+                    richBars++;
+                    Assert.That(item.CornerRadius, Is.EqualTo(4f), "战况条圆角");
+                    Assert.That(item.Padding, Is.EqualTo(1f), "战况条留白");
+                    Assert.That(item.FillGradientTo.W, Is.GreaterThan(0f), "战况条填充渐变");
+                    Assert.That(item.BackgroundGradientTo.W, Is.GreaterThan(0f), "战况条背景渐变");
+                    Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "战况条阴影");
+                }
+                else if (item.Kind == WorldHudItemKind.Text && item.BoxBackground.W > 0.5f)
+                {
+                    nameplates++;
+                    Assert.That(item.StyleFlags & 0x01, Is.Not.Zero, "名字板粗体");
+                    Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "名字板文字阴影");
+                    Assert.That(item.Padding, Is.EqualTo(2f), "名字板留白");
+                }
+            }
+
+            Assert.That(richBars, Is.EqualTo(16), "16 个战况条带完整装饰");
+            Assert.That(nameplates, Is.EqualTo(16), "16 个名字板带底板+阴影");
+            Assert.That(screenHud.Count, Is.GreaterThan(0), "投影后屏幕缓冲有内容");
         }
 
         [Test]
@@ -261,20 +342,20 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(48), "16 单位 × 3 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(80), "16 单位 × 5 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
-                if (item.Kind == WorldHudItemKind.Bar)
+                if (item.Kind == WorldHudItemKind.Bar && item.BorderWidth <= 0.5f)
                 {
                     bars++;
                     Assert.That(item.Width, Is.EqualTo(46f), "css width 必须落到每个条目");
                     Assert.That(item.Height, Is.EqualTo(item.Height > 4f ? 5f : 3f), "css height(bar=5/morale=3)");
                     Assert.That(item.ScreenOffsetY, Is.EqualTo(item.Height > 4f ? -26f : -30f).Within(0.001f), "css translate 必须落到每个条目");
                 }
-                else if (item.Kind == WorldHudItemKind.Text)
+                else if (item.Kind == WorldHudItemKind.Text && item.BoxBackground.W <= 0.5f)
                 {
                     texts++;
                     Assert.That(item.FontSize, Is.EqualTo(13), "css font-size 必须落到每个文本");
@@ -282,8 +363,8 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条");
-            Assert.That(texts, Is.EqualTo(16), "16 单位 × 状态文本");
+            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条(战况条另计)");
+            Assert.That(texts, Is.EqualTo(16), "16 单位 × 状态文本(名字板另计)");
 
             // 血量补丁经属性绑定写成填充率:95/100 与 8/100 必须出现在值里。
             float maxRatio = 0f;

@@ -366,6 +366,7 @@ namespace Ludots.Core.Presentation.Systems
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Decoration = ScreenHudDecoration.FromWorld(in item),
                 };
                 bool accepted = _retainedProjectedBuild
                     ? _screenHud.TryUpsertProjectedBar(in bar, projectedBarIndex)
@@ -421,6 +422,7 @@ namespace Ludots.Core.Presentation.Systems
                 ValueBound = item.ValueBound,
                 BoundAttributeId = item.BoundAttributeId,
                 Owner = item.Owner,
+                Decoration = ScreenHudDecoration.FromWorld(in item),
                 Text = item.Text,
             };
             bool textAccepted = _retainedProjectedBuild

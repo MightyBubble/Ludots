@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-10-04T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "HudCssStylingMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "HudCssStylingMod",
+      "rootPath": "../../../../../../../mods/showcases/hud_css_styling/HudCssStylingMod"
+    }
+  ]
+}

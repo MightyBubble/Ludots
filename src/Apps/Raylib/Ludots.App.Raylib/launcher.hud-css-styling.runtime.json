@@ -1,7 +1,4 @@
 {
-  "ModPaths": [
-    "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/CoreInputMod",
-    "../../../../../../../mods/showcases/hud_css_styling/HudCssStylingMod"
-  ]
+  "LaunchGraphPath": "raylib.hud-css-styling.launch.graph.json",
+  "PlanSchemaVersion": 1
 }

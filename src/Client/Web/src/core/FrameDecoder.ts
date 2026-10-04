@@ -15,6 +15,22 @@ const SEC_DEBUG_LINES = 0x10;
 const SEC_DEBUG_CIRCLES = 0x11;
 const SEC_DEBUG_BOXES = 0x12;
 
+export interface ScreenHudDecoration {
+  radius: number;
+  borderWidth: number;
+  padding: number;
+  borderColor?: [number, number, number, number];
+  fillGradientTo?: [number, number, number, number];
+  backgroundGradientTo?: [number, number, number, number];
+  boxBackground?: [number, number, number, number];
+  bold: boolean;
+  italic: boolean;
+  shadowColor?: [number, number, number, number];
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
+}
+
 export interface CameraState {
   posX: number; posY: number; posZ: number;
   tgtX: number; tgtY: number; tgtZ: number;
@@ -83,6 +99,7 @@ export interface ScreenHudItem {
   textPacket?: PresentationTextPacket;
   textTemplate?: string;
   textTemplates?: Map<number, string>;
+  deco?: ScreenHudDecoration;
 }
 
 export interface ScreenOverlayItem {
@@ -240,8 +257,9 @@ export class FrameDecoder {
         id0: v.getInt32(p + 61, true), id1: v.getInt32(p + 65, true),
         fontSize: v.getInt32(p + 69, true),
         textPacket,
+        deco: this.readDecoration(v, p + 113),
       });
-      p += 113;
+      p += 221;
     }
 
     const stringCount = v.getUint16(p, true); p += 2;
@@ -325,6 +343,32 @@ export class FrameDecoder {
 
     frame.screenOverlays = items;
     return p;
+  }
+
+  private readDecoration(v: DataView, p: number): ScreenHudDecoration {
+    const readColor = (o: number): [number, number, number, number] =>
+      [v.getFloat32(o, true), v.getFloat32(o + 4, true), v.getFloat32(o + 8, true), v.getFloat32(o + 12, true)];
+    const borderColor = readColor(p + 12);
+    const fillGrad = readColor(p + 28);
+    const bgGrad = readColor(p + 44);
+    const boxBg = readColor(p + 60);
+    const styleFlags = v.getUint8(p + 76);
+    const shadowColor = readColor(p + 80);
+    return {
+      radius: v.getFloat32(p, true),
+      borderWidth: v.getFloat32(p + 4, true),
+      padding: v.getFloat32(p + 8, true),
+      borderColor: borderColor[3] > 0 ? borderColor : undefined,
+      fillGradientTo: fillGrad[3] >= 0 ? fillGrad : undefined,
+      backgroundGradientTo: bgGrad[3] >= 0 ? bgGrad : undefined,
+      boxBackground: boxBg[3] > 0 ? boxBg : undefined,
+      bold: (styleFlags & 0x01) !== 0,
+      italic: (styleFlags & 0x02) !== 0,
+      shadowColor: shadowColor[3] > 0 ? shadowColor : undefined,
+      shadowOffsetX: v.getFloat32(p + 96, true),
+      shadowOffsetY: v.getFloat32(p + 100, true),
+      shadowBlur: v.getFloat32(p + 104, true),
+    };
   }
 
   private readTextPacket(v: DataView, p: number): PresentationTextPacket {
