@@ -2417,9 +2417,9 @@ public static class LauncherEvidenceRecorder
         string avoidanceDir = Path.Combine(screensDir, "avoidance");
         Directory.CreateDirectory(avoidanceDir);
         var avoidanceMetrics = new List<MassNavigationAvoidanceFrameMetrics>();
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks, out int firstOrderPeakActiveMoveOrderCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_command_order", captureImage: true, sampledAgentIndices: commandedAgentIndices);
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks, out _);
 
         WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "002_settled_before_crossing", captureImage: true, sampledAgentIndices: commandedAgentIndices);
@@ -2429,7 +2429,7 @@ public static class LauncherEvidenceRecorder
         // area (hard resolve is intentionally skipped outside it).
         Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, commandActors, crossingTarget);
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks, out int secondOrderPeakActiveMoveOrderCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true, sampledAgentIndices: commandedAgentIndices);
         WaitForMassNavigationMoveOrdersClear(runtime, frameTimesMs, MassNavigationAvoidanceCrowdSettleTicks);
         CaptureMassNavigationAvoidanceZoomFrame(simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, avoidanceMetrics);
@@ -2449,7 +2449,7 @@ public static class LauncherEvidenceRecorder
 
         WriteTimelineSheet("MassNavigation presenter + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
-        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation, avoidanceMetrics);
+        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation, avoidanceMetrics, firstOrderPeakActiveMoveOrderCount, secondOrderPeakActiveMoveOrderCount);
         string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
         string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
         string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
@@ -2676,11 +2676,19 @@ public static class LauncherEvidenceRecorder
         string framesDir,
         List<double> frameTimesMs,
         List<MassNavigationAvoidanceFrameMetrics> metrics,
-        int tickCount)
+        int tickCount,
+        out int peakActiveMoveOrderCount)
     {
+        peakActiveMoveOrderCount = 0;
         for (int i = 0; i < tickCount; i++)
         {
             Tick(runtime, 1, frameTimesMs);
+            int activeMoveOrderCount = CountActiveMassNavigationMoveOrders(runtime.Engine);
+            if (activeMoveOrderCount > peakActiveMoveOrderCount)
+            {
+                peakActiveMoveOrderCount = activeMoveOrderCount;
+            }
+
             if (i % MassNavigationAvoidanceFrameIntervalTicks != 0)
             {
                 continue;
@@ -3357,7 +3365,9 @@ public static class LauncherEvidenceRecorder
     private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(
         IReadOnlyList<MassNavigationSnapshot> timeline,
         MassNavigationSimulationRuntime simulation,
-        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics,
+        int firstOrderPeakActiveMoveOrderCount,
+        int secondOrderPeakActiveMoveOrderCount)
     {
         var failures = new List<string>();
         MassNavigationStageFailureSummary stageFailures = SummarizeMassNavigationStageFailures(timeline);
@@ -3390,11 +3400,13 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
         AddAcceptanceCheck(afterOrder.CommandSourceCount > 0, "The formal command source contains no MassNavigation agents.", failures);
-        AddAcceptanceCheck(afterOrder.ActiveMoveOrderCount > 0, "massNavigationMove did not become active in any actor OrderBuffer.", failures);
+        // Per-slot arrival (#1674) can finish a move order before the post-sequence snapshot,
+        // so activation is proven by the in-sequence peak, not by the end-state sample.
+        AddAcceptanceCheck(afterOrder.ActiveMoveOrderCount > 0 || firstOrderPeakActiveMoveOrderCount > 0, "massNavigationMove did not become active in any actor OrderBuffer during the command sequence.", failures);
         AddAcceptanceCheck(firstMoveSampleCount >= MassNavigationMinimumMovedSampleCount,
             $"First massNavigationMove did not move enough sampled units by {MassNavigationMovementSampleThresholdCm:F0}cm: moved={firstMoveSampleCount}/{MassNavigationPositionSampleCount}, max={firstMoveMaxDisplacement:F1}cm.",
             failures);
-        AddAcceptanceCheck(crossing.ActiveMoveOrderCount > 0, "Second massNavigationMove did not become active in any actor OrderBuffer.", failures);
+        AddAcceptanceCheck(crossing.ActiveMoveOrderCount > 0 || secondOrderPeakActiveMoveOrderCount > 0, "Second massNavigationMove did not become active in any actor OrderBuffer during the crossing sequence.", failures);
         AddAcceptanceCheck(secondMoveSampleCount >= MassNavigationMinimumMovedSampleCount,
             $"Second massNavigationMove did not move enough sampled units by {MassNavigationMovementSampleThresholdCm:F0}cm: moved={secondMoveSampleCount}/{MassNavigationPositionSampleCount}, max={secondMoveMaxDisplacement:F1}cm.",
             failures);
