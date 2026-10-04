@@ -17,6 +17,7 @@ export type StatementInspectorProps = {
   speakers: readonly SpeakerRow[];
   speakerNameOf: (speakerId: string) => string | undefined;
   defaultTextOf: (token: string) => string;
+  portraitAssetIds: readonly string[];
   drafts: Record<string, LineDraft>;
   onDraft: (key: string, patch: LineDraft) => void;
   onClearDraft: (key: string) => void;
@@ -222,7 +223,7 @@ function StatementLineEditor({
 }
 
 export function StatementInspector(props: StatementInspectorProps) {
-  const { tree, node, lines, speakers, speakerNameOf, defaultTextOf, drafts, onDraft, onClearDraft, onQuickAddSpeaker, onChange, onAddChoice, onRemoveChoice, canRemove, onRemove } = props;
+  const { tree, node, lines, speakers, speakerNameOf, defaultTextOf, portraitAssetIds, drafts, onDraft, onClearDraft, onQuickAddSpeaker, onChange, onAddChoice, onRemoveChoice, canRemove, onRemove } = props;
 
   const patchLineId = (nextLineId: string, draftKey: string) => {
     if (drafts[draftKey] && nextLineId) {
@@ -265,6 +266,26 @@ export function StatementInspector(props: StatementInspectorProps) {
         onPatchLineId={patchLineId}
         extraAdvanced={
           <>
+            <label className={STUDIO_CHROME.label}>
+              立绘差分
+              <select
+                className={STUDIO_CHROME.field}
+                value={node.portraitImageId ?? ''}
+                onChange={(e) =>
+                  onChange(e.target.value ? { ...node, portraitImageId: e.target.value } : { ...node, portraitImageId: undefined })
+                }
+              >
+                <option value="">跟随说话人</option>
+                {portraitAssetIds.map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+                {node.portraitImageId && !portraitAssetIds.includes(node.portraitImageId) ? (
+                  <option value={node.portraitImageId}>{node.portraitImageId}</option>
+                ) : null}
+              </select>
+            </label>
             <label className={STUDIO_CHROME.label}>
               表现配置
               <input

@@ -104,6 +104,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
   const [localeRoot, setLocaleRoot] = useState<LocaleRoot | null>(null);
   const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
   const [newSpeakers, setNewSpeakers] = useState<SpeakerDraft[]>([]);
+  const [portraitAssetIds, setPortraitAssetIds] = useState<string[]>([]);
   const snapshotRef = useRef<Record<string, string>>({});
 
   const loadMods = useCallback(async () => {
@@ -154,17 +155,23 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
 
   const loadDialogueAuthoringState = useCallback(async (targetMod: string) => {
     setStatus('加载中…');
-    const [dialoguesJson, linesJson, speakersJson, tokensJson, localesJson] = await Promise.all([
+    const [dialoguesJson, linesJson, speakersJson, tokensJson, localesJson, imageAssetsJson] = await Promise.all([
       fetchJson(targetMod, 'dialogues'),
       fetchJson(targetMod, 'lines'),
       fetchJson(targetMod, 'speakers'),
       fetchJson(targetMod, 'text_tokens'),
       fetchJson(targetMod, 'text_locales'),
+      fetchJson(targetMod, 'image_assets'),
     ]);
     const dialogueList: DialogueRow[] = dialoguesJson ? asArray<DialogueRow>(dialoguesJson.items) : [];
     const lineList: LineRow[] = linesJson ? asArray<LineRow>(linesJson.items) : [];
     const speakerList: SpeakerRow[] = speakersJson ? asArray<SpeakerRow>(speakersJson.items) : [];
     const tokenList: TextTokenRow[] = tokensJson ? asArray<TextTokenRow>(tokensJson.items) : [];
+    const portraitIds: string[] = imageAssetsJson
+      ? asArray<{ id: string; kind?: string }>(imageAssetsJson.items)
+          .filter((asset) => asset.kind === 'Portrait' && asset.id)
+          .map((asset) => asset.id)
+      : [];
     const locales: LocaleRoot | null =
       localesJson && localesJson.items && typeof localesJson.items === 'object' && !Array.isArray(localesJson.items)
         ? (localesJson.items as LocaleRoot)
@@ -175,6 +182,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
     setSpeakerRows(speakerList);
     setTokenRows(tokenList);
     setLocaleRoot(locales);
+    setPortraitAssetIds(portraitIds);
     setDrafts({});
     setNewSpeakers([]);
     snapshotRef.current = {
@@ -979,6 +987,7 @@ export const StoryAuthoringPage: React.FC<{ tool?: StoryAuthoringTool }> = ({ to
                 speakers={speakerRows}
                 speakerNameOf={speakerNameOf}
                 defaultTextOf={defaultTextOf}
+                portraitAssetIds={portraitAssetIds}
                 drafts={drafts}
                 onDraft={handleDraft}
                 onClearDraft={clearDraft}

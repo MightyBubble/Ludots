@@ -53,6 +53,7 @@ type Props = {
   speakers: readonly SpeakerRow[];
   speakerNameOf: (speakerId: string) => string | undefined;
   defaultTextOf: (token: string) => string;
+  portraitAssetIds: readonly string[];
   drafts: Record<string, LineDraft>;
   onDraft: (key: string, patch: LineDraft) => void;
   onClearDraft: (key: string) => void;
@@ -68,6 +69,7 @@ export function DialogueTreeCanvas({
   speakers,
   speakerNameOf,
   defaultTextOf,
+  portraitAssetIds,
   drafts,
   onDraft,
   onClearDraft,
@@ -303,6 +305,7 @@ export function DialogueTreeCanvas({
             speakers={speakers}
             speakerNameOf={speakerNameOf}
             defaultTextOf={defaultTextOf}
+            portraitAssetIds={portraitAssetIds}
             drafts={drafts}
             onDraft={onDraft}
             onClearDraft={onClearDraft}

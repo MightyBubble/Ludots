@@ -25,6 +25,7 @@ export type DialogueNode = {
   lineId: string;
   presentationProfile?: string;
   cameraId?: string;
+  portraitImageId?: string;
   nextNode?: string;
   autoAdvanceSeconds?: number;
   onEnterActionGraphId?: string;
