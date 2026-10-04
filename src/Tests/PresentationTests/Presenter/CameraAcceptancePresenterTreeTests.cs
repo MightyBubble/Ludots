@@ -112,7 +112,6 @@ namespace Ludots.Tests.Presentation
                 pipeline,
                 definitions,
                 resolveAttributeName: AttributeRegistry.GetId,
-                resolveMeshId: meshAssets.GetId,
                 resolveTextTokenId: textCatalog.GetTokenId,
                 resolveEntityTemplateKey: mapLoader.EntityTemplateKeys.GetId,
                 resolveEffectTemplateId: _ => 0,

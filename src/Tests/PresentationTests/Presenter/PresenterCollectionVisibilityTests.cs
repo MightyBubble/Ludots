@@ -321,7 +321,7 @@ public sealed class PresenterCollectionVisibilityTests
             var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
             _definitions = new PresenterDefinitionRegistry();
             new PresenterDefinitionConfigLoader(pipeline, _definitions,
-                resolveMeshId: _ => 1, resolveMaterialId: _ => 1, resolveBehaviorAssetId: (_, _) => 1,
+                resolveMaterialId: _ => 1, resolveBehaviorAssetId: (_, _) => 1,
                 resolveEntityCollectionKeyId: key => key == "preview" ? 1 : key == "selected" ? 2 : throw new InvalidOperationException(key))
                 .Load(ConfigCatalogLoader.Load(pipeline));
             _previewId = _definitions.GetId("selection.preview");

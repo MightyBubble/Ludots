@@ -25,7 +25,6 @@ namespace Ludots.Core.Presentation.Config
         private readonly ConfigPipeline _configs;
         private readonly PresenterDefinitionRegistry _registry;
         private readonly Func<string, int> _resolveAttributeName;
-        private readonly Func<string, int> _resolveMeshId;
         private readonly Func<string, int> _resolveTextTokenId;
         private readonly Func<string, int> _resolveEntityTemplateKey;
         private readonly Func<string, int> _resolveEffectTemplateId;
@@ -45,7 +44,6 @@ namespace Ludots.Core.Presentation.Config
             ConfigPipeline configs,
             PresenterDefinitionRegistry registry,
             Func<string, int> resolveAttributeName = null,
-            Func<string, int> resolveMeshId = null,
             Func<string, int> resolveTextTokenId = null,
             Func<string, int> resolveEntityTemplateKey = null,
             Func<string, int> resolveEffectTemplateId = null,
@@ -64,7 +62,6 @@ namespace Ludots.Core.Presentation.Config
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
-            _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
             _resolveEntityTemplateKey = resolveEntityTemplateKey ?? (_ => 0);
             _resolveEffectTemplateId = resolveEffectTemplateId ?? (_ => 0);

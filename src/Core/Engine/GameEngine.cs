@@ -1522,7 +1522,6 @@ namespace Ludots.Core.Engine
                 ConfigPipeline,
                 presenterDefinitions,
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
-                meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
                 MapLoader.EntityTemplateKeys.GetId,
                 EffectTemplateIdRegistry.GetId,

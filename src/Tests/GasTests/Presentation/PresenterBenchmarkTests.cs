@@ -727,7 +727,6 @@ namespace Ludots.Tests.Presentation
                 pipeline,
                 defs,
                 resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
-                resolveMeshId: meshes.GetId,
                 resolveTextTokenId: textCatalog.GetTokenId,
                 resolveEntityTemplateKey: templateKeys.GetId,
                 resolveMaterialId: materialAssets.GetId,
