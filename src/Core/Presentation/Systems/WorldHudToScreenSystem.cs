@@ -34,7 +34,6 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastWorldHudPositionRevision = -1;
         private int _lastWorldHudStructuralRevision = -1;
         private int _lastProjectionRevision = -1;
-        private int _lastCullVisibilityRevision = -1;
 
         private static readonly bool HudGateTraceEnabled =
             Environment.GetEnvironmentVariable("LUDOTS_HUD_GATE_TRACE") is "1" or "true" or "yes" or "on";
@@ -267,7 +266,6 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudRevision = worldHudRevision;
             _lastWorldHudProjectionRevision = worldHudProjectionRevision;
             _lastProjectionRevision = projectionRevision;
-            _lastCullVisibilityRevision = cullVisibilityRevision;
             _lastHeightmapRevision = heightmapRevision;
             _lastHeightmap = heightmap;
             _lastWorldHudPositionRevision = positionRevision;
@@ -281,7 +279,6 @@ namespace Ludots.Core.Presentation.Systems
             ReadOnlySpan<int> removedStableIds,
             ref long start)
         {
-            int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             int projectedItems = 0;
             for (int i = 0; i < removedStableIds.Length; i++)
             {
@@ -299,7 +296,6 @@ namespace Ludots.Core.Presentation.Systems
 
             _lastWorldHudRevision = _worldHud.ContentRevision;
             _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
-            _lastCullVisibilityRevision = cullVisibilityRevision;
             _worldHud.ClearContentDeltas();
             _timingDiagnostics?.ObserveWorldHudProjection(
                 (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency,
@@ -673,7 +669,6 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudRevision = _worldHud.ContentRevision;
             _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
             _lastProjectionRevision = _projector is IProjectionRevisionProvider provider ? provider.ProjectionRevision : -1;
-            _lastCullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             _lastHeightmapRevision = heightmapRevision;
             _lastHeightmap = heightmap;
             _lastWorldHudPositionRevision = _worldHud.PositionRevision;

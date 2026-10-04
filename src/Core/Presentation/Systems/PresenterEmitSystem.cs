@@ -1153,22 +1153,7 @@ namespace Ludots.Core.Presentation.Systems
                     }
                 }
             }
-        }
-
-        private bool TryReadOwnerAttributes(Entity owner, int attributeId, out float current, out float baseValue)
-        {
-            current = 0f;
-            baseValue = 0f;
-            if (attributeId < 0 || !World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner))
-            {
-                return false;
             }
-
-            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-            current = attributes.GetCurrent(attributeId);
-            baseValue = attributes.GetBase(attributeId);
-            return true;
-        }
 
         private void ProcessDirtyStaticEmitEntities()
         {
@@ -1324,10 +1309,7 @@ namespace Ludots.Core.Presentation.Systems
                     RemoveRetainedPresentationRequestIfPresent(in state, in cachedDefinition, ref emitCache);
                     RemoveSurfaceSourceIfPresent(in state, in cachedDefinition, ref emitCache);
                     RemoveReplayCache(entity);
-                    if (ownerDead)
-                    {
-                        _pendingDestroy.Add(entity);
-                    }
+                    _pendingDestroy.Add(entity);
                 }
             }
         }
