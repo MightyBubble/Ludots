@@ -10,6 +10,7 @@ namespace Ludots.Core.Presentation.Hud
     {
         private const int MaxTextPacketCacheEntries = 8192;
         private const int MaxNumericTextCacheEntries = 4096;
+        private const int MaxResolvedTextCacheEntries = 8192;
 
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly WorldHudStringTable? _worldHudStrings;
@@ -179,6 +180,7 @@ namespace Ludots.Core.Presentation.Hud
                 int stableId = removedStableIds[i];
                 scene.RemoveStable(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar, stableId);
                 scene.RemoveStable(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text, stableId);
+                _screenHudResolvedTextCache.Remove(stableId);
             }
 
             // 同帧"值变化→出画"的条目会同时出现在 dirty 与 removed 流里：dirty 快照不因移除失效，
@@ -489,10 +491,7 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            if (_textPacketCache.Count >= MaxTextPacketCacheEntries)
-            {
-                _textPacketCache.Clear();
-            }
+            MakeRoom(_textPacketCache, MaxTextPacketCacheEntries);
 
             _textPacketCache[cacheKey] = formatted;
             text = formatted;
@@ -513,10 +512,7 @@ namespace Ludots.Core.Presentation.Hud
                 return null;
             }
 
-            if (_numericTextCache.Count >= MaxNumericTextCacheEntries)
-            {
-                _numericTextCache.Clear();
-            }
+            MakeRoom(_numericTextCache, MaxNumericTextCacheEntries);
 
             _numericTextCache[cacheKey] = formatted;
             return formatted;
@@ -534,6 +530,33 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
+        /// <summary>
+        /// 缓存满时腾出半表而不是整表清空：整表 Clear 后的第一帧要全量重格式化，
+        /// 在长会话里表现为周期性分配尖峰。Dictionary 迭代序不代表插入序，
+        /// 半清只保证腾出空间，是 LRU 的粗化近似。
+        /// </summary>
+        private static void MakeRoom<TKey, TValue>(Dictionary<TKey, TValue> cache, int maxEntries)
+            where TKey : notnull
+        {
+            if (cache.Count < maxEntries)
+            {
+                return;
+            }
+
+            int toRemove = cache.Count - (maxEntries / 2);
+            if (toRemove <= 0)
+            {
+                return;
+            }
+
+            TKey[] keys = new TKey[cache.Count];
+            cache.Keys.CopyTo(keys, 0);
+            for (int i = 0; i < toRemove; i++)
+            {
+                cache.Remove(keys[i]);
+            }
+        }
+
         private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text, bool allowResolvedCache)
         {
             if (!allowResolvedCache || item.StableId == 0 || text == null)
@@ -541,6 +564,7 @@ namespace Ludots.Core.Presentation.Hud
                 return;
             }
 
+            MakeRoom(_screenHudResolvedTextCache, MaxResolvedTextCacheEntries);
             _screenHudResolvedTextCache[item.StableId] = new ScreenHudResolvedTextCacheEntry(item.DirtySerial, ActiveLocaleId, text);
         }
 
