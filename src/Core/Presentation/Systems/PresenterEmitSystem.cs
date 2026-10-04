@@ -316,7 +316,7 @@ namespace Ludots.Core.Presentation.Systems
             lane.Template = new SkinnedVisualBatchItem
             {
                 MeshAssetId = asset.AssetId,
-                Color = ResolveAuthoredColor(in slot),
+                Color = PresenterAssetEmitRuntime.ResolveAuthoredColor(in slot),
                 MaterialId = asset.MaterialId,
                 TemplateId = definitionId,
                 AnimationProfileId = definition.AnimationProfileId,
@@ -375,7 +375,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            bool behaviorActive = IsBehaviorActive(state.BehaviorActiveMask, lane.SlotIndex);
+            bool behaviorActive = PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, lane.SlotIndex);
             bool lodCulled = lane.Asset.HasMaxLod && cull.LOD > lane.Asset.MaxLod;
             if (behaviorActive && animatorSlot >= 0 && !lodCulled)
             {
@@ -388,8 +388,8 @@ namespace Ludots.Core.Presentation.Systems
                 ref SkinnedVisualBatchItem item = ref _skinnedVisualBatchBuffer.ReservedItem(reservedIndex);
                 item = lane.Template;
                 Vector3 resolvedPosition = PresenterAssetEmitRuntime.ResolvePosition(in state, position.Value, lane.YDriftPerSecond);
-                item.Position = ResolveAssetPosition(resolvedPosition, rotation.Value, scale.Value, in lane.Asset);
-                item.Rotation = ResolveAssetRotation(in lane.Asset, rotation.Value);
+                item.Position = PresenterAssetEmitRuntime.ResolveAssetPosition(resolvedPosition, rotation.Value, scale.Value, in lane.Asset);
+                item.Rotation = PresenterAssetEmitRuntime.ResolveRotation(in lane.Asset, rotation.Value);
                 item.Scale = AssetBindingVisualScale.Resolve(in lane.Asset, scale.Value, 1f);
                 item.OwnerStableId = state.OwnerStableId;
                 item.StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
@@ -651,7 +651,7 @@ namespace Ludots.Core.Presentation.Systems
 
             ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndex];
             if ((slot.Kind != BehaviorKind.AssetBinding && slot.Kind != BehaviorKind.WorldText) ||
-                !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                !PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
             {
                 return false;
             }
@@ -704,8 +704,8 @@ namespace Ludots.Core.Presentation.Systems
             }
             bool visible = cull.OwnerCullVisible &&
                            hasProjection &&
-                           IsWithinMaxLod(cull.LOD, in asset) &&
-                           ResolveAssetVisibility(entity, in asset) &&
+                           PresenterAssetEmitRuntime.IsWithinMaxLod(cull.LOD, in asset) &&
+                           _assetEmitter.ResolveAssetVisibility(entity, in asset) &&
                            IsWorldHudDebugEnabled(kind);
             if (!visible)
             {
@@ -726,8 +726,8 @@ namespace Ludots.Core.Presentation.Systems
             else
             {
                 WorldHudItem next = kind == WorldHudItemKind.Bar
-                    ? BuildWorldHudBarItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value, in scale)
-                    : BuildWorldHudTextItemDirect(entity, in state, in definition, in slot, in asset, stableId, position.Value);
+                    ? _assetEmitter.ComposeWorldHudBarItem(entity, in state, in slot, in asset, stableId, position.Value, in scale.Value, 1f)
+                    : _assetEmitter.ComposeWorldHudTextItem(entity, in state, definition, in slot, in asset, stableId, position.Value, 1f);
 
                 if (!_worldHudBuffer.TryAdd(in next))
                 {
@@ -759,199 +759,6 @@ namespace Ludots.Core.Presentation.Systems
             };
         }
 
-        private WorldHudItem BuildWorldHudBarItemDirect(
-            Entity entity,
-            in PresenterState state,
-            in PresenterDefinition definition,
-            in BehaviorSlot slot,
-            in AssetBindingConfig asset,
-            int stableId,
-            in Vector3 worldPosition,
-            in PresenterWorldScale presenterScale)
-        {
-            Vector3 resolvedScale = ResolveAssetScale(entity, in asset, presenterScale.Value);
-            Vector4 foreground = ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot));
-            Vector4 background = new(0.2f, 0.2f, 0.2f, foreground.W);
-            float value = asset.MaterialParamKey >= 0
-                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
-                : 1f;
-            float width = resolvedScale.X > 0f ? resolvedScale.X : 40f;
-            float height = resolvedScale.Y > 0f ? resolvedScale.Y : 6f;
-
-            return new WorldHudItem
-            {
-                Owner = state.OwnerEntity,
-                StableId = stableId,
-                DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
-                Kind = WorldHudItemKind.Bar,
-                WorldPosition = worldPosition,
-                Value0 = value,
-                Width = width,
-                Height = height,
-                Color0 = background,
-                Color1 = foreground,
-            };
-        }
-
-        private WorldHudItem BuildWorldHudTextItemDirect(
-            Entity entity,
-            in PresenterState state,
-            in PresenterDefinition definition,
-            in BehaviorSlot slot,
-            in AssetBindingConfig asset,
-            int stableId,
-            in Vector3 worldPosition)
-        {
-            Vector4 color = ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot));
-            int tokenId = ResolveAssetId(entity, in asset);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"WorldText AssetBinding for presenter definition '{definition.Key}' resolved invalid asset id {tokenId}.");
-            }
-
-            float value0;
-            float value1;
-            int stringTableId;
-            int valueModeId;
-            bool valueBound;
-            PresentationTextPacket packet;
-            if (WorldTextArgs.UsesTemplateArgs(in slot.WorldText))
-            {
-                value0 = 0f;
-                value1 = 0f;
-                stringTableId = 0;
-                valueModeId = 0;
-                valueBound = false;
-                packet = WorldTextArgs.Build(
-                    in slot.WorldText,
-                    tokenId,
-                    entity,
-                    state.OwnerEntity,
-                    World,
-                    _runtime,
-                    _globals);
-            }
-            else
-            {
-                value0 = asset.ScaleParamKey >= 0
-                    ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
-                    : 0f;
-                value1 = asset.MaterialParamKey >= 0
-                    ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
-                    : 0f;
-                WorldHudValueMode valueMode = slot.WorldText.Mode;
-                stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-                valueModeId = (int)valueMode;
-                valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
-                    (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
-                // 值绑定条目不带 emit 期参数快照包：解析落屏幕数值车道，权威值由投影期现读。
-                packet = valueBound
-                    ? default
-                    : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
-            }
-
-            int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
-
-            return new WorldHudItem
-            {
-                Owner = state.OwnerEntity,
-                StableId = stableId,
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, valueModeId, value0, value1, color, packet, valueBound),
-                Kind = WorldHudItemKind.Text,
-                WorldPosition = worldPosition,
-                Value0 = value0,
-                Value1 = value1,
-                Id0 = stringTableId,
-                Id1 = valueModeId,
-                FontSize = fontSize,
-                Color0 = color,
-                ValueBound = valueBound ? (byte)1 : (byte)0,
-                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
-                Text = packet,
-            };
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
-        {
-            return asset.VisibilityParamKey < 0 ||
-                RequireIntParam(entity, asset.VisibilityParamKey, "AssetBinding.visibilityParamKey") != 0;
-        }
-
-        private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
-        {
-            if (asset.AssetIdParamKey >= 0)
-            {
-                if (!_runtime.TryResolveInt(entity, asset.AssetIdParamKey, out int assetId) || assetId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Presenter AssetBinding assetIdParamKey {asset.AssetIdParamKey} did not resolve to a registered asset id.");
-                }
-
-                return assetId;
-            }
-
-            if (asset.AssetSwapParamKey < 0)
-            {
-                return asset.AssetId;
-            }
-
-            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved))
-            {
-                throw new InvalidOperationException(
-                    $"Presenter AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} did not resolve to a swap value.");
-            }
-
-            AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
-            for (int i = 0; i < table.Length; i++)
-            {
-                ref readonly AssetSwapEntry entry = ref table[i];
-                if (MathF.Abs(entry.ParamValue - resolved) <= 0.0001f)
-                {
-                    return entry.AssetId;
-                }
-            }
-
-            throw new InvalidOperationException(
-                $"Presenter AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} resolved value {resolved} with no matching assetSwapTable entry.");
-        }
-
-        private Vector3 ResolveAssetScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
-        {
-            return _assetEmitter.ResolveScale(entity, in asset, presenterWorldScale);
-        }
-
-        private static Quaternion ResolveAssetRotation(in AssetBindingConfig asset, Quaternion presenterWorldRotation)
-        {
-            return WorldPlane2D.ResolveVisualAssetRotation(in presenterWorldRotation, in asset.LocalRotation);
-        }
-
-        private static Vector3 ResolveAssetPosition(
-            Vector3 position,
-            Quaternion presenterWorldRotation,
-            Vector3 presenterWorldScale,
-            in AssetBindingConfig asset)
-        {
-            return WorldPlane2D.ResolveVisualAssetPosition(
-                in position,
-                in presenterWorldRotation,
-                in presenterWorldScale,
-                in asset.LocalOffset);
-        }
-
-        private Vector4 ResolveAssetColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
-        {
-            return asset.ColorParamKey >= 0
-                ? RequireVectorParam(entity, asset.ColorParamKey, "AssetBinding.colorParamKey")
-                : defaultColor;
-        }
-
-        private static Vector4 ResolveAuthoredColor(in BehaviorSlot slot)
-        {
-            return slot.Style.HasColor ? slot.Style.Color : Vector4.One;
-        }
-
         private static Vector4 ApplyAuthoredAlpha(Vector4 color, in PresenterState state, in PresenterDefinition definition, BehaviorAlphaPolicy policy)
         {
             if (policy == BehaviorAlphaPolicy.FadeOverLifetime && definition.DefaultLifetime > 0f)
@@ -962,70 +769,6 @@ namespace Ludots.Core.Presentation.Systems
             return color;
         }
 
-        private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
-        {
-            if (asset.MaterialParamKey < 0)
-            {
-                return asset.MaterialId;
-            }
-
-            int materialId = RequireIntParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey");
-            if (materialId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"AssetBinding.materialParamKey {asset.MaterialParamKey} resolved invalid material id {materialId}.");
-            }
-
-            return materialId;
-        }
-
-        private float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
-        {
-            return RequireFloatParam(entity, paramKey, context);
-        }
-
-        private int RequireIntParam(Entity entity, int paramKey, string context)
-        {
-            if (!_runtime.TryResolveInt(entity, paramKey, out int value))
-            {
-                throw new InvalidOperationException($"{context} {paramKey} did not resolve to an int param value.");
-            }
-
-            return value;
-        }
-
-        private float RequireFloatParam(Entity entity, int paramKey, string context)
-        {
-            if (!_runtime.TryResolveFloat(entity, paramKey, out float value))
-            {
-                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a float param value.");
-            }
-
-            return value;
-        }
-
-        private Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
-        {
-            if (!_runtime.TryResolveVector(entity, paramKey, out Vector4 value))
-            {
-                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a vector param value.");
-            }
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
-        {
-            return !asset.HasMaxLod || lod <= asset.MaxLod;
-        }
-
-        /// <summary>
-        /// HUD 内联专 lane：父 presenter 上的内联描述符直接合成 worldHud 条目（位置=父位置+
-        /// 附件偏移按父旋转，值=属主 AttributeBuffer 现读）。可见性吃父剔除状态；父死亡时随
-        /// ReleaseDestroyedPresenterVisualStableIds 的内联清理移除。v1 范围：不做知识投影门控
-        /// （massnav 的 RequiredAttributeIds 为空且无 reveal hidden 语义）；LOD 门控未接。
-        /// </summary>
         internal int InlineHudComposedLastUpdate;
         internal int InlineHudSkippedLastUpdate;
 
@@ -1769,7 +1512,7 @@ namespace Ludots.Core.Presentation.Systems
             ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
             if (slot.Kind != BehaviorKind.SurfaceSource ||
                 slot.SurfaceSource == null ||
-                !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                !PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
             {
                 return;
             }
@@ -1812,7 +1555,7 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
-                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                if (!PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     continue;
                 }
@@ -1880,7 +1623,7 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < assetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
-                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                if (!PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     continue;
                 }
@@ -1949,7 +1692,7 @@ namespace Ludots.Core.Presentation.Systems
             if (_skinnedVisualBatchBuffer == null ||
                 asset.AssetKind != AssetKind.SkinnedMesh ||
                 (asset.HasMaxLod && lod > asset.MaxLod) ||
-                !ResolveAssetVisibility(entity, in asset))
+                !_assetEmitter.ResolveAssetVisibility(entity, in asset))
             {
                 return false;
             }
@@ -1967,14 +1710,14 @@ namespace Ludots.Core.Presentation.Systems
 
             if (!_skinnedVisualBatchBuffer.TryAddDirect(new SkinnedVisualBatchItem
             {
-                MeshAssetId = ResolveAssetId(entity, in asset),
-                Position = ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
-                Rotation = ResolveAssetRotation(in asset, presenterWorldRotation),
-                Scale = ResolveAssetScale(entity, in asset, presenterWorldScale),
-                Color = ApplyAuthoredAlpha(ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
+                MeshAssetId = _assetEmitter.ResolveAssetId(entity, in asset),
+                Position = PresenterAssetEmitRuntime.ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
+                Rotation = PresenterAssetEmitRuntime.ResolveRotation(in asset, presenterWorldRotation),
+                Scale = _assetEmitter.ResolveScale(entity, in asset, presenterWorldScale),
+                Color = ApplyAuthoredAlpha(_assetEmitter.ResolveColor(entity, in asset, PresenterAssetEmitRuntime.ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
                 OwnerStableId = state.OwnerStableId,
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
-                MaterialId = ResolveMaterialId(entity, in asset),
+                MaterialId = _assetEmitter.ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
                 RenderPath = renderPath,
@@ -2019,14 +1762,14 @@ namespace Ludots.Core.Presentation.Systems
             return new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Presenter,
-                MeshAssetId = ResolveAssetId(entity, in asset),
-                Position = ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
-                Rotation = ResolveAssetRotation(in asset, presenterWorldRotation),
-                Scale = ResolveAssetScale(entity, in asset, presenterWorldScale),
-                Color = ApplyAuthoredAlpha(ResolveAssetColor(entity, in asset, ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
+                MeshAssetId = _assetEmitter.ResolveAssetId(entity, in asset),
+                Position = PresenterAssetEmitRuntime.ResolveAssetPosition(resolvedPosition, presenterWorldRotation, presenterWorldScale, in asset),
+                Rotation = PresenterAssetEmitRuntime.ResolveRotation(in asset, presenterWorldRotation),
+                Scale = _assetEmitter.ResolveScale(entity, in asset, presenterWorldScale),
+                Color = ApplyAuthoredAlpha(_assetEmitter.ResolveColor(entity, in asset, PresenterAssetEmitRuntime.ResolveAuthoredColor(in slot)), in state, in definition, slot.Style.AlphaPolicy),
                 OwnerStableId = state.OwnerStableId,
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
-                MaterialId = ResolveMaterialId(entity, in asset),
+                MaterialId = _assetEmitter.ResolveMaterialId(entity, in asset),
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
                 RenderPath = renderPath,
@@ -2072,11 +1815,6 @@ namespace Ludots.Core.Presentation.Systems
             return _assetEmitter.TryGetAnimationOverlay(entity, out AnimationOverlayRequest overlay)
                 ? overlay
                 : default;
-        }
-
-        private static bool IsBehaviorActive(uint mask, int slotIndex)
-        {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
 
         private static bool IsCacheableVisualKind(AssetKind kind)
@@ -2168,14 +1906,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.AssetBehaviorIndices[0]];
-            int stableId = slot.AssetBinding.AssetKind switch
-            {
-                AssetKind.WorldHud => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, definition.Id, slot.SlotIndex),
-                AssetKind.WorldText => HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definition.Id, slot.SlotIndex),
-                AssetKind.Spline => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
-                AssetKind.GroundOverlay => PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
-                _ => 0,
-            };
+            int stableId = PresenterBehaviorRuntimeUtility.ComposeRetainedRemovalStableId(in state, in slot);
             if (stableId <= 0)
             {
                 return;
@@ -2246,7 +1977,7 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in slot.AssetBinding, state.DefId, ref localOffsetConsumedMask);
                     Vector3 position = PresenterAssetEmitRuntime.ResolvePosition(in state, presenterWorldPosition, slot.Motion.YDriftPerSecond);
-                    Vector3 assetPosition = ResolveAssetPosition(position, presenterWorldRotation, presenterWorldScale, in slot.AssetBinding);
+                    Vector3 assetPosition = PresenterAssetEmitRuntime.ResolveAssetPosition(position, presenterWorldRotation, presenterWorldScale, in slot.AssetBinding);
                     _stableDrawCache.UpdatePosition(stableId, assetPosition);
                 }
             }
