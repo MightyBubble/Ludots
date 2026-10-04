@@ -3669,6 +3669,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "hud_css_styling_raylib",
+      "name": "HUD CSS Styling Showcase Raylib",
+      "selectors": [
+        "$hud_css_styling"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

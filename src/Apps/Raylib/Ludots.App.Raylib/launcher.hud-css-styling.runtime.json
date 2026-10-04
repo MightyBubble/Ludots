@@ -1,0 +1,7 @@
+{
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/showcases/hud_css_styling/HudCssStylingMod"
+  ]
+}

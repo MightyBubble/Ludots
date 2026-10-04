@@ -1,6 +1,12 @@
 {
   "name": "HudCssStylingMod",
   "version": "1.0.0",
-  "description": "有限 CSS 样式 showcase：大战略风血条与状态文本（宽高/配色/透明度/屏幕像素偏移，与相机距离无关）。",
-  "dependencies": {}
+  "description": "有限 CSS 样式 showcase：大战略风血条/状态条（宽高/配色/透明度/屏幕像素偏移，与相机距离无关）。",
+  "main": "bin/net9.0/HudCssStylingMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "tags": ["showcase", "presenter", "hud", "css"]
 }

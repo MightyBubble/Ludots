@@ -1,6 +1,41 @@
 [
   {
-    "id": "hud_css_styling.health_bar",
+    "id": "hud_css_styling_unit_root",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_health_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_status_text",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_morale_bar",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_health_bar",
     "behaviors": [
       {
         "slot": "hud",
@@ -10,15 +45,44 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "localOffset": [0, 2.2, 0],
           "materialParamKey": "hud_css_styling.health.ratio",
           "css": "width: 46px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -26px;"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
         }
       }
     ]
   },
   {
-    "id": "hud_css_styling.status_text",
+    "id": "hud_css_styling_status_text",
     "behaviors": [
       {
         "slot": "hud",
@@ -31,11 +95,51 @@
           "secondaryValueParamKey": "hud_css_styling.health.max",
           "css": "color: #FFE9A8; font-size: 13px; translate: 0 -34px; opacity: 0.95;"
         }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.max",
+          "mode": "AttributeBase"
+        }
       }
     ]
   },
   {
-    "id": "hud_css_styling.morale_bar",
+    "id": "hud_css_styling_morale_bar",
     "behaviors": [
       {
         "slot": "hud",
@@ -45,9 +149,59 @@
           "assetKind": "WorldHud",
           "renderPath": "None",
           "mobility": "Movable",
-          "localOffset": [0, 2.2, 0],
-          "materialParamKey": "hud_css_styling.morale.ratio",
           "css": "width: 46px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -30px; opacity: 0.9;"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_unit_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
         }
       }
     ]

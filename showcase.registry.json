@@ -6018,7 +6018,9 @@
         "css"
       ],
       "acceptanceTest": "HudCssStylingTests",
-      "status": "active"
+      "status": "active",
+      "binding": "hud_css_styling",
+      "preset": "hud_css_styling_raylib"
     },
     {
       "id": "progression_scope",

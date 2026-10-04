@@ -20,6 +20,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
+using HudCssStylingMod;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -104,13 +105,13 @@ namespace Ludots.Tests.Presentation
         {
             PresenterDefinitionRegistry registry = LoadShowcasePresenters();
 
-            Assert.That(registry.TryGet(registry.GetId("hud_css_styling.health_bar"), out PresenterDefinition bar), Is.True);
+            Assert.That(registry.TryGet(registry.GetId("hud_css_styling_health_bar"), out PresenterDefinition bar), Is.True);
             WorldHudStyle barStyle = bar.Behaviors[0].AssetBinding.HudStyle;
             Assert.That(barStyle.Width, Is.EqualTo(46f));
             Assert.That(barStyle.Height, Is.EqualTo(5f));
             Assert.That(barStyle.Translate!.Value, Is.EqualTo(new Vector2(0f, -26f)));
 
-            Assert.That(registry.TryGet(registry.GetId("hud_css_styling.status_text"), out PresenterDefinition text), Is.True);
+            Assert.That(registry.TryGet(registry.GetId("hud_css_styling_status_text"), out PresenterDefinition text), Is.True);
             WorldHudStyle textStyle = text.Behaviors[0].WorldText.HudStyle;
             Assert.That(textStyle.FontSize, Is.EqualTo(13f));
             Assert.That(textStyle.Opacity, Is.EqualTo(0.95f));
@@ -245,6 +246,62 @@ namespace Ludots.Tests.Presentation
             return new Vector2(shifted.ScreenX - plain.ScreenX, shifted.ScreenY - plain.ScreenY);
         }
 
+        [Test]
+        public void ShowcaseMap_LoadsAndEmits_StyledHudForEveryUnit()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine(
+                "LudotsCoreMod", "CoreInputMod", "HudCssStylingMod");
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, "hud_css_styling_map", frames: 90);
+
+            // 投影与宿主循环同序:Tick 之后驱动世界→屏幕投影。
+            using var projection = PresenterBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+            PresenterBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, projection, 4);
+
+            var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
+            var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
+
+            Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
+            Assert.That(worldHud.Count, Is.EqualTo(48), "16 单位 × 3 元素先落世界缓冲");
+
+            int bars = 0;
+            int texts = 0;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar)
+                {
+                    bars++;
+                    Assert.That(item.Width, Is.EqualTo(46f), "css width 必须落到每个条目");
+                    Assert.That(item.Height, Is.EqualTo(item.Height > 4f ? 5f : 3f), "css height(bar=5/morale=3)");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(item.Height > 4f ? -26f : -30f).Within(0.001f), "css translate 必须落到每个条目");
+                }
+                else if (item.Kind == WorldHudItemKind.Text)
+                {
+                    texts++;
+                    Assert.That(item.FontSize, Is.EqualTo(13), "css font-size 必须落到每个文本");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-34f).Within(0.001f));
+                }
+            }
+
+            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条");
+            Assert.That(texts, Is.EqualTo(16), "16 单位 × 状态文本");
+
+            // 血量补丁经属性绑定写成填充率:95/100 与 8/100 必须出现在值里。
+            float maxRatio = 0f;
+            float minRatio = 1f;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar && item.Height > 4f)
+                {
+                    maxRatio = MathF.Max(maxRatio, item.Value0);
+                    minRatio = MathF.Min(minRatio, item.Value0);
+                }
+            }
+
+            Assert.That(maxRatio, Is.GreaterThan(0.9f), "最满的血条约 95/100");
+            Assert.That(minRatio, Is.LessThan(0.1f), "最空的血条约 8/100");
+            Assert.That(screenHud.Count, Is.GreaterThan(0), "投影后屏幕缓冲必须有内容");
+        }
+
         private PresenterDefinitionRegistry LoadShowcasePresenters()
         {
             string assetPath = Path.Combine(
@@ -269,6 +326,8 @@ namespace Ludots.Tests.Presentation
             new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
+                resolveAttributeName: _ => 1,
+                resolveEntityTemplateKey: _ => 1,
                 resolveTextTokenId: _ => 101,
                 resolveBehaviorAssetId: (_, _) => 1).Load(catalog);
             return registry;
