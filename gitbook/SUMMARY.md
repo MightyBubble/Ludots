@@ -39,6 +39,7 @@
   - [编码标准](contributing/coding-standards.md)
   - [Feature 开发工作流](contributing/feature-development-workflow.md)
   - [AI 辅助开发规范](contributing/ai-assisted-development.md)
+  - [事故复盘 · #1535 属性层来源](contributing/incident-2026-10-04-gas-attribute-source.md)
   - [环境与构建](contributing/environment-setup.md)
   - [文档治理](contributing/documentation-governance.md)
   - [共享 Skill 治理](contributing/shared-skill-governance.md)
