@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using ExCSS;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -25,14 +27,18 @@ namespace Ludots.Core.Presentation.Hud
     }
 
     /// <summary>
-    /// 有限 CSS 声明解析器。支持的属性与值形:
+    /// 有限 CSS 声明解析。解析本体复用仓库的 ExCSS(与 UI 车道同一轮子);
+    /// 本类型只负责把声明映射为 HUD 样式并执行严格合同:
+    /// 未知属性、重复声明、被解析器丢弃的残缺声明、非法值一律抛错——资产拼错必须当场失败。
+    /// 支持的属性与值形:
     /// width/height/font-size: 正长度(px 可省略,其他单位拒绝);
     /// opacity: 0..1;color/background-color: #RGB/#RGBA/#RRGGBB/#RRGGBBAA/rgb()/rgba();
     /// translate: 两个长度。
-    /// 未知属性、重复属性、非法值、非正尺寸一律抛错——资产拼错必须当场失败。
     /// </summary>
     public static class WorldHudStyleCss
     {
+        private const string Supported = "width, height, font-size, opacity, color, background-color, translate";
+
         public static WorldHudStyle Parse(string css, string context)
         {
             if (string.IsNullOrWhiteSpace(css))
@@ -40,18 +46,15 @@ namespace Ludots.Core.Presentation.Hud
                 throw new InvalidOperationException($"{context}: 'css' must be a non-empty declaration string.");
             }
 
+            // 声明切分只按分号/冒号定界(本子集的值内不会出现分号),拒绝重复属性名;
+            // 值的语法验证逐条交给 ExCSS:它认识的属性以其解析结果为准(色值会被规范化为
+            // rgb()/rgba() 形),它没有属性模型而整条丢弃的名字(如 translate)由本类型映射器
+            // 自行验证——无论哪条路径,非法值与未知属性都当场抛错。
+            HashSet<string> declaredNames = new(StringComparer.OrdinalIgnoreCase);
             var style = new WorldHudStyle();
-            string? seenWidth = null;
-            string? seenHeight = null;
-            string? seenFontSize = null;
-            string? seenOpacity = null;
-            string? seenColor = null;
-            string? seenBackgroundColor = null;
-            string? seenTranslate = null;
-
-            foreach (string rawDeclaration in css.Split(';'))
+            foreach (string raw in css.Split(';'))
             {
-                string declaration = rawDeclaration.Trim();
+                string declaration = raw.Trim();
                 if (declaration.Length == 0)
                 {
                     continue;
@@ -63,49 +66,27 @@ namespace Ludots.Core.Presentation.Hud
                     throw new InvalidOperationException($"{context}: css declaration '{declaration}' must be 'property: value'.");
                 }
 
-                string property = declaration[..colon].Trim();
-                string value = declaration[(colon + 1)..].Trim();
-
-                switch (property)
+                string name = declaration[..colon].Trim();
+                if (!declaredNames.Add(name.ToLowerInvariant()))
                 {
-                    case "width":
-                        EnsureNotDuplicate(seenWidth, property, context);
-                        seenWidth = property;
-                        style.Width = ParsePositiveLength(value, property, context);
-                        break;
-                    case "height":
-                        EnsureNotDuplicate(seenHeight, property, context);
-                        seenHeight = property;
-                        style.Height = ParsePositiveLength(value, property, context);
-                        break;
-                    case "font-size":
-                        EnsureNotDuplicate(seenFontSize, property, context);
-                        seenFontSize = property;
-                        style.FontSize = ParsePositiveLength(value, property, context);
-                        break;
-                    case "opacity":
-                        EnsureNotDuplicate(seenOpacity, property, context);
-                        seenOpacity = property;
-                        style.Opacity = ParseOpacity(value, context);
-                        break;
-                    case "color":
-                        EnsureNotDuplicate(seenColor, property, context);
-                        seenColor = property;
-                        style.Color = ParseColor(value, property, context);
-                        break;
-                    case "background-color":
-                        EnsureNotDuplicate(seenBackgroundColor, property, context);
-                        seenBackgroundColor = property;
-                        style.BackgroundColor = ParseColor(value, property, context);
-                        break;
-                    case "translate":
-                        EnsureNotDuplicate(seenTranslate, property, context);
-                        seenTranslate = property;
-                        style.Translate = ParseTranslate(value, context);
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"{context}: css property '{property}' is not supported; supported: width, height, font-size, opacity, color, background-color, translate.");
+                    throw new InvalidOperationException($"{context}: css property '{name}' declared twice.");
+                }
+
+                string rawValue = declaration[(colon + 1)..].Trim();
+                Stylesheet sheet = new StylesheetParser().Parse("*{" + declaration + "}");
+                bool mapped = false;
+                foreach (IStyleRule rule in sheet.StyleRules)
+                {
+                    foreach (Property property in rule.Style)
+                    {
+                        MapDeclaration(ref style, property.Name.ToLowerInvariant(), property.Value, context);
+                        mapped = true;
+                    }
+                }
+
+                if (!mapped)
+                {
+                    MapDeclaration(ref style, name, rawValue, context);
                 }
             }
 
@@ -117,27 +98,41 @@ namespace Ludots.Core.Presentation.Hud
             return style;
         }
 
-        private static void EnsureNotDuplicate(string? seen, string property, string context)
+        private static void MapDeclaration(ref WorldHudStyle style, string name, string value, string context)
         {
-            if (seen != null)
+            switch (name)
             {
-                throw new InvalidOperationException($"{context}: css property '{property}' declared twice.");
+                case "width":
+                    style.Width = ParsePositiveLength(value, "width", context);
+                    break;
+                case "height":
+                    style.Height = ParsePositiveLength(value, "height", context);
+                    break;
+                case "font-size":
+                    style.FontSize = ParsePositiveLength(value, "font-size", context);
+                    break;
+                case "opacity":
+                    style.Opacity = ParseOpacity(value, context);
+                    break;
+                case "color":
+                    style.Color = ParseColor(value, "color", context);
+                    break;
+                case "background-color":
+                    style.BackgroundColor = ParseColor(value, "background-color", context);
+                    break;
+                case "translate":
+                    style.Translate = ParseTranslate(value, context);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{context}: css property '{name}' is not supported; supported: {Supported}.");
             }
         }
 
         private static float ParsePositiveLength(string value, string property, string context)
         {
-            string number = value;
-            if (number.EndsWith("px", StringComparison.OrdinalIgnoreCase))
-            {
-                number = number[..^2].Trim();
-            }
-            else if (UnitSuffixPresent(number))
-            {
-                throw new InvalidOperationException($"{context}: css '{property}' only supports px lengths, got '{value}'.");
-            }
-
-            if (!TryParseFloat(number, out float length) || length <= 0f || !float.IsFinite(length))
+            float length = ParsePxLength(value, property, context);
+            if (length <= 0f)
             {
                 throw new InvalidOperationException($"{context}: css '{property}' requires a positive px length, got '{value}'.");
             }
@@ -145,14 +140,14 @@ namespace Ludots.Core.Presentation.Hud
             return length;
         }
 
-        private static float ParseSignedLength(string value, string context, string property)
+        private static float ParsePxLength(string value, string property, string context)
         {
-            string number = value;
+            string number = value.Trim();
             if (number.EndsWith("px", StringComparison.OrdinalIgnoreCase))
             {
                 number = number[..^2].Trim();
             }
-            else if (UnitSuffixPresent(number))
+            else if (number.Length > 0 && (char.IsAsciiLetter(number[^1]) || number[^1] == '%'))
             {
                 throw new InvalidOperationException($"{context}: css '{property}' only supports px lengths, got '{value}'.");
             }
@@ -165,14 +160,9 @@ namespace Ludots.Core.Presentation.Hud
             return length;
         }
 
-        private static bool UnitSuffixPresent(string number)
-        {
-            return number.Length > 0 && (char.IsAsciiLetter(number[^1]) || number[^1] == '%');
-        }
-
         private static float ParseOpacity(string value, string context)
         {
-            if (!TryParseFloat(value, out float opacity) || opacity < 0f || opacity > 1f)
+            if (!TryParseFloat(value.Trim(), out float opacity) || opacity < 0f || opacity > 1f)
             {
                 throw new InvalidOperationException($"{context}: css 'opacity' requires a number in [0,1], got '{value}'.");
             }
@@ -189,21 +179,22 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             return new Vector2(
-                ParseSignedLength(parts[0], context, "translate"),
-                ParseSignedLength(parts[1], context, "translate"));
+                ParsePxLength(parts[0], "translate", context),
+                ParsePxLength(parts[1], "translate", context));
         }
 
         private static Vector4 ParseColor(string value, string property, string context)
         {
-            if (value.StartsWith('#'))
+            string trimmed = value.Trim();
+            if (trimmed.StartsWith('#'))
             {
-                return ParseHexColor(value, property, context);
+                return ParseHexColor(trimmed, property, context);
             }
 
-            if (value.StartsWith("rgba(", StringComparison.OrdinalIgnoreCase) ||
-                value.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase))
+            if (trimmed.StartsWith("rgba(", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase))
             {
-                return ParseRgbColor(value, property, context);
+                return ParseRgbColor(trimmed, property, context);
             }
 
             throw new InvalidOperationException(

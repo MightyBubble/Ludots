@@ -90,7 +90,7 @@ namespace Ludots.Tests.Presentation
         [TestCase("border: 1px solid black")]
         [TestCase("width: 5em")]
         [TestCase("opacity: 1.5")]
-        [TestCase("color: red")]
+        [TestCase("color: not-a-color")]
         [TestCase("font-size: 0")]
         [TestCase("translate: 10px")]
         [TestCase("width: 10px; width: 12px")]
