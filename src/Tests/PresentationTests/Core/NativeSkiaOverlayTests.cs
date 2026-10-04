@@ -84,7 +84,11 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(underUiBars[0].DirtySerial, Is.EqualTo(1001));
         Assert.That(underUiText[0].Text, Is.EqualTo("HP 42"));
         Assert.That(underUiText[0].StableId, Is.EqualTo(202));
-        Assert.That(underUiText[0].DirtySerial, Is.EqualTo(2002));
+        // 文本车道序号混入当前语种 id（同 serial 换语言要当成新句子重建），
+        // 落到 lane 上的是混合值而非裸 DirtySerial。
+        int expectedTextSerial = unchecked((2002 * 16777619) ^ locale.ActiveLocaleId);
+        expectedTextSerial &= int.MaxValue;
+        Assert.That(underUiText[0].DirtySerial, Is.EqualTo(expectedTextSerial == 0 ? 1 : expectedTextSerial));
         Assert.That(topRects[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Rect));
         Assert.That(topText[0].Text, Is.EqualTo("Telemetry"));
         Assert.That(scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length, Is.EqualTo(0));
