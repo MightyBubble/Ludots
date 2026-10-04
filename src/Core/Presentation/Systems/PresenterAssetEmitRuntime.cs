@@ -710,13 +710,18 @@ namespace Ludots.Core.Presentation.Systems
             float alpha)
         {
             Vector3 scale = ResolveScale(entity, in asset, presenterWorldScale);
-            Vector4 foreground = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), alpha);
-            Vector4 background = new Vector4(0.2f, 0.2f, 0.2f, foreground.W);
+            WorldHudStyle style = asset.HudStyle;
+            Vector4 foreground = ApplyAlpha(
+                ResolveColor(entity, in asset, style.Color ?? ResolveAuthoredColor(in slot)),
+                alpha * style.Opacity ?? alpha);
+            Vector4 background = style.BackgroundColor ?? new Vector4(0.2f, 0.2f, 0.2f, 1f);
+            background.W *= foreground.W;
             float value = asset.MaterialParamKey >= 0
                 ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
                 : 1f;
-            float width = scale.X > 0f ? scale.X : 40f;
-            float height = scale.Y > 0f ? scale.Y : 6f;
+            float width = style.Width ?? (scale.X > 0f ? scale.X : 40f);
+            float height = style.Height ?? (scale.Y > 0f ? scale.Y : 6f);
+            Vector2 translate = style.Translate ?? Vector2.Zero;
 
             return new WorldHudItem
             {
@@ -730,6 +735,8 @@ namespace Ludots.Core.Presentation.Systems
                 Height = height,
                 Color0 = background,
                 Color1 = foreground,
+                ScreenOffsetX = translate.X,
+                ScreenOffsetY = translate.Y,
             };
         }
 
@@ -744,7 +751,9 @@ namespace Ludots.Core.Presentation.Systems
             in Vector3 worldPosition,
             float alpha)
         {
-            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), alpha);
+            Vector4 color = ApplyAlpha(
+                ResolveColor(entity, in asset, slot.WorldText.HudStyle.Color ?? ResolveAuthoredColor(in slot)),
+                alpha);
             int tokenId = ResolveAssetId(entity, in asset);
             if (tokenId <= 0)
             {
@@ -793,7 +802,14 @@ namespace Ludots.Core.Presentation.Systems
                     : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
             }
 
-            int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
+            WorldHudStyle style = slot.WorldText.HudStyle;
+            int fontSize = (int)(style.FontSize ?? (slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16f));
+            if (style.Opacity.HasValue)
+            {
+                color.W *= style.Opacity.Value;
+            }
+
+            Vector2 translate = style.Translate ?? Vector2.Zero;
 
             return new WorldHudItem
             {
@@ -810,6 +826,8 @@ namespace Ludots.Core.Presentation.Systems
                 Color0 = color,
                 ValueBound = valueBound ? (byte)1 : (byte)0,
                 BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
+                ScreenOffsetX = translate.X,
+                ScreenOffsetY = translate.Y,
                 Text = packet,
             };
         }

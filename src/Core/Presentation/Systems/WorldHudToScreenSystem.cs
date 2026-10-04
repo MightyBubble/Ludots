@@ -314,8 +314,9 @@ namespace Ludots.Core.Presentation.Systems
             ref int projectedBarIndex,
             ref int projectedTextIndex)
         {
-            float x = MathF.Round(screen.X - item.Width * 0.5f);
-            float y = MathF.Round(screen.Y);
+            // css translate 的屏幕像素偏移在投影后应用:与相机距离无关,NaN 哨兵语义不受影响。
+            float x = MathF.Round(screen.X - item.Width * 0.5f + item.ScreenOffsetX);
+            float y = MathF.Round(screen.Y + item.ScreenOffsetY);
 
             // ProjectWorldToScreenFast 以 NaN 表示屏幕外/相机后；不得放行到保留 upsert——
             // (int)NaN 强转得 0 会被边界剔除误判为屏幕内，NaN 位置随后毒化保留槽。
@@ -633,8 +634,8 @@ namespace Ludots.Core.Presentation.Systems
                     item.Width = 16f;
                 }
 
-                float x = MathF.Round(screen.X - item.Width * 0.5f);
-                float y = MathF.Round(screen.Y);
+                float x = MathF.Round(screen.X - item.Width * 0.5f + item.ScreenOffsetX);
+                float y = MathF.Round(screen.Y + item.ScreenOffsetY);
                 bool offscreen = item.Kind == WorldHudItemKind.Bar
                     ? (x + item.Width < -ProjectionMarginPixels || x > screenWidth + ProjectionMarginPixels ||
                        y + item.Height < -ProjectionMarginPixels || y > screenHeight + ProjectionMarginPixels)

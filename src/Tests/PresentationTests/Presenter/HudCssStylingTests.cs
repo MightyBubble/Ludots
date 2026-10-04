@@ -1,0 +1,314 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Client;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Requests;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Presentation
+{
+    /// <summary>
+    /// 有限 CSS 样式验收：showcase 资产（mods/showcases/hud_css_styling）声明 css 后，
+    /// 样式逐层到达发射条目与屏幕坐标；屏幕像素偏移与相机距离无关；
+    /// 解析器对未知属性/非法值/重复声明一律拒绝。
+    /// </summary>
+    [TestFixture]
+    public sealed class HudCssStylingTests
+    {
+        private string _root = string.Empty;
+
+        private static string RepoRoot
+        {
+            get
+            {
+                string? dir = AppContext.BaseDirectory;
+                while (dir != null && !File.Exists(Path.Combine(dir, "showcase.registry.json")))
+                {
+                    dir = Path.GetDirectoryName(dir);
+                }
+
+                return dir ?? throw new InvalidOperationException("repo root not found");
+            }
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "Ludots_HudCssStyling", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            try
+            {
+                Directory.Delete(_root, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+        }
+
+        [Test]
+        public void CssParser_ValidDeclarations_MapEverySupportedProperty()
+        {
+            WorldHudStyle style = WorldHudStyleCss.Parse(
+                "width: 46px; height: 5px; font-size: 13px; opacity: 0.9; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -34px",
+                "test");
+
+            Assert.That(style.Width, Is.EqualTo(46f));
+            Assert.That(style.Height, Is.EqualTo(5f));
+            Assert.That(style.FontSize, Is.EqualTo(13f));
+            Assert.That(style.Opacity, Is.EqualTo(0.9f));
+            Assert.That(style.Color!.Value.X, Is.EqualTo(0xE2 / 255f).Within(0.001f));
+            // 6 位 hex 无 alpha 通道,透明度为 1。
+            Assert.That(style.Color!.Value.W, Is.EqualTo(1f));
+            Assert.That(style.BackgroundColor!.Value.X, Is.EqualTo(16f / 255f).Within(0.001f));
+            Assert.That(style.BackgroundColor!.Value.W, Is.EqualTo(0.85f).Within(0.001f));
+            Assert.That(style.Translate!.Value, Is.EqualTo(new Vector2(0f, -34f)));
+        }
+
+        [TestCase("border: 1px solid black")]
+        [TestCase("width: 5em")]
+        [TestCase("opacity: 1.5")]
+        [TestCase("color: red")]
+        [TestCase("font-size: 0")]
+        [TestCase("translate: 10px")]
+        [TestCase("width: 10px; width: 12px")]
+        [TestCase("")]
+        public void CssParser_RejectedDeclarations_FailFast(string css)
+        {
+            Assert.Throws<InvalidOperationException>(() => WorldHudStyleCss.Parse(css, "test"));
+        }
+
+        [Test]
+        public void ShowcaseAsset_Loads_AndStylesReachConfigs()
+        {
+            PresenterDefinitionRegistry registry = LoadShowcasePresenters();
+
+            Assert.That(registry.TryGet(registry.GetId("hud_css_styling.health_bar"), out PresenterDefinition bar), Is.True);
+            WorldHudStyle barStyle = bar.Behaviors[0].AssetBinding.HudStyle;
+            Assert.That(barStyle.Width, Is.EqualTo(46f));
+            Assert.That(barStyle.Height, Is.EqualTo(5f));
+            Assert.That(barStyle.Translate!.Value, Is.EqualTo(new Vector2(0f, -26f)));
+
+            Assert.That(registry.TryGet(registry.GetId("hud_css_styling.status_text"), out PresenterDefinition text), Is.True);
+            WorldHudStyle textStyle = text.Behaviors[0].WorldText.HudStyle;
+            Assert.That(textStyle.FontSize, Is.EqualTo(13f));
+            Assert.That(textStyle.Opacity, Is.EqualTo(0.95f));
+        }
+
+        [Test]
+        public void StyledBar_Emit_ProducesStyledWorldHudItem()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int defId = definitions.Register("css.bar", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.WorldHud,
+                            Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
+                            LocalScale = new Vector3(60f, 8f, 1f),
+                            MaterialParamKey = 51,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            HudStyle = WorldHudStyleCss.Parse(
+                                "width: 46px; height: 5px; color: #E2493B; background-color: #101218D9; translate: 0 -26px; opacity: 0.9",
+                                "test"),
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 8f, 9f), 9501, Entity.Null, default);
+            ref var state = ref world.Get<PresenterState>(presenter);
+            state.BehaviorActiveMask = 1u;
+            ref var scale = ref world.Get<PresenterWorldScale>(presenter);
+            scale.Value = Vector3.One;
+            instances.SetParam(presenter, 51, ParamLane.Float, 0.65f, 0, default);
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                CreateWorldHudProjectionGlobals(world, owner),
+                animatorStates: null!,
+                soundRequests: null!);
+            system.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
+            ref readonly WorldHudChannelItem hud = ref requests.WorldHudAt(0);
+            // css 覆盖静态 authoring(localScale 60x8)与引擎默认(40x6)。
+            Assert.That(hud.Item.Width, Is.EqualTo(46f));
+            Assert.That(hud.Item.Height, Is.EqualTo(5f));
+            Assert.That(hud.Item.ScreenOffsetX, Is.EqualTo(0f));
+            Assert.That(hud.Item.ScreenOffsetY, Is.EqualTo(-26f));
+            Assert.That(hud.Item.Color1.X, Is.EqualTo(0xE2 / 255f).Within(0.002f));
+            Assert.That(hud.Item.Color1.W, Is.EqualTo(0.9f).Within(0.01f));
+            Assert.That(hud.Item.Color0.X, Is.EqualTo(0x10 / 255f).Within(0.002f));
+        }
+
+        [Test]
+        public void ScreenOffset_AppliesAfterProjection_AndSurvivesCameraDistance()
+        {
+            var worldHud = new WorldHudBatchBuffer(2);
+            var screenHud = new ScreenHudBatchBuffer(2);
+            var view = new FixedView();
+            var camera = new CameraManager();
+            camera.ApplyPose(new CameraPoseRequest { DistanceCm = 16000, Pitch = 50, TargetCm = Vector2.Zero });
+
+            for (int i = 0; i < 2; i++)
+            {
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = i + 1,
+                    DirtySerial = 1,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = Vector3.Zero,
+                    Width = 12,
+                    Height = 3,
+                    Value0 = 0.5f,
+                    Color0 = Vector4.One,
+                    Color1 = Vector4.One,
+                    ScreenOffsetX = i == 0 ? 0f : -14f,
+                    ScreenOffsetY = i == 0 ? 0f : -26f,
+                });
+            }
+
+            Vector2 nearDelta = ProjectAndMeasureOffset(camera, view, worldHud, screenHud, distanceCm: 16000);
+            Vector2 farDelta = ProjectAndMeasureOffset(camera, view, worldHud, screenHud, distanceCm: 42000);
+
+            // 大战略合同:偏移是屏幕像素,拉近拉远都不随透视缩放。
+            Assert.That(nearDelta.X, Is.EqualTo(-14f).Within(0.01f));
+            Assert.That(nearDelta.Y, Is.EqualTo(-26f).Within(0.01f));
+            Assert.That(farDelta.X, Is.EqualTo(-14f).Within(0.01f));
+            Assert.That(farDelta.Y, Is.EqualTo(-26f).Within(0.01f));
+        }
+
+        private static Vector2 ProjectAndMeasureOffset(
+            CameraManager camera,
+            FixedView view,
+            WorldHudBatchBuffer worldHud,
+            ScreenHudBatchBuffer screenHud,
+            float distanceCm)
+        {
+            using var world = World.Create();
+            camera.ApplyPose(new CameraPoseRequest { DistanceCm = distanceCm, Pitch = 50, TargetCm = Vector2.Zero });
+            var projector = new CoreScreenProjector(camera, view);
+            using var projection = new WorldHudToScreenSystem(world, worldHud, null, projector, view, screenHud);
+            projection.Update(1f / 60);
+
+            ScreenHudBarItem plain = default;
+            ScreenHudBarItem shifted = default;
+            bool sawPlain = false;
+            bool sawShifted = false;
+            foreach (ref readonly ScreenHudBarItem bar in screenHud.GetBarSpan())
+            {
+                if (bar.StableId == 1) { plain = bar; sawPlain = true; }
+                if (bar.StableId == 2) { shifted = bar; sawShifted = true; }
+            }
+
+            Assert.That(sawPlain && sawShifted, Is.True, "both items must survive projection");
+            return new Vector2(shifted.ScreenX - plain.ScreenX, shifted.ScreenY - plain.ScreenY);
+        }
+
+        private PresenterDefinitionRegistry LoadShowcasePresenters()
+        {
+            string assetPath = Path.Combine(
+                RepoRoot,
+                "mods", "showcases", "hud_css_styling", "HudCssStylingMod",
+                "assets", "Presentation", "presenters.json");
+
+            var vfs = new VirtualFileSystem();
+            Directory.CreateDirectory(Path.Combine(_root, "Core", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(_root, "Core", "config_catalog.json"),
+                @"[{ ""Path"": ""Presentation/presenters.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            File.WriteAllText(
+                Path.Combine(_root, "Core", "Presentation", "presenters.json"),
+                File.ReadAllText(assetPath));
+            vfs.Mount("Core", Path.Combine(_root, "Core"));
+
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: _ => 101,
+                resolveBehaviorAssetId: (_, _) => 1).Load(catalog);
+            return registry;
+        }
+
+        private sealed class FixedView : IViewController
+        {
+            public Vector2 Resolution => new(640, 480);
+            public float Fov => 60;
+            public float AspectRatio => Resolution.X / Resolution.Y;
+        }
+
+        private static Dictionary<string, object> CreateWorldHudProjectionGlobals(World world, Entity owner)
+        {
+            Entity viewer = world.Create();
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            projectionStore.Upsert(
+                viewer,
+                owner,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 1));
+
+            var seats = new ClientLocalSeatRegistry();
+            seats.Add(new ClientLocalSeat("test"));
+            seats.SetPossession("test", 1, viewer);
+
+            return new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = seats,
+            };
+        }
+    }
+}

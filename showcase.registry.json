@@ -6005,6 +6005,22 @@
       "status": "active"
     },
     {
+      "id": "hud_css_styling",
+      "path": "mods/showcases/hud_css_styling/HudCssStylingMod",
+      "projectPath": null,
+      "title": "HUD 有限 CSS 样式",
+      "summary": "大战略风血条/状态条样式 showcase：css 字段声明宽高、前景/背景色、透明度与屏幕像素偏移（translate，与相机距离无关）；未知属性/非法值加载期报错。",
+      "tier": "T3",
+      "category": "showcase",
+      "tags": [
+        "presenter",
+        "hud",
+        "css"
+      ],
+      "acceptanceTest": "HudCssStylingTests",
+      "status": "active"
+    },
+    {
       "id": "progression_scope",
       "path": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
       "projectPath": "ProgressionScopeShowcaseMod.csproj",

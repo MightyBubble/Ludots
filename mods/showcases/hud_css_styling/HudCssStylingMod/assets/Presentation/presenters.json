@@ -1,0 +1,55 @@
+[
+  {
+    "id": "hud_css_styling.health_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [0, 2.2, 0],
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 46px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -26px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling.status_text",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "valueParamKey": "hud_css_styling.health.current",
+          "secondaryValueParamKey": "hud_css_styling.health.max",
+          "css": "color: #FFE9A8; font-size: 13px; translate: 0 -34px; opacity: 0.95;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling.morale_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [0, 2.2, 0],
+          "materialParamKey": "hud_css_styling.morale.ratio",
+          "css": "width: 46px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -30px; opacity: 0.9;"
+        }
+      }
+    ]
+  }
+]

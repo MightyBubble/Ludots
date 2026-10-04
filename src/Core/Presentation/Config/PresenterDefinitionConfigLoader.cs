@@ -1006,13 +1006,20 @@ namespace Ludots.Core.Presentation.Config
             "assetIdParamKey", "assetSwapParamKey", "assetSwapTable",
             "visibilityParamKey", "surfaceLayerKey", "sortId",
             "materialCustomData", "maxLod",
-            "grounding", "groundingOffset",
+            "grounding", "groundingOffset", "css",
         };
 
         private static readonly string[] WorldTextFields =
         {
-            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize", "args",
+            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize", "args", "css",
         };
+
+        private static WorldHudStyle ParseOptionalHudStyle(JsonNode? node, string context)
+        {
+            return node is null
+                ? default
+                : WorldHudStyleCss.Parse(node.GetValue<string>(), context);
+        }
 
         private static readonly string[] WorldTextArgFields =
         {
@@ -3118,6 +3125,7 @@ namespace Ludots.Core.Presentation.Config
                     Mode = WorldHudValueMode.None,
                     FontSize = fontSize,
                     Args = ParseWorldTextArgs(obj["args"], path, tokenId),
+                    HudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css"),
                 };
             }
 
@@ -3128,6 +3136,7 @@ namespace Ludots.Core.Presentation.Config
                 ValueParamKey = ParseOptionalParamKey(obj["valueParamKey"], $"{path}.valueParamKey"),
                 SecondaryValueParamKey = ParseOptionalParamKey(obj["secondaryValueParamKey"], $"{path}.secondaryValueParamKey"),
                 FontSize = fontSize,
+                HudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css"),
             };
         }
 
@@ -3409,6 +3418,14 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("WorldHud AssetBinding must not declare assetId, assetIdParamKey, assetSwapParamKey, or assetSwapTable.");
             }
 
+            if (obj["css"] != null && assetKind != AssetKind.WorldHud)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.css styles the WorldHud bar lane; assetKind '{assetKind}' must not declare css. Text styling uses worldText.css.");
+            }
+
+            WorldHudStyle hudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css");
+
             AssetSwapEntry[] assetSwapTable = assetKind == AssetKind.WorldHud
                 ? Array.Empty<AssetSwapEntry>()
                 : ParseAssetSwapTable(assetKind, obj["assetSwapTable"], $"{path}.assetSwapTable");
@@ -3447,6 +3464,7 @@ namespace Ludots.Core.Presentation.Config
                 SurfaceLayerKey = surfaceLayerKey,
                 SortId = sortId,
                 MaterialCustomData = materialCustomData,
+                HudStyle = hudStyle,
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
             };

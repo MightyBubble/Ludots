@@ -22,6 +22,9 @@ namespace Ludots.Core.Presentation.Hud
         /// <summary>非 0 表示 Value0/Value1 为属性源快照初值，权威值在投影期现读 AttributeBuffer。</summary>
         public byte ValueBound;
         public int BoundAttributeId;
+        /// <summary>屏幕空间像素偏移(css translate)。投影后应用,与相机距离无关;y 正方向为屏幕向下。</summary>
+        public float ScreenOffsetX;
+        public float ScreenOffsetY;
         public PresentationTextPacket Text;
     }
 }

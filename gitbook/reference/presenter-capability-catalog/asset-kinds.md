@@ -48,14 +48,16 @@ AssetKind 回答"这个 behavior 绑的是什么类别的可视输出"。作者�
 
 - **是什么**：血条、名字板等钉在世界坐标、随距离缩小的 HUD；引擎投影到屏幕后批量绘制。
 - **怎么写**：`assetKind: "WorldHud"`；铁匠铺的 hudbar/hudtext 基准是活样例（含 5 万级 hotpath 验收）。
-- **跑**：preset `presenter_blacksmith_showcase_raylib`。
+- **有限 CSS 样式**：`assetBinding.css` 声明血条样式，支持 `width`、`height`、`color`（前景）、`background-color`（背景）、`opacity`、`translate`（屏幕像素偏移，x/y 正方向为屏幕右/下，与相机距离无关）。css 覆盖静态 authored 值（`localScale`、`style.color`），动态参数绑定（`materialParamKey` 等）仍优先。未知属性、非法值、重复声明在加载期报错。
+- **跑**：preset `presenter_blacksmith_showcase_raylib`；CSS 样式 showcase `hud_css_styling`（验收 `HudCssStylingTests`）。
 - **证据**：`artifacts/acceptance/presentation-hotpath-harness/battle-report.md`（HUD hotpath 基线）；UAT 双视角表见 [Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md)。
 
 ### WorldText — 浮动文字
 
 - **是什么**：一次性浮动战斗文字/提示（可配 `DefaultLifetime` 自动回收），带 yDrift 上浮。
 - **怎么写**：`WorldText` behavior。两格数值句用 `textToken` + `mode` + `valueParamKey`。多格句子用 `args`：数字孔引用 AttributeBinding 写好的参数键，名字孔用 `entityInfoTitle`。
-- **跑**：preset `presenter_blacksmith_showcase_raylib`。
+- **有限 CSS 样式**：`worldText.css` 支持 `font-size`、`color`、`opacity`、`translate`，语义与 WorldHud 的 css 相同（css 覆盖 `fontSize` 静态值，`colorParamKey` 动态绑定优先）。
+- **跑**：preset `presenter_blacksmith_showcase_raylib`；CSS 样式 showcase `hud_css_styling`。
 - **证据**：文本合同测试与验收见 [Presenter Raylib UAT](../../architecture/presenter-raylib-uat.md) WorldText 章节。
 
 ### GroundOverlay — 地面指示

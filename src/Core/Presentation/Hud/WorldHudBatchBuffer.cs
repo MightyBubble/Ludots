@@ -331,7 +331,9 @@ namespace Ludots.Core.Presentation.Hud
                    left.WorldPosition == right.WorldPosition &&
                    left.Width == right.Width &&
                    left.Height == right.Height &&
-                   left.FontSize == right.FontSize;
+                   left.FontSize == right.FontSize &&
+                   left.ScreenOffsetX == right.ScreenOffsetX &&
+                   left.ScreenOffsetY == right.ScreenOffsetY;
         }
 
         private static bool TextPacketEquals(in PresentationTextPacket left, in PresentationTextPacket right)
