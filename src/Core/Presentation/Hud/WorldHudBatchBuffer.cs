@@ -358,6 +358,7 @@ namespace Ludots.Core.Presentation.Hud
             _count = 0;
             _transientCount = 0;
             DroppedSinceClear = 0;
+            DirtyContentDrops = 0;
             _retainedIndexByStableId.Clear();
             _dirtyContentCount = 0;
             _removedStableIdCount = 0;
@@ -382,6 +383,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyContentCount >= _dirtyContentBuffer.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -401,5 +403,8 @@ namespace Ludots.Core.Presentation.Hud
 
         /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数（LUDOTS_HUD_TRACE 之外恒为 0 且无人读取）。</summary>
         public int RemovedIdDrops { get; private set; }
+
+        /// <summary>取证计数：脏内容增量窗口容量溢出被丢弃的条数（与 RemovedIdDrops 同口径）。</summary>
+        public int DirtyContentDrops { get; private set; }
     }
 }

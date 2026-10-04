@@ -34,7 +34,12 @@ namespace Ludots.Core.Presentation.Config
         public int Register(string text)
         {
             if (text == null) throw new ArgumentNullException(nameof(text));
-            if (_count >= _table.Length) return 0;
+            if (_count >= _table.Length)
+            {
+                throw new InvalidOperationException(
+                    $"WorldHudStringTable runtime string capacity {_table.Length} exhausted; " +
+                    "raise the runtimeStringCapacity provided at construction.");
+            }
             int id = _count++;
             _table[id] = text;
             return id;

@@ -1057,6 +1057,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyBarCount >= _dirtyBars.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -1067,6 +1068,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyTextCount >= _dirtyTexts.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -1157,6 +1159,9 @@ namespace Ludots.Core.Presentation.Hud
 
         /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数。</summary>
         public int RemovedIdDrops { get; private set; }
+
+        /// <summary>取证计数：脏条目增量窗口容量溢出被丢弃的条数（bar/text 合并计数，与 WorldHudBatchBuffer.DirtyContentDrops 同口径）。</summary>
+        public int DirtyContentDrops { get; private set; }
 
         private void AddRemovedStableId(int stableId)
         {

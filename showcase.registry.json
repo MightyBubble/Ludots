@@ -5973,6 +5973,38 @@
       "status": "active"
     },
     {
+      "id": "presenter_schema_strictness",
+      "path": "mods/fixtures/presenter_schema_strictness/PresenterSchemaStrictnessMod",
+      "projectPath": null,
+      "title": "Presenter Schema 严格化夹具",
+      "summary": "presenters.json 数值数组形状错误（分量缺失/多余/为 null）的加载期拒绝样例；配套验收断言报错带字段名，valid_absent_defaults 是缺省默认的阳性对照。",
+      "tier": "T1",
+      "category": "fixture",
+      "tags": [
+        "presenter",
+        "schema",
+        "strictness"
+      ],
+      "acceptanceTest": "PresenterSchemaStrictnessTests",
+      "status": "active"
+    },
+    {
+      "id": "hud_overflow_diagnostics",
+      "path": "mods/fixtures/hud_overflow_diagnostics/HudOverflowDiagnosticsMod",
+      "projectPath": null,
+      "title": "HUD 溢出诊断夹具",
+      "summary": "HUD 容量边界行为的验收样例：脏内容窗口溢出计数、运行期字符串表满报错、paramDefaults 超 lane 容量注册期失败。配套测试断言所有溢出都留痕，不允许静默丢弃。",
+      "tier": "T1",
+      "category": "fixture",
+      "tags": [
+        "hud",
+        "diagnostics",
+        "capacity"
+      ],
+      "acceptanceTest": "HudOverflowDiagnosticsTests",
+      "status": "active"
+    },
+    {
       "id": "progression_scope",
       "path": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
       "projectPath": "ProgressionScopeShowcaseMod.csproj",

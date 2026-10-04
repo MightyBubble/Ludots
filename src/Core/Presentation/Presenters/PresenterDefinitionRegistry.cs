@@ -45,6 +45,7 @@ namespace Ludots.Core.Presentation.Presenters
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;
+            ValidateParamDefaultsFitLanes(key, definition);
             ValidateRuleCommands(key, definition);
             StampRuleOwners(definition, id);
             definition.BuildBindingIndex();
@@ -101,6 +102,46 @@ namespace Ludots.Core.Presentation.Presenters
         /// Use when the definition needs to reference its own id (e.g. self-referential rules).
         /// Follow with <see cref="Register"/> to store the full definition.
         /// </summary>
+        /// <summary>
+        /// 参数黑板组件是定容的（Float/Int 各 16 槽、Vector 8 槽）：默认值按 lane 计数超容
+        /// 必须在注册期报错，否则实例化时静默丢参，表现为 HUD 数值停在半路。
+        /// </summary>
+        private static void ValidateParamDefaultsFitLanes(string key, PresenterDefinition definition)
+        {
+            ParamDefault[]? defaults = definition.ParamDefaults;
+            if (defaults == null || defaults.Length == 0)
+            {
+                return;
+            }
+
+            int floatCount = 0;
+            int intCount = 0;
+            int vectorCount = 0;
+            for (int i = 0; i < defaults.Length; i++)
+            {
+                switch (defaults[i].Lane)
+                {
+                    case ParamLane.Float: floatCount++; break;
+                    case ParamLane.Int: intCount++; break;
+                    case ParamLane.Vector: vectorCount++; break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Presenter '{key}' paramDefaults[{i}] declares unknown lane {defaults[i].Lane}.");
+                }
+            }
+
+            if (floatCount > PresenterFloatParams.MAX_ENTRIES ||
+                intCount > PresenterIntParams.MAX_ENTRIES ||
+                vectorCount > PresenterVectorParams.MAX_ENTRIES)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' declares {floatCount} float / {intCount} int / {vectorCount} vector " +
+                    $"param defaults; the parameter blackboard holds at most {PresenterFloatParams.MAX_ENTRIES} " +
+                    $"float, {PresenterIntParams.MAX_ENTRIES} int and {PresenterVectorParams.MAX_ENTRIES} vector " +
+                    "entries per presenter. Reduce paramDefaults or raise the container capacity.");
+            }
+        }
+
         public int GetOrRegisterId(string key) => _ids.Register(key);
 
         public string GetName(int id) => _ids.GetName(id);
