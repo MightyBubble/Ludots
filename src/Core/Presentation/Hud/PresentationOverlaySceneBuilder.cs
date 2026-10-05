@@ -474,9 +474,10 @@ namespace Ludots.Core.Presentation.Hud
                 return stringTableText;
             }
 
-            string? numericText = ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
-            CacheResolvedScreenHudText(item, numericText, allowResolvedCache);
-            return numericText;
+            // 值驱动文本由数值缓存按 (mode,值) 直接命中,不写 resolved 缓存:
+            // 这类条目的 serial 每帧随值变化,resolved 缓存对其恒 MISS,
+            // 写入只制造高频触顶淘汰的簿记开销(50k HUD 基准实测 368KB/帧)。
+            return ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
         }
 
         private string? ResolveScreenOverlayText(in ScreenOverlayItem item)
@@ -567,17 +568,25 @@ namespace Ludots.Core.Presentation.Hud
                 return;
             }
 
-            TKey[] keys = new TKey[cache.Count];
-            cache.Keys.CopyTo(keys, 0);
-            for (int i = 0; i < toRemove; i++)
+            // 边枚举边删(Dictionary 允许枚举中 Remove,禁止 Add),避免每轮触顶
+            // 都分配一份键数组——值每帧变化的 HUD 文本会高频走到这里。
+            foreach (TKey key in cache.Keys)
             {
-                cache.Remove(keys[i]);
+                cache.Remove(key);
+                toRemove--;
+                if (toRemove <= 0)
+                {
+                    break;
+                }
             }
         }
 
         private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text, bool allowResolvedCache)
         {
-            if (!allowResolvedCache || item.StableId == 0 || text == null)
+            // 值绑定条目的 serial 每帧随值变化,resolved 缓存对其永远 MISS;
+            // 写入只会在容量触顶时反复触发 MakeRoom 的全量键数组分配。其文本由
+            // 数值缓存(值域有限)直接给出,跳过本缓存。
+            if (!allowResolvedCache || item.StableId == 0 || text == null || item.ValueBound != 0)
             {
                 return;
             }
