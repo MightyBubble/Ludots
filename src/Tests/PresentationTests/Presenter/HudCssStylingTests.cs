@@ -208,7 +208,7 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚");
                     Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "名字投影");
                     Assert.That(item.BoxBackground.W, Is.LessThan(0.5f), "名字无底板");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-54f).Within(0.001f), "名字悬于饰板中央");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-59f).Within(0.001f), "名字悬于饰板中央");
                 }
             }
 
@@ -229,16 +229,16 @@ namespace Ludots.Tests.Presentation
                         slicedPanels++;
                         if (item.Width > 50f)
                         {
-                            Assert.That(item.ImageSliceTop, Is.EqualTo(12f), "饰板九宫格上切 12");
-                            Assert.That(item.ImageSliceRight, Is.EqualTo(12f), "饰板九宫格右切 12");
-                            Assert.That(item.ImageSliceBottom, Is.EqualTo(12f), "饰板九宫格下切 12");
-                            Assert.That(item.ImageSliceLeft, Is.EqualTo(12f), "饰板九宫格左切 12");
+                            Assert.That(item.ImageSliceTop, Is.EqualTo(8f), "饰板九宫格上切 8");
+                            Assert.That(item.ImageSliceRight, Is.EqualTo(8f), "饰板九宫格右切 8");
+                            Assert.That(item.ImageSliceBottom, Is.EqualTo(8f), "饰板九宫格下切 8");
+                            Assert.That(item.ImageSliceLeft, Is.EqualTo(8f), "饰板九宫格左切 8");
                         }
                         else
                         {
-                            Assert.That(item.ImageSliceTop, Is.EqualTo(12f), "绶带三宫格上切 12");
+                            Assert.That(item.ImageSliceTop, Is.EqualTo(10f), "绶带三宫格上切 10");
                             Assert.That(item.ImageSliceRight, Is.EqualTo(0f), "绶带三宫格左右不切");
-                            Assert.That(item.ImageSliceBottom, Is.EqualTo(12f), "绶带三宫格下切 12");
+                            Assert.That(item.ImageSliceBottom, Is.EqualTo(10f), "绶带三宫格下切 10");
                             Assert.That(item.ImageSliceLeft, Is.EqualTo(0f), "绶带三宫格左右不切");
                         }
 
@@ -248,14 +248,14 @@ namespace Ludots.Tests.Presentation
                     if (MathF.Abs(item.ScreenOffsetX) < 0.001f)
                     {
                         capitalIcons++;
-                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-74f).Within(0.001f), "首都星居叠层顶");
+                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-84f).Within(0.001f), "首都星居叠层顶");
                     }
                     else if (item.ScreenOffsetX < 0f)
                     {
                         rankBanners++;
                         Assert.That(item.Width, Is.EqualTo(14f), "军旗宽 14");
                         Assert.That(item.Height, Is.EqualTo(18f), "军旗高 18");
-                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-75f).Within(0.001f), "军旗挂星标左侧");
+                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-85f).Within(0.001f), "军旗挂星标左侧");
                     }
                     else
                     {
@@ -451,7 +451,7 @@ namespace Ludots.Tests.Presentation
                 {
                     texts++;
                     Assert.That(item.FontSize, Is.EqualTo(16), "css font-size 必须落到每个文本");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-54f).Within(0.001f));
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-59f).Within(0.001f));
                     Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚标志随链路落到位");
                 }
             }
