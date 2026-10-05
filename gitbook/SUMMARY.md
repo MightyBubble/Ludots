@@ -63,6 +63,7 @@
   - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
   - [面板视图投影：元素模板 · 主体类型 · 容器只编排](architecture/panel-view-projection.md)
   - [查询图集合输出：成员身份 · 输出类型 · 面板只消费](architecture/query-graph-collection-outputs.md)
+  - [UI 取数与呈现车道：现状图](architecture/ui-data-binding-lanes.md)
   - [面板开箱布局套件（list / grid / column）](architecture/panel-author-layout-kit.md)
   - [面板快速上手：10 分钟加一个血条](architecture/panel-quickstart.md)
   - [面板目录设计：配置形状与线框](architecture/panel-catalog-designs.md)
