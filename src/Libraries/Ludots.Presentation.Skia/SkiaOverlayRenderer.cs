@@ -985,10 +985,15 @@ namespace Ludots.Presentation.Skia
                 float[] positionsY = bucket.Y;
                 SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
                 SKRect[] drawSprites = state.DrawSprites;
+                float bucketOffsetX = bucket.OffsetX;
+                float bucketOffsetY = bucket.OffsetY;
                 for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
                 {
                     drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(
+                        1f, 0f,
+                        positionsX[instanceIndex] - bucketOffsetX,
+                        positionsY[instanceIndex] - bucketOffsetY);
                     writeIndex++;
                 }
             }
@@ -2382,7 +2387,14 @@ namespace Ludots.Presentation.Skia
                     }
                     else if (resource.SvgPicture != null)
                     {
-                        spriteCanvas.DrawPicture(resource.SvgPicture);
+                        SKRect cull = resource.SvgPicture.CullRect;
+                        float scaleX = rect.Width / cull.Width;
+                        float scaleY = rect.Height / cull.Height;
+                        spriteCanvas.Save();
+                        spriteCanvas.Translate(rect.Left, rect.Top);
+                        spriteCanvas.Scale(scaleX, scaleY);
+                        spriteCanvas.DrawPicture(resource.SvgPicture, 0f, 0f);
+                        spriteCanvas.Restore();
                     }
 
                     spriteCanvas.Restore();

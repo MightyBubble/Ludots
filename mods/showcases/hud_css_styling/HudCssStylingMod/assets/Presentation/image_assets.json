@@ -2,11 +2,13 @@
   {
     "id": "hud_css.icon.capital_star",
     "kind": "Icon",
-    "glyphFallback": "★"
+    "glyphFallback": "★",
+    "path": "HudCssStylingMod:assets/Presentation/Icons/capital_star.svg"
   },
   {
     "id": "hud_css.icon.defense_shield",
     "kind": "Icon",
-    "glyphFallback": "⛨"
+    "glyphFallback": "⛨",
+    "path": "HudCssStylingMod:assets/Presentation/Icons/defense_shield.svg"
   }
 ]
