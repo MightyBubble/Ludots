@@ -27,6 +27,10 @@ export interface ScreenHudDecoration {
   bold: boolean;
   italic: boolean;
   textAlignCenter: boolean;
+  imageSliceTop: number;
+  imageSliceRight: number;
+  imageSliceBottom: number;
+  imageSliceLeft: number;
   shadowColor?: [number, number, number, number];
   shadowOffsetX: number;
   shadowOffsetY: number;
@@ -261,7 +265,7 @@ export class FrameDecoder {
         textPacket,
         deco: this.readDecoration(v, p + 113),
       });
-      p += 221;
+      p += 237;
     }
 
     const stringCount = v.getUint16(p, true); p += 2;
@@ -373,6 +377,10 @@ export class FrameDecoder {
       shadowOffsetX: v.getFloat32(p + 96, true),
       shadowOffsetY: v.getFloat32(p + 100, true),
       shadowBlur: v.getFloat32(p + 104, true),
+      imageSliceTop: v.getFloat32(p + 108, true),
+      imageSliceRight: v.getFloat32(p + 112, true),
+      imageSliceBottom: v.getFloat32(p + 116, true),
+      imageSliceLeft: v.getFloat32(p + 120, true),
     };
   }
 

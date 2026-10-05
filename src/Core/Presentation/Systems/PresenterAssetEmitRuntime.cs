@@ -763,6 +763,10 @@ namespace Ludots.Core.Presentation.Systems
             item.ShadowOffsetX = style.ShadowOffsetX ?? 0f;
             item.ShadowOffsetY = style.ShadowOffsetY ?? 0f;
             item.ShadowBlur = style.ShadowBlur ?? 0f;
+            item.ImageSliceTop = style.ImageSlice?.X ?? 0f;
+            item.ImageSliceRight = style.ImageSlice?.Y ?? 0f;
+            item.ImageSliceBottom = style.ImageSlice?.Z ?? 0f;
+            item.ImageSliceLeft = style.ImageSlice?.W ?? 0f;
         }
 
         /// <summary>

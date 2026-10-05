@@ -148,6 +148,12 @@ namespace Ludots.Tests.Presentation
 
             WorldHudStyle diamond = WorldHudStyleCss.Parse("clip-path: diamond", "test2");
             Assert.That(diamond.ClipShape, Is.EqualTo(HudClipShape.Diamond));
+
+            WorldHudStyle sliced = WorldHudStyleCss.Parse("image-slice: 12px", "test3");
+            Assert.That(sliced.ImageSlice!.Value, Is.EqualTo(new Vector4(12f, 12f, 12f, 12f)), "一值=四边");
+
+            WorldHudStyle ribbon = WorldHudStyleCss.Parse("nine-slice: 12px 0", "test4");
+            Assert.That(ribbon.ImageSlice!.Value, Is.EqualTo(new Vector4(12f, 0f, 12f, 0f)), "两值=上下 左右(三宫格)");
         }
 
         [TestCase("border: 1px dashed black")]
@@ -156,6 +162,9 @@ namespace Ludots.Tests.Presentation
         [TestCase("text-shadow: 1px red")]
         [TestCase("font-style: oblique")]
         [TestCase("text-align: justify")]
+        [TestCase("image-slice: 1px 2px 3px 4px 5px")]
+        [TestCase("image-slice: -2px")]
+        [TestCase("nine-slice: 12px 12px 12px 12px 12px")]
         [TestCase("padding: 1px 2px 3px 4px 5px")]
         public void CssParser_TypographyRejectedDeclarations_FailFast(string css)
         {
@@ -175,8 +184,8 @@ namespace Ludots.Tests.Presentation
             var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
-            // 每单位 7 元素:士气条/生命条/战况条/名字板/首都星/军旗(PNG)/盾徽。
-            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素");
+            // 每单位 9 元素:绶带(三宫格)/饰板(九宫格)/士气条/生命条/战况条/名字板/首都星/军旗(PNG)/盾徽。
+            Assert.That(worldHud.Count, Is.EqualTo(144), "16 单位 × 9 元素");
 
             int richBars = 0;
             int nameplates = 0;
@@ -199,7 +208,7 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚");
                     Assert.That(item.ShadowColor.W, Is.GreaterThan(0.5f), "名字投影");
                     Assert.That(item.BoxBackground.W, Is.LessThan(0.5f), "名字无底板");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-52f).Within(0.001f), "名字悬于条组上方");
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-54f).Within(0.001f), "名字悬于饰板中央");
                 }
             }
 
@@ -210,10 +219,32 @@ namespace Ludots.Tests.Presentation
             int capitalIcons = 0;
             int rankBanners = 0;
             int shieldBadges = 0;
+            int slicedPanels = 0;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
                 if (item.Kind == WorldHudItemKind.Bar && item.Id0 > 0)
                 {
+                    if (item.ImageSliceTop > 0f || item.ImageSliceBottom > 0f)
+                    {
+                        slicedPanels++;
+                        if (item.Width > 50f)
+                        {
+                            Assert.That(item.ImageSliceTop, Is.EqualTo(12f), "饰板九宫格上切 12");
+                            Assert.That(item.ImageSliceRight, Is.EqualTo(12f), "饰板九宫格右切 12");
+                            Assert.That(item.ImageSliceBottom, Is.EqualTo(12f), "饰板九宫格下切 12");
+                            Assert.That(item.ImageSliceLeft, Is.EqualTo(12f), "饰板九宫格左切 12");
+                        }
+                        else
+                        {
+                            Assert.That(item.ImageSliceTop, Is.EqualTo(12f), "绶带三宫格上切 12");
+                            Assert.That(item.ImageSliceRight, Is.EqualTo(0f), "绶带三宫格左右不切");
+                            Assert.That(item.ImageSliceBottom, Is.EqualTo(12f), "绶带三宫格下切 12");
+                            Assert.That(item.ImageSliceLeft, Is.EqualTo(0f), "绶带三宫格左右不切");
+                        }
+
+                        continue;
+                    }
+
                     if (MathF.Abs(item.ScreenOffsetX) < 0.001f)
                     {
                         capitalIcons++;
@@ -238,6 +269,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(capitalIcons, Is.EqualTo(16), "16 个首都星图标(SVG)");
             Assert.That(rankBanners, Is.EqualTo(16), "16 面军旗(PNG 位图腿)");
             Assert.That(shieldBadges, Is.EqualTo(16), "16 个盾徽(盾形裁剪+金边)");
+            Assert.That(slicedPanels, Is.EqualTo(32), "16 饰板(九宫格)+16 绶带(三宫格)");
         }
 
         [Test]
@@ -402,7 +434,7 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(144), "16 单位 × 9 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;
@@ -419,7 +451,7 @@ namespace Ludots.Tests.Presentation
                 {
                     texts++;
                     Assert.That(item.FontSize, Is.EqualTo(16), "css font-size 必须落到每个文本");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-52f).Within(0.001f));
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(-54f).Within(0.001f));
                     Assert.That(item.StyleFlags & 0x04, Is.Not.Zero, "名字居中锚标志随链路落到位");
                 }
             }

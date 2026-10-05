@@ -414,6 +414,10 @@ namespace Ludots.Adapter.Web.Streaming
             WriteFloat(decoration.ShadowOffsetX);
             WriteFloat(decoration.ShadowOffsetY);
             WriteFloat(decoration.ShadowBlur);
+            WriteFloat(decoration.ImageSliceTop);
+            WriteFloat(decoration.ImageSliceRight);
+            WriteFloat(decoration.ImageSliceBottom);
+            WriteFloat(decoration.ImageSliceLeft);
         }
 
         private void WriteTextPacket(in PresentationTextPacket packet)

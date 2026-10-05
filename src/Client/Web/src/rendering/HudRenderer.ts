@@ -1,5 +1,46 @@
 import type { ScreenHudItem, ScreenOverlayItem, DebugLine, DebugCircle, DebugBox, PresentationTextPacket } from '../core/FrameDecoder';
 
+/** 九宫格/三宫格切片绘制:与 C# NineSliceBaker 同一几何合同,非法切片 fail-closed(整图不画)。 */
+function drawNineSlice(
+  ctx: CanvasRenderingContext2D,
+  img: CanvasImageSource,
+  dx: number, dy: number, dw: number, dh: number,
+  sliceTop: number, sliceRight: number, sliceBottom: number, sliceLeft: number,
+  sourceWidth: number, sourceHeight: number,
+): void {
+  if (sourceWidth <= 0.01 || sourceHeight <= 0.01 ||
+      sliceTop < 0 || sliceRight < 0 || sliceBottom < 0 || sliceLeft < 0 ||
+      sliceLeft + sliceRight >= sourceWidth || sliceTop + sliceBottom >= sourceHeight) {
+    return;
+  }
+  const dl = Math.min(sliceLeft, dw);
+  const dt = Math.min(sliceTop, dh);
+  const dr = Math.min(sliceRight, Math.max(0, dw - dl));
+  const db = Math.min(sliceBottom, Math.max(0, dh - dt));
+  const sl = sliceLeft, st = sliceTop, sr = sliceRight, sb = sliceBottom;
+  const scw = Math.max(0, sourceWidth - sl - sr);
+  const sch = Math.max(0, sourceHeight - st - sb);
+  const dcw = Math.max(0, dw - dl - dr);
+  const dch = Math.max(0, dh - dt - db);
+  const dxr = dx + dw - dr;
+  const dyb = dy + dh - db;
+  const patches: Array<{ s: [number, number, number, number]; d: [number, number, number, number] }> = [
+    { s: [0, 0, sl, st], d: [dx, dy, dl, dt] },
+    { s: [sl, 0, scw, st], d: [dx + dl, dy, dcw, dt] },
+    { s: [sourceWidth - sr, 0, sr, st], d: [dxr, dy, dr, dt] },
+    { s: [0, st, sl, sch], d: [dx, dy + dt, dl, dch] },
+    { s: [sl, st, scw, sch], d: [dx + dl, dy + dt, dcw, dch] },
+    { s: [sourceWidth - sr, st, sr, sch], d: [dxr, dy + dt, dr, dch] },
+    { s: [0, sourceHeight - sb, sl, sb], d: [dx, dyb, dl, db] },
+    { s: [sl, sourceHeight - sb, scw, sb], d: [dx + dl, dyb, dcw, db] },
+    { s: [sourceWidth - sr, sourceHeight - sb, sr, sb], d: [dxr, dyb, dr, db] },
+  ];
+  for (const p of patches) {
+    if (p.s[2] <= 0.01 || p.s[3] <= 0.01 || p.d[2] <= 0.01 || p.d[3] <= 0.01) continue;
+    ctx.drawImage(img, p.s[0], p.s[1], p.s[2], p.s[3], p.d[0], p.d[1], p.d[2], p.d[3]);
+  }
+}
+
 export class HudRenderer {
   private readonly _canvas: HTMLCanvasElement;
   private readonly _ctx: CanvasRenderingContext2D;
@@ -29,7 +70,19 @@ export class HudRenderer {
       if (item.kind === HUD_BAR && item.text) {
         const img = this.obtainImage(item.text);
         if (img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, Math.round(item.sx), Math.round(item.sy), Math.round(item.width), Math.round(item.height));
+          const ix = Math.round(item.sx);
+          const iy = Math.round(item.sy);
+          const iw = Math.round(item.width);
+          const ih = Math.round(item.height);
+          const st = deco ? deco.imageSliceTop : 0;
+          const sr = deco ? deco.imageSliceRight : 0;
+          const sb = deco ? deco.imageSliceBottom : 0;
+          const sl = deco ? deco.imageSliceLeft : 0;
+          if (st > 0 || sr > 0 || sb > 0 || sl > 0) {
+            drawNineSlice(ctx, img, ix, iy, iw, ih, st, sr, sb, sl, img.naturalWidth, img.naturalHeight);
+          } else {
+            ctx.drawImage(img, ix, iy, iw, ih);
+          }
         }
       } else if (item.kind === HUD_BAR) {
         const x = Math.round(item.sx);

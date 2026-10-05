@@ -15,5 +15,15 @@
     "id": "hud_css.icon.rank_banner",
     "kind": "Icon",
     "path": "HudCssStylingMod:assets/Presentation/Icons/rank_banner.png"
+  },
+  {
+    "id": "hud_css.icon.plaque_frame",
+    "kind": "Card",
+    "path": "HudCssStylingMod:assets/Presentation/Icons/plaque_frame.png"
+  },
+  {
+    "id": "hud_css.icon.ribbon_banner",
+    "kind": "Card",
+    "path": "HudCssStylingMod:assets/Presentation/Icons/ribbon_banner.png"
   }
 ]

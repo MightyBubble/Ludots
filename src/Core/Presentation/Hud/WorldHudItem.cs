@@ -46,6 +46,11 @@ namespace Ludots.Core.Presentation.Hud
         public float ShadowOffsetX;
         public float ShadowOffsetY;
         public float ShadowBlur;
+        /// <summary>图片九宫格切片(px;top/right/bottom/left),全 0=整图。</summary>
+        public float ImageSliceTop;
+        public float ImageSliceRight;
+        public float ImageSliceBottom;
+        public float ImageSliceLeft;
         public PresentationTextPacket Text;
     }
 }

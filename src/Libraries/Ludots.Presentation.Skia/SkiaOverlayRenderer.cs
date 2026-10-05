@@ -2381,7 +2381,46 @@ namespace Ludots.Presentation.Skia
                     using SKPath iconPath = BuildItemPath(deco.ClipShape, rect, radius);
                     spriteCanvas.Save();
                     spriteCanvas.ClipPath(iconPath);
-                    if (resource.RasterImage != null)
+                    bool sliced = deco.ImageSliceTop > 0f || deco.ImageSliceRight > 0f ||
+                                  deco.ImageSliceBottom > 0f || deco.ImageSliceLeft > 0f;
+                    if (sliced)
+                    {
+                        // 九宫格/三宫格:源矩形取位图尺寸或 SVG CullRect;切片非法时 fail-closed
+                        // (不画图,不回退整图拉伸),与 UI 车道 NineSliceBaker 同一合同。
+                        float sourceLeft = 0f;
+                        float sourceTop = 0f;
+                        float sourceWidth;
+                        float sourceHeight;
+                        if (resource.RasterImage != null)
+                        {
+                            sourceWidth = resource.RasterImage.Width;
+                            sourceHeight = resource.RasterImage.Height;
+                        }
+                        else
+                        {
+                            SKRect cull = resource.SvgPicture!.CullRect;
+                            sourceLeft = cull.Left;
+                            sourceTop = cull.Top;
+                            sourceWidth = cull.Width;
+                            sourceHeight = cull.Height;
+                        }
+
+                        if (NineSliceBaker.TryBuildPatches(
+                                sourceWidth, sourceHeight, sourceLeft, sourceTop, rect,
+                                deco.ImageSliceTop, deco.ImageSliceRight, deco.ImageSliceBottom, deco.ImageSliceLeft,
+                                out NineSliceBaker.PatchSet patches))
+                        {
+                            if (resource.RasterImage != null)
+                            {
+                                NineSliceBaker.DrawImage(spriteCanvas, resource.RasterImage, in patches);
+                            }
+                            else
+                            {
+                                NineSliceBaker.DrawPicture(spriteCanvas, resource.SvgPicture!, in patches);
+                            }
+                        }
+                    }
+                    else if (resource.RasterImage != null)
                     {
                         spriteCanvas.DrawImage(resource.RasterImage, rect);
                     }

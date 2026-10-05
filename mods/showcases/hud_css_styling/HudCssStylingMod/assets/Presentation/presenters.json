@@ -3,6 +3,14 @@
     "id": "hud_css_styling_unit_root",
     "children": [
       {
+        "definitionId": "hud_css_styling_ribbon",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_plaque",
+        "scopeTag": "structure"
+      },
+      {
         "definitionId": "hud_css_styling_rank_banner",
         "scopeTag": "structure"
       },
@@ -164,7 +172,7 @@
           "mode": "AttributeCurrentOverBase",
           "valueParamKey": "hud_css_styling.health.current",
           "secondaryValueParamKey": "hud_css_styling.health.max",
-          "css": "color: #FFFFFF; font-size: 16px; font-weight: bold; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.9); translate: 0 -52px;"
+          "css": "color: #FFFFFF; font-size: 16px; font-weight: bold; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.9); translate: 0 -54px;"
         }
       },
       {
@@ -233,6 +241,38 @@
           "renderPath": "None",
           "mobility": "Movable",
           "css": "width: 14px; height: 18px; image: hud_css.icon.rank_banner; translate: -26px -75px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_ribbon",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 44px; height: 34px; image: hud_css.icon.ribbon_banner; image-slice: 12px 0; translate: 0 -34px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_plaque",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 76px; height: 20px; image: hud_css.icon.plaque_frame; image-slice: 12px; translate: 0 -56px;"
         }
       }
     ]

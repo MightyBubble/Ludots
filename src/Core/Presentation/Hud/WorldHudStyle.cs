@@ -61,6 +61,8 @@ namespace Ludots.Core.Presentation.Hud
         public bool? TextAlignCenter;
         /// <summary>clip-path 异形预设;见 HudClipShape。</summary>
         public HudClipShape ClipShape;
+        /// <summary>图片九宫格切片(px;分量顺序 top/right/bottom/left)。三宫格=两维置 0;全 0=整图。</summary>
+        public Vector4? ImageSlice;
 
         public bool IsEmpty =>
             !Width.HasValue && !Height.HasValue && !FontSize.HasValue && !Opacity.HasValue &&
@@ -69,7 +71,7 @@ namespace Ludots.Core.Presentation.Hud
             !FillGradientTo.HasValue && !BackgroundGradientTo.HasValue &&
             !Bold.HasValue && !Italic.HasValue &&
             !ShadowColor.HasValue && !ShadowOffsetX.HasValue && !ShadowOffsetY.HasValue && !ShadowBlur.HasValue &&
-            ImageAssetId == null && ClipShape == 0 && TextAlignCenter != true;
+            ImageAssetId == null && ClipShape == 0 && TextAlignCenter != true && !ImageSlice.HasValue;
     }
 
     /// <summary>
@@ -90,7 +92,8 @@ namespace Ludots.Core.Presentation.Hud
         private const string Supported =
             "width, height, font-size, opacity, color, background-color, background, background-image, " +
             "translate, border, border-width, border-color, border-radius, padding, " +
-            "font-weight, font-style, text-align, text-shadow, box-shadow, image, clip-path";
+            "font-weight, font-style, text-align, text-shadow, box-shadow, image, clip-path, " +
+            "image-slice, nine-slice, border-image-slice";
 
         public static WorldHudStyle Parse(string css, string context)
         {
@@ -315,6 +318,11 @@ namespace Ludots.Core.Presentation.Hud
                 case "image":
                     style.ImageAssetId = ParseImageAssetId(value, context);
                     break;
+                case "image-slice":
+                case "nine-slice":
+                case "border-image-slice":
+                    SetUniformSlice(ref style, ParseImageSlice(value, context), name, context);
+                    break;
                 case "clip-path":
                     style.ClipShape = ParseClipShape(value, context);
                     break;
@@ -322,6 +330,55 @@ namespace Ludots.Core.Presentation.Hud
                     throw new InvalidOperationException(
                         $"{context}: css property '{name}' is not supported; supported: {Supported}.");
             }
+        }
+
+        /// <summary>切片值语义固定(top/right/bottom/left),重复声明或与别名互斥一律拒绝。</summary>
+        private static void SetUniformSlice(ref WorldHudStyle style, Vector4 slice, string name, string context)
+        {
+            if (style.ImageSlice.HasValue && style.ImageSlice.Value != slice)
+            {
+                throw new InvalidOperationException($"{context}: css '{name}' conflicts with an earlier image-slice declaration.");
+            }
+
+            style.ImageSlice = slice;
+        }
+
+        /// <summary>值形与 UI 车道 TryParseThickness 一致:1 值=四边;2 值=上下 左右;3 值=上 左右 下;4 值=top right bottom left。</summary>
+        private static Vector4 ParseImageSlice(string value, string context)
+        {
+            string[] tokens = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            float t, r, b, l;
+            switch (tokens.Length)
+            {
+                case 1:
+                    t = r = b = l = ParsePxLength(tokens[0], "image-slice", context);
+                    break;
+                case 2:
+                    t = b = ParsePxLength(tokens[0], "image-slice", context);
+                    r = l = ParsePxLength(tokens[1], "image-slice", context);
+                    break;
+                case 3:
+                    t = ParsePxLength(tokens[0], "image-slice", context);
+                    r = l = ParsePxLength(tokens[1], "image-slice", context);
+                    b = ParsePxLength(tokens[2], "image-slice", context);
+                    break;
+                case 4:
+                    t = ParsePxLength(tokens[0], "image-slice", context);
+                    r = ParsePxLength(tokens[1], "image-slice", context);
+                    b = ParsePxLength(tokens[2], "image-slice", context);
+                    l = ParsePxLength(tokens[3], "image-slice", context);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{context}: css 'image-slice' requires 1-4 px lengths (top right bottom left), got '{value}'.");
+            }
+
+            if (t < 0f || r < 0f || b < 0f || l < 0f)
+            {
+                throw new InvalidOperationException($"{context}: css 'image-slice' requires non-negative lengths, got '{value}'.");
+            }
+
+            return new Vector4(t, r, b, l);
         }
 
         private static string ParseImageAssetId(string value, string context)
