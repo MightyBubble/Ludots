@@ -1,33 +1,36 @@
 [
   {
-    "id": "hud_css_styling_unit_root",
+    "id": "hud_css_styling_ribbon_health_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 36px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -20px;"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_icon",
     "children": [
       {
-        "definitionId": "hud_css_styling_ribbon",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_plaque",
-        "scopeTag": "structure"
-      },
-      {
         "definitionId": "hud_css_styling_rank_banner",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_morale_bar",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_health_bar",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_rich_bar",
-        "scopeTag": "structure"
-      },
-      {
-        "definitionId": "hud_css_styling_nameplate",
         "scopeTag": "structure"
       },
       {
@@ -36,6 +39,103 @@
       },
       {
         "definitionId": "hud_css_styling_shield_badge",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_plaque",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_plaque",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_nameplate",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_ribbon",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_ribbon",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_ribbon_health_bar",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_bars",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_rich_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_health_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_morale_bar",
         "scopeTag": "structure"
       }
     ],
@@ -97,38 +197,6 @@
           "renderPath": "None",
           "mobility": "Movable",
           "css": "width: 36px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -10px; opacity: 0.9;"
-        }
-      }
-    ]
-  },
-  {
-    "id": "hud_css_styling_bootstrap",
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned",
-          "key": "hud_css_styling_unit"
-        },
-        "condition": {
-          "inline": "None"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "hud_css_styling_unit_root",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed",
-          "key": "hud_css_styling_unit"
-        },
-        "condition": {
-          "inline": "None"
-        },
-        "command": {
-          "kind": "DestroyPresenterScope",
-          "scopeSource": "EventPayloadA"
         }
       }
     ]
@@ -246,22 +314,6 @@
     ]
   },
   {
-    "id": "hud_css_styling_ribbon",
-    "behaviors": [
-      {
-        "slot": "hud",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "WorldHud",
-          "renderPath": "None",
-          "mobility": "Movable",
-          "css": "width: 44px; height: 34px; image: hud_css.icon.ribbon_banner; image-slice: 10px 0; translate: 0 -34px;"
-        }
-      }
-    ]
-  },
-  {
     "id": "hud_css_styling_plaque",
     "behaviors": [
       {
@@ -273,6 +325,135 @@
           "renderPath": "None",
           "mobility": "Movable",
           "css": "width: 84px; height: 26px; image: hud_css.icon.plaque_frame; image-slice: 8px; translate: 0 -62px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_ribbon",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 44px; height: 30px; image: hud_css.icon.ribbon_banner; image-slice: 8px 0; translate: 0 -30px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_icon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_icon",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_icon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_plaque"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_plaque",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_plaque"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_ribbon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_ribbon",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_ribbon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_bars"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_bars",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_bars"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
         }
       }
     ]

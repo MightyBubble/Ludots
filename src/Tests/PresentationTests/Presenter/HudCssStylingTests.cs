@@ -184,8 +184,8 @@ namespace Ludots.Tests.Presentation
             var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
-            // 每单位 9 元素:绶带(三宫格)/饰板(九宫格)/士气条/生命条/战况条/名字板/首都星/军旗(PNG)/盾徽。
-            Assert.That(worldHud.Count, Is.EqualTo(144), "16 单位 × 9 元素");
+            // 16 单位分四行单一职责演示:图标 ×4 / 饰板+名字 ×4 / 绶带+血条 ×4 / 三根 css 条 ×4。
+            Assert.That(worldHud.Count, Is.EqualTo(40), "4 图标单位×3 + 4 饰板单位×2 + 4 绶带单位×2 + 4 条样式单位×3");
 
             int richBars = 0;
             int nameplates = 0;
@@ -212,8 +212,8 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(richBars, Is.EqualTo(16), "16 个战况条带完整装饰");
-            Assert.That(nameplates, Is.EqualTo(16), "16 个名字板带底板+阴影");
+            Assert.That(richBars, Is.EqualTo(4), "4 个战况条带完整装饰(条样式行)");
+            Assert.That(nameplates, Is.EqualTo(4), "4 个名字(饰板行)");
             Assert.That(screenHud.Count, Is.GreaterThan(0), "投影后屏幕缓冲有内容");
 
             int capitalIcons = 0;
@@ -236,9 +236,9 @@ namespace Ludots.Tests.Presentation
                         }
                         else
                         {
-                            Assert.That(item.ImageSliceTop, Is.EqualTo(10f), "绶带三宫格上切 10");
+                            Assert.That(item.ImageSliceTop, Is.EqualTo(8f), "绶带三宫格上切 8");
                             Assert.That(item.ImageSliceRight, Is.EqualTo(0f), "绶带三宫格左右不切");
-                            Assert.That(item.ImageSliceBottom, Is.EqualTo(10f), "绶带三宫格下切 10");
+                            Assert.That(item.ImageSliceBottom, Is.EqualTo(8f), "绶带三宫格下切 8");
                             Assert.That(item.ImageSliceLeft, Is.EqualTo(0f), "绶带三宫格左右不切");
                         }
 
@@ -266,10 +266,10 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(capitalIcons, Is.EqualTo(16), "16 个首都星图标(SVG)");
-            Assert.That(rankBanners, Is.EqualTo(16), "16 面军旗(PNG 位图腿)");
-            Assert.That(shieldBadges, Is.EqualTo(16), "16 个盾徽(盾形裁剪+金边)");
-            Assert.That(slicedPanels, Is.EqualTo(32), "16 饰板(九宫格)+16 绶带(三宫格)");
+            Assert.That(capitalIcons, Is.EqualTo(4), "4 个首都星图标(SVG,图标行)");
+            Assert.That(rankBanners, Is.EqualTo(4), "4 面军旗(PNG 位图腿,图标行)");
+            Assert.That(shieldBadges, Is.EqualTo(4), "4 个盾徽(盾形裁剪+金边,图标行)");
+            Assert.That(slicedPanels, Is.EqualTo(8), "4 饰板(九宫格,饰板行)+4 绶带(三宫格,绶带行)");
         }
 
         [Test]
@@ -434,7 +434,7 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(144), "16 单位 × 9 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(40), "四行单一职责演示合计 40 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;
@@ -445,7 +445,9 @@ namespace Ludots.Tests.Presentation
                     bars++;
                     Assert.That(item.Width, Is.EqualTo(36f), "css width 必须落到每个条目");
                     Assert.That(item.Height, Is.EqualTo(item.Height > 4f ? 5f : 3f), "css height(bar=5/morale=3)");
-                    Assert.That(item.ScreenOffsetY, Is.EqualTo(item.Height > 4f ? -18f : -10f).Within(0.001f), "css translate 必须落到每个条目");
+                    float expectedBarY = item.Height > 4f ? -18f : -10f;
+                    Assert.That(item.ScreenOffsetY, Is.EqualTo(expectedBarY).Within(0.001f).Or.EqualTo(-20f).Within(0.001f),
+                        "css translate 必须落到每个条目(绶带行生命条为 -20)");
                 }
                 else if (item.Kind == WorldHudItemKind.Text)
                 {
@@ -456,8 +458,8 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(bars, Is.EqualTo(32), "16 单位 × 生命条+士气条(战况条/图标另计)");
-            Assert.That(texts, Is.EqualTo(16), "16 单位 × 名字板");
+            Assert.That(bars, Is.EqualTo(12), "条样式行 8 根素条(生命+士气)+ 绶带行 4 根生命条");
+            Assert.That(texts, Is.EqualTo(4), "饰板行 4 个名字");
 
             // 血量补丁经属性绑定写成填充率:95/100 与 8/100 必须出现在值里。
             float maxRatio = 0f;

@@ -22,14 +22,22 @@ public sealed class HudCssStylingModEntry : IMod
     public static volatile int DiagQueued;
 
     private const string ShowcaseMapId = "hud_css_styling_map";
-    private const string UnitTemplateId = "hud_css_styling_unit";
     private const int LocalPlayerId = 1;
     private const int UnitCount = 16;
     private const float GridStepCm = 900f;
     private const float GridOriginCm = 2000f;
 
+    // 一行一个单一职责演示:图标 / 九宫格名字饰板 / 三宫格绶带 / css 条样式。
+    private static readonly string[] RowTemplateIds =
+    {
+        "hud_css_styling_unit_icon",
+        "hud_css_styling_unit_plaque",
+        "hud_css_styling_unit_ribbon",
+        "hud_css_styling_unit_bars",
+    };
+
     // 16 个单位各自的当前血量:展示不同填充比例,验收断言按此对账。
-    private static readonly int[] UnitHealth = { 95, 72, 48, 12, 88, 33, 66, 51, 20, 77, 90, 41, 59, 8, 84, 64 };
+    private static readonly int[] UnitHealth = { 50, 60, 70, 80, 55, 65, 75, 85, 95, 33, 20, 8, 88, 66, 41, 59 };
 
     public void OnLoad(IModContext context)
     {
@@ -76,7 +84,7 @@ public sealed class HudCssStylingModEntry : IMod
             requests[i] = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = UnitTemplateId,
+                TemplateId = RowTemplateIds[i / 4],
                 MapId = mapId,
                 WorldPositionCm = Fix64Vec2.FromFloat(x, y),
                 HasWorldPosition = 1,
