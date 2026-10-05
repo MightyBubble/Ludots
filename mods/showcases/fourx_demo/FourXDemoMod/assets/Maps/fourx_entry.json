@@ -87,5 +87,11 @@
       "TeamId": 4,
       "RepresentativeInstanceId": "fourx-nomad-caravan"
     }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.Fourx.GovernorCard.Open",
+      "scopeInstanceId": "fourx-governor"
+    }
   ]
 }

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "panel.fourx.governorCard",
+    "graph": "Graph.Fourx.GovernorCard",
+    "pins": [
+      { "name": "count", "key": "panel.fourx.governor.count", "mode": "realtime", "default": 0 }
+    ],
+    "collections": [
+      {
+        "name": "governor",
+        "source": "selfGraph",
+        "collectionKey": "panel.fourx.governor.entity",
+        "template": "panel.entityinfo.cardRow"
+      }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "fourx-governor-card-title", "text": "总督档案" },
+        {
+          "type": "list",
+          "class": "fourx-governor-card-list",
+          "bind": "governor",
+          "viewportHeight": 56,
+          "itemExtent": 56
+        }
+      ]
+    }
+  }
+]

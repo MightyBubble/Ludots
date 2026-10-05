@@ -1,0 +1,31 @@
+[
+  {
+    "id": "Graph.EntityInfo.CardRow",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "hpMax", "op": "LoadSelfAttribute", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "hpMax" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "health",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "entityinfo.card.health"
+      },
+      {
+        "id": "healthMax",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hpMax",
+        "key": "entityinfo.card.healthMax"
+      }
+    ]
+  }
+]
