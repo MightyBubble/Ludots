@@ -50,6 +50,31 @@ namespace Ludots.Core.Presentation.Hud
                 ImageSliceLeft = item.ImageSliceLeft,
             };
         }
+
+        /// <summary>
+        /// 字段级比较。装饰块含 float 字段,ValueType.Equals 会落入反射逐字段装箱路径
+        /// (每调用约 1KB 分配),而内容相等判定在每帧每条目上运行——必须走本方法。
+        /// </summary>
+        public bool ContentEquals(in ScreenHudDecoration other)
+        {
+            return CornerRadius == other.CornerRadius &&
+                   BorderWidth == other.BorderWidth &&
+                   Padding == other.Padding &&
+                   BorderColor.Equals(other.BorderColor) &&
+                   FillGradientTo.Equals(other.FillGradientTo) &&
+                   BackgroundGradientTo.Equals(other.BackgroundGradientTo) &&
+                   BoxBackground.Equals(other.BoxBackground) &&
+                   StyleFlags == other.StyleFlags &&
+                   ClipShape == other.ClipShape &&
+                   ShadowColor.Equals(other.ShadowColor) &&
+                   ShadowOffsetX == other.ShadowOffsetX &&
+                   ShadowOffsetY == other.ShadowOffsetY &&
+                   ShadowBlur == other.ShadowBlur &&
+                   ImageSliceTop == other.ImageSliceTop &&
+                   ImageSliceRight == other.ImageSliceRight &&
+                   ImageSliceBottom == other.ImageSliceBottom &&
+                   ImageSliceLeft == other.ImageSliceLeft;
+        }
     }
 
     public struct ScreenHudBarItem

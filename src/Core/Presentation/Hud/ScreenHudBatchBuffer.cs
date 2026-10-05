@@ -1422,7 +1422,7 @@ namespace Ludots.Core.Presentation.Hud
                    left.Height == right.Height &&
                    left.Value0 == right.Value0 &&
                    left.Id0 == right.Id0 &&
-                   left.Decoration.Equals(right.Decoration);
+                   left.Decoration.ContentEquals(in right.Decoration);
         }
 
         private static bool TextEquals(in ScreenHudTextItem left, in ScreenHudTextItem right)
@@ -1451,7 +1451,7 @@ namespace Ludots.Core.Presentation.Hud
                    left.Id1 == right.Id1 &&
                    left.FontSize == right.FontSize &&
                    TextPacketEquals(in left.Text, in right.Text) &&
-                   left.Decoration.Equals(right.Decoration);
+                   left.Decoration.ContentEquals(in right.Decoration);
         }
 
         private static bool TextPacketEquals(in PresentationTextPacket left, in PresentationTextPacket right)

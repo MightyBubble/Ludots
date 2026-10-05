@@ -2890,6 +2890,9 @@ namespace Ludots.Presentation.Skia
 
         private readonly record struct FontCacheKey(string FamilyName, int FontSize, byte StyleFlags);
 
+        // 两个含 Decoration 成员的缓存键手写 Equals/GetHashCode:record 生成的默认实现
+        // 经 EqualityComparer<ScreenHudDecoration>.Default 落入 ValueType.Equals 的反射
+        // 装箱路径(装饰块含 float 字段),缓存查找在每帧每条目上运行。
         private readonly record struct BarSpriteCacheKey(
             int WidthPx,
             int HeightPx,
@@ -2897,13 +2900,61 @@ namespace Ludots.Presentation.Skia
             uint BackgroundColor,
             uint ForegroundColor,
             ScreenHudDecoration Decoration,
-            string? ImageSource);
+            string? ImageSource)
+        {
+            public bool Equals(BarSpriteCacheKey other)
+            {
+                return WidthPx == other.WidthPx &&
+                       HeightPx == other.HeightPx &&
+                       FillPx == other.FillPx &&
+                       BackgroundColor == other.BackgroundColor &&
+                       ForegroundColor == other.ForegroundColor &&
+                       Decoration.ContentEquals(other.Decoration) &&
+                       string.Equals(ImageSource, other.ImageSource, StringComparison.Ordinal);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = WidthPx;
+                    hash = (hash * 31) ^ HeightPx;
+                    hash = (hash * 31) ^ FillPx;
+                    hash = (hash * 31) ^ (int)BackgroundColor;
+                    hash = (hash * 31) ^ (int)ForegroundColor;
+                    hash = (hash * 31) ^ Decoration.GetHashCode();
+                    hash = (hash * 31) ^ (ImageSource?.GetHashCode(StringComparison.Ordinal) ?? 0);
+                    return hash;
+                }
+            }
+        }
 
         private readonly record struct TextLayoutCacheKey(string Text, int FontSize, byte StyleFlags);
 
         private readonly record struct TextBatchKey(string Text, int FontSize, uint ColorKey, byte StyleFlags);
 
-        private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey, ScreenHudDecoration Decoration);
+        private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey, ScreenHudDecoration Decoration)
+        {
+            public bool Equals(TextSpriteCacheKey other)
+            {
+                return FontSize == other.FontSize &&
+                       ColorKey == other.ColorKey &&
+                       string.Equals(Text, other.Text, StringComparison.Ordinal) &&
+                       Decoration.ContentEquals(other.Decoration);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Text?.GetHashCode(StringComparison.Ordinal) ?? 0;
+                    hash = (hash * 31) ^ FontSize;
+                    hash = (hash * 31) ^ (int)ColorKey;
+                    hash = (hash * 31) ^ Decoration.GetHashCode();
+                    return hash;
+                }
+            }
+        }
 
         private readonly record struct CachedTextRun(
             SKTextBlob? Blob,
