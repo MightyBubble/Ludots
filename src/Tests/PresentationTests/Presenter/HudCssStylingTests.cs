@@ -175,8 +175,8 @@ namespace Ludots.Tests.Presentation
             var worldHud = (WorldHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!;
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
-            // 每单位 6 元素:士气条/生命条/战况条/名字板/首都星/盾徽。
-            Assert.That(worldHud.Count, Is.EqualTo(96), "16 单位 × 6 元素");
+            // 每单位 7 元素:士气条/生命条/战况条/名字板/首都星/军旗(PNG)/盾徽。
+            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素");
 
             int richBars = 0;
             int nameplates = 0;
@@ -208,16 +208,23 @@ namespace Ludots.Tests.Presentation
             Assert.That(screenHud.Count, Is.GreaterThan(0), "投影后屏幕缓冲有内容");
 
             int capitalIcons = 0;
+            int rankBanners = 0;
             int shieldBadges = 0;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
                 if (item.Kind == WorldHudItemKind.Bar && item.Id0 > 0)
                 {
-                    if (item.Width < 20f)
+                    if (MathF.Abs(item.ScreenOffsetX) < 0.001f)
                     {
                         capitalIcons++;
-                        Assert.That(item.ScreenOffsetX, Is.EqualTo(0f).Within(0.001f), "首都星水平居中");
                         Assert.That(item.ScreenOffsetY, Is.EqualTo(-74f).Within(0.001f), "首都星居叠层顶");
+                    }
+                    else if (item.ScreenOffsetX < 0f)
+                    {
+                        rankBanners++;
+                        Assert.That(item.Width, Is.EqualTo(14f), "军旗宽 14");
+                        Assert.That(item.Height, Is.EqualTo(18f), "军旗高 18");
+                        Assert.That(item.ScreenOffsetY, Is.EqualTo(-75f).Within(0.001f), "军旗挂星标左侧");
                     }
                     else
                     {
@@ -228,7 +235,8 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(capitalIcons, Is.EqualTo(16), "16 个首都星图标(Id0=图片源串)");
+            Assert.That(capitalIcons, Is.EqualTo(16), "16 个首都星图标(SVG)");
+            Assert.That(rankBanners, Is.EqualTo(16), "16 面军旗(PNG 位图腿)");
             Assert.That(shieldBadges, Is.EqualTo(16), "16 个盾徽(盾形裁剪+金边)");
         }
 
@@ -394,7 +402,7 @@ namespace Ludots.Tests.Presentation
             var screenHud = (ScreenHudBatchBuffer)engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!;
 
             Assert.That(HudCssStylingModEntry.DiagQueued, Is.EqualTo(16), "mod 应入队 16 个单位");
-            Assert.That(worldHud.Count, Is.EqualTo(96), "16 单位 × 6 元素先落世界缓冲");
+            Assert.That(worldHud.Count, Is.EqualTo(112), "16 单位 × 7 元素先落世界缓冲");
 
             int bars = 0;
             int texts = 0;

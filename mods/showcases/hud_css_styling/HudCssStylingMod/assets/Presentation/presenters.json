@@ -3,6 +3,10 @@
     "id": "hud_css_styling_unit_root",
     "children": [
       {
+        "definitionId": "hud_css_styling_rank_banner",
+        "scopeTag": "structure"
+      },
+      {
         "definitionId": "hud_css_styling_morale_bar",
         "scopeTag": "structure"
       },
@@ -213,6 +217,22 @@
           "renderPath": "None",
           "mobility": "Movable",
           "css": "width: 20px; height: 20px; image: hud_css.icon.defense_shield; clip-path: shield; border: 1px solid rgba(255,215,0,0.8); translate: 26px -75px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_rank_banner",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 14px; height: 18px; image: hud_css.icon.rank_banner; translate: -26px -75px;"
         }
       }
     ]

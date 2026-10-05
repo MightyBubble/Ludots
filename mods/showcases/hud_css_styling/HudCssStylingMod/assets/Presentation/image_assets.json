@@ -10,5 +10,10 @@
     "kind": "Icon",
     "glyphFallback": "⛨",
     "path": "HudCssStylingMod:assets/Presentation/Icons/defense_shield.svg"
+  },
+  {
+    "id": "hud_css.icon.rank_banner",
+    "kind": "Icon",
+    "path": "HudCssStylingMod:assets/Presentation/Icons/rank_banner.png"
   }
 ]
