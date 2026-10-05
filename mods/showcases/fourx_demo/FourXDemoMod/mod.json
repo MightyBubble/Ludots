@@ -5,7 +5,7 @@
   "main": "bin/net9.0/FourXDemoMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0",
+    "EntityInfoPanelsMod": "^1.0.0"
   }
 }
-

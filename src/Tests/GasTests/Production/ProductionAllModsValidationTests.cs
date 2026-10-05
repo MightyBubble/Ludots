@@ -147,7 +147,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "FourXDemoMod",
-                    new[] { "LudotsCoreMod", "FourXDemoMod" },
+                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "FourXDemoMod" },
                     true))
                 .SetName("ProdModSmoke_FourXDemoMod");
 
