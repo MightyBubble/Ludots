@@ -186,7 +186,7 @@ namespace Ludots.Core.Presentation.Systems
                     for (int markerIndex = 0; markerIndex < markerWorkItems.Length; markerIndex++)
                     {
                         ref readonly PresenterDefinition.MinimapMarkerWorkItem work = ref markerWorkItems[markerIndex];
-                        if (!IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
+                        if (!PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
                         {
                             continue;
                         }
@@ -287,7 +287,7 @@ namespace Ludots.Core.Presentation.Systems
                     for (int markerIndex = 0; markerIndex < markerWorkItems.Length; markerIndex++)
                     {
                         ref readonly PresenterDefinition.MinimapMarkerWorkItem work = ref markerWorkItems[markerIndex];
-                        if (!IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
+                        if (!PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
                         {
                             continue;
                         }
@@ -567,11 +567,6 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsBehaviorActive(uint mask, int slotIndex)
-        {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
-        }
-
         private static bool IsMarkerVisible(
             int visibilityParamKey,
             bool hasIntParams,

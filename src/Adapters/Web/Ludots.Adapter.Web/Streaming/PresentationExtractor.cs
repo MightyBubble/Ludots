@@ -35,7 +35,10 @@ namespace Ludots.Adapter.Web.Streaming
             PrimitiveDrawBuffer? primitives = _engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             SkinnedVisualBatchBuffer? skinnedVisuals = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             GroundOverlayBuffer? groundOverlays = _engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
-            WorldHudBatchBuffer? worldHud = _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            // world→screen 投影发生在宿主侧（WorldHudToScreenSystem），客户端只消费 screenHud；
+            // worldHud 不上 wire，省去每帧整段序列化与传输。WriteWorldHud 仍被 wire 契约测试
+            // 用作 text packet 字节布局的锁定载体，编码能力保留。
+            WorldHudBatchBuffer? worldHud = null;
             ScreenHudBatchBuffer? screenHud = _engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             var worldHudStrings = _engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
             DebugDrawCommandBuffer? debugDraw = _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);

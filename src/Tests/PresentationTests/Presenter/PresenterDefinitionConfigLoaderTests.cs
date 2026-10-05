@@ -140,7 +140,6 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveMeshId: key => string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0,
                 resolveMaterialId: key => key switch
                 {
                     "knight_base" => 101,

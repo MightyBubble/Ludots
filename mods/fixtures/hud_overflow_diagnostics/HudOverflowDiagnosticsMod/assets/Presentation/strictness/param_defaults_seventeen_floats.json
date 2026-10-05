@@ -1,0 +1,105 @@
+[
+  {
+    "id": "overflow_param_defaults",
+    "paramDefaults": [
+      {
+        "paramKey": "overflow.test.float0",
+        "lane": "Float",
+        "floatValue": 0.0
+      },
+      {
+        "paramKey": "overflow.test.float1",
+        "lane": "Float",
+        "floatValue": 1.0
+      },
+      {
+        "paramKey": "overflow.test.float2",
+        "lane": "Float",
+        "floatValue": 2.0
+      },
+      {
+        "paramKey": "overflow.test.float3",
+        "lane": "Float",
+        "floatValue": 3.0
+      },
+      {
+        "paramKey": "overflow.test.float4",
+        "lane": "Float",
+        "floatValue": 4.0
+      },
+      {
+        "paramKey": "overflow.test.float5",
+        "lane": "Float",
+        "floatValue": 5.0
+      },
+      {
+        "paramKey": "overflow.test.float6",
+        "lane": "Float",
+        "floatValue": 6.0
+      },
+      {
+        "paramKey": "overflow.test.float7",
+        "lane": "Float",
+        "floatValue": 7.0
+      },
+      {
+        "paramKey": "overflow.test.float8",
+        "lane": "Float",
+        "floatValue": 8.0
+      },
+      {
+        "paramKey": "overflow.test.float9",
+        "lane": "Float",
+        "floatValue": 9.0
+      },
+      {
+        "paramKey": "overflow.test.float10",
+        "lane": "Float",
+        "floatValue": 10.0
+      },
+      {
+        "paramKey": "overflow.test.float11",
+        "lane": "Float",
+        "floatValue": 11.0
+      },
+      {
+        "paramKey": "overflow.test.float12",
+        "lane": "Float",
+        "floatValue": 12.0
+      },
+      {
+        "paramKey": "overflow.test.float13",
+        "lane": "Float",
+        "floatValue": 13.0
+      },
+      {
+        "paramKey": "overflow.test.float14",
+        "lane": "Float",
+        "floatValue": 14.0
+      },
+      {
+        "paramKey": "overflow.test.float15",
+        "lane": "Float",
+        "floatValue": 15.0
+      },
+      {
+        "paramKey": "overflow.test.float16",
+        "lane": "Float",
+        "floatValue": 16.0
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "overflow_mesh",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  }
+]

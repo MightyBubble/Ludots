@@ -1,0 +1,9 @@
+[
+  {
+    "id": "strict_anchor_short",
+    "behaviors": [
+      { "slot": "body", "kind": "AssetBinding", "activeByDefault": true, "assetBinding": { "assetKind": "Mesh", "assetId": "ref_mesh_cube", "renderPath": "StaticMesh", "mobility": "Static" } }
+    ],
+    "anchor": { "offset": [0, 1.5] }
+  }
+]

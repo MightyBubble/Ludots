@@ -31,10 +31,34 @@ namespace Ludots.Core.Presentation.Config
             _count = Math.Max(_count, catalog.TokenCount + 1);
         }
 
+        private readonly Dictionary<string, int> _idBySource = new(System.StringComparer.Ordinal);
+
+        /// <summary>同一源串只登记一次(图标源等重复解析场景)。</summary>
+        public int GetOrRegisterSource(string source)
+        {
+            if (_idBySource.TryGetValue(source, out int id))
+            {
+                return id;
+            }
+
+            id = Register(source);
+            if (id > 0)
+            {
+                _idBySource[source] = id;
+            }
+
+            return id;
+        }
+
         public int Register(string text)
         {
             if (text == null) throw new ArgumentNullException(nameof(text));
-            if (_count >= _table.Length) return 0;
+            if (_count >= _table.Length)
+            {
+                throw new InvalidOperationException(
+                    $"WorldHudStringTable runtime string capacity {_table.Length} exhausted; " +
+                    "raise the runtimeStringCapacity provided at construction.");
+            }
             int id = _count++;
             _table[id] = text;
             return id;

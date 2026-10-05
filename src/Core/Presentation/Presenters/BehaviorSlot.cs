@@ -100,6 +100,9 @@ namespace Ludots.Core.Presentation.Presenters
         public int SecondaryValueParamKey;
         public int FontSize;
 
+        /// <summary>有限 CSS 样式(css 字段加载期解析)。空样式沿用 FontSize 等既有字段。</summary>
+        public WorldHudStyle HudStyle;
+
         /// <summary>
         /// 句子孔。有内容时 mode 与两个数值键必须缺席：数字仍由 AttributeBinding 写入 paramKey，
         /// 名字孔只声明 entityInfoTitle。空数组不是旧的两格数值句。
@@ -184,6 +187,7 @@ namespace Ludots.Core.Presentation.Presenters
             MaterialCustomData = MaterialCustomDataBinding.Empty;
             HasMaxLod = false;
             MaxLod = LODLevel.Low;
+            HudStyle = default;
         }
 
         public AssetKind AssetKind;
@@ -204,6 +208,9 @@ namespace Ludots.Core.Presentation.Presenters
         public string SurfaceLayerKey;
         public int SortId;
         public MaterialCustomDataBinding MaterialCustomData;
+
+        /// <summary>有限 CSS 样式(css 字段加载期解析);仅 assetKind=WorldHud 的血条消费,其余 kind 声明 css 会被加载器拒绝。</summary>
+        public WorldHudStyle HudStyle;
         public bool HasMaxLod;
         public LODLevel MaxLod;
     }

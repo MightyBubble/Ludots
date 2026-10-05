@@ -1,0 +1,114 @@
+[
+  {
+    "id": "hud_css_styling_unit_icon",
+    "components": {
+      "Name": {
+        "Value": "HudCssUnit"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 64
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "hud_css_styling_unit_plaque",
+    "components": {
+      "Name": {
+        "Value": "HudCssUnit"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 64
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "hud_css_styling_unit_ribbon",
+    "components": {
+      "Name": {
+        "Value": "HudCssUnit"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 64
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "hud_css_styling_unit_bars",
+    "components": {
+      "Name": {
+        "Value": "HudCssUnit"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 64
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  }
+]

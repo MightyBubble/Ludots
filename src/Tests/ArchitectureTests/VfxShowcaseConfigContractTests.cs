@@ -310,7 +310,6 @@ namespace Ludots.Tests.Architecture
                     pipeline,
                     definitions,
                     resolveAttributeName: AttributeRegistry.GetId,
-                    resolveMeshId: meshes.GetId,
                     resolveTextTokenId: textCatalog.GetTokenId,
                     resolveEntityTemplateKey: mapLoader.EntityTemplateKeys.GetId,
                     resolveEffectTemplateId: _ => 0,

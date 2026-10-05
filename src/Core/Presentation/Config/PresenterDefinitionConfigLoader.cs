@@ -25,7 +25,6 @@ namespace Ludots.Core.Presentation.Config
         private readonly ConfigPipeline _configs;
         private readonly PresenterDefinitionRegistry _registry;
         private readonly Func<string, int> _resolveAttributeName;
-        private readonly Func<string, int> _resolveMeshId;
         private readonly Func<string, int> _resolveTextTokenId;
         private readonly Func<string, int> _resolveEntityTemplateKey;
         private readonly Func<string, int> _resolveEffectTemplateId;
@@ -45,7 +44,6 @@ namespace Ludots.Core.Presentation.Config
             ConfigPipeline configs,
             PresenterDefinitionRegistry registry,
             Func<string, int> resolveAttributeName = null,
-            Func<string, int> resolveMeshId = null,
             Func<string, int> resolveTextTokenId = null,
             Func<string, int> resolveEntityTemplateKey = null,
             Func<string, int> resolveEffectTemplateId = null,
@@ -64,7 +62,6 @@ namespace Ludots.Core.Presentation.Config
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
-            _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
             _resolveEntityTemplateKey = resolveEntityTemplateKey ?? (_ => 0);
             _resolveEffectTemplateId = resolveEffectTemplateId ?? (_ => 0);
@@ -828,7 +825,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                if (!TryFindDefinitionById(parsedByKey, children[i].DefinitionId, out PresenterDefinition childDefinition) ||
+                if (!TryGetDefinitionById(parsedByKey, children[i].DefinitionId, out PresenterDefinition childDefinition) ||
                     childDefinition.PositionOffset == Vector3.Zero)
                 {
                     continue;
@@ -837,24 +834,6 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException(
                     $"Presenter '{key}' children[{i}] declares overrides.transform.localPosition while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local position source. Remove one of them.");
             }
-        }
-
-        private static bool TryFindDefinitionById(
-            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
-            int definitionId,
-            out PresenterDefinition definition)
-        {
-            foreach ((string _, PresenterDefinition parsedDefinition) in parsedByKey)
-            {
-                if (parsedDefinition.Id == definitionId)
-                {
-                    definition = parsedDefinition;
-                    return true;
-                }
-            }
-
-            definition = null!;
-            return false;
         }
 
         private static void RejectRemovedFields(JsonNode node, string key)
@@ -1027,13 +1006,20 @@ namespace Ludots.Core.Presentation.Config
             "assetIdParamKey", "assetSwapParamKey", "assetSwapTable",
             "visibilityParamKey", "surfaceLayerKey", "sortId",
             "materialCustomData", "maxLod",
-            "grounding", "groundingOffset",
+            "grounding", "groundingOffset", "css",
         };
 
         private static readonly string[] WorldTextFields =
         {
-            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize", "args",
+            "textToken", "mode", "valueParamKey", "secondaryValueParamKey", "fontSize", "args", "css",
         };
+
+        private static WorldHudStyle ParseOptionalHudStyle(JsonNode? node, string context)
+        {
+            return node is null
+                ? default
+                : WorldHudStyleCss.Parse(node.GetValue<string>(), context);
+        }
 
         private static readonly string[] WorldTextArgFields =
         {
@@ -2835,27 +2821,12 @@ namespace Ludots.Core.Presentation.Config
                         $"Presenter '{key}' rule[{i}] references an unknown presenter definition.");
                 }
 
-                if (!ContainsDefinitionId(parsedByKey, referencedDefinitionId))
+                if (!TryGetDefinitionById(parsedByKey, referencedDefinitionId, out _))
                 {
                     throw new InvalidOperationException(
                         $"Presenter '{key}' rule[{i}] references definition id={referencedDefinitionId} that failed to load.");
                 }
             }
-        }
-
-        private static bool ContainsDefinitionId(
-            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
-            int definitionId)
-        {
-            foreach ((string _, PresenterDefinition parsedDefinition) in parsedByKey)
-            {
-                if (parsedDefinition.Id == definitionId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private BehaviorSlot[] ParseBehaviors(JsonNode? node, string ownerKey, string pathBase, string arrayFieldName)
@@ -3154,6 +3125,7 @@ namespace Ludots.Core.Presentation.Config
                     Mode = WorldHudValueMode.None,
                     FontSize = fontSize,
                     Args = ParseWorldTextArgs(obj["args"], path, tokenId),
+                    HudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css"),
                 };
             }
 
@@ -3164,6 +3136,7 @@ namespace Ludots.Core.Presentation.Config
                 ValueParamKey = ParseOptionalParamKey(obj["valueParamKey"], $"{path}.valueParamKey"),
                 SecondaryValueParamKey = ParseOptionalParamKey(obj["secondaryValueParamKey"], $"{path}.secondaryValueParamKey"),
                 FontSize = fontSize,
+                HudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css"),
             };
         }
 
@@ -3445,6 +3418,14 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("WorldHud AssetBinding must not declare assetId, assetIdParamKey, assetSwapParamKey, or assetSwapTable.");
             }
 
+            if (obj["css"] != null && assetKind != AssetKind.WorldHud)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.css styles the WorldHud bar lane; assetKind '{assetKind}' must not declare css. Text styling uses worldText.css.");
+            }
+
+            WorldHudStyle hudStyle = ParseOptionalHudStyle(obj["css"], $"{path}.css");
+
             AssetSwapEntry[] assetSwapTable = assetKind == AssetKind.WorldHud
                 ? Array.Empty<AssetSwapEntry>()
                 : ParseAssetSwapTable(assetKind, obj["assetSwapTable"], $"{path}.assetSwapTable");
@@ -3483,6 +3464,7 @@ namespace Ludots.Core.Presentation.Config
                 SurfaceLayerKey = surfaceLayerKey,
                 SortId = sortId,
                 MaterialCustomData = materialCustomData,
+                HudStyle = hudStyle,
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
             };
@@ -4656,56 +4638,79 @@ namespace Ludots.Core.Presentation.Config
 
         private static Vector3 ParseVector3(JsonNode? node)
         {
-            if (node is JsonArray arr && arr.Count >= 3)
+            if (node is null)
             {
-                return new Vector3(
-                    arr[0]?.GetValue<float>() ?? 0f,
-                    arr[1]?.GetValue<float>() ?? 0f,
-                    arr[2]?.GetValue<float>() ?? 0f);
+                return Vector3.Zero;
             }
 
-            return Vector3.Zero;
+            if (node is not JsonArray arr || arr.Count != 3)
+            {
+                throw new InvalidOperationException($"'{node.GetPath()}' requires exactly 3 numeric components.");
+            }
+
+            return new Vector3(
+                ParseFiniteFloat(arr[0], node),
+                ParseFiniteFloat(arr[1], node),
+                ParseFiniteFloat(arr[2], node));
         }
 
         private static Vector3 ParseVector3OrDefault(JsonNode? node, Vector3 defaultValue)
         {
-            if (node is JsonArray arr && arr.Count >= 3)
-            {
-                return new Vector3(
-                    arr[0]?.GetValue<float>() ?? defaultValue.X,
-                    arr[1]?.GetValue<float>() ?? defaultValue.Y,
-                    arr[2]?.GetValue<float>() ?? defaultValue.Z);
-            }
-
-            return defaultValue;
+            return node is null ? defaultValue : ParseVector3(node);
         }
 
         private static Quaternion ParseQuaternion(JsonNode? node)
         {
-            if (node is JsonArray arr && arr.Count >= 4)
+            if (node is null)
             {
-                return new Quaternion(
-                    arr[0]?.GetValue<float>() ?? 0f,
-                    arr[1]?.GetValue<float>() ?? 0f,
-                    arr[2]?.GetValue<float>() ?? 0f,
-                    arr[3]?.GetValue<float>() ?? 1f);
+                return Quaternion.Identity;
             }
 
-            return Quaternion.Identity;
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"'{node.GetPath()}' requires exactly 4 numeric components.");
+            }
+
+            return new Quaternion(
+                ParseFiniteFloat(arr[0], node),
+                ParseFiniteFloat(arr[1], node),
+                ParseFiniteFloat(arr[2], node),
+                ParseFiniteFloat(arr[3], node));
         }
 
         private static Vector4 ParseVector4(JsonNode? node)
         {
-            if (node is JsonArray arr && arr.Count >= 4)
+            if (node is null)
             {
-                return new Vector4(
-                    arr[0]?.GetValue<float>() ?? 0f,
-                    arr[1]?.GetValue<float>() ?? 0f,
-                    arr[2]?.GetValue<float>() ?? 0f,
-                    arr[3]?.GetValue<float>() ?? 0f);
+                return Vector4.Zero;
             }
 
-            return Vector4.Zero;
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"'{node.GetPath()}' requires exactly 4 numeric components.");
+            }
+
+            return new Vector4(
+                ParseFiniteFloat(arr[0], node),
+                ParseFiniteFloat(arr[1], node),
+                ParseFiniteFloat(arr[2], node),
+                ParseFiniteFloat(arr[3], node));
+        }
+
+        private static float ParseFiniteFloat(JsonNode? node, JsonNode owner)
+        {
+            if (node is null)
+            {
+                throw new InvalidOperationException($"'{owner.GetPath()}' contains a null component; numeric components are required.");
+            }
+
+            float value = node.GetValue<float>();
+            if (!float.IsFinite(value))
+            {
+                throw new InvalidOperationException($"'{node.GetPath()}' contains a non-finite component.");
+            }
+
+            return value;
         }
 
         private static Vector4 ParseOptionalFiniteVector4(JsonNode? node, Vector4 defaultValue, string context)
@@ -4814,16 +4819,21 @@ namespace Ludots.Core.Presentation.Config
 
         private static Vector4 ParseColor(JsonNode? node)
         {
-            if (node is JsonArray arr && arr.Count >= 4)
+            if (node is null)
             {
-                return new Vector4(
-                    arr[0]?.GetValue<float>() ?? 1f,
-                    arr[1]?.GetValue<float>() ?? 1f,
-                    arr[2]?.GetValue<float>() ?? 1f,
-                    arr[3]?.GetValue<float>() ?? 1f);
+                return new Vector4(1f, 1f, 1f, 1f);
             }
 
-            return new Vector4(1f, 1f, 1f, 1f);
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"'{node.GetPath()}' requires exactly 4 numeric components (r, g, b, a).");
+            }
+
+            return new Vector4(
+                ParseFiniteFloat(arr[0], node),
+                ParseFiniteFloat(arr[1], node),
+                ParseFiniteFloat(arr[2], node),
+                ParseFiniteFloat(arr[3], node));
         }
 
         private static T ParseEnum<T>(string? s, T defaultValue) where T : struct, Enum

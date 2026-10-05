@@ -391,7 +391,8 @@
             0,
             2.5,
             0
-          ]
+          ],
+          "css": "width: 42px; height: 6px; color: #E04B3BFF; background: linear-gradient(to right, rgba(20,20,20,0.85), rgba(48,52,64,0.85)); translate: 0 -12px; border: 1px solid rgba(255,255,255,0.5); border-radius: 3px; padding: 1px; box-shadow: 1px 1px 2px rgba(0,0,0,0.6);"
         }
       }
     ]
@@ -405,7 +406,8 @@
         "activeByDefault": true,
         "worldText": {
           "textToken": "ref_text_damage",
-          "mode": "None"
+          "mode": "None",
+          "css": "font-size: 14px; color: #FFE9A8FF; translate: 0 -22px; opacity: 0.95; font-weight: bold; background-color: rgba(10,12,18,0.75); border-radius: 3px; padding: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,0.85);"
         }
       }
     ]
@@ -526,8 +528,7 @@
         "floatValue": 0
       }
     ]
-  }
-,
+  },
   {
     "id": "ref_anchor_offset_definition",
     "behaviors": [
@@ -540,9 +541,22 @@
           "assetId": "ref_mesh_cube",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localOffset": [0, 0, 0],
-          "localRotation": [0, 0, 0, 1],
-          "localScale": [1, 1, 1]
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ],
@@ -550,7 +564,11 @@
       "durationSeconds": 5
     },
     "anchor": {
-      "offset": [0, 1.5, 0]
+      "offset": [
+        0,
+        1.5,
+        0
+      ]
     }
   }
 ]

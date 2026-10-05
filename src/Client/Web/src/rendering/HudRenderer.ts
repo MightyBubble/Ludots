@@ -1,5 +1,46 @@
 import type { ScreenHudItem, ScreenOverlayItem, DebugLine, DebugCircle, DebugBox, PresentationTextPacket } from '../core/FrameDecoder';
 
+/** 九宫格/三宫格切片绘制:与 C# NineSliceBaker 同一几何合同,非法切片 fail-closed(整图不画)。 */
+function drawNineSlice(
+  ctx: CanvasRenderingContext2D,
+  img: CanvasImageSource,
+  dx: number, dy: number, dw: number, dh: number,
+  sliceTop: number, sliceRight: number, sliceBottom: number, sliceLeft: number,
+  sourceWidth: number, sourceHeight: number,
+): void {
+  if (sourceWidth <= 0.01 || sourceHeight <= 0.01 ||
+      sliceTop < 0 || sliceRight < 0 || sliceBottom < 0 || sliceLeft < 0 ||
+      sliceLeft + sliceRight >= sourceWidth || sliceTop + sliceBottom >= sourceHeight) {
+    return;
+  }
+  const dl = Math.min(sliceLeft, dw);
+  const dt = Math.min(sliceTop, dh);
+  const dr = Math.min(sliceRight, Math.max(0, dw - dl));
+  const db = Math.min(sliceBottom, Math.max(0, dh - dt));
+  const sl = sliceLeft, st = sliceTop, sr = sliceRight, sb = sliceBottom;
+  const scw = Math.max(0, sourceWidth - sl - sr);
+  const sch = Math.max(0, sourceHeight - st - sb);
+  const dcw = Math.max(0, dw - dl - dr);
+  const dch = Math.max(0, dh - dt - db);
+  const dxr = dx + dw - dr;
+  const dyb = dy + dh - db;
+  const patches: Array<{ s: [number, number, number, number]; d: [number, number, number, number] }> = [
+    { s: [0, 0, sl, st], d: [dx, dy, dl, dt] },
+    { s: [sl, 0, scw, st], d: [dx + dl, dy, dcw, dt] },
+    { s: [sourceWidth - sr, 0, sr, st], d: [dxr, dy, dr, dt] },
+    { s: [0, st, sl, sch], d: [dx, dy + dt, dl, dch] },
+    { s: [sl, st, scw, sch], d: [dx + dl, dy + dt, dcw, dch] },
+    { s: [sourceWidth - sr, st, sr, sch], d: [dxr, dy + dt, dr, dch] },
+    { s: [0, sourceHeight - sb, sl, sb], d: [dx, dyb, dl, db] },
+    { s: [sl, sourceHeight - sb, scw, sb], d: [dx + dl, dyb, dcw, db] },
+    { s: [sourceWidth - sr, sourceHeight - sb, sr, sb], d: [dxr, dyb, dr, db] },
+  ];
+  for (const p of patches) {
+    if (p.s[2] <= 0.01 || p.s[3] <= 0.01 || p.d[2] <= 0.01 || p.d[3] <= 0.01) continue;
+    ctx.drawImage(img, p.s[0], p.s[1], p.s[2], p.s[3], p.d[0], p.d[1], p.d[2], p.d[3]);
+  }
+}
+
 export class HudRenderer {
   private readonly _canvas: HTMLCanvasElement;
   private readonly _ctx: CanvasRenderingContext2D;
@@ -25,24 +66,110 @@ export class HudRenderer {
       const HUD_BAR = 1;
       const HUD_TEXT = 2;
 
-      if (item.kind === HUD_BAR) {
+      const deco = item.deco;
+      if (item.kind === HUD_BAR && item.text) {
+        const img = this.obtainImage(item.text);
+        if (img.complete && img.naturalWidth > 0) {
+          const ix = Math.round(item.sx);
+          const iy = Math.round(item.sy);
+          const iw = Math.round(item.width);
+          const ih = Math.round(item.height);
+          const st = deco ? deco.imageSliceTop : 0;
+          const sr = deco ? deco.imageSliceRight : 0;
+          const sb = deco ? deco.imageSliceBottom : 0;
+          const sl = deco ? deco.imageSliceLeft : 0;
+          if (st > 0 || sr > 0 || sb > 0 || sl > 0) {
+            drawNineSlice(ctx, img, ix, iy, iw, ih, st, sr, sb, sl, img.naturalWidth, img.naturalHeight);
+          } else {
+            ctx.drawImage(img, ix, iy, iw, ih);
+          }
+        }
+      } else if (item.kind === HUD_BAR) {
         const x = Math.round(item.sx);
         const y = Math.round(item.sy);
         const w = Math.round(item.width);
         const h = Math.round(item.height);
+        const pad = deco ? deco.padding : 0;
+        const ix = x + pad, iy = y + pad, iw = Math.max(1, w - 2 * pad), ih = Math.max(1, h - 2 * pad);
+        const radius = deco ? deco.radius : 0;
 
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = this.rgba(item.c1r, item.c1g, item.c1b, item.c1a);
-        ctx.fillRect(x, y, Math.round(w * item.v0), h);
-        ctx.strokeStyle = 'black';
-        ctx.strokeRect(x, y, w, h);
+        if (deco && deco.shadowColor && deco.shadowBlur >= 0) {
+          ctx.save();
+          ctx.shadowColor = this.rgba(...deco.shadowColor);
+          ctx.shadowBlur = deco.shadowBlur;
+          ctx.shadowOffsetX = deco.shadowOffsetX;
+          ctx.shadowOffsetY = deco.shadowOffsetY;
+          ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, Math.max(0.01, item.c0a));
+          this.fillRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
+          item.c0r, item.c0g, item.c0b, item.c0a, deco?.backgroundGradientTo);
+        this.fillRounded(ctx, ix, iy, iw, ih, radius, deco?.clipShape ?? 0);
+
+        const fillW = Math.round(iw * item.v0);
+        if (fillW > 0) {
+          ctx.save();
+          ctx.beginPath();
+          this.roundedPath(ctx, ix, iy, iw, ih, radius, deco?.clipShape ?? 0);
+          ctx.clip();
+          ctx.fillStyle = this.gradientOrColor(ctx, ix, ix + iw,
+            item.c1r, item.c1g, item.c1b, item.c1a, deco?.fillGradientTo);
+          ctx.fillRect(ix, iy, fillW, ih);
+          ctx.restore();
+        }
+
+        if (deco && deco.borderWidth > 0) {
+          ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
+          ctx.lineWidth = deco.borderWidth;
+          this.strokeRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
+          ctx.lineWidth = 1;
+        } else {
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 1;
+          this.strokeRounded(ctx, x, y, w, h, radius, deco?.clipShape ?? 0);
+        }
       } else if (item.kind === HUD_TEXT) {
         const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
-        ctx.font = `${fontSize}px monospace`;
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+        const bold = deco?.bold ? 'bold ' : '';
+        const italic = deco?.italic ? 'italic ' : '';
+        ctx.font = `${italic}${bold}${fontSize}px monospace`;
         const text = this.resolveHudText(item);
+        const centered = deco?.textAlignCenter === true;
+        ctx.textAlign = centered ? 'center' : 'left';
+
+        if (deco && deco.boxBackground) {
+          const pad = deco.padding + deco.borderWidth;
+          const textW = ctx.measureText(text).width;
+          const boxX = (centered ? item.sx - textW / 2 : item.sx) - pad;
+          const boxY = item.sy - pad;
+          const boxW = textW + 2 * pad;
+          const boxH = fontSize * 1.5 + 2 * pad;
+          ctx.fillStyle = this.rgba(...deco.boxBackground);
+          this.fillRounded(ctx, boxX, boxY, boxW, boxH, deco.radius, deco.clipShape ?? 0);
+          if (deco.borderWidth > 0) {
+            ctx.strokeStyle = this.rgba(...(deco.borderColor ?? [0, 0, 0, 1]));
+            ctx.lineWidth = deco.borderWidth;
+            this.strokeRounded(ctx, boxX, boxY, boxW, boxH, deco.radius, deco.clipShape ?? 0);
+            ctx.lineWidth = 1;
+          }
+        }
+
+        if (deco && deco.shadowColor) {
+          ctx.save();
+          ctx.shadowColor = this.rgba(...deco.shadowColor);
+          ctx.shadowBlur = deco.shadowBlur;
+          ctx.shadowOffsetX = deco.shadowOffsetX;
+          ctx.shadowOffsetY = deco.shadowOffsetY;
+          ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+          ctx.fillText(text, item.sx, item.sy + fontSize);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
         ctx.fillText(text, item.sx, item.sy + fontSize);
+        ctx.textAlign = 'left';
       }
     }
   }
@@ -115,6 +242,70 @@ export class HudRenderer {
         }
       }
     }
+  }
+
+  private _imageCache = new Map<string, HTMLImageElement>();
+
+  private obtainImage(src: string): HTMLImageElement {
+    let img = this._imageCache.get(src);
+    if (!img) {
+      img = new Image();
+      img.src = src;
+      this._imageCache.set(src, img);
+    }
+    return img;
+  }
+
+  /** css clip-path 预设的归一化顶点(与 Skia 端 BuildItemPath 同一合同)。 */
+  private static readonly CLIP_POINTS: Record<number, number[]> = {
+    1: [0, 0, 1, 0, 1, 0.62, 0.5, 1, 0, 0.62],
+    2: [0.5, 0, 1, 0.5, 0.5, 1, 0, 0.5],
+    3: [0, 0, 1, 0, 1, 0.78, 0.5, 0.55, 0, 0.78],
+    4: [0.12, 0, 1, 0, 0.88, 1, 0, 1],
+    5: [0, 0, 1, 0, 1, 0.72, 0.5, 1, 0, 0.72],
+  };
+
+  private roundedPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
+    ctx.beginPath();
+    const points = HudRenderer.CLIP_POINTS[clipShape];
+    if (points) {
+      ctx.moveTo(x + points[0] * w, y + points[1] * h);
+      for (let i = 2; i < points.length; i += 2) {
+        ctx.lineTo(x + points[i] * w, y + points[i + 1] * h);
+      }
+      ctx.closePath();
+      return;
+    }
+    if (r > 0.5 && ctx.roundRect) {
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+  }
+
+  private fillRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
+    this.roundedPath(ctx, x, y, w, h, r, clipShape);
+    ctx.fill();
+  }
+
+  private strokeRounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, clipShape = 0): void {
+    this.roundedPath(ctx, x, y, w, h, r, clipShape);
+    ctx.stroke();
+  }
+
+  private gradientOrColor(
+    ctx: CanvasRenderingContext2D,
+    x0: number, x1: number,
+    r: number, g: number, b: number, a: number,
+    to?: [number, number, number, number],
+  ): string | CanvasGradient {
+    if (to) {
+      const grad = ctx.createLinearGradient(x0, 0, x1, 0);
+      grad.addColorStop(0, this.rgba(r, g, b, a));
+      grad.addColorStop(1, this.rgba(...to));
+      return grad;
+    }
+    return this.rgba(r, g, b, a);
   }
 
   private rgba(r: number, g: number, b: number, a: number): string {

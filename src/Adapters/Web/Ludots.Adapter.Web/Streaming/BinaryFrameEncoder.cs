@@ -105,11 +105,7 @@ namespace Ludots.Adapter.Web.Streaming
                 return;
             }
 
-            if (count > ushort.MaxValue)
-            {
-                throw new InvalidOperationException(
-                    $"Web primitive wire section contains {count} static/skinned visuals, exceeding protocol capacity {ushort.MaxValue}.");
-            }
+            ThrowIfSectionCountExceedsWireCapacity("primitives (static/skinned visuals)", count);
 
             int itemBytes = count * WirePrimitiveDrawItem.SizeInBytes;
             WriteSectionHeader(FrameProtocol.SectionPrimitives, (ushort)count, itemBytes);
@@ -181,6 +177,7 @@ namespace Ludots.Adapter.Web.Streaming
             var span = buf.GetSpan();
             int count = span.Length;
             int itemBytes = count * WireGroundOverlayItem.SizeInBytes;
+            ThrowIfSectionCountExceedsWireCapacity("ground overlays", count);
             WriteSectionHeader(FrameProtocol.SectionGroundOverlays, (ushort)count, itemBytes);
             EnsureCapacity(itemBytes);
 
@@ -208,6 +205,7 @@ namespace Ludots.Adapter.Web.Streaming
             var span = buf.GetSpan();
             int count = span.Length;
             int itemBytes = count * WireWorldHudItem.SizeInBytes;
+            ThrowIfSectionCountExceedsWireCapacity("world hud items", count);
             WriteSectionHeader(FrameProtocol.SectionWorldHud, (ushort)count, itemBytes);
             EnsureCapacity(itemBytes);
 
@@ -236,13 +234,14 @@ namespace Ludots.Adapter.Web.Streaming
             var span = buf.GetSpan();
             int count = span.Length;
             int startPos = _pos;
+            ThrowIfSectionCountExceedsWireCapacity("screen hud items", count);
             WriteSectionHeader(FrameProtocol.SectionScreenHud, (ushort)count, 0);
 
             int maxStringId = 0;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var item = ref span[i];
-                EnsureCapacity(WireWorldHudItem.SizeInBytes);
+                EnsureCapacity(WireWorldHudItem.SizeInBytesWithDecoration);
                 _buffer[_pos++] = (byte)item.Kind;
                 WriteFloat(item.ScreenX); WriteFloat(item.ScreenY); WriteFloat(0f);
                 WriteFloat(item.Color0.X); WriteFloat(item.Color0.Y); WriteFloat(item.Color0.Z); WriteFloat(item.Color0.W);
@@ -255,6 +254,7 @@ namespace Ludots.Adapter.Web.Streaming
                 WriteInt32(item.Id1);
                 WriteInt32(item.FontSize);
                 WriteTextPacket(in item.Text);
+                WriteDecoration(item.Decoration);
                 if (item.Id0 > maxStringId)
                 {
                     maxStringId = item.Id0;
@@ -276,7 +276,8 @@ namespace Ludots.Adapter.Web.Streaming
             {
                 int count = buf.Lines.Count;
                 int itemBytes = count * WireDebugLine.SizeInBytes;
-                WriteSectionHeader(FrameProtocol.SectionDebugLines, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                ThrowIfSectionCountExceedsWireCapacity("debug lines", count);
+                WriteSectionHeader(FrameProtocol.SectionDebugLines, (ushort)count, itemBytes);
                 EnsureCapacity(itemBytes);
 
                 for (int i = 0; i < count; i++)
@@ -296,7 +297,8 @@ namespace Ludots.Adapter.Web.Streaming
             {
                 int count = buf.Circles.Count;
                 int itemBytes = count * WireDebugCircle.SizeInBytes;
-                WriteSectionHeader(FrameProtocol.SectionDebugCircles, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                ThrowIfSectionCountExceedsWireCapacity("debug circles", count);
+                WriteSectionHeader(FrameProtocol.SectionDebugCircles, (ushort)count, itemBytes);
                 EnsureCapacity(itemBytes);
 
                 for (int i = 0; i < count; i++)
@@ -316,7 +318,8 @@ namespace Ludots.Adapter.Web.Streaming
             {
                 int count = buf.Boxes.Count;
                 int itemBytes = count * WireDebugBox.SizeInBytes;
-                WriteSectionHeader(FrameProtocol.SectionDebugBoxes, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                ThrowIfSectionCountExceedsWireCapacity("debug boxes", count);
+                WriteSectionHeader(FrameProtocol.SectionDebugBoxes, (ushort)count, itemBytes);
                 EnsureCapacity(itemBytes);
 
                 for (int i = 0; i < count; i++)
@@ -343,6 +346,7 @@ namespace Ludots.Adapter.Web.Streaming
             int count = span.Length;
 
             int startPos = _pos;
+            ThrowIfSectionCountExceedsWireCapacity("screen overlay items", count);
             WriteSectionHeader(FrameProtocol.SectionScreenOverlay, (ushort)count, 0);
 
             for (int i = 0; i < count; i++)
@@ -376,6 +380,44 @@ namespace Ludots.Adapter.Web.Streaming
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
+        }
+
+        private void WriteDecoration(in Ludots.Core.Presentation.Hud.ScreenHudDecoration decoration)
+        {
+            WriteFloat(decoration.CornerRadius);
+            WriteFloat(decoration.BorderWidth);
+            WriteFloat(decoration.Padding);
+            WriteFloat(decoration.BorderColor.X);
+            WriteFloat(decoration.BorderColor.Y);
+            WriteFloat(decoration.BorderColor.Z);
+            WriteFloat(decoration.BorderColor.W);
+            WriteFloat(decoration.FillGradientTo.X);
+            WriteFloat(decoration.FillGradientTo.Y);
+            WriteFloat(decoration.FillGradientTo.Z);
+            WriteFloat(decoration.FillGradientTo.W);
+            WriteFloat(decoration.BackgroundGradientTo.X);
+            WriteFloat(decoration.BackgroundGradientTo.Y);
+            WriteFloat(decoration.BackgroundGradientTo.Z);
+            WriteFloat(decoration.BackgroundGradientTo.W);
+            WriteFloat(decoration.BoxBackground.X);
+            WriteFloat(decoration.BoxBackground.Y);
+            WriteFloat(decoration.BoxBackground.Z);
+            WriteFloat(decoration.BoxBackground.W);
+            _buffer[_pos++] = decoration.StyleFlags;
+            _buffer[_pos++] = (byte)decoration.ClipShape;
+            _buffer[_pos++] = 0;
+            _buffer[_pos++] = 0;
+            WriteFloat(decoration.ShadowColor.X);
+            WriteFloat(decoration.ShadowColor.Y);
+            WriteFloat(decoration.ShadowColor.Z);
+            WriteFloat(decoration.ShadowColor.W);
+            WriteFloat(decoration.ShadowOffsetX);
+            WriteFloat(decoration.ShadowOffsetY);
+            WriteFloat(decoration.ShadowBlur);
+            WriteFloat(decoration.ImageSliceTop);
+            WriteFloat(decoration.ImageSliceRight);
+            WriteFloat(decoration.ImageSliceBottom);
+            WriteFloat(decoration.ImageSliceLeft);
         }
 
         private void WriteTextPacket(in PresentationTextPacket packet)
@@ -507,6 +549,19 @@ namespace Ludots.Adapter.Web.Streaming
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
+        }
+
+        /// <summary>
+        /// wire 的 section count 是 16 位：截断会让解码端按错误条数消费、从截断点起整帧错位，
+        /// 因此超容必须当场失败，而不是静默截断或依赖上游缓冲容量巧合兜底。
+        /// </summary>
+        private static void ThrowIfSectionCountExceedsWireCapacity(string sectionLabel, int count)
+        {
+            if (count > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Web wire section '{sectionLabel}' contains {count} items, exceeding protocol capacity {ushort.MaxValue}.");
+            }
         }
 
         private void WriteSectionHeader(byte sectionType, ushort itemCount, int byteLength)

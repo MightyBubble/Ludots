@@ -535,7 +535,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			ClipNodeBounds(canvas, sKRect, style);
 			if (HasRequestedImageSlice(style))
 			{
-				if (resource.RasterImage != null && TryBuildNineSlicePatches(resource.RasterImage.Width, resource.RasterImage.Height, 0f, 0f, sKRect, style.ImageSlice, out NineSlicePatchSet patches))
+				if (resource.RasterImage != null && TryBuildNineSlicePatches(resource.RasterImage.Width, resource.RasterImage.Height, 0f, 0f, sKRect, style.ImageSlice, out NineSliceBaker.PatchSet patches))
 				{
 					DrawNineSliceImage(canvas, resource.RasterImage, patches);
 				}
@@ -575,140 +575,19 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return imageSlice.Left > 0f || imageSlice.Top > 0f || imageSlice.Right > 0f || imageSlice.Bottom > 0f;
 	}
 
-	private static bool TryBuildNineSlicePatches(float sourceWidth, float sourceHeight, float sourceLeft, float sourceTop, SKRect destination, UiThickness slice, out NineSlicePatchSet patches)
+	private static bool TryBuildNineSlicePatches(float sourceWidth, float sourceHeight, float sourceLeft, float sourceTop, SKRect destination, UiThickness slice, out NineSliceBaker.PatchSet patches)
 	{
-		patches = default;
-		if (sourceWidth <= 0.01f || sourceHeight <= 0.01f ||
-			slice.Left < 0f || slice.Top < 0f || slice.Right < 0f || slice.Bottom < 0f ||
-			slice.Left + slice.Right >= sourceWidth || slice.Top + slice.Bottom >= sourceHeight)
-		{
-			return false;
-		}
-		float left = slice.Left;
-		float top = slice.Top;
-		float right = slice.Right;
-		float bottom = slice.Bottom;
-		float destinationLeft = Math.Min(left, destination.Width);
-		float destinationTop = Math.Min(top, destination.Height);
-		float destinationRight = Math.Min(right, Math.Max(0f, destination.Width - destinationLeft));
-		float destinationBottom = Math.Min(bottom, Math.Max(0f, destination.Height - destinationTop));
-		float sourceCenterWidth = Math.Max(0f, sourceWidth - left - right);
-		float sourceCenterHeight = Math.Max(0f, sourceHeight - top - bottom);
-		float destinationCenterWidth = Math.Max(0f, destination.Width - destinationLeft - destinationRight);
-		float destinationCenterHeight = Math.Max(0f, destination.Height - destinationTop - destinationBottom);
-		patches = new NineSlicePatchSet(
-			new NineSlicePatch(new SKRect(sourceLeft, sourceTop, sourceLeft + left, sourceTop + top), new SKRect(destination.Left, destination.Top, destination.Left + destinationLeft, destination.Top + destinationTop)),
-			new NineSlicePatch(new SKRect(sourceLeft + left, sourceTop, sourceLeft + left + sourceCenterWidth, sourceTop + top), new SKRect(destination.Left + destinationLeft, destination.Top, destination.Right - destinationRight, destination.Top + destinationTop)),
-			new NineSlicePatch(new SKRect(sourceLeft + sourceWidth - right, sourceTop, sourceLeft + sourceWidth, sourceTop + top), new SKRect(destination.Right - destinationRight, destination.Top, destination.Right, destination.Top + destinationTop)),
-			new NineSlicePatch(new SKRect(sourceLeft, sourceTop + top, sourceLeft + left, sourceTop + top + sourceCenterHeight), new SKRect(destination.Left, destination.Top + destinationTop, destination.Left + destinationLeft, destination.Bottom - destinationBottom)),
-			new NineSlicePatch(new SKRect(sourceLeft + left, sourceTop + top, sourceLeft + left + sourceCenterWidth, sourceTop + top + sourceCenterHeight), new SKRect(destination.Left + destinationLeft, destination.Top + destinationTop, destination.Left + destinationLeft + destinationCenterWidth, destination.Top + destinationTop + destinationCenterHeight)),
-			new NineSlicePatch(new SKRect(sourceLeft + sourceWidth - right, sourceTop + top, sourceLeft + sourceWidth, sourceTop + top + sourceCenterHeight), new SKRect(destination.Right - destinationRight, destination.Top + destinationTop, destination.Right, destination.Bottom - destinationBottom)),
-			new NineSlicePatch(new SKRect(sourceLeft, sourceTop + sourceHeight - bottom, sourceLeft + left, sourceTop + sourceHeight), new SKRect(destination.Left, destination.Bottom - destinationBottom, destination.Left + destinationLeft, destination.Bottom)),
-			new NineSlicePatch(new SKRect(sourceLeft + left, sourceTop + sourceHeight - bottom, sourceLeft + left + sourceCenterWidth, sourceTop + sourceHeight), new SKRect(destination.Left + destinationLeft, destination.Bottom - destinationBottom, destination.Right - destinationRight, destination.Bottom)),
-			new NineSlicePatch(new SKRect(sourceLeft + sourceWidth - right, sourceTop + sourceHeight - bottom, sourceLeft + sourceWidth, sourceTop + sourceHeight), new SKRect(destination.Right - destinationRight, destination.Bottom - destinationBottom, destination.Right, destination.Bottom)));
-		return true;
+		return NineSliceBaker.TryBuildPatches(sourceWidth, sourceHeight, sourceLeft, sourceTop, destination, slice.Top, slice.Right, slice.Bottom, slice.Left, out patches);
 	}
 
-	private static void DrawNineSliceImage(SKCanvas canvas, SKImage image, NineSlicePatchSet patches)
+	private static void DrawNineSliceImage(SKCanvas canvas, SKImage image, in NineSliceBaker.PatchSet patches)
 	{
-		using SKPaint paint = new SKPaint
-		{
-			IsAntialias = true,
-			FilterQuality = SKFilterQuality.High
-		};
-		for (int i = 0; i < patches.Count; i++)
-		{
-			NineSlicePatch patch = patches[i];
-			DrawImagePatch(canvas, image, patch.Source, patch.Destination, paint);
-		}
+		NineSliceBaker.DrawImage(canvas, image, in patches);
 	}
 
-	private static void DrawImagePatch(SKCanvas canvas, SKImage image, SKRect source, SKRect destination, SKPaint paint)
+	private static void DrawNineSlicePicture(SKCanvas canvas, SKPicture picture, in NineSliceBaker.PatchSet patches)
 	{
-		if (!(source.Width <= 0.01f) && !(source.Height <= 0.01f) && !(destination.Width <= 0.01f) && !(destination.Height <= 0.01f))
-		{
-			canvas.DrawImage(image, source, destination, paint);
-		}
-	}
-
-	private static void DrawNineSlicePicture(SKCanvas canvas, SKPicture picture, NineSlicePatchSet patches)
-	{
-		for (int i = 0; i < patches.Count; i++)
-		{
-			NineSlicePatch patch = patches[i];
-			DrawPicturePatch(canvas, picture, patch.Source, patch.Destination);
-		}
-	}
-
-	private static void DrawPicturePatch(SKCanvas canvas, SKPicture picture, SKRect source, SKRect destination)
-	{
-		if (source.Width <= 0.01f || source.Height <= 0.01f || destination.Width <= 0.01f || destination.Height <= 0.01f)
-		{
-			return;
-		}
-		int count = canvas.Save();
-		canvas.ClipRect(destination, SKClipOperation.Intersect, antialias: true);
-		float scaleX = destination.Width / source.Width;
-		float scaleY = destination.Height / source.Height;
-		canvas.Translate(destination.Left - source.Left * scaleX, destination.Top - source.Top * scaleY);
-		canvas.Scale(scaleX, scaleY);
-		canvas.DrawPicture(picture);
-		canvas.RestoreToCount(count);
-	}
-
-	private readonly struct NineSlicePatch
-	{
-		internal SKRect Source { get; }
-
-		internal SKRect Destination { get; }
-
-		internal NineSlicePatch(SKRect source, SKRect destination)
-		{
-			Source = source;
-			Destination = destination;
-		}
-	}
-
-	private readonly struct NineSlicePatchSet
-	{
-		private readonly NineSlicePatch _p0;
-		private readonly NineSlicePatch _p1;
-		private readonly NineSlicePatch _p2;
-		private readonly NineSlicePatch _p3;
-		private readonly NineSlicePatch _p4;
-		private readonly NineSlicePatch _p5;
-		private readonly NineSlicePatch _p6;
-		private readonly NineSlicePatch _p7;
-		private readonly NineSlicePatch _p8;
-
-		internal int Count => 9;
-
-		internal NineSlicePatchSet(NineSlicePatch p0, NineSlicePatch p1, NineSlicePatch p2, NineSlicePatch p3, NineSlicePatch p4, NineSlicePatch p5, NineSlicePatch p6, NineSlicePatch p7, NineSlicePatch p8)
-		{
-			_p0 = p0;
-			_p1 = p1;
-			_p2 = p2;
-			_p3 = p3;
-			_p4 = p4;
-			_p5 = p5;
-			_p6 = p6;
-			_p7 = p7;
-			_p8 = p8;
-		}
-
-		internal NineSlicePatch this[int index] => index switch
-		{
-			0 => _p0,
-			1 => _p1,
-			2 => _p2,
-			3 => _p3,
-			4 => _p4,
-			5 => _p5,
-			6 => _p6,
-			7 => _p7,
-			8 => _p8,
-			_ => throw new ArgumentOutOfRangeException(nameof(index)),
-		};
+		NineSliceBaker.DrawPicture(canvas, picture, in patches);
 	}
 
 	private static void DrawBackgroundImageLayer(SKCanvas canvas, SKRect rect, UiStyle style, string imageSource, int layerIndex)

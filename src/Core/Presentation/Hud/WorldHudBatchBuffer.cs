@@ -14,16 +14,10 @@ namespace Ludots.Core.Presentation.Hud
         private int _positionDirtyCount;
         private int _positionDeltaStamp = 1;
         private readonly Dictionary<int, int> _retainedIndexByStableId = new();
-        private readonly Dictionary<WorldHudOwnerGroupKey, int> _ownerGroupIndexByKey = new();
-        private WorldHudOwnerGroup[] _ownerGroups;
-        private int[] _groupedItemIndices;
-        private int[] _ownerGroupWriteOffsets;
         private int _count;
         private int _transientCount;
         private int _dirtyContentCount;
         private int _removedStableIdCount;
-        private int _ownerGroupCount;
-        private int _ownerGroupProjectionRevision = -1;
 
         public int Count => _count;
         public int Capacity => _buffer.Length;
@@ -54,9 +48,6 @@ namespace Ludots.Core.Presentation.Hud
             _removedStableIds = new int[capacity];
             _positionDirtyStableIds = new int[capacity];
             _positionDirtySlotStamps = new int[capacity];
-            _ownerGroups = new WorldHudOwnerGroup[Math.Min(capacity, 1024)];
-            _groupedItemIndices = new int[capacity];
-            _ownerGroupWriteOffsets = new int[Math.Min(capacity, 1024)];
         }
 
         /// <summary>
@@ -289,14 +280,6 @@ namespace Ludots.Core.Presentation.Hud
 
         public ReadOnlySpan<WorldHudItem> GetSpan() => new ReadOnlySpan<WorldHudItem>(_buffer, 0, _count);
 
-        public ReadOnlySpan<WorldHudOwnerGroup> GetOwnerGroupSpan()
-        {
-            EnsureOwnerGroups();
-            return new ReadOnlySpan<WorldHudOwnerGroup>(_ownerGroups, 0, _ownerGroupCount);
-        }
-
-        public ReadOnlySpan<int> GetGroupedItemIndexSpan() => new ReadOnlySpan<int>(_groupedItemIndices, 0, _count);
-
         public ref readonly WorldHudItem GetItemRef(int index) => ref _buffer[index];
 
         public bool TryGetByStableId(int stableId, out WorldHudItem item)
@@ -337,7 +320,25 @@ namespace Ludots.Core.Presentation.Hud
                    left.Id0 == right.Id0 &&
                    left.Id1 == right.Id1 &&
                    left.FontSize == right.FontSize &&
-                   TextPacketEquals(in left.Text, in right.Text);
+                   TextPacketEquals(in left.Text, in right.Text) &&
+                   DecorationEquals(in left, in right);
+        }
+
+        private static bool DecorationEquals(in WorldHudItem left, in WorldHudItem right)
+        {
+            return left.CornerRadius == right.CornerRadius &&
+                   left.BorderWidth == right.BorderWidth &&
+                   left.Padding == right.Padding &&
+                   left.BorderColor == right.BorderColor &&
+                   left.FillGradientTo == right.FillGradientTo &&
+                   left.BackgroundGradientTo == right.BackgroundGradientTo &&
+                   left.BoxBackground == right.BoxBackground &&
+                   left.StyleFlags == right.StyleFlags &&
+                   left.ClipShape == right.ClipShape &&
+                   left.ShadowColor == right.ShadowColor &&
+                   left.ShadowOffsetX == right.ShadowOffsetX &&
+                   left.ShadowOffsetY == right.ShadowOffsetY &&
+                   left.ShadowBlur == right.ShadowBlur;
         }
 
         private static bool WorldHudProjectionEquals(in WorldHudItem left, in WorldHudItem right)
@@ -348,7 +349,9 @@ namespace Ludots.Core.Presentation.Hud
                    left.WorldPosition == right.WorldPosition &&
                    left.Width == right.Width &&
                    left.Height == right.Height &&
-                   left.FontSize == right.FontSize;
+                   left.FontSize == right.FontSize &&
+                   left.ScreenOffsetX == right.ScreenOffsetX &&
+                   left.ScreenOffsetY == right.ScreenOffsetY;
         }
 
         private static bool TextPacketEquals(in PresentationTextPacket left, in PresentationTextPacket right)
@@ -375,10 +378,8 @@ namespace Ludots.Core.Presentation.Hud
             _count = 0;
             _transientCount = 0;
             DroppedSinceClear = 0;
+            DirtyContentDrops = 0;
             _retainedIndexByStableId.Clear();
-            _ownerGroupIndexByKey.Clear();
-            _ownerGroupCount = 0;
-            _ownerGroupProjectionRevision = -1;
             _dirtyContentCount = 0;
             _removedStableIdCount = 0;
             _positionDirtyCount = 0;
@@ -402,6 +403,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyContentCount >= _dirtyContentBuffer.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -422,110 +424,7 @@ namespace Ludots.Core.Presentation.Hud
         /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数（LUDOTS_HUD_TRACE 之外恒为 0 且无人读取）。</summary>
         public int RemovedIdDrops { get; private set; }
 
-        private void EnsureOwnerGroups()
-        {
-            if (_ownerGroupProjectionRevision == ProjectionRevision)
-            {
-                return;
-            }
-
-            _ownerGroupIndexByKey.Clear();
-            _ownerGroupCount = 0;
-            for (int i = 0; i < _count; i++)
-            {
-                ref readonly WorldHudItem item = ref _buffer[i];
-                var key = new WorldHudOwnerGroupKey(item.Owner, item.WorldPosition);
-                if (_ownerGroupIndexByKey.TryGetValue(key, out int groupIndex))
-                {
-                    _ownerGroups[groupIndex].Count++;
-                    continue;
-                }
-
-                EnsureOwnerGroupCapacity(_ownerGroupCount + 1);
-                _ownerGroups[_ownerGroupCount] = new WorldHudOwnerGroup(item.Owner, item.WorldPosition, 0, 1);
-                _ownerGroupIndexByKey[key] = _ownerGroupCount;
-                _ownerGroupCount++;
-            }
-
-            int start = 0;
-            for (int groupIndex = 0; groupIndex < _ownerGroupCount; groupIndex++)
-            {
-                ref WorldHudOwnerGroup group = ref _ownerGroups[groupIndex];
-                int count = group.Count;
-                group.Start = start;
-                _ownerGroupWriteOffsets[groupIndex] = start;
-                start += count;
-            }
-
-            for (int i = 0; i < _count; i++)
-            {
-                ref readonly WorldHudItem item = ref _buffer[i];
-                int groupIndex = _ownerGroupIndexByKey[new WorldHudOwnerGroupKey(item.Owner, item.WorldPosition)];
-                int writeIndex = _ownerGroupWriteOffsets[groupIndex]++;
-                _groupedItemIndices[writeIndex] = i;
-            }
-
-            _ownerGroupProjectionRevision = ProjectionRevision;
-        }
-
-        private void EnsureOwnerGroupCapacity(int required)
-        {
-            if (_ownerGroups.Length >= required)
-            {
-                return;
-            }
-
-            int next = _ownerGroups.Length == 0 ? 4 : _ownerGroups.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _ownerGroups, next);
-            Array.Resize(ref _ownerGroupWriteOffsets, next);
-        }
-    }
-
-    public struct WorldHudOwnerGroup
-    {
-        public Arch.Core.Entity Owner;
-        public System.Numerics.Vector3 WorldPosition;
-        public int Start;
-        public int Count;
-
-        public WorldHudOwnerGroup(Arch.Core.Entity owner, System.Numerics.Vector3 worldPosition, int start, int count)
-        {
-            Owner = owner;
-            WorldPosition = worldPosition;
-            Start = start;
-            Count = count;
-        }
-    }
-
-    internal readonly struct WorldHudOwnerGroupKey : IEquatable<WorldHudOwnerGroupKey>
-    {
-        private readonly Arch.Core.Entity _owner;
-        private readonly System.Numerics.Vector3 _worldPosition;
-
-        public WorldHudOwnerGroupKey(Arch.Core.Entity owner, System.Numerics.Vector3 worldPosition)
-        {
-            _owner = owner;
-            _worldPosition = worldPosition;
-        }
-
-        public bool Equals(WorldHudOwnerGroupKey other)
-        {
-            return _owner == other._owner && _worldPosition == other._worldPosition;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is WorldHudOwnerGroupKey other && Equals(other);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(_owner, _worldPosition);
-        }
+        /// <summary>取证计数：脏内容增量窗口容量溢出被丢弃的条数（与 RemovedIdDrops 同口径）。</summary>
+        public int DirtyContentDrops { get; private set; }
     }
 }

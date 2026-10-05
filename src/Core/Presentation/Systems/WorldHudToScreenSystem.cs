@@ -34,7 +34,6 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastWorldHudPositionRevision = -1;
         private int _lastWorldHudStructuralRevision = -1;
         private int _lastProjectionRevision = -1;
-        private int _lastCullVisibilityRevision = -1;
 
         private static readonly bool HudGateTraceEnabled =
             Environment.GetEnvironmentVariable("LUDOTS_HUD_GATE_TRACE") is "1" or "true" or "yes" or "on";
@@ -267,7 +266,6 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudRevision = worldHudRevision;
             _lastWorldHudProjectionRevision = worldHudProjectionRevision;
             _lastProjectionRevision = projectionRevision;
-            _lastCullVisibilityRevision = cullVisibilityRevision;
             _lastHeightmapRevision = heightmapRevision;
             _lastHeightmap = heightmap;
             _lastWorldHudPositionRevision = positionRevision;
@@ -281,7 +279,6 @@ namespace Ludots.Core.Presentation.Systems
             ReadOnlySpan<int> removedStableIds,
             ref long start)
         {
-            int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             int projectedItems = 0;
             for (int i = 0; i < removedStableIds.Length; i++)
             {
@@ -299,7 +296,6 @@ namespace Ludots.Core.Presentation.Systems
 
             _lastWorldHudRevision = _worldHud.ContentRevision;
             _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
-            _lastCullVisibilityRevision = cullVisibilityRevision;
             _worldHud.ClearContentDeltas();
             _timingDiagnostics?.ObserveWorldHudProjection(
                 (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency,
@@ -318,8 +314,9 @@ namespace Ludots.Core.Presentation.Systems
             ref int projectedBarIndex,
             ref int projectedTextIndex)
         {
-            float x = MathF.Round(screen.X - item.Width * 0.5f);
-            float y = MathF.Round(screen.Y);
+            // css translate 的屏幕像素偏移在投影后应用:与相机距离无关,NaN 哨兵语义不受影响。
+            float x = MathF.Round(screen.X - item.Width * 0.5f + item.ScreenOffsetX);
+            float y = MathF.Round(screen.Y + item.ScreenOffsetY);
 
             // ProjectWorldToScreenFast 以 NaN 表示屏幕外/相机后；不得放行到保留 upsert——
             // (int)NaN 强转得 0 会被边界剔除误判为屏幕内，NaN 位置随后毒化保留槽。
@@ -369,6 +366,8 @@ namespace Ludots.Core.Presentation.Systems
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Id0 = item.Id0,
+                    Decoration = ScreenHudDecoration.FromWorld(in item),
                 };
                 bool accepted = _retainedProjectedBuild
                     ? _screenHud.TryUpsertProjectedBar(in bar, projectedBarIndex)
@@ -424,6 +423,7 @@ namespace Ludots.Core.Presentation.Systems
                 ValueBound = item.ValueBound,
                 BoundAttributeId = item.BoundAttributeId,
                 Owner = item.Owner,
+                Decoration = ScreenHudDecoration.FromWorld(in item),
                 Text = item.Text,
             };
             bool textAccepted = _retainedProjectedBuild
@@ -637,8 +637,8 @@ namespace Ludots.Core.Presentation.Systems
                     item.Width = 16f;
                 }
 
-                float x = MathF.Round(screen.X - item.Width * 0.5f);
-                float y = MathF.Round(screen.Y);
+                float x = MathF.Round(screen.X - item.Width * 0.5f + item.ScreenOffsetX);
+                float y = MathF.Round(screen.Y + item.ScreenOffsetY);
                 bool offscreen = item.Kind == WorldHudItemKind.Bar
                     ? (x + item.Width < -ProjectionMarginPixels || x > screenWidth + ProjectionMarginPixels ||
                        y + item.Height < -ProjectionMarginPixels || y > screenHeight + ProjectionMarginPixels)
@@ -673,7 +673,6 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudRevision = _worldHud.ContentRevision;
             _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
             _lastProjectionRevision = _projector is IProjectionRevisionProvider provider ? provider.ProjectionRevision : -1;
-            _lastCullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             _lastHeightmapRevision = heightmapRevision;
             _lastHeightmap = heightmap;
             _lastWorldHudPositionRevision = _worldHud.PositionRevision;

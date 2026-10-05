@@ -25,6 +25,7 @@ namespace Ludots.Core.Presentation.Hud
         public byte ValueBound;
         public int BoundAttributeId;
         public Arch.Core.Entity Owner;
+        public ScreenHudDecoration Decoration;
         public PresentationTextPacket Text;
     }
 }

@@ -1,0 +1,461 @@
+[
+  {
+    "id": "hud_css_styling_ribbon_health_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 36px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -20px;"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_icon",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_rank_banner",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_capital_icon",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_shield_badge",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_plaque",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_plaque",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_nameplate",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_ribbon",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_ribbon",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_ribbon_health_bar",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_root_bars",
+    "children": [
+      {
+        "definitionId": "hud_css_styling_rich_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_health_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "hud_css_styling_morale_bar",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            300,
+            300,
+            300
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_health_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 36px; height: 5px; color: #E2493B; background-color: rgba(16, 18, 24, 0.85); translate: 0 -18px;"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_morale_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 36px; height: 3px; color: #4E9DE2; background-color: rgba(16, 18, 24, 0.85); translate: 0 -10px; opacity: 0.9;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_rich_bar",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "materialParamKey": "hud_css_styling.health.ratio",
+          "css": "width: 36px; height: 6px; border: 1px solid rgba(255,255,255,0.55); border-radius: 4px; padding: 1px; background: linear-gradient(to right, rgba(16,18,24,0.9), rgba(40,44,56,0.9)); color: linear-gradient(to right, #E2493B, #FFB020); translate: 0 -29px; box-shadow: 1px 2px 3px rgba(0,0,0,0.6);"
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_nameplate",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "valueParamKey": "hud_css_styling.health.current",
+          "secondaryValueParamKey": "hud_css_styling.health.max",
+          "css": "color: #F5EFE0; font-size: 16px; font-weight: bold; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.9); translate: 0 -59px;"
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "hud_css_styling.health.max",
+          "mode": "AttributeBase"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_capital_icon",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 18px; height: 18px; image: hud_css.icon.capital_star; translate: 0 -84px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_shield_badge",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 20px; height: 20px; image: hud_css.icon.defense_shield; clip-path: shield; border: 1px solid rgba(255,215,0,0.8); translate: 26px -85px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_rank_banner",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 14px; height: 18px; image: hud_css.icon.rank_banner; translate: -26px -85px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_plaque",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 84px; height: 26px; image: hud_css.icon.plaque_frame; image-slice: 8px; translate: 0 -62px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_ribbon",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "css": "width: 44px; height: 30px; image: hud_css.icon.ribbon_banner; image-slice: 8px 0; translate: 0 -30px;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hud_css_styling_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_icon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_icon",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_icon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_plaque"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_plaque",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_plaque"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_ribbon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_ribbon",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_ribbon"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "hud_css_styling_unit_bars"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "hud_css_styling_root_bars",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "hud_css_styling_unit_bars"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

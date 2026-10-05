@@ -2,7 +2,6 @@ import type { UiScenePayload } from './UiSceneTypes';
 
 const MSG_FULL = 0x01;
 const MSG_MESH_MAP = 0x03;
-const MSG_DELTA = 0x05;
 
 const SEC_END = 0x00;
 const SEC_CAMERA = 0x01;
@@ -15,7 +14,28 @@ const SEC_SCREEN_OVERLAY = 0x0a;
 const SEC_DEBUG_LINES = 0x10;
 const SEC_DEBUG_CIRCLES = 0x11;
 const SEC_DEBUG_BOXES = 0x12;
-const SEC_PRIMITIVES_DELTA = 0x18;
+
+export interface ScreenHudDecoration {
+  clipShape: number;
+  radius: number;
+  borderWidth: number;
+  padding: number;
+  borderColor?: [number, number, number, number];
+  fillGradientTo?: [number, number, number, number];
+  backgroundGradientTo?: [number, number, number, number];
+  boxBackground?: [number, number, number, number];
+  bold: boolean;
+  italic: boolean;
+  textAlignCenter: boolean;
+  imageSliceTop: number;
+  imageSliceRight: number;
+  imageSliceBottom: number;
+  imageSliceLeft: number;
+  shadowColor?: [number, number, number, number];
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
+}
 
 export interface CameraState {
   posX: number; posY: number; posZ: number;
@@ -85,6 +105,7 @@ export interface ScreenHudItem {
   textPacket?: PresentationTextPacket;
   textTemplate?: string;
   textTemplates?: Map<number, string>;
+  deco?: ScreenHudDecoration;
 }
 
 export interface ScreenOverlayItem {
@@ -121,7 +142,6 @@ export interface DecodedFrame {
 }
 
 export class FrameDecoder {
-  private _prevFrame: DecodedFrame | null = null;
   private _meshMap: MeshMapEntry[] | null = null;
   private _textDecoder = new TextDecoder();
 
@@ -138,7 +158,6 @@ export class FrameDecoder {
     }
     if (v.byteLength < 17) return null;
     if (msgType === MSG_FULL) return this.decodeFull(v);
-    if (msgType === MSG_DELTA) return this.decodeDelta(v);
     return null;
   }
 
@@ -186,41 +205,6 @@ export class FrameDecoder {
       }
     }
 
-    this._prevFrame = frame;
-    return frame;
-  }
-
-  private decodeDelta(v: DataView): DecodedFrame {
-    const frame = this._prevFrame ? this.cloneFrame(this._prevFrame) : this.emptyFrame();
-    frame.frameNumber = v.getUint32(1, true);
-    frame.simTick = v.getInt32(5, true);
-    frame.timestampMs = Number(v.getBigInt64(9, true));
-
-    let p = 17;
-    while (p < v.byteLength) {
-      const secType = v.getUint8(p);
-      if (secType === SEC_END) break;
-      const itemCount = v.getUint16(p + 1, true);
-      const byteLen = v.getInt32(p + 3, true);
-      p += 7;
-
-      switch (secType) {
-        case SEC_CAMERA: p = this.readCamera(frame, v, p); break;
-        case SEC_PRIMITIVES_DELTA: p = this.applyPrimitiveDelta(frame, v, p, itemCount); break;
-        case SEC_PRIMITIVES: p = this.readPrimitives(frame, v, p, itemCount); break;
-        case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
-        case SEC_WORLD_HUD: p += byteLen; break;
-        case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
-        case SEC_UI_SCENE: p = this.readUiScene(frame, v, p); break;
-        case SEC_SCREEN_OVERLAY: p = this.readScreenOverlays(frame, v, p, itemCount); break;
-        case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
-        case SEC_DEBUG_CIRCLES: p = this.readDebugCircles(frame, v, p, itemCount); break;
-        case SEC_DEBUG_BOXES: p = this.readDebugBoxes(frame, v, p, itemCount); break;
-        default: p += byteLen; break;
-      }
-    }
-
-    this._prevFrame = frame;
     return frame;
   }
 
@@ -243,28 +227,6 @@ export class FrameDecoder {
         scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
         r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
       });
-      p += 44;
-    }
-    return p;
-  }
-
-  private applyPrimitiveDelta(frame: DecodedFrame, v: DataView, p: number, changedCount: number): number {
-    const totalCount = v.getUint16(p, true);
-    p += 4; // totalCount(2) + reserved(2)
-
-    if (frame.primitives.length > totalCount) frame.primitives.length = totalCount;
-    while (frame.primitives.length < totalCount) {
-      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1 });
-    }
-
-    for (let i = 0; i < changedCount; i++) {
-      const idx = v.getUint16(p, true); p += 2;
-      frame.primitives[idx] = {
-        meshAssetId: v.getInt32(p, true),
-        posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
-        scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
-        r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
-      };
       p += 44;
     }
     return p;
@@ -301,8 +263,9 @@ export class FrameDecoder {
         id0: v.getInt32(p + 61, true), id1: v.getInt32(p + 65, true),
         fontSize: v.getInt32(p + 69, true),
         textPacket,
+        deco: this.readDecoration(v, p + 113),
       });
-      p += 113;
+      p += 237;
     }
 
     const stringCount = v.getUint16(p, true); p += 2;
@@ -386,6 +349,39 @@ export class FrameDecoder {
 
     frame.screenOverlays = items;
     return p;
+  }
+
+  private readDecoration(v: DataView, p: number): ScreenHudDecoration {
+    const readColor = (o: number): [number, number, number, number] =>
+      [v.getFloat32(o, true), v.getFloat32(o + 4, true), v.getFloat32(o + 8, true), v.getFloat32(o + 12, true)];
+    const borderColor = readColor(p + 12);
+    const fillGrad = readColor(p + 28);
+    const bgGrad = readColor(p + 44);
+    const boxBg = readColor(p + 60);
+    const styleFlags = v.getUint8(p + 76);
+    const clipShape = v.getUint8(p + 77);
+    const shadowColor = readColor(p + 80);
+    return {
+      radius: v.getFloat32(p, true),
+      borderWidth: v.getFloat32(p + 4, true),
+      padding: v.getFloat32(p + 8, true),
+      borderColor: borderColor[3] > 0 ? borderColor : undefined,
+      fillGradientTo: fillGrad[3] >= 0 ? fillGrad : undefined,
+      backgroundGradientTo: bgGrad[3] >= 0 ? bgGrad : undefined,
+      boxBackground: boxBg[3] > 0 ? boxBg : undefined,
+      clipShape,
+      bold: (styleFlags & 0x01) !== 0,
+      italic: (styleFlags & 0x02) !== 0,
+      textAlignCenter: (styleFlags & 0x04) !== 0,
+      shadowColor: shadowColor[3] > 0 ? shadowColor : undefined,
+      shadowOffsetX: v.getFloat32(p + 96, true),
+      shadowOffsetY: v.getFloat32(p + 100, true),
+      shadowBlur: v.getFloat32(p + 104, true),
+      imageSliceTop: v.getFloat32(p + 108, true),
+      imageSliceRight: v.getFloat32(p + 112, true),
+      imageSliceBottom: v.getFloat32(p + 116, true),
+      imageSliceLeft: v.getFloat32(p + 120, true),
+    };
   }
 
   private readTextPacket(v: DataView, p: number): PresentationTextPacket {
@@ -484,31 +480,6 @@ export class FrameDecoder {
       camera: { posX: 0, posY: 10, posZ: 10, tgtX: 0, tgtY: 0, tgtZ: 0, upX: 0, upY: 1, upZ: 0, fov: 60 },
       primitives: [], debugLines: [], debugCircles: [], debugBoxes: [],
       groundOverlays: [], screenHud: [], screenOverlays: [],
-    };
-  }
-
-  private cloneFrame(f: DecodedFrame): DecodedFrame {
-    return {
-      ...f,
-      camera: { ...f.camera },
-      primitives: f.primitives.map(p => ({ ...p })),
-      debugLines: [...f.debugLines],
-      debugCircles: [...f.debugCircles],
-      debugBoxes: [...f.debugBoxes],
-      groundOverlays: [...f.groundOverlays],
-      screenHud: f.screenHud.map(item => ({
-        ...item,
-        textPacket: item.textPacket
-          ? { ...item.textPacket, args: item.textPacket.args.map(arg => ({ ...arg })) }
-          : undefined,
-      })),
-      screenOverlays: f.screenOverlays.map(item => ({
-        ...item,
-        textPacket: item.textPacket
-          ? { ...item.textPacket, args: item.textPacket.args.map(arg => ({ ...arg })) }
-          : undefined,
-      })),
-      uiScene: f.uiScene,
     };
   }
 }

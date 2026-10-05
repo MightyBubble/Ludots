@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\..\mods\fixtures\animation\AnimationAcceptanceMod\AnimationAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\PresenterBlacksmithShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\hud_css_styling\HudCssStylingMod\HudCssStylingMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\CapabilityStandardCrowdPhysicsArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\CapabilityStandardPresenterCommandShowcaseMod.csproj" />

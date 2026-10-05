@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
@@ -134,7 +135,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                if (!PresenterBehaviorRuntimeUtility.IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     // Multi-slot StaticMesh: sibling slots may still emit, so the outer
                     // "nothing emitted → clear all" fallback never runs. Inactive slots must
@@ -514,27 +515,15 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Vector3 scale = ResolveScale(entity, in asset, presenterWorldScale);
-            Vector4 foreground = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), alpha);
-            Vector4 background = new Vector4(0.2f, 0.2f, 0.2f, foreground.W);
-            float value = asset.MaterialParamKey >= 0
-                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
-                : 1f;
-            float width = scale.X > 0f ? scale.X : 40f;
-            float height = scale.Y > 0f ? scale.Y : 6f;
-
-            WorldHudItem item = new WorldHudItem
-            {
-                StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, definitionId, slot.SlotIndex),
-                DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
-                Kind = WorldHudItemKind.Bar,
-                WorldPosition = position,
-                Value0 = value,
-                Width = width,
-                Height = height,
-                Color0 = background,
-                Color1 = foreground,
-            };
+            WorldHudItem item = ComposeWorldHudBarItem(
+                entity,
+                in state,
+                in slot,
+                in asset,
+                HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Bar, definitionId, slot.SlotIndex),
+                position,
+                presenterWorldScale,
+                alpha);
             _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);
         }
 
@@ -557,73 +546,15 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, ResolveAuthoredColor(in slot)), alpha);
-            int tokenId = ResolveAssetId(entity, in asset);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"WorldText AssetBinding for presenter definition '{definition.Key}' resolved invalid asset id {tokenId}.");
-            }
-
-            float value0;
-            float value1;
-            int stringTableId;
-            int valueModeId;
-            bool valueBound;
-            PresentationTextPacket packet;
-            if (WorldTextArgs.UsesTemplateArgs(in slot.WorldText))
-            {
-                value0 = 0f;
-                value1 = 0f;
-                stringTableId = 0;
-                valueModeId = 0;
-                valueBound = false;
-                packet = WorldTextArgs.Build(
-                    in slot.WorldText,
-                    tokenId,
-                    entity,
-                    state.OwnerEntity,
-                    _world,
-                    _runtime,
-                    _globals);
-            }
-            else
-            {
-                value0 = asset.ScaleParamKey >= 0
-                    ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
-                    : 0f;
-                value1 = asset.MaterialParamKey >= 0
-                    ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
-                    : 0f;
-                WorldHudValueMode valueMode = slot.WorldText.Mode;
-                stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-                valueModeId = (int)valueMode;
-                valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
-                    (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
-                packet = valueBound
-                    ? default
-                    : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
-            }
-
-            int fontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
-
-            WorldHudItem item = new WorldHudItem
-            {
-                StableId = HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, valueModeId, value0, value1, color, packet, valueBound),
-                Kind = WorldHudItemKind.Text,
-                WorldPosition = position,
-                Value0 = value0,
-                Value1 = value1,
-                Id0 = stringTableId,
-                Id1 = valueModeId,
-                FontSize = fontSize,
-                Color0 = color,
-                Owner = state.OwnerEntity,
-                ValueBound = valueBound ? (byte)1 : (byte)0,
-                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
-                Text = packet,
-            };
+            WorldHudItem item = ComposeWorldHudTextItem(
+                entity,
+                in state,
+                definition,
+                in slot,
+                in asset,
+                HudItemIdentity.ComposePresenterStableId(state.StableId, WorldHudItemKind.Text, definitionId, slot.SlotIndex),
+                position,
+                alpha);
             _requests.AddWorldHud(state.OwnerEntity, in item, phaseResult.LOD);
         }
 
@@ -703,13 +634,13 @@ namespace Ludots.Core.Presentation.Systems
             _requests.AddGroundOverlay(state.OwnerEntity, in item, lod);
         }
 
-        private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
+        internal bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
         {
             return asset.VisibilityParamKey < 0 ||
                 RequireIntParam(entity, asset.VisibilityParamKey, "AssetBinding.visibilityParamKey") != 0;
         }
 
-        private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
+        internal int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
         {
             if (asset.AssetIdParamKey >= 0)
             {
@@ -747,7 +678,7 @@ namespace Ludots.Core.Presentation.Systems
                 $"Presenter AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} resolved value {resolved} with no matching assetSwapTable entry.");
         }
 
-        private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
+        internal int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
         {
             if (asset.MaterialParamKey < 0)
             {
@@ -764,6 +695,227 @@ namespace Ludots.Core.Presentation.Systems
             return materialId;
         }
 
+        /// <summary>
+        /// 图标源解析缓存:按字符串表实例弱引用持有 资产id→字符串表id,
+        /// 表实例随引擎重建时缓存自动失效。资产未登记/解析失败一律 fail-fast。
+        /// </summary>
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<WorldHudStringTable, Dictionary<string, int>> ImageStringIdCache = new();
+
+        private int ResolveImageStringId(string assetId)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out object? tableObj) ||
+                tableObj is not WorldHudStringTable table)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' requires WorldHudStringTable (PresentationWorldHudStrings service) at emit time.");
+            }
+
+            Dictionary<string, int> cache = ImageStringIdCache.GetOrCreateValue(table);
+            if (cache.TryGetValue(assetId, out int cached))
+            {
+                return cached;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.PresentationDisplayResolver.Name, out object? resolverObj) ||
+                resolverObj is not PresentationDisplayResolver resolver)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' requires PresentationDisplayResolver service at emit time.");
+            }
+
+            if (!resolver.TryResolveImageSource(assetId, out string source))
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' could not be resolved; register it in Presentation/image_assets.json.");
+            }
+
+            int id = table.GetOrRegisterSource(source);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"css 'image: {assetId}' source could not be registered in WorldHudStringTable.");
+            }
+
+            cache[assetId] = id;
+            return id;
+        }
+
+        /// <summary>
+        /// 把解析好的 css 排版声明落到条目装饰块。缺省字段写入"关闭"哨兵
+        /// (渐变 W=-1、颜色 W=0),保证未声明样式时渲染路径与旧默认逐像素一致。
+        /// </summary>
+        private static void ApplyDecoration(ref WorldHudItem item, in WorldHudStyle style, bool isText)
+        {
+            item.CornerRadius = style.CornerRadius ?? 0f;
+            item.BorderWidth = style.BorderWidth ?? 0f;
+            item.Padding = style.Padding ?? 0f;
+            item.BorderColor = style.BorderColor ?? default;
+            item.FillGradientTo = style.FillGradientTo ?? new Vector4(0f, 0f, 0f, -1f);
+            item.BackgroundGradientTo = style.BackgroundGradientTo ?? new Vector4(0f, 0f, 0f, -1f);
+            item.BoxBackground = isText ? (style.BackgroundColor ?? default) : default;
+            byte flags = 0;
+            if (style.Bold == true) flags |= 0x01;
+            if (style.Italic == true) flags |= 0x02;
+            if (isText && style.TextAlignCenter == true) flags |= 0x04;
+            item.StyleFlags = flags;
+            item.ClipShape = style.ClipShape;
+            item.ShadowColor = style.ShadowColor ?? default;
+            item.ShadowOffsetX = style.ShadowOffsetX ?? 0f;
+            item.ShadowOffsetY = style.ShadowOffsetY ?? 0f;
+            item.ShadowBlur = style.ShadowBlur ?? 0f;
+            item.ImageSliceTop = style.ImageSlice?.X ?? 0f;
+            item.ImageSliceRight = style.ImageSlice?.Y ?? 0f;
+            item.ImageSliceBottom = style.ImageSlice?.Z ?? 0f;
+            item.ImageSliceLeft = style.ImageSlice?.W ?? 0f;
+        }
+
+        /// <summary>
+        /// 世界 HUD 条目的唯一建条路径：请求车道（本类）与 retained 直写车道
+        /// （PresenterEmitSystem）共用，保证两条车道产出的字段语义逐项一致。
+        /// alpha 由请求车道按 LOD 传入；直写车道传 1。
+        /// </summary>
+        internal WorldHudItem ComposeWorldHudBarItem(
+            Entity entity,
+            in PresenterState state,
+            in BehaviorSlot slot,
+            in AssetBindingConfig asset,
+            int stableId,
+            in Vector3 worldPosition,
+            in Vector3 presenterWorldScale,
+            float alpha)
+        {
+            Vector3 scale = ResolveScale(entity, in asset, presenterWorldScale);
+            WorldHudStyle style = asset.HudStyle;
+            Vector4 foreground = ApplyAlpha(
+                ResolveColor(entity, in asset, style.Color ?? ResolveAuthoredColor(in slot)),
+                alpha * style.Opacity ?? alpha);
+            Vector4 background = style.BackgroundColor ?? new Vector4(0.2f, 0.2f, 0.2f, 1f);
+            background.W *= foreground.W;
+            float value = asset.MaterialParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                : 1f;
+            float width = style.Width ?? (scale.X > 0f ? scale.X : 40f);
+            float height = style.Height ?? (scale.Y > 0f ? scale.Y : 6f);
+            Vector2 translate = style.Translate ?? Vector2.Zero;
+
+            WorldHudItem item = new()
+            {
+                Owner = state.OwnerEntity,
+                StableId = stableId,
+                DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
+                Kind = WorldHudItemKind.Bar,
+                WorldPosition = worldPosition,
+                Value0 = value,
+                Width = width,
+                Height = height,
+                Color0 = background,
+                Color1 = foreground,
+                ScreenOffsetX = translate.X,
+                ScreenOffsetY = translate.Y,
+            };
+            ApplyDecoration(ref item, in style, isText: false);
+            if (style.ImageAssetId != null)
+            {
+                item.Id0 = ResolveImageStringId(style.ImageAssetId);
+            }
+
+            return item;
+        }
+
+        /// <summary>同 <see cref="ComposeWorldHudBarItem"/>：世界文本条目的唯一建条路径。</summary>
+        internal WorldHudItem ComposeWorldHudTextItem(
+            Entity entity,
+            in PresenterState state,
+            in PresenterDefinition definition,
+            in BehaviorSlot slot,
+            in AssetBindingConfig asset,
+            int stableId,
+            in Vector3 worldPosition,
+            float alpha)
+        {
+            Vector4 color = ApplyAlpha(
+                ResolveColor(entity, in asset, slot.WorldText.HudStyle.Color ?? ResolveAuthoredColor(in slot)),
+                alpha);
+            int tokenId = ResolveAssetId(entity, in asset);
+            if (tokenId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"WorldText AssetBinding for presenter definition '{definition.Key}' resolved invalid asset id {tokenId}.");
+            }
+
+            float value0;
+            float value1;
+            int stringTableId;
+            int valueModeId;
+            bool valueBound;
+            PresentationTextPacket packet;
+            if (WorldTextArgs.UsesTemplateArgs(in slot.WorldText))
+            {
+                value0 = 0f;
+                value1 = 0f;
+                stringTableId = 0;
+                valueModeId = 0;
+                valueBound = false;
+                packet = WorldTextArgs.Build(
+                    in slot.WorldText,
+                    tokenId,
+                    entity,
+                    state.OwnerEntity,
+                    _world,
+                    _runtime,
+                    _globals);
+            }
+            else
+            {
+                value0 = asset.ScaleParamKey >= 0
+                    ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
+                    : 0f;
+                value1 = asset.MaterialParamKey >= 0
+                    ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                    : 0f;
+                WorldHudValueMode valueMode = slot.WorldText.Mode;
+                stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
+                valueModeId = (int)valueMode;
+                valueBound = slot.WorldText.BoundAttributeId != WorldTextConfig.UnboundAttributeId &&
+                    (valueMode == WorldHudValueMode.AttributeCurrentOverBase || valueMode == WorldHudValueMode.AttributeCurrent);
+                // 值绑定条目不带 emit 期参数快照包：解析落屏幕数值车道，权威值由投影期现读。
+                packet = valueBound
+                    ? default
+                    : PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            }
+
+            WorldHudStyle style = slot.WorldText.HudStyle;
+            int fontSize = (int)(style.FontSize ?? (slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16f));
+            if (style.Opacity.HasValue)
+            {
+                color.W *= style.Opacity.Value;
+            }
+
+            Vector2 translate = style.Translate ?? Vector2.Zero;
+
+            WorldHudItem item = new()
+            {
+                Owner = state.OwnerEntity,
+                StableId = stableId,
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, valueModeId, value0, value1, color, packet, valueBound),
+                Kind = WorldHudItemKind.Text,
+                WorldPosition = worldPosition,
+                Value0 = value0,
+                Value1 = value1,
+                Id0 = stringTableId,
+                Id1 = valueModeId,
+                FontSize = fontSize,
+                Color0 = color,
+                ValueBound = valueBound ? (byte)1 : (byte)0,
+                BoundAttributeId = valueBound ? slot.WorldText.BoundAttributeId : 0,
+                ScreenOffsetX = translate.X,
+                ScreenOffsetY = translate.Y,
+                Text = packet,
+            };
+            ApplyDecoration(ref item, in style, isText: true);
+            return item;
+        }
+
         internal Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
         {
             float scaleParamMultiplier = 1f;
@@ -775,12 +927,12 @@ namespace Ludots.Core.Presentation.Systems
             return AssetBindingVisualScale.Resolve(in asset, presenterWorldScale, scaleParamMultiplier);
         }
 
-        private static Quaternion ResolveRotation(in AssetBindingConfig asset, Quaternion presenterWorldRotation)
+        internal static Quaternion ResolveRotation(in AssetBindingConfig asset, Quaternion presenterWorldRotation)
         {
             return WorldPlane2D.ResolveVisualAssetRotation(in presenterWorldRotation, in asset.LocalRotation);
         }
 
-        private static Vector3 ResolveAssetPosition(
+        internal static Vector3 ResolveAssetPosition(
             Vector3 position,
             Quaternion presenterWorldRotation,
             Vector3 presenterWorldScale,
@@ -793,19 +945,19 @@ namespace Ludots.Core.Presentation.Systems
                 in asset.LocalOffset);
         }
 
-        private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
+        internal Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
         {
             return asset.ColorParamKey >= 0
                 ? RequireVectorParam(entity, asset.ColorParamKey, "AssetBinding.colorParamKey")
                 : defaultColor;
         }
 
-        private float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
+        internal float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
         {
             return RequireFloatParam(entity, paramKey, context);
         }
 
-        private int RequireIntParam(Entity entity, int paramKey, string context)
+        internal int RequireIntParam(Entity entity, int paramKey, string context)
         {
             if (!_runtime.TryResolveInt(entity, paramKey, out int value))
             {
@@ -815,7 +967,7 @@ namespace Ludots.Core.Presentation.Systems
             return value;
         }
 
-        private float RequireFloatParam(Entity entity, int paramKey, string context)
+        internal float RequireFloatParam(Entity entity, int paramKey, string context)
         {
             if (!_runtime.TryResolveFloat(entity, paramKey, out float value))
             {
@@ -845,7 +997,7 @@ namespace Ludots.Core.Presentation.Systems
                 ResolveOptionalFloatParam(entity, aParamKey, fallback.W));
         }
 
-        private Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
+        internal Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
         {
             if (!_runtime.TryResolveVector(entity, paramKey, out Vector4 value))
             {
@@ -904,7 +1056,7 @@ namespace Ludots.Core.Presentation.Systems
             return asset.RenderPath;
         }
 
-        private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
+        internal static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
             return !asset.HasMaxLod || lod <= asset.MaxLod;
         }
@@ -950,11 +1102,6 @@ namespace Ludots.Core.Presentation.Systems
             };
         }
 
-        private static bool IsBehaviorActive(uint mask, int slotIndex)
-        {
-            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
-        }
-
         private static GroundOverlayShape ResolveGroundOverlayShape(int assetId)
         {
             return assetId switch
@@ -997,7 +1144,7 @@ namespace Ludots.Core.Presentation.Systems
             return Math.Clamp(1f - (state.Elapsed / definition.DefaultLifetime), 0f, 1f);
         }
 
-        private static Vector4 ResolveAuthoredColor(in BehaviorSlot slot)
+        internal static Vector4 ResolveAuthoredColor(in BehaviorSlot slot)
         {
             return slot.Style.HasColor ? slot.Style.Color : Vector4.One;
         }

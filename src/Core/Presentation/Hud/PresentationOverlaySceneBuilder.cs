@@ -10,6 +10,7 @@ namespace Ludots.Core.Presentation.Hud
     {
         private const int MaxTextPacketCacheEntries = 8192;
         private const int MaxNumericTextCacheEntries = 4096;
+        private const int MaxResolvedTextCacheEntries = 8192;
 
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly WorldHudStringTable? _worldHudStrings;
@@ -179,6 +180,7 @@ namespace Ludots.Core.Presentation.Hud
                 int stableId = removedStableIds[i];
                 scene.RemoveStable(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar, stableId);
                 scene.RemoveStable(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text, stableId);
+                _screenHudResolvedTextCache.Remove(stableId);
             }
 
             // 同帧"值变化→出画"的条目会同时出现在 dirty 与 removed 流里：dirty 快照不因移除失效，
@@ -213,7 +215,9 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color0,
                     item.Color1,
                     item.StableId,
-                    item.DirtySerial);
+                    item.DirtySerial,
+                    item.Decoration,
+                    ResolveBarImageSource(item.Id0));
             }
 
             for (int i = 0; i < dirtyTexts.Length; i++)
@@ -235,7 +239,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                 }
             }
 
@@ -322,7 +327,9 @@ namespace Ludots.Core.Presentation.Hud
                     item.Color0,
                     item.Color1,
                     item.StableId,
-                    item.DirtySerial);
+                    item.DirtySerial,
+                    item.Decoration,
+                    ResolveBarImageSource(item.Id0));
             }
 
             ReadOnlySpan<ScreenHudTextItem> texts = _screenHud.GetTextSpan();
@@ -342,7 +349,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                         continue;
                     }
 
@@ -354,7 +362,8 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        SceneTextSerial(item.DirtySerial));
+                        SceneTextSerial(item.DirtySerial),
+                        item.Decoration);
                 }
             }
         }
@@ -428,6 +437,17 @@ namespace Ludots.Core.Presentation.Hud
             scene.SetTopMostMinimapMarkers(_minimapMarkers);
         }
 
+        /// <summary>bar 条目的 Id0>0 即图标条目:把字符串表 id 解析成图片源串供渲染端取图。</summary>
+        private string? ResolveBarImageSource(int stringTableId)
+        {
+            if (stringTableId <= 0 || _worldHudStrings == null)
+            {
+                return null;
+            }
+
+            return _worldHudStrings.TryGet(stringTableId);
+        }
+
         private string? ResolveScreenHudText(in ScreenHudTextItem item)
         {
             bool allowResolvedCache = item.Text.HasValue || item.Id0 != 0 || item.Id1 != 0;
@@ -454,9 +474,10 @@ namespace Ludots.Core.Presentation.Hud
                 return stringTableText;
             }
 
-            string? numericText = ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
-            CacheResolvedScreenHudText(item, numericText, allowResolvedCache);
-            return numericText;
+            // 值驱动文本由数值缓存按 (mode,值) 直接命中,不写 resolved 缓存:
+            // 这类条目的 serial 每帧随值变化,resolved 缓存对其恒 MISS,
+            // 写入只制造高频触顶淘汰的簿记开销(50k HUD 基准实测 368KB/帧)。
+            return ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
         }
 
         private string? ResolveScreenOverlayText(in ScreenOverlayItem item)
@@ -489,10 +510,7 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            if (_textPacketCache.Count >= MaxTextPacketCacheEntries)
-            {
-                _textPacketCache.Clear();
-            }
+            MakeRoom(_textPacketCache, MaxTextPacketCacheEntries);
 
             _textPacketCache[cacheKey] = formatted;
             text = formatted;
@@ -513,10 +531,7 @@ namespace Ludots.Core.Presentation.Hud
                 return null;
             }
 
-            if (_numericTextCache.Count >= MaxNumericTextCacheEntries)
-            {
-                _numericTextCache.Clear();
-            }
+            MakeRoom(_numericTextCache, MaxNumericTextCacheEntries);
 
             _numericTextCache[cacheKey] = formatted;
             return formatted;
@@ -534,13 +549,49 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
-        private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text, bool allowResolvedCache)
+        /// <summary>
+        /// 缓存满时腾出半表而不是整表清空：整表 Clear 后的第一帧要全量重格式化，
+        /// 在长会话里表现为周期性分配尖峰。Dictionary 迭代序不代表插入序，
+        /// 半清只保证腾出空间，是 LRU 的粗化近似。
+        /// </summary>
+        private static void MakeRoom<TKey, TValue>(Dictionary<TKey, TValue> cache, int maxEntries)
+            where TKey : notnull
         {
-            if (!allowResolvedCache || item.StableId == 0 || text == null)
+            if (cache.Count < maxEntries)
             {
                 return;
             }
 
+            int toRemove = cache.Count - (maxEntries / 2);
+            if (toRemove <= 0)
+            {
+                return;
+            }
+
+            // 边枚举边删(Dictionary 允许枚举中 Remove,禁止 Add),避免每轮触顶
+            // 都分配一份键数组——值每帧变化的 HUD 文本会高频走到这里。
+            foreach (TKey key in cache.Keys)
+            {
+                cache.Remove(key);
+                toRemove--;
+                if (toRemove <= 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text, bool allowResolvedCache)
+        {
+            // 值绑定条目的 serial 每帧随值变化,resolved 缓存对其永远 MISS;
+            // 写入只会在容量触顶时反复触发 MakeRoom 的全量键数组分配。其文本由
+            // 数值缓存(值域有限)直接给出,跳过本缓存。
+            if (!allowResolvedCache || item.StableId == 0 || text == null || item.ValueBound != 0)
+            {
+                return;
+            }
+
+            MakeRoom(_screenHudResolvedTextCache, MaxResolvedTextCacheEntries);
             _screenHudResolvedTextCache[item.StableId] = new ScreenHudResolvedTextCacheEntry(item.DirtySerial, ActiveLocaleId, text);
         }
 

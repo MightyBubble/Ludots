@@ -1,0 +1,6 @@
+{
+  "name": "HudOverflowDiagnosticsMod",
+  "version": "1.0.0",
+  "description": "HUD overflow diagnostics fixture: paramDefaults sample exceeding the per-lane blackboard capacity must fail at registration instead of silently dropping entries at instantiation.",
+  "dependencies": {}
+}

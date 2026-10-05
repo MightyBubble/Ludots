@@ -1,0 +1,34 @@
+{
+  "Id": "hud_css_styling_map",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "hud",
+    "css"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 12800,
+      "HeightCm": 12800,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 4250,
+    "TargetYCm": 4250
+  },
+  "Entities": []
+}

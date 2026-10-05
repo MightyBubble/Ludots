@@ -469,7 +469,7 @@ namespace Ludots.Presentation.Skia
         private void DrawBar(SKCanvas canvas, in PresentationOverlayItem item)
         {
             CachedBarSprite sprite = GetBarSprite(item);
-            canvas.DrawImage(sprite.Image, item.X, item.Y);
+            canvas.DrawImage(sprite.Image, item.X - sprite.OffsetX, item.Y - sprite.OffsetY);
         }
 
         private void ClearItemBounds(SKCanvas canvas, in PresentationOverlayItem item)
@@ -536,18 +536,87 @@ namespace Ludots.Presentation.Skia
         private void DrawBarDirect(SKCanvas canvas, in PresentationOverlayItem item)
         {
             SKRect rect = new(item.X, item.Y, item.X + item.Width, item.Y + item.Height);
-            _fillPaint.Color = ToSkColor(item.Color0);
-            canvas.DrawRect(rect, _fillPaint);
-
-            float clampedValue = Math.Clamp(item.Value0, 0f, 1f);
-            if (clampedValue > 0f)
+            ScreenHudDecoration deco = item.Decoration;
+            if (deco.ShadowColor.W > 0.001f)
             {
-                _fillPaint.Color = ToSkColor(item.Color1);
-                canvas.DrawRect(item.X, item.Y, item.Width * clampedValue, item.Height, _fillPaint);
+                using var shadowPaint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    Color = ToSkColor(deco.ShadowColor),
+                    MaskFilter = deco.ShadowBlur > 0.01f
+                        ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, deco.ShadowBlur * 0.5f)
+                        : null,
+                };
+                SKRect shadowRect = new(
+                    rect.Left + deco.ShadowOffsetX,
+                    rect.Top + deco.ShadowOffsetY,
+                    rect.Right + deco.ShadowOffsetX,
+                    rect.Bottom + deco.ShadowOffsetY);
+                DrawRoundedOrPlain(canvas, in shadowRect, deco.CornerRadius, shadowPaint);
             }
 
-            _strokePaint.Color = SKColors.Black;
-            canvas.DrawRect(rect, _strokePaint);
+            SKRect inner = new(rect.Left + deco.Padding, rect.Top + deco.Padding, rect.Right - deco.Padding, rect.Bottom - deco.Padding);
+            SKShader? backgroundShader = null;
+            if (deco.BackgroundGradientTo.W > 0.001f)
+            {
+                backgroundShader = SKShader.CreateLinearGradient(
+                    new SKPoint(inner.Left, inner.Top),
+                    new SKPoint(inner.Right, inner.Top),
+                    new[] { ToSkColor(item.Color0), ToSkColor(deco.BackgroundGradientTo) },
+                    null,
+                    SKShaderTileMode.Clamp);
+                _fillPaint.Shader = backgroundShader;
+            }
+            else
+            {
+                _fillPaint.Color = ToSkColor(item.Color0);
+            }
+
+            DrawRoundedOrPlain(canvas, in inner, deco.CornerRadius, _fillPaint);
+            _fillPaint.Shader = null;
+            backgroundShader?.Dispose();
+
+            float clampedValue = Math.Clamp(item.Value0, 0f, 1f);
+            if (clampedValue > 0f && inner.Width > 0.5f)
+            {
+                SKShader? fillShader = null;
+                if (deco.FillGradientTo.W > 0.001f)
+                {
+                    fillShader = SKShader.CreateLinearGradient(
+                        new SKPoint(inner.Left, inner.Top),
+                        new SKPoint(inner.Right, inner.Top),
+                        new[] { ToSkColor(item.Color1), ToSkColor(deco.FillGradientTo) },
+                        null,
+                        SKShaderTileMode.Clamp);
+                    _fillPaint.Shader = fillShader;
+                }
+                else
+                {
+                    _fillPaint.Color = ToSkColor(item.Color1);
+                }
+
+                int save = canvas.SaveLayer();
+                canvas.ClipRect(SKRect.Create(inner.Left, inner.Top, inner.Width * clampedValue, inner.Height));
+                DrawRoundedOrPlain(canvas, in inner, deco.CornerRadius, _fillPaint);
+                canvas.RestoreToCount(save);
+                _fillPaint.Shader = null;
+                fillShader?.Dispose();
+            }
+
+            if (deco.BorderWidth > 0.01f)
+            {
+                _strokePaint.StrokeWidth = deco.BorderWidth;
+                _strokePaint.Color = deco.BorderColor.W > 0.001f ? ToSkColor(deco.BorderColor) : SKColors.Black;
+            }
+            else
+            {
+                _strokePaint.StrokeWidth = 1f;
+                _strokePaint.Color = SKColors.Black;
+            }
+
+            DrawRoundedOrPlainStroke(canvas, in rect, deco.CornerRadius, _strokePaint);
+            _strokePaint.StrokeWidth = 1f;
         }
 
         private void DrawText(SKCanvas canvas, in PresentationOverlayItem item)
@@ -558,15 +627,61 @@ namespace Ludots.Presentation.Skia
             }
 
             int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+            ScreenHudDecoration deco = item.Decoration;
             _textPaint.Color = ToSkColor(item.Color0);
-            CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
+            CachedTextLayout layout = GetTextLayout(item.Text, fontSize, deco.StyleFlags);
             float baselineY = item.Y + fontSize;
+            float originX = ResolveTextOriginX(item.X, layout.Width, deco.StyleFlags);
+
+            if (deco.BoxBackground.W > 0.001f)
+            {
+                SKRect boxRect = new(
+                    originX - deco.Padding - deco.BorderWidth,
+                    item.Y - deco.Padding - deco.BorderWidth,
+                    originX + layout.Width + deco.Padding + deco.BorderWidth,
+                    item.Y + MathF.Max(1, fontSize) * 1.5f + deco.Padding + deco.BorderWidth);
+                _fillPaint.Color = ToSkColor(deco.BoxBackground);
+                DrawRoundedOrPlain(canvas, in boxRect, deco.CornerRadius, _fillPaint);
+                if (deco.BorderWidth > 0.01f)
+                {
+                    _strokePaint.StrokeWidth = deco.BorderWidth;
+                    _strokePaint.Color = deco.BorderColor.W > 0.001f ? ToSkColor(deco.BorderColor) : SKColors.Black;
+                    DrawRoundedOrPlainStroke(canvas, in boxRect, deco.CornerRadius, _strokePaint);
+                    _strokePaint.StrokeWidth = 1f;
+                }
+            }
+
+            if (deco.ShadowColor.W > 0.001f)
+            {
+                using var shadowPaint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    Color = ToSkColor(deco.ShadowColor),
+                    MaskFilter = deco.ShadowBlur > 0.01f
+                        ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, deco.ShadowBlur * 0.5f)
+                        : null,
+                };
+                for (int i = 0; i < layout.Runs.Length; i++)
+                {
+                    CachedTextRun run = layout.Runs[i];
+                    if (run.Blob != null)
+                    {
+                        canvas.DrawText(
+                            run.Blob,
+                            originX + run.XOffset + deco.ShadowOffsetX,
+                            baselineY + deco.ShadowOffsetY,
+                            shadowPaint);
+                    }
+                }
+            }
+
             for (int i = 0; i < layout.Runs.Length; i++)
             {
                 CachedTextRun run = layout.Runs[i];
                 if (run.Blob != null)
                 {
-                    canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                    canvas.DrawText(run.Blob, originX + run.XOffset, baselineY, _textPaint);
                 }
             }
         }
@@ -747,7 +862,7 @@ namespace Ludots.Presentation.Skia
                     bucketIndex = bucketCount++;
                     _barBatchMap[key] = bucketIndex;
                     CachedBarSprite sprite = GetBarSprite(key, item);
-                    _barBatchBuckets[bucketIndex].Reset(sprite.Image, item.Width, item.Height);
+                    _barBatchBuckets[bucketIndex].Reset(sprite.Image, item.Width, item.Height, sprite.OffsetX, sprite.OffsetY);
                 }
 
                 _barBatchBuckets[bucketIndex].Add(item.X, item.Y);
@@ -764,6 +879,7 @@ namespace Ludots.Presentation.Skia
                     canvas.DrawImage(bucket.Image, bucket.X[0], bucket.Y[0]);
                     continue;
                 }
+
 
                 DrawAtlasCount(canvas, bucket.Image, bucket.Sprites, bucket.Transforms, bucket.Count);
             }
@@ -869,10 +985,15 @@ namespace Ludots.Presentation.Skia
                 float[] positionsY = bucket.Y;
                 SKRotationScaleMatrix[] drawTransforms = state.DrawTransforms;
                 SKRect[] drawSprites = state.DrawSprites;
+                float bucketOffsetX = bucket.OffsetX;
+                float bucketOffsetY = bucket.OffsetY;
                 for (int instanceIndex = 0; instanceIndex < count; instanceIndex++)
                 {
                     drawSprites[writeIndex] = spriteRect;
-                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(1f, 0f, positionsX[instanceIndex], positionsY[instanceIndex]);
+                    drawTransforms[writeIndex] = new SKRotationScaleMatrix(
+                        1f, 0f,
+                        positionsX[instanceIndex] - bucketOffsetX,
+                        positionsY[instanceIndex] - bucketOffsetY);
                     writeIndex++;
                 }
             }
@@ -1049,7 +1170,7 @@ namespace Ludots.Presentation.Skia
 
             bucketIndex = state.Buckets.Count;
             CachedBarSprite sprite = GetBarSprite(key, item);
-            state.Buckets.Add(new RetainedBarBatchBucket(sprite.Image));
+            state.Buckets.Add(new RetainedBarBatchBucket(sprite.Image, sprite.OffsetX, sprite.OffsetY));
             state.BucketIndexByKey[key] = bucketIndex;
             state.AtlasDirty = true;
             return bucketIndex;
@@ -1175,19 +1296,7 @@ namespace Ludots.Presentation.Skia
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
-                SKRect rect = new(item.X, item.Y, item.X + item.Width, item.Y + item.Height);
-                _fillPaint.Color = ToSkColor(item.Color0);
-                canvas.DrawRect(rect, _fillPaint);
-
-                float clampedValue = Math.Clamp(item.Value0, 0f, 1f);
-                if (clampedValue > 0f)
-                {
-                    _fillPaint.Color = ToSkColor(item.Color1);
-                    canvas.DrawRect(item.X, item.Y, item.Width * clampedValue, item.Height, _fillPaint);
-                }
-
-                _strokePaint.Color = SKColors.Black;
-                canvas.DrawRect(rect, _strokePaint);
+                DrawBarDirect(canvas, in item);
             }
 
             LastBarBatchBucketCount += 1;
@@ -1214,7 +1323,14 @@ namespace Ludots.Presentation.Skia
 
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                 SKColor color = ToSkColor(item.Color0);
-                var key = new TextBatchKey(item.Text, fontSize, ToColorKey(color));
+                if (item.Decoration.ShadowColor.W > 0.001f || item.Decoration.BoxBackground.W > 0.001f)
+                {
+                    // 阴影/底板无法进文本 blob 批,回退逐条直绘(样式仍然完整)。
+                    DrawText(canvas, item);
+                    continue;
+                }
+
+                var key = new TextBatchKey(item.Text, fontSize, ToColorKey(color), item.Decoration.StyleFlags);
                 if (!_textBatchMap.TryGetValue(key, out int bucketIndex))
                 {
                     if (bucketCount >= _textBatchBuckets.Count)
@@ -1222,13 +1338,15 @@ namespace Ludots.Presentation.Skia
                         _textBatchBuckets.Add(new TextBatchBucket());
                     }
 
-                    CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
+                    CachedTextLayout layout = GetTextLayout(item.Text, fontSize, item.Decoration.StyleFlags);
                     bucketIndex = bucketCount++;
                     _textBatchMap[key] = bucketIndex;
                     _textBatchBuckets[bucketIndex].Reset(layout, color);
                 }
 
-                _textBatchBuckets[bucketIndex].Add(item.X, item.Y + fontSize);
+                _textBatchBuckets[bucketIndex].Add(
+                    ResolveTextOriginX(item.X, _textBatchBuckets[bucketIndex].Layout.Width, item.Decoration.StyleFlags),
+                    item.Y + fontSize);
             }
 
             LastTextSpriteBatchBucketCount += bucketCount;
@@ -1291,9 +1409,9 @@ namespace Ludots.Presentation.Skia
             LastTextBatchDrawMs += ElapsedMs(drawStart);
         }
 
-        private CachedTextLayout GetTextLayout(string text, int fontSize)
+        private CachedTextLayout GetTextLayout(string text, int fontSize, byte styleFlags = 0)
         {
-            var cacheKey = new TextLayoutCacheKey(text, fontSize);
+            var cacheKey = new TextLayoutCacheKey(text, fontSize, styleFlags);
             if (_textLayoutCache.TryGetValue(cacheKey, out CachedTextLayout? cached))
             {
                 LastTextLayoutCacheHits++;
@@ -1320,7 +1438,7 @@ namespace Ludots.Presentation.Skia
                 SKTypeface typeface = UiFontRegistry.ResolveTypefaceForTextElement(null, bold: false, element);
                 if (activeTypeface != null && !UiFontRegistry.SameTypeface(activeTypeface, typeface))
                 {
-                    cursorX = FlushRun(runs, activeTypeface, fontSize, cursorX);
+                    cursorX = FlushRun(runs, activeTypeface, fontSize, cursorX, styleFlags);
                     _runText.Clear();
                 }
 
@@ -1330,7 +1448,7 @@ namespace Ludots.Presentation.Skia
 
             if (_runText.Length > 0 && activeTypeface != null)
             {
-                cursorX = FlushRun(runs, activeTypeface, fontSize, cursorX);
+                cursorX = FlushRun(runs, activeTypeface, fontSize, cursorX, styleFlags);
             }
 
             var created = new CachedTextLayout(runs.ToArray(), cursorX);
@@ -1338,10 +1456,10 @@ namespace Ludots.Presentation.Skia
             return created;
         }
 
-        private float FlushRun(List<CachedTextRun> runs, SKTypeface typeface, int fontSize, float cursorX)
+        private float FlushRun(List<CachedTextRun> runs, SKTypeface typeface, int fontSize, float cursorX, byte styleFlags = 0)
         {
             string runText = _runText.ToString();
-            SKFont font = GetFont(typeface, fontSize);
+            SKFont font = GetFont(typeface, fontSize, styleFlags);
             ushort[] glyphs = font.GetGlyphs(runText);
             SKPoint[] glyphPositions = font.GetGlyphPositions(glyphs);
             SKTextBlob? blob = SKTextBlob.Create(runText, font);
@@ -1418,16 +1536,25 @@ namespace Ludots.Presentation.Skia
 
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                 float baselineY = item.Y + fontSize;
-                CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
+                CachedTextLayout layout = GetTextLayout(item.Text, fontSize, item.Decoration.StyleFlags);
+                float originX = ResolveTextOriginX(item.X, layout.Width, item.Decoration.StyleFlags);
                 for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
                 {
                     CachedTextRun run = layout.Runs[runIndex];
                     if (run.Blob != null)
                     {
-                        canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                        canvas.DrawText(run.Blob, originX + run.XOffset, baselineY, _textPaint);
                     }
                 }
             }
+        }
+
+        private const byte TextAlignCenterFlag = 0x04;
+
+        /// <summary>css text-align:center 的锚定语义:锚点 X 即文本水平中心(与血条一致);默认左锚。</summary>
+        private static float ResolveTextOriginX(float anchorX, float textWidth, byte styleFlags)
+        {
+            return (styleFlags & TextAlignCenterFlag) != 0 ? anchorX - textWidth * 0.5f : anchorX;
         }
 
         private static bool IsAsciiText(string text)
@@ -1459,7 +1586,7 @@ namespace Ludots.Presentation.Skia
 
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                 SKColor color = ToSkColor(item.Color0);
-                var key = new TextBatchKey(item.Text, fontSize, ToColorKey(color));
+                var key = new TextBatchKey(item.Text, fontSize, ToColorKey(color), item.Decoration.StyleFlags);
                 if (!_textSpriteBatchMap.TryGetValue(key, out int bucketIndex))
                 {
                     if (bucketCount >= _textSpriteBatchBuckets.Count)
@@ -1469,13 +1596,15 @@ namespace Ludots.Presentation.Skia
 
                     bucketIndex = bucketCount++;
                     _textSpriteBatchMap[key] = bucketIndex;
-                    CachedTextSprite sprite = GetTextSprite(item.Text, fontSize, color);
+                    CachedTextSprite sprite = GetTextSprite(item.Text, fontSize, color, item.Decoration);
                     _textSpriteBatchBuckets[bucketIndex].Reset(sprite);
                 }
 
                 CachedTextSprite cachedSprite = _textSpriteBatchBuckets[bucketIndex].Sprite;
                 float drawY = (item.Y + fontSize) - cachedSprite.BaselineY;
-                _textSpriteBatchBuckets[bucketIndex].Add(item.X, drawY);
+                _textSpriteBatchBuckets[bucketIndex].Add(
+                    ResolveTextOriginX(item.X, cachedSprite.TextWidth, item.Decoration.StyleFlags),
+                    drawY);
             }
 
             LastTextSpriteBatchBucketCount += bucketCount;
@@ -1533,6 +1662,13 @@ namespace Ludots.Presentation.Skia
                 }
 
                 if (item.StableId <= 0)
+                {
+                    return false;
+                }
+
+                // 阴影/底板需要逐条烘进精灵的画布外扩,retained 图集按无外扩精灵布局;
+                // 带这两种装饰的条目退回 blob 批(其内部再回退直绘),样式不丢。
+                if (item.Decoration.ShadowColor.W > 0.001f || item.Decoration.BoxBackground.W > 0.001f)
                 {
                     return false;
                 }
@@ -1669,7 +1805,9 @@ namespace Ludots.Presentation.Skia
                 {
                     RetainedTextSpriteBatchBucket orderBucket = state.Buckets[orderEntry.BucketIndex];
                     float orderDrawY = (item.Y + fontSize) - state.BucketBaselines[orderEntry.BucketIndex];
-                    orderBucket.AddVisible(item.X, orderDrawY);
+                    orderBucket.AddVisible(
+                        ResolveTextOriginX(item.X, orderBucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                        orderDrawY);
                     continue;
                 }
 
@@ -1678,11 +1816,13 @@ namespace Ludots.Presentation.Skia
                     (uint)entry.BucketIndex < (uint)state.Buckets.Count &&
                     (item.DirtySerial != 0
                         ? entry.DirtySerial == item.DirtySerial
-                        : entry.Key.Equals(new TextBatchKey(item.Text, fontSize, ToColorKey(ToSkColor(item.Color0))))))
+                        : entry.Key.Equals(new TextBatchKey(item.Text, fontSize, ToColorKey(ToSkColor(item.Color0)), item.Decoration.StyleFlags))))
                 {
                     RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                     float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                    bucket.AddVisible(item.X, drawY);
+                    bucket.AddVisible(
+                        ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                        drawY);
                     entry.SeenStamp = stamp;
                     entry.DirtySerial = item.DirtySerial;
                     entry.FontSize = fontSize;
@@ -1695,12 +1835,13 @@ namespace Ludots.Presentation.Skia
                 AddRetainedTextSpriteEntry(
                     state,
                     stableId,
-                    new TextBatchKey(item.Text, fontSize, ToColorKey(color)),
+                    new TextBatchKey(item.Text, fontSize, ToColorKey(color), item.Decoration.StyleFlags),
                     item,
                     fontSize,
                     color,
                     stamp,
-                    i);
+                    i,
+                    item.Decoration);
             }
 
             state.OrderCount = span.Length;
@@ -1747,7 +1888,9 @@ namespace Ludots.Presentation.Skia
                 RetainedTextSpriteBatchBucket bucket = state.Buckets[entry.BucketIndex];
                 int fontSize = state.OrderFontSizes[i];
                 float drawY = (item.Y + fontSize) - state.BucketBaselines[entry.BucketIndex];
-                bucket.AddVisible(item.X, drawY);
+                bucket.AddVisible(
+                    ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                    drawY);
             }
 
             state.LastVersion = laneVersion;
@@ -1779,12 +1922,13 @@ namespace Ludots.Presentation.Skia
                 AddRetainedTextSpriteEntry(
                     state,
                     item.StableId,
-                    new TextBatchKey(item.Text, fontSize, ToColorKey(color)),
+                    new TextBatchKey(item.Text, fontSize, ToColorKey(color), item.Decoration.StyleFlags),
                     item,
                     fontSize,
                     color,
                     stamp,
-                    orderCount);
+                    orderCount,
+                    item.Decoration);
                 orderCount++;
             }
 
@@ -1800,12 +1944,16 @@ namespace Ludots.Presentation.Skia
             int fontSize,
             SKColor color,
             int stamp,
-            int orderIndex)
+            int orderIndex,
+            in ScreenHudDecoration decoration)
         {
-            int bucketIndex = GetOrCreateRetainedTextSpriteBucket(state, key, item.Text!, fontSize, color);
+            int bucketIndex = GetOrCreateRetainedTextSpriteBucket(state, key, item.Text!, fontSize, color, decoration);
             RetainedTextSpriteBatchBucket bucket = state.Buckets[bucketIndex];
             float drawY = (item.Y + fontSize) - bucket.Sprite.BaselineY;
-            int slotIndex = bucket.Add(stableId, item.X, drawY);
+            int slotIndex = bucket.Add(
+                stableId,
+                ResolveTextOriginX(item.X, bucket.Sprite.TextWidth, item.Decoration.StyleFlags),
+                drawY);
             RetainedTextSpriteEntry entry = new(bucketIndex, slotIndex, key, item.DirtySerial, fontSize, stamp);
             state.ItemsByStableId[stableId] = entry;
             if ((uint)orderIndex < (uint)state.OrderStableIds.Length)
@@ -1821,7 +1969,8 @@ namespace Ludots.Presentation.Skia
             in TextBatchKey key,
             string text,
             int fontSize,
-            SKColor color)
+            SKColor color,
+            in ScreenHudDecoration decoration)
         {
             if (state.BucketIndexByKey.TryGetValue(key, out int bucketIndex))
             {
@@ -1829,7 +1978,7 @@ namespace Ludots.Presentation.Skia
             }
 
             bucketIndex = state.Buckets.Count;
-            CachedTextSprite sprite = GetTextSprite(text, fontSize, color);
+            CachedTextSprite sprite = GetTextSprite(text, fontSize, color, decoration);
             state.Buckets.Add(new RetainedTextSpriteBatchBucket(sprite));
             if (state.BucketBaselines.Length <= bucketIndex)
             {
@@ -1983,9 +2132,9 @@ namespace Ludots.Presentation.Skia
             return GetBarSprite(key, item);
         }
 
-        private CachedTextSprite GetTextSprite(string text, int fontSize, SKColor color)
+        private CachedTextSprite GetTextSprite(string text, int fontSize, SKColor color, in ScreenHudDecoration decoration = default)
         {
-            var key = new TextSpriteCacheKey(text, fontSize, ToColorKey(color));
+            var key = new TextSpriteCacheKey(text, fontSize, ToColorKey(color), decoration);
             if (_textSpriteCache.TryGetValue(key, out CachedTextSprite? sprite))
             {
                 LastTextSpriteCacheHits++;
@@ -2000,7 +2149,7 @@ namespace Ludots.Presentation.Skia
             }
 
             LastTextSpriteCacheMisses++;
-            CachedTextLayout layout = GetTextLayout(text, fontSize);
+            CachedTextLayout layout = GetTextLayout(text, fontSize, decoration.StyleFlags);
             float ascent = fontSize;
             float descent = Math.Max(1f, fontSize * 0.25f);
             for (int i = 0; i < layout.Runs.Length; i++)
@@ -2010,13 +2159,69 @@ namespace Ludots.Presentation.Skia
                 descent = Math.Max(descent, metrics.Descent);
             }
 
+            bool hasShadow = decoration.ShadowColor.W > 0.001f;
+            bool hasBox = decoration.BoxBackground.W > 0.001f;
+            float shadowMargin = hasShadow
+                ? MathF.Ceiling(MathF.Abs(decoration.ShadowOffsetX) + MathF.Abs(decoration.ShadowOffsetY) + decoration.ShadowBlur)
+                : 0f;
+            float boxPad = hasBox ? decoration.Padding + decoration.BorderWidth : 0f;
+
             float baselineY = MathF.Ceiling(ascent) + 1f;
-            int widthPx = Math.Max(1, (int)MathF.Ceiling(layout.Width) + 2);
-            int heightPx = Math.Max(1, (int)MathF.Ceiling(ascent + descent) + 2);
+            int widthPx = Math.Max(1, (int)MathF.Ceiling(layout.Width) + 2 + (int)(2 * (shadowMargin + boxPad)));
+            int heightPx = Math.Max(1, (int)MathF.Ceiling(ascent + descent) + 2 + (int)(2 * (shadowMargin + boxPad)));
+            float originX = shadowMargin + boxPad;
+            float originY = shadowMargin + boxPad;
 
             using var surface = SKSurface.Create(new SKImageInfo(widthPx, heightPx));
             SKCanvas spriteCanvas = surface.Canvas;
             spriteCanvas.Clear(SKColors.Transparent);
+
+            float drawBaseline = originY + baselineY;
+            if (hasShadow)
+            {
+                using var shadowPaint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    Color = ToSkColor(decoration.ShadowColor),
+                    MaskFilter = decoration.ShadowBlur > 0.01f
+                        ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, decoration.ShadowBlur * 0.5f)
+                        : null,
+                };
+                for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
+                {
+                    CachedTextRun run = layout.Runs[runIndex];
+                    if (run.Blob != null)
+                    {
+                        spriteCanvas.DrawText(
+                            run.Blob,
+                            TextSpriteBakePaddingX + originX + run.XOffset + decoration.ShadowOffsetX,
+                            drawBaseline + decoration.ShadowOffsetY,
+                            shadowPaint);
+                    }
+                }
+            }
+
+            if (hasBox)
+            {
+                float boxLeft = originX - boxPad + decoration.Padding * 0f;
+                SKRect boxRect = new(
+                    shadowMargin,
+                    shadowMargin,
+                    widthPx - shadowMargin,
+                    heightPx - shadowMargin);
+                _fillPaint.Color = ToSkColor(decoration.BoxBackground);
+                DrawRoundedOrPlain(spriteCanvas, boxRect, decoration.CornerRadius, _fillPaint);
+                if (decoration.BorderWidth > 0.01f)
+                {
+                    _strokePaint.StrokeWidth = decoration.BorderWidth;
+                    _strokePaint.Color = decoration.BorderColor.W > 0.001f
+                        ? ToSkColor(decoration.BorderColor)
+                        : SKColors.Black;
+                    DrawRoundedOrPlainStroke(spriteCanvas, boxRect, decoration.CornerRadius, _strokePaint);
+                    _strokePaint.StrokeWidth = 1f;
+                }
+            }
 
             _textPaint.Color = color;
             for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
@@ -2024,13 +2229,94 @@ namespace Ludots.Presentation.Skia
                 CachedTextRun run = layout.Runs[runIndex];
                 if (run.Blob != null)
                 {
-                    spriteCanvas.DrawText(run.Blob, TextSpriteBakePaddingX + run.XOffset, baselineY, _textPaint);
+                    spriteCanvas.DrawText(run.Blob, TextSpriteBakePaddingX + originX + run.XOffset, drawBaseline, _textPaint);
                 }
             }
 
-            sprite = new CachedTextSprite(surface.Snapshot(), baselineY);
+            sprite = new CachedTextSprite(
+                surface.Snapshot(),
+                baselineY + originY,
+                layout.Width,
+                offsetX: originX,
+                offsetY: originY);
             _textSpriteCache[key] = sprite;
             return sprite;
+        }
+
+        /// <summary>css clip-path 预设的归一化路径(0..1 坐标,乘以条目矩形)。</summary>
+        private static readonly float[][] ClipShapePoints =
+        {
+            Array.Empty<float>(),
+            // Shield:尖底盾——顶边全宽,底边中点收尖。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.62f, 0.5f, 1f, 0f, 0.62f },
+            // Diamond:菱形。
+            new[] { 0.5f, 0f, 1f, 0.5f, 0.5f, 1f, 0f, 0.5f },
+            // Pennant:燕尾——底边中央内凹。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.78f, 0.5f, 0.55f, 0f, 0.78f },
+            // Parallelogram:右斜平行四边形。
+            new[] { 0.12f, 0f, 1f, 0f, 0.88f, 1f, 0f, 1f },
+            // PointedBottom:下尖水滴。
+            new[] { 0f, 0f, 1f, 0f, 1f, 0.72f, 0.5f, 1f, 0f, 0.72f },
+        };
+
+        private static SKPath BuildItemPath(HudClipShape clipShape, in SKRect rect, float radius)
+        {
+            SKPath path = new();
+            if (clipShape != HudClipShape.None)
+            {
+                float[] points = ClipShapePoints[(int)clipShape];
+                for (int i = 0; i < points.Length; i += 2)
+                {
+                    float x = rect.Left + points[i] * rect.Width;
+                    float y = rect.Top + points[i + 1] * rect.Height;
+                    if (i == 0)
+                    {
+                        path.MoveTo(x, y);
+                    }
+                    else
+                    {
+                        path.LineTo(x, y);
+                    }
+                }
+
+                path.Close();
+                return path;
+            }
+
+            if (radius > 0.5f)
+            {
+                path.AddRoundRect(rect, radius, radius);
+            }
+            else
+            {
+                path.AddRect(rect);
+            }
+
+            return path;
+        }
+
+        private static void DrawRoundedOrPlain(SKCanvas canvas, in SKRect rect, float radius, SKPaint paint)
+        {
+            if (radius > 0.5f)
+            {
+                canvas.DrawRoundRect(rect, radius, radius, paint);
+            }
+            else
+            {
+                canvas.DrawRect(rect, paint);
+            }
+        }
+
+        private static void DrawRoundedOrPlainStroke(SKCanvas canvas, in SKRect rect, float radius, SKPaint paint)
+        {
+            if (radius > 0.5f)
+            {
+                canvas.DrawRoundRect(rect, radius, radius, paint);
+            }
+            else
+            {
+                canvas.DrawRect(rect, paint);
+            }
         }
 
         private CachedBarSprite GetBarSprite(in BarSpriteCacheKey key, in PresentationOverlayItem item)
@@ -2049,28 +2335,192 @@ namespace Ludots.Presentation.Skia
             }
 
             LastBarSpriteCacheMisses++;
+            ScreenHudDecoration deco = key.Decoration;
+            bool isIcon = !string.IsNullOrEmpty(key.ImageSource);
+            bool hasShadow = deco.ShadowColor.W > 0.001f;
+            float shadowMargin = hasShadow
+                ? MathF.Ceiling(MathF.Abs(deco.ShadowOffsetX) + MathF.Abs(deco.ShadowOffsetY) + deco.ShadowBlur)
+                : 0f;
+
             int widthPx = key.WidthPx;
             int heightPx = key.HeightPx;
-            using var surface = SKSurface.Create(new SKImageInfo(widthPx, heightPx));
+            using var surface = SKSurface.Create(
+                new SKImageInfo(widthPx + (int)(2 * shadowMargin), heightPx + (int)(2 * shadowMargin)));
             SKCanvas spriteCanvas = surface.Canvas;
             spriteCanvas.Clear(SKColors.Transparent);
 
-            SKRect rect = new(0f, 0f, widthPx, heightPx);
-            _fillPaint.Color = ToSkColor(item.Color0);
-            spriteCanvas.DrawRect(rect, _fillPaint);
+            SKRect rect = new(shadowMargin, shadowMargin, shadowMargin + widthPx, shadowMargin + heightPx);
+            float radius = deco.CornerRadius;
+            float pad = deco.Padding;
+            SKRect inner = new(rect.Left + pad, rect.Top + pad, rect.Right - pad, rect.Bottom - pad);
 
-            if (key.FillPx > 0)
+            if (hasShadow)
             {
-                _fillPaint.Color = ToSkColor(item.Color1);
-                spriteCanvas.DrawRect(0f, 0f, key.FillPx, heightPx, _fillPaint);
+                using var shadowPaint = new SKPaint
+                {
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    Color = ToSkColor(deco.ShadowColor),
+                    MaskFilter = deco.ShadowBlur > 0.01f
+                        ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, deco.ShadowBlur * 0.5f)
+                        : null,
+                };
+                SKRect shadowRect = new(
+                    rect.Left + deco.ShadowOffsetX,
+                    rect.Top + deco.ShadowOffsetY,
+                    rect.Right + deco.ShadowOffsetX,
+                    rect.Bottom + deco.ShadowOffsetY);
+                DrawRoundedOrPlain(spriteCanvas, in shadowRect, radius, shadowPaint);
             }
 
-            _strokePaint.Color = SKColors.Black;
-            spriteCanvas.DrawRect(rect, _strokePaint);
+            // 图标条目:阴影(可选)→图片铺满矩形,不做底/填充/渐变;装饰块边框照常套在外圈。
+            if (isIcon)
+            {
+                if (UiImageSourceCache.TryGetResource(key.ImageSource, out UiImageSourceCache.UiImageResource? resource) && resource != null)
+                {
+                    using SKPath iconPath = BuildItemPath(deco.ClipShape, rect, radius);
+                    spriteCanvas.Save();
+                    spriteCanvas.ClipPath(iconPath);
+                    bool sliced = deco.ImageSliceTop > 0f || deco.ImageSliceRight > 0f ||
+                                  deco.ImageSliceBottom > 0f || deco.ImageSliceLeft > 0f;
+                    if (sliced)
+                    {
+                        // 九宫格/三宫格:源矩形取位图尺寸或 SVG CullRect;切片非法时 fail-closed
+                        // (不画图,不回退整图拉伸),与 UI 车道 NineSliceBaker 同一合同。
+                        float sourceLeft = 0f;
+                        float sourceTop = 0f;
+                        float sourceWidth;
+                        float sourceHeight;
+                        if (resource.RasterImage != null)
+                        {
+                            sourceWidth = resource.RasterImage.Width;
+                            sourceHeight = resource.RasterImage.Height;
+                        }
+                        else
+                        {
+                            SKRect cull = resource.SvgPicture!.CullRect;
+                            sourceLeft = cull.Left;
+                            sourceTop = cull.Top;
+                            sourceWidth = cull.Width;
+                            sourceHeight = cull.Height;
+                        }
+
+                        if (NineSliceBaker.TryBuildPatches(
+                                sourceWidth, sourceHeight, sourceLeft, sourceTop, rect,
+                                deco.ImageSliceTop, deco.ImageSliceRight, deco.ImageSliceBottom, deco.ImageSliceLeft,
+                                out NineSliceBaker.PatchSet patches))
+                        {
+                            if (resource.RasterImage != null)
+                            {
+                                NineSliceBaker.DrawImage(spriteCanvas, resource.RasterImage, in patches);
+                            }
+                            else
+                            {
+                                NineSliceBaker.DrawPicture(spriteCanvas, resource.SvgPicture!, in patches);
+                            }
+                        }
+                    }
+                    else if (resource.RasterImage != null)
+                    {
+                        spriteCanvas.DrawImage(resource.RasterImage, rect);
+                    }
+                    else if (resource.SvgPicture != null)
+                    {
+                        SKRect cull = resource.SvgPicture.CullRect;
+                        float scaleX = rect.Width / cull.Width;
+                        float scaleY = rect.Height / cull.Height;
+                        spriteCanvas.Save();
+                        spriteCanvas.Translate(rect.Left, rect.Top);
+                        spriteCanvas.Scale(scaleX, scaleY);
+                        spriteCanvas.DrawPicture(resource.SvgPicture, 0f, 0f);
+                        spriteCanvas.Restore();
+                    }
+
+                    spriteCanvas.Restore();
+                }
+
+                if (deco.BorderWidth > 0.01f)
+                {
+                    _strokePaint.StrokeWidth = deco.BorderWidth;
+                    _strokePaint.Color = deco.BorderColor.W > 0.001f ? ToSkColor(deco.BorderColor) : SKColors.Black;
+                    using SKPath borderPath = BuildItemPath(deco.ClipShape, rect, radius);
+                    spriteCanvas.DrawPath(borderPath, _strokePaint);
+                    _strokePaint.StrokeWidth = 1f;
+                }
+
+                image = surface.Snapshot();
+                _barSpriteCache[key] = image;
+                return new CachedBarSprite(image, shadowMargin, shadowMargin);
+            }
+
+            // 背景:双色渐变或纯色;渐变跨度取内框整宽。
+            SKShader? backgroundShader = null;
+            if (deco.BackgroundGradientTo.W > 0.001f)
+            {
+                backgroundShader = SKShader.CreateLinearGradient(
+                    new SKPoint(inner.Left, inner.Top),
+                    new SKPoint(inner.Right, inner.Top),
+                    new[] { ToSkColor(item.Color0), ToSkColor(deco.BackgroundGradientTo) },
+                    null,
+                    SKShaderTileMode.Clamp);
+                _fillPaint.Shader = backgroundShader;
+            }
+            else
+            {
+                _fillPaint.Color = ToSkColor(item.Color0);
+            }
+
+            DrawRoundedOrPlain(spriteCanvas, in inner, radius, _fillPaint);
+            _fillPaint.Shader = null;
+            backgroundShader?.Dispose();
+
+            // 前景填充:按值裁剪内框,渐变沿整宽保证跨条目视觉连续。
+            float clamped = Math.Clamp(item.Value0, 0f, 1f);
+            if (clamped > 0f && inner.Width > 0.5f)
+            {
+                SKRect fillClip = new(inner.Left, inner.Top, inner.Left + inner.Width * clamped, inner.Bottom);
+                SKShader? fillShader = null;
+                if (deco.FillGradientTo.W > 0.001f)
+                {
+                    fillShader = SKShader.CreateLinearGradient(
+                        new SKPoint(inner.Left, inner.Top),
+                        new SKPoint(inner.Right, inner.Top),
+                        new[] { ToSkColor(item.Color1), ToSkColor(deco.FillGradientTo) },
+                        null,
+                        SKShaderTileMode.Clamp);
+                    _fillPaint.Shader = fillShader;
+                }
+                else
+                {
+                    _fillPaint.Color = ToSkColor(item.Color1);
+                }
+
+                int save = spriteCanvas.SaveLayer();
+                spriteCanvas.ClipRect(fillClip);
+                DrawRoundedOrPlain(spriteCanvas, in inner, radius, _fillPaint);
+                spriteCanvas.RestoreToCount(save);
+                _fillPaint.Shader = null;
+                fillShader?.Dispose();
+            }
+
+            // 边框:零宽时保留旧默认(1px 黑)以维持未声明样式的逐像素一致。
+            if (deco.BorderWidth > 0.01f)
+            {
+                _strokePaint.StrokeWidth = deco.BorderWidth;
+                _strokePaint.Color = deco.BorderColor.W > 0.001f ? ToSkColor(deco.BorderColor) : SKColors.Black;
+            }
+            else
+            {
+                _strokePaint.StrokeWidth = 1f;
+                _strokePaint.Color = SKColors.Black;
+            }
+
+            DrawRoundedOrPlainStroke(spriteCanvas, in rect, radius, _strokePaint);
+            _strokePaint.StrokeWidth = 1f;
 
             image = surface.Snapshot();
             _barSpriteCache[key] = image;
-            return new CachedBarSprite(image);
+            return new CachedBarSprite(image, shadowMargin, shadowMargin);
         }
 
         private CachedMarkerSprite GetMarkerSprite(in MinimapMarkerRenderBucketKey key)
@@ -2189,7 +2639,9 @@ namespace Ludots.Presentation.Skia
                 heightPx,
                 fillPx,
                 ToColorKey(ToSkColor(item.Color0)),
-                ToColorKey(ToSkColor(item.Color1)));
+                ToColorKey(ToSkColor(item.Color1)),
+                item.Decoration,
+                item.Text);
         }
 
         private static int QuantizeStrokeWidth(float strokeWidth)
@@ -2223,16 +2675,20 @@ namespace Ludots.Presentation.Skia
             _markerSpriteCache.Clear();
         }
 
-        private SKFont GetFont(SKTypeface typeface, int fontSize)
+        private SKFont GetFont(SKTypeface typeface, int fontSize, byte styleFlags = 0)
         {
             string familyName = typeface.FamilyName ?? string.Empty;
-            var key = new FontCacheKey(familyName, fontSize);
+            var key = new FontCacheKey(familyName, fontSize, styleFlags);
             if (_fontCache.TryGetValue(key, out SKFont? font))
             {
                 return font;
             }
 
-            font = new SKFont(typeface, fontSize);
+            font = new SKFont(typeface, fontSize)
+            {
+                Embolden = (styleFlags & 0x01) != 0,
+                SkewX = (styleFlags & 0x02) != 0 ? -0.25f : 0f,
+            };
             _fontCache[key] = font;
             return font;
         }
@@ -2432,20 +2888,73 @@ namespace Ludots.Presentation.Skia
             return ((int)layer * KindCount) + ((int)kind - 1);
         }
 
-        private readonly record struct FontCacheKey(string FamilyName, int FontSize);
+        private readonly record struct FontCacheKey(string FamilyName, int FontSize, byte StyleFlags);
 
+        // 两个含 Decoration 成员的缓存键手写 Equals/GetHashCode:record 生成的默认实现
+        // 经 EqualityComparer<ScreenHudDecoration>.Default 落入 ValueType.Equals 的反射
+        // 装箱路径(装饰块含 float 字段),缓存查找在每帧每条目上运行。
         private readonly record struct BarSpriteCacheKey(
             int WidthPx,
             int HeightPx,
             int FillPx,
             uint BackgroundColor,
-            uint ForegroundColor);
+            uint ForegroundColor,
+            ScreenHudDecoration Decoration,
+            string? ImageSource)
+        {
+            public bool Equals(BarSpriteCacheKey other)
+            {
+                return WidthPx == other.WidthPx &&
+                       HeightPx == other.HeightPx &&
+                       FillPx == other.FillPx &&
+                       BackgroundColor == other.BackgroundColor &&
+                       ForegroundColor == other.ForegroundColor &&
+                       Decoration.ContentEquals(other.Decoration) &&
+                       string.Equals(ImageSource, other.ImageSource, StringComparison.Ordinal);
+            }
 
-        private readonly record struct TextLayoutCacheKey(string Text, int FontSize);
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = WidthPx;
+                    hash = (hash * 31) ^ HeightPx;
+                    hash = (hash * 31) ^ FillPx;
+                    hash = (hash * 31) ^ (int)BackgroundColor;
+                    hash = (hash * 31) ^ (int)ForegroundColor;
+                    hash = (hash * 31) ^ Decoration.GetHashCode();
+                    hash = (hash * 31) ^ (ImageSource?.GetHashCode(StringComparison.Ordinal) ?? 0);
+                    return hash;
+                }
+            }
+        }
 
-        private readonly record struct TextBatchKey(string Text, int FontSize, uint ColorKey);
+        private readonly record struct TextLayoutCacheKey(string Text, int FontSize, byte StyleFlags);
 
-        private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey);
+        private readonly record struct TextBatchKey(string Text, int FontSize, uint ColorKey, byte StyleFlags);
+
+        private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey, ScreenHudDecoration Decoration)
+        {
+            public bool Equals(TextSpriteCacheKey other)
+            {
+                return FontSize == other.FontSize &&
+                       ColorKey == other.ColorKey &&
+                       string.Equals(Text, other.Text, StringComparison.Ordinal) &&
+                       Decoration.ContentEquals(other.Decoration);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Text?.GetHashCode(StringComparison.Ordinal) ?? 0;
+                    hash = (hash * 31) ^ FontSize;
+                    hash = (hash * 31) ^ (int)ColorKey;
+                    hash = (hash * 31) ^ Decoration.GetHashCode();
+                    return hash;
+                }
+            }
+        }
 
         private readonly record struct CachedTextRun(
             SKTextBlob? Blob,
@@ -2454,7 +2963,7 @@ namespace Ludots.Presentation.Skia
             ushort[] Glyphs,
             SKPoint[] GlyphPositions);
 
-        private readonly record struct CachedBarSprite(SKImage Image);
+        private readonly record struct CachedBarSprite(SKImage Image, float OffsetX = 0f, float OffsetY = 0f);
 
         private sealed class CachedMarkerSprite : IDisposable
         {
@@ -2729,12 +3238,18 @@ namespace Ludots.Presentation.Skia
             private float[] _x = Array.Empty<float>();
             private float[] _y = Array.Empty<float>();
 
-            public RetainedBarBatchBucket(SKImage image)
+            public RetainedBarBatchBucket(SKImage image, float offsetX = 0f, float offsetY = 0f)
             {
                 Image = image;
+                OffsetX = offsetX;
+                OffsetY = offsetY;
             }
 
             public SKImage Image { get; }
+
+            public float OffsetX { get; }
+
+            public float OffsetY { get; }
 
             public int Count { get; private set; }
 
@@ -2938,15 +3453,26 @@ namespace Ludots.Presentation.Skia
 
         private sealed class CachedTextSprite : IDisposable
         {
-            public CachedTextSprite(SKImage image, float baselineY)
+            public CachedTextSprite(SKImage image, float baselineY, float textWidth, float offsetX = 0f, float offsetY = 0f)
             {
                 Image = image;
                 BaselineY = baselineY;
+                TextWidth = textWidth;
+                OffsetX = offsetX;
+                OffsetY = offsetY;
             }
 
             public SKImage Image { get; }
 
             public float BaselineY { get; }
+
+            /// <summary>纯字形测量宽(px),text-align:center 时用于锚点回中。</summary>
+            public float TextWidth { get; }
+
+            /// <summary>阴影/底板烘焙进精灵后的左上外扩(px),绘制侧按此回贴锚点。</summary>
+            public float OffsetX { get; }
+
+            public float OffsetY { get; }
 
             public void Dispose()
             {
@@ -3022,9 +3548,15 @@ namespace Ludots.Presentation.Skia
 
             public SKRotationScaleMatrix[] Transforms => _transforms;
 
-            public void Reset(SKImage image, float width, float height)
+            public float OffsetX { get; private set; }
+
+            public float OffsetY { get; private set; }
+
+            public void Reset(SKImage image, float width, float height, float offsetX = 0f, float offsetY = 0f)
             {
                 Image = image;
+                OffsetX = offsetX;
+                OffsetY = offsetY;
                 _spriteRect = new SKRect(0f, 0f, Image.Width, Image.Height);
                 Count = 0;
             }
@@ -3032,10 +3564,10 @@ namespace Ludots.Presentation.Skia
             public void Add(float x, float y)
             {
                 EnsureCapacity(Count + 1);
-                _x[Count] = x;
-                _y[Count] = y;
+                _x[Count] = x - OffsetX;
+                _y[Count] = y - OffsetY;
                 _sprites[Count] = _spriteRect;
-                _transforms[Count] = SKRotationScaleMatrix.CreateTranslation(x, y);
+                _transforms[Count] = SKRotationScaleMatrix.CreateTranslation(x - OffsetX, y - OffsetY);
                 Count++;
             }
 

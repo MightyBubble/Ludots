@@ -41,6 +41,12 @@ namespace Ludots.Adapter.Web.Protocol
     public static class WireWorldHudItem
     {
         public const int SizeInBytes = 113;
+
+        /// <summary>css 排版装饰块,追加在既有 113B 之后:文本包偏移不变,旧断言不受影响。</summary>
+        public const int DecorationSizeInBytes = 124;
+
+        /// <summary>含装饰块的屏幕 HUD 条目总长。</summary>
+        public const int SizeInBytesWithDecoration = SizeInBytes + DecorationSizeInBytes;
     }
 
     public static class WirePresentationTextPacket

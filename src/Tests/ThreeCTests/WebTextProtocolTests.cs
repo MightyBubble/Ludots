@@ -171,7 +171,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(buffer[itemOffset + 89], Is.EqualTo((byte)PresentationTextArgType.Int32));
             Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(itemOffset + 93, 4)), Is.EqualTo(150));
 
-            int cursor = itemOffset + WireWorldHudItem.SizeInBytes;
+            int cursor = itemOffset + WireWorldHudItem.SizeInBytesWithDecoration;
             int stringCount = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2));
             Assert.That(stringCount, Is.EqualTo(0));
             cursor += 2;
@@ -221,7 +221,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(buffer[itemOffset + 89], Is.EqualTo((byte)PresentationTextArgType.TextToken));
             Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(itemOffset + 93, 4)), Is.EqualTo(2));
 
-            int cursor = itemOffset + WireWorldHudItem.SizeInBytes;
+            int cursor = itemOffset + WireWorldHudItem.SizeInBytesWithDecoration;
             int stringCount = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2));
             Assert.That(stringCount, Is.EqualTo(0));
             cursor += 2;

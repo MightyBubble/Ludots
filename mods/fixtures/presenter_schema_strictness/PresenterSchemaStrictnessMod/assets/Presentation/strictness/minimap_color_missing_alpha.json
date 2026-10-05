@@ -1,0 +1,8 @@
+[
+  {
+    "id": "strict_minimap_rgb_only",
+    "behaviors": [
+      { "slot": "minimap", "kind": "MinimapMarker", "activeByDefault": true, "minimapMarker": { "shape": "Circle", "color": [1, 0, 0], "sizePx": 3, "colorParamKey": "none", "sizeParamKey": "none", "visibilityParamKey": "none" } }
+    ]
+  }
+]

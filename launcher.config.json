@@ -2688,6 +2688,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubIntEntryMod",
         "projectPath": "CapabilityStandardGraphOpSubIntEntryMod.csproj"
       }
+    },
+    {
+      "name": "hud_css_styling",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/hud_css_styling/HudCssStylingMod",
+        "projectPath": "HudCssStylingMod.csproj"
+      }
     }
   ],
   "adapters": {

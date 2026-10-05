@@ -89,6 +89,7 @@ namespace Ludots.Adapter.Web
                     screenProjector,
                     viewController,
                     screenHud,
+                    cullingDebug: engine.GetService(CoreServiceKeys.CameraCullingDebugState),
                     heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             }
 

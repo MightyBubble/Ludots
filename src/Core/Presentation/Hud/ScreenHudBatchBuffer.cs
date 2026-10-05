@@ -676,6 +676,8 @@ namespace Ludots.Core.Presentation.Hud
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Id0 = item.Id0,
+                    Decoration = ScreenHudDecoration.FromWorld(in item),
                 });
             }
 
@@ -702,6 +704,7 @@ namespace Ludots.Core.Presentation.Hud
                     ValueBound = item.ValueBound,
                     BoundAttributeId = item.BoundAttributeId,
                     Owner = item.Owner,
+                    Decoration = ScreenHudDecoration.FromWorld(in item),
                     Text = item.Text,
                 });
             }
@@ -1057,6 +1060,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyBarCount >= _dirtyBars.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -1067,6 +1071,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_dirtyTextCount >= _dirtyTexts.Length)
             {
+                DirtyContentDrops++;
                 return;
             }
 
@@ -1157,6 +1162,9 @@ namespace Ludots.Core.Presentation.Hud
 
         /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数。</summary>
         public int RemovedIdDrops { get; private set; }
+
+        /// <summary>取证计数：脏条目增量窗口容量溢出被丢弃的条数（bar/text 合并计数，与 WorldHudBatchBuffer.DirtyContentDrops 同口径）。</summary>
+        public int DirtyContentDrops { get; private set; }
 
         private void AddRemovedStableId(int stableId)
         {
@@ -1261,6 +1269,7 @@ namespace Ludots.Core.Presentation.Hud
                     Width = item.Width,
                     Height = item.Height,
                     Value0 = item.Value0,
+                    Decoration = item.Decoration,
                 };
             }
 
@@ -1283,6 +1292,7 @@ namespace Ludots.Core.Presentation.Hud
                     ValueBound = item.ValueBound,
                     BoundAttributeId = item.BoundAttributeId,
                     Owner = item.Owner,
+                    Decoration = item.Decoration,
                     Text = item.Text,
                 };
             }
@@ -1410,7 +1420,9 @@ namespace Ludots.Core.Presentation.Hud
                    left.Color1 == right.Color1 &&
                    left.Width == right.Width &&
                    left.Height == right.Height &&
-                   left.Value0 == right.Value0;
+                   left.Value0 == right.Value0 &&
+                   left.Id0 == right.Id0 &&
+                   left.Decoration.ContentEquals(in right.Decoration);
         }
 
         private static bool TextEquals(in ScreenHudTextItem left, in ScreenHudTextItem right)
@@ -1438,7 +1450,8 @@ namespace Ludots.Core.Presentation.Hud
                    left.Id0 == right.Id0 &&
                    left.Id1 == right.Id1 &&
                    left.FontSize == right.FontSize &&
-                   TextPacketEquals(in left.Text, in right.Text);
+                   TextPacketEquals(in left.Text, in right.Text) &&
+                   left.Decoration.ContentEquals(in right.Decoration);
         }
 
         private static bool TextPacketEquals(in PresentationTextPacket left, in PresentationTextPacket right)

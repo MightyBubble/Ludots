@@ -1,0 +1,8 @@
+[
+  {
+    "id": "strict_valid_absent",
+    "behaviors": [
+      { "slot": "body", "kind": "AssetBinding", "activeByDefault": true, "assetBinding": { "assetKind": "Mesh", "assetId": "ref_mesh_cube", "renderPath": "StaticMesh", "mobility": "Static" } }
+    ]
+  }
+]
