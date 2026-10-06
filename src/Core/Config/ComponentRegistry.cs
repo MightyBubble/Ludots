@@ -134,6 +134,7 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
+            Register("CrowdSimulationAgent", SetCrowdSimulationAgent, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>.ComponentType);
             Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
@@ -1895,6 +1896,18 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
             string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
             int profileKey = MassNavigationProfileRegistry.Register(profileId);
             entity.Add(new MassNavigationAgent { ProfileId = profileKey });
+        }
+
+        private static void SetCrowdSimulationAgent(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationAgent", "profileId");
+            string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId });
         }
 
         private static void SetMassNavigationBlocker(Entity entity, JsonNode data)
