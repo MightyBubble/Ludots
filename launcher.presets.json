@@ -3669,6 +3669,33 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_1337_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 1337) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_1337"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_2024_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 2024) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_2024"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_7_raylib",
+      "name": "CrowdSimulation S1 Terrain (seed 7) Raylib",
+      "selectors": [
+        "$crowd_simulation_s1_terrain_7"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

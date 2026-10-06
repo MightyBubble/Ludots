@@ -1,0 +1,111 @@
+[
+  {
+    "id": "crowd_simulation_team",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Team"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation_player",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Player"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation_blocker_140m",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Blocker.140m"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "halfWidthCm": 7000,
+        "halfHeightCm": 7000,
+        "navRadiusCm": 0,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation_blocker_50m",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Blocker.50m"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "halfWidthCm": 2500,
+        "halfHeightCm": 2500,
+        "navRadiusCm": 0,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation_blocker_35m",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Blocker.35m"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "halfWidthCm": 1750,
+        "halfHeightCm": 1750,
+        "navRadiusCm": 0,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation_bridge",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Bridge"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "CrowdSimulationBridgeSpan": {
+        "x0Cm": 0,
+        "y0Cm": 0,
+        "x1Cm": 0,
+        "y1Cm": 0,
+        "widthCm": 0
+      }
+    }
+  }
+]

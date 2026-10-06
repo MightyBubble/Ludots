@@ -1,0 +1,4 @@
+[
+  { "Path": "CrowdSimulationConfig.json", "Policy": "DeepObject" },
+  { "Path": "CrowdSimulationDebug.json", "Policy": "DeepObject" }
+]

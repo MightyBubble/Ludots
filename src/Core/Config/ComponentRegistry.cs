@@ -134,6 +134,8 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
+            Register("CrowdSimulationAgent", SetCrowdSimulationAgent, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>.ComponentType);
+            Register("CrowdSimulationBridgeSpan", SetCrowdSimulationBridgeSpan, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationBridgeSpan>.ComponentType);
             Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
@@ -1895,6 +1897,36 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
             string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
             int profileKey = MassNavigationProfileRegistry.Register(profileId);
             entity.Add(new MassNavigationAgent { ProfileId = profileKey });
+        }
+
+        private static void SetCrowdSimulationAgent(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationAgent", "profileId");
+            string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId });
+        }
+
+        private static void SetCrowdSimulationBridgeSpan(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationBridgeSpan requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationBridgeSpan", "x0Cm", "y0Cm", "x1Cm", "y1Cm", "widthCm");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationBridgeSpan
+            {
+                X0Cm = ReadIntProperty(obj, "x0Cm", "CrowdSimulationBridgeSpan"),
+                Y0Cm = ReadIntProperty(obj, "y0Cm", "CrowdSimulationBridgeSpan"),
+                X1Cm = ReadIntProperty(obj, "x1Cm", "CrowdSimulationBridgeSpan"),
+                Y1Cm = ReadIntProperty(obj, "y1Cm", "CrowdSimulationBridgeSpan"),
+                WidthCm = ReadIntProperty(obj, "widthCm", "CrowdSimulationBridgeSpan"),
+            });
         }
 
         private static void SetMassNavigationBlocker(Entity entity, JsonNode data)

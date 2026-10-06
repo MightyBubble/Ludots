@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrowdSimulation S1 · 地形与阻挡验收视图</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #141210; color: #e8e2d6; font: 14px/1.6 system-ui, "Segoe UI", sans-serif; }
+  header { padding: 14px 20px 0; }
+  h1 { font-size: 18px; margin: 0 0 4px; font-weight: 650; }
+  .sub { color: #a89e8c; font-size: 12.5px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; position: sticky; top: 0; background: #141210ee; backdrop-filter: blur(6px); }
+  .bar button {
+    background: #262019; color: #d9d0bf; border: 1px solid #4a3f30; border-radius: 6px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+  }
+  .bar button:hover { border-color: #8a7657; }
+  .bar button.active { background: #6b5432; color: #fff; border-color: #a8874f; }
+  .bar .sep { width: 1px; background: #4a3f30; margin: 4px 2px; }
+  main { padding: 0 20px 24px; }
+  img { width: min(100%, 980px); image-rendering: pixelated; border: 1px solid #3a3227; border-radius: 4px; display: block; }
+  .meta { color: #a89e8c; font-size: 12.5px; padding: 8px 2px 0; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 2px 0; font-size: 12.5px; color: #c9c0ae; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CrowdSimulation S1 · 地形与障碍物</h1>
+  <div class="sub">Ludots 端读取 .navsurface / .height / 地图实体后的渲染结果（16 km × 16 km，256² 导航格）。三种子逐格对拍摘要见各 Mod 的 <code>assets/CrowdSimulation/parity/s1-truth.json</code>。</div>
+</header>
+<div class="bar">
+  <button data-seed="s1337" class="active">种子 1337</button>
+  <button data-seed="s2024">种子 2024</button>
+  <button data-seed="s7">种子 7</button>
+  <span class="sep"></span>
+  <button data-layer="types" class="active">地形类型</button>
+  <button data-layer="blocked">+ 阻挡格</button>
+  <button data-layer="full">+ 桥与跳跃</button>
+</div>
+<main>
+  <img id="view" src="crowd_simulation_s1337_types.png" alt="terrain">
+  <div class="legend">
+    <span><i style="background:#466eaa"></i>水</span>
+    <span><i style="background:#c8b882"></i>岸</span>
+    <span><i style="background:#96aa6e"></i>陆</span>
+    <span><i style="background:#96785a"></i>山</span>
+    <span><i style="background:#3c322c"></i>悬崖</span>
+    <span><i style="background:#d32f2f"></i>阻挡格（覆盖率 ≥ 0.5）</span>
+    <span><i style="background:#966e46"></i>桥面</span>
+    <span><i style="background:#ffb300"></i>单向跳跃</span>
+    <span><i style="background:#5c6bc0"></i>双向跳跃</span>
+  </div>
+  <div class="meta" id="meta"></div>
+</main>
+<script>
+  const meta = {
+    s1337: '种子 1337：300 阻挡物 · 7 座桥 · 267 跳跃候选',
+    s2024: '种子 2024：300 阻挡物 · 6 座桥 · 171 跳跃候选',
+    s7: '种子 7：300 阻挡物 · 11 座桥 · 333 跳跃候选',
+  };
+  let seed = 's1337', layer = 'types';
+  const img = document.getElementById('view');
+  function refresh() {
+    img.src = `crowd_simulation_${seed}_${layer}.png`;
+    document.getElementById('meta').textContent = meta[seed];
+  }
+  document.querySelectorAll('[data-seed]').forEach(b => b.onclick = () => {
+    seed = b.dataset.seed;
+    document.querySelectorAll('[data-seed]').forEach(x => x.classList.toggle('active', x === b));
+    refresh();
+  });
+  document.querySelectorAll('[data-layer]').forEach(b => b.onclick = () => {
+    layer = b.dataset.layer;
+    document.querySelectorAll('[data-layer]').forEach(x => x.classList.toggle('active', x === b));
+    refresh();
+  });
+  refresh();
+</script>
+</body>
+</html>

@@ -10992,6 +10992,72 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubInt/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 1337）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_1337",
+      "preset": "crowd_simulation_s1_terrain_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s1337_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_2024",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain2024Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 2024）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_2024",
+      "preset": "crowd_simulation_s1_terrain_2024_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s2024_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s1_terrain_7",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod",
+      "projectPath": null,
+      "title": "CrowdSimulation S1 地形（种子 7）",
+      "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s1_terrain_7",
+      "preset": "crowd_simulation_s1_terrain_7_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-and-navsurface.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s7_types.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "navsurface"
+      ]
     }
   ],
   "pathExemptions": [

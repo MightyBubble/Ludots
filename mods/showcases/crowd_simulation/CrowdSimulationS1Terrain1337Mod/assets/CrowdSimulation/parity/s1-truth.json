@@ -1,0 +1,10 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "navCells": 256,
+  "cellSizeCm": 6250,
+  "blockers": 300,
+  "bridges": 7,
+  "jumpCandidates": 267,
+  "fnv1a": "d83aa1b4"
+}

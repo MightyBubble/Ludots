@@ -1,0 +1,17 @@
+{
+  "name": "CrowdSimulationS1Terrain2024Mod",
+  "version": "0.1.0",
+  "description": "CrowdSimulation S1 地形演示（种子 2024）：.navsurface 地表 + 高度图 + 阻挡物实体。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "navsurface",
+    "s1"
+  ]
+}

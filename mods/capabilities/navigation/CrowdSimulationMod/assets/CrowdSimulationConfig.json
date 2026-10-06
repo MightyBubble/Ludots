@@ -1,0 +1,96 @@
+{
+  "version": 7,
+  "mapId": "crowd_simulation_demo",
+  "world": {
+    "navCellSizeCm": 6250,
+    "terrainTypes": [{ "id": "water" }, { "id": "shore" }, { "id": "land" }, { "id": "mountain" }, { "id": "cliff" }],
+    "surfaceAsset": "terrain/crowd_simulation_demo.navsurface"
+  },
+  "navAreas": [
+    { "id": "open", "slopeFree": false },
+    { "id": "shallow", "slopeFree": false },
+    { "id": "rough", "slopeFree": false },
+    { "id": "sheer", "slopeFree": false },
+    { "id": "deep", "slopeFree": true },
+    { "id": "road", "slopeFree": false },
+    { "id": "deck", "slopeFree": true },
+    { "id": "flooded", "slopeFree": true },
+    { "id": "burning", "slopeFree": false }
+  ],
+  "terrainAreas": { "water": "deep", "shore": "shallow", "land": "open", "mountain": "rough", "cliff": "sheer" },
+  "navProfiles": [
+    { "id": "foot", "maxSlopeDeg": 24 },
+    { "id": "hull" },
+    { "id": "climber", "maxSlopeDeg": 38 },
+    { "id": "amphib", "maxSlopeDeg": 20 },
+    { "id": "leaper", "maxSlopeDeg": 30, "jump": { "upCm": 2500, "downCm": 20000, "rangeCells": 7, "cost": 2 } }
+  ],
+  "agentTypes": [
+    { "id": "foot", "layer": 0, "speedCmPerSecond": 1400, "pushPriority": 2, "profile": "foot", "areaCost": { "open": 1.0, "shallow": 1.3, "road": 0.7, "deck": 1.0, "flooded": 3.0, "burning": 8.0 } },
+    { "id": "hull", "layer": 1, "speedCmPerSecond": 1100, "pushPriority": 2, "profile": "hull", "areaCost": { "deep": 1.0, "shallow": 1.6, "flooded": 1.2 } },
+    { "id": "climber", "layer": 2, "speedCmPerSecond": 800, "pushPriority": 3, "profile": "climber", "areaCost": { "open": 1.0, "shallow": 1.4, "rough": 1.8, "road": 0.8, "deck": 1.0, "flooded": 3.5, "burning": 8.0 } },
+    { "id": "amphib", "layer": 3, "speedCmPerSecond": 1000, "pushPriority": 1, "profile": "amphib", "areaCost": { "deep": 1.5, "shallow": 1.0, "open": 1.1, "road": 0.9, "deck": 1.0, "flooded": 1.0 } },
+    { "id": "leaper", "layer": 4, "speedCmPerSecond": 1200, "pushPriority": 2, "profile": "leaper", "areaCost": { "shallow": 1.2, "open": 1.0, "rough": 1.6, "road": 0.8, "deck": 1.0, "flooded": 3.0, "burning": 6.0 } }
+  ],
+  "unitTypes": [
+    { "id": "infantry", "agentType": "foot" },
+    { "id": "navy", "agentType": "hull" },
+    { "id": "mountaineer", "agentType": "climber" },
+    { "id": "amphibious", "agentType": "amphib" },
+    { "id": "jumper", "agentType": "leaper" }
+  ],
+  "agents": { "avoidanceRadiusScale": 6 },
+  "navmesh": { "minRegionArea": 12, "maxSimplificationError": 1.3, "maxEdgeLen": 12, "maxVertsPerPoly": 6, "portalInsetCells": 0.5 },
+  "hpa": { "clusterSize": 16, "maxEntranceWidth": 6 },
+  "navtile": { "cacheCapacity": 4096 },
+  "flowfield": { "cacheCapacity": 80, "poolCapacity": 16, "corridorPadding": 1, "maxRebuildsPerTick": 1 },
+  "planning": { "latencyTicks": 2, "refreshLatencyTicks": 12, "maxRefreshesPerTick": 1, "rebakeSlices": 3 },
+  "fog": { "rateHz": 4, "cellCells": 4, "visionCm": 80000, "revealTicks": 30, "slotCacheCapacity": 8, "variantCapacity": 64 },
+  "formation": {
+    "spacingScale": 1.1, "leaderSpeed": 0.8, "leaderTurnRate": 3, "faceTurnScale": 0.5, "catchUp": 1.35,
+    "slotSightCells": 16, "settleTime": 4, "leaderLookAhead": 6, "magicBoxMaxSpreadCm": 250000, "magicBoxPadCells": 1,
+    "slotArriveCells": 0.35, "goalArriveCells": 1, "settleRadiusCells": 2, "clumpSlack": 1.3, "minClumpCells": 1.5
+  },
+  "formations": [
+    { "id": "box", "label": "方阵", "spacing": 1, "aspect": 1.5, "wedge": false },
+    { "id": "line", "label": "横队", "spacing": 1, "aspect": 6, "wedge": false },
+    { "id": "wedge", "label": "楔形", "spacing": 1, "aspect": 1.5, "wedge": true },
+    { "id": "loose", "label": "松散", "spacing": 1.8, "aspect": 1.5, "wedge": false }
+  ],
+  "movement": {
+    "maxStepCells": 0.45, "maxSubSteps": 8, "slotTimeConstant": 1.5, "blendRate": 2.5, "blendCommit": 0.5,
+    "slotCheckInterval": 4, "sightHysteresis": 1.5, "laneSpread": 0.5, "wakeDistanceCells": 2, "stallSpeedRatio": 0.3,
+    "stallDecay": 0.5, "unitTurnRate": 2.5, "stopSpeedRatio": 0.2, "speedCapRatio": 1.5, "restAccelScale": 2,
+    "restSeparationScale": 0.6, "jumpSpeedRatio": 1.3
+  },
+  "avoidance": {
+    "rateHz": 15, "hashRings": 1, "maxNeighbors": 24, "maxScan": 96, "separationWeight": 1.4,
+    "acceleration": 4, "restDeadband": 0.25, "maxPush": 1.5, "smoothing": 0.5
+  },
+  "push": {
+    "movingBonus": 1, "dominantShare": 0.1,
+    "modes": { "samePlayer": "priority", "Friendly": "priority", "Neutral": "rigid", "Hostile": "rigid" }
+  },
+  "sim": { "maxUnits": 50000, "timeScale": 10 },
+  "spawn": { "placementTries": 8, "clusterSpacing": 2.2, "targetSearchTries": 400, "cellInset": 0.02 },
+  "structures": { "blockCoverage": 0.5, "portalCells": 4 },
+  "deploy": {
+    "initialUnits": 12000,
+    "spreadCells": 30,
+    "baseJitterCells": 20,
+    "centersPerGroup": 3,
+    "templates": [
+      "crowd_simulation_infantry_r100", "crowd_simulation_infantry_r200", "crowd_simulation_infantry_r300", "crowd_simulation_infantry_r400",
+      "crowd_simulation_navy_r100", "crowd_simulation_navy_r200", "crowd_simulation_navy_r300", "crowd_simulation_navy_r400",
+      "crowd_simulation_mountaineer_r100", "crowd_simulation_mountaineer_r200", "crowd_simulation_mountaineer_r300", "crowd_simulation_mountaineer_r400",
+      "crowd_simulation_amphibious_r100", "crowd_simulation_amphibious_r200", "crowd_simulation_amphibious_r300", "crowd_simulation_amphibious_r400"
+    ],
+    "bases": [
+      { "playerId": 1, "xCm": 480000, "yCm": 560000 },
+      { "playerId": 2, "xCm": 1120000, "yCm": 1040000 },
+      { "playerId": 3, "xCm": 1120000, "yCm": 480000 },
+      { "playerId": 4, "xCm": 480000, "yCm": 1040000 }
+    ]
+  },
+  "telemetry": { "turnEpsRad": 0.035, "ema": 0.2 }
+}

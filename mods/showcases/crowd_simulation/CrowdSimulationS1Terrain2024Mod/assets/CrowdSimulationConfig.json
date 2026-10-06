@@ -1,0 +1,7 @@
+{
+  "version": 7,
+  "mapId": "crowd_simulation_s2024",
+  "world": {
+    "surfaceAsset": "terrain/crowd_simulation_s2024.navsurface"
+  }
+}
