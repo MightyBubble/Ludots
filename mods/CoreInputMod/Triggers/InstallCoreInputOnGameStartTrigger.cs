@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Systems;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.CommandSources;
@@ -60,13 +59,9 @@ namespace CoreInputMod.Triggers
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
 
-            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext);
-            engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
-            RegisterLoadedModViewModes(engine);
-            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
             RegisterAutoLocalOrderSource(engine);
 
-_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation, ViewMode registered");
+_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation registered");
 
 InstallDeclaredLocalOrderSources(engine);
             return Task.CompletedTask;
@@ -181,22 +176,5 @@ InstallDeclaredLocalOrderSources(engine);
             _ctx.Log($"[CoreInputMod] Auto local order source installed from '{sourceModId}'.");
         }
 
-        private void RegisterLoadedModViewModes(GameEngine engine)
-        {
-            if (engine.ModLoader?.LoadedModIds == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < engine.ModLoader.LoadedModIds.Count; i++)
-            {
-                string modId = engine.ModLoader.LoadedModIds[i];
-                ViewModeRegistrar.RegisterFromVfs(
-                    _ctx,
-                    engine.GlobalContext,
-                    sourceModId: modId,
-                    activateWhenUnset: false);
-            }
-        }
     }
 }

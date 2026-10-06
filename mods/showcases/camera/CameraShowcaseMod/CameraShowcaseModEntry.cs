@@ -1,6 +1,7 @@
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using CameraShowcaseMod.Runtime;
+using CameraShowcaseMod.Triggers;
 
 namespace CameraShowcaseMod
 {
@@ -11,6 +12,7 @@ namespace CameraShowcaseMod
             context.Log("[CameraShowcaseMod] Loaded");
             var runtime = new CameraShowcaseRuntime(context);
 
+            context.OnEvent(GameEvents.GameStart, new InstallCameraShowcaseSystemsOnGameStartTrigger(context).ExecuteAsync);
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);

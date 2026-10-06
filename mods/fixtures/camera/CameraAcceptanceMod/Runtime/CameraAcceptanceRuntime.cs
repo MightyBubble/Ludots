@@ -2,9 +2,6 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CameraAcceptanceMod.UI;
-using CoreInputMod;
-using CoreInputMod.ViewMode;
-using CoreInputMod.Triggers;
 using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
@@ -31,7 +28,6 @@ namespace CameraAcceptanceMod.Runtime
 {
     internal sealed class CameraAcceptanceRuntime
     {
-        private const string AcceptanceModePrefix = "Camera.Acceptance.Mode.";
         private const float TwoPiRadians = 6.2831855f;
         private const float GoldenAngleRadians = 2.3999631f;
         private const float ProjectionScatterSpacingCm = 120f;
@@ -282,17 +278,6 @@ namespace CameraAcceptanceMod.Runtime
                 }
             }
 
-            if (!CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
-            {
-                return;
-            }
-
-            string activeModeId = manager.ActiveMode?.Id ?? string.Empty;
-            if (!isAcceptanceMap &&
-                activeModeId.StartsWith(AcceptanceModePrefix, System.StringComparison.OrdinalIgnoreCase))
-            {
-                manager.ClearActiveMode();
-            }
         }
 
         private CameraAcceptancePanelController EnsurePanelController(GameEngine engine)

@@ -142,13 +142,13 @@ PlayerInputHandler.Update()
 - live 输入采样：`src/Core/Input/Systems/InputRuntimeSystem.cs`
 - 权威输入冻结：`src/Core/Input/Systems/AuthoritativeInputSnapshotSystem.cs`
 - 相机固定步推进：`src/Core/Systems/CameraRuntimeSystem.cs`
-- 输入到 Order：`mods/CoreInputMod/Systems/ViewModeSwitchSystem.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs`
+- 输入到 Order：`src/Core/Input/Orders/InputOrderMappingSystem.cs`；相机模式键由各 showcase 自持轮询或图节点（`ActivateVirtualCamera`）驱动
 
 时序原则：
 
 - 先冻结输入，再推进相机，再推进 Order / GAS
 - `CameraManager.CaptureVisualInput()` 只采样，不推进逻辑
-- `ViewModeManager` 改变的是 virtual camera 激活关系，不绕过 fixed-step 主线
+- 相机模式切换改变的是 virtual camera 激活关系（`VirtualCameraRequest`），不绕过 fixed-step 主线
 
 ## 5. 角色与相机的耦合点
 
@@ -180,7 +180,7 @@ Physics2D.Position2D
 
 - 共享 3C profile pack：`mods/capabilities/camera/SharedThreeCProfilesMod/assets/Configs/Camera/virtual_cameras.json`
 - 基础 profile：`mods/capabilities/camera/CameraProfilesMod/assets/Configs/Camera/virtual_cameras.json`
-- 视角模式：`mods/capabilities/camera/CameraProfilesMod/assets/viewmodes.json`
+- 相机模式：消费方 mod 自持按键 + `VirtualCameraRequest` 激活（`viewmodes.json` 已随 ViewMode 退役删除）
 - shot：`mods/capabilities/camera/VirtualCameraShotsMod/assets/Configs/Camera/virtual_cameras.json`
 - 生产级示例：`mods/showcases/camera/CameraShowcaseMod`
 - 地图默认相机：`MapConfig.DefaultCamera.VirtualCameraId`

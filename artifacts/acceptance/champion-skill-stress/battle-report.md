@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts
 - map: champion_skill_stress
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-09-22T09:32:32.8078162Z
+- execution_timestamp_utc: 2026-10-06T14:48:59.9918334Z
 - screenshots: `screens/*.svg`, `screens/timeline.svg`
 
 ## Timeline
@@ -14,18 +14,18 @@
 [T+004] View=P1 Formation | formation container exposes 48 allied units through the same selection SSOT
 [T+005] View=AI Targets | team-B commander publishes 48 focused enemy targets via selection containers
 [T+006] View=Command Snapshot | command preview mirrors the current command-source entity after self-contained move order enqueue
-[T+007] Frontline melee plus fireball/laser volleys engaged | peak_projectiles=21 | peak_primitives=191 | peak_world_text=377 | heal_observed=True
-[T+008] Toolbar scale-up converged | A=56 | B=56 | injured A/B=22/20
+[T+007] Frontline melee plus fireball/laser volleys engaged | peak_projectiles=23 | peak_primitives=59 | peak_world_text=387 | heal_observed=True
+[T+008] Toolbar scale-up converged | A=56 | B=56 | injured A/B=23/24
 
 ## Outcome
 - result: success
 - failure_branch: toolbar scale-up must converge; otherwise stress spawn or order routing regressed
-- final_toolbar: View Command Snapshot | A 48/56 | B 48/56 | Proj 3 peak 21 | HUD BTF
+- final_toolbar: View Command Snapshot | A 48/56 | B 48/56 | Proj 4 peak 23 | HUD BTF
 - final_view_primary: StressLaserMageA
 - final_view_members: StressLaserMageA
 - final_team_counts: A=56, B=56
-- final_injured_counts: A=22, B=20
-- final_projectiles: 4
+- final_injured_counts: A=23, B=24
+- final_projectiles: 3
 
 ## Summary Stats
 - total_actions: 8
@@ -34,9 +34,9 @@
 - toolbar_scale_ups: 1
 - selection_view_switches: 4
 - command_snapshot_checks: 1
-- peak_projectiles: 21
-- peak_primitives: 191
-- peak_world_text: 377
+- peak_projectiles: 23
+- peak_primitives: 59
+- peak_world_text: 387
 - heal_observed: True
-- median_tick_ms: 0.919
-- max_tick_ms: 16.11
+- median_tick_ms: 3.548
+- max_tick_ms: 108.115

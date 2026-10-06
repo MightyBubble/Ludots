@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Reflection;
 using Arch.Core;
 using CameraShowcaseMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -43,7 +42,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         };
 
         [Test]
-        public void CoreInputMod_DefaultGameplay_ProvidesGenericCommandSourceAndViewModeActions()
+        public void CoreInputMod_DefaultGameplay_ProvidesGenericCommandSourceActions()
         {
             using var engine = CreateEngine(CoreInputMods);
 
@@ -53,8 +52,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(input.HasAction("CommandSourceAcquire"), Is.True);
             Assert.That(input.HasAction("Command"), Is.True);
             Assert.That(input.HasAction("Cancel"), Is.True);
-            Assert.That(input.HasAction("ViewModeNext"), Is.True);
-            Assert.That(input.HasAction("ViewModePrev"), Is.True);
         }
 
         [Test]
@@ -70,10 +67,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(commandSourceProfile.Id, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(revealShot.Id, Is.EqualTo(CameraShowcaseIds.RevealShotId));
 
-            Assert.That(engine.GlobalContext.TryGetValue("CoreInputMod.ViewModeManager", out var managerObj), Is.True);
-            Assert.That(managerObj, Is.Not.Null);
-
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
+            RequestCommandSourceFollow(engine);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.AuthorityCamera().VirtualCameraBrain;
@@ -121,8 +115,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.HubMapId);
 
-            Assert.That(engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj), Is.True);
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
+            RequestCommandSourceFollow(engine);
             Tick(engine, BlendSettleFrames);
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
@@ -130,7 +123,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             LoadMap(engine, "entry");
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
-            Assert.That(engine.GlobalContext.ContainsKey(ViewModeManager.ActiveModeIdKey), Is.False);
         }
 
         [Test]
@@ -362,11 +354,19 @@ namespace Ludots.Tests.ThreeC.Acceptance
             throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
         }
 
-        private static bool SwitchViewMode(object manager, string modeId)
+        private static void RequestCommandSourceFollow(GameEngine engine)
         {
-            var switchTo = manager.GetType().GetMethod("SwitchTo", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null)
-                ?? throw new InvalidOperationException("ViewModeManager.SwitchTo(string) was not found.");
-            return switchTo.Invoke(manager, new object[] { modeId }) is bool value && value;
+            Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out var owner);
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = CameraShowcaseIds.CommandSourceFollowProfileId,
+                BlendDurationSeconds = 0f,
+                FollowTargetKindOverride = Ludots.Core.Gameplay.Camera.CameraFollowTargetKind.EntityCollectionPrimary,
+                FollowCollectionOwnerOverride = owner,
+                FollowCollectionKeyOverride = "collection.command.source",
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
+            });
         }
 
         private static TestInputBackend GetInputBackend(GameEngine engine)

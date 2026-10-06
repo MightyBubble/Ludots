@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -1248,19 +1247,15 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) &&
-                modeIdObj is string modeId)
+            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
             {
-                return modeId;
-            }
-
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-                managerObj is ViewModeManager manager)
-            {
-                return manager.ActiveMode?.Id ?? string.Empty;
-            }
-
-            return string.Empty;
+                Ludots.Core.Input.Orders.CastModeType.TargetFirst => WowModeId,
+                Ludots.Core.Input.Orders.CastModeType.SmartCast => LolModeId,
+                Ludots.Core.Input.Orders.CastModeType.AimCast => Sc2ModeId,
+                Ludots.Core.Input.Orders.CastModeType.SmartCastWithIndicator => IndicatorModeId,
+                Ludots.Core.Input.Orders.CastModeType.ContextScored => ActionModeId,
+                _ => LolModeId
+            };
         }
 
         private static string BuildAbilityDiagnostics(GameEngine engine, string actorName)
@@ -1963,7 +1958,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 

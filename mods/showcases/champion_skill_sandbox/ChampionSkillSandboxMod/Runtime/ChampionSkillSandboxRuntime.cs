@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -65,6 +64,34 @@ namespace ChampionSkillSandboxMod.Runtime
             EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: false);
+        }
+
+        internal static void PollCastModeSwitch(GameEngine engine)
+        {
+            // The Controls context is startup-pushed and never popped; without a map guard its
+            // F1-F3 bindings would fire this poll on any co-loaded map and hijack the camera.
+            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not Ludots.Core.Input.Runtime.IInputActionReader input)
+            {
+                return;
+            }
+
+            if (input.PressedThisFrame(ChampionSkillSandboxIds.SmartCastActionId))
+            {
+                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
+            }
+            else if (input.PressedThisFrame(ChampionSkillSandboxIds.IndicatorActionId))
+            {
+                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.IndicatorModeId);
+            }
+            else if (input.PressedThisFrame(ChampionSkillSandboxIds.PressReleaseActionId))
+            {
+                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.PressReleaseModeId);
+            }
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -503,10 +530,9 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void EnsureMode(GameEngine engine)
         {
-            if (!ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) ||
-                !ChampionSkillSandboxIds.IsSandboxMode(activeModeId))
+            if (!ChampionSkillSandboxIds.IsSandboxMode(ChampionSkillCastModes.GetActive(engine)))
             {
-                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, ChampionSkillSandboxIds.SmartCastModeId);
+                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
             }
         }
 
@@ -987,12 +1013,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 engine.GetService(CoreServiceKeys.EntityCommandPanelService) is IEntityCommandPanelService service)
             {
                 service.Close(_focusPanelHandle);
-            }
-
-            if (ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) &&
-                ChampionSkillSandboxIds.IsSandboxMode(activeModeId))
-            {
-                ViewModeRuntime.TryClearActiveMode(engine.GlobalContext);
             }
 
             _focusPanelHandle = EntityCommandPanelHandle.Invalid;

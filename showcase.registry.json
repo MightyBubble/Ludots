@@ -434,7 +434,7 @@
       "path": "mods/capabilities/camera/CameraProfilesMod",
       "projectPath": "CameraProfilesMod.csproj",
       "title": "相机 Profile 能力包",
-      "summary": "提供虚拟相机 profile、视角模式与默认输入配置，业务 mod 通过配置选择或扩展。",
+      "summary": "提供可复用虚拟相机 profile（纯资产），业务 mod 通过配置选择或扩展。",
       "tier": "T2",
       "category": "capability",
       "tags": [
