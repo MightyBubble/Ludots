@@ -323,8 +323,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(order.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.Single));
             Assert.That(order.Args.Spatial.WorldCm.X, Is.EqualTo(start.X + binding.StepDistanceCm).Within(0.001f));
-            Assert.That(order.Args.Spatial.WorldCm.Y, Is.EqualTo(start.Y).Within(0.001f));
-            Assert.That(order.Args.Spatial.WorldCm.Z, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(order.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(order.Args.Spatial.WorldCm.Z, Is.EqualTo(start.Y).Within(0.001f));
 
             WriteWasdAcceptanceArtifact(
                 artifactDir,

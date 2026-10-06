@@ -122,7 +122,7 @@ namespace Ludots.Core.Input.Systems
                 };
                 order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
                 order.Args.Spatial.Mode = OrderCollectionMode.Single;
-                order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
+                order.Args.Spatial.WorldCm = new Vector3(target.X, 0f, target.Y);
 
                 if (_orderQueue.TryEnqueue(in order))
                 {
@@ -191,7 +191,7 @@ namespace Ludots.Core.Input.Systems
             };
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
-            order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
+            order.Args.Spatial.WorldCm = new Vector3(target.X, 0f, target.Y);
 
             bool submitted;
             if (IsReplicatedClient())

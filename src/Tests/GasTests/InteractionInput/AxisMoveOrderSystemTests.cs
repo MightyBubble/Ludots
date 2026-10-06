@@ -112,8 +112,8 @@ namespace Ludots.Tests.GAS
             Assert.That(first.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
             Assert.That(first.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(first.Args.Spatial.WorldCm.X, Is.EqualTo(StartXcm + 240f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(StartYcm + 320f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(StartYcm + 320f).Within(0.01f));
 
             Assert.That(harness.Orders.TryDequeue(out Order second), Is.True);
             Assert.That(second.Args.Spatial.WorldCm, Is.EqualTo(first.Args.Spatial.WorldCm));
