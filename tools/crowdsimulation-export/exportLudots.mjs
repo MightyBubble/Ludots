@@ -78,6 +78,7 @@ const terrainIds = config.terrainTypes.map((t) => t.id);
 
 // ───────────────────────────── .height（CHTM v2） ─────────────────────────────
 const B = world.B, HS = world.heightScale;
+let heightRaw, heightOffsetCm, heightSpanCm;
 {
   const count = B * B;
   let mn = Infinity, mx = -Infinity;
@@ -92,6 +93,7 @@ const B = world.B, HS = world.heightScale;
     const cm = world.heightBake[i] * HS * 100;
     raw.writeUInt16LE(Math.min(65535, Math.max(0, Math.round(((cm - offsetCm) * 65535) / spanCm))), i * 2);
   }
+  heightRaw = raw; heightOffsetCm = offsetCm; heightSpanCm = spanCm;
   const w = new BW();
   w.bytes(Buffer.from('CHTM', 'ascii'));
   w.i32(2); // version
@@ -218,3 +220,113 @@ function fnv1a(buf) {
 }
 
 console.log(`[export] ${mapId} seed=${seed} cells=${N}x${N} blockers=${blockers.length} bridges=${bridges.length} jumps=${world.jumps.count} → ${outRoot}`);
+
+// ───────────────────────────── S2:逐导航上下文真相（量化高度输入） ─────────────────────────────
+// 两端读同一份量化高度（14.1）：navHeight / slope 从写出的 uint16 样本重建，再跑真实烘焙。
+const { buildNavContext, navIdOf } = await import('../src/engine/nav.js');
+const { TileCache } = await import('../src/engine/navtile/tileCache.js');
+const { clearanceOf } = await import('../src/engine/core/space.js');
+
+const worldQ = Object.assign({}, world);
+// 跳跃候选同样换成量化后的 .navsurface 落盘值（drop 四舍五入到厘米;len 已是 f32）
+{
+  const n = world.jumps.count;
+  const q = { count: n, a: new Int32Array(n), b: new Int32Array(n), len: new Float32Array(n), drop: new Float32Array(n) };
+  for (let k = 0; k < n; k++) {
+    q.a[k] = world.jumps.a[k]; q.b[k] = world.jumps.b[k];
+    q.len[k] = Math.fround(world.jumps.len[k]);
+    q.drop[k] = Math.round(world.jumps.drop[k] * 100) / 100;
+  }
+  worldQ.jumps = q;
+}
+{
+  const Bq = world.B, Nq = world.N, cellSizeM = world.cellSize;
+  const cmQ = new Float64Array(Bq * Bq);
+  for (let i = 0; i < Bq * Bq; i++) cmQ[i] = (heightOffsetCm + (heightRaw.readUInt16LE(i * 2) * heightSpanCm) / 65535) / 100;
+  const navHeight = new Float64Array(Nq * Nq);
+  for (let y = 0; y < Nq; y++) {
+    const by0 = Math.floor((y * Bq) / Nq), by1 = Math.max(by0 + 1, Math.floor(((y + 1) * Bq) / Nq));
+    for (let x = 0; x < Nq; x++) {
+      const bx0 = Math.floor((x * Bq) / Nq), bx1 = Math.max(bx0 + 1, Math.floor(((x + 1) * Bq) / Nq));
+      let sum = 0, cnt = 0;
+      for (let by = by0; by < by1; by++) for (let bx = bx0; bx < bx1; bx++) { sum += cmQ[by * Bq + bx]; cnt++; }
+      navHeight[y * Nq + x] = sum / cnt;
+    }
+  }
+  const slope = new Float64Array(Nq * Nq), k2 = 1 / (2 * cellSizeM);
+  for (let y = 0; y < Nq; y++) for (let x = 0; x < Nq; x++) {
+    const xl = Math.max(0, x - 1), xr = Math.min(Nq - 1, x + 1), yu = Math.max(0, y - 1), yd = Math.min(Nq - 1, y + 1);
+    const gx = (navHeight[y * Nq + xr] - navHeight[y * Nq + xl]) * k2;
+    const gy = (navHeight[yd * Nq + x] - navHeight[yu * Nq + x]) * k2;
+    slope[y * Nq + x] = Math.sqrt(gx * gx + gy * gy);
+  }
+  worldQ.navHeight = navHeight; worldQ.slope = slope;
+}
+
+// 分区摘要用规范化标签（按连通域最小格号排序编号），跨语言只比较划分不比较标签编号
+function canonComp(comp, n2) {
+  const minCell = new Map();
+  for (let i = 0; i < n2; i++) {
+    const c = comp[i];
+    if (c < 0) continue;
+    const m = minCell.get(c);
+    if (m === undefined || i < m) minCell.set(c, i);
+  }
+  const comps = [...minCell.entries()].sort((a, b) => a[1] - b[1]);
+  const rank = new Map(comps.map((e, i) => [e[0], i]));
+  const out = new Int32Array(n2).fill(-1);
+  for (let i = 0; i < n2; i++) if (comp[i] >= 0) out[i] = rank.get(comp[i]);
+  return out;
+}
+
+{
+  const n2 = world.N * world.N;
+  const tileCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+  const seen = new Set(), contexts = [];
+  for (let a = 0; a < config.agentTypes.length; a++) {
+    for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+      const c = clearanceOf(config, r), id = navIdOf(a, c);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      contexts.push({ a, clearance: c, id, nav: buildNavContext(worldQ, config, a, c, structures, tileCache) });
+    }
+  }
+
+  const w = new BW();
+  w.bytes(Buffer.from('LS2T', 'ascii'));
+  w.i32(world.N); w.i32(contexts.length);
+  const summary = [];
+  for (const { a, clearance, id, nav } of contexts) {
+    w.i32(id);
+    w.bytes(Buffer.from(nav.passable.buffer, nav.passable.byteOffset, n2));
+    const cc = canonComp(nav.comp, n2);
+    w.bytes(Buffer.from(cc.buffer, cc.byteOffset, n2 * 4));
+    const links = nav.links;
+    const linkCount = links ? links.count : 0;
+    w.i32(linkCount);
+    for (let e = 0; e < linkCount; e++) { w.u32(links.from[e]); w.u32(links.to[e]); w.u8(links.two[e]); w.f32(links.len[e]); }
+    let passableCount = 0;
+    for (let i = 0; i < n2; i++) passableCount += nav.passable[i];
+    summary.push({
+      navId: id, agentType: config.agentTypes[a].id, clearance,
+      passableCount, compCount: nav.compCount, linkCount,
+    });
+  }
+  const bytes = w.build();
+  writeFileSync(join(outRoot, 'parity', 's2-nav-truth.json'), JSON.stringify({
+    mapId, seed, contexts: summary, fnv1a: fnv1a(bytes),
+  }, null, 2));
+  // 逐上下文可走栅格转储(分歧定位用;真相摘要是权威,本文件只做调试)
+  const dbgDir = join(outRoot, 'parity', 's2');
+  mkdirSync(dbgDir, { recursive: true });
+  for (const { a, clearance, nav } of contexts) {
+    writeFileSync(join(dbgDir, `${config.agentTypes[a].id}_c${clearance}.pass`), Buffer.from(nav.passable.buffer, nav.passable.byteOffset, n2));
+  }
+  // 量化输入推导的坡度栅格(f32)——坡度分歧测量用
+  {
+    const sf = new Float32Array(worldQ.slope.length);
+    for (let i = 0; i < sf.length; i++) sf[i] = worldQ.slope[i];
+    writeFileSync(join(dbgDir, 'slope.f32'), Buffer.from(sf.buffer));
+  }
+  console.log(`[export] ${mapId} s2 contexts=${contexts.length} fnv=${fnv1a(bytes)}`);
+}
