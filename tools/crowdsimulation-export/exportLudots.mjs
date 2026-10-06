@@ -140,18 +140,33 @@ const entities = [
 ];
 
 const worldCm = world.size * 100;
+// 绝对高程着色的海平面与峰跨度用真实数据算（默认 36 m 跨度会把 1400 m 地形整个饱和成单色）
+const seaLevelCm = Math.round(world.thresholds.seaH * HS * 100);
+const peakSpanCm = Math.max(100, Math.round((1 - world.thresholds.seaH) * HS * 100));
 const mapJson = {
   Id: mapId,
   Tags: ['crowd_simulation'],
+  Tuning: { LoadedChunkCapacity: 256 },
   Boards: [{
     Name: 'default', SpatialType: 'Grid', WidthCm: worldCm, HeightCm: worldCm,
     Anchor: { LocalXCm: 0, LocalYCm: 0, WorldXCm: 0, WorldYCm: 0 }, Grid: { CellSizeCm: 100 },
   }],
-  ContinuousHeightmap: { Asset: `assets/terrain/${mapId}.height` },
-  DefaultCamera: { VirtualCameraId: 'CrowdSimulation.Camera.Terrain', TargetXCm: worldCm / 2, TargetYCm: worldCm / 2, Yaw: 45, Pitch: 55, DistanceCm: 3000000, FovYDeg: 50 },
+  ContinuousHeightmap: {
+    Asset: `assets/terrain/${mapId}.height`,
+    RenderProfile: {
+      OverviewSwitchChunkSpans: 2.5,
+      OverviewVertexLimit: 65536,
+      ChunkLodErrorPx: 240,
+      DisableDistanceFog: true,
+      DisplayHeightScale: 1.0,
+      SeaLevelCm: seaLevelCm,
+      AbsoluteColorPeakSpanCm: peakSpanCm,
+    },
+  },
+  DefaultCamera: { VirtualCameraId: 'CrowdSimulation.Camera.Terrain', TargetXCm: worldCm / 2, TargetYCm: worldCm / 2, Yaw: 45, Pitch: 55, DistanceCm: Math.round(worldCm * 1.2), FovYDeg: 50 },
   Teams: [{ TeamId: 1, RepresentativeInstanceId: 'team_1' }, { TeamId: 2, RepresentativeInstanceId: 'team_2' }],
   Players: config.players.map((p, i) => ({ PlayerId: i + 1, TeamId: p.team === 'A' ? 1 : 2, RepresentativeInstanceId: `player_${i + 1}` })),
-  ParticipantRelationships: { Teams: [{ TeamA: 1, TeamB: 2, Attitude: 'Hostile', Symmetric: true }] },
+  ParticipantRelationships: { Teams: [{ TeamA: 1, TeamB: 2, TypeId: 'LudotsCore.Participant', Attitude: 'Hostile', Symmetric: true }] },
   Entities: entities,
 };
 writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));

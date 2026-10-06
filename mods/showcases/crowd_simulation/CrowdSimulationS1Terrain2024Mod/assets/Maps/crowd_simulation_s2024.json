@@ -3,6 +3,9 @@
   "Tags": [
     "crowd_simulation"
   ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Boards": [
     {
       "Name": "default",
@@ -21,7 +24,16 @@
     }
   ],
   "ContinuousHeightmap": {
-    "Asset": "assets/terrain/crowd_simulation_s2024.height"
+    "Asset": "assets/terrain/crowd_simulation_s2024.height",
+    "RenderProfile": {
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536,
+      "ChunkLodErrorPx": 240,
+      "DisableDistanceFog": true,
+      "DisplayHeightScale": 1,
+      "SeaLevelCm": 39323,
+      "AbsoluteColorPeakSpanCm": 100677
+    }
   },
   "DefaultCamera": {
     "VirtualCameraId": "CrowdSimulation.Camera.Terrain",
@@ -29,7 +41,7 @@
     "TargetYCm": 800000,
     "Yaw": 45,
     "Pitch": 55,
-    "DistanceCm": 3000000,
+    "DistanceCm": 1920000,
     "FovYDeg": 50
   },
   "Teams": [
@@ -69,6 +81,7 @@
       {
         "TeamA": 1,
         "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
         "Attitude": "Hostile",
         "Symmetric": true
       }
