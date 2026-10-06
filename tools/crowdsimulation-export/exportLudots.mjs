@@ -42,6 +42,7 @@ class BW {
   i32(v) { const b = Buffer.alloc(4); b.writeInt32LE(v); this.parts.push(b); }
   u32(v) { const b = Buffer.alloc(4); b.writeUInt32LE(v >>> 0); this.parts.push(b); }
   f32(v) { const b = Buffer.alloc(4); b.writeFloatLE(v); this.parts.push(b); }
+  f64(v) { const b = Buffer.alloc(8); b.writeDoubleLE(v); this.parts.push(b); }
   bytes(buf) { this.parts.push(Buffer.from(buf)); }
   // .NET BinaryWriter.Write(string)：7 位变长字节数 + UTF-8
   netString(s) {
@@ -367,5 +368,47 @@ function canonComp(comp, n2) {
       entryHashes: Object.fromEntries(entries.map(([k, ], i) => [fnv1a(Buffer.from([...k].flatMap((c) => { const cc = c.charCodeAt(0); return [cc & 0xff, cc >> 8]; }))), perEntry[i]])),
     }, null, 2));
     console.log(`[export] ${mapId} s3 tiles=${entries.length} bakes=${tileCache.bakes} fnv=${fnv1a(bytes2)}`);
+
+    // ───────────────────────────── S3-b:拼装网格 + HPA* 抽象图真相 ─────────────────────────────
+    // 拓扑(节点格 / 邻接目标 / 计数 / 网格多边形结构)进 FNV;代价数组(浮点)只落数值,
+    // C# 侧按带宽比较(两套数学体系的最后位差异不算缺陷,超过带宽才算)。
+    {
+      const { assembleNavmesh } = await import('../src/engine/navtile/assemble.js');
+      const { flattenHpa } = await import('../src/engine/hpa.js');
+      const wq = new BW(); // 拓扑流
+      const wc = new BW(); // 代价流
+      wq.bytes(Buffer.from('LS3B', 'ascii'));
+      wq.i32(world.N); wq.i32(contexts.length);
+      const perCtx = [];
+      const writeI32s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      const writeU8s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.u8(arr[i]); };
+      const writeCosts = (arr) => { wc.i32(arr.length); for (let i = 0; i < arr.length; i++) wc.f64(arr[i]); };
+      for (const { id, nav } of contexts) {
+        wq.i32(id);
+        const mesh = assembleNavmesh(nav);
+        wq.i32(mesh.count); wq.i32(mesh.regionCount);
+        writeI32s(wq, mesh.polyStart); writeI32s(wq, mesh.polyVerts); writeI32s(wq, mesh.polyTile);
+        writeI32s(wq, mesh.neiStart); writeI32s(wq, mesh.nei);
+        writeI32s(wq, mesh.polyOf);
+        // 网格顶点与邻接端点坐标是整数(f32 容器装 int),按 int 入流
+        writeI32s(wq, Int32Array.from(mesh.vx, (v) => v)); writeI32s(wq, Int32Array.from(mesh.vy, (v) => v));
+        writeI32s(wq, Int32Array.from(mesh.pax, (v) => v)); writeI32s(wq, Int32Array.from(mesh.pay, (v) => v));
+        writeI32s(wq, Int32Array.from(mesh.pbx, (v) => v)); writeI32s(wq, Int32Array.from(mesh.pby, (v) => v));
+        writeCosts(mesh.polyCost);
+        const flat = flattenHpa(nav.hpa);
+        wq.i32(flat.nodeCount); wq.i32(flat.edgeCount);
+        writeI32s(wq, flat.nodeCell); writeU8s(wq, flat.nodeLayer); writeI32s(wq, flat.nodeCluster);
+        writeI32s(wq, flat.adjStart); writeI32s(wq, flat.adjTo);
+        writeCosts(flat.adjCost);
+        perCtx.push({ navId: id, polys: mesh.count, hpaNodes: flat.nodeCount, hpaEdges: flat.edgeCount });
+      }
+      const truthBytes = wq.build();
+      writeFileSync(join(outRoot, 'parity', 's3b-topology.bin'), truthBytes);
+      writeFileSync(join(outRoot, 'parity', 's3b-graph-truth.json'), JSON.stringify({
+        mapId, seed, contexts: perCtx, fnv1a: fnv1a(truthBytes),
+      }, null, 2));
+      writeFileSync(join(outRoot, 'parity', 's3b-costs.bin'), wc.build());
+      console.log(`[export] ${mapId} s3b fnv=${fnv1a(truthBytes)}`);
+    }
   }
 }
