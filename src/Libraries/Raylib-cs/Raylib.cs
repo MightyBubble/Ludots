@@ -39,6 +39,42 @@ namespace Raylib_cs
         MOUSE_MIDDLE_BUTTON = 2
     }
 
+    // Mirrors raylib's GameControllerButtons (rlgl-independent, rcore layer).
+    // Face/dpad names are layout-abstract: on Xbox pads SOUTH=A, EAST=B; on
+    // PlayStation pads SOUTH=cross, EAST=circle. Bindings must use the abstract
+    // name so a control scheme reads the same on both layouts.
+    public enum GamepadButton
+    {
+        GAMEPAD_BUTTON_UNKNOWN = 0,
+        GAMEPAD_BUTTON_LEFT_FACE_UP,
+        GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+        GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+        GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+        GAMEPAD_BUTTON_RIGHT_FACE_UP,
+        GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+        GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+        GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
+        GAMEPAD_BUTTON_LEFT_TRIGGER_1,
+        GAMEPAD_BUTTON_LEFT_TRIGGER_2,
+        GAMEPAD_BUTTON_RIGHT_TRIGGER_1,
+        GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+        GAMEPAD_BUTTON_MIDDLE_LEFT,
+        GAMEPAD_BUTTON_MIDDLE,
+        GAMEPAD_BUTTON_MIDDLE_RIGHT,
+        GAMEPAD_BUTTON_LEFT_THUMB,
+        GAMEPAD_BUTTON_RIGHT_THUMB
+    }
+
+    public enum GamepadAxis
+    {
+        GAMEPAD_AXIS_LEFT_X = 0,
+        GAMEPAD_AXIS_LEFT_Y,
+        GAMEPAD_AXIS_RIGHT_X,
+        GAMEPAD_AXIS_RIGHT_Y,
+        GAMEPAD_AXIS_LEFT_TRIGGER,
+        GAMEPAD_AXIS_RIGHT_TRIGGER
+    }
+
     public enum KeyboardKey
     {
         KEY_NULL = 0,
@@ -561,6 +597,21 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr GetGamepadName(int gamepad);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsGamepadButtonDown(int gamepad, GamepadButton button);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsGamepadButtonPressed(int gamepad, GamepadButton button);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsGamepadButtonReleased(int gamepad, GamepadButton button);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern float GetGamepadAxisMovement(int gamepad, GamepadAxis axis);
 
         // --- Instancing APIs ---
 

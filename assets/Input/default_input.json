@@ -210,7 +210,43 @@
         {
           "actionId": "CameraLock",
           "path": "<Keyboard>/space"
-        }
+        },
+        {
+          "actionId": "Move",
+          "path": "<Gamepad>/leftStick",
+          "processors": [
+            { "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.15 }] },
+            { "type": "Invert", "parameters": [{ "name": "Y", "value": 1 }] }
+          ]
+        },
+        {
+          "actionId": "Look",
+          "path": "<Gamepad>/rightStick",
+          "processors": [
+            { "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.15 }] },
+            { "type": "Invert", "parameters": [{ "name": "Y", "value": 1 }] }
+          ]
+        },
+        {
+          "actionId": "Zoom",
+          "path": "<Gamepad>/rightTrigger",
+          "processors": [
+            { "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.1 }] }
+          ]
+        },
+        {
+          "actionId": "Zoom",
+          "path": "<Gamepad>/leftTrigger",
+          "processors": [
+            { "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.1 }] },
+            { "type": "Invert", "parameters": [{ "name": "X", "value": 1 }] }
+          ]
+        },
+        { "actionId": "RotateLeft", "path": "<Gamepad>/dpad/left" },
+        { "actionId": "RotateRight", "path": "<Gamepad>/dpad/right" },
+        { "actionId": "QueueModifier", "path": "<Gamepad>/leftShoulder" },
+        { "actionId": "PrecisionModifier", "path": "<Gamepad>/rightShoulder" },
+        { "actionId": "CameraLock", "path": "<Gamepad>/leftStickPress" }
       ]
     },
     {
@@ -229,7 +265,10 @@
         { "actionId": "Hotkey7", "path": "<Keyboard>/7" },
         { "actionId": "Hotkey8", "path": "<Keyboard>/8" },
         { "actionId": "Hotkey9", "path": "<Keyboard>/9" },
-        { "actionId": "ChainDemo", "path": "<Keyboard>/c" }
+        { "actionId": "ChainDemo", "path": "<Keyboard>/c" },
+        { "actionId": "PrimaryClick", "path": "<Gamepad>/buttonSouth" },
+        { "actionId": "SecondaryClick", "path": "<Gamepad>/buttonEast" },
+        { "actionId": "ChainDemo", "path": "<Gamepad>/buttonNorth" }
       ]
     }
   ]

@@ -1,0 +1,13 @@
+{
+  "name": "GamepadShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable gamepad showcase: live stick/trigger/button HUD, A-button pulse ring, dpad color shift. Pair with the camera showcase for gamepad-driven flythrough.",
+  "main": "bin/net9.0/GamepadShowcaseMod.dll",
+  "priority": 850,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0",
+    "CoreInputMod": ">=1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["gamepad", "input", "showcase"]
+}

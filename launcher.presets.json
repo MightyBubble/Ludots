@@ -2,15 +2,6 @@
   "schemaVersion": 1,
   "presets": [
     {
-      "id": "case_e_selection_raylib",
-      "name": "Case E Selection Raylib",
-      "selectors": [
-        "$case_e_selection"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "save_load_showcase_raylib",
       "name": "Save Load Raylib",
       "selectors": [
@@ -46,6 +37,16 @@
       "name": "Camera Acceptance Raylib",
       "selectors": [
         "$camera_acceptance"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "gamepad_showcase_raylib",
+      "name": "Gamepad Showcase Raylib",
+      "selectors": [
+        "$camera_showcase",
+        "$gamepad_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -509,15 +510,6 @@
       "name": "Capability Standard Effect Preset Type Code Raylib",
       "selectors": [
         "$capability_standard_effect_preset_type_code_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
-      "name": "Capability Standard Graph Op Extension Raylib",
-      "selectors": [
-        "$capability_standard_mod_graph_op_extension_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2442,26 +2434,6 @@
       ]
     },
     {
-      "id": "engine_raylib_gpu_crowd",
-      "name": "引擎画廊·GPU 剔除 Indirect Draw",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--project",
-        "projects/engine_gallery",
-        "--scene",
-        "gpu_crowd",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_gpu_crowd/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_gpu_crowd/stats.json"
-      ]
-    },
-    {
       "id": "engine_raylib_slash_trail",
       "name": "引擎画廊·刀光轨迹",
       "selectors": [
@@ -2479,26 +2451,6 @@
         "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_slash_trail/stats.json"
-      ]
-    },
-    {
-      "id": "engine_raylib_gpu_crowd_sim",
-      "name": "引擎画廊·模拟层驱动 GPU 军团",
-      "selectors": [
-        "$engine_gallery"
-      ],
-      "adapterId": "raylib",
-      "args": [
-        "--project",
-        "projects/engine_gallery",
-        "--scene",
-        "gpu_crowd_sim",
-        "--frames",
-        "120",
-        "--screenshot",
-        "artifacts/acceptance/engine_raylib_gpu_crowd_sim/screen.png",
-        "--json",
-        "artifacts/acceptance/engine_raylib_gpu_crowd_sim/stats.json"
       ]
     },
     {
@@ -2551,15 +2503,6 @@
       "name": "Dual Seat Panels Raylib",
       "selectors": [
         "$dual_seat_panels_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "tcg_prompt_raylib",
-      "name": "TCG Prompt Raylib",
-      "selectors": [
-        "$tcg_prompt_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -3360,361 +3303,6 @@
       "selectors": [
         "$contact_sensor_textbook",
         "$agent_bridge"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_CompleteActiveOrder_raylib",
-      "name": "Graph Op CompleteActiveOrder Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_CompleteActiveOrder"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_FloatToInt_raylib",
-      "name": "Graph Op FloatToInt Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_FloatToInt"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_IntToFloat_raylib",
-      "name": "Graph Op IntToFloat Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_IntToFloat"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
-      "name": "Graph Op LoadEntityPosValid Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadEntityPosValid"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadEntityPosX_raylib",
-      "name": "Graph Op LoadEntityPosX Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadEntityPosX"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadEntityPosY_raylib",
-      "name": "Graph Op LoadEntityPosY Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadEntityPosY"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
-      "name": "Graph Op LoadOrderTypeId Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadOrderTypeId"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SqrtFloat_raylib",
-      "name": "Graph Op SqrtFloat Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SqrtFloat"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubmitAssignedOrder_raylib",
-      "name": "Graph Op SubmitAssignedOrder Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubmitAssignedOrder"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "eqs_influence_raylib",
-      "name": "EQS Influence Raylib",
-      "selectors": [
-        "$eqs_influence"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubmitCommandIntent_raylib",
-      "name": "Graph Op SubmitCommandIntent Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubmitCommandIntent"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubmitCast_raylib",
-      "name": "Graph Op SubmitCast Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubmitCast"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_QueryFilterKnowledgeVisible_raylib",
-      "name": "Graph Op QueryFilterKnowledgeVisible Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_QueryFilterKnowledgeVisible"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubmitEngageBatch_raylib",
-      "name": "Graph Op SubmitEngageBatch Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubmitEngageBatch"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_QueryFilterSelectable_raylib",
-      "name": "Graph Op QueryFilterSelectable Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_QueryFilterSelectable"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ApplyCalendarStart_raylib",
-      "name": "Graph Op ApplyCalendarStart Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ApplyCalendarStart"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarCycleDay_raylib",
-      "name": "Graph Op ReadCalendarCycleDay Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarCycleDay"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarCyclePhase_raylib",
-      "name": "Graph Op ReadCalendarCyclePhase Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarCyclePhase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarDayIndex_raylib",
-      "name": "Graph Op ReadCalendarDayIndex Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarDayIndex"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarDayPermille_raylib",
-      "name": "Graph Op ReadCalendarDayPermille Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarDayPermille"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarDayPhase_raylib",
-      "name": "Graph Op ReadCalendarDayPhase Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarDayPhase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarEnabled_raylib",
-      "name": "Graph Op ReadCalendarEnabled Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarEnabled"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarTicksIntoDay_raylib",
-      "name": "Graph Op ReadCalendarTicksIntoDay Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarTicksIntoDay"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarYear_raylib",
-      "name": "Graph Op ReadCalendarYear Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarYear"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SetCalendarDayIndex_raylib",
-      "name": "Graph Op SetCalendarDayIndex Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SetCalendarDayIndex"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SetCalendarTicksIntoDay_raylib",
-      "name": "Graph Op SetCalendarTicksIntoDay Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SetCalendarTicksIntoDay"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_AcquireTimeFlowPause_raylib",
-      "name": "Graph Op AcquireTimeFlowPause Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_AcquireTimeFlowPause"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_AcquireTimeFlowScale_raylib",
-      "name": "Graph Op AcquireTimeFlowScale Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_AcquireTimeFlowScale"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadTimeFlowPaused_raylib",
-      "name": "Graph Op ReadTimeFlowPaused Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadTimeFlowPaused"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadTimeFlowScalePermille_raylib",
-      "name": "Graph Op ReadTimeFlowScalePermille Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadTimeFlowScalePermille"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReleaseTimeFlowToken_raylib",
-      "name": "Graph Op ReleaseTimeFlowToken Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReleaseTimeFlowToken"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadConfigKey_raylib",
-      "name": "Graph Op LoadConfigKey Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadConfigKey"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarCyclePhaseIndex_raylib",
-      "name": "Graph Op ReadCalendarCyclePhaseIndex Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarCyclePhaseIndex"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ReadCalendarDaysUntilPhase_raylib",
-      "name": "Graph Op ReadCalendarDaysUntilPhase Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ReadCalendarDaysUntilPhase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubInt_raylib",
-      "name": "Graph Op SubInt Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubInt"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SubmitResponseChainOrder_raylib",
-      "name": "Graph Op SubmitResponseChainOrder Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SubmitResponseChainOrder"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "ballista_route_by_target_raylib",
-      "name": "Ballista Route By Target Raylib",
-      "selectors": [
-        "$ballista_units",
-        "$ballista_route_by_target",
-        "$agent_bridge"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "total_war_flow_raylib",
-      "name": "Total War Flow Raylib",
-      "selectors": [
-        "$total_war_flow",
-        "$ballista_units",
-        "$agent_bridge"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_ActivateVirtualCamera_raylib",
-      "name": "Graph Op ActivateVirtualCamera Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_ActivateVirtualCamera"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

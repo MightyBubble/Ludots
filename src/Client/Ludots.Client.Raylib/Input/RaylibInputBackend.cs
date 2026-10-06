@@ -53,6 +53,13 @@ namespace Ludots.Client.Raylib.Input
             {
                 return Raylib_cs.Raylib.GetMouseWheelMove() + (_synthetic?.WheelDeltaThisFrame ?? 0f);
             }
+
+            var gamepadAxis = RaylibInputPathParser.ParseGamepadAxis(devicePath);
+            if (gamepadAxis.HasValue)
+            {
+                return ReadGamepadAxis(gamepadAxis.Value.Pad, gamepadAxis.Value.Axis, devicePath);
+            }
+
             return 0f;
         }
 
@@ -63,6 +70,23 @@ namespace Ludots.Client.Raylib.Input
                 _synthetic.IsButtonDown(ToSyntheticButton(mouseBtn.Value)))
             {
                 return true;
+            }
+
+            var gamepadBtn = RaylibInputPathParser.ParseGamepadButton(devicePath);
+            if (gamepadBtn.HasValue)
+            {
+                if (_synthetic != null && _synthetic.IsGamepadButtonDown(SyntheticGamepadControl(devicePath)))
+                {
+                    return true;
+                }
+
+                int pad = RaylibInputPathParser.ParseGamepadIndex(devicePath);
+                if (pad >= 0 && Raylib_cs.Raylib.IsGamepadAvailable(pad))
+                {
+                    return Raylib_cs.Raylib.IsGamepadButtonDown(pad, gamepadBtn.Value);
+                }
+
+                return false;
             }
 
             if (_imeEnabled) return false; // Block keyboard inputs when IME is active
@@ -84,6 +108,33 @@ namespace Ludots.Client.Raylib.Input
             }
 
             return false;
+        }
+
+        private float ReadGamepadAxis(int pad, GamepadAxis axis, string devicePath)
+        {
+            if (_synthetic != null)
+            {
+                float syntheticValue = _synthetic.GetGamepadAxis(devicePath);
+                if (syntheticValue != 0f)
+                {
+                    return syntheticValue;
+                }
+            }
+
+            if (pad >= 0 && Raylib_cs.Raylib.IsGamepadAvailable(pad))
+            {
+                return Raylib_cs.Raylib.GetGamepadAxisMovement(pad, axis);
+            }
+
+            return 0f;
+        }
+
+        /// <summary>Engine-neutral control name for the synthetic gamepad ("&lt;Gamepad&gt;/dpad/up" becomes "DPADUP").</summary>
+        internal static string SyntheticGamepadControl(string devicePath)
+        {
+            int slash = devicePath.IndexOf('/');
+            string control = slash >= 0 ? devicePath.Substring(slash + 1) : devicePath;
+            return control.Replace("/", "").ToUpperInvariant();
         }
 
         public Vector2 GetMousePosition()
