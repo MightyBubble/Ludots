@@ -61,6 +61,11 @@
       "PlayerId": 1,
       "TeamId": 1,
       "RepresentativeInstanceId": "wasd-sandbox-zhangsan"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "wasd-sandbox-lisi"
     }
   ]
 }

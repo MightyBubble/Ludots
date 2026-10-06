@@ -110,6 +110,46 @@ namespace Ludots.Tests.GAS.Production
                 $"(yaw={cameraYaw}, expected={expected}, delta={delta}).");
         }
 
+        [Test]
+        public void WasdSandbox_ToggleKey_SwitchesPossessionAndCameraProfile()
+        {
+            string repoRoot = FindRepoRoot();
+            var backend = new TestInputBackend();
+            using var engine = CreateEngine(repoRoot, backend);
+            engine.LoadMap(MapId);
+            Tick(engine, 8);
+
+            Entity zhangSan = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            ControlSchemeRuntime schemes = RequireSchemes(engine);
+            Assert.That(schemes.TryGetActiveAxisMove(out _), Is.True);
+            Assert.That(ActiveCameraId(engine, zhangSan), Is.EqualTo("Camera.Profile.WasdSandboxTps"),
+                "张三's binding adopts the TPS profile at map entry.");
+
+            backend.SetButton("<Keyboard>/t", true);
+            Tick(engine, 1);
+            backend.SetButton("<Keyboard>/t", false);
+            Tick(engine, 4);
+
+            Entity current = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Assert.That(current, Is.Not.EqualTo(zhangSan),
+                "T must cycle possession to the other bound rep (李四).");
+            Assert.That(ActiveCameraId(engine, current), Is.EqualTo("Camera.Profile.WasdSandboxTopdown"),
+                "李四's binding adopts the top-down profile after the possession switch.");
+        }
+
+        private static string ActiveCameraId(GameEngine engine, Entity rep)
+        {
+            // Sole-seat fullscreen: the seat's PresentBinding view is the single camera authority;
+            // profile adoption targets it regardless of which rep is possessed.
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine.GlobalContext);
+            Assert.That(seats.TryGetSoleSeat(out ClientLocalSeat seat), Is.True);
+            PresentBinding binding = seat.PresentBinding
+                ?? throw new InvalidOperationException("sole seat has no PresentBinding view.");
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(engine);
+            return views.Require(binding.LogicViewId).Camera.VirtualCameraBrain?.ActiveCameraId
+                ?? string.Empty;
+        }
+
         private static ControlSchemeRuntime RequireSchemes(GameEngine engine)
         {
             return engine.GetService(CoreServiceKeys.ControlSchemeRuntime)

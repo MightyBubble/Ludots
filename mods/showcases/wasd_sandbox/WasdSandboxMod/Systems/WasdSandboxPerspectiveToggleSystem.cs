@@ -4,15 +4,19 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Client;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
 namespace WasdSandboxMod.Systems
 {
     /// <summary>
-    /// Cycles the sole seat's possession across every alive rep that declares a
-    /// <see cref="CameraProfileBinding"/>. The camera profile switch itself is not this system's
-    /// job — <see cref="Ludots.Core.Systems.CameraProfileBindingSystem"/> adopts the binding of
+    /// Cycles the sole seat's possession across the participant reps that declare a
+    /// <see cref="CameraProfileBinding"/>. Possession follows participants
+    /// (<c>SeatPossessionSyncSystem</c> rebinds the rep from <c>PlayerEntityLookup</c>), so
+    /// switching means possessing the other player — never overriding the player-rep binding.
+    /// The camera profile switch itself is not this system's job:
+    /// <see cref="Ludots.Core.Systems.CameraProfileBindingSystem"/> adopts the binding of
     /// whichever rep becomes possessed.
     /// </summary>
     public sealed class WasdSandboxPerspectiveToggleSystem : ISystem<float>
@@ -22,7 +26,8 @@ namespace WasdSandboxMod.Systems
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly List<Entity> _candidates = new();
-        private static readonly QueryDescription BindingQuery = new QueryDescription().WithAll<CameraProfileBinding, WorldPositionCm>();
+        private static readonly QueryDescription BindingQuery =
+            new QueryDescription().WithAll<CameraProfileBinding, WorldPositionCm, PlayerOwner>();
 
         public WasdSandboxPerspectiveToggleSystem(World world, Dictionary<string, object> globals)
         {
@@ -74,7 +79,8 @@ namespace WasdSandboxMod.Systems
                 next = _candidates[0];
             }
 
-            seats.SetPossession(seat.SeatId, seat.PossessedPlayerId, next);
+            int targetPlayerId = _world.Get<PlayerOwner>(next).PlayerId;
+            seats.SetPossession(seat.SeatId, targetPlayerId, next);
         }
     }
 }

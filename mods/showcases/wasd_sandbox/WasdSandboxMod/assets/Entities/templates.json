@@ -23,7 +23,7 @@
     "id": "wasd_lisi",
     "components": {
       "Name": { "Value": "LiSi" },
-      "PlayerOwner": { "PlayerId": 1 },
+      "PlayerOwner": { "PlayerId": 2 },
       "Team": { "Id": 1 },
       "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 1200, "Y": 0 } },
