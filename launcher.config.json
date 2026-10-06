@@ -26,27 +26,6 @@
       }
     },
     {
-      "name": "ballista_units",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/ballista_units/BallistaUnitsMod"
-      }
-    },
-    {
-      "name": "ballista_route_by_target",
-      "target": {
-        "type": "path",
-        "value": "mods/fixtures/gas/BallistaRouteByTargetMod"
-      }
-    },
-    {
-      "name": "total_war_flow",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod"
-      }
-    },
-    {
       "name": "save_panel",
       "target": {
         "type": "path",
@@ -84,6 +63,22 @@
         "type": "path",
         "value": "mods/fixtures/camera/CameraAcceptanceMod",
         "projectPath": "CameraAcceptanceMod.csproj"
+      }
+    },
+    {
+      "name": "gamepad_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/gamepad/GamepadShowcaseMod",
+        "projectPath": "GamepadShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "camera_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/camera/CameraShowcaseMod",
+        "projectPath": "CameraShowcaseMod.csproj"
       }
     },
     {
@@ -170,7 +165,8 @@
       "name": "mass_navigation",
       "target": {
         "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod"
+        "value": "mods/capabilities/navigation/MassNavigationMod",
+        "projectPath": "MassNavigationMod.csproj"
       }
     },
     {
@@ -397,22 +393,6 @@
       }
     },
     {
-      "name": "capability_standard_mod_graph_op_extension_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
-        "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "graph_op_provider",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
-        "projectPath": "CapabilityStandardGraphOpProviderMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_presenter_behavior_extension_showcase",
       "target": {
         "type": "path",
@@ -440,7 +420,8 @@
       "name": "capability_standard_transport_network",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod"
+        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
+        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
       }
     },
     {
@@ -1746,13 +1727,6 @@
       }
     },
     {
-      "name": "tcg_prompt_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/tcg_demo/TcgPromptShowcaseMod"
-      }
-    },
-    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -2435,302 +2409,6 @@
         "type": "path",
         "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
         "projectPath": "ContactSensorTextbookMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_CompleteActiveOrder",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompleteActiveOrderEntryMod",
-        "projectPath": "CapabilityStandardGraphOpCompleteActiveOrderEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_FloatToInt",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToIntEntryMod",
-        "projectPath": "CapabilityStandardGraphOpFloatToIntEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_IntToFloat",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToFloatEntryMod",
-        "projectPath": "CapabilityStandardGraphOpIntToFloatEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadEntityPosValid",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadEntityPosX",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosXEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadEntityPosXEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadEntityPosY",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosYEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadEntityPosYEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadOrderTypeId",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadOrderTypeIdEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadOrderTypeIdEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SqrtFloat",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSqrtFloatEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSqrtFloatEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubmitAssignedOrder",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitAssignedOrderEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubmitAssignedOrderEntryMod.csproj"
-      }
-    },
-    {
-      "name": "eqs_influence",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/eqs_influence/EqsInfluenceShowcaseMod",
-        "projectPath": "EqsInfluenceShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubmitCommandIntent",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCommandIntentEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubmitCommandIntentEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubmitCast",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCastEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubmitCastEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod",
-        "projectPath": "CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubmitEngageBatch",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitEngageBatchEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubmitEngageBatchEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_QueryFilterSelectable",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterSelectableEntryMod",
-        "projectPath": "CapabilityStandardGraphOpQueryFilterSelectableEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ApplyCalendarStart",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyCalendarStartEntryMod",
-        "projectPath": "CapabilityStandardGraphOpApplyCalendarStartEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarCycleDay",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCycleDayEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarCycleDayEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarCyclePhase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCyclePhaseEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarCyclePhaseEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarDayIndex",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayIndexEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarDayIndexEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarDayPermille",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayPermilleEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarDayPermilleEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarDayPhase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayPhaseEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarDayPhaseEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarEnabled",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarEnabledEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarEnabledEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarTicksIntoDay",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarYear",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarYearEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarYearEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SetCalendarDayIndex",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCalendarDayIndexEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSetCalendarDayIndexEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SetCalendarTicksIntoDay",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_AcquireTimeFlowPause",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAcquireTimeFlowPauseEntryMod",
-        "projectPath": "CapabilityStandardGraphOpAcquireTimeFlowPauseEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_AcquireTimeFlowScale",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAcquireTimeFlowScaleEntryMod",
-        "projectPath": "CapabilityStandardGraphOpAcquireTimeFlowScaleEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadTimeFlowPaused",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadTimeFlowPausedEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadTimeFlowPausedEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadTimeFlowScalePermille",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadTimeFlowScalePermilleEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadTimeFlowScalePermilleEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReleaseTimeFlowToken",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadConfigKey",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigKeyEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadConfigKeyEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarCyclePhaseIndex",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCyclePhaseIndexEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarCyclePhaseIndexEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ReadCalendarDaysUntilPhase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDaysUntilPhaseEntryMod",
-        "projectPath": "CapabilityStandardGraphOpReadCalendarDaysUntilPhaseEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubInt",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubIntEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubIntEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SubmitResponseChainOrder",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_ActivateVirtualCamera",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateVirtualCameraEntryMod",
-        "projectPath": "CapabilityStandardGraphOpActivateVirtualCameraEntryMod.csproj"
       }
     }
   ],

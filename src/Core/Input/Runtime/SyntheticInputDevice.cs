@@ -27,7 +27,7 @@ namespace Ludots.Core.Input.Runtime
     /// </summary>
     public sealed class SyntheticInputDevice
     {
-        private enum EventKind { PointerMove, PointerButton, Wheel, Key, Text, ReleaseAll }
+        private enum EventKind { PointerMove, PointerButton, Wheel, Key, Text, ReleaseAll, GamepadButton, GamepadAxis }
 
         private struct PendingEvent
         {
@@ -37,6 +37,7 @@ namespace Ludots.Core.Input.Runtime
             public SyntheticPointerButton Button;
             public bool Down;
             public string? Text;
+            public float Value;
         }
 
         private readonly List<PendingEvent> _pending = new();
@@ -48,6 +49,11 @@ namespace Ludots.Core.Input.Runtime
         private readonly HashSet<string> _keysPressedThisFrame = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _keysReleasedThisFrame = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<char> _charsThisFrame = new();
+
+        // Synthetic gamepad state lives on the primary pad slot: control names are
+        // engine-neutral upper-case ("BUTTONSOUTH", "DPADUP", "LEFTSTICK/X", "RIGHTTRIGGER").
+        private readonly HashSet<string> _gamepadButtonsDown = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, float> _gamepadAxes = new(StringComparer.OrdinalIgnoreCase);
 
         private Vector2 _pointerPosition;
         private float _wheelThisFrame;
@@ -106,6 +112,32 @@ namespace Ludots.Core.Input.Runtime
         /// <summary>Release every held button/key and disengage the pointer override.</summary>
         public void ReleaseAll() => _pending.Add(new PendingEvent { Kind = EventKind.ReleaseAll });
 
+        /// <summary>
+        /// Hold or release a synthetic gamepad button. Control names are
+        /// engine-neutral ("ButtonSouth", "DpadUp", "LeftShoulder", "Start", …);
+        /// matching is case/separator-insensitive.
+        /// </summary>
+        public void GamepadButtonDown(string control) =>
+            _pending.Add(new PendingEvent { Kind = EventKind.GamepadButton, Text = NormalizeGamepadControl(control), Down = true });
+
+        public void GamepadButtonUp(string control) =>
+            _pending.Add(new PendingEvent { Kind = EventKind.GamepadButton, Text = NormalizeGamepadControl(control), Down = false });
+
+        /// <summary>Full down+up within the same frame.</summary>
+        public void PressGamepadButton(string control)
+        {
+            GamepadButtonDown(control);
+            GamepadButtonUp(control);
+        }
+
+        /// <summary>
+        /// Set one synthetic gamepad axis value. Axis names are engine-neutral
+        /// ("LeftStick/X", "LeftStick/Y", "RightStick/X", "RightStick/Y",
+        /// "LeftTrigger", "RightTrigger") in [-1, 1] (triggers in [0, 1]).
+        /// </summary>
+        public void SetGamepadAxis(string axis, float value) =>
+            _pending.Add(new PendingEvent { Kind = EventKind.GamepadAxis, Text = NormalizeGamepadControl(axis), Value = value });
+
         // ---- frame boundary (host loop) ----
 
         public void AdvanceFrame()
@@ -158,11 +190,26 @@ namespace Ludots.Core.Input.Runtime
                     case EventKind.Text:
                         _charsThisFrame.AddRange(e.Text!);
                         break;
+                    case EventKind.GamepadButton:
+                        if (e.Down)
+                        {
+                            _gamepadButtonsDown.Add(e.Text!);
+                        }
+                        else
+                        {
+                            _gamepadButtonsDown.Remove(e.Text!);
+                        }
+                        break;
+                    case EventKind.GamepadAxis:
+                        _gamepadAxes[e.Text!] = e.Value;
+                        break;
                     case EventKind.ReleaseAll:
                         foreach (SyntheticPointerButton b in _buttonsDown) _releasedThisFrame.Add(b);
                         foreach (string k in _keysDown) _keysReleasedThisFrame.Add(k);
                         _buttonsDown.Clear();
                         _keysDown.Clear();
+                        _gamepadButtonsDown.Clear();
+                        _gamepadAxes.Clear();
                         HasPointerOverride = false;
                         break;
                 }
@@ -181,6 +228,10 @@ namespace Ludots.Core.Input.Runtime
         public bool WasKeyPressedThisFrame(string key) => _keysPressedThisFrame.Contains(key);
         public bool WasKeyReleasedThisFrame(string key) => _keysReleasedThisFrame.Contains(key);
 
+        public bool IsGamepadButtonDown(string control) => _gamepadButtonsDown.Contains(NormalizeGamepadControl(control));
+        public float GetGamepadAxis(string axis) =>
+            _gamepadAxes.TryGetValue(NormalizeGamepadControl(axis), out float value) ? value : 0f;
+
         /// <summary>Snapshot iteration is safe against mutation during UI event dispatch.</summary>
         public IReadOnlyList<string> KeysDownSnapshotPressedThisFrame() => new List<string>(_keysPressedThisFrame);
         public IReadOnlyList<string> KeysReleasedThisFrameSnapshot() => new List<string>(_keysReleasedThisFrame);
@@ -196,12 +247,14 @@ namespace Ludots.Core.Input.Runtime
 
         private sealed class SyntheticDeviceWatcher : IInputDeviceWatcher
         {
-            // The synthetic device fakes keys and a pointer with wheel; it has no touch surface.
-            // It lives for the whole process, so the device set is constant and never fires changes.
+            // The synthetic device fakes keys, a pointer with wheel, and a primary
+            // gamepad. It lives for the whole process, so the device set is constant
+            // and never fires changes.
             private static readonly InputDeviceDescriptor[] Devices =
             {
                 new("synthetic-keyboard", InputDeviceKind.Keyboard, "AgentBridge Synthetic Keyboard", -1),
                 new("synthetic-mouse", InputDeviceKind.Mouse, "AgentBridge Synthetic Mouse", -1),
+                new("synthetic-gamepad", InputDeviceKind.Gamepad, "AgentBridge Synthetic Gamepad", -1),
             };
 
             public event Action<InputDeviceChangeEvent>? DeviceChanged
@@ -221,6 +274,30 @@ namespace Ludots.Core.Input.Runtime
             }
 
             return key.Replace("_", string.Empty).Replace(" ", string.Empty).ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// Same normalization as keys, plus path separators: "LeftStick/X" and
+        /// "&lt;Gamepad&gt;/leftStick/x" both become "LEFTSTICKX" so write-side
+        /// control names and backend device paths agree.
+        /// </summary>
+        public static string NormalizeGamepadControl(string control)
+        {
+            if (string.IsNullOrWhiteSpace(control))
+            {
+                throw new ArgumentException("Gamepad control name cannot be null or whitespace.", nameof(control));
+            }
+
+            int close = control.IndexOf('>');
+            if (control[0] == '<' && close >= 0 && close + 1 < control.Length)
+            {
+                control = control.Substring(close + 1);
+            }
+
+            return control.Replace("_", string.Empty)
+                .Replace(" ", string.Empty)
+                .Replace("/", string.Empty)
+                .ToUpperInvariant();
         }
     }
 }

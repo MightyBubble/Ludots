@@ -528,6 +528,10 @@ namespace Ludots.Core.Input.Runtime
             {
                 compiled.SourceKind = BindingSourceKind.MouseScroll;
             }
+            else if (TryClassifyGamepadPath(compiled.Path, out BindingSourceKind gamepadKind))
+            {
+                compiled.SourceKind = gamepadKind;
+            }
             else if (compiled.Path.StartsWith("<Keyboard>", StringComparison.Ordinal) || compiled.Path.StartsWith("<Mouse>", StringComparison.Ordinal))
             {
                 compiled.SourceKind = BindingSourceKind.Button;
@@ -540,6 +544,47 @@ namespace Ludots.Core.Input.Runtime
             compiled.Interactions = CompileInteractions(binding.Interactions, binding.Path, compiled.SourceKind);
             compiled.ContributionKey = BuildContributionKey(compiled);
             return compiled;
+        }
+
+        /// <summary>
+        /// Classifies a "&lt;Gamepad&gt;/…" path by its control suffix: whole sticks
+        /// ("leftStick", "rightStick") are 2-axis sources whose per-axis paths the
+        /// backend resolves by appending "/x" and "/y"; triggers ("leftTrigger",
+        /// "rightTrigger") are 1-axis sources read through the path itself; everything
+        /// else is a button. Stick Y is reported with screen-down positive by most
+        /// backends, so schemes that need up-positive apply an Invert Y processor.
+        /// </summary>
+        private static bool TryClassifyGamepadPath(string path, out BindingSourceKind kind)
+        {
+            kind = BindingSourceKind.Unsupported;
+            if (!path.StartsWith("<Gamepad>", StringComparison.OrdinalIgnoreCase))
+            {
+                return path.StartsWith("<Gamepad", StringComparison.OrdinalIgnoreCase);
+            }
+
+            int slash = path.IndexOf('/');
+            if (slash < 0)
+            {
+                return true; // Device tag alone: no control to read; stays Unsupported.
+            }
+
+            string control = path.Substring(slash + 1)
+                .Replace("/", string.Empty)
+                .ToUpperInvariant();
+            if (control is "LEFTSTICK" or "RIGHTSTICK")
+            {
+                kind = BindingSourceKind.GamepadStick;
+            }
+            else if (control is "LEFTTRIGGER" or "RIGHTTRIGGER")
+            {
+                kind = BindingSourceKind.GamepadAxis1D;
+            }
+            else
+            {
+                kind = BindingSourceKind.Button;
+            }
+
+            return true;
         }
 
         private static string BuildContributionKey(CompiledBinding binding)
@@ -835,6 +880,14 @@ namespace Ludots.Core.Input.Runtime
                     return new Vector3(_mouseDelta.X, _mouseDelta.Y, 0f);
                 case BindingSourceKind.MouseScroll:
                     return new Vector3(_backend.GetMouseWheel(), 0f, 0f);
+                case BindingSourceKind.GamepadStick:
+                {
+                    float x = _backend.GetAxis(binding.Path + "/x");
+                    float y = _backend.GetAxis(binding.Path + "/y");
+                    return new Vector3(x, y, 0f);
+                }
+                case BindingSourceKind.GamepadAxis1D:
+                    return new Vector3(_backend.GetAxis(binding.Path), 0f, 0f);
                 case BindingSourceKind.Button:
                     return _backend.GetButton(binding.Path) ? Vector3.One : Vector3.Zero;
                 case BindingSourceKind.CompositeVector2:
@@ -1028,6 +1081,8 @@ namespace Ludots.Core.Input.Runtime
             Button = 4,
             CompositeVector2 = 5,
             CompositeButtonChord = 6,
+            GamepadStick = 7,
+            GamepadAxis1D = 8,
         }
 
         private enum ProcessorKind : byte

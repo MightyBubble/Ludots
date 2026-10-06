@@ -1,0 +1,54 @@
+{
+  "actions": [
+    { "id": "Pad_ToggleHud", "name": "Pad_ToggleHud", "type": "Button" },
+    { "id": "Pad_Pulse", "name": "Pad_Pulse", "type": "Button" },
+    { "id": "Pad_CycleColor", "name": "Pad_CycleColor", "type": "Button" },
+    { "id": "Pad_West", "name": "Pad_West", "type": "Button" },
+    { "id": "Pad_North", "name": "Pad_North", "type": "Button" },
+    { "id": "Pad_DpadUp", "name": "Pad_DpadUp", "type": "Button" },
+    { "id": "Pad_DpadDown", "name": "Pad_DpadDown", "type": "Button" },
+    { "id": "Pad_DpadLeft", "name": "Pad_DpadLeft", "type": "Button" },
+    { "id": "Pad_DpadRight", "name": "Pad_DpadRight", "type": "Button" },
+    { "id": "Pad_LeftShoulder", "name": "Pad_LeftShoulder", "type": "Button" },
+    { "id": "Pad_RightShoulder", "name": "Pad_RightShoulder", "type": "Button" },
+    { "id": "Pad_LeftStickPress", "name": "Pad_LeftStickPress", "type": "Button" },
+    { "id": "Pad_RightStickPress", "name": "Pad_RightStickPress", "type": "Button" },
+    { "id": "Pad_Select", "name": "Pad_Select", "type": "Button" },
+    { "id": "Pad_LeftTrigger", "name": "Pad_LeftTrigger", "type": "Axis1D" },
+    { "id": "Pad_RightTrigger", "name": "Pad_RightTrigger", "type": "Axis1D" }
+  ],
+  "contexts": [
+    {
+      "id": "Gamepad_Showcase",
+      "name": "Gamepad Showcase",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "Pad_ToggleHud", "path": "<Gamepad>/start" },
+        { "actionId": "Pad_ToggleHud", "path": "<Keyboard>/f6" },
+        { "actionId": "Pad_Pulse", "path": "<Gamepad>/buttonSouth" },
+        { "actionId": "Pad_CycleColor", "path": "<Gamepad>/buttonEast" },
+        { "actionId": "Pad_West", "path": "<Gamepad>/buttonWest" },
+        { "actionId": "Pad_North", "path": "<Gamepad>/buttonNorth" },
+        { "actionId": "Pad_DpadUp", "path": "<Gamepad>/dpad/up" },
+        { "actionId": "Pad_DpadDown", "path": "<Gamepad>/dpad/down" },
+        { "actionId": "Pad_DpadLeft", "path": "<Gamepad>/dpad/left" },
+        { "actionId": "Pad_DpadRight", "path": "<Gamepad>/dpad/right" },
+        { "actionId": "Pad_LeftShoulder", "path": "<Gamepad>/leftShoulder" },
+        { "actionId": "Pad_RightShoulder", "path": "<Gamepad>/rightShoulder" },
+        { "actionId": "Pad_LeftStickPress", "path": "<Gamepad>/leftStickPress" },
+        { "actionId": "Pad_RightStickPress", "path": "<Gamepad>/rightStickPress" },
+        { "actionId": "Pad_Select", "path": "<Gamepad>/select" },
+        {
+          "actionId": "Pad_LeftTrigger",
+          "path": "<Gamepad>/leftTrigger",
+          "processors": [{ "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.05 }] }]
+        },
+        {
+          "actionId": "Pad_RightTrigger",
+          "path": "<Gamepad>/rightTrigger",
+          "processors": [{ "type": "Deadzone", "parameters": [{ "name": "Min", "value": 0.05 }] }]
+        }
+      ]
+    }
+  ]
+}
