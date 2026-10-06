@@ -46,7 +46,7 @@ dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --filter "FullyQualified
 
 预期（两树对照）：
 - ThreeCTests：12 红 / 116 绿，两边红名单相同（一个测试改名：`...AndViewModeActions` → `...Actions`）。
-- ArchitectureTests：5 红 / 388 绿，同名。
+- ArchitectureTests：5 红 / 388 绿，同名。【勘误（独立评审后）：评审树实为 387 绿——本 PR 合法成对删除了守护已删文件的守卫测试 `CoreInput_ViewModeSwitchSystem_DoesNotRenderPersistentHud`，前置提交者的门禁记录少算了这一项；红集 5/5 同名结论不变。】
 - GasTests 过滤集：基线与评审树各有 1-17 个红（InteractionShowcase_PlayableFlow、road/massnav 线），名单相同。
 - CapStd 验收 7/7、champion 4/4、ux 5/5 绿。
 

@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillPanelShowcase_WritesThemeArtifacts
 - map: champion_skill_sandbox
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-10-06T13:23:50.0238590Z
+- execution_timestamp_utc: 2026-10-06T14:48:51.6573934Z
 - screenshots: `screens/001_lol_ezreal.png`, `screens/002_dota2_geomancer.png`, `screens/003_sc2_spell_engineer.png`
 
 ## Timeline
@@ -24,5 +24,5 @@
 - total_actions: 3
 - themed_showcases: 3
 - shared_panel_runtime_reused: true
-- median_tick_ms: 7.491
-- max_tick_ms: 396.953
+- median_tick_ms: 5.61
+- max_tick_ms: 391.836

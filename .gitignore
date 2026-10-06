@@ -87,6 +87,7 @@ artifacts/*
 !artifacts/gas-composition-gate.md
 !artifacts/gas-composition-gate-*.md
 !artifacts/review-request-*.md
+!artifacts/review-result-*.md
 !artifacts/showcases/
 artifacts/showcases/*
 !artifacts/showcases/graph-fsm-bt-refactor-design.md

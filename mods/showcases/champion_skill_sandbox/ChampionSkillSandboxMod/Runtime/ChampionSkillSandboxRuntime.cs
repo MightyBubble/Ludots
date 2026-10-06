@@ -68,6 +68,13 @@ namespace ChampionSkillSandboxMod.Runtime
 
         internal static void PollCastModeSwitch(GameEngine engine)
         {
+            // The Controls context is startup-pushed and never popped; without a map guard its
+            // F1-F3 bindings would fire this poll on any co-loaded map and hijack the camera.
+            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
+            {
+                return;
+            }
+
             if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not Ludots.Core.Input.Runtime.IInputActionReader input)
             {
                 return;

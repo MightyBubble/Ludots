@@ -80,4 +80,7 @@ N/A — 不新增任何 op。
 11. champion 技能栏键位标签随 viewmodes 删除后无人写入——回填 local_order_source.json。
 12. 七个 mod 的 csproj 死 CoreInputMod ProjectReference 断链（mod.json 依赖按设计文档片 8 统一处理）。
 
-已知遗留（未修，记录在案）：InteractionModesConfig 的 DeepObject 数组整替语义下，CapStd 片段重述根 mode.normal/mode.targeting——根文件演进时需同步（引擎 schema 决定，改合并策略属引擎任务）；技能栏离图清理（旧 ClearActiveMode 的标签删除）无消费方接盘，暴露面小。
+已知遗留（未修，记录在案）：
+1. InteractionModesConfig 的 DeepObject 数组整替语义下，CapStd 片段重述根 mode.normal/mode.targeting——根文件演进时需同步（引擎 schema 决定，改合并策略属引擎任务）。
+2. 技能栏离图清理（旧 ClearActiveMode 的标签删除）无消费方接盘，暴露面小。
+3. champion 的 ChampionSkillSandbox.Controls 上下文经 game.json startup 常驻且无弹栈路径（独立评审 face 3 发现，早于本 PR 即如此）；本 PR 已给 PollCastModeSwitch 加 IsSandboxMap 守卫消除可观察后果，上下文弹栈治理随 champion 自身后续片。
