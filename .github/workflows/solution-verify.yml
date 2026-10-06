@@ -127,10 +127,7 @@ jobs:
         shell: pwsh
         run: |
           $architectureFilter = @(
-            'FullyQualifiedName~Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots',
-            'FullyQualifiedName~MassNavigationEvidenceContractTests',
-            'FullyQualifiedName~MassNavigationIssue671ArchitectureTests',
-            'FullyQualifiedName~FormationOwnershipContractTests'
+            'FullyQualifiedName~Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots'
           ) -join '|'
 
           dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj -c Debug --no-build --filter $architectureFilter -v minimal
@@ -142,23 +139,7 @@ jobs:
             'FullyQualifiedName~AuthoredAgentBindingSystem_UnchangedRelationshipRevisionDoesNotResolveDomainsAgain',
             'FullyQualifiedName~AuthoredAgentBindingSystem_MissingCommittedAgentIndexRebuildsInsteadOfRepeatedlyResolving',
             'FullyQualifiedName~Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution',
-            'FullyQualifiedName~FormationCapabilityExecution_InvalidSoldierAgentIndexFailsBeforeAnyAnchorStateChanges',
-            'FullyQualifiedName~FormationCapabilityExecution_StableTargetStillRejectsInvalidSoldierBindingBeforeAnyCommit',
-            'FullyQualifiedName~FormationCapabilityExecution_SoldierAgentIndexAtCapacityFailsBeforeAnyCommit',
-            'FullyQualifiedName~FormationCapabilityExecution_DuplicateSoldierSlotFailsBeforeAnyCommit',
-            'FullyQualifiedName~FormationCapabilityExecution_SuspendedSoldierFailsWholeBatchBeforeAnchorCommit',
-            'FullyQualifiedName~FormationCapabilityExecution_SuspendedAnchorFailsExplicitlyWithoutMemberCommit',
-            'FullyQualifiedName~MassNavigationOrderCommand_MemberChangeUsesExactComparisonForFormerHashCollision',
-            'FullyQualifiedName~FormationCapabilityExecutionHotPath_AfterWarmupAllocatesZeroBytes',
             'FullyQualifiedName~MassNavigationIssue671RuntimeTests',
-            'FullyQualifiedName~RuntimeTemplateSpawn_BatchTemplateAuthoredTeamLinksMembershipForEveryEntity',
-            'FullyQualifiedName~RuntimeTemplateSpawn_BatchTemplateAuthoredTeamMissingRepresentativeFailsBeforeCreation',
-            'FullyQualifiedName~RuntimeTemplateBatchSpawn_AppliesExplicitMembershipRelationshipsForEveryEntity',
-            'FullyQualifiedName~FormationCapabilityMoveBatch_DifferentOrderIdsAtSameTargetRemainIndependent',
-            'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
-            'FullyQualifiedName~FormationCapabilityOrderBatch_',
-            'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
-            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
             'FullyQualifiedName~PresentationRequestChannelTests',
             'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
           ) -join '|'

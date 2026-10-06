@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
@@ -22,7 +23,7 @@ namespace Ludots.Core.Gameplay.Relationships
     {
         private static readonly QueryDescription OwnedMapEntityQuery = new QueryDescription()
             .WithAll<PlayerOwner, MapEntity>()
-            .WithNone<PlayerIdentity>();
+            .WithNone<PlayerIdentity, PresentationDestroyPending>();
 
         /// <summary>
         /// Links every non-rep entity of the given map that carries <see cref="PlayerOwner"/> to its player rep.

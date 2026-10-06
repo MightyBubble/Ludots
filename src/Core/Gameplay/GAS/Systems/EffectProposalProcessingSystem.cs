@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
@@ -442,7 +443,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     var req = _queue[_rootCursor++];
-                    if (!World.IsAlive(req.Target))
+                    if (!World.IsAlive(req.Target) || World.Has<PresentationDestroyPending>(req.Target))
                     {
                         ConsumeWork(ref workUnits);
                         continue;

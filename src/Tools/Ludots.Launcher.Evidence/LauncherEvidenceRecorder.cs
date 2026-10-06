@@ -2421,6 +2421,9 @@ public static class LauncherEvidenceRecorder
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_command_order", captureImage: true, sampledAgentIndices: commandedAgentIndices);
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks, out _);
 
+        // Idle agents hold position and count as settled, so the crowd fraction alone does
+        // not imply the commanded group finished its first order.
+        WaitForMassNavigationMoveOrdersClear(runtime, frameTimesMs, MassNavigationAvoidanceCrowdSettleTicks, "first");
         WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "002_settled_before_crossing", captureImage: true, sampledAgentIndices: commandedAgentIndices);
         // March the commanded group back across the settled central crowd. The crossing target
@@ -2431,7 +2434,7 @@ public static class LauncherEvidenceRecorder
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, commandActors, crossingTarget);
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks, out int secondOrderPeakActiveMoveOrderCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true, sampledAgentIndices: commandedAgentIndices);
-        WaitForMassNavigationMoveOrdersClear(runtime, frameTimesMs, MassNavigationAvoidanceCrowdSettleTicks);
+        WaitForMassNavigationMoveOrdersClear(runtime, frameTimesMs, MassNavigationAvoidanceCrowdSettleTicks, "crossing");
         CaptureMassNavigationAvoidanceZoomFrame(simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, avoidanceMetrics);
         WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
@@ -2650,7 +2653,8 @@ public static class LauncherEvidenceRecorder
     private static void WaitForMassNavigationMoveOrdersClear(
         RecordingRuntime runtime,
         List<double> frameTimesMs,
-        int maxTicks)
+        int maxTicks,
+        string orderLabel)
     {
         for (int i = 0; i < maxTicks; i++)
         {
@@ -2664,7 +2668,7 @@ public static class LauncherEvidenceRecorder
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation UAT crossing order did not settle within {maxTicks} ticks; active massNavigationMove orders={CountActiveMassNavigationMoveOrders(runtime.Engine)}.");
+            $"MassNavigation UAT {orderLabel} order did not settle within {maxTicks} ticks; active massNavigationMove orders={CountActiveMassNavigationMoveOrders(runtime.Engine)}.");
     }
 
     private static void CaptureMassNavigationAvoidanceSequence(
