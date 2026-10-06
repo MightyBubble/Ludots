@@ -1,0 +1,47 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "contexts": [
+    {
+      "navId": 1,
+      "agentType": "foot",
+      "clearance": 1,
+      "passableCount": 32225,
+      "compCount": 94,
+      "linkCount": 0
+    },
+    {
+      "navId": 257,
+      "agentType": "hull",
+      "clearance": 1,
+      "passableCount": 19956,
+      "compCount": 15,
+      "linkCount": 0
+    },
+    {
+      "navId": 513,
+      "agentType": "climber",
+      "clearance": 1,
+      "passableCount": 46913,
+      "compCount": 24,
+      "linkCount": 0
+    },
+    {
+      "navId": 769,
+      "agentType": "amphib",
+      "clearance": 1,
+      "passableCount": 46324,
+      "compCount": 99,
+      "linkCount": 0
+    },
+    {
+      "navId": 1025,
+      "agentType": "leaper",
+      "clearance": 1,
+      "passableCount": 44982,
+      "compCount": 43,
+      "linkCount": 304
+    }
+  ],
+  "fnv1a": "26f7c4aa"
+}

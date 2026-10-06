@@ -18,7 +18,7 @@ public static class CrowdSimulationMapSurfaceSource
         ArgumentNullException.ThrowIfNull(templatesById);
 
         var blockers = new List<BlockerFootprint>();
-        var bridges = new List<CrowdSimulationBridgeSpan>();
+        var bridges = new List<BridgeDeckRecord>();
         foreach (var entity in map.Entities)
         {
             if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
@@ -42,11 +42,42 @@ public static class CrowdSimulationMapSurfaceSource
             var span = EffectiveBridgeSpan(template, entity);
             if (span != null)
             {
-                bridges.Add(span.Value);
+                var navArea = EffectiveNavArea(template, entity);
+                bridges.Add(new BridgeDeckRecord(span.Value, navArea?.Area ?? throw new InvalidOperationException(
+                    $"Maps/{map.Id}.json: 桥实体 \"{entity.InstanceId}\" 缺少 CrowdSimulationNavArea 区域声明。")));
             }
         }
 
         return new CrowdSimulationMapSurface(blockers, bridges);
+    }
+
+    /// <summary>区域覆盖组件的有效视图（实例 Overrides 按字段覆盖模板）。</summary>
+    internal static CrowdSimulationNavArea? EffectiveNavArea(EntityTemplate template, EntitySpawnData entity)
+    {
+        bool has = template.Components.ContainsKey(nameof(CrowdSimulationNavArea))
+            || (entity.Overrides?.ContainsKey(nameof(CrowdSimulationNavArea)) ?? false);
+        if (!has)
+        {
+            return null;
+        }
+
+        JsonObject? merged = template.Components.TryGetValue(nameof(CrowdSimulationNavArea), out var t) && t is JsonObject baseObj
+            ? (JsonObject)baseObj.DeepClone()
+            : new JsonObject();
+        if (entity.Overrides != null && entity.Overrides.TryGetValue(nameof(CrowdSimulationNavArea), out var o) && o is JsonObject ovl)
+        {
+            foreach (var kvp in ovl)
+            {
+                merged[kvp.Key] = kvp.Value?.DeepClone();
+            }
+        }
+
+        return new CrowdSimulationNavArea
+        {
+            Area = merged["area"]?.GetValue<string>() ?? string.Empty,
+            Priority = merged["priority"]?.GetValue<int>() ?? 0,
+            Layered = merged["layered"]?.GetValue<bool>() ?? false,
+        };
     }
 
     /// <summary>阻挡组件的有效视图（实例 Overrides 按字段覆盖模板）。</summary>
@@ -122,12 +153,26 @@ public static class CrowdSimulationMapSurfaceSource
 
 public sealed class CrowdSimulationMapSurface
 {
-    public CrowdSimulationMapSurface(IReadOnlyList<BlockerFootprint> blockers, IReadOnlyList<CrowdSimulationBridgeSpan> bridges)
+    public CrowdSimulationMapSurface(IReadOnlyList<BlockerFootprint> blockers, IReadOnlyList<BridgeDeckRecord> bridges)
     {
         Blockers = blockers;
         Bridges = bridges;
     }
 
     public IReadOnlyList<BlockerFootprint> Blockers { get; }
-    public IReadOnlyList<CrowdSimulationBridgeSpan> Bridges { get; }
+    /// <summary>桥面层实体:跨度 + 区域覆盖声明。</summary>
+    public IReadOnlyList<BridgeDeckRecord> Bridges { get; }
+}
+
+/// <summary>桥面层实体记录:几何跨度 + 其覆盖的导航区域 id。</summary>
+public readonly struct BridgeDeckRecord
+{
+    public BridgeDeckRecord(CrowdSimulationBridgeSpan span, string areaId)
+    {
+        Span = span;
+        AreaId = areaId;
+    }
+
+    public CrowdSimulationBridgeSpan Span { get; }
+    public string AreaId { get; }
 }

@@ -20,6 +20,8 @@ public sealed class SurfaceGrid
     public required byte[] Area { get; init; }
     /// <summary>逐格阻挡：阻挡足迹覆盖率 ≥ structures.blockCoverage。</summary>
     public required byte[] Blocked { get; init; }
+    /// <summary>跳跃候选（.navsurface 资产原样携带;按几何 profile 过滤成链接是烘焙侧的事）。</summary>
+    public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
 
     public static SurfaceGrid Build(
         CrowdSimulationRuntimeConfig config,
@@ -83,6 +85,7 @@ public sealed class SurfaceGrid
             TerrainType = surface.TerrainCells,
             Area = area,
             Blocked = blocked,
+            JumpCandidates = surface.JumpCandidates,
         };
     }
 

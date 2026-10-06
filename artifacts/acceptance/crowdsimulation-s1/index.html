@@ -3,22 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CrowdSimulation S1 · 地形与阻挡验收视图</title>
+<title>CrowdSimulation S1–S2 · 地形 / 阻挡 / 可走区域验收视图</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body { margin: 0; background: #141210; color: #e8e2d6; font: 14px/1.6 system-ui, "Segoe UI", sans-serif; }
   header { padding: 14px 20px 0; }
   h1 { font-size: 18px; margin: 0 0 4px; font-weight: 650; }
-  .sub { color: #a89e8c; font-size: 12.5px; }
-  .bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; position: sticky; top: 0; background: #141210ee; backdrop-filter: blur(6px); }
+  .sub { color: #a89e8c; font-size: 12.5px; max-width: 980px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px; position: sticky; top: 0; background: #141210ee; backdrop-filter: blur(6px); align-items: center; }
   .bar button {
     background: #262019; color: #d9d0bf; border: 1px solid #4a3f30; border-radius: 6px;
     padding: 6px 14px; font-size: 13px; cursor: pointer;
   }
   .bar button:hover { border-color: #8a7657; }
   .bar button.active { background: #6b5432; color: #fff; border-color: #a8874f; }
-  .bar .sep { width: 1px; background: #4a3f30; margin: 4px 2px; }
+  .bar .sep { width: 1px; height: 22px; background: #4a3f30; margin: 0 2px; }
+  .bar .label { color: #8d8270; font-size: 12px; margin-left: 6px; }
   main { padding: 0 20px 24px; }
   img { width: min(100%, 980px); image-rendering: pixelated; border: 1px solid #3a3227; border-radius: 4px; display: block; }
   .meta { color: #a89e8c; font-size: 12.5px; padding: 8px 2px 0; }
@@ -28,53 +29,84 @@
 </head>
 <body>
 <header>
-  <h1>CrowdSimulation S1 · 地形与障碍物</h1>
-  <div class="sub">Ludots 端读取 .navsurface / .height / 地图实体后的渲染结果（16 km × 16 km，256² 导航格）。三种子逐格对拍摘要见各 Mod 的 <code>assets/CrowdSimulation/parity/s1-truth.json</code>。</div>
+  <h1>CrowdSimulation S1–S2 · 地形 / 阻挡 / 逐体型可走区域</h1>
+  <div class="sub">
+    Ludots 端读取 .navsurface / .height / 地图实体后渲染（16 km × 16 km，256² 导航格）。
+    逐格对拍摘要：S1 见各 Mod 的 <code>assets/CrowdSimulation/parity/s1-truth.json</code>，
+    S2 逐上下文（可走栅格 + 连通域 + 跳跃链接）见 <code>s2-nav-truth.json</code>。
+    视图中的数字（可走格数 / 连通域数 / 链接数）与 Web 参考实现逐一相等。
+  </div>
 </header>
 <div class="bar">
+  <span class="label">地图</span>
   <button data-seed="s1337" class="active">种子 1337</button>
   <button data-seed="s2024">种子 2024</button>
   <button data-seed="s7">种子 7</button>
   <span class="sep"></span>
-  <button data-layer="types" class="active">地形类型</button>
-  <button data-layer="blocked">+ 阻挡格</button>
-  <button data-layer="full">+ 桥与跳跃</button>
+  <span class="label">视图</span>
+  <button data-view="types" class="active">地形类型</button>
+  <button data-view="blocked">+ 阻挡格</button>
+  <button data-view="full">+ 桥与跳跃候选</button>
+  <span class="sep"></span>
+  <span class="label">可走区域(S2)</span>
+  <button data-view="nav_foot_c1">步兵</button>
+  <button data-view="nav_hull_c1">水军</button>
+  <button data-view="nav_climber_c1">山地兵</button>
+  <button data-view="nav_amphib_c1">两栖</button>
+  <button data-view="nav_leaper_c1">跳跃兵</button>
 </div>
 <main>
   <img id="view" src="crowd_simulation_s1337_types.png" alt="terrain">
-  <div class="legend">
+  <div class="legend" id="legendS1">
     <span><i style="background:#466eaa"></i>水</span>
     <span><i style="background:#c8b882"></i>岸</span>
     <span><i style="background:#96aa6e"></i>陆</span>
     <span><i style="background:#96785a"></i>山</span>
     <span><i style="background:#3c322c"></i>悬崖</span>
-    <span><i style="background:#d32f2f"></i>阻挡格（覆盖率 ≥ 0.5）</span>
+    <span><i style="background:#d32f2f"></i>阻挡格(覆盖率 ≥ 0.5)</span>
     <span><i style="background:#966e46"></i>桥面</span>
     <span><i style="background:#ffb300"></i>单向跳跃</span>
     <span><i style="background:#5c6bc0"></i>双向跳跃</span>
+  </div>
+  <div class="legend" id="legendS2" style="display:none">
+    <span><i style="background:#a01e1e"></i>该体型不可走</span>
+    <span><i style="background:#966e46"></i>桥面层可走格</span>
+    <span><i style="background:#ffd54f"></i>桥头 portal(上下桥处)</span>
+    <span><i style="background:#ffb300"></i>单向跳跃链接</span>
+    <span><i style="background:#5c6bc0"></i>双向跳跃链接</span>
   </div>
   <div class="meta" id="meta"></div>
 </main>
 <script>
   const meta = {
-    s1337: '种子 1337：300 阻挡物 · 7 座桥 · 267 跳跃候选',
-    s2024: '种子 2024：300 阻挡物 · 6 座桥 · 171 跳跃候选',
-    s7: '种子 7：300 阻挡物 · 11 座桥 · 333 跳跃候选',
+    s1337: '种子 1337:300 阻挡物 · 7 座桥 · 267 跳跃候选',
+    s2024: '种子 2024:300 阻挡物 · 6 座桥 · 171 跳跃候选',
+    s7: '种子 7:300 阻挡物 · 11 座桥 · 333 跳跃候选',
   };
-  let seed = 's1337', layer = 'types';
+  const navMeta = {
+    nav_foot_c1: '步兵(foot):只走陆地与桥,坡超 24° 不走',
+    nav_hull_c1: '水军(hull):深水 / 浅滩 / 泛洪,不上岸不上桥',
+    nav_climber_c1: '山地兵(climber):坡超 38° 不走,能上山地',
+    nav_amphib_c1: '两栖(amphib):水陆两栖,坡超 20° 不走',
+    nav_leaper_c1: '跳跃兵(leaper):带跳跃链接(落差 ≤ 25 m 双向 / ≤ 200 m 单向)',
+  };
+  let seed = 's1337', view = 'types';
   const img = document.getElementById('view');
   function refresh() {
-    img.src = `crowd_simulation_${seed}_${layer}.png`;
-    document.getElementById('meta').textContent = meta[seed];
+    img.src = `crowd_simulation_${seed}_${view}.png`;
+    document.getElementById('meta').textContent =
+      (view.startsWith('nav_') ? navMeta[view] + ' · ' : '') + meta[seed];
+    document.getElementById('legendS1').style.display = view.startsWith('nav_') ? 'none' : '';
+    document.getElementById('legendS2').style.display = view.startsWith('nav_') ? '' : 'none';
   }
   document.querySelectorAll('[data-seed]').forEach(b => b.onclick = () => {
     seed = b.dataset.seed;
     document.querySelectorAll('[data-seed]').forEach(x => x.classList.toggle('active', x === b));
     refresh();
   });
-  document.querySelectorAll('[data-layer]').forEach(b => b.onclick = () => {
-    layer = b.dataset.layer;
-    document.querySelectorAll('[data-layer]').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
+    view = b.dataset.view;
+    document.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('active', x === b));
     refresh();
   });
   refresh();

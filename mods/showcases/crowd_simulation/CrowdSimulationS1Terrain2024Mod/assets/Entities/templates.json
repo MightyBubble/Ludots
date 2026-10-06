@@ -105,6 +105,11 @@
         "x1Cm": 0,
         "y1Cm": 0,
         "widthCm": 0
+      },
+      "CrowdSimulationNavArea": {
+        "area": "deck",
+        "priority": 30,
+        "layered": true
       }
     }
   }

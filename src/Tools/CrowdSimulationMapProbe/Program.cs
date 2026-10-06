@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Terrain;
@@ -23,6 +24,12 @@ public static class Program
 
     public static int Main(string[] args)
     {
+        if (args.Length >= 1 && args[0] == "--s2")
+        {
+            // --s2 <seedAssetsDir> <capabilityAssetsDir> <outDir>
+            return RunS2(args[1], args[2], args[3]);
+        }
+
         if (args.Length < 3)
         {
             Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <capabilityAssetsDir> <outDir>");
@@ -34,16 +41,98 @@ public static class Program
         string outDir = args[2];
         Directory.CreateDirectory(outDir);
 
+        var bundle = Load(seedDir, capabilityDir);
+        RenderTypes(bundle.Surface, bundle.Height, Path.Combine(outDir, $"{bundle.MapId}_types.png"));
+        RenderBlocked(bundle.Surface, bundle.Height, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
+        RenderFull(bundle.Surface, bundle.Height, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
+
+        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.CellCount}x{bundle.Grid.CellCount} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
+        return 0;
+    }
+
+    /// <summary>S2:逐代理体型的可走区域视图(不可走 = 红色遮罩;桥 portal 高亮;跳跃链接叠画)。</summary>
+    private static int RunS2(string seedDir, string capabilityDir, string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var bundle = Load(seedDir, capabilityDir);
+        var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellCount, bundle.Runtime.NavCellSizeCm);
+
+        var seen = new HashSet<int>();
+        for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
+        {
+            foreach (int clearance in bundle.Runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            {
+                var nav = NavContextBaker.Bake(bundle.Runtime, bundle.Grid, heights, bundle.MapSurface.Bridges, a, clearance);
+                if (!seen.Add(nav.Id)) continue;
+                string name = $"{bundle.Runtime.AgentTypes[a].Id}_c{clearance}";
+                RenderNav(bundle, nav, heights, Path.Combine(outDir, $"{bundle.MapId}_nav_{name}.png"));
+                Console.WriteLine($"[probe:s2] {bundle.MapId} {name}: passable={nav.Cells.Length} comps={nav.CompCount} links={nav.Links?.Count ?? 0}");
+            }
+        }
+
+        return 0;
+    }
+
+    private static void RenderNav(SeedBundle bundle, NavContext nav, NavHeightField heights, string path)
+    {
+        var px = BaseLayer(bundle.Surface, bundle.Height);
+        int n = nav.CellCount;
+        // 不可走遮罩
+        for (int cy = 0; cy < n; cy++)
+        {
+            for (int cx = 0; cx < n; cx++)
+            {
+                if (nav.Passable[cy * n + cx] == 0) FillCell(px, cx, cy, n, (160, 30, 30), 0.5f);
+            }
+        }
+
+        // 桥面可走格与 portal
+        for (int cy = 0; cy < n; cy++)
+        {
+            for (int cx = 0; cx < n; cx++)
+            {
+                if (nav.Portal[cy * n + cx] != 0) FillCell(px, cx, cy, n, (255, 213, 79), 0.9f);
+                else if (nav.UpPass[cy * n + cx] != 0) FillCell(px, cx, cy, n, (150, 110, 70), 0.85f);
+            }
+        }
+
+        // 跳跃链接:双向靛蓝 / 单向琥珀
+        if (nav.Links != null)
+        {
+            float cs = bundle.Runtime.NavCellSizeCm;
+            float worldCm = n * cs;
+            for (int e = 0; e < nav.Links.Count; e++)
+            {
+                int from = nav.Links.From[e], to = nav.Links.To[e];
+                var color = nav.Links.TwoWay[e] != 0 ? (92, 107, 192) : (255, 179, 0);
+                DrawLine(px,
+                    (from % n + 0.5f) * cs, ((from / n) + 0.5f) * cs,
+                    (to % n + 0.5f) * cs, ((to / n) + 0.5f) * cs,
+                    worldCm, color);
+            }
+        }
+
+        PngWriter.Write(path, RenderSize, RenderSize, px);
+    }
+
+    private sealed record SeedBundle(
+        string MapId,
+        CrowdSimulationRuntimeConfig Runtime,
+        NavSurfaceAsset Surface,
+        ContinuousHeightmapAsset Height,
+        CrowdSimulationMapSurface MapSurface,
+        SurfaceGrid Grid);
+
+    private static SeedBundle Load(string seedDir, string capabilityDir)
+    {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
             .Let(p => Path.GetFileNameWithoutExtension(p));
 
-        // 1. 配置:CrowdSimulationMod 全量默认 + 地图 Mod 覆盖(DeepObject 同 catalog 语义)
         var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(capabilityDir, "CrowdSimulationConfig.json")))!;
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         var config = CrowdSimulationConfig.Load(merged);
 
-        // 2. 地图 + 模板
         var map = JsonSerializer.Deserialize<MapConfig>(
             File.ReadAllText(Path.Combine(seedDir, "Maps", $"{mapId}.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -52,26 +141,17 @@ public static class Program
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var templatesById = templates.Where(t => !string.IsNullOrWhiteSpace(t.Id)).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        // 3. 运行时配置(体型注册表读 CrowdSimulationMod 的默认 agent_profiles.json)
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
         var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), fixedHz: 30);
 
-        // 4. 地表资产 + 导航格
         var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-
-        // 5. 高度图(渲染明暗)
         var height = ContinuousHeightmapBinary.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.height")));
 
-        RenderTypes(surface, height, Path.Combine(outDir, $"{mapId}_types.png"));
-        RenderBlocked(surface, height, grid, Path.Combine(outDir, $"{mapId}_blocked.png"));
-        RenderFull(surface, height, grid, mapSurface, runtime, Path.Combine(outDir, $"{mapId}_full.png"));
-
-        Console.WriteLine($"[probe] {mapId}: cells={grid.CellCount}x{grid.CellCount} blockers={mapSurface.Blockers.Count} bridges={mapSurface.Bridges.Count} jumps={surface.JumpCandidates.Length}");
-        return 0;
+        return new SeedBundle(mapId, runtime, surface, height, mapSurface, grid);
     }
 
     private static void RenderTypes(NavSurfaceAsset surface, ContinuousHeightmapAsset height, string path)
@@ -120,7 +200,7 @@ public static class Program
         float worldCm = (float)n * grid.CellSizeCm;
         foreach (var b in mapSurface.Bridges)
         {
-            RasterizePath(px, b.X0Cm, b.Y0Cm, b.X1Cm, b.Y1Cm, b.WidthCm, worldCm, (150, 110, 70));
+            RasterizePath(px, b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm, worldCm, (150, 110, 70));
         }
 
         // 跳跃候选:双向(落差 ≤ 25 m)靛蓝,单向琥珀

@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）与 S1（地形与障碍物，含逐格对拍）已交付。后续阶段见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接，含逐上下文对拍）已交付。后续阶段见文末路线。
 
 ## 这是什么
 
@@ -29,6 +29,12 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
   World/                             NavSurfaceAsset（.navsurface v1 读写与格式门禁）
                                      NavSurfaceContract（资产 ↔ 配置一致性）
                                      CrowdSimulationSpace（格几何原语）
+                                     SurfaceGrid（地表栅格:地形 / 区域 / 阻挡）
+                                     NavHeightField（.height → 导航高度场与坡度）
+                                     CrowdSimulationMapSurfaceSource（地图实体提取）
+  Nav/                               NavContextBaker（分类 / 腐蚀 / 连通域 / 链接）
+                                     UpperLayerBake（桥面层栅格化与烘焙、portal 合并）
+                                     NavContext / NavLinkSet（上下文产物）
   CrowdSimulationAgent.cs            单位组件 { profileId }
 mods/capabilities/navigation/CrowdSimulationMod/
   assets/config_catalog.json         登记 CrowdSimulationConfig.json = DeepObject
@@ -71,6 +77,15 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换（config 按 mapId 绑定地图，多地图共用一份配置的问题见缺口）。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
+
+## S2 交付：每种单位能去哪里（本次）
+
+- **导航烘焙**（`src/Core/CrowdSimulation/Nav/`，参考实现 `nav.js` / `navLinks.js` / `navtile/upperLayer.js` / `erode.js` 的 S2 子集移植）：逐（移动类型 × 净空）导航上下文 = 代价栅格（区域代价行 × 坡度上限 × 阻挡）→ 切比雪夫净空腐蚀 → 可走栅格 → 4 连通洪泛连通域 → 跳跃链接（候选按 profile 的 up / down / rangeCells 过滤成单向 / 双向，携带连通域间有向可达图）。
+- **桥面层**（RT-16 的网格级部分）：桥实体栅格化为桥面格 + 桥头 portal;桥面可走格 = 区域定价 ∩ 净空腐蚀,桥头腐蚀半径内的地面可走格并入;连通域合并 = 桥面洪泛 + portal 格双通合并（与参考实现 mergeTiles 同语义）。
+- **高度输入**：`NavHeightField` 从 `.height` 资产的 uint16 样本推导导航格高度与坡度;样本解码先在 double 完成（raw × 分子 ÷ 分母）再转 Fix64——定点域内直接乘会溢出 Q31.32。Web 导出端同样从量化样本重建,两端读同一份输入。
+- **对拍**：导出器跑参考实现的真实 `buildNavContext` 产出逐上下文摘要;C# 侧重建同序字节流,FNV-1a 全等（5 上下文 × 3 种子）,连通域按划分规范化比较（不按标签编号）。`JumpLinkFilter_RespectsDownCm` 覆盖跳跃能力收紧后链接减少的验收点。
+- **目视**：探针 `--s2` 模式渲染逐体型可走区域（不可走遮罩 + 桥面 + portal + 链接）,同一查看器切换。
+- **已知边界**：坡度阈值处的定点 vs 浮点残差实测约 1e-5,三种子均未翻转任何格;HPA* 分区与 tile 缓存并入 S3（走廊与流场需要时再交付）。
 - **验收（真机）**：Raylib 宿主经 launcher 预设启动，地图、阻挡物实体与高度图地形（含高程着色）真实渲染，见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-live.png`。地形类型着色叠加层在宿主内尚无 presenter，由探针视图承担。
 - **顺手的基建修复**：`ContinuousHeightSampleScale.Decode` 的 int32 溢出（大缩放比例资产会触发，10k 资产因恒等比例从未踩到）改为先 widening 再乘。
 

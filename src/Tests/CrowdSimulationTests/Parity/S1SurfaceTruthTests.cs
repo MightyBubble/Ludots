@@ -136,7 +136,7 @@ public class S1SurfaceTruthTests
         return CrowdSimulationConfigLoader.Load(config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz);
     }
 
-    internal static (List<BlockerFootprint> blockers, List<(int x0, int y0, int x1, int y1, int width)> bridges) LoadMapEntities(string seed)
+    internal static CrowdSimulationMapSurface LoadMapSurface(string seed)
     {
         var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(SeedDir(seed), "Entities", "templates.json")),
@@ -147,10 +147,14 @@ public class S1SurfaceTruthTests
         var map = JsonSerializer.Deserialize<MapConfig>(
             File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        var surface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
+        return CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
+    }
 
+    internal static (List<BlockerFootprint> blockers, List<(int x0, int y0, int x1, int y1, int width)> bridges) LoadMapEntities(string seed)
+    {
+        var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
-        var bridges = surface.Bridges.Select(b => (b.X0Cm, b.Y0Cm, b.X1Cm, b.Y1Cm, b.WidthCm)).ToList();
+        var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
         blockers.Sort((a, b) => a.XCm != b.XCm ? a.XCm - b.XCm : a.YCm != b.YCm ? a.YCm - b.YCm : a.HalfSizeCm - b.HalfSizeCm);
         bridges.Sort((a, b) => a.X0Cm != b.X0Cm ? a.X0Cm - b.X0Cm : a.Y0Cm != b.Y0Cm ? a.Y0Cm - b.Y0Cm : a.X1Cm != b.X1Cm ? a.X1Cm - b.X1Cm : a.Y1Cm - b.Y1Cm);
         return (blockers, bridges);

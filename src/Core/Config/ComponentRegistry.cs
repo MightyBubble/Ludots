@@ -136,6 +136,7 @@ namespace Ludots.Core.Config
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
             Register("CrowdSimulationAgent", SetCrowdSimulationAgent, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>.ComponentType);
             Register("CrowdSimulationBridgeSpan", SetCrowdSimulationBridgeSpan, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationBridgeSpan>.ComponentType);
+            Register("CrowdSimulationNavArea", SetCrowdSimulationNavArea, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationNavArea>.ComponentType);
             Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
@@ -1909,6 +1910,22 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
             ValidateProperties(obj, "CrowdSimulationAgent", "profileId");
             string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
             entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId });
+        }
+
+        private static void SetCrowdSimulationNavArea(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationNavArea requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationNavArea", "area", "priority", "layered");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationNavArea
+            {
+                Area = RequireStringProperty(obj, "area", "CrowdSimulationNavArea"),
+                Priority = ReadIntProperty(obj, "priority", "CrowdSimulationNavArea"),
+                Layered = ParseBooleanByte(RequireProperty(obj, "layered", "CrowdSimulationNavArea"), "CrowdSimulationNavArea.layered") != 0,
+            });
         }
 
         private static void SetCrowdSimulationBridgeSpan(Entity entity, JsonNode data)
