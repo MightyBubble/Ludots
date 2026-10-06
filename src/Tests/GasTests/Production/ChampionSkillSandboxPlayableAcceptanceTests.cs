@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using CoreInputMod.Systems;
-using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -1872,13 +1871,6 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) &&
-                modeIdObj is string modeId &&
-                !string.IsNullOrWhiteSpace(modeId))
-            {
-                return modeId;
-            }
-
             return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
             {
                 CastModeType.SmartCastWithIndicator => IndicatorModeId,

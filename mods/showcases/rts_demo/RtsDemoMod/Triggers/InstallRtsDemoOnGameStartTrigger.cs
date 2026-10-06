@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
@@ -66,7 +65,6 @@ namespace RtsDemoMod.Triggers
             {
                 engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
                 engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
-                ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
                 _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
             }
             else

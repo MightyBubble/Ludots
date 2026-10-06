@@ -5,8 +5,6 @@ using System.Numerics;
 using Arch.Core;
 using CameraAcceptanceMod.Runtime;
 using CameraAcceptanceMod.Systems;
-using CoreInputMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -529,8 +527,8 @@ namespace CameraAcceptanceMod.UI
                     .Gap(8f),
                 CameraAcceptanceIds.FollowMapId => Ui.Column(
                         Ui.Row(
-                                BuildActionButton("Close", state.ActiveModeId == CameraAcceptanceIds.FollowCloseModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowCloseModeId)),
-                                BuildActionButton("Wide", state.ActiveModeId == CameraAcceptanceIds.FollowWideModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowWideModeId)))
+                                BuildActionButton("Close", state.ActiveModeId == CameraAcceptanceIds.FollowCloseModeId, () => SwitchCamera(CameraAcceptanceIds.FollowCloseModeId)),
+                                BuildActionButton("Wide", state.ActiveModeId == CameraAcceptanceIds.FollowWideModeId, () => SwitchCamera(CameraAcceptanceIds.FollowWideModeId)))
                             .Wrap()
                             .Gap(8f),
                         Ui.Row(BuildActionButton("Move Captain", false, ToggleCaptainPosition))
@@ -543,10 +541,10 @@ namespace CameraAcceptanceMod.UI
                         BuildActionButton("Clear", false, () => RequestVirtualCamera(id: null, clear: true)))
                     .Wrap()
                     .Gap(8f),
-                CameraAcceptanceIds.RtsMapId => Ui.Row(BuildActionButton("RTS Mode", state.ActiveModeId == CameraAcceptanceIds.RtsModeId, () => SwitchViewMode(CameraAcceptanceIds.RtsModeId)))
+                CameraAcceptanceIds.RtsMapId => Ui.Row(BuildActionButton("RTS Mode", state.ActiveModeId == CameraAcceptanceIds.RtsModeId, () => SwitchCamera(CameraAcceptanceIds.RtsModeId)))
                     .Wrap()
                     .Gap(8f),
-                CameraAcceptanceIds.TpsMapId => Ui.Row(BuildActionButton("TPS Mode", state.ActiveModeId == CameraAcceptanceIds.TpsModeId, () => SwitchViewMode(CameraAcceptanceIds.TpsModeId)))
+                CameraAcceptanceIds.TpsMapId => Ui.Row(BuildActionButton("TPS Mode", state.ActiveModeId == CameraAcceptanceIds.TpsModeId, () => SwitchCamera(CameraAcceptanceIds.TpsModeId)))
                     .Wrap()
                     .Gap(8f),
                 _ => Ui.Text("Interact directly in world view for this scenario.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
@@ -918,14 +916,27 @@ namespace CameraAcceptanceMod.UI
             SyncMountedRoot();
         }
 
-        private void SwitchViewMode(string modeId)
+        private void SwitchCamera(string modeId)
         {
             GameEngine engine = RequireEngine();
-            if (ResolveViewModeManager(engine) is ViewModeManager viewModeManager)
+            if (TryGetCameraIdForMode(modeId, out string cameraId))
             {
-                viewModeManager.SwitchTo(modeId);
+                Runtime.CameraAcceptanceCameras.SwitchToProfile(engine, cameraId);
                 SyncMountedRoot();
             }
+        }
+
+        private static bool TryGetCameraIdForMode(string modeId, out string cameraId)
+        {
+            cameraId = modeId switch
+            {
+                CameraAcceptanceIds.RtsModeId => CameraAcceptanceIds.RtsCameraId,
+                CameraAcceptanceIds.TpsModeId => CameraAcceptanceIds.TpsCameraId,
+                CameraAcceptanceIds.FollowCloseModeId => CameraAcceptanceIds.FollowCloseCameraId,
+                CameraAcceptanceIds.FollowWideModeId => CameraAcceptanceIds.FollowWideCameraId,
+                _ => string.Empty
+            };
+            return cameraId.Length > 0;
         }
 
         private void SetBlendCamera(string cameraId)
@@ -1226,14 +1237,22 @@ namespace CameraAcceptanceMod.UI
             return true;
         }
 
-        private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
-        {
-            return CoreInputRuntimeServices.GetViewModeManager(engine);
-        }
-
         private static string ResolveActiveModeId(GameEngine engine)
         {
-            return CoreInputRuntimeServices.GetActiveViewModeId(engine) ?? "map-default";
+            var brain = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain;
+            if (brain == null || !brain.HasActiveCamera)
+            {
+                return "map-default";
+            }
+
+            return brain.ActiveCameraId switch
+            {
+                CameraAcceptanceIds.RtsCameraId => CameraAcceptanceIds.RtsModeId,
+                CameraAcceptanceIds.TpsCameraId => CameraAcceptanceIds.TpsModeId,
+                CameraAcceptanceIds.FollowCloseCameraId => CameraAcceptanceIds.FollowCloseModeId,
+                CameraAcceptanceIds.FollowWideCameraId => CameraAcceptanceIds.FollowWideModeId,
+                _ => "map-default"
+            };
         }
 
         private static string ResolveActiveBlendCameraId(GameEngine engine)

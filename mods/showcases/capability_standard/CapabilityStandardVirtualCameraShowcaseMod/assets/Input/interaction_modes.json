@@ -1,0 +1,35 @@
+{
+  "modes": [
+    {
+      "id": "mode.normal",
+      "contexts": []
+    },
+    {
+      "id": "mode.targeting",
+      "contexts": [
+        {
+          "contextId": "Default_Gameplay",
+          "priority": 0
+        }
+      ]
+    },
+    {
+      "id": "CapabilityStandard.VirtualCamera.Control",
+      "contexts": [
+        {
+          "contextId": "CapabilityStandard.VirtualCamera.Controls",
+          "priority": 120
+        }
+      ]
+    },
+    {
+      "id": "CapabilityStandard.VirtualCamera.Avatar",
+      "contexts": [
+        {
+          "contextId": "CapabilityStandard.VirtualCamera.AvatarControls",
+          "priority": 130
+        }
+      ]
+    }
+  ]
+}

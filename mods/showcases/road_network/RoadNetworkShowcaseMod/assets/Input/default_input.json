@@ -19,6 +19,16 @@
       "id": "ResetCamera",
       "name": "Gameplay_ResetCamera",
       "type": "Button"
+    },
+    {
+      "id": "CameraModeTactical",
+      "name": "RoadNetwork_CameraModeTactical",
+      "type": "Button"
+    },
+    {
+      "id": "CameraModeInspect",
+      "name": "RoadNetwork_CameraModeInspect",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -42,6 +52,14 @@
         {
           "actionId": "ResetCamera",
           "path": "<Keyboard>/home"
+        },
+        {
+          "actionId": "CameraModeTactical",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "CameraModeInspect",
+          "path": "<Keyboard>/f3"
         }
       ]
     }

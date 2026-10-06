@@ -3,7 +3,6 @@ using System.IO;
 using System.Numerics;
 using CapabilityStandardVirtualCameraShowcaseMod;
 using CoreInputMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -138,7 +137,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void Showcase_ViewModeSwitchActivatesBehaviorCameraAndZoomBehavior()
+        public void Showcase_CameraModeSwitchActivatesBehaviorCameraAndZoomBehavior()
         {
             using var engine = CreateEngine(ShowcaseMods);
             engine.LoadStartupMap();
@@ -147,9 +146,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Clear = true });
             Tick(engine, BlendSettleFrames);
 
-            var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
-                ?? throw new InvalidOperationException("ViewModeManager is required.");
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitModeId), Is.True);
+            RequestCameraStack(engine, CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitCameraId);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.AuthorityCamera().VirtualCameraBrain;
@@ -185,7 +182,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void Showcase_ViewModeSwitchesCoverHeightmapTpsAndFps()
+        public void Showcase_CameraModeSwitchesCoverHeightmapTpsAndFps()
         {
             using var engine = CreateEngine(ShowcaseMods);
             engine.LoadStartupMap();
@@ -196,8 +193,6 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Clear = true });
             Tick(engine, BlendSettleFrames);
 
-            var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
-                ?? throw new InvalidOperationException("ViewModeManager is required.");
             var heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
                 ?? throw new InvalidOperationException("ContinuousHeightmap is required.");
             var input = engine.GetService(CoreServiceKeys.InputHandler)
@@ -215,7 +210,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(input.HasAction(CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveActionId), Is.True);
             var backend = (TestInputBackend)engine.GlobalContext[TestInputBackendKey];
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f6",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.AuthorityCamera().VirtualCameraBrain
@@ -227,7 +226,11 @@ namespace Ludots.Tests.GAS.Production
                 engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(terrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.TpsModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f7",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId);
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
@@ -273,7 +276,11 @@ namespace Ludots.Tests.GAS.Production
                 engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(localTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.FpsModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f8",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId);
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId));
@@ -324,9 +331,6 @@ namespace Ludots.Tests.GAS.Production
                 "<Keyboard>/f6",
                 () => brain.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId);
 
-            Assert.That(
-                engine.GlobalContext[CoreInputMod.ViewMode.ViewModeManager.ActiveModeIdKey],
-                Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId));
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId));
 
             PressKeyUntil(
@@ -335,9 +339,6 @@ namespace Ludots.Tests.GAS.Production
                 "<Keyboard>/f7",
                 () => brain.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId);
 
-            Assert.That(
-                engine.GlobalContext[CoreInputMod.ViewMode.ViewModeManager.ActiveModeIdKey],
-                Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsModeId));
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
             Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
         }
@@ -433,6 +434,16 @@ namespace Ludots.Tests.GAS.Production
                 () => engine.WorldSizeSpec.Bounds,
                 () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             return engine;
+        }
+
+        private static void RequestCameraStack(GameEngine engine, string cameraId)
+        {
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+            {
+                Id = cameraId,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
+            });
         }
 
         private static void AssertCameraActionBinding(GameEngine engine, string actionId, string attributeName)

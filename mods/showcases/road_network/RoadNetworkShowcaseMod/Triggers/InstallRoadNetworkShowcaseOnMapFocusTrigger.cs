@@ -77,6 +77,9 @@ namespace RoadNetworkShowcaseMod.Triggers
                 new RoadNetworkCameraResetSystem(engine.GlobalContext, engine, _runtime),
                 SystemGroup.InputCollection);
             engine.RegisterSystem(
+                new RoadNetworkCameraModeSystem(engine.GlobalContext, _runtime),
+                SystemGroup.LocalInput);
+            engine.RegisterSystem(
                 new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
                 SystemGroup.RuntimeEntityBinding);
             engine.RegisterSystem(

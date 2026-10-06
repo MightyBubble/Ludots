@@ -3,8 +3,6 @@ using System.Threading.Tasks;
 using Arch.Core;
 using CameraShowcaseMod.Input;
 using CameraShowcaseMod.UI;
-using CoreInputMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
@@ -43,7 +41,6 @@ namespace CameraShowcaseMod.Runtime
 
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             bool showcaseActive = CameraShowcaseIds.IsShowcaseMap(activeMapId);
-            var viewModeManager = ResolveViewModeManager(engine);
 
             var input = context.Get(CoreServiceKeys.InputHandler);
             if (showcaseActive)
@@ -53,14 +50,13 @@ namespace CameraShowcaseMod.Runtime
                 if (string.Equals(activeMapId, CameraShowcaseIds.CommandSourceFollowMapId, StringComparison.OrdinalIgnoreCase) &&
                     owner != Entity.Null)
                 {
-                    RequestCollectionFollowCamera(engine, CameraShowcaseIds.CommandSourceFollowProfileId, owner);
+                    CameraShowcaseCameras.RequestCollectionFollowCamera(engine, CameraShowcaseIds.CommandSourceFollowProfileId, owner);
                 }
 
-                MountPanel(context, engine, activeMapId!, viewModeManager);
+                MountPanel(context, engine, activeMapId!);
             }
             else
             {
-                ClearCommandSourceFollowModeIfOwned(viewModeManager);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -82,7 +78,6 @@ namespace CameraShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ClearCommandSourceFollowModeIfOwned(ResolveViewModeManager(engine));
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
             return Task.CompletedTask;
@@ -176,30 +171,6 @@ namespace CameraShowcaseMod.Runtime
             knowledge.Upsert(owner, target, in record);
         }
 
-        private static void RequestCollectionFollowCamera(GameEngine engine, string cameraId, Entity owner)
-        {
-            if (owner == Entity.Null ||
-                !engine.World.IsAlive(owner) ||
-                engine.GetService(CoreServiceKeys.VirtualCameraRegistry) is not VirtualCameraRegistry registry ||
-                !registry.TryGet(cameraId, out var definition) ||
-                definition == null)
-            {
-                return;
-            }
-
-            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
-            {
-                Id = cameraId,
-                BlendDurationSeconds = 0f,
-                FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
-                FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = "collection.command.source",
-                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
-                ResetRuntimeState = true,
-                ReplaceActiveStack = true
-            });
-        }
-
         private static bool TryFindEntityByName(World world, string name, out Entity result)
         {
             result = Entity.Null;
@@ -245,14 +216,14 @@ namespace CameraShowcaseMod.Runtime
             _inputContextActive = false;
         }
 
-        private void MountPanel(ScriptContext context, GameEngine engine, string activeMapId, ViewModeManager? viewModeManager)
+        private void MountPanel(ScriptContext context, GameEngine engine, string activeMapId)
         {
             if (context.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
                 return;
             }
 
-            _panelController.PublishOrRefresh(engine, activeMapId, viewModeManager, surfaceHost);
+            _panelController.PublishOrRefresh(engine, activeMapId, surfaceHost);
         }
 
         private void ClearPanelIfOwned(ScriptContext context)
@@ -263,20 +234,6 @@ namespace CameraShowcaseMod.Runtime
             }
 
             _panelController.ClearIfOwned(surfaceHost);
-        }
-
-        private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
-        {
-            return CoreInputRuntimeServices.GetViewModeManager(engine);
-        }
-
-        private static void ClearCommandSourceFollowModeIfOwned(ViewModeManager? viewModeManager)
-        {
-            if (viewModeManager != null &&
-                string.Equals(viewModeManager.ActiveMode?.Id, CameraShowcaseIds.CommandSourceFollowModeId, StringComparison.OrdinalIgnoreCase))
-            {
-                viewModeManager.ClearActiveMode();
-            }
         }
 
         private static void EnsureShowcaseInputSchema(PlayerInputHandler input)

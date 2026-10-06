@@ -73,6 +73,7 @@ namespace ChampionSkillSandboxMod.Triggers
 
             _toolbarProvider.Bind(engine);
             engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _toolbarProvider);
+            engine.RegisterSystem(new ChampionSkillCastModePollSystem(engine), SystemGroup.LocalInput);
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 

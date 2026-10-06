@@ -1,6 +1,5 @@
 using System;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Hud;
@@ -327,7 +326,10 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            ViewModeRuntime.TrySwitchTo(_engine?.GlobalContext!, buttonId);
+            if (_engine != null)
+            {
+                ChampionSkillCastModes.TrySetActive(_engine, buttonId);
+            }
         }
 
         private string ResolveActiveCameraFollowMode()
@@ -376,14 +378,9 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private string ResolveActiveModeId()
         {
-            if (_engine != null &&
-                ViewModeRuntime.TryGetActiveModeId(_engine.GlobalContext, out string activeModeId) &&
-                !string.IsNullOrWhiteSpace(activeModeId))
-            {
-                return activeModeId;
-            }
-
-            return ChampionSkillSandboxIds.SmartCastModeId;
+            return _engine != null
+                ? ChampionSkillCastModes.GetActive(_engine)
+                : ChampionSkillSandboxIds.SmartCastModeId;
         }
 
         private string ResolveActiveSelectionViewId()
