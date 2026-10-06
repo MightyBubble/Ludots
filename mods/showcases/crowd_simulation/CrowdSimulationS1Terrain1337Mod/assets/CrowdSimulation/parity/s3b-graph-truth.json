@@ -1,0 +1,37 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "contexts": [
+    {
+      "navId": 1,
+      "polys": 1263,
+      "hpaNodes": 1332,
+      "hpaEdges": 4236
+    },
+    {
+      "navId": 257,
+      "polys": 399,
+      "hpaNodes": 470,
+      "hpaEdges": 966
+    },
+    {
+      "navId": 513,
+      "polys": 1134,
+      "hpaNodes": 1337,
+      "hpaEdges": 4402
+    },
+    {
+      "navId": 769,
+      "polys": 1539,
+      "hpaNodes": 1599,
+      "hpaEdges": 5163
+    },
+    {
+      "navId": 1025,
+      "polys": 1290,
+      "hpaNodes": 1831,
+      "hpaEdges": 7753
+    }
+  ],
+  "fnv1a": "eadd5c42"
+}

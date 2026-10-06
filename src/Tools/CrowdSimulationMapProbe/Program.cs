@@ -161,6 +161,31 @@ public static class Program
             if (any) DrawTileEntry(px, cache, nav.UpPass, nav.UpArea, n, tx, ty, t, (255, 213, 79), cellPx, csCm);
         }
 
+        // HPA* 分区:cluster 网格 + 入口节点(抽象图形状)
+        var hpa = HpaGraph.Build(nav, runtime);
+        var flat = hpa.Flatten();
+        float worldCm2 = n * csCm;
+        for (int i = 0; i < flat.NodeCell.Length; i++)
+        {
+            int cell = flat.NodeCell[i];
+            float cx = (cell % n + 0.5f) * csCm / worldCm2 * RenderSize;
+            float cy = ((cell / n) + 0.5f) * csCm / worldCm2 * RenderSize;
+            FillDisc(px, cx, cy, 2.2f, flat.NodeLayer[i] != 0 ? (255, 213, 79) : (64, 196, 255));
+        }
+
+        for (int b = 0; b <= c; b++)
+        {
+            float p = b * t * cellPx;
+            for (int i2 = 0; i2 < RenderSize; i2 += 2)
+            {
+                if (b < c) { int ii = (i2 * RenderSize + (int)Math.Min(RenderSize - 1, p)) * 3; px[ii] = 255; px[ii + 1] = 255; px[ii + 2] = 255; }
+                int ii2 = ((int)Math.Min(RenderSize - 1, p) * RenderSize + i2) * 3;
+                if (b < c) { px[ii2] = 255; px[ii2 + 1] = 255; px[ii2 + 2] = 255; }
+            }
+        }
+
+        Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hpaNodes={flat.NodeCell.Length} hpaEdges={hpa.EdgeCount}");
+
         string path = Path.Combine(outDir, $"{bundle.MapId}_navmesh_foot.png");
         PngWriter.Write(path, RenderSize, RenderSize, px);
         Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hits={cache.Hits} comps={nav.CompCount}");

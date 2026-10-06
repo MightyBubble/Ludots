@@ -34,6 +34,10 @@ public sealed class NavContext
     public required byte[] Portal { get; init; }
     /// <summary>桥面可走格的区域编号（UpPass 处有效;tiles 缓存输入）。</summary>
     public required byte[] UpArea { get; init; }
+    /// <summary>桥面逐格代价（UpPass 处 = 区域代价;上行 HPA* / 流场用）。</summary>
+    public required Fix64[] UpCost { get; init; }
+    /// <summary>逐 tile 的缓存条目(拼装 / 查询的输入;仅在烘焙拿到缓存时填充)。</summary>
+    public NavTileEntry?[]? Tiles { get; set; }
 }
 
 /// <summary>

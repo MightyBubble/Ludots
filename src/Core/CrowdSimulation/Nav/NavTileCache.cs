@@ -7,6 +7,8 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// Tile 缓存(TileCache 移植):以 tile 的精确输入为键(逐格 0 = 不可走,
 /// 否则区域编号 + 1;不做哈希,无碰撞)。内容相同的 tile 跨位置 / 跨上下文共享一份烘焙;
 /// 拆建筑恢复原键即命中。LRU 容量来自 navtile.cacheCapacity。
+/// 线程契约与参考实现一致:归仿真侧单线程所有(路径服务镜像持自己的另一份),
+/// 不设计为并发安全——查询缓冲不可重入,见 RT-03。
 /// </summary>
 public sealed class NavTileCache
 {
@@ -27,6 +29,8 @@ public sealed class NavTileCache
     public int Misses { get; private set; }
     public int Evictions { get; private set; }
     public int Bakes { get; private set; }
+    /// <summary>累计烘焙耗时(遥测,不参与任何状态与摘要)。</summary>
+    public double BakeMs { get; private set; }
     public int Count => _map.Count;
 
     /// <summary>测试 / 对拍用:逐条目的内容键与条目。</summary>
@@ -70,7 +74,9 @@ public sealed class NavTileCache
 
         Misses++;
         Bakes++;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var entry = NavTileBaker.Bake(_win, t, _minRegionArea, _maxSimplificationError, _maxEdgeLen, _maxVertsPerPoly);
+        BakeMs += sw.Elapsed.TotalMilliseconds;
         entry.Uid = _uid++;
         var newNode = _lru.AddLast((key, entry));
         _map[key] = newNode;

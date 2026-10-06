@@ -98,13 +98,18 @@ public static class NavContextBaker
         var upPass = new byte[n2];
         var portal = new byte[n2];
         var upArea = new byte[n2];
+        var upCost = new Fix64[n2];
         if (deck.TileOrder.Length > 0)
         {
             UpperLayerBake.BakeDeck(config, agentTypeIndex, clearanceCells, walk, deck.AreaIndex, deck.PortalFlag, upPass, portal);
             for (int i = 0; i < n2; i++)
             {
                 // DeckSurface.AreaIndex 是 +1 编码(0 = 无桥面);UpArea 存 0 基区域下标供 tile 缓存输入
-                if (upPass[i] != 0) upArea[i] = (byte)(deck.AreaIndex[i] - 1);
+                if (upPass[i] != 0)
+                {
+                    upArea[i] = (byte)(deck.AreaIndex[i] - 1);
+                    upCost[i] = agent.CostByArea[upArea[i]];
+                }
             }
 
             var merged = new int[n2];
@@ -113,14 +118,16 @@ public static class NavContextBaker
         }
 
         // tile 缓存填充(与 buildNavContext 同点同序):地面全部 tile + 有可走格的桥面 tile
+        NavTileEntry?[]? tiles = null;
         if (tileCache != null)
         {
             int t = config.Hpa.ClusterSize, c = n / t;
+            tiles = new NavTileEntry?[c * c];
             for (int ty = 0; ty < c; ty++)
             {
                 for (int tx = 0; tx < c; tx++)
                 {
-                    tileCache.Acquire(passable, surface.Area, n, tx, ty);
+                    tiles[ty * c + tx] = tileCache.Acquire(passable, surface.Area, n, tx, ty);
                 }
             }
 
@@ -158,6 +165,8 @@ public static class NavContextBaker
             UpPass = upPass,
             Portal = portal,
             UpArea = upArea,
+            UpCost = upCost,
+            Tiles = tiles,
         };
     }
 
