@@ -1,0 +1,54 @@
+{
+  "Id": "wasd_sandbox_entry",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "wasd_sandbox"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.WasdSandboxFollow"
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "InstanceId": "wasd-sandbox-hero",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "wasd-sandbox-hero"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "WasdSandbox.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "wasd-sandbox-hero"
+    }
+  ]
+}

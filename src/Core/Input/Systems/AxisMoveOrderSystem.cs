@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Client;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 
@@ -110,7 +111,7 @@ namespace Ludots.Core.Input.Systems
 
                 Entity actor = seat.PossessedRep;
                 Vector2 current = _world.Get<WorldPositionCm>(actor).Value.ToVector2();
-                Vector2 direction = Vector2.Normalize(axis);
+                Vector2 direction = ResolveMoveDirection(actor, axis, binding.DirectionMode);
                 Vector2 target = current + (direction * binding.StepDistanceCm);
 
                 var order = new Order
@@ -179,7 +180,7 @@ namespace Ludots.Core.Input.Systems
             int playerId = soleSeat.PossessedPlayerId;
 
             Vector2 current = _world.Get<WorldPositionCm>(local).Value.ToVector2();
-            Vector2 direction = Vector2.Normalize(axis);
+            Vector2 direction = ResolveMoveDirection(local, axis, _binding.DirectionMode);
             Vector2 target = current + (direction * _binding.StepDistanceCm);
 
             var order = new Order
@@ -214,6 +215,29 @@ namespace Ludots.Core.Input.Systems
             {
                 _throttleTicksRemaining = _binding.ThrottleTicks - 1;
             }
+        }
+
+        /// <summary>
+        /// Camera-relative declarations rotate the axis by the possessed rep's logic-view camera yaw
+        /// (W stays screen-up while the camera turns); world-absolute passes the axis through.
+        /// </summary>
+        private Vector2 ResolveMoveDirection(Entity actor, Vector2 axis, ControlSchemeAxisMoveDirectionMode mode)
+        {
+            if (mode == ControlSchemeAxisMoveDirectionMode.WorldAbsolute)
+            {
+                return Vector2.Normalize(axis);
+            }
+
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(_globals);
+            if (!views.TryGetDefaultViewId(actor, out string viewId) ||
+                !views.TryGet(viewId, out LogicViewEntry entry))
+            {
+                throw new InvalidOperationException(
+                    "axisMove.directionMode=cameraRelative requires a logic view camera for the possessed rep " +
+                    $"(entity {actor.Id}); register the seat's logic view before the LocalInput group ticks.");
+            }
+
+            return OrbitCameraDirectionUtil.MoveInputToDirection(entry.Camera.State.Yaw, axis);
         }
 
         private bool IsReplicatedClient() =>

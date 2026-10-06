@@ -26,6 +26,14 @@
       }
     },
     {
+      "name": "wasd_sandbox",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/wasd_sandbox/WasdSandboxMod",
+        "projectPath": "WasdSandboxMod.csproj"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",

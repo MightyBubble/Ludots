@@ -4914,6 +4914,29 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "wasd_sandbox",
+      "path": "mods/showcases/wasd_sandbox/WasdSandboxMod",
+      "projectPath": "WasdSandboxMod.csproj",
+      "title": "WASD 移动沙盒",
+      "summary": "最小 WASD 操控演示：纯数据组合（scheme.wasd_move 启动即激活 + 核心 moba_hero 模板 + Follow 相机），验证按键→指令→实体行走全链路。",
+      "tier": "T3",
+      "category": "demo",
+      "tags": [
+        "wasd",
+        "input",
+        "axis-move"
+      ],
+      "binding": "wasd_sandbox",
+      "preset": "wasd_sandbox_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "WasdSandboxWalkAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/wasd-sandbox",
+      "screenshot": null,
+      "status": "active",
+      "notes": "#1729 端到端验收载体：修复 AxisMoveOrderSystem 装箱后的按键→位移验证场景"
+    },
+    {
       "id": "item_loadout",
       "path": "mods/showcases/item_system/ItemLoadoutShowcaseMod",
       "projectPath": "ItemLoadoutShowcaseMod.csproj",

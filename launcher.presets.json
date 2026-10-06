@@ -685,6 +685,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "wasd_sandbox_raylib",
+      "name": "Wasd Sandbox Raylib",
+      "selectors": [
+        "$wasd_sandbox"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "superweapon_context_raylib",
       "name": "Superweapon Context Raylib",
       "selectors": [

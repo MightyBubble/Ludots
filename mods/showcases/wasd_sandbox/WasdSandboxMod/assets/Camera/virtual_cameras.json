@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Camera.Profile.WasdSandboxFollow",
+    "displayName": "Wasd Sandbox Follow",
+    "priority": 100,
+    "rigKind": "ThirdPerson",
+    "distanceCm": 500,
+    "pitch": 18,
+    "fovYDeg": 60,
+    "yaw": 0,
+    "minDistanceCm": 200,
+    "maxDistanceCm": 1200,
+    "minPitchDeg": -20,
+    "maxPitchDeg": 45,
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 120,
+    "followMode": "AlwaysFollow",
+    "followTargetKind": "SolePossessedRep",
+    "allowUserInput": true
+  }
+]

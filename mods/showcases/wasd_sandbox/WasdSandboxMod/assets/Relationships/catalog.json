@@ -1,0 +1,11 @@
+{
+  "types": [
+    {
+      "id": "WasdSandbox.Participant",
+      "isSymmetric": false
+    }
+  ],
+  "metrics": [],
+  "flags": [],
+  "reasons": []
+}

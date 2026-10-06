@@ -236,6 +236,13 @@ namespace Ludots.Core.Input.Interaction
             {
                 ValidateAxisMoveAction(definition);
 
+                if (definition.AxisMove.DirectionMode == ControlSchemeAxisMoveDirectionMode.None)
+                {
+                    throw new InvalidOperationException(
+                        $"Control scheme '{definition.Id}' axisMove.directionMode must be explicitly declared " +
+                        "(worldAbsolute | cameraRelative).");
+                }
+
                 if (!_orderTypes.TryGetId(definition.AxisMove.OrderTypeKey, out int orderTypeId))
                 {
                     throw new InvalidOperationException(
@@ -248,7 +255,8 @@ namespace Ludots.Core.Input.Interaction
                     definition.AxisMove.ActionId,
                     orderTypeId,
                     definition.AxisMove.ThrottleTicks,
-                    definition.AxisMove.StepDistanceCm);
+                    definition.AxisMove.StepDistanceCm,
+                    definition.AxisMove.DirectionMode);
             }
 
             if (schemeId >= _schemes.Length)
@@ -399,13 +407,20 @@ namespace Ludots.Core.Input.Interaction
         public readonly int OrderTypeId;
         public readonly int ThrottleTicks;
         public readonly int StepDistanceCm;
+        public readonly ControlSchemeAxisMoveDirectionMode DirectionMode;
 
-        public ControlSchemeAxisMoveBinding(string actionId, int orderTypeId, int throttleTicks, int stepDistanceCm)
+        public ControlSchemeAxisMoveBinding(
+            string actionId,
+            int orderTypeId,
+            int throttleTicks,
+            int stepDistanceCm,
+            ControlSchemeAxisMoveDirectionMode directionMode)
         {
             ActionId = actionId;
             OrderTypeId = orderTypeId;
             ThrottleTicks = throttleTicks;
             StepDistanceCm = stepDistanceCm;
+            DirectionMode = directionMode;
         }
     }
 
