@@ -328,7 +328,7 @@ namespace Ludots.Tests.GAS
             {
                 Id = "EdgePan",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.EdgePan,
                 EdgePanMarginPx = 10f,
                 EdgePanSpeedCmPerSec = 8000f,

@@ -202,7 +202,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "ManagerRotate",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -273,7 +273,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "TestZoom",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -304,7 +304,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "AccumulatedZoom",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 5000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -334,7 +334,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "TestRotate",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -363,7 +363,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "TestPitch",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 80f,
                 FovYDeg = 60f,

@@ -698,7 +698,6 @@ namespace Ludots.Core.Gameplay.Camera
             destination.Yaw = source.Yaw;
             destination.Pitch = source.Pitch;
             destination.DistanceCm = source.DistanceCm;
-            destination.RigKind = source.RigKind;
             destination.ZoomLevel = source.ZoomLevel;
             destination.FovYDeg = source.FovYDeg;
             destination.RigPivotOffsetCm = source.RigPivotOffsetCm;

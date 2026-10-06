@@ -1,11 +1,14 @@
 namespace Ludots.Core.Gameplay.Camera
 {
-    public enum CameraRigKind
+    /// <summary>
+    /// Whether the camera arm adopts the followed target's facing yaw. None is the unset state and
+    /// fails fast at load: a rig that silently guesses facing semantics is authoring debt, not a
+    /// default. Placement needs no rig kind — distance 0 is at-pivot by geometry.
+    /// </summary>
+    public enum CameraFacingMode
     {
-        Orbit,
-        TopDown,
-        ThirdPerson,
-        FirstPerson
+        None,
+        FollowTarget
     }
 
     public enum CameraPanMode

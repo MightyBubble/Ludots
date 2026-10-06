@@ -1,0 +1,22 @@
+{
+  "actions": [
+    {
+      "id": "PerspectiveToggle",
+      "name": "WasdSandbox_PerspectiveToggle",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "WasdSandbox.Controls",
+      "name": "Wasd Sandbox Controls",
+      "priority": 60,
+      "bindings": [
+        {
+          "actionId": "PerspectiveToggle",
+          "path": "<Keyboard>/t"
+        }
+      ]
+    }
+  ]
+}

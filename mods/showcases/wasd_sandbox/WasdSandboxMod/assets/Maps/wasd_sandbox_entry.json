@@ -9,16 +9,28 @@
     "wasd_sandbox"
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.WasdSandboxFollow"
+    "VirtualCameraId": "Camera.Profile.WasdSandboxTps"
   },
   "Entities": [
     {
-      "Template": "moba_hero",
-      "InstanceId": "wasd-sandbox-hero",
+      "Template": "wasd_zhangsan",
+      "InstanceId": "wasd-sandbox-zhangsan",
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
             "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "Template": "wasd_lisi",
+      "InstanceId": "wasd-sandbox-lisi",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1200,
             "Y": 0
           }
         }
@@ -28,7 +40,7 @@
   "Teams": [
     {
       "TeamId": 1,
-      "RepresentativeInstanceId": "wasd-sandbox-hero"
+      "RepresentativeInstanceId": "wasd-sandbox-zhangsan"
     }
   ],
   "ParticipantRelationships": {
@@ -48,7 +60,7 @@
     {
       "PlayerId": 1,
       "TeamId": 1,
-      "RepresentativeInstanceId": "wasd-sandbox-hero"
+      "RepresentativeInstanceId": "wasd-sandbox-zhangsan"
     }
   ]
 }

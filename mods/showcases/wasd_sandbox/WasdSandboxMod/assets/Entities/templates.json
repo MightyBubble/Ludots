@@ -1,0 +1,42 @@
+[
+  {
+    "id": "wasd_zhangsan",
+    "components": {
+      "Name": { "Value": "ZhangSan" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "CameraProfileBinding": { "ProfileId": "Camera.Profile.WasdSandboxTps" },
+      "AttributeBuffer": {
+        "base": { "Health": 100, "MoveSpeed": 600 }
+      },
+      "AbilityStateBuffer": { "abilityIds": [] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "wasd_lisi",
+    "components": {
+      "Name": { "Value": "LiSi" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 1200, "Y": 0 } },
+      "CameraProfileBinding": { "ProfileId": "Camera.Profile.WasdSandboxTopdown" },
+      "AttributeBuffer": {
+        "base": { "Health": 100, "MoveSpeed": 900 }
+      },
+      "AbilityStateBuffer": { "abilityIds": [] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

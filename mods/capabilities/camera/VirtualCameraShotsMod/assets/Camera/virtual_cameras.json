@@ -1,13 +1,16 @@
-﻿[
+[
   {
     "id": "Camera.Shot.IntroFocus",
     "displayName": "Intro Focus",
     "priority": 1000,
-    "rigKind": "TopDown",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 6400, "y": 3200 },
+    "fixedTargetCm": {
+      "x": 6400,
+      "y": 3200
+    },
     "yaw": 210,
     "pitch": 75,
+    "facingMode": "none",
     "distanceCm": 18000,
     "fovYDeg": 42,
     "defaultBlendDuration": 0.0,
@@ -18,10 +21,10 @@
     "id": "Camera.Shot.SelectionLock",
     "displayName": "Selection Lock",
     "priority": 1100,
-    "rigKind": "ThirdPerson",
     "targetSource": "FollowTarget",
     "yaw": 182,
     "pitch": 12,
+    "facingMode": "followTarget",
     "distanceCm": 480,
     "fovYDeg": 58,
     "followTargetKind": "EntityCollectionPrimary",
@@ -34,11 +37,14 @@
     "id": "Camera.Shot.InspectSweep",
     "displayName": "Inspect Sweep",
     "priority": 1000,
-    "rigKind": "Orbit",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 3200, "y": 2000 },
+    "fixedTargetCm": {
+      "x": 3200,
+      "y": 2000
+    },
     "yaw": 225,
     "pitch": 52,
+    "facingMode": "none",
     "distanceCm": 6800,
     "fovYDeg": 46,
     "defaultBlendDuration": 0.6,

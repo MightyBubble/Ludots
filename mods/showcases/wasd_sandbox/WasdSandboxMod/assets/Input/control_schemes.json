@@ -6,7 +6,9 @@
     },
     {
       "id": "scheme.wasd_move",
-      "inputContexts": [],
+      "inputContexts": [
+        "WasdSandbox.Controls"
+      ],
       "axisMove": {
         "actionId": "Move",
         "orderTypeKey": "moveTo",

@@ -3,11 +3,14 @@
     "id": "TeamResearch.Camera.Overview",
     "displayName": "Team Research Overview",
     "priority": 100,
-    "rigKind": "Orbit",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 6400, "y": 6400 },
+    "fixedTargetCm": {
+      "x": 6400,
+      "y": 6400
+    },
     "yaw": 180,
     "pitch": 48,
+    "facingMode": "none",
     "distanceCm": 9800,
     "fovYDeg": 60,
     "panMode": "None",

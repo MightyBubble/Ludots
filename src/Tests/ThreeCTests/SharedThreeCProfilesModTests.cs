@@ -28,7 +28,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(registry, Is.Not.Null);
             Assert.That(registry!.TryGet("Shared3C.Profile.RtsMoba", out VirtualCameraDefinition definition), Is.True);
             Assert.That(definition.Id, Is.EqualTo("Shared3C.Profile.RtsMoba"));
-            Assert.That(definition.RigKind, Is.EqualTo(CameraRigKind.Orbit));
+            Assert.That(definition.FacingMode, Is.EqualTo(CameraFacingMode.None));
             Assert.That(definition.TargetSource, Is.EqualTo(VirtualCameraTargetSource.FollowTarget));
             Assert.That(definition.PanMode, Is.EqualTo(CameraPanMode.None));
             Assert.That(definition.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
