@@ -94,11 +94,13 @@ namespace CameraShowcaseMod.Runtime
                 return false;
             }
 
-            owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!engine.World.IsAlive(owner))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner) ||
+                owner == Entity.Null ||
+                !engine.World.IsAlive(owner))
             {
-                throw new InvalidOperationException(
-                    "Camera showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+                // No client-local seat claimed yet (headless acceptance renders without launch
+                // seats). Keep the map-default camera; a later F4/poll can re-assert the follow.
+                return false;
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);

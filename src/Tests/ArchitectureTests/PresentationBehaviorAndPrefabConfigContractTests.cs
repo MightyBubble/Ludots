@@ -1052,7 +1052,14 @@ namespace Ludots.Tests.Architecture
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "actions": {
+        "zoom": "Minimap.Zoom"
+      }
+    },
+    "teamRelationColors": {
+      "friendlyRelation": "Friendly",
+      "hostileRelation": "Hostile"
     }
   }
 }

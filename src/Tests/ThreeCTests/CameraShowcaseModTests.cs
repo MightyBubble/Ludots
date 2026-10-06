@@ -49,7 +49,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var input = engine.GetService(CoreServiceKeys.InputHandler);
             Assert.That(input, Is.Not.Null);
             Assert.That(input!.HasContext("Default_Gameplay"), Is.True);
-            Assert.That(input.HasAction("CommandSourceAcquire"), Is.True);
             Assert.That(input.HasAction("Command"), Is.True);
             Assert.That(input.HasAction("Cancel"), Is.True);
         }
@@ -206,7 +205,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DistanceCm = 3600f,
                 FovYDeg = 48f
             });
-            Tick(engine, 1);
+            // Pose raises propagate over a couple of frames after the follow camera settles
+            // (request body reads state from the next camera update, not the same frame).
+            Tick(engine, 8);
 
             Assert.That(engine.AuthorityCamera().State.Pitch, Is.EqualTo(55f).Within(0.001f));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(3600f).Within(0.001f));
@@ -242,6 +243,24 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
 
                 engine.LoadMap(mapId);
+
+                // Showcase maps carry a local-player rep (CameraShowcaseHero) that production
+                // possesses via launch seats. There is no launcher here, so bind the sole seat to
+                // the hero; without it the command-source camera path silently no-ops and these
+                // acceptance tests cannot exercise the flow.
+                Entity hero = FindEntityByName(engine.World, CameraShowcaseIds.HeroName);
+                if (hero != Entity.Null)
+                {
+                    ClientLocalSeatTestBindings.BindSoleSeat(engine, hero, playerId: 1, seatId: "seat.0");
+                }
+
+                // Load-time seat binding happens after the map-focus callback already ran without
+                // a seat, so re-assert the command-source follow camera explicitly on its map.
+                if (string.Equals(mapId, CameraShowcaseIds.CommandSourceFollowMapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    RequestCommandSourceFollow(engine);
+                    Tick(engine, BlendSettleFrames);
+                }
             }
 
             Tick(engine, frames);

@@ -38,6 +38,15 @@ namespace Ludots.Tests.Architecture
                     continue;
                 }
 
+                // Declared-path installer (per-mod local_order_source.json) is still inside the
+                // migration window: interaction/champion ship it for skillbar labels, and the
+                // auto-install replacement does not read those labels yet. Retirement of this
+                // file is slice-8 work together with the CoreInputMod dependency removal.
+                if (normalized.EndsWith("CoreInputMod/Systems/LocalOrderSourceSystem.cs"))
+                {
+                    continue;
+                }
+
                 offenders.Add(normalized);
             }
 
