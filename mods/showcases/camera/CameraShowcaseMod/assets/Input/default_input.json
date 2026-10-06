@@ -1,5 +1,8 @@
 {
   "actions": [
+    { "id": "CameraModeTactical", "name": "CameraModeTactical", "type": "Button" },
+    { "id": "CameraModeFollow", "name": "CameraModeFollow", "type": "Button" },
+    { "id": "CameraModeInspect", "name": "CameraModeInspect", "type": "Button" },
     { "id": "CameraModeCommandSourceFollow", "name": "CameraModeCommandSourceFollow", "type": "Button" }
   ],
   "contexts": [
@@ -8,6 +11,9 @@
       "name": "Camera Showcase Controls",
       "priority": 120,
       "bindings": [
+        { "actionId": "CameraModeTactical", "path": "<Keyboard>/f1" },
+        { "actionId": "CameraModeFollow", "path": "<Keyboard>/f2" },
+        { "actionId": "CameraModeInspect", "path": "<Keyboard>/f3" },
         { "actionId": "CameraModeCommandSourceFollow", "path": "<Keyboard>/f4" }
       ]
     }

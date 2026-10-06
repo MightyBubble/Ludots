@@ -6,7 +6,6 @@ using Arch.Core;
 using CoreInputMod.Systems;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
-using CoreInputMod.ViewMode;
 using InteractionShowcaseMod.Input;
 using InteractionShowcaseMod.UI;
 using Ludots.Core.Components;
@@ -82,7 +81,6 @@ namespace InteractionShowcaseMod.Runtime
             {
                 CloseEntityInfoPanels(context);
                 RestoreSuppressedHud(engine);
-                ClearShowcaseModeIfOwned(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -104,7 +102,6 @@ namespace InteractionShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ClearShowcaseModeIfOwned(engine);
             CloseEntityInfoPanels(context);
             RestoreSuppressedHud(engine);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
@@ -659,19 +656,9 @@ namespace InteractionShowcaseMod.Runtime
 
         private static void EnsureDefaultShowcaseMode(GameEngine engine)
         {
-            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
-            if (!InteractionShowcaseIds.IsShowcaseMode(activeModeId))
+            if (!InteractionShowcaseIds.IsShowcaseMode(InteractionShowCastModes.GetActive(engine)))
             {
-                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, InteractionShowcaseIds.LolModeId);
-            }
-        }
-
-        private static void ClearShowcaseModeIfOwned(GameEngine engine)
-        {
-            if (ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) &&
-                InteractionShowcaseIds.IsShowcaseMode(activeModeId))
-            {
-                ViewModeRuntime.TryClearActiveMode(engine.GlobalContext);
+                InteractionShowCastModes.TrySetActive(engine, InteractionShowcaseIds.LolModeId);
             }
         }
 

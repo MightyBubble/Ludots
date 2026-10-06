@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillSandbox_PlayableFlow_WritesAcceptanceArtifacts
 - map: champion_skill_sandbox
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-08-17T05:54:12.7835046Z
+- execution_timestamp_utc: 2026-10-06T13:23:53.1848853Z
 
 ## Timeline
 [T+001] champion_skill_sandbox loaded | default mode Quick Cast | default focus Ezreal Alpha
@@ -12,7 +12,7 @@
 [T+003] Select(Garen Courage) -> panel shows W active from toggle state
 [T+004] Select(Jayce Hammer) -> panel routes to hammer-form Q/W/E/R
 [T+005] Idle hover over Target Dummy A shows a dedicated hover marker before any cast input
-[T+006] Ezreal Alpha.Move(RMB) -> X 1180 to 1264 to create spacing with a visible path overlay
+[T+006] Ezreal Alpha.Move(RMB) -> X 1180 to 1264 to create spacing
 [T+007] Camera.Reset(F4) -> tactical view restored to sandbox default pose
 [T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP 220 -> 205
 [T+009] Indicator hover over Target Dummy A shows an extra target marker before release
@@ -27,7 +27,7 @@
 [T+017] Spell Engineer Alpha.Cast(Spell Beacon) -> summon manifestation spawned with shared owner/team/map/parent contract
 [T+018] Spell Engineer Alpha.Cast(Gravity Well) -> Target Dummy D zone tick confirmed | HP 220 -> 212
 [T+019] Spell Engineer Alpha.Cast(Cataclysm Ring) -> 10 blocker segments spawned and sunk into box physics/nav obstacles
-[T+020] Spell Engineer Alpha.Hold(Guided Laser) -> Dummy D hit, retarget to Dummy E rotates beam, Release(R) removes channel | HP D 212->199 | HP E 212->199
+[T+020] Spell Engineer Alpha.Hold(Guided Laser) -> Dummy D hit, retarget to Dummy E rotates beam, Release(R) removes channel | HP D 212->199 | HP E 212->204
 
 ## Outcome
 - result: success
@@ -36,9 +36,9 @@
 - final_mode: ChampionSkillSandbox.Mode.SmartCast
 - final_camera_target_cm: (1850, 580)
 - final_camera_distance_cm: 6500
-- final_selection_ring_count: 21
-- final_feedback_primitives: 22
-- final_feedback_world_text: 22
+- final_selection_ring_count: 19
+- final_feedback_primitives: 15
+- final_feedback_world_text: 19
 
 ## Summary Stats
 - total_actions: 15
@@ -50,5 +50,5 @@
 - cancelled_casts: 1
 - manifestation_spawns: 3
 - manifestation_selections: 2
-- median_tick_ms: 1.226
-- max_tick_ms: 25.51
+- median_tick_ms: 1.051
+- max_tick_ms: 35.327

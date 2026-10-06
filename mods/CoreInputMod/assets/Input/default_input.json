@@ -11,16 +11,6 @@
       "type": "Button"
     },
     {
-      "id": "ViewModeNext",
-      "name": "Gameplay_ViewModeNext",
-      "type": "Button"
-    },
-    {
-      "id": "ViewModePrev",
-      "name": "Gameplay_ViewModePrev",
-      "type": "Button"
-    },
-    {
       "id": "PointerPos",
       "name": "Pointer_Position",
       "type": "Axis2D"
@@ -52,14 +42,6 @@
         {
           "actionId": "Cancel",
           "path": "<Keyboard>/escape"
-        },
-        {
-          "actionId": "ViewModeNext",
-          "path": "<Keyboard>/v"
-        },
-        {
-          "actionId": "ViewModePrev",
-          "path": "<Keyboard>/b"
         },
         {
           "actionId": "PointerPos",

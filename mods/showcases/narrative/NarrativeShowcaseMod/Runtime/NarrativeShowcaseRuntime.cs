@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using InteractionShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -98,7 +97,7 @@ namespace NarrativeShowcaseMod.Runtime
             if (showcaseActive)
             {
                 ActivateInputContexts(input);
-                EnsureViewMode(engine);
+                EnsureSmartCastInteractionMode(engine);
                 EnsurePlayerLocale(engine);
                 RequireShowcaseSolePossessedRep(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
@@ -848,19 +847,6 @@ namespace NarrativeShowcaseMod.Runtime
             }
         }
 
-        private void EnsureViewMode(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) || managerObj is not ViewModeManager manager)
-            {
-                return;
-            }
-
-            if (!InteractionShowcaseIds.IsShowcaseMode(manager.ActiveMode?.Id))
-            {
-                manager.SwitchTo(InteractionShowcaseIds.LolModeId);
-            }
-        }
-
         private static Entity RequireShowcaseSolePossessedRep(GameEngine engine, string activeMapId)
         {
             Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -1139,6 +1125,15 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return result;
+        }
+
+        private static void EnsureSmartCastInteractionMode(GameEngine engine)
+        {
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
+                mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping)
+            {
+                mapping.SetInteractionMode(Ludots.Core.Input.Orders.CastModeType.SmartCast);
+            }
         }
 
         private void EnsurePlayerLocale(GameEngine engine)

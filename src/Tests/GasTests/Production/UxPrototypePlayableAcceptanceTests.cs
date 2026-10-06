@@ -404,7 +404,7 @@ namespace Ludots.Tests.GAS.Production
         {
             MethodInfo buildSnapshot = state.GetType().GetMethod("BuildSnapshot", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 ?? throw new MissingMethodException("BuildSnapshot");
-            object? snapshot = buildSnapshot.Invoke(state, new object?[] { engine, null });
+            object? snapshot = buildSnapshot.Invoke(state, new object?[] { engine });
             return snapshot ?? throw new InvalidOperationException("BuildSnapshot returned null.");
         }
 

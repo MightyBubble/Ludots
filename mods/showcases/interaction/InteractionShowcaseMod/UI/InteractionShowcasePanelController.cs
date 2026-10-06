@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.UI;
 using InteractionShowcaseMod.Runtime;
@@ -504,7 +503,7 @@ namespace InteractionShowcaseMod.UI
         {
             if (_engine != null)
             {
-                ViewModeRuntime.TrySwitchTo(_engine.GlobalContext, modeId);
+                InteractionShowCastModes.TrySetActive(_engine, modeId);
             }
         }
 
@@ -518,10 +517,8 @@ namespace InteractionShowcaseMod.UI
             string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
-            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
-            string activeModeName = ViewModeRuntime.TryGetActiveModeDisplayName(engine.GlobalContext, out string displayName)
-                ? displayName
-                : "Unassigned";
+            string activeModeId = InteractionShowCastModes.GetActive(engine) ?? InteractionShowcaseIds.LolModeId;
+            string activeModeName = InteractionShowCastModes.GetDisplayName(activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);
