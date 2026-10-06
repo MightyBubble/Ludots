@@ -42,7 +42,7 @@ namespace Ludots.Tests.Presentation
         private const int MarchBudgetFrames = 3600;
         private const float ArrivalToleranceCm = 800f;
         private const int ExpectedSquadSize = 48;
-        private const string MouseRightButtonPath = "<Mouse>/RightButton";
+        private const string MouseRightButtonPath = "<Mouse>/rightButton";
         private const string SkillQKeyPath = "<Keyboard>/q";
         private const string SkillEKeyPath = "<Keyboard>/e";
         private const string CrateName = "CrowdPhysicsArena.Crate";
@@ -53,7 +53,6 @@ namespace Ludots.Tests.Presentation
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardCrowdPhysicsArenaMod"
@@ -155,9 +154,7 @@ namespace Ludots.Tests.Presentation
                     $"arrived within {ArrivalToleranceCm}cm of {target}. " +
                     $"lastOrderMemberCount={simulation.LastOrderMemberCount}, firstAgent={ReadAgentPositionCm(engine, squad[0])}, " +
                     $"centroid={ComputeCentroid(engine, squad)}, " +
-                    $"lastOrder={ReadDebugGlobal(engine, "CoreInputMod.Debug.LastOrder")}, " +
-                    $"lastGround={ReadDebugGlobal(engine, "CoreInputMod.Debug.LastGroundWorldCm")}, " +
-                    $"lastActivation={DescribeLastActivation(engine)}");
+                    $"lastDrain={DescribeLastCommandDrain(engine)}");
 
             float maxCrateDisplacementCm = 0f;
             foreach ((Entity crate, Vector2 before) in cratesBefore)
@@ -239,7 +236,7 @@ namespace Ludots.Tests.Presentation
                 () => plate.OpenedDoorCount >= 1,
                 () => $"Door did not open after a full-squad crossing. plateBegin={plate.AgentContactBeginCount}, " +
                     $"plateEnd={plate.AgentContactEndCount}, centroid={ComputeCentroid(engine, squad)}, " +
-                    $"lastActivation={DescribeLastActivation(engine)}");
+                    $"lastDrain={DescribeLastCommandDrain(engine)}");
             Assert.That(plate.AgentContactBeginCount, Is.GreaterThanOrEqualTo(20));
             AssertOpenedDoorRemoved(engine);
         }
@@ -477,21 +474,11 @@ namespace Ludots.Tests.Presentation
                 $"(current: {simulation.NavigationAgentCount}).");
         }
 
-        private static string DescribeLastActivation(GameEngine engine)
+        private static string DescribeLastCommandDrain(GameEngine engine)
         {
-            InputOrderMappingSystem? mapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            if (mapping == null)
-            {
-                return "<no mapping installed>";
-            }
-
-            var result = mapping.LastActivationResult;
-            return $"state={result.State}, rejection={result.Rejection}, actor={result.Actor.Id}, orderId={result.OrderId}";
-        }
-
-        private static string ReadDebugGlobal(GameEngine engine, string key)
-        {
-            return engine.GlobalContext.TryGetValue(key, out object? value) ? value?.ToString() ?? "<null>" : "<unset>";
+            CommandIntentBufferDrainSystem drain = RequireService(engine, CoreServiceKeys.CommandIntentBufferDrain);
+            return $"drained={drain.LastDrainedCount}, accepted={drain.LastAcceptedCount}, " +
+                   $"rejected={drain.LastRejectedCount}, reason={drain.LastRejectionReason ?? "<none>"}";
         }
 
         private static void ParkAllScenarioAgents(GameEngine engine)
@@ -763,7 +750,7 @@ namespace Ludots.Tests.Presentation
         {
             EntityCollectionStore collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                "selected",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

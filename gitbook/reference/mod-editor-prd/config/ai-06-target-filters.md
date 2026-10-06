@@ -46,7 +46,7 @@
 |---|---|---|
 | SourceSelf | — | 以 actor 自身为候选起点 |
 | SpatialRadius | RadiusCm 正 | 半径内 |
-| Relationship | Value（Hostile/Friendly 等） | 双方 Team 关系 |
+| Relationship | Value（关系类型名，如 Hostile/Friendly） | actor 队伍到目标队伍有这条关系边 |
 | HasAllTags | Tags[] | 目标须含全部 tag |
 | HasNoneTags | Tags[] | 目标不得含任一 tag |
 | LayerAny | Mask 正 | 层级掩码相交 |

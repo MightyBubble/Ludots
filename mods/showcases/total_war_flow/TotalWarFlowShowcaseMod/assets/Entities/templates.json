@@ -1,0 +1,63 @@
+[
+  {
+    "id": "tw.block.nav_agent",
+    "components": {
+      "ContinuousHeightmapSampleState": {},
+      "MassNavigationAgent": {
+        "profileId": "tw.agent"
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      }
+    }
+  },
+  {
+    "id": "tw_marine",
+    "uses": [
+      "ballista_soldier",
+      "tw.block.nav_agent"
+    ],
+    "components": {
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "tw_commander",
+    "extends": "tw_marine",
+    "initialInteractionContext": "interaction.context.tw.controls"
+  },
+  {
+    "id": "tw_wolf",
+    "uses": [
+      "ballista_wolf",
+      "tw.block.nav_agent"
+    ]
+  },
+  {
+    "id": "tw_death_burst",
+    "onSpawnEffect": "Effect.Tw.DeathBurst.SelfDestruct",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 1
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Fx.DeathBurst"
+        ]
+      },
+      "DirtyFlags": {}
+    }
+  }
+]

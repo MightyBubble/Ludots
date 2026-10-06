@@ -1,0 +1,112 @@
+{
+  "Id": "ballista_engage_field",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "input",
+    "route",
+    "engage"
+  ],
+  "HeartbeatIntervalTicks": 6,
+  "Entities": [
+    {
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_1",
+      "PositionXCm": 0,
+      "PositionYCm": 0,
+      "Overrides": {
+        "PlayerIdentity": {
+          "PlayerId": 1
+        }
+      },
+      "Relations": [
+        {
+          "To": "ballista_1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ballista-engage-hostiles-anchor",
+          "Type": "Hostile"
+        }
+      ]
+    },
+    {
+      "Template": "ballista_wolf",
+      "InstanceId": "wolf_1",
+      "PositionXCm": 400,
+      "PositionYCm": 0
+    },
+    {
+      "Template": "ballista_tower",
+      "InstanceId": "tower_1",
+      "PositionXCm": 400,
+      "PositionYCm": 600
+    },
+    {
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_2",
+      "PositionXCm": -400,
+      "PositionYCm": 300,
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_3",
+      "PositionXCm": -400,
+      "PositionYCm": -300,
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "Template": "ballista_team_anchor",
+      "InstanceId": "ballista-engage-hostiles-anchor",
+      "PositionXCm": 2000,
+      "PositionYCm": 2000,
+      "Overrides": {
+        "Name": {
+          "Value": "Hostiles Anchor"
+        }
+      },
+      "Relations": [
+        {
+          "To": "ballista-engage-hostiles-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ballista_1",
+          "Type": "Hostile"
+        }
+      ]
+    }
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
+  "Teams": [
+    {
+      "TeamId": 1,
+      "Name": "Player",
+      "RepresentativeInstanceId": "ballista_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "ballista-engage-hostiles-anchor"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ballista_1"
+    }
+  ]
+}

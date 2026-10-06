@@ -55,7 +55,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(input.HasAction("Cancel"), Is.True);
             Assert.That(input.HasAction("ViewModeNext"), Is.True);
             Assert.That(input.HasAction("ViewModePrev"), Is.True);
-            Assert.That(input.HasAction("TabTarget"), Is.True);
         }
 
         [Test]

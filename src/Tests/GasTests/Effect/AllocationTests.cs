@@ -1,3 +1,4 @@
+using Ludots.Core.Gameplay.GAS.Input;
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
@@ -175,7 +176,7 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 budget: null,
                 templates: templates,
-                inputRequests: null,
+                promptState: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));

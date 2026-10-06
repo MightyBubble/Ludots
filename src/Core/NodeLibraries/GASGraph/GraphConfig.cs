@@ -49,7 +49,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public int RotationDeg { get; set; }
         public int HexRadius { get; set; }
         public uint LayerMask { get; set; }
-        public string? RelationshipMode { get; set; }
         public int Limit { get; set; }
         public int TeamId { get; set; }
         public string? Sort { get; set; }

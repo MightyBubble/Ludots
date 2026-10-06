@@ -50,7 +50,7 @@ namespace CameraAcceptanceMod.Systems
                 return;
             }
 
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
             if (!TryResolveProjectionGround(engine, pointer, out WorldCmInt2 worldCm))
             {
                 throw new InvalidOperationException(

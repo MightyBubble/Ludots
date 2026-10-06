@@ -11,25 +11,38 @@
       "InstanceId": "interaction-stress-anchor-red",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 1000, "Y": 1400 } }
-      }
+      },
+      "Relations": [
+        {
+          "To": "interaction-stress-anchor-red",
+          "Type": "Friendly"
+        },
+        {
+          "To": "interaction-stress-anchor-blue",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "interaction_stress_anchor_blue",
       "InstanceId": "interaction-stress-anchor-blue",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 5400, "Y": 1400 } }
-      }
+      },
+      "Relations": [
+        {
+          "To": "interaction-stress-anchor-blue",
+          "Type": "Friendly"
+        },
+        {
+          "To": "interaction-stress-anchor-red",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "interaction-stress-anchor-red" },
     { "TeamId": 2, "RepresentativeInstanceId": "interaction-stress-anchor-blue" }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
-    ]
-  }
+  ]
 }

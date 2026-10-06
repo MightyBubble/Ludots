@@ -1,22 +1,10 @@
-using System;
-using System.Collections.Generic;
-using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
-using Ludots.Core.Mathematics;
-using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod
 {
     public static class CoreInputRuntimeServices
     {
-        public static bool TryGetCommandSourceAcquiredCallbacks(
-            GameEngine engine,
-            out List<Action<WorldCmInt2, Entity>> callbacks)
-        {
-            return engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out callbacks);
-        }
-
         public static bool TryGetViewModeManager(GameEngine engine, out ViewModeManager manager)
         {
             return engine.TryGetService(CoreInputServiceKeys.ViewModeManager, out manager);

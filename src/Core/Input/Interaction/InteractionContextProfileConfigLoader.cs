@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Interaction
     /// declared DeepObject merge through the shared <see cref="ConfigPipeline"/> (a mod fragment's
     /// profiles array replaces the root's, matching the filter profile family); structural
     /// validation fails fast. Referenced filter/intent ids resolve at registry install, not here.
-    /// The engine-reserved steady-state profile installs programmatically in GameEngine, not here.
+    /// Steady state is the absence of a mounted instance. This loader does not install a reserved profile.
     /// </summary>
     public sealed class InteractionContextProfileConfigLoader
     {
@@ -42,7 +42,7 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
-            RejectRetiredProfileFields(mergedObject, relativePath);
+            RejectRetiredPeriodFields(mergedObject, relativePath);
 
             var config = mergedObject.Deserialize<InteractionContextProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
@@ -51,11 +51,13 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Retired and undeclared profile fields fail closed. The deserializer ignores unknown
-        /// properties, so a collection field invented beside <c>activeCollectionKey</c> would
-        /// otherwise sit in the file and never reach the entity.
+        /// Retired profile fields fail closed. <c>continuousQuery</c> / <c>whileActive</c> were
+        /// replaced by <c>onActivated</c> / <c>onDeactivated</c>. <c>activeCollectionKey</c> was
+        /// replaced by the member set on the intent. <c>activeEntityViewKey</c> never had a runtime
+        /// consumer. Other unknown properties are ignored by the
+        /// deserializer, so these names are rejected here.
         /// </summary>
-        public static void RejectRetiredProfileFields(JsonObject root, string relativePath)
+        private static void RejectRetiredPeriodFields(JsonObject root, string relativePath)
         {
             if (!root.TryGetPropertyValue("profiles", out JsonNode? profilesNode) ||
                 profilesNode is not JsonArray profiles)
@@ -84,18 +86,16 @@ namespace Ludots.Core.Input.Interaction
                             $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
                     }
 
+                    if (string.Equals(property.Key, "activeCollectionKey", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; the submitting graph carries the member set on the intent.");
+                    }
+
                     if (string.Equals(property.Key, "activeEntityViewKey", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new InvalidOperationException(
                             $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; it has no runtime consumer.");
-                    }
-
-                    if (IsArbitraryCollectionField(property.Key))
-                    {
-                        throw new InvalidOperationException(
-                            $"{relativePath}.profiles[{index}] declares collection field '{property.Key}'. " +
-                            "Collection keys are declared as collectionKey on graph nodes. The only profile field is activeCollectionKey, " +
-                            "and a context whose submit graph declares collectionKey must omit it — that key is persisted on the entity interaction instance.");
                     }
                 }
             }
@@ -126,9 +126,6 @@ namespace Ludots.Core.Input.Interaction
                     throw new InvalidOperationException($"{path}.id duplicates interaction context profile '{profile.Id}'.");
                 }
 
-                // activeCollectionKey is optional. A context whose submit graphs declare
-                // collectionKey must omit it; install copies that graph key onto the entity.
-                RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
@@ -193,16 +190,6 @@ namespace Ludots.Core.Input.Interaction
                     ?? throw new InvalidOperationException($"{path}[{i}] must be a string.");
                 RequireTrimmedNonEmpty(graph, $"{path}[{i}]");
             }
-        }
-
-        private static bool IsArbitraryCollectionField(string propertyName)
-        {
-            if (string.Equals(propertyName, "activeCollectionKey", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            return propertyName.Contains("collection", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)

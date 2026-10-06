@@ -10,7 +10,7 @@ Case E 是框选演示：按下拖框，抬起落定。
 合同纠偏已到位——起角落指挥官黑板，屏幕框直读黑板和活指针，不靠地图变量，开机不硬塞玩法键。
 名单落账也已图化：三份名单（可框选 / 预览黄环 / 已选中）由图经 `WriteCollection` 写，引擎特供通道（`collection_event_writers.json`、`DispatchCollectionEvent`）已退役删除。
 
-下令已经接上：右键提交图和施法图在节点上声明 `collectionKey: "selected"`。战斗档案不写集合字段。装上战斗上下文时，这个键记在指挥官的交互实例上，下令读这份实例。
+当前欠的一笔：**Case E 还不下单。**§12 接口空置。
 
 ## 2. 结构
 
@@ -26,8 +26,8 @@ Case E 是框选演示：按下拖框，抬起落定。
 
 ## 3. 详情：下一步是全链下单（迁移切1）
 
-按宪法 §12：`SubmitCommandIntent` / `SubmitCast` 节点声明 `collectionKey: "selected"`；
-档案上再写集合字段会被装载拒绝。下令域读指挥官交互实例上的这份键，令下给成员。
+按宪法 §12：右键提交图自己从 `selected` 装载成员，经 `SubmitCommandIntent` 把成员集写入意图缓冲；
+排水按这批成员授权并下单。上下文档案不再声明集合键。
 
 验收目标：按下拖框 → 抬起选中 → 右键 → 选中的陆战队移动。
 headless + trace 入 `artifacts/acceptance/`。
@@ -59,9 +59,7 @@ Feature: Case E 交接说得清
   Scenario: 我知道下一步
     Given 我要落切1 全链下单
     When 我对照宪法 §12
-    Then 提交图声明 collectionKey
-    And 战斗档案没有集合字段
-    And 指挥官的交互实例上带着这份键
+    Then 提交图从 selected 装载成员并随意图提交
     And 右键提交图经 SubmitCommandIntent 下单
     And 全程没有 C# 玩法代码
 ```

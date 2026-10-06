@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -66,6 +67,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public LogicTerrainField Terrain { get; init; } = null!;
 
+        public IContinuousHeightmap? ContinuousHeightmap { get; init; }
+
+        public WorldAabbCm ContinuousHeightBounds { get; init; }
+
+        public int? BlockedAtOrBelowHeightCm { get; init; }
+
         public NavObstacleSet Obstacles { get; init; } = new();
 
         public NavMeshBakeConfig Config { get; init; } = null!;
@@ -91,6 +98,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (Terrain == null)
             {
                 throw new InvalidOperationException("NavBakeContext.terrain is required.");
+            }
+
+            if (ContinuousHeightmap != null && (ContinuousHeightBounds.Width <= 0 || ContinuousHeightBounds.Height <= 0))
+            {
+                throw new InvalidOperationException("NavBakeContext.continuousHeightmap requires positive bounds.");
             }
 
             if (Config == null)

@@ -1113,7 +1113,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             return;
         }
 
-        if (!CommandSourceEligibility.CanAcquire(engine.World, engine.GlobalContext, owner, formation, default))
+        if (!CommandSourceEligibility.CanAcquire(engine.World, engine.GlobalContext, owner, formation, RelationFilter.All))
         {
             throw new InvalidOperationException(
                 $"Formation Capability showcase initial command source formation '{config.InitialCommandSourceFormationId}' must be command-source acquireable.");

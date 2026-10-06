@@ -1,0 +1,12 @@
+{
+  "locales": {
+    "en-US": {
+      "moba_demo.cast_style.smart": "Smart cast: Q/E/R hit the enemy under the cursor | F3: aim first",
+      "moba_demo.cast_style.aim": "Aim first: Q/E/R show the range, left-click an enemy to cast, right-click/Esc cancels | F2: smart cast"
+    },
+    "zh-CN": {
+      "moba_demo.cast_style.smart": "智能施法：Q/E/R 直接打光标下的敌人 | F3 改成先瞄准",
+      "moba_demo.cast_style.aim": "先瞄准：Q/E/R 先出范围圈，左键点敌人放出，右键或 Esc 取消 | F2 改回智能施法"
+    }
+  }
+}

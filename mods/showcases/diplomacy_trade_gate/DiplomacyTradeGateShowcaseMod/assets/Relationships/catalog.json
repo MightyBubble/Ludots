@@ -17,13 +17,5 @@
     {
       "id": "Embargo"
     }
-  ],
-  "reasons": [
-    {
-      "id": "DiplomacyTradeGate.Pact"
-    },
-    {
-      "id": "DiplomacyTradeGate.Embargo"
-    }
   ]
 }

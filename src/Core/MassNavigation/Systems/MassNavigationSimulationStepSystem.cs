@@ -135,11 +135,29 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
         MassNavigationRouteSinkResult result = routeSink.TryApplyTrackedRouteTargets(
             simulation,
             _engine.World);
-        if (!result.Applied)
+        if (result.Applied)
         {
-            throw new System.InvalidOperationException(
-                $"MassNavigation route execution failed for order {result.OrderToken}, agent {result.AgentIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}.");
+            return;
         }
+
+        // An unreachable goal is an ordinary gameplay outcome, not a fault: the player may click
+        // across an unwalkable gap. The agent that raised it holds position and the rest of the
+        // batch still runs, so one bad order cannot kill the frame loop. Genuine wiring faults
+        // (missing service, unbound agent, capacity breach) still fail fast.
+        if (result.Status == MassNavigationRouteSinkStatus.SolveFailed ||
+            result.Status == MassNavigationRouteSinkStatus.EmptyPath)
+        {
+            Ludots.Core.Diagnostics.Log.Warn(
+                in Ludots.Core.Diagnostics.LogChannels.Engine,
+                $"MassNavigation route not solvable for order {result.OrderToken}, agent {result.AgentIndex}: " +
+                $"status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, " +
+                $"errorCode={result.ErrorCode}, start=({result.StartWorldCm.X:0.###},{result.StartWorldCm.Y:0.###}), " +
+                $"goal=({result.DestinationWorldCm.X:0.###},{result.DestinationWorldCm.Y:0.###}); agent holds position.");
+            return;
+        }
+
+        throw new System.InvalidOperationException(
+            $"MassNavigation route execution failed for order {result.OrderToken}, agent {result.AgentIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}, start=({result.StartWorldCm.X:0.###},{result.StartWorldCm.Y:0.###}), goal=({result.DestinationWorldCm.X:0.###},{result.DestinationWorldCm.Y:0.###}).");
     }
 
 }

@@ -100,6 +100,7 @@ namespace Ludots.Core.Input.Orders
         private readonly Ludots.Core.EntityCollections.CollectionApplier _collectionApplier;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly PresentationEventStream _events;
+        private readonly Ludots.Core.Gameplay.Teams.TeamRelationQuery _teamRelations;
         private readonly GameSession? _session;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly GasGraphRuntimeApi? _graphApi;
@@ -145,6 +146,7 @@ namespace Ludots.Core.Input.Orders
             int aimAffectedCollectionKeyId,
             ISpatialQueryService spatialQueries,
             PresentationEventStream events,
+            Ludots.Core.Gameplay.Teams.TeamRelationQuery teamRelations,
             GameSession? session = null,
             GraphProgramRegistry? graphPrograms = null,
             GasGraphRuntimeApi? graphApi = null,
@@ -161,6 +163,7 @@ namespace Ludots.Core.Input.Orders
             _aimAffectedCollectionKeyName = ResolveKeyName(collections, aimAffectedCollectionKeyId);
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _events = events ?? throw new ArgumentNullException(nameof(events));
+            _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
             _session = session;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
@@ -355,7 +358,8 @@ namespace Ludots.Core.Input.Orders
                     _candidateBuffer,
                     candidateCount,
                     _budget,
-                    _fanOutCommands);
+                    _fanOutCommands,
+                    _teamRelations);
             }
 
             for (int i = 0; i < _fanOutCommands.Count; i++)

@@ -25,7 +25,13 @@
         "Name": {
           "Value": "Emerald Compact"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-rep",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "p1-rep",

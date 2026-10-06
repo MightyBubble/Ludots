@@ -4,6 +4,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
@@ -90,6 +91,7 @@ public static class GraphOpsHeadlessGameEngine
             engine.UnloadMap(engine.CurrentMapSession.MapId.Value);
         }
 
+        SettleAbandonedResponseWindow(engine);
         ClearQueuedEffects(engine);
         DestroyPendingPresentationActors(engine.World);
         engine.LoadMap(mapId);
@@ -100,6 +102,27 @@ public static class GraphOpsHeadlessGameEngine
 
         ResetSpatialIndex(engine);
         AdvanceUntilMapActorsAreSpatiallyIndexed(engine, mapId);
+    }
+
+    /// <summary>
+    /// A response window parked on a prompt keeps its root in the effect queue; clearing that
+    /// queue underneath it would strand the window. Unloading destroyed the prompted actor, so
+    /// ticking lets the engine close the window itself before leftovers are discarded.
+    /// </summary>
+    private static void SettleAbandonedResponseWindow(GameEngine engine)
+    {
+        ResponseChainPromptState prompt = engine.GetService(CoreServiceKeys.ResponseChainPromptState)
+            ?? throw new InvalidOperationException("Gallery headless engine has no ResponseChainPromptState.");
+        for (int tick = 0; prompt.IsOpen; tick++)
+        {
+            if (tick >= 8)
+            {
+                throw new InvalidOperationException(
+                    $"Response-chain prompt for player {prompt.PlayerId} stayed open 8 ticks after its map unloaded.");
+            }
+
+            engine.Tick(Time.FixedDeltaTime);
+        }
     }
 
     private static void ClearQueuedEffects(GameEngine engine)

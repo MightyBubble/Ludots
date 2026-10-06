@@ -8,8 +8,6 @@ namespace CoreInputMod.Systems
 {
     public sealed class ViewModeSwitchSystem : ISystem<float>
     {
-        public const string ViewModeHudEnabledKey = "CoreInputMod.ViewModeHudEnabled";
-
         private const string NextAction = "ViewModeNext";
         private const string PrevAction = "ViewModePrev";
 

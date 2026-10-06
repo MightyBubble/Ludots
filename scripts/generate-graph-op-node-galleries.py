@@ -140,6 +140,18 @@ def collect_team_bindings(actors: list, template_teams: dict[str, int]) -> list[
     ]
 
 
+def attach_team_relations(entities: list[dict], teams: list[dict]) -> None:
+    by_instance = {entity["InstanceId"]: entity for entity in entities}
+    for binding in teams:
+        relations = [{"To": binding["RepresentativeInstanceId"], "Type": "Friendly"}]
+        relations.extend(
+            {"To": other["RepresentativeInstanceId"], "Type": "Hostile"}
+            for other in teams
+            if other["TeamId"] != binding["TeamId"]
+        )
+        by_instance[binding["RepresentativeInstanceId"]]["Relations"] = relations
+
+
 def map_variables_from_vignette(op: str, vignette: dict) -> list[dict]:
     raw = vignette.get("variables") or []
     if op in MAP_VAR_OPS and not raw:
@@ -241,6 +253,7 @@ def write_map(
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
+        attach_team_relations(payload["Entities"], teams)
     dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">

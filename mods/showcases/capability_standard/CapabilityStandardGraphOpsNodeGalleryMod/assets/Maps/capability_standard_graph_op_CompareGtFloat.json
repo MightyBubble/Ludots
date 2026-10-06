@@ -55,7 +55,13 @@
             "Health": 30
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "target",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "context",

@@ -42,7 +42,13 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "tank-chassis",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "attachment_rider",

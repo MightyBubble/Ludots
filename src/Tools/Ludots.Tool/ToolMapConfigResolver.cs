@@ -381,7 +381,6 @@ namespace Ludots.Tool
 
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
             if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
-            if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
         if (!string.IsNullOrWhiteSpace(source.RootBoard))
         {
             target.RootBoard = source.RootBoard;

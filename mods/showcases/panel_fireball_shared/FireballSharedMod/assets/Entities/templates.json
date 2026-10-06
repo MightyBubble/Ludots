@@ -1,6 +1,7 @@
 [
   {
     "id": "fireball_hero",
+    "initialInteractionContext": "interaction.context.fireball.battle",
     "components": {
       "Name": {
         "Value": "Hero"

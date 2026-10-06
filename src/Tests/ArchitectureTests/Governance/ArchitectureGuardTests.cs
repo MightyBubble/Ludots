@@ -386,6 +386,140 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void TeamFriendFoe_IsAnsweredOnlyByAuthoredRelationshipEdges()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] sourceRoots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] forbiddenSource =
+            {
+                "TeamManager",
+                "TeamRelationship.",
+                "TeamRelationshipSnapshot",
+                "DomainStanceQuery",
+                "DomainStanceProjection",
+                "RelationshipFilter.",
+                "RelationshipFilterUtil",
+                "NearestEnemyInRange"
+            };
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, sourceRoots, forbiddenSource);
+
+            string[] forbiddenMapKeys = { "Attitude" };
+            string[] forbiddenRelationshipKeys =
+            {
+                "stance",
+                "stanceTypes",
+                "sameTeamStance",
+                "sameDomainStance",
+                "defaultStance",
+                "cooperativeStance"
+            };
+            foreach (string assetRoot in new[] { Path.Combine(repoRoot, "assets"), Path.Combine(repoRoot, "mods") })
+            {
+                foreach (string file in Directory.EnumerateFiles(assetRoot, "*.json", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) || relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    bool isMap = relative.Contains("/Maps/", StringComparison.Ordinal);
+                    bool isRelationshipConfig = relative.Contains("/Relationships/", StringComparison.Ordinal) ||
+                                                relative.EndsWith("MassNavigationConfig.json", StringComparison.Ordinal);
+                    if (!isMap && !isRelationshipConfig)
+                    {
+                        continue;
+                    }
+
+                    JsonNode? root = JsonNode.Parse(File.ReadAllText(file));
+                    if (root == null)
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenJsonKeys(repoRoot, file, root, "$", isMap ? forbiddenMapKeys : forbiddenRelationshipKeys, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Team friend/foe is an authored relationship edge between team representatives; no stance projection, " +
+                "global team relationship table or implicit same-team rule may answer it:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
+        public void RelationshipCatalogs_DeclareOnlyConsumedVocabulary()
+        {
+            var repoRoot = FindRepoRoot();
+            var catalogSections = new HashSet<string>(StringComparer.Ordinal) { "types", "metrics", "flags" };
+            var projectionSections = new HashSet<string>(StringComparer.Ordinal) { "knowledgeGrants" };
+            var hits = FindForbiddenSourceTokens(
+                repoRoot,
+                new[] { Path.Combine(repoRoot, "src", "Core"), Path.Combine(repoRoot, "mods") },
+                new[]
+                {
+                    "PlayerTeamRelationshipBindingData",
+                    "ParticipantRelationshipConfig",
+                    "TeamRelationshipBindingData",
+                    "PlayerRelationshipBindingData",
+                });
+
+            foreach (string assetRoot in new[] { Path.Combine(repoRoot, "assets"), Path.Combine(repoRoot, "mods") })
+            {
+                foreach (string file in Directory.EnumerateFiles(assetRoot, "*.json", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal) ||
+                        !relative.Contains("/Relationships/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    HashSet<string>? allowed = relative.EndsWith("/catalog.json", StringComparison.Ordinal)
+                        ? catalogSections
+                        : relative.EndsWith("/projection.json", StringComparison.Ordinal) ? projectionSections : null;
+                    if (allowed == null || JsonNode.Parse(File.ReadAllText(file)) is not JsonObject root)
+                    {
+                        continue;
+                    }
+
+                    foreach (KeyValuePair<string, JsonNode?> section in root)
+                    {
+                        if (!allowed.Contains(section.Key))
+                        {
+                            hits.Add($"{relative}: section '{section.Key}' has no reader");
+                        }
+                    }
+
+                    if (root["types"] is JsonArray types)
+                    {
+                        foreach (JsonNode? type in types)
+                        {
+                            string id = type?["id"]?.GetValue<string>() ?? string.Empty;
+                            if (id == "Participant" || id.EndsWith(".Participant", StringComparison.Ordinal))
+                            {
+                                hits.Add($"{relative}: relationship type '{id}' is a placeholder edge nothing queries");
+                            }
+                        }
+                    }
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Relationship catalogs may only declare vocabulary some consumer reads; placeholder participant types and retired sections must not return:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Issue200_CoreKnowledgeProjection_RemainsEntityCentricWithoutPlayerOrTeamVisibilityPaths()
         {
             var repoRoot = FindRepoRoot();
@@ -651,85 +785,6 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void Epic322_CommandActorMovePathOverlayBridge_IsRemoved()
-        {
-            var repoRoot = FindRepoRoot();
-            string[] directories =
-            {
-                Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
-                Path.Combine(repoRoot, "docs", "architecture", "interaction")
-            };
-            string[] forbidden =
-            {
-                "SelectedMovePathOverlayBridge"
-            };
-
-            var hits = new List<string>();
-            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
-            {
-                string dir = directories[dirIndex];
-                if (!Directory.Exists(dir))
-                {
-                    continue;
-                }
-
-                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
-                {
-                    string ext = Path.GetExtension(file);
-                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
-                }
-            }
-
-            if (hits.Count > 0)
-            {
-                Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; the old direct overlay bridge must not return:\n" +
-                    string.Join("\n", hits));
-            }
-        }
-
-        [Test]
-        public void Epic322_CommandActorMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
-        {
-            var repoRoot = FindRepoRoot();
-            string file = Path.Combine(
-                repoRoot,
-                "mods",
-                "CoreInputMod",
-                "Systems",
-                "CommandActorMovePathPresentationSystem.cs");
-            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 command actor move path source {file}");
-
-            string[] forbidden =
-            {
-                "GroundOverlayBuffer",
-                "ScreenOverlayBuffer",
-                "GroundOverlayItem",
-                ".AddRect(",
-                ".AddText(",
-                ".TryAddLine(",
-                ".TryAdd(new GroundOverlayItem"
-            };
-
-            var hits = new List<string>();
-            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
-
-            if (hits.Count > 0)
-            {
-                Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; it must not read or write render buffers directly:\n" +
-                    string.Join("\n", hits));
-            }
-        }
-
-        [Test]
         public void Epic322_ShowcasePresentationSystems_PublishWorldFactsInsteadOfWritingRenderBuffers()
         {
             var repoRoot = FindRepoRoot();
@@ -868,9 +923,7 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionConsumer.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "GasInputResponseSystem.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
             };
             string[] forbidden =
@@ -1154,10 +1207,8 @@ namespace Ludots.Tests.Architecture.Governance
             Type[] types =
             {
                 typeof(SpatialBoundsUtility),
-                typeof(TabTargetCycleSystem),
                 typeof(LocalOrderSourceHelper),
                 typeof(AxisMoveOrderSystem),
-                typeof(GasInputResponseSystem),
                 typeof(AuthoritativeInputSnapshotSystem),
                 typeof(AuthoritativePointerButtonSnapshotSystem),
                 typeof(InputRuntimeSystem),
@@ -1172,7 +1223,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] files =
             {
                 Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
             };
             for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)

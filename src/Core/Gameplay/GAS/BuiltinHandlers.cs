@@ -214,7 +214,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
@@ -267,7 +268,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
@@ -306,6 +308,15 @@ namespace Ludots.Core.Gameplay.GAS
                 out var direction);
             if (proj.TravelMode == ProjectileTravelMode.Direction && !hasDirection)
             {
+                // A degenerate direction whose cause is the cast target being the source
+                // itself is a legitimate runtime state (self-click) — the shot fizzles
+                // instead of throwing. Every other unresolvable direction stays a
+                // config-drift hard error.
+                if (context.Target == context.Source)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"CreateProjectile direction mode requires a resolvable direction: source={context.Source.Id}, target={context.Target.Id}.");
             }

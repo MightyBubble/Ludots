@@ -120,7 +120,8 @@ public sealed class DerivedEntityIndexTests
         Assert.That(store.TryGetEntityAt(after, 0, out var member) && member == entity, Is.True);
         store.TryGet(owner, key, out var unchanged);
         Assert.That(unchanged, Is.EqualTo(after));
-        Assert.Throws<InvalidOperationException>(() => CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Replace, Array.Empty<Entity>()));
+        var applier = new CollectionApplier(world, store);
+        Assert.Throws<InvalidOperationException>(() => applier.Apply(owner, key, CollectionWriteOp.Replace, Array.Empty<Entity>()));
         store.RemoveSource(index);
         Assert.That(store.TryGet(owner, key, out _), Is.False);
     }

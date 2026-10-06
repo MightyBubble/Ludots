@@ -50,9 +50,11 @@
       }
     ]
   },
-  "teamRelationships": {
-    "relationships": []
-  },
+  "teamRelationships": [
+    { "teamA": 1, "teamB": 1, "relation": "Friendly", "symmetric": false },
+    { "teamA": 2, "teamB": 2, "relation": "Friendly", "symmetric": false },
+    { "teamA": 1, "teamB": 2, "relation": "Hostile", "symmetric": true }
+  ],
   "streaming": {
     "retainSeconds": 12,
     "radiusCm": 24000

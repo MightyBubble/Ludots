@@ -11,7 +11,7 @@
 - CompileTargetFilterOp 保持九 Kind 分派与正数校验；ops 平铺 + offset/count 布局保持。
 - 判定链保持：逐 op 短路淘汰并写专属 UtilityAiFilterRejectReason；DistanceMax 用平方距离；RecentAttacker 校验 LastAttacker 存活 + TTL。
 - **治理项（引 todo/ai.md）**：I4——HasAllTags 的 IntB 编译端固定传 0，运行时 priorityBucket+=op.IntB 恒加 0，死字段未接线；接通权重通道（配字段如 BucketBonus）或删掉累加行。
-- RelationshipFilter 解析与 Team 组件缺失行为保持（缺 Team 即淘汰）。
+- Relationship op 装载期把关系类型名编译成 RelationFilter，运行期查队伍关系边；缺 Team 即淘汰。
 
 ## 3. 精确语义与不变量
 

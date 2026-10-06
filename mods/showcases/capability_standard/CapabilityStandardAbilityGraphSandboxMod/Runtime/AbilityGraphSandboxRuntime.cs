@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -127,7 +128,11 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             new RelationshipBandRegistry(),
             new RelationshipChangeBuffer(),
             new RelationshipReverseIndex(_world));
-        var entityQueries = new EntitySetQueryRuntime(_world, _tagOps, _relationships);
+        var entityQueries = new EntitySetQueryRuntime(
+            _world,
+            _tagOps,
+            _relationships,
+            new TeamRelationQuery(_relationships, new TeamEntityLookup()));
         _api = new GasGraphRuntimeApi(
             _world,
             spatial,

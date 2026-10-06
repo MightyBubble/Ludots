@@ -1,0 +1,59 @@
+[
+  {
+    "id": "graph.moba.enter_smart_cast",
+    "kind": "Script",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "enter",
+        "op": "ActivateContext",
+        "context": "interaction.context.moba_demo.smart_cast",
+        "parentContext": "interaction.context.moba_demo.battle"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "enter"
+      },
+      {
+        "from": "enter",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "enter",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

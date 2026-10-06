@@ -289,7 +289,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
 
                 string path = $"NavMeshBakeConfig.profiles[{i}]";
-                RequireOnlyProperties(profile, path, "id", "maxClimbCm", "maxSlopeDeg");
+                RequireOnlyProperties(profile, path, new[] { "id", "maxClimbCm", "maxSlopeDeg" }, new[] { "cellSizeCm" });
+                if (profile.ContainsKey("cellSizeCm"))
+                {
+                    int cellSizeCm = RequireInt(profile, "cellSizeCm", path);
+                    if (cellSizeCm <= 0)
+                    {
+                        throw new InvalidOperationException($"{path}.cellSizeCm must be > 0 when declared.");
+                    }
+                }
                 string id = RequireString(profile, "id", path);
                 if (!seenProfiles.Add(id))
                 {

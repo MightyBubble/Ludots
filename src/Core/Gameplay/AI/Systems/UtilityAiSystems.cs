@@ -92,7 +92,8 @@ namespace Ludots.Core.Gameplay.AI.Systems
             Ludots.Core.GraphRuntime.GraphProgramRegistry? graphs,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? graphApi,
             OrderQueue orders,
-            OrderTerminalResultBuffer terminalResults)
+            OrderTerminalResultBuffer terminalResults,
+            Ludots.Core.Gameplay.Teams.TeamRelationQuery? teamRelations = null)
             : base(world)
         {
             _clock = clock;
@@ -100,7 +101,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
             _orders = orders;
             _admissionResults = orders?.AdmissionResults ?? throw new ArgumentNullException(nameof(orders));
             _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, targetCapacity: ResolveTargetScratchCapacity(in runtime));
+            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, targetCapacity: ResolveTargetScratchCapacity(in runtime), teamRelations: teamRelations);
         }
 
         public override void Update(in float dt)
