@@ -1,0 +1,83 @@
+[
+  {
+    "id": "Graph.EntityCommand.AbilityBar",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slots",
+        "op": "QueryCollectAbilitySlots"
+      },
+      {
+        "id": "ready",
+        "op": "ConstFloat",
+        "floatValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slots"
+      },
+      {
+        "from": "slots",
+        "fromPort": "next",
+        "to": "ready"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "slots",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "slots",
+        "destination": "AbilitySlotCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.cmdcard.abilityBar.slots",
+        "role": "Display",
+        "title": "技能格",
+        "summary": "Owner entity resolved ability slots."
+      },
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "panel.cmdcard.abilityBar.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.EntityCommand.AbilityChip",
+    "kind": "Query",
+    "entry": "ready",
+    "nodes": [
+      {
+        "id": "ready",
+        "op": "ConstFloat",
+        "floatValue": 1
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "panel.cmdcard.abilityChip.ready"
+      }
+    ]
+  }
+]

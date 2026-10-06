@@ -13,19 +13,21 @@ namespace Ludots.Tests.Presentation;
 [NonParallelizable]
 [TestFixture]
 [Category("acceptance")]
-public sealed class GenreInfoPanelAuthoringAcceptanceTests
+public sealed class EntityCommandPanelAuthoringAcceptanceTests
 {
     private const string MapId = "fourx_entry";
     private const float DeltaTime = 1f / 60f;
 
     [Test]
-    public void EntityInfo_AuthoredGovernorCard_OpensViaTriggerAndProjectsEntitySubject()
+    public void EntityCommand_AuthoredAbilityBar_OpensViaTriggerAndProjectsAbilitySlots()
     {
         string repoRoot = FindRepoRoot();
         string assetsRoot = Path.Combine(repoRoot, "assets");
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod", "FourXDemoMod", "EntityInfoPanelsMod" }),
+            RepoModPaths.ResolveExplicit(
+                repoRoot,
+                new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }),
             assetsRoot);
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);
         try
@@ -40,29 +42,31 @@ public sealed class GenreInfoPanelAuthoringAcceptanceTests
             PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
                 ?? throw new InvalidOperationException("PanelHost service missing.");
             Assert.That(panelHost.Count, Is.EqualTo(2),
-                "MapLoaded trigger graphs must open the authored governor card and ability bar with zero C#.");
-            PanelInstanceHandle panel = FindPanel(panelHost, "panel.fourx.governorCard");
+                "MapLoaded triggers must open both authored cards: governor info card and ability bar.");
+            PanelInstanceHandle panel = FindPanel(panelHost, "panel.cmdcard.abilityBar");
 
             Assert.That(panelHost.TryGetValues(panel, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("count"), Is.EqualTo(1f).Within(0.001f),
-                "Governor card supply graph must count the single fourx_governor instance.");
+            Assert.That(values.Get("ready"), Is.EqualTo(1f).Within(0.001f),
+                "Ability bar supply graph must publish its ready pin.");
 
             Assert.That(
                 panelHost.TryGetListProjections(panel, out IReadOnlyList<PanelListProjection> lists),
                 Is.True);
             Assert.That(lists.Count, Is.EqualTo(1));
-            Assert.That(lists[0].TotalCount, Is.EqualTo(1),
-                "EntityCollection output must project the governor as the single card row.");
+            Assert.That(lists[0].TotalCount, Is.EqualTo(6),
+                "AbilitySlotCollection output must project one row per resolved ability slot.");
 
             Assert.That(
-                panelHost.TryProjectListWindow(panel, "governor", PanelListViewWindow.All, out PanelListProjection rows),
+                panelHost.TryProjectListWindow(panel, "slots", PanelListViewWindow.All, out PanelListProjection slots),
                 Is.True);
-            Assert.That(rows.Items.Count, Is.EqualTo(1));
-            Assert.That(rows.Items[0].Strings["displayName"], Is.EqualTo("Governor"),
-                "Entity subject must resolve the template Name component.");
-            Assert.That(rows.Items[0].Floats["health"], Is.EqualTo(100f).Within(0.001f),
-                "Capability row graph LoadSelfAttribute must read the governor template Health base.");
-            Assert.That(rows.Items[0].Floats["healthMax"], Is.EqualTo(100f).Within(0.001f));
+            Assert.That(slots.Items.Count, Is.EqualTo(6));
+            string[] names = new string[slots.Items.Count];
+            for (int i = 0; i < slots.Items.Count; i++)
+            {
+                names[i] = slots.Items[i].Strings["displayName"];
+            }
+            Assert.That(string.Join("|", names), Does.Contain("BuildOutpost"),
+                "Ability slot rows must resolve ability display names. Got: " + string.Join("|", names));
         }
         finally
         {

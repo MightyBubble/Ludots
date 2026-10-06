@@ -148,6 +148,10 @@
     {
       "graph": "Graph.Fourx.GovernorCard.Open",
       "scopeInstanceId": "fourx-governor"
+    },
+    {
+      "graph": "Graph.Fourx.CmdCard.Open",
+      "scopeInstanceId": "fourx-governor"
     }
   ]
 }

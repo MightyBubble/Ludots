@@ -422,7 +422,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[4X] 进入策略大地图 (4 阵营)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "FourXDemoMod" }, "fourx_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }, "fourx_entry", engine =>
             {
                 var world = engine.World;
                 var governor = FindEntity(world, "Governor");
