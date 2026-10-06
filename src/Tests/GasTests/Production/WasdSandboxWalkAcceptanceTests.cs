@@ -135,6 +135,28 @@ namespace Ludots.Tests.GAS.Production
                 "T must cycle possession to the other bound rep (李四).");
             Assert.That(ActiveCameraId(engine, current), Is.EqualTo("Camera.Profile.WasdSandboxTopdown"),
                 "李四's binding adopts the top-down profile after the possession switch.");
+
+            // The seam that bit us: camera-relative axis move resolves the seat's view camera, not
+            // a per-rep view — 李四 owns no LogicView, and movement must still work.
+            Vector2 beforeWalk = engine.World.Get<WorldPositionCm>(current).Value.ToVector2();
+            backend.SetButton("<Keyboard>/d", true);
+            Vector2 afterWalk = beforeWalk;
+            bool walked = false;
+            for (int frame = 0; frame < 300; frame++)
+            {
+                Tick(engine, 1);
+                afterWalk = engine.World.Get<WorldPositionCm>(current).Value.ToVector2();
+                if ((afterWalk - beforeWalk).LengthSquared() >= 100f * 100f)
+                {
+                    walked = true;
+                    break;
+                }
+            }
+
+            backend.SetButton("<Keyboard>/d", false);
+            Tick(engine, 2);
+            Assert.That(walked, Is.True,
+                "D must walk 李四 after the possession switch (before={0}, after={1}).");
         }
 
         private static string ActiveCameraId(GameEngine engine, Entity rep)
