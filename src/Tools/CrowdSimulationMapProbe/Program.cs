@@ -30,6 +30,12 @@ public static class Program
             return RunS2(args[1], args[2], args[3]);
         }
 
+        if (args.Length >= 1 && args[0] == "--s3")
+        {
+            // --s3 <seedAssetsDir> <capabilityAssetsDir> <outDir>
+            return RunS3(args[1], args[2], args[3]);
+        }
+
         if (args.Length < 3)
         {
             Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <capabilityAssetsDir> <outDir>");
@@ -56,13 +62,14 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, capabilityDir);
         var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellCount, bundle.Runtime.NavCellSizeCm);
+        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
 
         var seen = new HashSet<int>();
         for (int a = 0; a < bundle.Runtime.AgentTypes.Count; a++)
         {
             foreach (int clearance in bundle.Runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
             {
-                var nav = NavContextBaker.Bake(bundle.Runtime, bundle.Grid, heights, bundle.MapSurface.Bridges, a, clearance);
+                var nav = NavContextBaker.Bake(bundle.Runtime, bundle.Grid, heights, deck, a, clearance);
                 if (!seen.Add(nav.Id)) continue;
                 string name = $"{bundle.Runtime.AgentTypes[a].Id}_c{clearance}";
                 RenderNav(bundle, nav, heights, Path.Combine(outDir, $"{bundle.MapId}_nav_{name}.png"));
@@ -113,6 +120,78 @@ public static class Program
         }
 
         PngWriter.Write(path, RenderSize, RenderSize, px);
+    }
+
+    /// <summary>S3:NavMesh 多边形网格视图(地面 tile 白色描边,桥面 tile 棕色)。</summary>
+    private static int RunS3(string seedDir, string capabilityDir, string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var bundle = Load(seedDir, capabilityDir);
+        var runtime = bundle.Runtime;
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize, c = n / t;
+
+        // 步兵上下文(含桥面),缓存随烘焙填充
+        var cache = new NavTileCache(
+            runtime.NavtileCacheCapacity, t,
+            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
+            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+        var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, 0, 1, cache);
+
+        var px = BaseLayer(bundle.Surface, bundle.Height);
+        float cellPx = (float)RenderSize / n;
+        float csCm = runtime.NavCellSizeCm;
+
+        for (int ty = 0; ty < c; ty++)
+        {
+            for (int tx = 0; tx < c; tx++)
+            {
+                DrawTileEntry(px, cache, nav.Passable, bundle.Grid.Area, n, tx, ty, t, (230, 230, 230), cellPx, csCm);
+            }
+        }
+
+        foreach (int tileId in deck.TileOrder)
+        {
+            bool any = false;
+            int tx = tileId % c, ty = tileId / c;
+            for (int y = ty * t; y < ty * t + t && !any; y++)
+                for (int x = tx * t; x < tx * t + t; x++)
+                    if (nav.UpPass[y * n + x] != 0) { any = true; break; }
+            if (any) DrawTileEntry(px, cache, nav.UpPass, nav.UpArea, n, tx, ty, t, (255, 213, 79), cellPx, csCm);
+        }
+
+        string path = Path.Combine(outDir, $"{bundle.MapId}_navmesh_foot.png");
+        PngWriter.Write(path, RenderSize, RenderSize, px);
+        Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hits={cache.Hits} comps={nav.CompCount}");
+        return 0;
+    }
+
+    private static void DrawTileEntry(byte[] px, NavTileCache cache, byte[] passable, byte[] area, int n, int tx, int ty, int tileCells, (int r, int g, int b) color, float cellPx, float csCm)
+    {
+        var entry = cache.Acquire(passable, area, n, tx, ty);
+        for (int p = 0; p < entry.Count; p++)
+        {
+            int s = entry.PolyStart[p], e = entry.PolyStart[p + 1];
+            for (int k = s; k < e; k++)
+            {
+                int a = entry.PolyVerts[k], b = entry.PolyVerts[k + 1 < e ? k + 1 : s];
+                float x0 = (tx * tileCells + entry.Vx[a]) * csCm / 100f;
+                float y0 = (ty * tileCells + entry.Vy[a]) * csCm / 100f;
+                float x1 = (tx * tileCells + entry.Vx[b]) * csCm / 100f;
+                float y1 = (ty * tileCells + entry.Vy[b]) * csCm / 100f;
+                float worldCm = n * csCm;
+                int steps = (int)(MathF.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / worldCm * RenderSize * 2) + 1;
+                for (int si = 0; si <= steps; si++)
+                {
+                    float tt = si / (float)steps;
+                    FillDisc(px,
+                        (x0 + (x1 - x0) * tt) / worldCm * RenderSize,
+                        (y0 + (y1 - y0) * tt) / worldCm * RenderSize,
+                        0.8f, color);
+                }
+            }
+        }
     }
 
     private sealed record SeedBundle(

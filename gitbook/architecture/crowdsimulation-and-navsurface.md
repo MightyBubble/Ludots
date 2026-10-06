@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接，含逐上下文对拍）已交付。后续阶段见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存，逐 tile 逐字段对拍）已交付。S3 剩余（拼装 / HPA* / 走廊 / 流场）见文末路线。
 
 ## 这是什么
 
@@ -85,7 +85,16 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **高度输入**：`NavHeightField` 从 `.height` 资产的 uint16 样本推导导航格高度与坡度;样本解码先在 double 完成（raw × 分子 ÷ 分母）再转 Fix64——定点域内直接乘会溢出 Q31.32。Web 导出端同样从量化样本重建,两端读同一份输入。
 - **对拍**：导出器跑参考实现的真实 `buildNavContext` 产出逐上下文摘要;C# 侧重建同序字节流,FNV-1a 全等（5 上下文 × 3 种子）,连通域按划分规范化比较（不按标签编号）。`JumpLinkFilter_RespectsDownCm` 覆盖跳跃能力收紧后链接减少的验收点。
 - **目视**：探针 `--s2` 模式渲染逐体型可走区域（不可走遮罩 + 桥面 + portal + 链接）,同一查看器切换。
-- **已知边界**：坡度阈值处的定点 vs 浮点残差实测约 1e-5,三种子均未翻转任何格;HPA* 分区与 tile 缓存并入 S3（走廊与流场需要时再交付）。
+- **已知边界**：坡度阈值处的定点 vs 浮点残差实测约 1e-5,三种子均未翻转任何格。
+
+## S3-a 交付：tile 烘焙链与 tile 缓存（本次）
+
+- **移植**（`Nav/Recast/` 与 `Nav/`,整数格角点几何,无浮点参与）：距离场（`DistanceField`）、分水岭区域（`WatershedRegions`,含计数排序 / 层级生长 / 小区域合并的完整顺序语义）、轮廓追踪（`ContourTracer`,tile 边界永不简化为墙、格角必留、Douglas-Peucker 整数叉积 + 坐标决胜）、耳切三角化与洞合并与凸合并（`PolygonOps`）、`NavTileBaker`（tile → 凸多边形 + 邻接 + 边界段 + cell→poly）、`NavTileCache`（内容键 LRU,无哈希碰撞）。
+- **桥面 tile 与地面 tile 共用同一缓存**,条目是独立内容键;无可走格的类型（如 hull 的桥面）不产生条目——S1 先修了一个 +1 编码双重叠加导致的键错位。
+- **对拍**：导出器把五种上下文共享的 tile 缓存逐条目（内容键指纹对齐）落真相,C# 逐字段 FNV 全等——三种子各 769 / 700 / 883 个不同 tile,缓存命中 / 烘焙计数也一致。
+- **踩过的坑（已固化成回归测试 `S3RegressionTests`）**：定点 `Sqrt` 在"路径端点格"上的 ~1e-5 误差会吃掉覆盖判断的 EPS——桥 / 路径跨度按生成器约定轴对齐,轴对齐时单位向量与长度取精确值;斜线路径（S7 道路 / 泛洪）届时再定精度口径。
+- **目视**：探针 `--s3` 渲染 NavMesh 多边形网格叠加图（`crowd_simulation_s1337_navmesh_foot.png`）。
+- **S3 剩余**：全局拼装（邻接 + 边界 portal 拼接）、HPA* 抽象图、走廊（A* + 漏斗）、流场 Dijkstra、路径服务固定生效帧——依次是 S3-b / S3-c。
 - **验收（真机）**：Raylib 宿主经 launcher 预设启动，地图、阻挡物实体与高度图地形（含高程着色）真实渲染，见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-live.png`。地形类型着色叠加层在宿主内尚无 presenter，由探针视图承担。
 - **顺手的基建修复**：`ContinuousHeightSampleScale.Decode` 的 int32 溢出（大缩放比例资产会触发，10k 资产因恒等比例从未踩到）改为先 widening 再乘。
 

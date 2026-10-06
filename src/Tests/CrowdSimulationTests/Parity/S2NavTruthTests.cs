@@ -30,6 +30,7 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
+        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
@@ -45,7 +46,7 @@ public class S2NavTruthTests
                 .Distinct();
             foreach (int c in clearances)
             {
-                var nav = NavContextBaker.Bake(runtime, grid, heights, mapSurface.Bridges, a, c);
+                var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, c);
                 if (seen.Add(nav.Id)) contexts.Add(nav);
             }
         }
@@ -100,11 +101,12 @@ public class S2NavTruthTests
         var surface = S1SurfaceTruthTests.ReadSurface("s1337");
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface("s1337");
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
+        var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir("s1337"), "terrain", "crowd_simulation_s1337.height")));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
 
-        var baseline = NavContextBaker.Bake(runtime, grid, heights, mapSurface.Bridges, agentTypeIndex: 4, clearanceCells: 1);
+        var baseline = NavContextBaker.Bake(runtime, grid, heights, deck, agentTypeIndex: 4, clearanceCells: 1);
         Assert.That(baseline.Links, Is.Not.Null);
         int baselineCount = baseline.Links!.Count;
 
@@ -118,7 +120,7 @@ public class S2NavTruthTests
             File.ReadAllText(Path.Combine(S1Dir("s1337"), "Maps", "crowd_simulation_s1337.json")),
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var restricted = CrowdSimulationConfigLoader.Load(config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz);
-        var narrowed = NavContextBaker.Bake(restricted, grid, heights, mapSurface.Bridges, agentTypeIndex: 4, clearanceCells: 1);
+        var narrowed = NavContextBaker.Bake(restricted, grid, heights, deck, agentTypeIndex: 4, clearanceCells: 1);
 
         Assert.That(narrowed.Links?.Count ?? 0, Is.LessThan(baselineCount), "downCm 收紧后链接必须减少");
         // 留下的链接全部满足新上限

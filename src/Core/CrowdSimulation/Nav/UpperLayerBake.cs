@@ -6,6 +6,22 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
+/// <summary>桥面层地表(每地图一份,与上下文无关):桥面格区域、桥头标记、首写 tile 序。</summary>
+public sealed class DeckSurface
+{
+    public required byte[] AreaIndex { get; init; }
+    public required byte[] PortalFlag { get; init; }
+    /// <summary>含桥面格的 tile 编号,按首次写入序(与参考实现的栅格化扫描序一致)。</summary>
+    public required int[] TileOrder { get; init; }
+
+    public static DeckSurface Empty(int cellCount) => new()
+    {
+        AreaIndex = new byte[cellCount * cellCount],
+        PortalFlag = new byte[cellCount * cellCount],
+        TileOrder = Array.Empty<int>(),
+    };
+}
+
 /// <summary>
 /// 桥面层烘焙（RT-16 LY-1 / LY-4 的网格级移植）：桥实体（路径足迹）栅格化为
 /// 桥面格 + 桥头 portal 标记;桥面层逐上下文烘焙 = 区域定价 ∩ 净空腐蚀,
@@ -15,15 +31,18 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// </summary>
 public static class UpperLayerBake
 {
-    /// <summary>桥实体栅格化:逐格桥面区域下标(0 = 无桥面)与桥头 portal 标记。</summary>
-    public static void RasterizeDecks(
+    /// <summary>桥实体栅格化:逐格桥面区域下标(0 = 无桥面)与桥头 portal 标记,及首写 tile 序。</summary>
+    public static DeckSurface RasterizeDecks(
         IReadOnlyList<BridgeDeckRecord> bridges,
-        CrowdSimulationRuntimeConfig config,
-        byte[] deckAreaIndex,
-        byte[] portalFlag)
+        CrowdSimulationRuntimeConfig config)
     {
         int n = config.NavCellCount;
         int cs = config.NavCellSizeCm;
+        var deckAreaIndex = new byte[n * n];
+        var portalFlag = new byte[n * n];
+        var tileSeen = new bool[(n / config.Hpa.ClusterSize) * (n / config.Hpa.ClusterSize)];
+        var tileOrder = new List<int>();
+        int tileSize = config.Hpa.ClusterSize;
         var portalReach = Fix64.FromInt(config.Structures.PortalCells * cs / 100); // 格 → 米
         foreach (var bridge in bridges)
         {
@@ -38,9 +57,18 @@ public static class UpperLayerBake
 
             var x0 = Cm(span.X0Cm); var y0 = Cm(span.Y0Cm);
             var ax = Cm(span.X1Cm) - x0; var ay = Cm(span.Y1Cm) - y0;
-            var len = Fix64Math.VectorLength(ax, ay);
-            var ux = len > Fix64.Zero ? ax / len : Fix64.OneValue;
-            var uy = len > Fix64.Zero ? ay / len : Fix64.Zero;
+            // 桥 / 路径跨度按生成器约定是轴对齐的:轴对齐时单位向量与长度都取精确值,
+            // 不走 VectorLength(定点 Sqrt 在端点格上的误差会吃掉 EPS 容差)。
+            // 斜线路径(运行时道路 / 泛洪,S7)届时再按参考实现复核精度口径。
+            Fix64 len, ux, uy;
+            if (ay == Fix64.Zero && ax != Fix64.Zero) { len = Fix64.Abs(ax); ux = ax > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; uy = Fix64.Zero; }
+            else if (ax == Fix64.Zero && ay != Fix64.Zero) { len = Fix64.Abs(ay); ux = Fix64.Zero; uy = ay > Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue; }
+            else
+            {
+                len = Fix64Math.VectorLength(ax, ay);
+                ux = len > Fix64.Zero ? ax / len : Fix64.OneValue;
+                uy = len > Fix64.Zero ? ay / len : Fix64.Zero;
+            }
             var halfW = Fix64.FromInt(span.WidthCm) / 200;
             var eps = Fix64.FromDouble(1e-6);
             var csM = Fix64.FromInt(cs) / 100;
@@ -63,9 +91,13 @@ public static class UpperLayerBake
                     var endDist = t < len - t ? t : len - t;
                     deckAreaIndex[cell] = (byte)(areaIndex + 1); // 同格后放者胜( bridges 顺序即实体顺序)
                     if (endDist < portalReach) portalFlag[cell] = 1;
+                    int tileId = (y / tileSize) * (n / tileSize) + x / tileSize;
+                    if (!tileSeen[tileId]) { tileSeen[tileId] = true; tileOrder.Add(tileId); }
                 }
             }
         }
+
+        return new DeckSurface { AreaIndex = deckAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
 
         static Fix64 Cm(int cm) => Fix64.FromInt(cm) / 100;
         static int FloorDiv(int value, int divisor)

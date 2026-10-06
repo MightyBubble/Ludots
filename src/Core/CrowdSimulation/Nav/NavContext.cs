@@ -32,6 +32,8 @@ public sealed class NavContext
     public required byte[] UpPass { get; init; }
     /// <summary>桥头 portal 格（桥面与地面唯一互通处）。</summary>
     public required byte[] Portal { get; init; }
+    /// <summary>桥面可走格的区域编号（UpPass 处有效;tiles 缓存输入）。</summary>
+    public required byte[] UpArea { get; init; }
 }
 
 /// <summary>

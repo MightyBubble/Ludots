@@ -18,9 +18,10 @@ public static class NavContextBaker
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid surface,
         NavHeightField heights,
-        IReadOnlyList<BridgeDeckRecord> bridges,
+        DeckSurface deck,
         int agentTypeIndex,
-        int clearanceCells)
+        int clearanceCells,
+        NavTileCache? tileCache = null)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(surface);
@@ -96,15 +97,47 @@ public static class NavContextBaker
         // 桥面层(RT-16):桥面格烘焙 + portal 合并进连通域
         var upPass = new byte[n2];
         var portal = new byte[n2];
-        if (bridges.Count > 0)
+        var upArea = new byte[n2];
+        if (deck.TileOrder.Length > 0)
         {
-            var deckAreaIndex = new byte[n2];
-            var portalFlag = new byte[n2];
-            UpperLayerBake.RasterizeDecks(bridges, config, deckAreaIndex, portalFlag);
-            UpperLayerBake.BakeDeck(config, agentTypeIndex, clearanceCells, walk, deckAreaIndex, portalFlag, upPass, portal);
+            UpperLayerBake.BakeDeck(config, agentTypeIndex, clearanceCells, walk, deck.AreaIndex, deck.PortalFlag, upPass, portal);
+            for (int i = 0; i < n2; i++)
+            {
+                // DeckSurface.AreaIndex 是 +1 编码(0 = 无桥面);UpArea 存 0 基区域下标供 tile 缓存输入
+                if (upPass[i] != 0) upArea[i] = (byte)(deck.AreaIndex[i] - 1);
+            }
+
             var merged = new int[n2];
             compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, passable, upPass, portal, n, merged);
             comp = merged;
+        }
+
+        // tile 缓存填充(与 buildNavContext 同点同序):地面全部 tile + 有可走格的桥面 tile
+        if (tileCache != null)
+        {
+            int t = config.Hpa.ClusterSize, c = n / t;
+            for (int ty = 0; ty < c; ty++)
+            {
+                for (int tx = 0; tx < c; tx++)
+                {
+                    tileCache.Acquire(passable, surface.Area, n, tx, ty);
+                }
+            }
+
+            foreach (int tileId in deck.TileOrder)
+            {
+                int tx = tileId % c, ty = tileId / c;
+                bool any = false;
+                for (int y = ty * t; y < ty * t + t && !any; y++)
+                {
+                    for (int x = tx * t; x < tx * t + t; x++)
+                    {
+                        if (upPass[y * n + x] != 0) { any = true; break; }
+                    }
+                }
+
+                if (any) tileCache.Acquire(upPass, upArea, n, tx, ty);
+            }
         }
 
         var links = BuildLinks(config, surface, profile, passable, comp);
@@ -124,6 +157,7 @@ public static class NavContextBaker
             Links = links,
             UpPass = upPass,
             Portal = portal,
+            UpArea = upArea,
         };
     }
 
