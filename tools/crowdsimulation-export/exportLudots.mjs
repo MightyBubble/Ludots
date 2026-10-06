@@ -282,8 +282,7 @@ function canonComp(comp, n2) {
 {
   const n2 = world.N * world.N;
   const tileCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
-  const seen = new Set(), contexts = [];
-  for (let a = 0; a < config.agentTypes.length; a++) {
+  const seen = new Set(), contexts = [];  for (let a = 0; a < config.agentTypes.length; a++) {
     for (let r = 0; r < config.agents.radiusClasses.length; r++) {
       const c = clearanceOf(config, r), id = navIdOf(a, c);
       if (seen.has(id)) continue;
@@ -329,4 +328,44 @@ function canonComp(comp, n2) {
     writeFileSync(join(dbgDir, 'slope.f32'), Buffer.from(sf.buffer));
   }
   console.log(`[export] ${mapId} s2 contexts=${contexts.length} fnv=${fnv1a(bytes)}`);
+
+  // ───────────────────────────── S3:tile 烘焙真相(内容键序) ─────────────────────────────
+  // tile 缓存里的每个条目按内容键排序后逐字段入流;uid(获取序)不参与,跨端按内容对齐。
+  {
+    const entries = [...tileCache.map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    // 逐字段写出一个条目(全局流与逐条目哈希共用同一段代码)
+    const writeEntry = (w, e) => {
+      const wi32 = (arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      const wf32 = (arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.f32(arr[i]); };
+      w.i32(e.count); w.i32(e.regionCount);
+      wf32(e.vx); wf32(e.vy);
+      wi32(e.polyStart); wi32(e.polyVerts);
+      wi32(e.neiStart); wi32(e.nei); wi32(e.neiA); wi32(e.neiB);
+      wi32(e.bminx); wi32(e.bminy); wi32(e.bmaxx); wi32(e.bmaxy);
+      wi32(e.polyOf);
+      wi32(e.border.poly);
+      w.i32(e.border.side.length); for (let i = 0; i < e.border.side.length; i++) w.u8(e.border.side[i]);
+      wi32(e.border.lo); wi32(e.border.hi);
+      w.i32(e.border.rev.length); for (let i = 0; i < e.border.rev.length; i++) w.u8(e.border.rev[i]);
+    };
+    const w2 = new BW();
+    w2.bytes(Buffer.from('LS3T', 'ascii'));
+    w2.i32(world.N);
+    w2.i32(entries.length);
+    const perEntry = [];
+    for (const [, e] of entries) {
+      writeEntry(w2, e);
+      const w3 = new BW();
+      writeEntry(w3, e);
+      perEntry.push(fnv1a(w3.build()));
+    }
+    w2.i32(tileCache.bakes); w2.i32(tileCache.hits); w2.i32(tileCache.misses);
+    const bytes2 = w2.build();
+    writeFileSync(join(outRoot, 'parity', 's3-tile-truth.json'), JSON.stringify({
+      mapId, seed, tiles: entries.length, bakes: tileCache.bakes, hits: tileCache.hits, misses: tileCache.misses, fnv1a: fnv1a(bytes2),
+      // 键指纹 → 条目哈希(键 = tile 精确内容,跨端按内容对齐,不靠位置序)
+      entryHashes: Object.fromEntries(entries.map(([k, ], i) => [fnv1a(Buffer.from([...k].flatMap((c) => { const cc = c.charCodeAt(0); return [cc & 0xff, cc >> 8]; }))), perEntry[i]])),
+    }, null, 2));
+    console.log(`[export] ${mapId} s3 tiles=${entries.length} bakes=${tileCache.bakes} fnv=${fnv1a(bytes2)}`);
+  }
 }
