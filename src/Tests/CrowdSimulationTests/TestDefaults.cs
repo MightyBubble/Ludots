@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
@@ -48,31 +49,12 @@ public static class TestDefaults
         };
     }
 
-    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400。</summary>
+    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读 CrowdSimulationMod 的默认文件）。</summary>
     public static AgentProfileRegistry DemoProfiles()
     {
-        var pushByAgent = new[] { 2, 2, 3, 1, 2 };
-        var agents = new[] { "foot", "hull", "climber", "amphib", "leaper" };
-        var radii = new[] { 100, 200, 300, 400 };
-        var list = new List<AgentProfileConfig>();
-        for (int layer = 0; layer < agents.Length; layer++)
-        {
-            for (int r = 0; r < radii.Length; r++)
-            {
-                list.Add(new AgentProfileConfig
-                {
-                    Id = $"{agents[layer]}_r{radii[r]}",
-                    RadiusCm = radii[r],
-                    HeightCm = 180,
-                    ClearanceCm = 0,
-                    DraftCm = 0,
-                    BeamCm = 0,
-                    Mass = pushByAgent[layer] + r,
-                    Layer = layer,
-                });
-            }
-        }
-
+        var list = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
+            File.ReadAllText(Path.Combine("assets", "agent_profiles.json")),
+            StrictJsonOptions.CreateCamelCase())!;
         return new AgentProfileRegistry(list);
     }
 

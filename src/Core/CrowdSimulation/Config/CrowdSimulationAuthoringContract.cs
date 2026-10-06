@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -64,28 +65,28 @@ public static class CrowdSimulationAuthoringContract
                 throw new InvalidOperationException($"Maps/{config.MapId}.json: 实体 \"{entity.InstanceId}\" 引用未知模板 \"{entity.Template}\"。");
             }
 
-            var obstacle = EffectiveObstacle(template, entity);
+            var obstacle = CrowdSimulationMapSurfaceSource.EffectiveObstacle(template, entity);
             if (obstacle == null)
             {
                 continue;
             }
 
-            (string shape, bool sink, int halfWidthCm, int halfHeightCm) = obstacle.Value;
-            if (!sink)
+            var view = obstacle.Value;
+            if (!view.SinkNavigationObstacle)
             {
                 continue;
             }
 
-            if (!string.Equals(shape, "Box", StringComparison.Ordinal))
+            if (!string.Equals(view.Shape, "Box", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）的 shape = \"{shape}\"，阻挡物只能是 Box（不禁止圆形非阻挡区域实体）。");
+                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）的 shape = \"{view.Shape}\"，阻挡物只能是 Box（不禁止圆形非阻挡区域实体）。");
             }
 
-            if (halfWidthCm != halfHeightCm)
+            if (view.HalfWidthCm != view.HalfHeightCm)
             {
                 throw new InvalidOperationException(
-                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）必须是正方形（halfWidthCm {halfWidthCm} ≠ halfHeightCm {halfHeightCm}）。");
+                    $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）必须是正方形（halfWidthCm {view.HalfWidthCm} ≠ halfHeightCm {view.HalfHeightCm}）。");
             }
         }
 
@@ -104,32 +105,5 @@ public static class CrowdSimulationAuthoringContract
                     $"{CrowdSimulationConfigValidator.FileName}: deploy.templates 的模板 \"{templateId}\" 必须带 CrowdSimulationAgent 组件。");
             }
         }
-    }
-
-    private static (string shape, bool sink, int halfWidthCm, int halfHeightCm)? EffectiveObstacle(EntityTemplate template, EntitySpawnData entity)
-    {
-        var node = template.Components.TryGetValue("ManifestationObstacleIntent2D", out var t) ? t : null;
-        if (entity.Overrides != null && entity.Overrides.TryGetValue("ManifestationObstacleIntent2D", out var o) && o is JsonObject ovl)
-        {
-            var merged = node as JsonObject;
-            var copy = merged != null ? (JsonObject)merged.DeepClone() : new JsonObject();
-            foreach (var kvp in ovl)
-            {
-                copy[kvp.Key] = kvp.Value?.DeepClone();
-            }
-
-            node = copy;
-        }
-
-        if (node is not JsonObject obj)
-        {
-            return null;
-        }
-
-        string shape = obj["shape"]?.GetValue<string>() ?? "Box";
-        bool sink = obj["sinkNavigationObstacle"]?.GetValue<bool>() ?? false;
-        int halfWidthCm = obj["halfWidthCm"]?.GetValue<int>() ?? 0;
-        int halfHeightCm = obj["halfHeightCm"]?.GetValue<int>() ?? 0;
-        return (shape, sink, halfWidthCm, halfHeightCm);
     }
 }

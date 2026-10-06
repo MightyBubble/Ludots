@@ -24,7 +24,6 @@ namespace Ludots.Core.CrowdSimulation.World;
 ///   ..  ..   格数据：cellsX × cellsY × u8，行优先 index = cy * cellsX + cx；
 ///            cell (0,0) = 地图局部坐标原点角，值 = 地形类型表下标
 ///   ..  ..   跳跃候选：jumpCount × JumpCandidateRecord（16 B）
-///
 /// 长度校验：文件总字节数必须与头字段推导的精确长度一致；多一字节少一字节都拒绝。
 /// </summary>
 public sealed class NavSurfaceAsset
@@ -153,16 +152,10 @@ public sealed class NavSurfaceAsset
                 ToY = reader.ReadUInt16(),
                 DropCm = reader.ReadInt32(),
                 LengthCells = reader.ReadSingle(),
-                Reserved = reader.ReadUInt16(),
             };
             if (candidate.FromX >= cellsX || candidate.FromY >= cellsY || candidate.ToX >= cellsX || candidate.ToY >= cellsY)
             {
                 throw new InvalidDataException($".navsurface: 跳跃候选 {i} 端点越界（网格 {cellsX} × {cellsY}）。");
-            }
-
-            if (candidate.Reserved != 0)
-            {
-                throw new InvalidDataException($".navsurface: 跳跃候选 {i} 保留字段必须为 0。");
             }
 
             jumps[i] = candidate;
@@ -263,7 +256,6 @@ public sealed class NavSurfaceAsset
             writer.Write(j.ToY);
             writer.Write(j.DropCm);
             writer.Write(j.LengthCells);
-            writer.Write((ushort)0);
         }
 
         writer.Flush();
@@ -282,5 +274,4 @@ public struct NavSurfaceJumpCandidate
     public ushort ToY { get; init; }
     public int DropCm { get; init; }
     public float LengthCells { get; init; }
-    public ushort Reserved { get; init; }
 }

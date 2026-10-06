@@ -1,0 +1,3794 @@
+{
+  "Id": "crowd_simulation_s1337",
+  "Tags": [
+    "crowd_simulation"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 1600000,
+      "HeightCm": 1600000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/crowd_simulation_s1337.height"
+  },
+  "DefaultCamera": {
+    "VirtualCameraId": "CrowdSimulation.Camera.Terrain",
+    "TargetXCm": 800000,
+    "TargetYCm": 800000,
+    "Yaw": 45,
+    "Pitch": 55,
+    "DistanceCm": 3000000,
+    "FovYDeg": 50
+  },
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "team_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "team_2"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_1"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "player_2"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_3"
+    },
+    {
+      "PlayerId": 4,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "player_4"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
+    ]
+  },
+  "Entities": [
+    {
+      "InstanceId": "team_1",
+      "Template": "crowd_simulation_team"
+    },
+    {
+      "InstanceId": "team_2",
+      "Template": "crowd_simulation_team"
+    },
+    {
+      "InstanceId": "player_1",
+      "Template": "crowd_simulation_player"
+    },
+    {
+      "InstanceId": "player_2",
+      "Template": "crowd_simulation_player"
+    },
+    {
+      "InstanceId": "player_3",
+      "Template": "crowd_simulation_player"
+    },
+    {
+      "InstanceId": "player_4",
+      "Template": "crowd_simulation_player"
+    },
+    {
+      "InstanceId": "building_0001",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 46875,
+            "Y": 796875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0002",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 65625,
+            "Y": 1453125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0003",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 78125,
+            "Y": 1553125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0004",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 90625,
+            "Y": 765625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0005",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 90625,
+            "Y": 846875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0006",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 96875,
+            "Y": 1496875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0007",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 109375,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0008",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 128125,
+            "Y": 846875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0009",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 134375,
+            "Y": 978125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0010",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 134375,
+            "Y": 1478125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0011",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 146875,
+            "Y": 1071875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0012",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 153125,
+            "Y": 790625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0013",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 159375,
+            "Y": 640625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0014",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 159375,
+            "Y": 1403125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0015",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 165625,
+            "Y": 1328125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0016",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 165625,
+            "Y": 1528125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0017",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 171875,
+            "Y": 1021875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0018",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 178125,
+            "Y": 590625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0019",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 178125,
+            "Y": 1159375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0020",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 184375,
+            "Y": 703125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0021",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 184375,
+            "Y": 865625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0022",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 184375,
+            "Y": 940625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0023",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 196875,
+            "Y": 796875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0024",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 196875,
+            "Y": 984375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0025",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 196875,
+            "Y": 1465625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0026",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 203125,
+            "Y": 1209375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0027",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 209375,
+            "Y": 1521875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0028",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 215625,
+            "Y": 1321875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0029",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 221875,
+            "Y": 665625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0030",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 221875,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0031",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 228125,
+            "Y": 1365625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0032",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 234375,
+            "Y": 953125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0033",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 234375,
+            "Y": 1128125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0034",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 240625,
+            "Y": 903125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0035",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 246875,
+            "Y": 590625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0036",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 246875,
+            "Y": 834375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0037",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 253125,
+            "Y": 1315625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0038",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 253125,
+            "Y": 1484375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0039",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 259375,
+            "Y": 678125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0040",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 265625,
+            "Y": 753125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0041",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 271875,
+            "Y": 1153125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0042",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 278125,
+            "Y": 546875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0043",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 278125,
+            "Y": 1246875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0044",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 284375,
+            "Y": 909375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0045",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 296875,
+            "Y": 678125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0046",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 303125,
+            "Y": 621875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0047",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 303125,
+            "Y": 1290625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0048",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 309375,
+            "Y": 821875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0049",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 315625,
+            "Y": 459375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0050",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 315625,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0051",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 321875,
+            "Y": 415625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0052",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 321875,
+            "Y": 578125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0053",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 328125,
+            "Y": 859375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0054",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 328125,
+            "Y": 1553125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0055",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 334375,
+            "Y": 346875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0056",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 340625,
+            "Y": 746875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0057",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 340625,
+            "Y": 784375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0058",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 340625,
+            "Y": 1459375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0059",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 359375,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0060",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 365625,
+            "Y": 840625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0061",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 365625,
+            "Y": 878125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0062",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 378125,
+            "Y": 778125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0063",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 409375,
+            "Y": 290625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0064",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 415625,
+            "Y": 371875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0065",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 415625,
+            "Y": 1459375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0066",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 421875,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0067",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 434375,
+            "Y": 771875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0068",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 434375,
+            "Y": 840625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0069",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 446875,
+            "Y": 278125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0070",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 446875,
+            "Y": 909375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0071",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 446875,
+            "Y": 1528125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0072",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 471875,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0073",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 478125,
+            "Y": 340625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0074",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 478125,
+            "Y": 384375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0075",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 478125,
+            "Y": 809375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0076",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 478125,
+            "Y": 871875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0077",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 490625,
+            "Y": 1540625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0078",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 503125,
+            "Y": 1503125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0079",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 509375,
+            "Y": 909375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0080",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 515625,
+            "Y": 365625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0081",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 521875,
+            "Y": 715625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0082",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 521875,
+            "Y": 790625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0083",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 534375,
+            "Y": 284375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0084",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 553125,
+            "Y": 1553125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0085",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 565625,
+            "Y": 1459375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0086",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 571875,
+            "Y": 315625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0087",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 571875,
+            "Y": 359375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0088",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 571875,
+            "Y": 740625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0089",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 571875,
+            "Y": 871875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0090",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 571875,
+            "Y": 1515625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0091",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 578125,
+            "Y": 278125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0092",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 578125,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0093",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 584375,
+            "Y": 834375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0094",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 615625,
+            "Y": 790625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0095",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 615625,
+            "Y": 934375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0096",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 628125,
+            "Y": 359375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0097",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 628125,
+            "Y": 896875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0098",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 628125,
+            "Y": 1534375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0099",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 634375,
+            "Y": 315625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0100",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 634375,
+            "Y": 678125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0101",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 634375,
+            "Y": 1484375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0102",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 653125,
+            "Y": 571875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0103",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 653125,
+            "Y": 759375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0104",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 659375,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0105",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 665625,
+            "Y": 934375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0106",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 671875,
+            "Y": 1484375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0107",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 684375,
+            "Y": 534375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0108",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 696875,
+            "Y": 653125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0109",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 703125,
+            "Y": 709375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0110",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 703125,
+            "Y": 915625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0111",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 709375,
+            "Y": 871875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0112",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 715625,
+            "Y": 1478125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0113",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 734375,
+            "Y": 234375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0114",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 734375,
+            "Y": 553125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0115",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 740625,
+            "Y": 790625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0116",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 746875,
+            "Y": 703125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0117",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 759375,
+            "Y": 590625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0118",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 765625,
+            "Y": 440625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0119",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 765625,
+            "Y": 646875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0120",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 765625,
+            "Y": 921875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0121",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 771875,
+            "Y": 1371875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0122",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 784375,
+            "Y": 496875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0123",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 784375,
+            "Y": 778125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0124",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 790625,
+            "Y": 378125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0125",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 790625,
+            "Y": 709375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0126",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 790625,
+            "Y": 878125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0127",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 796875,
+            "Y": 340625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0128",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 796875,
+            "Y": 821875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0129",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 821875,
+            "Y": 946875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0130",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 828125,
+            "Y": 403125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0131",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 828125,
+            "Y": 859375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0132",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 828125,
+            "Y": 990625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0133",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 828125,
+            "Y": 1296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0134",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 834375,
+            "Y": 446875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0135",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 834375,
+            "Y": 578125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0136",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 834375,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0137",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 840625,
+            "Y": 628125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0138",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 846875,
+            "Y": 496875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0139",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 846875,
+            "Y": 1078125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0140",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 865625,
+            "Y": 253125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0141",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 865625,
+            "Y": 309375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0142",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 865625,
+            "Y": 909375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0143",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 865625,
+            "Y": 1365625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0144",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 871875,
+            "Y": 834375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0145",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 871875,
+            "Y": 946875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0146",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 878125,
+            "Y": 546875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0147",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 878125,
+            "Y": 1184375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0148",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 878125,
+            "Y": 1553125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0149",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 884375,
+            "Y": 496875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0150",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 890625,
+            "Y": 715625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0151",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 890625,
+            "Y": 1109375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0152",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 890625,
+            "Y": 1478125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0153",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 896875,
+            "Y": 759375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0154",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 896875,
+            "Y": 1403125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0155",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 903125,
+            "Y": 353125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0156",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 909375,
+            "Y": 434375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0157",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 909375,
+            "Y": 584375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0158",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 909375,
+            "Y": 796875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0159",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 909375,
+            "Y": 959375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0160",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 909375,
+            "Y": 1028125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0161",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 915625,
+            "Y": 296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0162",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 915625,
+            "Y": 1146875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0163",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 915625,
+            "Y": 1540625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0164",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 921875,
+            "Y": 621875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0165",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 921875,
+            "Y": 903125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0166",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 921875,
+            "Y": 1296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0167",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 928125,
+            "Y": 1071875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0168",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 940625,
+            "Y": 259375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0169",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 940625,
+            "Y": 546875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0170",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 940625,
+            "Y": 1453125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0171",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 946875,
+            "Y": 415625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0172",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 946875,
+            "Y": 815625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0173",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 946875,
+            "Y": 984375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0174",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 946875,
+            "Y": 1234375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0175",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 953125,
+            "Y": 509375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0176",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 953125,
+            "Y": 671875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0177",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 953125,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0178",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 959375,
+            "Y": 621875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0179",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 959375,
+            "Y": 928125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0180",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 959375,
+            "Y": 1134375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0181",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 965625,
+            "Y": 328125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0182",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 965625,
+            "Y": 871875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0183",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 971875,
+            "Y": 1284375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0184",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 971875,
+            "Y": 1365625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0185",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 990625,
+            "Y": 684375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0186",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 990625,
+            "Y": 1321875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0187",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 990625,
+            "Y": 1453125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0188",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 996875,
+            "Y": 753125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0189",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 996875,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0190",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1003125,
+            "Y": 1534375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0191",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1009375,
+            "Y": 240625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0192",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1021875,
+            "Y": 878125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0193",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1021875,
+            "Y": 1215625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0194",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1028125,
+            "Y": 278125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0195",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1028125,
+            "Y": 634375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0196",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1028125,
+            "Y": 1271875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0197",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1040625,
+            "Y": 1434375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0198",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1046875,
+            "Y": 1340625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0199",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1046875,
+            "Y": 1384375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0200",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1059375,
+            "Y": 853125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0201",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1059375,
+            "Y": 1215625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0202",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1065625,
+            "Y": 740625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0203",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1065625,
+            "Y": 1290625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0204",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1071875,
+            "Y": 815625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0205",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1078125,
+            "Y": 1428125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0206",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1078125,
+            "Y": 1521875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0207",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1084375,
+            "Y": 703125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0208",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1090625,
+            "Y": 640625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0209",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1090625,
+            "Y": 1378125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0210",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1103125,
+            "Y": 296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0211",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1109375,
+            "Y": 821875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0212",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1121875,
+            "Y": 778125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0213",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1128125,
+            "Y": 1278125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0214",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1134375,
+            "Y": 740625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0215",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1140625,
+            "Y": 253125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0216",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1140625,
+            "Y": 696875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0217",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1140625,
+            "Y": 1234375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0218",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1146875,
+            "Y": 1446875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0219",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1153125,
+            "Y": 1503125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0220",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1165625,
+            "Y": 1390625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0221",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1171875,
+            "Y": 303125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0222",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1171875,
+            "Y": 646875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0223",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1178125,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0224",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1178125,
+            "Y": 840625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0225",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1184375,
+            "Y": 1215625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0226",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1196875,
+            "Y": 253125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0227",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1203125,
+            "Y": 740625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0228",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1203125,
+            "Y": 1253125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0229",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1203125,
+            "Y": 1359375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0230",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1203125,
+            "Y": 1421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0231",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1209375,
+            "Y": 1471875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0232",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1228125,
+            "Y": 1321875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0233",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1234375,
+            "Y": 1534375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0234",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1240625,
+            "Y": 1415625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0235",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1246875,
+            "Y": 1453125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0236",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1253125,
+            "Y": 296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0237",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1253125,
+            "Y": 659375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0238",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1253125,
+            "Y": 759375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0239",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1253125,
+            "Y": 828125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0240",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1253125,
+            "Y": 1221875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0241",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1278125,
+            "Y": 534375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0242",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1278125,
+            "Y": 909375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0243",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1284375,
+            "Y": 1459375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0244",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1290625,
+            "Y": 1328125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0245",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1296875,
+            "Y": 259375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0246",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1296875,
+            "Y": 409375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0247",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1303125,
+            "Y": 578125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0248",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1309375,
+            "Y": 353125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0249",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1328125,
+            "Y": 1378125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0250",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1340625,
+            "Y": 1246875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0251",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1365625,
+            "Y": 365625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0252",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1371875,
+            "Y": 440625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0253",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1378125,
+            "Y": 1303125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0254",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1390625,
+            "Y": 1228125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0255",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1396875,
+            "Y": 296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0256",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1409375,
+            "Y": 478125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0257",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1409375,
+            "Y": 1371875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0258",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1409375,
+            "Y": 1440625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0259",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1415625,
+            "Y": 1334375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0260",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1421875,
+            "Y": 565625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0261",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1421875,
+            "Y": 634375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0262",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1421875,
+            "Y": 1121875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0263",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1446875,
+            "Y": 340625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0264",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1453125,
+            "Y": 478125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0265",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1453125,
+            "Y": 746875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0266",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1459375,
+            "Y": 1384375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0267",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1465625,
+            "Y": 384375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0268",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1465625,
+            "Y": 428125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0269",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1465625,
+            "Y": 584375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0270",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1465625,
+            "Y": 1171875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0271",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1465625,
+            "Y": 1440625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0272",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1471875,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0273",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1471875,
+            "Y": 1296875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0274",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1471875,
+            "Y": 1346875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0275",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1478125,
+            "Y": 1134375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0276",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1484375,
+            "Y": 634375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0277",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1484375,
+            "Y": 671875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0278",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1496875,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0279",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1496875,
+            "Y": 1021875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0280",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1496875,
+            "Y": 1390625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0281",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1509375,
+            "Y": 421875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0282",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1509375,
+            "Y": 815625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0283",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1509375,
+            "Y": 1071875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0284",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1515625,
+            "Y": 353125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0285",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1515625,
+            "Y": 778125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0286",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1515625,
+            "Y": 903125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0287",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1515625,
+            "Y": 1153125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0288",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1515625,
+            "Y": 1240625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0289",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1521875,
+            "Y": 646875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0290",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1521875,
+            "Y": 1303125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0291",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1528125,
+            "Y": 471875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0292",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1534375,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0293",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1540625,
+            "Y": 584375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0294",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1540625,
+            "Y": 1353125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0295",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1546875,
+            "Y": 434375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0296",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1546875,
+            "Y": 521875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0297",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1546875,
+            "Y": 1028125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0298",
+      "Template": "crowd_simulation_blocker_35m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1546875,
+            "Y": 1428125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0299",
+      "Template": "crowd_simulation_blocker_50m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1553125,
+            "Y": 846875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "building_0300",
+      "Template": "crowd_simulation_blocker_140m",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1553125,
+            "Y": 1215625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0001",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 246875,
+          "y0Cm": 1446875,
+          "x1Cm": 340625,
+          "y1Cm": 1446875,
+          "widthCm": 6250
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0002",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 971875,
+          "y0Cm": 1190625,
+          "x1Cm": 971875,
+          "y1Cm": 1253125,
+          "widthCm": 6250
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0003",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 1078125,
+          "y0Cm": 1321875,
+          "x1Cm": 1140625,
+          "y1Cm": 1321875,
+          "widthCm": 18750
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0004",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 1096875,
+          "y0Cm": 340625,
+          "x1Cm": 1096875,
+          "y1Cm": 434375,
+          "widthCm": 6250
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0005",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 1234375,
+          "y0Cm": 459375,
+          "x1Cm": 1234375,
+          "y1Cm": 528125,
+          "widthCm": 6250
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0006",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 1440625,
+          "y0Cm": 490625,
+          "x1Cm": 1440625,
+          "y1Cm": 546875,
+          "widthCm": 6250
+        }
+      }
+    },
+    {
+      "InstanceId": "bridge_0007",
+      "Template": "crowd_simulation_bridge",
+      "Overrides": {
+        "CrowdSimulationBridgeSpan": {
+          "x0Cm": 1565625,
+          "y0Cm": 584375,
+          "x1Cm": 1565625,
+          "y1Cm": 665625,
+          "widthCm": 6250
+        }
+      }
+    }
+  ]
+}

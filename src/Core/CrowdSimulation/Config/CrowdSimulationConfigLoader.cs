@@ -94,6 +94,12 @@ public sealed class CrowdSimulationConfigLoader
         CrowdSimulationConfigValidator.Validate(config);
 
         string mapFile = $"Maps/{config.MapId}.json";
+        if (!string.Equals(map.Id, config.MapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: mapId = \"{config.MapId}\"，与当前地图 \"{map.Id}\" 不一致（CrowdSimulationConfig 按 mapId 绑定地图）。");
+        }
+
         if (fixedHz < 10 || fixedHz > 240)
         {
             throw new InvalidOperationException($"Engine/clock.json: FixedHz = {fixedHz}，需为 ≥ 10、≤ 240 的数值");

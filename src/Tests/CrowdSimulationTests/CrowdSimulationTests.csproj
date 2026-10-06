@@ -23,6 +23,22 @@
       <Link>assets\CrowdSimulationConfig.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationMod\assets\Navigation\agent_profiles.json">
+      <Link>assets\agent_profiles.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain1337Mod\assets\**">
+      <Link>assets\s1\s1337\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain2024Mod\assets\**">
+      <Link>assets\s1\s2024\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS1Terrain7Mod\assets\**">
+      <Link>assets\s1\s7\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
