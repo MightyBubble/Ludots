@@ -341,6 +341,15 @@ namespace Ludots.Adapter.Raylib
                             ? heightCm / 100f
                             : (float?)null,
                 };
+                var routeVisualRenderer = new RaylibRouteVisualRenderer
+                {
+                    PlaneY = 0.45f,
+                    GroundSamplerM = (x, z) =>
+                        engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm2) &&
+                        hm2.TrySampleHeightCm(x * 100f, z * 100f, out float heightCm2)
+                            ? heightCm2 / 100f
+                            : (float?)null,
+                };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 var discreteFieldProjector = new FieldDiscreteVisualProjector(
@@ -742,11 +751,22 @@ namespace Ludots.Adapter.Raylib
                                     fieldSession.RegionGroups,
                                     in mapMode,
                                     globalFieldVisualBuffer);
-                        if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
-                        {
-                            influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
-                            influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
-                        }                            }
+                            }
+
+                            if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
+                            {
+                                influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
+                                influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
+                            }
+
+                            if (engine.TryGetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, out Ludots.Core.Presentation.Fields.GlobalFieldVisualProjectorRegistry? fieldProjectorRegistry))
+                            {
+                                // 能力 / Mod 注册的投影器(流场等),宿主不逐个认识
+                                foreach (var projector in fieldProjectorRegistry.Projectors)
+                                {
+                                    projector.Project(globalFieldVisualBuffer);
+                                }
+                            }
                         }
 
                         if (overlaySceneBuilder != null && overlayScene != null)
@@ -1198,6 +1218,13 @@ namespace Ludots.Adapter.Raylib
                             else
                             {
                                 presentationTiming?.ObserveDebugDrawRender(0d, 0);
+                            }
+
+                            // 路线 / 标记(gameplay 通道,不吃调试开关):移动路线、阵型槽位等叠加
+                            if (engine.TryGetService(CoreServiceKeys.RouteVisualBuffer, out RouteVisualBuffer? routeVisuals) &&
+                                (routeVisuals.Polylines.Count > 0 || routeVisuals.Markers.Count > 0))
+                            {
+                                routeVisualRenderer.Draw(routeVisuals);
                             }
 
                             EndCoreMode3D();

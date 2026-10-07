@@ -123,6 +123,73 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void BuildTexturePlan_StagesFlowFieldWithDirectionHueContract()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Flow,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 3, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            // 东向(0° → 红色相)、北向(90° → 绿色相)、未到达(零方向 → 透明)
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(1f, 0f, 1f, 0f)),
+            new(new FieldCell2D(1, 0), new System.Numerics.Vector4(0f, 1f, 0.5f, 0f)),
+            new(new FieldCell2D(2, 0), new System.Numerics.Vector4(0f, 0f, 1f, 0f)),
+        };
+        IntRect[] dirty = { new(0, 0, 3, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color east), Is.True);
+        Assert.That(east.r, Is.EqualTo(255));
+        Assert.That(east.g, Is.LessThan(80));
+        Assert.That(east.b, Is.LessThan(80));
+        Assert.That(east.a, Is.EqualTo(230));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color north), Is.True);
+        Assert.That(north.g, Is.GreaterThan(north.r));
+        Assert.That(north.g, Is.GreaterThan(north.b));
+        Assert.That(north.a, Is.EqualTo(115));
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(2, 0), out Color unreached), Is.True);
+        Assert.That(unreached.a, Is.Zero);
+    }
+
+    [Test]
+    public void BuildTexturePlan_RejectsNonVector4FlowField()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Flow,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 1, 1),
+            GlobalFieldVisualValueKind.Byte);
+        GlobalFieldVisualCell[] cells = { new(new FieldCell2D(0, 0), byteValue: 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, new[] { new IntRect(0, 0, 1, 1) });
+
+        var presenter = new RaylibFieldRenderPresenter();
+        Assert.Throws<InvalidOperationException>(() => presenter.BuildTexturePlan(buffer));
+    }
+
+    [Test]
     public void ShouldDrapeDiscreteOwnership_UsesTexturePlaneForContinentalCellSizes()
     {
         Assert.That(

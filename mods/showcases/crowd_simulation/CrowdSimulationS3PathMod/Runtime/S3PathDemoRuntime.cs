@@ -8,6 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -35,6 +36,8 @@ public sealed class S3PathDemoRuntime : IDisposable
     public int RequestTick { get; private set; }
     public int DueTick { get; private set; }
     public PathResult? Current { get; private set; }
+    /// <summary>流场呈现源(GameStart 时由 Mod 入口注入,答复到达即发布)。</summary>
+    public CrowdFlowFieldVisualSource? FlowVisual { get; set; }
     public int ThreadCount => Service.WorkerCount;
     public int TotalWaits => Service.Waits;
     public bool SlowInjected { get; private set; }
@@ -105,6 +108,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             _pendingId = null;
             if (Current?.Flow != null) Service.Recycle(Current.Flow);
             Current = result;
+            if (FlowVisual != null) FlowVisual.Flow = result.Flow;
             if (Service.Faulted) return;
             Service.TestDelayPerJob = TimeSpan.Zero;
             SlowInjected = false;

@@ -8,25 +8,29 @@ using Ludots.Platform.Abstractions;
 namespace CrowdSimulationS3PathMod.Runtime;
 
 /// <summary>
-/// S3 演示覆盖层:当前对的折线(品红)、流场方向箭头(白,抽样)、
-/// 起点(绿)/ 终点(红)标记;HUD 显示请求帧 / 生效帧 / 当前帧 / 等待次数 /
+/// S3 演示覆盖层(gameplay 通道,不是调试绘制):当前对的折线写路线视觉缓冲
+/// (品红折线 + 绿起点 / 红终点标记,渲染端地形跟随);方向图由流场投影器经
+/// 全场视觉缓冲呈现(本系统不管);HUD 显示请求帧 / 生效帧 / 当前帧 / 等待次数 /
 /// 后台线程数 / 分支 / 可达性(慢注入时提示仿真暂停等待)。
 /// </summary>
 public sealed class S3PathDemoPresentationSystem : ISystem<float>
 {
-    private static readonly DebugDrawColor Magenta = new(255, 64, 200);
-    private static readonly DebugDrawColor ArrowWhite = new(220, 235, 245);
-    private static readonly DebugDrawColor StartGreen = new(76, 217, 100);
-    private static readonly DebugDrawColor GoalRed = new(255, 69, 58);
+    private static readonly Vector4 Magenta = new(1f, 0.25f, 0.78f, 1f);
+    private static readonly Vector4 StartGreen = new(0.3f, 0.85f, 0.4f, 1f);
+    private static readonly Vector4 GoalRed = new(1f, 0.27f, 0.22f, 1f);
+
+    private static readonly RouteVisualId RouteLine = new(1);
+    private static readonly RouteVisualId RouteStart = new(2);
+    private static readonly RouteVisualId RouteGoal = new(3);
 
     private readonly S3PathDemoRuntime _runtime;
-    private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly RouteVisualBuffer _routeVisuals;
     private readonly ScreenOverlayBuffer _overlay;
 
-    public S3PathDemoPresentationSystem(S3PathDemoRuntime runtime, DebugDrawCommandBuffer debugDraw, ScreenOverlayBuffer overlay)
+    public S3PathDemoPresentationSystem(S3PathDemoRuntime runtime, RouteVisualBuffer routeVisuals, ScreenOverlayBuffer overlay)
     {
         _runtime = runtime;
-        _debugDraw = debugDraw;
+        _routeVisuals = routeVisuals;
         _overlay = overlay;
     }
 
@@ -37,63 +41,29 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        _debugDraw.Clear();
-        var nav = _runtime.Nav;
-        int n = nav.CellCount, n2 = n * n;
+        _routeVisuals.BeginFrame();
+        int n = _runtime.Nav.CellCount;
         float csM = _runtime.Config.NavCellSizeCm / 100f;
 
         var current = _runtime.Current;
-        if (current != null)
+        if (current?.Points != null)
         {
-            // 流场方向箭头(每 8 格抽样;桥面格跳过)
-            var flow = current.Flow;
-            if (flow != null)
+            int pointCount = current.Points.Length / 2;
+            Span<Vector2> pts = pointCount <= 256 ? stackalloc Vector2[pointCount] : new Vector2[pointCount];
+            for (int k = 0; k < pointCount; k++)
             {
-                var inf = Ludots.Core.Mathematics.FixedPoint.Fix64.MaxValue / 4;
-                for (int cy = 1; cy < n - 1; cy += 8)
-                {
-                    for (int cx = 1; cx < n - 1; cx += 8)
-                    {
-                        int u = cy * n + cx;
-                        if (flow.Integ[u] >= inf) continue;
-                        int w = flow.Wp[u];
-                        if (w < 0 || w == u) continue;
-                        int wc = w % n2;
-                        float x0 = (cx + 0.5f) * csM, y0 = (cy + 0.5f) * csM;
-                        float dx = (wc % n - cx) * csM, dy = (wc / n - cy) * csM;
-                        float len = MathF.Sqrt(dx * dx + dy * dy);
-                        if (len < 1e-3f) continue;
-                        float arrow = Math.Min(len, 4 * csM);
-                        _debugDraw.Lines.Add(new DebugDrawLine2D
-                        {
-                            A = new Vector2(x0, y0),
-                            B = new Vector2(x0 + dx / len * arrow, y0 + dy / len * arrow),
-                            Thickness = 0.6f,
-                            Color = ArrowWhite,
-                        });
-                    }
-                }
+                pts[k] = new Vector2(
+                    (float)current.Points[k * 2].ToDouble() * csM,
+                    (float)current.Points[k * 2 + 1].ToDouble() * csM);
             }
 
-            // 折线(查询结果)
-            if (current.Points != null)
-            {
-                for (int k = 2; k < current.Points.Length; k += 2)
-                {
-                    _debugDraw.Lines.Add(new DebugDrawLine2D
-                    {
-                        A = new Vector2((float)current.Points[k - 2].ToDouble() * csM, (float)current.Points[k - 1].ToDouble() * csM),
-                        B = new Vector2((float)current.Points[k].ToDouble() * csM, (float)current.Points[k + 1].ToDouble() * csM),
-                        Thickness = 1.6f,
-                        Color = Magenta,
-                    });
-                }
-            }
+            // 视觉尺寸跟导航格走(本图 62.5 m/格),不写死米数
+            _routeVisuals.AddPolyline(RouteLine, pts, csM * 0.35f, Magenta);
 
-            // 起点 / 终点
             int sc = current.Query.StartCell, gc = current.Query.GoalCell;
-            _debugDraw.Circles.Add(new DebugDrawCircle2D { Center = new Vector2((sc % n + 0.5f) * csM, (sc / n + 0.5f) * csM), Radius = 4f, Thickness = 1.5f, Color = StartGreen });
-            _debugDraw.Circles.Add(new DebugDrawCircle2D { Center = new Vector2((gc % n + 0.5f) * csM, (gc / n + 0.5f) * csM), Radius = 4f, Thickness = 1.5f, Color = GoalRed });
+            float markerRadius = csM * 1.2f;
+            _routeVisuals.AddMarker(RouteStart, new Vector2((sc % n + 0.5f) * csM, (sc / n + 0.5f) * csM), RouteVisualMarkerShape.Ring, markerRadius, 1.5f, StartGreen);
+            _routeVisuals.AddMarker(RouteGoal, new Vector2((gc % n + 0.5f) * csM, (gc / n + 0.5f) * csM), RouteVisualMarkerShape.Diamond, markerRadius, 1.5f, GoalRed);
         }
 
         string branch = current == null ? "-" : current.Branch switch

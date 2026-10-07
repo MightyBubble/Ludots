@@ -70,6 +70,8 @@ namespace Ludots.Client.Raylib.Rendering
         /// Continental admin cells are kilometers wide; draping each texel draws a square mosaic and hides terrain.
         /// </summary>
         public int DiscreteOwnershipDrapeMaxCellSizeCm { get; set; } = 5_000;
+        /// <summary>Flow 场走逐格贴地渲染的格边长上限(导航格可达数十米,走廊格数有限,逐格四边形可承受)。</summary>
+        public int FlowDrapeMaxCellSizeCm { get; set; } = 10_000;
 
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
@@ -108,11 +110,19 @@ namespace Ludots.Client.Raylib.Rendering
                 if (descriptor.Id.Kind is not (
                     GlobalFieldVisualKind.Fog or
                     GlobalFieldVisualKind.Influence or
+                    GlobalFieldVisualKind.Flow or
                     GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
                         $"Raylib Global Field renderer does not support field kind '{descriptor.Id.Kind}' yet. Publish through the shared buffer, then add an explicit Raylib renderer contract for that kind.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Flow &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Vector4)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib flow field renderer requires Vector4 cells (dirX, dirY, strength, 0), but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog &&
@@ -213,9 +223,13 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly RaylibFieldTexturePlan plan = ref plans[i];
                 FieldTextureState state = _stateById[plan.Id];
                 UploadDirtyRects(state);
-                if (state.Id.Kind == GlobalFieldVisualKind.DiscreteOwnership &&
+                int drapeMaxCellSizeCm = state.Id.Kind == GlobalFieldVisualKind.Flow
+                    ? FlowDrapeMaxCellSizeCm
+                    : DiscreteOwnershipDrapeMaxCellSizeCm;
+                bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow;
+                if (drapeCapable &&
                     HeightSampleSource is IContinuousHeightmap heightSampleSource &&
-                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, DiscreteOwnershipDrapeMaxCellSizeCm))
+                    ShouldDrapeDiscreteOwnership(plan.CellSizeCm, drapeMaxCellSizeCm))
                 {
                     DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
                 }
@@ -463,6 +477,52 @@ namespace Ludots.Client.Raylib.Rendering
             return new Color(r, g, b, a);
         }
 
+        /// <summary>
+        /// Flow 场契约:FloatValue = (dirX, dirY, strength, 0)——方向取色相(东 0° 红、
+        /// 北 90° 绿、西 180° 青、南 270° 紫,与世界 +X/+Z 平面一致),强度取不透明度;
+        /// 零方向 / 零强度 = 透明(未到达格不显示)。
+        /// </summary>
+        internal static void ResolveFlowColorBytes(
+            in GlobalFieldVisualCell cell,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            Vector4 v = cell.FloatValue;
+            float dirX = v.X, dirY = v.Y, strength = Math.Clamp(v.Z, 0f, 1f);
+            float lenSq = dirX * dirX + dirY * dirY;
+            if (lenSq < 1e-6f || strength <= 0f)
+            {
+                r = 0; g = 0; b = 0; a = 0;
+                return;
+            }
+
+            float angle = MathF.Atan2(dirY, dirX);
+            if (angle < 0f) angle += MathF.Tau;
+            HsvToRgb(angle / MathF.Tau, 0.85f, 1f, out r, out g, out b);
+            a = (byte)Math.Clamp((int)(strength * 230f), 0, 255);
+        }
+
+        private static void HsvToRgb(float h, float s, float v, out byte r, out byte g, out byte b)
+        {
+            float c = v * s;
+            float x = c * (1f - MathF.Abs((h * 6f) % 2f - 1f));
+            float m = v - c;
+            (float rr, float gg, float bb) = (int)(h * 6f) switch
+            {
+                0 => (c, x, 0f),
+                1 => (x, c, 0f),
+                2 => (0f, c, x),
+                3 => (0f, x, c),
+                4 => (x, 0f, c),
+                _ => (c, 0f, x),
+            };
+            r = ToColorByte(rr + m);
+            g = ToColorByte(gg + m);
+            b = ToColorByte(bb + m);
+        }
+
         public static Vector4 ResolveDiscreteOwnershipColorVector(int projectedId)
         {
             ResolveDiscreteOwnershipColorBytes(
@@ -568,6 +628,12 @@ namespace Ludots.Client.Raylib.Rendering
             if (kind == GlobalFieldVisualKind.Influence)
             {
                 ResolveInfluenceColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                return;
+            }
+
+            if (kind == GlobalFieldVisualKind.Flow)
+            {
+                ResolveFlowColorBytes(in cell, out r, out g, out b, out a);
                 return;
             }
 
