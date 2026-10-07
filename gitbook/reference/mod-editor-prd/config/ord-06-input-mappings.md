@@ -4,7 +4,7 @@
 
 ## 1. 示例配置
 
-真实例（`mods/showcases/rts_demo/RtsDemoMod/assets/Input/input_order_mappings.json` 节选——直连与候选路由各一）：
+真实例（`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Input/input_order_mappings.json` 同款形状，节选——直连与候选路由各一；rts/moba demo 的旧实例已随输入线退役删除）：
 
 ```json
 { "interactionMode": "AimCast",
@@ -60,6 +60,6 @@
 
 ## 6. 实例
 
-- 真实例：`mods/showcases/rts_demo/RtsDemoMod/assets/Input/input_order_mappings.json`
+- 真实例：`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Input/input_order_mappings.json`、`mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod/Assets/Input/input_order_mappings.json`（rts/moba demo 旧实例已随输入线退役删除）
 
 **相关文档**：[ord-06 PRD](../prd/ord-06-input-mappings.md) · [input-01 配置说明](input-01-command-intent.md) · [input-05 配置说明](input-05-filters-and-schemes.md)
