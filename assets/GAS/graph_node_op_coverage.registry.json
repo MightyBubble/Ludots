@@ -2195,7 +2195,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterRelationship",

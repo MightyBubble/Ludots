@@ -10,7 +10,7 @@
 | 2 | EntityInfoPanelsMod 自营 | 2026-04（#163–#167 线） | 自研 Service 取样/格式化/渲染 | 自研（Sample/Storage/Format/Insight + 自营模板目录） | 屏幕面板：实体信息卡 | 该 mod 自身 |
 | 3 | PanelKit manifest | 2026-07 | manifest 声明 + C# 登记 descriptor | topic/profile/layout/density 引用 | 屏幕面板：HUD 布局 | 4 个 showcase 试点 + 小地图 |
 | 4 | PanelHost pin | 2026-08（#1026） | 图求值（realtime 每帧 / snapshot）→ GraphOutputValueStore | 图输出 float | 屏幕面板：标量 | 仅 float；Bool/Entity/String 缺（#1010） |
-| 5 | PanelHost collection | 2026-08（#1390 起） | 图求值产出包 → 列表投影 | `PanelSubjectKind` 13 种 subject（Entity/Ability/AbilitySlot/AbilityDefinition/Task/Tag/DialogueChoice/Item×2/Effect×2/Activity/ProgressionNode），实体包 + IntId 包 | 屏幕面板：列表 | **只有叙事选项面板一个** |
+| 5 | PanelHost collection | 2026-08（#1390 起） | 图求值产出包 → 列表投影 | `PanelSubjectKind` 13 种 subject（Entity/Ability/AbilitySlot/AbilityDefinition/Task/Tag/DialogueChoice/Item×2/Effect×2/Activity/ProgressionNode），实体包 + IntId 包 | 屏幕面板：列表 | 写表时（10-05）仅叙事选项面板；#1728/#1733 后新增总督档案卡（Entity 组）与总督指令卡（AbilitySlot 组）——两个自营 mod 的作者面已上车道 |
 
 代码锚点：车道 1 在 `src/Core/Presentation/Presenters/`（`ValueRef.cs`、`PresenterParamBinding.cs`、`BehaviorSlot.cs` 的 `AttributeBindingConfig`、`PresenterDefinition.cs` 的 OwnerAttribute/TagWorkItem）；车道 2 在 `mods/capabilities/entityinfo/EntityInfoPanelsMod/`（无 PanelHost 引用）；车道 4/5 在 `src/Core/UI/PanelHosting/` 与 `src/Core/UI/PanelProjection/`（`PanelGraphEvaluator.cs`、`PanelRealtimeRefreshSystem.cs`、`PanelListProjector.cs`）。
 
@@ -22,7 +22,7 @@
 
 ## 3. 定性与收敛
 
-EntityInfoPanelsMod 与 EntityCommandPanelMod 是**业务聚合时代的产物**：在抽象车道（PanelHost pin/collection）建成之前，按各自业务手搓的聚合层。车道通了之后没有搬回来，于是 Core 里的组投影长期只有叙事一个消费者。
+EntityInfoPanelsMod 与 EntityCommandPanelMod 是**业务聚合时代的产物**：在抽象车道（PanelHost pin/collection）建成之前，按各自业务手搓的聚合层。车道通了之后没有搬回来，Core 里的组投影长期只有叙事一个消费者——该状态已被 #1726 两刀（#1728/#1733，作者面上车道）终结；两个 mod 的 C# 自营层退役是后续票。
 
 收敛路径（= PANEL epic 的实际施工序）：
 
