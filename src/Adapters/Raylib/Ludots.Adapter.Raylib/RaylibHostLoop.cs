@@ -1099,8 +1099,41 @@ namespace Ludots.Adapter.Raylib
 
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
                             {
+                                // Flow 场:有连续高度图渲染器时改走地形贴花槽位(整张贴花,非小方块);
+                                // 本渲染器只负责纹理暂存上传,绘制由地形着色器完成
+                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? flowDecal = null;
+                                foreach (var fieldRecord in globalFieldVisualBuffer.GetRecords())
+                                {
+                                    if (fieldRecord.IsActive && fieldRecord.Descriptor.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Flow)
+                                    {
+                                        flowDecal = fieldRecord.Descriptor;
+                                        break;
+                                    }
+                                }
+
+                                fieldRenderPresenter.DrawFlowKind = flowDecal == null;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
+                                if (flowDecal is { } flowDescriptor &&
+                                    fieldRenderPresenter.TryGetStagedTexture(flowDescriptor.Id, out Texture2D flowTexture))
+                                {
+                                    var bounds = flowDescriptor.BoundsCells;
+                                    float cs = flowDescriptor.CellSizeCm;
+                                    continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = true;
+                                    continuousHeightmapRenderer.SetNavWalkabilityOverlayExternal(
+                                        flowTexture,
+                                        new System.Numerics.Vector4(
+                                            bounds.X * cs,
+                                            bounds.Y * cs,
+                                            (bounds.X + bounds.Width) * cs,
+                                            (bounds.Y + bounds.Height) * cs));
+                                }
+                                else
+                                {
+                                    continuousHeightmapRenderer.ClearNavWalkabilityOverlayExternal();
+                                    continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = false;
+                                }
+
                                 presentationTiming?.ObserveGlobalFieldRender(
                                     ElapsedMs(fieldRenderStart),
                                     fieldRenderPresenter.LastFieldTextureCount,

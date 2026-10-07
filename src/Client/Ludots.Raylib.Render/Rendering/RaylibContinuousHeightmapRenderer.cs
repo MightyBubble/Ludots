@@ -87,6 +87,8 @@ namespace Ludots.Raylib.Render
         public bool TerrainAlbedoActive => _albedoEnabled;
 
         public bool NavWalkabilityOverlayActive => _navWalkabilityEnabled;
+        /// <summary>overview 简化网格下是否保留叠加(旧 walkability 水洗在全图视角被刻意洗掉;Flow 场要求全缩放可见)。</summary>
+        public bool NavWalkabilityOverlayVisibleInOverview { get; set; }
 
         private float? _absoluteColorSeaLevelCm;
         private float _absoluteColorPeakSpanCm = 3600f;
@@ -344,7 +346,9 @@ namespace Ludots.Raylib.Render
 
         public void ClearNavWalkabilityOverlay()
         {
-            if (!_navWalkabilityEnabled && _navWalkabilityTexture.id == 0)
+            // 只清 URI 自有绑定;外部持有的贴花(Flow 场等)由持有方经 ClearNavWalkabilityOverlayExternal 管理,
+            // 帧初的 URI 配置轮询不得误清(已踩过:清绑交错导致外部贴花永远画不出来)
+            if (_navWalkabilityTextureUri == null)
             {
                 return;
             }
@@ -353,6 +357,47 @@ namespace Ludots.Raylib.Render
             _navWalkabilityEnabled = false;
             _navWalkabilityBoundsCm = default;
             _navWalkabilityTextureUri = null;
+            if (_initialized)
+            {
+                _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
+                ApplyNavWalkabilityUniforms();
+            }
+        }
+
+        /// <summary>
+        /// 绑定外部持有的叠加纹理(场渲染管线的帧更新纹理,如 Flow 方向场)到地形贴花槽位:
+        /// 与 SetNavWalkabilityOverlay 同一着色器契约,但纹理所有权在外部——本类不加载、
+        /// 不卸载,内容更新由持有方原地重传,绑定一次即持续生效。
+        /// </summary>
+        public void SetNavWalkabilityOverlayExternal(Texture2D texture, Vector4 boundsCm)
+        {
+            if (texture.id == 0) throw new ArgumentException("外部叠加纹理必须已加载。", nameof(texture));
+            if (boundsCm.Z - boundsCm.X <= 0f || boundsCm.W - boundsCm.Y <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(boundsCm), boundsCm, "外部叠加 bounds 必须有正跨度。");
+            }
+
+            // 若之前持有的是自有纹理(URI 路径),先卸;外部纹理永不卸载
+            if (_navWalkabilityTexture.id != 0 && _navWalkabilityTextureUri != null)
+            {
+                UnloadNavWalkabilityTexture();
+            }
+
+            _navWalkabilityTexture = texture;
+            _navWalkabilityTextureUri = null;
+            _navWalkabilityBoundsCm = boundsCm;
+            _navWalkabilityEnabled = true;
+            ApplyNavWalkabilityMaterialMap();
+            ApplyNavWalkabilityUniforms();
+        }
+
+        /// <summary>解绑外部叠加(不卸载纹理,所有权在持有方)。</summary>
+        public void ClearNavWalkabilityOverlayExternal()
+        {
+            if (_navWalkabilityTextureUri != null || !_navWalkabilityEnabled) return;
+            _navWalkabilityTexture = default;
+            _navWalkabilityEnabled = false;
+            _navWalkabilityBoundsCm = default;
             if (_initialized)
             {
                 _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
@@ -422,7 +467,16 @@ namespace Ludots.Raylib.Render
                 EnsureOverviewMesh(source, heightSampleSource, profile.OverviewVertexLimit);
                 ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
                 // Keep albedo/control so authored weight maps stay readable; drop nav walkability wash only.
-                ApplyOverviewWithoutNavWalkabilityUniforms();
+                // Flow 类叠加(NavWalkabilityOverlayVisibleInOverview)要求全缩放可见,跳过这条洗掉
+                if (NavWalkabilityOverlayVisibleInOverview)
+                {
+                    ApplyNavWalkabilityUniforms();
+                }
+                else
+                {
+                    ApplyOverviewWithoutNavWalkabilityUniforms();
+                }
+
                 RaylibMatrix identity = RaylibMatrix.Identity;
                 Rl.rlDisableBackfaceCulling();
                 Rl.DrawMesh(_overviewMesh, _terrainMaterial, identity);
@@ -987,7 +1041,8 @@ namespace Ludots.Raylib.Render
 
         private void UnloadNavWalkabilityTexture()
         {
-            if (_navWalkabilityTexture.id != 0)
+            // 外部持有的纹理(URI 为空)只解绑不卸载,所有权在持有方
+            if (_navWalkabilityTexture.id != 0 && _navWalkabilityTextureUri != null)
             {
                 RaylibNativeResources.UnloadTexture(_navWalkabilityTexture);
             }

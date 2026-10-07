@@ -73,6 +73,25 @@ namespace Ludots.Client.Raylib.Rendering
         /// <summary>Flow 场走逐格贴地渲染的格边长上限(导航格可达数十米,走廊格数有限,逐格四边形可承受)。</summary>
         public int FlowDrapeMaxCellSizeCm { get; set; } = 10_000;
 
+        /// <summary>
+        /// Flow 场是否由本渲染器直接绘制(false = 宿主改走地形贴花槽位,
+        /// 本渲染器仍负责纹理暂存与上传,见 TryGetStagedTexture)。
+        /// </summary>
+        public bool DrawFlowKind { get; set; } = true;
+
+        /// <summary>取某场记录已上传的纹理(贴花槽位用;纹理内容随后续帧原地更新)。</summary>
+        public bool TryGetStagedTexture(GlobalFieldVisualId id, out Texture2D texture)
+        {
+            if (_stateById.TryGetValue(id, out FieldTextureState? state) && state.TextureLoaded)
+            {
+                texture = state.Texture;
+                return true;
+            }
+
+            texture = default;
+            return false;
+        }
+
         public int LastFieldTextureCount { get; private set; }
         public int LastFieldCellCount { get; private set; }
         public int LastDirtyUploadCount { get; private set; }
@@ -227,13 +246,15 @@ namespace Ludots.Client.Raylib.Rendering
                     ? FlowDrapeMaxCellSizeCm
                     : DiscreteOwnershipDrapeMaxCellSizeCm;
                 bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow;
-                if (drapeCapable &&
+                bool kindSuppressed = state.Id.Kind == GlobalFieldVisualKind.Flow && !DrawFlowKind;
+                if (!kindSuppressed &&
+                    drapeCapable &&
                     HeightSampleSource is IContinuousHeightmap heightSampleSource &&
                     ShouldDrapeDiscreteOwnership(plan.CellSizeCm, drapeMaxCellSizeCm))
                 {
                     DrawDrapedDiscreteOwnership(state, plan.CellSizeCm, heightSampleSource);
                 }
-                else
+                else if (!kindSuppressed)
                 {
                     DrawTexturePlane(state, plan.CellSizeCm);
                 }
@@ -782,6 +803,10 @@ namespace Ludots.Client.Raylib.Rendering
             Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
             state.Texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
+            // Flow 方向场走地形贴花槽,双线性过滤把格粒度抹成连续渐变(迷雾/权属保留最近邻的硬边)
+            Rl.SetTextureFilter(state.Texture, state.Id.Kind == GlobalFieldVisualKind.Flow
+                ? Rl.TextureFilter.TEXTURE_FILTER_BILINEAR
+                : Rl.TextureFilter.TEXTURE_FILTER_POINT);
             state.TextureLoaded = true;
             state.GpuUploaded = false;
         }
