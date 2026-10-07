@@ -1,0 +1,50 @@
+{
+  "Id": "panel_button_commands_arena",
+  "World": {
+    "WidthCm": 1024000,
+    "HeightCm": 1024000,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "panel_button_commands"
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "panel-buttons-hero"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "panel-buttons-target-1"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "panel-buttons-hero"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "panel_button_commands_caster",
+      "InstanceId": "panel-buttons-hero"
+    },
+    {
+      "Template": "fireball_target",
+      "InstanceId": "panel-buttons-target-1",
+      "Overrides": {
+        "Name": {
+          "Value": "靶子"
+        }
+      }
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.ButtonCommands.Open",
+      "scopeInstanceId": "panel-buttons-hero"
+    }
+  ]
+}

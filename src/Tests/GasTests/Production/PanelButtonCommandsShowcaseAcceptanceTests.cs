@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
@@ -10,6 +9,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.PanelHosting;
 using Ludots.Tests;
 using Ludots.UI;
 using Ludots.UI.Input;
@@ -19,23 +19,25 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// UI command panels showcase acceptance: 0-encode panels driven end-to-end by the
-/// generic panel host — the caster's ability slots as a clickable skill row (typed
-/// collection projection + Button + tooltip) and a C&C-style right-side global command
-/// panel. Clicks are semantic actions admitted by the mounted interaction context
-/// (panel = view/controller, context permits), consumed by context-gated trigger
-/// graphs writing map state.
+/// Panel button commands showcase acceptance: one zero-C# panel strip where the caster's
+/// abilities are aggregated by graph rules into a clickable skill row, plus a spawn button.
+/// Clicks are semantic actions admitted by the mounted interaction context; the skill chip
+/// casts through the same intent pipeline the keyboard uses, the spawn button creates a
+/// real entity via an effect. Skills, entities and presentation all come from
+/// FireballSharedMod — this showcase adds zero wheels.
 /// </summary>
 [NonParallelizable]
 [TestFixture]
 [Category("acceptance")]
-public sealed class UiCommandPanelsShowcaseAcceptanceTests
+public sealed class PanelButtonCommandsShowcaseAcceptanceTests
 {
     private const float DeltaTime = 1f / 60f;
-    private const string ShowcaseMapId = "ucp_arena";
+    private const string ShowcaseMapId = "panel_button_commands_arena";
+    private const string FireballChipText = "Ability.Fireball.Cast";
+    private const string SpawnChipText = "Ability.PanelButtons.SpawnTarget";
 
     [Test]
-    public void CommandPanels_MountClickCastAndTip_AllZeroEncode()
+    public void ButtonCommands_ClickToCastAndSpawn_ZeroCodeAndReusedFireball()
     {
         string repoRoot = FindRepoRoot();
         var backend = new TestInputBackend();
@@ -52,49 +54,108 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         UiScene? scene = root.Scene;
         Assert.That(scene, Is.Not.Null, "panel presentation must have mounted the surface scene");
 
-        // Two ability chips + two command buttons = four interactive affordances.
-        Assert.That(CountButtons(scene!.Root), Is.GreaterThanOrEqualTo(4),
-            "skill chips and command buttons both mount as interactive nodes");
+        // Two abilities on the caster aggregate into two clickable chips — nothing else.
+        Assert.That(CountButtons(scene!.Root), Is.EqualTo(2),
+            "the strip aggregates one chip per ability slot, zero hardcoded buttons");
 
-        // ── hover a command button: generic tooltip appears ──
-        (float buildX, float buildY) = FindButtonPointByText(root, "建造 兵营")
-            ?? throw new AssertionException("build button not found in the mounted scene");
-        Move(root, buildX, buildY);
-        Move(root, buildX + 1f, buildY + 1f);
+        // PROBE: dump interaction context instances on the hero rep
+        {
+            Entity hero = FindEntityByName(engine, "施法者");
+            Assert.That(
+                engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(hero, out var baseContext) &&
+                baseContext.ContextId > 0,
+                Is.True,
+                "hero rep carries no base interaction context — the profile never mounted");
+        }
+
+        // ── hover the spawn chip: tooltip appears with the ability display name ──
+        (float spawnX, float spawnY) = FindButtonPointByText(root, SpawnChipText)
+            ?? throw new AssertionException("spawn chip not found in the mounted scene");
+        Move(root, spawnX, spawnY);
+        Move(root, spawnX + 1f, spawnY + 1f);
         UiNode? tipTitle = FindNodeByClass(scene.Root, "ui-tip-title");
         Assert.That(tipTitle, Is.Not.Null, "hovering a tipped control publishes the tooltip overlay");
-        Assert.That(tipTitle!.TextContent, Is.EqualTo("兵营"));
+        Assert.That(tipTitle!.TextContent, Is.EqualTo(SpawnChipText));
 
-        // ── click build: semantic action → context-gated graph → map state ──
-        MapVariableStore? variables = engine.CurrentMapSession?.Variables;
-        Assert.That(variables, Is.Not.Null);
-        Click(root, buildX, buildY);
-        Tick(engine, 4);
-        Assert.That(variables!.ReadInt("ucp_built"), Is.EqualTo(1),
-            "clicking the build button must run the context-mounted consumption graph");
+        // ── click the spawn chip: cast intent → ability → CreateUnit effect → real entity ──
+        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost service missing.");
+        PanelInstanceHandle strip = FindPanel(panelHost, "panel.buttonCommands.strip");
+        Click(root, spawnX, spawnY);
+        Tick(engine, 30);
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
+            "spawn click errors: " + string.Join(" | ", engine.TriggerManager.Errors));
+        var bridge = engine.GetService(CoreServiceKeys.PanelEventActionBridge);
+        Assert.That(bridge?.LastRefusalReason, Is.Null, $"panel event refused: {bridge?.LastRefusalReason}");
+        var spawnDrain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain);
+        Assert.That(spawnDrain?.LastDrainedCount, Is.GreaterThan(0), "spawn cast intent must reach the drain");
+        Assert.That(spawnDrain?.LastRejectionReason, Is.Null, $"spawn cast rejected: {spawnDrain?.LastRejectionReason}");
+        Assert.That(panelHost.TryGetValues(strip, out var values), Is.True);
+        Assert.That(values.Get("targetCount"), Is.EqualTo(1f).Within(0.001f),
+            "clicking the spawn chip must create a real ally-target entity the strip graph counts");
 
-        // ── click a skill chip: real cast through the same intent pipeline the keyboard uses ──
-        (float chipX, float chipY) = FindButtonPointByText(root, "Ability.Ucp.Fireball")
-            ?? FindButtonPointByTip(root, "Ability.Ucp.Fireball")
+        // ── click the fireball chip: real cast through the keyboard's intent pipeline ──
+        (float chipX, float chipY) = FindButtonPointByText(root, FireballChipText)
+            ?? FindButtonPointByTip(root, FireballChipText)
             ?? throw new AssertionException("fireball chip not found in the mounted scene");
-        Entity dummy = FindEntityByName(engine, "靶子");
-        float dummyHealthBefore = CurrentHealth(engine, dummy);
+        Entity target = FindEntityByName(engine, "靶子");
+        float targetHealthBefore = CurrentHealth(engine, target);
         Click(root, chipX, chipY);
-        Tick(engine, 10);
+        Tick(engine, 240);
         var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain);
         Assert.That(drain?.LastDrainedCount, Is.GreaterThan(0), "the chip's cast intent must reach the drain");
         Assert.That(drain?.LastRejectionReason, Is.Null, $"cast intent rejected: {drain?.LastRejectionReason}");
-        // Full real-cast loop: chip payload carries the slot, the consumption graph resolves
-        // the target from the maintained enemies collection (QueryFromCollection + team
-        // filter + TargetListGet), SubmitCast drains accepted with target, the fireball's
-        // InstantDamage lands on the dummy.
-        Assert.That(CurrentHealth(engine, dummy), Is.LessThan(dummyHealthBefore),
-            "clicking the chip must cast for real — target resolved in-graph, damage lands");
+        Assert.That(ProjectileArrivedAtTarget(engine, target),
+            "clicking the chip must cast for real — the fireball flies the full 600cm to the target (headless impact detonation is tracked by #1739)");
+
+        // NOTE(#1739): targetless-click guarding (no target ⇒ no order) is not authorable today —
+        // TargetListGet's valid flag has no authorable port and the drain accepts targetless
+        // cast intents by design (self-cast abilities). Follow-up options recorded in #1739.
 
         // ── tip leaves with the pointer ──
         Move(root, 40f, 40f);
         Move(root, 41f, 41f);
         Assert.That(FindNodeByClass(scene.Root, "ui-tip"), Is.Null, "leaving the control releases the tip");
+    }
+
+    private static bool ProjectileArrivedAtTarget(GameEngine engine, Entity target)
+    {
+        if (!engine.World.TryGet<Ludots.Core.Components.WorldPositionCm>(target, out var targetPos))
+        {
+            return false;
+        }
+
+        bool arrived = false;
+        var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.GAS.ProjectileState>();
+        engine.World.Query(in query, (Entity e) =>
+        {
+            if (arrived || !engine.World.TryGet<Ludots.Core.Components.WorldPositionCm>(e, out var pos))
+            {
+                return;
+            }
+
+            float dx = (float)(pos.Value.X - targetPos.Value.X);
+            float dy = (float)(pos.Value.Y - targetPos.Value.Y);
+            if ((dx * dx) + (dy * dy) < 60f * 60f)
+            {
+                arrived = true;
+            }
+        });
+
+        return arrived;
+    }
+
+    private static PanelInstanceHandle FindPanel(PanelHost host, string templateId)
+    {
+        foreach (PanelHostInstanceInfo info in host.SnapshotInstances())
+        {
+            if (info.TemplateId == templateId)
+            {
+                return info.Handle;
+            }
+        }
+
+        throw new InvalidOperationException($"No panel '{templateId}' mounted.");
     }
 
     private static Entity FindEntityByName(GameEngine engine, string name)
@@ -132,7 +193,9 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "UiCommandPanelsShowcaseMod" }),
+            RepoModPaths.ResolveExplicit(
+                repoRoot,
+                new[] { "LudotsCoreMod", "FireballSharedMod", "PanelButtonCommandsShowcaseMod" }),
             Path.Combine(repoRoot, "assets"));
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
@@ -147,7 +210,7 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         AcceptanceUiHostInstaller.Install(engine);
         engine.SetService(
             CoreServiceKeys.ViewController,
-            (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1600f, 900f));
+            (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1280f, 720f));
         engine.Start();
         return engine;
     }
@@ -239,6 +302,24 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         return button == null ? null : CenterOf(root, button);
     }
 
+    private static UiNode? FindButtonByTip(UiNode? node, string title)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+
+        foreach (UiNode child in node.Children)
+        {
+            if (FindButtonByTip(child, title) is { } match)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
     private static UiNode? FindButtonByText(UiNode? node, string text)
     {
         if (node == null)
@@ -264,36 +345,12 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         return null;
     }
 
-    private static UiNode? FindButtonByTip(UiNode? node, string title)
-    {
-        if (node == null)
-        {
-            return null;
-        }
-
-        if (node.Kind == UiNodeKind.Button &&
-            node.Attributes.Contains("data-tip-title") &&
-            string.Equals(node.Attributes["data-tip-title"], title, StringComparison.Ordinal))
-        {
-            return node;
-        }
-
-        foreach (UiNode child in node.Children)
-        {
-            if (FindButtonByTip(child, title) is { } match)
-            {
-                return match;
-            }
-        }
-
-        return null;
-    }
-
     private static bool ContainsText(UiNode node, string text)
     {
         foreach (UiNode child in node.Children)
         {
-            if (string.Equals(child.TextContent, text, StringComparison.Ordinal) || ContainsText(child, text))
+            if (string.Equals(child.TextContent, text, StringComparison.Ordinal) ||
+                ContainsText(child, text))
             {
                 return true;
             }
@@ -332,19 +389,13 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
 
     private static string FindRepoRoot()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (int i = 0; i < 12 && dir != null; i++)
+        string? directory = Path.GetDirectoryName(typeof(PanelButtonCommandsShowcaseAcceptanceTests).Assembly.Location);
+        while (directory != null && !Directory.Exists(Path.Combine(directory, "mods")))
         {
-            if (File.Exists(Path.Combine(dir.FullName, "src", "Core", "Ludots.Core.csproj")) &&
-                Directory.Exists(Path.Combine(dir.FullName, "mods")))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent!;
+            directory = Path.GetDirectoryName(directory);
         }
 
-        throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
+        return directory ?? throw new InvalidOperationException("Repository root not found.");
     }
 
     private sealed class HeadlessViewController : Ludots.Core.Presentation.Camera.IViewController

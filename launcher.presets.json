@@ -3718,6 +3718,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "panel_button_commands_raylib",
+      "name": "Panel Button Commands Raylib",
+      "selectors": [
+        "$panel_button_commands"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

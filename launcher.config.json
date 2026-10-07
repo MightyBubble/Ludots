@@ -2732,6 +2732,13 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateVirtualCameraEntryMod",
         "projectPath": "CapabilityStandardGraphOpActivateVirtualCameraEntryMod.csproj"
       }
+    },
+    {
+      "name": "panel_button_commands",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_button_commands/PanelButtonCommandsShowcaseMod"
+      }
     }
   ],
   "adapters": {

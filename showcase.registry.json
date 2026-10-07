@@ -11122,6 +11122,30 @@
       "video": "artifacts/evidence/capability_standard_graph_op_ActivateVirtualCamera/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "panel_button_commands",
+      "path": "mods/showcases/panel_button_commands/PanelButtonCommandsShowcaseMod",
+      "projectPath": null,
+      "title": "面板按钮下令",
+      "summary": "零 C# 面板：施法者技能按图规则聚合为可点技能格，点击走正式施法意图管线（弹道全程飞抵）；召唤技能经 CreateUnit 效果生成真实体。技能/实体/表现复用 FireballSharedMod。",
+      "tier": "T1",
+      "category": "panel",
+      "binding": "panel_button_commands",
+      "preset": "panel_button_commands_raylib",
+      "docsPath": "gitbook/architecture/ui-data-binding-lanes.md",
+      "readmePath": "mods/showcases/panel_button_commands/PanelButtonCommandsShowcaseMod/README.md",
+      "acceptanceTest": "Ludots.Tests.GAS.Production.PanelButtonCommandsShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "button-events",
+        "zero-code",
+        "showcase"
+      ]
     }
   ],
   "pathExemptions": [
