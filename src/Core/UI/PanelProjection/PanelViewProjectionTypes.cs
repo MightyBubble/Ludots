@@ -42,6 +42,7 @@ namespace Ludots.Core.UI.PanelProjection
         Column = 6,
         RichText = 7,
         Repeater = 8,
+        Button = 9,
     }
 
     public enum PanelPresentMode : byte
@@ -159,7 +160,10 @@ namespace Ludots.Core.UI.PanelProjection
             string? visibleWhenNotEmpty = null,
             string? classBind = null,
             string? colorBind = null,
-            string? backgroundBind = null)
+            string? backgroundBind = null,
+            string? controlName = null,
+            IReadOnlyDictionary<string, string>? eventPayload = null,
+            PanelControlTipSpec? tip = null)
         {
             Type = type;
             ClassName = className;
@@ -193,6 +197,9 @@ namespace Ludots.Core.UI.PanelProjection
             ClassBind = classBind;
             ColorBind = colorBind;
             BackgroundBind = backgroundBind;
+            ControlName = controlName;
+            EventPayload = eventPayload ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            Tip = tip;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -246,6 +253,42 @@ namespace Ludots.Core.UI.PanelProjection
         public string? ClassBind { get; }
         public string? ColorBind { get; }
         public string? BackgroundBind { get; }
+
+        /// <summary>
+        /// Author-facing control identity for <see cref="PanelLayoutControlType.Button"/>: the name a
+        /// declared template event's <c>control</c> references. Required on Buttons, meaningless elsewhere.
+        /// </summary>
+        public string? ControlName { get; }
+
+        /// <summary>
+        /// Button event payload sources: payload field name → bind expression (panel variable, item
+        /// field in repeater scope, or literal). Values bake at compose time and refresh on re-compose.
+        /// </summary>
+        public IReadOnlyDictionary<string, string> EventPayload { get; }
+
+        /// <summary>Optional hover tooltip content for this control; any control may declare one.</summary>
+        public PanelControlTipSpec? Tip { get; }
+    }
+
+    /// <summary>
+    /// Generic control-level tooltip declaration: literal or bound title/text resolved from the
+    /// same binding scope as the label (panel pins or repeater item fields). Applies to any
+    /// control — content is the author's data, the hover surface is engine plumbing.
+    /// </summary>
+    public sealed class PanelControlTipSpec
+    {
+        public PanelControlTipSpec(string? title, string? text, string? titleBind, string? textBind)
+        {
+            Title = title;
+            Text = text;
+            TitleBind = titleBind;
+            TextBind = textBind;
+        }
+
+        public string? Title { get; }
+        public string? Text { get; }
+        public string? TitleBind { get; }
+        public string? TextBind { get; }
     }
 
     public sealed class PanelLayout
@@ -383,6 +426,9 @@ namespace Ludots.Core.UI.PanelProjection
 
         /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";
+
+        /// <summary>Float field on AbilitySlot list items: the slot's index in the owner's buffer (generic slot data).</summary>
+        public const string AbilitySlotIndex = "slotIndex";
 
         /// <summary>
         /// Presentation imageId surface for <c>type: image</c> binds (not graph pins).

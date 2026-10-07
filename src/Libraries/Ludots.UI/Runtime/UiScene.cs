@@ -30,6 +30,42 @@ public sealed class UiScene
 
 	private UiNodeId? _hoveredNodeId;
 
+	/// <summary>
+	/// Fires when the pointer move lands on a different node (null = none). Carries the pointer
+	/// position so overlay consumers (tooltips) can place themselves without re-reading input.
+	/// </summary>
+	public event Action<UiNode?, float, float>? HoverPointChanged;
+
+	/// <summary>
+	/// Reads declared tooltip content off a node or its nearest ancestor
+	/// (data-tip-title / data-tip-text attributes). Generic surface contract: any renderer
+	/// or host may consume it; the panel line authors it via control <c>tip</c> declarations.
+	/// </summary>
+	public static bool TryReadNodeTip(UiNode? node, out string? title, out string? text)
+	{
+		title = null;
+		text = null;
+		for (UiNode? current = node; current != null; current = current.Parent)
+		{
+			if (title == null && current.Attributes.Contains("data-tip-title"))
+			{
+				title = current.Attributes["data-tip-title"];
+			}
+
+			if (text == null && current.Attributes.Contains("data-tip-text"))
+			{
+				text = current.Attributes["data-tip-text"];
+			}
+
+			if (title != null && text != null)
+			{
+				break;
+			}
+		}
+
+		return title != null || text != null;
+	}
+
 	private UiNodeId? _pressedNodeId;
 
 	private UiNodeId? _focusedNodeId;
@@ -702,6 +738,7 @@ public sealed class UiScene
 	{
 		bool result = false;
 		UiNodeId? hoveredNodeId = _hoveredNodeId;
+		UiNodeId? previousHoveredNodeId = _hoveredNodeId;
 		if (hoveredNodeId.HasValue)
 		{
 			UiNodeId valueOrDefault = hoveredNodeId.GetValueOrDefault();
@@ -729,6 +766,10 @@ public sealed class UiScene
 		{
 			_hoveredNodeId = null;
 			result = true;
+		}
+		if (evt.PointerEventType == UiPointerEventType.Move && _hoveredNodeId != previousHoveredNodeId)
+		{
+			HoverPointChanged?.Invoke(targetNode, evt.X, evt.Y);
 		}
 		if (evt.PointerEventType == UiPointerEventType.Down && targetNode != null)
 		{

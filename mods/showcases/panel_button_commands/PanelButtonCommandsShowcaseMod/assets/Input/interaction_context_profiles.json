@@ -1,0 +1,16 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.panelButtons.demo",
+      "bindings": [
+        "ButtonCommands.Cast"
+      ],
+      "triggers": [
+        {
+          "trigger": "Graph.ButtonCommands.Cast",
+          "event": "panel.ButtonCommands.Cast"
+        }
+      ]
+    }
+  ]
+}
