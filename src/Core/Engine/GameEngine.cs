@@ -850,6 +850,10 @@ namespace Ludots.Core.Engine
             var engineClockConfigLoader = new EngineClockConfigLoader(ConfigPipeline);
             var engineClockConfig = engineClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             Time.FixedDeltaTime = 1f / engineClockConfig.FixedHz;
+            if (Pacemaker is RealtimePacemaker realtimePacemaker)
+            {
+                realtimePacemaker.MaxAccumulatedSeconds = engineClockConfig.MaxAccumulatedSeconds;
+            }
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
