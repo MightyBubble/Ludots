@@ -1,3 +1,0 @@
-[
-  { "id": "wasd.character.knight.raylib", "assetKind": "Mesh", "assetId": "wasd.character.knight", "backendId": "raylib", "sourceUris": ["WasdSandboxMod:assets/Models/Knight.glb"] }
-]

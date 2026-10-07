@@ -8,16 +8,52 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "SkinnedMesh",
-          "assetId": "sphere",
+          "assetId": "mass_navigation.agent.soldier",
           "materialId": "default_surface",
-          "renderPath": "SkinnedMesh",
+          "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
           "localScale": [
-            0.9,
-            0.9,
-            0.9
+            0.45,
+            0.45,
+            0.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.72,
+            1,
+            1
           ]
         }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation.agent.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
       }
     ]
   },
@@ -33,7 +69,7 @@
         "command": {
           "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
-          "definitionId": "wasd.template.wasd_zhangsan"
+          "definitionId": "wasd.template.zhangsan_visual"
         },
         "condition": {
           "inline": "SourceHasVisualTransform"
@@ -63,7 +99,7 @@
         "command": {
           "kind": "CreatePresenter",
           "scopeSource": "EventPayloadA",
-          "definitionId": "wasd.template.wasd_lisi"
+          "definitionId": "wasd.template.lisi_visual"
         },
         "condition": {
           "inline": "SourceHasVisualTransform"
