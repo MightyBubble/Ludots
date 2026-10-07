@@ -264,6 +264,7 @@ public sealed class CrowdSimulationConfigLoader
             FixedHz = fixedHz,
             NavCellCount = navCellCount,
             NavCellSizeCm = cellSizeCm,
+            WorldSeed = config.World.Seed,
             SurfaceAsset = config.World.SurfaceAsset,
             TerrainTypeIds = Array.ConvertAll(config.World.TerrainTypes, t => t.Id),
             NavAreas = Array.ConvertAll(config.NavAreas, a => new RuntimeNavArea { Id = a.Id, SlopeFree = a.SlopeFree }),
@@ -287,6 +288,7 @@ public sealed class CrowdSimulationConfigLoader
             {
                 Id = u.Id,
                 AgentTypeIndex = Array.FindIndex(config.AgentTypes, a => a.Id == u.AgentType),
+                Special = u.Special,
             }),
             Profiles = runtimeProfiles,
             AvoidanceRadiusScale = avoidanceRadiusScale,

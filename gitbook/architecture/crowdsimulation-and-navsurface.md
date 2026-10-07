@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）已交付。S3 完成,S4（部署与命令回放）见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）、S4-a（ECS 单位部署 + 规范校验码 + 指令记录回放内核）已交付。S4-b（部署演示：呈现、框选、生成工具、回放按钮）见文末路线。
 
 ## 这是什么
 
@@ -114,6 +114,16 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **演示**：探针 `--s3c` 渲染折线 + 方向箭头（`artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s1337_s3c_*`）;`CrowdSimulationS3PathMod` 真机演示（`raylib-s1337-s3path-interactive.png`）按 spec 演示契约全部接上：**左键点起点、右键点终点**（光标走 ScreenRayProvider + 高度图射线落地）,**Q 巡回代理体型**（全部去重导航上下文）,**T 巡回后台线程 1/2/4**（结果与线程数无关）,**G 注入后台变慢**（仿真暂停等待,画面不卡,绝不使用半成品）;HUD 实时显示请求帧 / 生效帧 / 当前帧 / 等待次数 / 体型 / 线程数 / 分支 / 可达性。呈现全部走正式基建,不吃调试通道：方向图经新增的**全场投影器注册表**（`GlobalFieldVisualProjectorRegistry`,宿主不再逐个认识场）写进全场视觉缓冲,再由**地形贴花槽**渲染（复用旧 walkability texture 通道:`SetNavWalkabilityOverlayExternal` 外部持有纹理 + Flow 场契约 Vector4 = 方向 + 强度,方向取色相、强度取不透明度,双线性过滤,整张贴花随地形,不再有逐格小方块）;折线与起终标记走新增的**路线视觉缓冲**（`RouteVisualBuffer` + `RaylibRouteVisualRenderer`,gameplay 通道,地形跟随,移动路线 / 阵型槽位后续同路）。调试绘制顺带修了地形跟随（`GroundSamplerM`）。
 - **顺手填掉的基建缺口**：宿主场投影块的影响场分支原来错嵌在"离散权属存在"的条件里（本图没有离散权属就不执行,嵌套从合并遗留,这次才暴露）——离散 / 影响 / 注册表三路已拉平到同一层;URI 版 `ClearNavWalkabilityOverlay` 原来每帧无条件清槽,会把外部持有的贴花一起清掉（贴花接线上轮怎么都画不出来,根因就是这个清绑交错）——清除按纹理所有权分流,URI 配置轮询只管自有绑定;overview 简化网格原来一律洗掉 walkability 叠加,Flow 类贴花加了 `NavWalkabilityOverlayVisibleInOverview` 按场类保留;贴花 drape 的逐格小方块路径保留为无连续高度图时的兜底。
 - **顺手的输入接线**：点选输入走引擎现成的 `InputBackend`（鼠标 / 键位）+ `ScreenRayProvider`（平滑渲染相机射线）+ 高度图 `TryRaycastGround`（落点必须逐帧取服务——GameStart 时高度图还没注册,一次捕获就是 null,点击全丢）,呈现线程只入队、仿真 tick 消费;被取代的请求由新增的 `PathQueryService.Discard` 作废（未开工不算、已算完丢弃）。分层视图:V 巡回 路线(方向场贴花) / 可走区域(新增 `GlobalFieldVisualKind.Walkable` 直接 RGBA 场类,不可走红罩 / 桥面棕 / portal 黄) / NavMesh+HPA 线框(多边形描边 + cluster 网格 + 入口节点 + 跳跃链接,路线通道共享数组缓存)。
+
+## S4-a 交付：部署单位与指令回放内核（本次）
+
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（profileId）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
+- **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
+- **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
+- **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
+- **踩过的坑（已固化）**：S0 配置的 `deploy.bases` 玩家 4 出生点 y 写成了玩家 2 的值（0.65 → 0.7 份额,部署差 416 格才发现;组号全对上但中心全错,按"组-中心-RNG 值"三层对拍才定位）;镜像侧量化函数把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位;参考实现玩家 0 基与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。
+- **配置增量**：`world.seed`（生成盐,进覆盖配置）、`unitTypes[].special`（特殊单位不参与批量部署）。
 
 ## 当前缺口（诚实清单）
 

@@ -73,6 +73,8 @@ public sealed class CrowdSimulationConfig
         public required int NavCellSizeCm { get; init; }
         public required TerrainTypeEntry[] TerrainTypes { get; init; }
         public required string SurfaceAsset { get; init; }
+        /// <summary>世界种子(生成盐;每张地图一个,与参考实现的 world.seed 同值)。</summary>
+        public int Seed { get; init; }
     }
 
     public sealed class TerrainTypeEntry
@@ -117,6 +119,8 @@ public sealed class CrowdSimulationConfig
     {
         public required string Id { get; init; }
         public required string AgentType { get; init; }
+        /// <summary>特殊单位(不参与批量部署,只能由生成工具点名;参考实现的 unitTypes[].special)。</summary>
+        public bool Special { get; init; }
     }
 
     public sealed class AgentsSection

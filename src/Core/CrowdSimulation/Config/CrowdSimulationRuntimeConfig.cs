@@ -17,6 +17,8 @@ public sealed class CrowdSimulationRuntimeConfig
     /// <summary>导航网格边长（格）。世界正方形，Boards[0].WidthCm / NavCellSizeCm。</summary>
     public required int NavCellCount { get; init; }
     public required int NavCellSizeCm { get; init; }
+    /// <summary>世界种子(生成盐,与参考实现的 world.seed 同值;部署 / 生成的 RNG 流以此为根)。</summary>
+    public required int WorldSeed { get; init; }
     public required string SurfaceAsset { get; init; }
 
     /// <summary>地形类型表；下标 = .navsurface 栅格中的编号。</summary>
@@ -93,6 +95,8 @@ public sealed class RuntimeUnitType
 {
     public required string Id { get; init; }
     public required int AgentTypeIndex { get; init; }
+    /// <summary>特殊单位(不参与批量部署,只能由生成工具点名)。</summary>
+    public bool Special { get; init; }
 }
 
 public sealed class RuntimeAgentProfile

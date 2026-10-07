@@ -2,6 +2,7 @@
   "version": 7,
   "mapId": "crowd_simulation_s7",
   "world": {
+    "seed": 7,
     "surfaceAsset": "terrain/crowd_simulation_s7.navsurface"
   }
 }

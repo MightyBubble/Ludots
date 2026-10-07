@@ -37,7 +37,7 @@
     { "id": "navy", "agentType": "hull" },
     { "id": "mountaineer", "agentType": "climber" },
     { "id": "amphibious", "agentType": "amphib" },
-    { "id": "jumper", "agentType": "leaper" }
+    { "id": "jumper", "agentType": "leaper", "special": true }
   ],
   "agents": { "avoidanceRadiusScale": 6 },
   "navmesh": { "minRegionArea": 12, "maxSimplificationError": 1.3, "maxEdgeLen": 12, "maxVertsPerPoly": 6, "portalInsetCells": 0.5 },
@@ -89,7 +89,7 @@
       { "playerId": 1, "xCm": 480000, "yCm": 560000 },
       { "playerId": 2, "xCm": 1120000, "yCm": 1040000 },
       { "playerId": 3, "xCm": 1120000, "yCm": 480000 },
-      { "playerId": 4, "xCm": 480000, "yCm": 1040000 }
+      { "playerId": 4, "xCm": 480000, "yCm": 1120000 }
     ]
   },
   "telemetry": { "turnEpsRad": 0.035, "ema": 0.2 }

@@ -178,7 +178,7 @@ writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, nu
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
   version: 7,
   mapId,
-  world: { surfaceAsset: `terrain/${mapId}.navsurface` },
+  world: { seed, surfaceAsset: `terrain/${mapId}.navsurface` },
 }, null, 2));
 
 // ───────────────────────────── S1 对拍摘要（FNV-1a 32） ─────────────────────────────
@@ -510,6 +510,97 @@ function canonComp(comp, n2) {
         mapId, seed, pairs, contexts: perCtxQ, fnv1a: fnv1a(queryBytes),
       }, null, 2));
       console.log(`[export] ${mapId} s3c pairs=${pairs.length} fnv=${fnv1a(queryBytes)}`);
+    }
+
+    // ───────────────────────────── S4:部署与指令回放真相 ─────────────────────────────
+    // 规范校验码(Fix64 原始值口径,甲方体系):生成位置按 Fix64 语义逐 op 求值
+    // (镜像侧 S4 归一补丁,globalThis.__S4_FIX64_SPAWN__;FromDouble 向零截断、乘法向 -∞ 取整到
+    // 2^-32 网格,与 Ludots Fix64 同语义);字段顺序与参考实现 unitChecksum 一致。
+    // 脚本玩家编号用 Ludots 约定(1..P;参考端 0 基,运行时在 spawn/select 处换算)。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const navList = contexts.map((c) => c.nav);
+      const host = createNavHost(config, worldQ, structures, navList, tileCache);
+      const sim = new Simulation(sources, { world: worldQ, structures, navs: navList, tileCache, ms: 0 }, new LocalPathService(host));
+
+      // 脚本(与 C# 对拍共用同一份数据;玩家 1..4 = Ludots 约定,位置为厘米)
+      const script = [
+        { tick: 0, cmd: { type: 'spawn', count: 12000 } },
+        { tick: 30, cmd: { type: 'select', player: 1, x0Cm: 167500, y0Cm: 247500, x1Cm: 792500, y1Cm: 872500, additive: false } },
+        { tick: 60, cmd: { type: 'spawnAt', player: 2, xCm: 1120000, yCm: 1040000, count: 20, unitType: 0, rIdx: 0 } },
+        { tick: 90, cmd: { type: 'selectAll', player: 2 } },
+        { tick: 120, cmd: { type: 'clearSelection' } },
+      ];
+      // 换算成参考端(0 基玩家,米制)再入队
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'select') return { tick: e.tick, cmd: { type: 'select', player: c.player - 1, x0: c.x0Cm / 100, y0: c.y0Cm / 100, x1: c.x1Cm / 100, y1: c.y1Cm / 100, additive: c.additive } };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'selectAll') return { tick: e.tick, cmd: { type: 'selectAll', player: c.player - 1 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      const mix32 = (h, v) => Math.imul(h ^ v, 16777619) >>> 0;
+      const mixI64 = (h, raw) => mix32(mix32(h, Number(raw & 0xffffffffn) >>> 0), Number((raw >> 32n) & 0xffffffffn) >>> 0);
+      const canonChecksum = () => {
+        const u = sim.units, n = u.count;
+        let h = mix32(mix32(2166136261, sim.tickCount), n);
+        for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonX[i] * 100 * 4294967296)));
+        for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonY[i] * 100 * 4294967296)));
+        for (let k = 0; k < 6; k++) for (let i = 0; i < n; i++) h = mix32(h, 0);
+        for (let i = 0; i < n; i++) h = mix32(h, u.state[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.group[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.id[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.order[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.mode[i]);
+        for (let i = 0; i < n; i++) h = mix32(h, u.level[i]);
+        return h.toString(16).padStart(8, '0');
+      };
+
+      const frames = [];
+      for (let t = 0; t < 150; t++) { sim.advance(1); frames.push(canonChecksum()); }
+      if (sim.__canonX.length !== sim.units.count) throw new Error(`S4 规范位置数 ${sim.__canonX.length} ≠ 单位数 ${sim.units.count}`);
+
+      // 部署转储(单位逐条:Ludots 玩家号 / 模板下标 / 半径级 / 组 / 规范位置米)
+      const wu = new BW();
+      wu.bytes(Buffer.from('LS4U', 'ascii'));
+      wu.i32(sim.units.count);
+      const arch = sim.archetypes;
+      for (let i = 0; i < sim.units.count; i++) {
+        wu.i32(sim.units.player[i] + 1);
+        wu.i32(arch.unitOf[sim.units.arch[i]]);
+        wu.i32(arch.radiusOf[sim.units.arch[i]]);
+        wu.i32(sim.units.group[i]);
+        wu.f64(sim.__canonX[i]);
+        wu.f64(sim.__canonY[i]);
+      }
+      writeFileSync(join(outRoot, 'parity', 's4-units.bin'), wu.build());
+
+      // 框选边界安全距(参考端 f32 存储与 Fix64 在边界上的翻转风险披露)
+      let minEdge = Infinity;
+      {
+        const u = sim.units;
+        for (let i = 0; i < u.count; i++) {
+          if (u.player[i] !== 0) continue;
+          const d = Math.min(
+            Math.abs(u.x[i] - 1675), Math.abs(u.x[i] - 7925),
+            Math.abs(u.y[i] - 2475), Math.abs(u.y[i] - 8725));
+          if (d < minEdge) minEdge = d;
+        }
+      }
+      writeFileSync(join(outRoot, 'parity', 's4-deploy-truth.json'), JSON.stringify({
+        mapId, seed,
+        note: 'S4 规范校验码以 Fix64 原始值为口径(甲方体系);生成位置经镜像侧 S4 归一补丁按 Fix64 语义逐 op 求值。脚本玩家编号 1..P 为 Ludots 约定。',
+        script, frames,
+        unitCount: sim.units.count,
+        spawnSeq: sim.spawnSeq,
+        selectEdgeMinDistM: Math.round(minEdge * 1000) / 1000,
+      }, null, 2));
+      console.log(`[export] ${mapId} s4 units=${sim.units.count} frames=${frames.length} edge=${minEdge.toFixed(2)}m`);
     }
   }
 }

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -41,6 +42,12 @@ public static class Program
         {
             // --s3c <seedAssetsDir> <capabilityAssetsDir> <outDir>
             return RunS3C(args[1], args[2], args[3]);
+        }
+
+        if (args.Length >= 1 && args[0] == "--s4probe")
+        {
+            // --s4probe <seedAssetsDir> <capabilityAssetsDir> <outDir> — 部署前 8 单位与真值比对
+            return RunS4Probe(args[1], args[2]);
         }
 
         if (args.Length < 3)
@@ -302,6 +309,102 @@ public static class Program
         FillDisc(px, (start % n + 0.5f) * csCm / worldCm * RenderSize, (start / n + 0.5f) * csCm / worldCm * RenderSize, 5, (76, 217, 100));
         FillDisc(px, (goal % n + 0.5f) * csCm / worldCm * RenderSize, (goal / n + 0.5f) * csCm / worldCm * RenderSize, 5, (255, 69, 58));
         PngWriter.Write(path, RenderSize, RenderSize, px);
+    }
+
+    /// <summary>S4 部署探针:跑 spawn 12000,前 8 个单位与 s4-units.bin 逐字段比对。</summary>
+    private static int RunS4Probe(string seedDir, string capabilityDir)
+    {
+        var bundle = Load(seedDir, capabilityDir);
+        var runtime = bundle.Runtime;
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        var cache = new NavTileCache(
+            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
+            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
+            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+
+        var navs = new Dictionary<int, NavContext>();
+        var navByLayerRadius = new Dictionary<(int, int), NavContext>();
+        var radiusClasses = CrowdDeployment.DistinctRadiusClasses(runtime);
+        var seen = new HashSet<int>();
+        for (int a = 0; a < runtime.AgentTypes.Count; a++)
+        {
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            {
+                var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, a, clearance, cache);
+                if (!seen.Add(nav.Id)) continue;
+                navs[nav.Id] = nav;
+            }
+        }
+
+        foreach (var profile in runtime.Profiles)
+        {
+            int rIdx = radiusClasses.IndexOf((int)profile.RadiusCm.ToInt());
+            navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
+        }
+
+        var session = new CrowdSimSession(runtime, Arch.Core.World.Create(), navs, navByLayerRadius);
+        // 复刻 spawn 的组分配(不生成),打印组清单与中心供对照
+        var dbgRng = CrowdSimRng.Create((long)runtime.WorldSeed * 31 + 1L * 7919);
+        int n0 = runtime.NavCellCount;
+        var dbgTypes = new List<int>();
+        for (int t = 0; t < runtime.UnitTypes.Count; t++) if (!runtime.UnitTypes[t].Special) dbgTypes.Add(t);
+        int gid = 0;
+        for (int p = 0; p < runtime.Deploy.Bases.Count; p++)
+        {
+            var b = runtime.Deploy.Bases[p];
+            int bx = (int)(b.XCm / runtime.NavCellSizeCm), by = (int)(b.YCm / runtime.NavCellSizeCm);
+            var ids = new List<string>();
+            foreach (int t in dbgTypes)
+            {
+                for (int r = 0; r < radiusClasses.Count; r++)
+                {
+                    int l = runtime.UnitTypes[t].AgentTypeIndex;
+                    var nav = session.NavFor(l, r);
+                    if (nav.Cells.Length == 0) continue;
+                    var cs = new List<int>();
+                    for (int k = 0; k < runtime.Deploy.CentersPerGroup; k++)
+                    {
+                        int x = Math.Min(n0 - 1, Math.Max(0, bx + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterCells)));
+                        int y = Math.Min(n0 - 1, Math.Max(0, by + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterCells)));
+                        int c = CrowdDeployment.NearestPassable(nav, y * n0 + x);
+                        if (c >= 0) cs.Add(c);
+                    }
+
+                    if (cs.Count == 0) continue;
+                    ids.Add($"{gid}(l{l}r{r})");
+                    if (gid is 0 or 8 or 23 or 36 or 44 or 55) Console.WriteLine($"mine g{gid}: (l{l},r{r}) centers: [{string.Join(", ", cs)}]");
+                    gid++;
+                }
+            }
+
+            if (p == 3) Console.WriteLine($"mine p3 list: {string.Join(' ', ids)}");
+        }
+
+        int made = CrowdDeployment.Spawn(session, 12000);
+        Console.WriteLine($"[probe:s4] made={made} seed={runtime.WorldSeed}");
+
+        var dump = File.ReadAllBytes(Path.Combine(seedDir, "CrowdSimulation", "parity", "s4-units.bin"));
+        int cursor = 8;
+        for (int i = 0; i < 8; i++)
+        {
+            int player = BitConverter.ToInt32(dump, cursor); cursor += 4;
+            int unitType = BitConverter.ToInt32(dump, cursor); cursor += 4;
+            int rIdx = BitConverter.ToInt32(dump, cursor); cursor += 4;
+            int group = BitConverter.ToInt32(dump, cursor); cursor += 4;
+            double xm = BitConverter.ToDouble(dump, cursor); cursor += 8;
+            double ym = BitConverter.ToDouble(dump, cursor); cursor += 8;
+            var entity = session.Units.EntityAt(i);
+            var pos = session.World.Get<Ludots.Core.Components.WorldPositionCm>(entity).Value;
+            var state = session.World.Get<Ludots.Core.CrowdSimulation.Units.CrowdSimulationUnitState>(entity);
+            Console.WriteLine(
+                $"  u{i} truth(p{player} t{unitType} r{rIdx} g{group} x={xm:F9} y={ym:F9}) | " +
+                $"mine(p{session.World.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(entity).PlayerId} g{state.GroupId} " +
+                $"x={(pos.X.RawValue / 4294967296.0 / 100):F9} y={(pos.Y.RawValue / 4294967296.0 / 100):F9}) " +
+                $"rawEq=({pos.X.RawValue == (long)(xm * 100 * 4294967296.0)},{pos.Y.RawValue == (long)(ym * 100 * 4294967296.0)})");
+        }
+
+        return 0;
     }
 
     private static void DrawTileEntry(byte[] px, NavTileCache cache, byte[] passable, byte[] area, int n, int tx, int ty, int tileCells, (int r, int g, int b) color, float cellPx, float csCm)
