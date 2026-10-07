@@ -20,15 +20,36 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 8192,
-      "HeightCells": 8192,
-      "HexEdgeLengthCm": 400
+      "WidthCm": 819200,
+      "HeightCm": 819200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
     {
       "InstanceId": "utility-autocast-mage",
-      "Template": "utility_autocast_mage"
+      "Template": "utility_autocast_mage",
+      "Relations": [
+        {
+          "To": "utility-autocast-mage",
+          "Type": "Friendly"
+        },
+        {
+          "To": "utility-autocast-enemy-brute",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "utility-autocast-injured-ally",
@@ -40,7 +61,17 @@
     },
     {
       "InstanceId": "utility-autocast-enemy-brute",
-      "Template": "utility_autocast_enemy_brute"
+      "Template": "utility_autocast_enemy_brute",
+      "Relations": [
+        {
+          "To": "utility-autocast-enemy-brute",
+          "Type": "Friendly"
+        },
+        {
+          "To": "utility-autocast-mage",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "utility-autocast-enemy-scout",
@@ -68,52 +99,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "utility-autocast-enemy-brute"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "UtilityAutocast.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "UtilityAutocast.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "UtilityAutocast.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "UtilityAutocast.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "UtilityAutocast.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "UtilityAutocast.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

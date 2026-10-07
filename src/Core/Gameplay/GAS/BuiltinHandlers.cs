@@ -214,7 +214,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
@@ -267,7 +268,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands);
+                runtime.FanOutCommands,
+                runtime.TeamRelations);
 
             runtime.ClearResolvedCandidates();
         }
@@ -306,6 +308,15 @@ namespace Ludots.Core.Gameplay.GAS
                 out var direction);
             if (proj.TravelMode == ProjectileTravelMode.Direction && !hasDirection)
             {
+                // A degenerate direction whose cause is the cast target being the source
+                // itself is a legitimate runtime state (self-click) — the shot fizzles
+                // instead of throwing. Every other unresolvable direction stays a
+                // config-drift hard error.
+                if (context.Target == context.Source)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"CreateProjectile direction mode requires a resolvable direction: source={context.Source.Id}, target={context.Target.Id}.");
             }
@@ -557,6 +568,32 @@ namespace Ludots.Core.Gameplay.GAS
                     case RelationOperation.RemoveParent:
                         runtime.EffectSideEffects.StageRemoveParent(subject);
                         return;
+                    case RelationOperation.EnsureLink:
+                    {
+                        Entity linkedTarget = ResolveRelationEntity(in context, relation.Parent);
+                        if (!world.IsAlive(linkedTarget))
+                        {
+                            throw new InvalidOperationException(
+                                $"GAS.RELATION.ERR.ParentInvalid: entity={linkedTarget.Id}.");
+                        }
+
+                        if (runtime.Relationships == null)
+                        {
+                            throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
+                        }
+
+                        if (relation.RelationshipTypeId < 0)
+                        {
+                            throw new InvalidOperationException("Relation operation EnsureLink requires a registered relationship type id.");
+                        }
+
+                        runtime.EffectSideEffects.StageRelationshipEnsureLink(
+                            runtime.Relationships,
+                            subject,
+                            linkedTarget,
+                            relation.RelationshipTypeId);
+                        return;
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
@@ -655,9 +692,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
                 RelationOperation.RemoveParent => EffectOperationMetadata.GasTransactional("ApplyRelation.RemoveParent"),
-                RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
-                    EffectAtomicDomain.Relationship,
-                    "ApplyRelation.EnsureLink"),
+                RelationOperation.EnsureLink => EffectOperationMetadata.GasTransactional("ApplyRelation.EnsureLink"),
                 RelationOperation.Attach => EffectOperationMetadata.GasTransactional("ApplyRelation.Attach"),
                 RelationOperation.Detach => EffectOperationMetadata.GasTransactional("ApplyRelation.Detach"),
                 _ => EffectOperationMetadata.Unsupported(

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "panel.entityinfo.cardRow",
+    "subject": "Entity",
+    "graph": "Graph.EntityInfo.CardRow",
+    "pins": [
+      { "name": "health", "key": "entityinfo.card.health", "mode": "realtime", "default": 0 },
+      { "name": "healthMax", "key": "entityinfo.card.healthMax", "mode": "realtime", "default": 0 }
+    ],
+    "layout": {
+      "controls": [
+        { "type": "label", "class": "entityinfo-card-name", "bind": "displayName" },
+        { "type": "progressBar", "class": "entityinfo-card-health", "current": "health", "max": "healthMax" }
+      ]
+    }
+  }
+]

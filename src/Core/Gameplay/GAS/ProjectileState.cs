@@ -17,7 +17,7 @@ namespace Ludots.Core.Gameplay.GAS
         public ProjectileTravelMode TravelMode;
         public ProjectileImpactPolicy ImpactPolicy;
         public int CollisionHalfWidthCm;
-        public RelationshipFilter CollisionRelationFilter;
+        public RelationFilter CollisionRelationFilter;
         public byte CollisionExcludeSource;
         public int MaxHitCount;
         public int RootId;

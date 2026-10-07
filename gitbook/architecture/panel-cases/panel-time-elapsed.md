@@ -2,7 +2,7 @@
 
 > 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
 >
-> ⚠️ **基建依赖**：当天进度千分比与昼夜相位已由 `CalendarRuntime.CaptureProgressSnapshot` 提供（见 [历法与周期](../calendar-system.md)）。`12:34` 是皮层把 `DayPermille` 画成钟面，不是时钟再算一套分钟。面板仍缺 G3：`Calendar.DayPermille`/`Calendar.DayPhase` 还没有全局实体属性出口。日期不进 `Clock.*`。
+> ⚠️ **基建依赖**：当天进度千分比与昼夜相位见 [历法与周期](../calendar-system.md)。值图用 `ReadCalendarDayPermille`、`ReadCalendarDayPhase`。`12:34` 是皮层把千分比画成钟面。没有 `Calendar.*` 实体属性。日期不进 `Clock.*`。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 
@@ -13,7 +13,7 @@
 ```jsonc
 {
   "id": "panel.time.elapsed",
-  "graph": "Graph.Time.Elapsed",              // 时钟图输出 dayPermille/dayPhase
+  "graph": "Graph.Time.Elapsed",              // 值图读当天千分比和昼夜相位
   "pins": [
     { "name": "dayPermille", "key": "calendar.dayPermille", "mode": "realtime", "default": 0 },
     { "name": "dayPhase",    "key": "calendar.dayPhase",    "mode": "realtime", "default": 1 }
@@ -27,8 +27,8 @@
 {
   "id": "Graph.Time.Elapsed", "kind": "Query", "entry": "dayPermille",
   "nodes": [
-    { "id": "dayPermille", "op": "LoadSelfAttribute", "attribute": "Calendar.DayPermille" },
-    { "id": "dayPhase",    "op": "LoadSelfAttribute", "attribute": "Calendar.DayPhase" }
+    { "id": "dayPermille", "op": "ReadCalendarDayPermille" },
+    { "id": "dayPhase",    "op": "ReadCalendarDayPhase" }
   ],
   "controlEdges": [
     { "from": "dayPermille", "fromPort": "next", "to": "dayPhase" }
@@ -47,4 +47,4 @@ screen.topRight（信息聚合左侧）┌────────────�
                               └──────────────┘
 ```
 
-30 秒预期：表走字、昼夜图标随 dayPhase 切换。依赖：G3（global scope 语义）。
+30 秒预期：表走字、昼夜图标随相位编号切换。依赖：`Calendar/world.json`。

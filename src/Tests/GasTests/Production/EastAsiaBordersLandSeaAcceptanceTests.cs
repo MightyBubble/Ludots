@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.FieldRegions;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -39,9 +41,45 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
         "EastAsiaBordersLandSeaDemoMod",
     };
 
+
+    private static void RequireLudotsSampleSubmodule()
+    {
+        // East-asia acceptance reads a real-scale heightmap from the LudotsSample
+        // submodule (external sample repo). Missing checkout is an environment gap,
+        // not a product failure — skip loudly instead of failing the gate.
+        string sample = Path.Combine(
+            FindRepoRoot(),
+            "mods", "showcases", "east_asia_playable_terrain", "EastAsiaPlayableTerrainMod",
+            "assets", "samples", "LudotsSample", "east_asia", "east_asia_continuous.height");
+        if (!File.Exists(sample))
+        {
+            Assert.Ignore(
+                "LudotsSample submodule not initialized; run " +
+                "'git submodule update --init mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample' " +
+                "to run east-asia acceptance.");
+        }
+    }
+
+    [Test]
+    public void BordersLandSea_BattleContextInstallsBoxSelectAndGridCommandGraphs()
+    {
+        using GameEngine engine = CreateEngine(BorderMods);
+        engine.Start();
+
+        var profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+            ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+        int battleId = profiles.ProfileIdRegistry.GetId("interaction.context.east_asia.battle");
+        Assert.That(profiles.IsInstalled(battleId), Is.True);
+        Assert.That(profiles.TryGetDefinition(battleId, out InteractionContextProfileDefinition battle), Is.True);
+        Assert.That(
+            battle.Triggers!.Select(mount => mount.Trigger),
+            Is.EquivalentTo(new[] { "graph.east_asia.box_begin", "graph.east_asia.command_commit" }));
+    }
+
     [Test]
     public void BordersLandSea_PathingHasFootMeshAndShipGraph()
     {
+        RequireLudotsSampleSubmodule();
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
 
@@ -72,6 +110,7 @@ public sealed class EastAsiaBordersLandSeaAcceptanceTests
     [Test]
     public void BordersLandSea_CrossingCountriesUpdatesBorderPanelVars()
     {
+        RequireLudotsSampleSubmodule();
         using GameEngine engine = CreateEngine(BorderMods);
         engine.Start();
         engine.LoadMap(MapId);

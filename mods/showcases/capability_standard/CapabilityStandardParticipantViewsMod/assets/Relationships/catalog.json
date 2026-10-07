@@ -1,7 +1,7 @@
 {
   "types": [
     {
-      "id": "Participant",
+      "id": "ParticipantViews.KnowledgeShare",
       "isSymmetric": false
     }
   ]

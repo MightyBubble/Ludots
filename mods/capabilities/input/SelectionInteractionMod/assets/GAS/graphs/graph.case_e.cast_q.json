@@ -6,11 +6,20 @@
       {
         "label": "on_cast_q",
         "action": "CaseE.CastQ",
-        "start": "slot",
+        "start": "caster",
         "refire": "restart"
       }
     ],
     "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
       {
         "id": "slot",
         "op": "ConstInt",
@@ -29,16 +38,129 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "selguard_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "selguard_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "selguard_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "selguard_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "selguard_br",
+        "op": "BranchBool"
       }
     ],
     "controlEdges": [
-      { "from": "slot", "fromPort": "next", "to": "submit" },
-      { "from": "submit", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "selguard_cnt"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "next",
+        "to": "selguard_cntf"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "next",
+        "to": "selguard_zero"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "next",
+        "to": "selguard_br"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "true",
+        "to": "slot"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "next",
+        "to": "selguard_gt"
+      }
     ],
     "valueEdges": [
-      { "from": "slot", "fromPort": "value", "to": "submit", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "value",
+        "to": "selguard_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "value",
+        "to": "selguard_br",
+        "toPort": "condition"
+      }
     ]
   }
 ]

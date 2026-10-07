@@ -13,22 +13,58 @@
   "HeartbeatIntervalTicks": 6,
   "Entities": [
     {
-      "template": "ballista_crew",
-      "instanceId": "ballista_1",
+      "Template": "ballista_crew",
+      "InstanceId": "ballista_1",
       "PositionXCm": 0,
-      "PositionYCm": 0
+      "PositionYCm": 0,
+      "Overrides": {
+        "PlayerIdentity": {
+          "PlayerId": 1
+        }
+      },
+      "Relations": [
+        {
+          "To": "ballista_1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ballista-route-hostiles-anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
-      "template": "ballista_wolf",
-      "instanceId": "wolf_1",
+      "Template": "ballista_wolf",
+      "InstanceId": "wolf_1",
       "PositionXCm": 400,
       "PositionYCm": 0
     },
     {
-      "template": "ballista_tower",
-      "instanceId": "tower_1",
+      "Template": "ballista_tower",
+      "InstanceId": "tower_1",
       "PositionXCm": 400,
       "PositionYCm": 600
+    },
+    {
+      "Template": "ballista_team_anchor",
+      "InstanceId": "ballista-route-hostiles-anchor",
+      "PositionXCm": 2000,
+      "PositionYCm": 2000,
+      "Overrides": {
+        "Name": {
+          "Value": "Hostiles Anchor"
+        }
+      },
+      "Relations": [
+        {
+          "To": "ballista-route-hostiles-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ballista_1",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
@@ -37,6 +73,10 @@
       "TeamId": 1,
       "Name": "Player",
       "RepresentativeInstanceId": "ballista_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "ballista-route-hostiles-anchor"
     }
   ],
   "Players": [

@@ -5,7 +5,7 @@ namespace Ludots.Core.TransportNetwork
 {
     public enum TransportNavObstacleGeometryKind : byte
     {
-        Corridor = 0,
+        Stripline = 0,
         FilledRing = 1
     }
 
@@ -49,7 +49,7 @@ namespace Ludots.Core.TransportNetwork
         public int MinWidthCm { get; set; }
         public int SampleStepCm { get; set; }
         public bool CapEnds { get; set; } = true;
-        public TransportNavObstacleGeometryKind Geometry { get; set; } = TransportNavObstacleGeometryKind.Corridor;
+        public TransportNavObstacleGeometryKind Geometry { get; set; } = TransportNavObstacleGeometryKind.Stripline;
 
         public void Validate(int index)
         {
@@ -83,15 +83,15 @@ namespace Ludots.Core.TransportNetwork
                 throw new InvalidOperationException($"{path}.sampleStepCm must be >= 0.");
             }
 
-            if (Geometry != TransportNavObstacleGeometryKind.Corridor &&
+            if (Geometry != TransportNavObstacleGeometryKind.Stripline &&
                 Geometry != TransportNavObstacleGeometryKind.FilledRing)
             {
                 throw new InvalidOperationException($"{path}.geometry '{Geometry}' is not supported.");
             }
 
-            if (Geometry == TransportNavObstacleGeometryKind.Corridor && SampleStepCm <= 0)
+            if (Geometry == TransportNavObstacleGeometryKind.Stripline && SampleStepCm <= 0)
             {
-                throw new InvalidOperationException($"{path}.sampleStepCm must be > 0 for Corridor geometry.");
+                throw new InvalidOperationException($"{path}.sampleStepCm must be > 0 for Stripline geometry.");
             }
         }
     }

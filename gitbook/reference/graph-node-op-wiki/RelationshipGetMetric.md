@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体）、`target`（目标实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析）；flags 填关系类型 |
@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → **RelationshipGetMetric**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：好感与敌友判定、关系数值的聚合与排序、信任旗/失和旗这类关系玩法。
 ## 怎么进

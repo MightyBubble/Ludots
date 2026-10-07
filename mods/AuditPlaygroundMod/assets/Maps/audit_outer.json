@@ -12,8 +12,17 @@
       "Name": "default",
       "SpatialType": "Grid",
       "DataFile": "level_1.bin",
-      "WidthCells": 16384,
-      "HeightCells": 16384
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "TriggerTypes": [
@@ -25,8 +34,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": 0
+            "X": 819200,
+            "Y": 819200
           }
         }
       }
@@ -36,8 +45,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 500,
-            "Y": 250
+            "X": 819700,
+            "Y": 819450
           }
         }
       }
@@ -47,8 +56,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -500,
-            "Y": -300
+            "X": 818700,
+            "Y": 818900
           }
         }
       }

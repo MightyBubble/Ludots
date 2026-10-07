@@ -381,7 +381,6 @@ namespace Ludots.Tool
 
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
             if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
-            if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
         if (!string.IsNullOrWhiteSpace(source.RootBoard))
         {
             target.RootBoard = source.RootBoard;
@@ -415,7 +414,7 @@ namespace Ludots.Tool
                 ContainsKey(root, "WidthInPages") || ContainsKey(root, "HeightInPages"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
+                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCm/HeightCm; the root board anchor world is the Ludots origin.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -428,7 +427,7 @@ namespace Ludots.Tool
                          ContainsKey(board, "WidthInPages") || ContainsKey(board, "HeightInPages")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
+                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCm/HeightCm and Anchor.");
                     }
                 }
             }

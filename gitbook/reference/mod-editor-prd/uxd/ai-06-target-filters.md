@@ -28,7 +28,7 @@
 | 过滤器清单 | target_filters 合并视图 | 徽标：关系倾向、MaxResults |
 | op 链 | 可排序列表 | 拖动改变判定顺序（AND 顺序影响淘汰码先后） |
 | op 参数表单 | 按 Kind 动态：正数字框/关系下拉/tag 多选/掩码/技能选择 | 非法值即时拦 |
-| 关系下拉 | RelationshipFilter 枚举 | Hostile/Friendly 等全值 |
+| 关系下拉 | 关系目录里的关系类型 | Hostile/Friendly 及 mod 自己声明的类型 |
 | Tags 多选 | tag 注册表 | HasAllTags/HasNoneTags 共用 |
 | 试验台 | 地图实体 + 本地重放判定链 | 逐实体输出 留/淘汰+原因码 |
 | 淘汰原因 | UtilityAiFilterRejectReason | 与运行时同码表 |

@@ -11,9 +11,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 256,
-      "HeightCells": 256,
-      "GridCellSizeCm": 100
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
@@ -33,7 +41,17 @@
           }
         }
       },
-      "InstanceId": "camera-acceptance-local-player"
+      "InstanceId": "camera-acceptance-local-player",
+      "Relations": [
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera-acceptance-alarm-dummy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",
@@ -48,7 +66,17 @@
             "Y": 3600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera-acceptance-alarm-dummy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [

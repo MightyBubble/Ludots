@@ -1,0 +1,16 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.tcg_prompt",
+      "inputContexts": []
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.tcg_prompt"
+  ]
+}

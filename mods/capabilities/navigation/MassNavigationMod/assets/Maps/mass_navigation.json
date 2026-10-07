@@ -26,8 +26,8 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
+    "TargetXCm": 3200000,
+    "TargetYCm": 3200000,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 12000,
@@ -37,15 +37,29 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 64000,
-      "HeightCells": 64000,
-      "GridCellSizeCm": 100
+      "WidthCm": 6400000,
+      "HeightCm": 6400000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [
     {
       "InstanceId": "player_team",
-      "Template": "mass_navigation_player_team"
+      "Template": "mass_navigation_player_team",
+      "Relations": [
+        {
+          "To": "player_team",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "local_player",
@@ -57,8 +71,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 3000,
-            "Y": 5000
+            "X": 3203000,
+            "Y": 3205000
           }
         },
         "ManifestationObstacleIntent2D": {
@@ -78,8 +92,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 5000,
-            "Y": 3000
+            "X": 3205000,
+            "Y": 3203000
           }
         },
         "ManifestationObstacleIntent2D": {
@@ -99,8 +113,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 5000,
-            "Y": 7000
+            "X": 3205000,
+            "Y": 3207000
           }
         },
         "ManifestationObstacleIntent2D": {
@@ -120,8 +134,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 7000,
-            "Y": 5000
+            "X": 3207000,
+            "Y": 3205000
           }
         },
         "ManifestationObstacleIntent2D": {
@@ -141,8 +155,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 5000,
-            "Y": 5000
+            "X": 3205000,
+            "Y": 3205000
           }
         },
         "ManifestationObstacleIntent2D": {

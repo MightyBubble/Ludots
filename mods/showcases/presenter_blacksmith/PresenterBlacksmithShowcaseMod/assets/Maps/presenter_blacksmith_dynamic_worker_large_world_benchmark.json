@@ -27,14 +27,22 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 65536,
-      "HeightCells": 65536,
-      "GridCellSizeCm": 100
+      "WidthCm": 6553600,
+      "HeightCm": 6553600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
-    "TargetXCm": 18640,
-    "TargetYCm": 0,
+    "TargetXCm": 3295440,
+    "TargetYCm": 3276800,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 5000,

@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
@@ -190,6 +191,61 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void BinaryFrameEncoder_ScreenHud_IncludesNestedTextTokenTemplate()
+        {
+            var screenHud = new ScreenHudBatchBuffer(4);
+            var strings = CreateWorldHudStrings("Lv{0} {1}", nameTokenId: 2, nameSource: "关羽");
+            var packet = PresentationTextPacket.FromToken(1);
+            packet.SetArg(0, PresentationTextArg.FromInt32(10));
+            packet.SetArg(1, PresentationTextArg.FromTextToken(2));
+
+            screenHud.TryAdd(new ScreenHudItem
+            {
+                Kind = WorldHudItemKind.Text,
+                ScreenX = 320f,
+                ScreenY = 180f,
+                FontSize = 16,
+                Text = packet,
+            });
+
+            var encoder = new BinaryFrameEncoder();
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+            encoder.Encode(1, 2, 3, in camera, null, null, null, screenHud, strings, null, null, null);
+
+            ReadOnlySpan<byte> buffer = encoder.GetResult();
+            var (payloadOffset, itemCount, _) = FindSection(buffer, FrameProtocol.SectionScreenHud);
+            Assert.That(itemCount, Is.EqualTo(1));
+
+            int itemOffset = payloadOffset;
+            Assert.That(buffer[itemOffset + 77], Is.EqualTo(2));
+            Assert.That(buffer[itemOffset + 89], Is.EqualTo((byte)PresentationTextArgType.TextToken));
+            Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(itemOffset + 93, 4)), Is.EqualTo(2));
+
+            int cursor = itemOffset + WireWorldHudItem.SizeInBytes;
+            int stringCount = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2));
+            Assert.That(stringCount, Is.EqualTo(0));
+            cursor += 2;
+
+            int templateCount = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2));
+            Assert.That(templateCount, Is.EqualTo(2));
+            cursor += 2;
+
+            var templates = new Dictionary<int, string>();
+            for (int i = 0; i < templateCount; i++)
+            {
+                int id = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(cursor, 4));
+                cursor += 4;
+                int byteCount = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(cursor, 2));
+                cursor += 2;
+                templates[id] = Encoding.UTF8.GetString(buffer.Slice(cursor, byteCount));
+                cursor += byteCount;
+            }
+
+            Assert.That(templates[1], Is.EqualTo("Lv{0} {1}"));
+            Assert.That(templates[2], Is.EqualTo("关羽"));
+        }
+
+        [Test]
         public void BinaryFrameEncoder_ScreenOverlay_EncodesPresentationTextPacketAndTemplateTable()
         {
             var overlay = new ScreenOverlayBuffer();
@@ -263,24 +319,48 @@ namespace Ludots.Tests.ThreeC
 
         private static WorldHudStringTable CreateWorldHudStrings(string templateSource)
         {
+            return CreateWorldHudStrings(templateSource, nameTokenId: 0, nameSource: null);
+        }
+
+        private static WorldHudStringTable CreateWorldHudStrings(string templateSource, int nameTokenId, string? nameSource)
+        {
             var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             tokenIds.Register("hud.test");
+            if (nameTokenId > 0)
+            {
+                tokenIds.Register("entity.guan");
+            }
+
             tokenIds.Freeze();
 
             var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             localeIds.Register("en-US");
             localeIds.Freeze();
 
-            var tokens = new PresentationTextTokenDefinition[2];
+            int tokenSlotCount = nameTokenId > 0 ? nameTokenId + 1 : 2;
+            var tokens = new PresentationTextTokenDefinition[tokenSlotCount];
             tokens[1] = new PresentationTextTokenDefinition
             {
                 TokenId = 1,
                 Key = "hud.test",
                 ArgCount = 2,
             };
+            if (nameTokenId > 0)
+            {
+                tokens[nameTokenId] = new PresentationTextTokenDefinition
+                {
+                    TokenId = nameTokenId,
+                    Key = "entity.guan",
+                    ArgCount = 0,
+                };
+            }
 
-            var templates = new PresentationTextTemplate[2];
+            var templates = new PresentationTextTemplate[tokenSlotCount];
             templates[1] = new PresentationTextTemplate(templateSource, Array.Empty<PresentationTextTemplatePart>());
+            if (nameTokenId > 0)
+            {
+                templates[nameTokenId] = new PresentationTextTemplate(nameSource ?? string.Empty, Array.Empty<PresentationTextTemplatePart>());
+            }
 
             var locales = new PresentationTextLocaleTable[2];
             locales[1] = new PresentationTextLocaleTable(1, "en-US", templates);

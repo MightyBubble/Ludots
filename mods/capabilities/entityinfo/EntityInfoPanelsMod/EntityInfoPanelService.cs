@@ -11,7 +11,7 @@ using Ludots.Core.Scripting;
 
 namespace EntityInfoPanelsMod;
 
-public sealed partial class EntityInfoPanelService
+public sealed partial class EntityInfoPanelService : IEntityInfoTitleProfiles
 {
     private const int PanelCapacity = 96;
     private const int MaxComponentSectionsPerPanel = 64;
@@ -24,6 +24,7 @@ public sealed partial class EntityInfoPanelService
     private const int ComponentToggleWordCount = 16;
 
     private readonly EntityInsightProfileCatalog _insightCatalog;
+    private readonly PresentationTextCatalog _presentationTextCatalog;
     private readonly EntityInsightTextResolver _insightTextResolver;
     private readonly EntityInsightIconFactory _insightIconFactory = new();
     private readonly PresentationDisplayResolver? _displayResolver;
@@ -104,6 +105,7 @@ public sealed partial class EntityInfoPanelService
         PresentationTextLocaleSelection effectiveLocaleSelection = localeSelection ?? new PresentationTextLocaleSelection(effectiveCatalog);
 
         _insightCatalog = insightCatalog ?? EntityInsightProfileCatalog.Empty;
+        _presentationTextCatalog = effectiveCatalog;
         _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
         _templates = templates ?? new EntityInfoPanelTemplateCatalog();
         _abilityDefinitions = abilityDefinitions;

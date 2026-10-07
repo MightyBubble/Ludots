@@ -109,7 +109,6 @@ type GraphNodeConfig = {
   rotationDeg?: number;
   hexRadius?: number;
   layerMask?: number;
-  relationshipMode?: string | null;
   sort?: string | null;
   relationshipType?: string | null;
   metric?: string | null;
@@ -143,6 +142,12 @@ type GraphNodeConfig = {
   presentationSurface?: string | null;
   decoratorKind?: string | null;
   pinRegister?: number;
+  calendar?: string | null;
+  cycle?: string | null;
+  domain?: string | null;
+  phase?: string | null;
+  symbol?: string | null;
+  day?: number | null;
 };
 
 type GasNodeData = GraphNodeConfig & {
@@ -355,7 +360,6 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     rotationDeg: n.rotationDeg,
     hexRadius: n.hexRadius,
     layerMask: n.layerMask,
-    relationshipMode: n.relationshipMode ?? undefined,
     sort: n.sort ?? undefined,
     relationshipType: n.relationshipType ?? undefined,
     metric: n.metric ?? undefined,
@@ -389,6 +393,12 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     presentationSurface: n.presentationSurface ?? undefined,
     decoratorKind: n.decoratorKind ?? undefined,
     pinRegister: n.pinRegister,
+    calendar: n.calendar ?? undefined,
+    cycle: n.cycle ?? undefined,
+    domain: n.domain ?? undefined,
+    phase: n.phase ?? undefined,
+    symbol: n.symbol ?? undefined,
+    day: n.day ? n.day : undefined,
   });
 }
 
@@ -1185,7 +1195,7 @@ export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({
         data.next = String(value).trim() === '' ? null : String(value).trim();
       } else if (field === 'boolValue') {
         data.boolValue = Boolean(value);
-      } else if (field === 'intValue' || field === 'teamId' || field === 'graphId') {
+      } else if (field === 'intValue' || field === 'teamId' || field === 'graphId' || field === 'day') {
         const parsed = Number.parseInt(String(value), 10);
         data[field] = Number.isInteger(parsed) ? parsed : 0;
       } else if (field === 'floatValue' || field === 'panelZOrder') {

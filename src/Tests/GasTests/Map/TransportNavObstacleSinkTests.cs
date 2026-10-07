@@ -13,11 +13,11 @@ namespace Ludots.Tests.GAS
     public sealed class TransportNavObstacleSinkTests
     {
         [Test]
-        public void Corridor_ExpandsEqualWidthPolygon_FromWidthCmOnly()
+        public void Stripline_ExpandsEqualWidthPolygon_FromWidthCmOnly()
         {
             var asset = new TransportNetworkAsset
             {
-                Id = "sink.corridor",
+                Id = "sink.stripline",
                 SampleStepCm = 100,
                 DefaultVisualWidthMeters = 2f,
                 Nodes =
@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
                         MinWidthCm = 1,
                         SampleStepCm = 100,
                         CapEnds = false,
-                        Geometry = TransportNavObstacleGeometryKind.Corridor
+                        Geometry = TransportNavObstacleGeometryKind.Stripline
                     }
                 }
             };
@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
             NavObstacleSet set = TransportNavObstacleSink.Build(asset, config);
             Assert.That(set.Obstacles, Has.Count.EqualTo(1));
             NavObstacle obstacle = set.Obstacles[0];
-            Assert.That(obstacle.Id, Is.EqualTo("transport:sink.corridor:river:carve_rivers"));
+            Assert.That(obstacle.Id, Is.EqualTo("transport:sink.stripline:river:carve_rivers"));
             Assert.That(obstacle.Kind, Is.EqualTo(NavObstacleKind.Polygon));
             Assert.That(obstacle.LayerId, Is.EqualTo("Ground"));
             Assert.That(obstacle.Points.Count, Is.GreaterThanOrEqualTo(4));
@@ -154,7 +154,7 @@ namespace Ludots.Tests.GAS
                 WidthSource = "visualWidthMeters",
                 MinWidthCm = 0,
                 SampleStepCm = 100,
-                Geometry = TransportNavObstacleGeometryKind.Corridor
+                Geometry = TransportNavObstacleGeometryKind.Stripline
             };
 
             Assert.Throws<InvalidOperationException>(() => rule.Validate(0));
@@ -203,6 +203,24 @@ namespace Ludots.Tests.GAS
                     obstacles,
                     "Ground"),
                 Is.True);
+        }
+
+        [Test]
+        public void TotalWarFlow_MapAuthoring_UsesObstaclePlacementAndIgnoresGameplayOnlyTemplates()
+        {
+            string root = FindRepoRoot();
+            NavObstacleSet obstacles = NavObstacleAuthoringCatalog.BuildForMap(
+                root,
+                "total_war_flow_field",
+                "TotalWarFlowShowcaseMod");
+
+            NavObstacle? tower = obstacles.Obstacles.SingleOrDefault(obstacle => obstacle.Id == "tower_1");
+            Assert.That(tower, Is.Not.Null);
+            Assert.That(obstacles.Obstacles, Has.Count.EqualTo(1));
+            Assert.That(tower!.Kind, Is.EqualTo(NavObstacleKind.Circle));
+            Assert.That(tower.Center.Xcm, Is.EqualTo(10400));
+            Assert.That(tower.Center.Zcm, Is.EqualTo(10600));
+            Assert.That(tower.RadiusCm, Is.EqualTo(500));
         }
 
         private static string FindRepoRoot()

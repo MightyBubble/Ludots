@@ -12,7 +12,7 @@
 |----|----|
 | 可用图种 | Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
-| 输入端口（值边 toPort） | `source`（来源实体）、`value`（数值） |
+| 输入端口（值边 toPort） | `value`（数值） |
 | 特殊写法 | imm 填符号名（编译期解析） |
 
 手册分册（全量字段与语义）：[地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)

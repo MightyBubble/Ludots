@@ -194,6 +194,20 @@ namespace Ludots.Core.GraphRuntime
 
         /// <summary>Cast order-type key for SubmitCast (symbol; resolved against OrderTypeRegistry by the drain).</summary>
         public string? OrderTypeKey { get; set; }
+        /// <summary>
+        /// Queue policy for SubmitCommandIntent / SubmitCast / SubmitEngageBatch: omitted replaces the
+        /// actors' current orders, <c>onQueueModifier</c> queues while the firing input action carried
+        /// the queue modifier, <c>always</c> always queues.
+        /// </summary>
+        public string? Queue { get; set; }
+        /// <summary>
+        /// Ground layout for SubmitCommandIntent: <c>preserveRelative</c> or <c>actorOrder</c> spreads
+        /// actors sharing the ground point onto a grid <see cref="LayoutSpacingCm"/> apart; omitted stacks them.
+        /// </summary>
+        public string? Layout { get; set; }
+        public int LayoutSpacingCm { get; set; }
+        /// <summary>Engage profile key for SubmitEngageBatch (symbol; resolved to an EQS query registry id at patch time).</summary>
+        public string? EngageProfile { get; set; }
         public string? EffectTemplate { get; set; }
         /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
         public string? OrderType { get; set; }
@@ -214,7 +228,6 @@ namespace Ludots.Core.GraphRuntime
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }
-        public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }
         public string? Flag { get; set; }
         /// <summary>Event payload slot index for LoadEventPayloadInt (0..1) / LoadEventPayloadFloat (0..3).</summary>
@@ -247,6 +260,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Context { get; set; }
         /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>
         public string? ParentContext { get; set; }
+        /// <summary>Virtual camera id symbol for ActivateVirtualCamera; must name a <c>Camera/virtual_cameras.json</c> entry.</summary>
+        public string? Camera { get; set; }
         /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
         public string? Seat { get; set; }
         /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
@@ -258,6 +273,21 @@ namespace Ludots.Core.GraphRuntime
         public string? ActivityId { get; set; }
         /// <summary>Task definition id symbol for OfferTask (Imm: string symbol; resolved against the registry at execution time).</summary>
         public string? TaskId { get; set; }
+        /// <summary>Calendar id for ReadCalendarYear / ReadCalendarCycle* . Omit to use the active calendar.</summary>
+        public string? Calendar { get; set; }
+        /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay / ReadCalendarCyclePhaseIndex / ReadCalendarDaysUntilPhase.</summary>
+        public string? Cycle { get; set; }
+        /// <summary>Phase id for ReadCalendarDaysUntilPhase. Matched against that cycle's phase table.</summary>
+        public string? Phase { get; set; }
+        /// <summary>
+        /// 1-based day inside the phase for ReadCalendarDaysUntilPhase.
+        /// 0 asks for the phase start. A positive day counts down to that day and wraps after it passes.
+        /// </summary>
+        public int Day { get; set; }
+        /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
+        public string? Symbol { get; set; }
+        /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
+        public string? Domain { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
@@ -355,6 +385,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Source = "source";
         public const string Min = "min";
         public const string Max = "max";
+        public const string Tolerance = "tolerance";
         public const string A = "a";
         public const string B = "b";
         public const string C = "c";

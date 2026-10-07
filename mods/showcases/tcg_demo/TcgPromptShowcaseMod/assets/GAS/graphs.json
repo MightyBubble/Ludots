@@ -1,0 +1,253 @@
+[
+  {
+    "id": "graph.tcg_prompt.vitals",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "hpMax", "op": "LoadSelfAttribute", "attribute": "MaxHealth" }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "hpMax" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "hp", "destination": "Summary", "type": "Float", "source": "hp", "key": "tcg_prompt.hp" },
+      { "id": "hpMax", "destination": "Summary", "type": "Float", "source": "hpMax", "key": "tcg_prompt.hp_max" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.hero_panels_open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create_status", "op": "CreatePanel", "panelType": "panel.tcg_prompt.hero_status", "panelAnchor": "screen.topLeft" },
+      { "id": "create_hint", "op": "CreatePanel", "panelType": "panel.tcg_prompt.turn_hint", "panelAnchor": "screen.bottomCenter" },
+      { "id": "create_prompt", "op": "CreatePanel", "panelType": "panel.tcg_prompt.prompt", "panelAnchor": "screen.bottomCenter" },
+      { "id": "show_status", "op": "ShowPanel", "panelType": "panel.tcg_prompt.hero_status" },
+      { "id": "show_hint", "op": "ShowPanel", "panelType": "panel.tcg_prompt.turn_hint" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create_status" },
+      { "from": "create_status", "fromPort": "next", "to": "create_hint" },
+      { "from": "create_hint", "fromPort": "next", "to": "create_prompt" },
+      { "from": "create_prompt", "fromPort": "next", "to": "show_status" },
+      { "from": "show_status", "fromPort": "next", "to": "show_hint" },
+      { "from": "show_hint", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create_status", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "create_hint", "toPort": "source" },
+      { "from": "scope", "fromPort": "value", "to": "create_prompt", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.mage_panel_open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.tcg_prompt.mage_status", "panelAnchor": "screen.topRight" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.tcg_prompt.mage_status" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.end_turn",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_end_turn", "action": "TcgPrompt.EndTurn", "start": "fire", "refire": "restart" }
+    ],
+    "nodes": [
+      { "id": "fire", "op": "DispatchMapEvent", "event": "TcgPrompt.TurnEnded" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "fire", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.mage_casts",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_turn_ended", "event": "TcgPrompt.TurnEnded", "start": "hero" }
+    ],
+    "nodes": [
+      { "id": "hero", "op": "LoadPlacedEntity", "instanceId": "tcg-prompt-hero" },
+      { "id": "no_x", "op": "ConstInt", "intValue": 0 },
+      { "id": "no_y", "op": "ConstInt", "intValue": 0 },
+      { "id": "cast", "op": "SubmitAssignedOrder", "orderType": "castAbility" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "hero", "fromPort": "next", "to": "no_x" },
+      { "from": "no_x", "fromPort": "next", "to": "no_y" },
+      { "from": "no_y", "fromPort": "next", "to": "cast" },
+      { "from": "cast", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "hero", "fromPort": "value", "to": "cast", "toPort": "target" },
+      { "from": "no_x", "fromPort": "value", "to": "cast", "toPort": "a" },
+      { "from": "no_y", "fromPort": "value", "to": "cast", "toPort": "b" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.prompt_opened",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_prompt_opened", "event": "ResponseChain.PromptOpened", "start": "rep" }
+    ],
+    "nodes": [
+      { "id": "rep", "op": "LoadEntryPayloadEntity", "payloadKey": "MapTrigger.TargetEntity" },
+      { "id": "ask", "op": "ActivateContext", "context": "interaction.context.tcg_prompt.prompt", "parentContext": "interaction.context.tcg_prompt.duel" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "rep", "fromPort": "next", "to": "ask" },
+      { "from": "ask", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "ask", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.prompt_closed",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_prompt_closed", "event": "ResponseChain.PromptClosed", "start": "rep" }
+    ],
+    "nodes": [
+      { "id": "rep", "op": "LoadEntryPayloadEntity", "payloadKey": "MapTrigger.TargetEntity" },
+      { "id": "done_asking", "op": "DeactivateContext", "context": "interaction.context.tcg_prompt.prompt" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "rep", "fromPort": "next", "to": "done_asking" },
+      { "from": "done_asking", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "done_asking", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.answer_pass",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_pass", "action": "TcgPrompt.Pass", "start": "answer", "refire": "restart" }
+    ],
+    "nodes": [
+      { "id": "answer", "op": "SubmitResponseChainOrder", "orderType": "chainPass" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "answer", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.answer_negate",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_negate", "action": "TcgPrompt.Negate", "start": "answer", "refire": "restart" }
+    ],
+    "nodes": [
+      { "id": "answer", "op": "SubmitResponseChainOrder", "orderType": "chainNegate" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "answer", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.answer_activate",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_activate", "action": "TcgPrompt.Activate", "start": "answer", "refire": "restart" }
+    ],
+    "nodes": [
+      { "id": "answer", "op": "SubmitResponseChainOrder", "orderType": "chainActivateEffect" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "answer", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "graph.tcg_prompt.show_prompt",
+    "kind": "Script",
+    "entry": "hide_hint",
+    "nodes": [
+      { "id": "hide_hint", "op": "HidePanel", "panelType": "panel.tcg_prompt.turn_hint" },
+      { "id": "show_prompt", "op": "ShowPanel", "panelType": "panel.tcg_prompt.prompt" },
+      { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
+    ],
+    "controlEdges": [
+      { "from": "hide_hint", "fromPort": "next", "to": "show_prompt" },
+      { "from": "show_prompt", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": []
+  },
+  {
+    "id": "graph.tcg_prompt.hide_prompt",
+    "kind": "Script",
+    "entry": "hide_prompt",
+    "nodes": [
+      { "id": "hide_prompt", "op": "HidePanel", "panelType": "panel.tcg_prompt.prompt" },
+      { "id": "show_hint", "op": "ShowPanel", "panelType": "panel.tcg_prompt.turn_hint" },
+      { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
+    ],
+    "controlEdges": [
+      { "from": "hide_prompt", "fromPort": "next", "to": "show_hint" },
+      { "from": "show_hint", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": []
+  }
+]

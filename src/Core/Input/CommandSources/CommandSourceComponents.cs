@@ -8,7 +8,6 @@ namespace Ludots.Core.Input.CommandSources
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
         public CommandSourceTargetFilterConfig? TargetFilter { get; set; }
-        public string[] MovePathPreviewOrderTypeKeys { get; set; } = System.Array.Empty<string>();
         public CommandSourceAcquisitionCollectionConfig Acquisition { get; set; } = new();
     }
 
@@ -23,9 +22,11 @@ namespace Ludots.Core.Input.CommandSources
     {
         public string? RelationFilter { get; set; }
 
-        public Ludots.Core.Gameplay.Teams.RelationshipFilter ParseRelationFilter()
+        public Ludots.Core.Gameplay.Teams.RelationFilter ParseRelationFilter(Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry relationshipTypes)
         {
-            return Ludots.Core.Gameplay.Teams.RelationshipFilterUtil.Parse(RelationFilter ?? string.Empty);
+            return Ludots.Core.Gameplay.Teams.RelationFilter.Parse(
+                RelationFilter ?? throw new System.InvalidOperationException("commandSource.targetFilter.relationFilter is required."),
+                relationshipTypes);
         }
     }
 

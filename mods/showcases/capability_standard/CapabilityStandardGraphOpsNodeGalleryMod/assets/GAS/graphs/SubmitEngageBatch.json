@@ -1,0 +1,50 @@
+[
+  {
+    "id": "showcase.graph_op.SubmitEngageBatch",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "pointer_x"
+      }
+    ],
+    "nodes": [
+      { "id": "pointer_x", "op": "ConstFloat", "floatValue": 400 },
+      { "id": "pointer_y", "op": "ConstFloat", "floatValue": 0 },
+      { "id": "to_ground", "op": "ScreenPointToGround" },
+      { "id": "ground_branch", "op": "JumpIfFalse" },
+      { "id": "slot", "op": "ConstInt", "intValue": 0 },
+      { "id": "idx0", "op": "ConstInt", "intValue": 0 },
+      { "id": "query", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 300 },
+      { "id": "tag", "op": "QueryFilterTagAny", "tag": "Gallery.EngageTarget" },
+      { "id": "get0", "op": "TargetListGet" },
+      { "id": "engage", "op": "SubmitEngageBatch", "engageProfile": "gallery.engage.ring", "orderTypeKey": "castAbility" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
+      { "from": "pointer_y", "fromPort": "next", "to": "to_ground" },
+      { "from": "to_ground", "fromPort": "next", "to": "ground_branch" },
+      { "from": "ground_branch", "fromPort": "true", "to": "slot" },
+      { "from": "ground_branch", "fromPort": "false", "to": "halt" },
+      { "from": "slot", "fromPort": "next", "to": "idx0" },
+      { "from": "idx0", "fromPort": "next", "to": "query" },
+      { "from": "query", "fromPort": "next", "to": "tag" },
+      { "from": "tag", "fromPort": "next", "to": "get0" },
+      { "from": "get0", "fromPort": "next", "to": "engage" },
+      { "from": "engage", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "pointer_x", "fromPort": "value", "to": "to_ground", "toPort": "a" },
+      { "from": "pointer_y", "fromPort": "value", "to": "to_ground", "toPort": "b" },
+      { "from": "to_ground", "fromPort": "value", "to": "ground_branch", "toPort": "condition" },
+      { "from": "slot", "fromPort": "value", "to": "engage", "toPort": "value" },
+      { "from": "idx0", "fromPort": "value", "to": "get0", "toPort": "value" },
+      { "from": "get0", "fromPort": "value", "to": "engage", "toPort": "target" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

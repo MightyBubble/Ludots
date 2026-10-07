@@ -49,30 +49,34 @@ export interface BoardInfo {
     heightHexes: number | null;
     effectiveWidthCm: number;
     effectiveHeightCm: number;
+    anchorLocalXCm: number;
+    anchorLocalYCm: number;
+    anchorWorldXCm: number;
+    anchorWorldYCm: number;
 }
 
 export interface BoardCreateRequest {
     name: string;
     spatialType: BoardTopology;
-    widthCells: number;
-    heightCells: number;
+    widthCm: number;
+    heightCm: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
-    originXCm?: number;
-    originYCm?: number;
-    widthHexes?: number;
-    heightHexes?: number;
+    anchorLocalXCm: number;
+    anchorLocalYCm: number;
+    anchorWorldXCm: number;
+    anchorWorldYCm: number;
 }
 
 export interface BoardUpdateRequest {
+    widthCm?: number;
+    heightCm?: number;
     cellSizeCm?: number;
     hexEdgeLengthCm?: number;
-    originXCm?: number;
-    originYCm?: number;
-    clearOrigin?: boolean;
-    widthHexes?: number;
-    heightHexes?: number;
-    clearHexAuthoring?: boolean;
+    anchorLocalXCm?: number;
+    anchorLocalYCm?: number;
+    anchorWorldXCm?: number;
+    anchorWorldYCm?: number;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -583,11 +587,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 name: request.name,
                 spatialType: request.spatialType,
-                widthCells: request.widthCells,
-                heightCells: request.heightCells,
+                widthCm: request.widthCm,
+                heightCm: request.heightCm,
                 cellSizeCm: request.cellSizeCm,
-                hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
-                chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
+                hexEdgeLengthCm: request.hexEdgeLengthCm,
+                anchorLocalXCm: request.anchorLocalXCm,
+                anchorLocalYCm: request.anchorLocalYCm,
+                anchorWorldXCm: request.anchorWorldXCm,
+                anchorWorldYCm: request.anchorWorldYCm,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -616,8 +623,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                widthCm: request.widthCm,
+                heightCm: request.heightCm,
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm,
+                anchorLocalXCm: request.anchorLocalXCm,
+                anchorLocalYCm: request.anchorLocalYCm,
+                anchorWorldXCm: request.anchorWorldXCm,
+                anchorWorldYCm: request.anchorWorldYCm,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -1066,6 +1079,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 }));
 
+function nestedField(record: JsonRecord | null | undefined, pascalObject: string, camelObject: string, pascalField: string, camelField: string): unknown {
+    const raw = record?.[pascalObject] ?? record?.[camelObject];
+    if (raw == null || typeof raw !== 'object') {
+        return undefined;
+    }
+    const obj = raw as JsonRecord;
+    return obj[pascalField] ?? obj[camelField];
+}
+
 function nullableNumberOr(value: unknown): number | null {
     const parsed = typeof value === 'string' ? Number(value) : value;
     return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.floor(parsed) : null;
@@ -1094,6 +1116,10 @@ function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
         heightHexes: nullableNumberOr(raw?.heightHexes ?? raw?.HeightHexes),
         effectiveWidthCm: numberOr(raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm, 0),
         effectiveHeightCm: numberOr(raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm, 0),
+        anchorLocalXCm: numberOr(raw?.anchorLocalXCm ?? raw?.AnchorLocalXCm, 0),
+        anchorLocalYCm: numberOr(raw?.anchorLocalYCm ?? raw?.AnchorLocalYCm, 0),
+        anchorWorldXCm: numberOr(raw?.anchorWorldXCm ?? raw?.AnchorWorldXCm, 0),
+        anchorWorldYCm: numberOr(raw?.anchorWorldYCm ?? raw?.AnchorWorldYCm, 0),
     };
 }
 
@@ -1119,6 +1145,10 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         HeightHexes: raw?.heightHexes ?? raw?.HeightHexes,
         EffectiveWidthCm: raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm,
         EffectiveHeightCm: raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm,
+        AnchorLocalXCm: raw?.anchorLocalXCm ?? raw?.AnchorLocalXCm,
+        AnchorLocalYCm: raw?.anchorLocalYCm ?? raw?.AnchorLocalYCm,
+        AnchorWorldXCm: raw?.anchorWorldXCm ?? raw?.AnchorWorldXCm,
+        AnchorWorldYCm: raw?.anchorWorldYCm ?? raw?.AnchorWorldYCm,
     });
     const boardsRaw = Array.isArray(raw?.boards) ? raw.boards : (Array.isArray(raw?.Boards) ? raw.Boards : []);
     const boards = arrayOfRecords(boardsRaw).map(normalizeBoardInfo).filter((b: BoardInfo) => b.name.length > 0);
@@ -1151,12 +1181,14 @@ function resolveBoardMetricsFromMapConfig(
             mapInfo?.spatialType ??
             DEFAULT_BOARD_METRICS.topology),
         cellSizeCm: numberOr(
+            nestedField(selectedBoard, 'Grid', 'grid', 'CellSizeCm', 'cellSizeCm') ??
             selectedBoard?.GridCellSizeCm ??
             selectedBoard?.gridCellSizeCm ??
             boardInfo?.cellSizeCm ??
             mapInfo?.cellSizeCm,
             DEFAULT_BOARD_METRICS.cellSizeCm),
         hexEdgeLengthCm: numberOr(
+            nestedField(selectedBoard, 'Hex', 'hex', 'EdgeLengthCm', 'edgeLengthCm') ??
             selectedBoard?.HexEdgeLengthCm ??
             selectedBoard?.hexEdgeLengthCm ??
             boardInfo?.hexEdgeLengthCm ??

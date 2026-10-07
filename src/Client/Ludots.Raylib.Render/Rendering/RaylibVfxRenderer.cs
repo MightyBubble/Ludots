@@ -20,6 +20,7 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<RaylibVfxKey, RaylibParticleVfxInstance> _particleVfx = new();
         private readonly HashSet<RaylibVfxKey> _activeKeys = new();
         private readonly List<RaylibVfxKey> _inactiveKeys = new();
+        private readonly HashSet<int> _reportedMissingVfx = new();
         private readonly Dictionary<int, RaylibAssetStore<Texture2D>.Lease> _textureCache = new();
 
         public RaylibVfxRenderer(IRenderAssetPathResolver? vfs = null, RaylibAssetStore<Texture2D>? textureStore = null)
@@ -84,19 +85,19 @@ namespace Ludots.Raylib.Render
 
             if (!effectAssets.TryGetDescriptor(visual.MeshAssetId, out MeshAssetDescriptor descriptor))
             {
-                throw new InvalidOperationException(
-                    $"VFX item stableId={visual.StableId} references unknown effect asset id {visual.MeshAssetId}.");
+                WarnMissingVfxSkipped(visual.MeshAssetId, visual.StableId, "is not a registered mesh asset");
+                return;
+            }
+
+            VfxAssetData effect = descriptor.VfxData;
+            if (!effect.IsValid || effect.ParticleSystem is null)
+            {
+                WarnMissingVfxSkipped(visual.MeshAssetId, visual.StableId, "has no registered Quarks particle VFX");
+                return;
             }
 
             RaylibVfxKey key = ComposeVfxKey(visual.StableId, visual.MeshAssetId);
             _activeKeys.Add(key);
-            VfxAssetData effect = descriptor.VfxData;
-            if (!effect.IsValid || effect.ParticleSystem is null)
-            {
-                throw new InvalidOperationException(
-                    $"VFX effect asset id {visual.MeshAssetId} must reference a registered Quarks particle VFX.");
-            }
-
             Vector3 scale = visual.Scale * scaleMul;
             RaylibParticleVfxInstance particleVfx = GetOrCreateParticleVfxInstance(key, effect.ParticleSystem);
             particleVfx.Update(effect.ParticleSystem, timeSeconds, visual.Position, visual.Rotation);
@@ -366,6 +367,18 @@ namespace Ludots.Raylib.Render
         internal static RaylibVfxKey ComposeVfxKey(int stableId, int effectAssetId)
         {
             return new RaylibVfxKey(stableId, effectAssetId);
+        }
+
+        private void WarnMissingVfxSkipped(int effectAssetId, int stableId, string reason)
+        {
+            if (!_reportedMissingVfx.Add(effectAssetId))
+            {
+                return;
+            }
+
+            string stableText = stableId > 0 ? $" stableId={stableId}" : string.Empty;
+            RenderDiagnostics.Warn(
+                $"Raylib renderer skipped VFX draw{stableText}: effectAssetId={effectAssetId} {reason}. No placeholder VFX is drawn.");
         }
 
         private static Vector4 ModulateColor(Vector4 authored, Vector4 tint)

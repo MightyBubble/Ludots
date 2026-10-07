@@ -7,6 +7,12 @@
   "Tags": [
     "crowd_physics_arena"
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "local_player"
+    }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
     "TargetXCm": 5000,
@@ -20,15 +26,29 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 64000,
-      "HeightCells": 64000,
-      "GridCellSizeCm": 100
+      "WidthCm": 6400000,
+      "HeightCm": 6400000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [
     {
       "InstanceId": "player_team",
-      "Template": "crowd_arena_player_team"
+      "Template": "crowd_arena_player_team",
+      "Relations": [
+        {
+          "To": "player_team",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "local_player",

@@ -150,6 +150,9 @@ namespace Ludots.Tests.GAS
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
+                // ReadBlackboardFloat fails closed on missing keys; the accumulated-damage
+                // entry is read by the OnApply Post step before the first write.
+                world.Get<BlackboardFloatBuffer>(target).Set(BbKeyAccumDamage, 0f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 

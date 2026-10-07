@@ -43,7 +43,8 @@
       {
         "id": "allowed",
         "lineId": "line.author_kit.guard.allowed",
-        "presentationProfile": "author_kit.dialogue_overlay"
+        "presentationProfile": "author_kit.dialogue_overlay",
+        "portraitImageId": "portrait.speaker.guard.nod"
       },
       {
         "id": "bye",

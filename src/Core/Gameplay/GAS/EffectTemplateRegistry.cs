@@ -123,7 +123,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int RotationDeg;        // Rectangle rotation
         public int LengthCm;           // Line length
         public SpatialQueryOrigin Origin;
-        public RelationshipFilter RelationFilter;
+        public RelationFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)
         public uint LayerMask;         // 0 = no layer filter
@@ -146,7 +146,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct TargetFilterDescriptor
     {
-        public RelationshipFilter RelationFilter;
+        public RelationFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;                     // 0 = unlimited
         public uint LayerMask;                     // 0 = no layer filter
@@ -187,7 +187,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>Collision query half-width in centimeters.</summary>
         public int CollisionHalfWidthCm;
         /// <summary>Relationship filter applied to collision hits.</summary>
-        public RelationshipFilter CollisionRelationFilter;
+        public RelationFilter CollisionRelationFilter;
         /// <summary>Whether to ignore the source entity in collision hits.</summary>
         public bool CollisionExcludeSource;
         /// <summary>Maximum number of distinct collision hits before despawn. Must fit ProjectileState.HitHistoryCapacity.</summary>

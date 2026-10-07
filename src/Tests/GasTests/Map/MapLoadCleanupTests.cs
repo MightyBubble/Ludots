@@ -34,7 +34,7 @@ namespace GasTests
             var cfgA = new MapConfig { Id = "m", RootBoard = "second" };
             var session = new MapSession(new MapId("m"), cfgA);
             var first = DefaultBoardConfig();
-            var second = new BoardConfig { Name = "second", SpatialType = "Grid", WidthCells = 256, HeightCells = 256, GridCellSizeCm = 100, ChunkSizeCells = 4, LoadedChunkCapacity = 16 };
+            var second = new BoardConfig { Name = "second", SpatialType = "Grid", WidthCm = 25_600, HeightCm = 25_600, Grid = new BoardGridAuthoring { CellSizeCm = 100 }, ChunkSizeCells = 4, LoadedChunkCapacity = 16 };
             session.AddBoard(new GridBoard(new BoardId(first.Name), first.Name, first));
             session.AddBoard(new GridBoard(new BoardId(second.Name), second.Name, second));
 
@@ -51,9 +51,9 @@ namespace GasTests
         {
             Name = "default",
             SpatialType = "Grid",
-            WidthCells = 256,
-            HeightCells = 256,
-            GridCellSizeCm = 100,
+            WidthCm = 25_600,
+            HeightCm = 25_600,
+            Grid = new BoardGridAuthoring { CellSizeCm = 100 },
             ChunkSizeCells = 4,
             LoadedChunkCapacity = 16
         };

@@ -31,23 +31,24 @@ namespace Ludots.Tests.Architecture
             return service;
         }
 
-        private static BoardConfig Board(string name, string type, int w, int h, int? ox = null, int? oy = null,
-            int? widthHexes = null, int? heightHexes = null)
+        private static BoardConfig Board(string name, string type, int w, int h, int worldX = 0, int worldY = 0)
         {
-            return new BoardConfig
+            var config = new BoardConfig
             {
                 Name = name,
                 SpatialType = type,
-                WidthCells = w,
-                HeightCells = h,
-                GridCellSizeCm = 100,
-                HexEdgeLengthCm = 400,
-                OriginXCm = ox,
-                OriginYcm = oy,
-                WidthHexes = widthHexes,
-                HeightHexes = heightHexes,
+                WidthCm = w * 100,
+                HeightCm = h * 100,
+                Grid = new BoardGridAuthoring { CellSizeCm = 100 },
+                Anchor = new BoardAnchor { WorldXCm = worldX, WorldYCm = worldY },
                 LoadedChunkCapacity = 4096,
             };
+            if (type is "HexGrid" or "Hex")
+            {
+                config.Hex = new BoardHexAuthoring { EdgeLengthCm = 400 };
+            }
+
+            return config;
         }
 
         [Test]
@@ -67,7 +68,7 @@ namespace Ludots.Tests.Architecture
 
                 var harbor = new HexGridBoard(
                     new BoardId("harbor"), "harbor",
-                    Board("harbor", "HexGrid", 999, 999, 320_000, -140_000, 24, 10));
+                    Board("harbor", "HexGrid", 198, 62, 320_000, -140_000));
                 var facade = BuildFacade(partition, harbor);
 
                 // 板域查询：范围内实体可见（共享索引，板盲正确）。

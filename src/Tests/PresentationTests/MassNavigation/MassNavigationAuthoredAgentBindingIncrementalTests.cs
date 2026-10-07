@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -181,6 +182,48 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 worldPosition.Value.Y.ToFloat(),
                 Is.EqualTo(simulation.ToWorldYCm(simulation.MassNavigationFlow.PlayAreaMaxYCm)).Within(PositionToleranceCm));
+        }
+
+        [Test]
+        public void SyncEntities_SkipsTrackedAgentDestroyedBeforeBindingRebuild()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity deadAgent,
+                out Entity survivor,
+                out _);
+            world.Destroy(deadAgent);
+
+            Assert.DoesNotThrow(() => simulation.MassNavigationFlow.SyncEntities(world, simulation.AgentState));
+
+            Assert.That(simulation.LastEntitySyncAgentCount, Is.EqualTo(1));
+            Assert.That(world.IsAlive(survivor), Is.True);
+            Assert.That(
+                world.Get<WorldPositionCm>(survivor).Value.X.ToFloat(),
+                Is.EqualTo(1200f).Within(PositionToleranceCm));
+        }
+
+        [Test]
+        public void SyncDisplacedAgentPoses_SkipsTrackedAgentDestroyedBeforeBindingRebuild()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity deadAgent,
+                out Entity survivor,
+                out _);
+            simulation.MassNavigationFlow.MarkAgentDisplaced(0);
+            world.Destroy(deadAgent);
+
+            Assert.DoesNotThrow(() =>
+                simulation.MassNavigationFlow.SyncDisplacedAgentPoses(world, simulation.AgentState));
+
+            Assert.That(simulation.MassNavigationFlow.DisplacedAgentCount, Is.EqualTo(1));
+            Assert.That(world.IsAlive(survivor), Is.True);
+            Assert.That(
+                world.Get<WorldPositionCm>(survivor).Value.X.ToFloat(),
+                Is.EqualTo(1200f).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -720,12 +763,12 @@ namespace Ludots.Tests.Presentation
 
             MassNavigationConfig config = CreateTestConfig(membershipCapacity, relationshipDomainCapacity);
             var simulation = CreateConfiguredSimulation(config);
-            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
-                ?? throw new InvalidOperationException("Test requires DomainStanceQuery.");
-            simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
-                stances,
+            TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+                ?? throw new InvalidOperationException("Test requires TeamRelationQuery.");
+            simulation.SetDomainRelationshipProjection(new MassNavigationDomainRelationProjection(
+                teamRelations,
                 config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
-                config.RelationshipPolicy.CooperativeStance));
+                config.RelationshipPolicy.CooperativeRelation));
             var mapId = new MapId(config.MapId);
             var runtimeBinding = new MassNavigationRuntimeBinding();
             runtimeBinding.Activate(mapId, simulation);
@@ -781,7 +824,7 @@ namespace Ludots.Tests.Presentation
         private static MassNavigationAgentSeed CreateSeed(float localX, float localY, MassNavigationAgentLayer layer)
         {
             return new MassNavigationAgentSeed(
-                teamId: TeamId,
+                relationshipDomainId: TeamId,
                 localPositionXCm: localX,
                 localPositionYCm: localY,
                 heavy: false,

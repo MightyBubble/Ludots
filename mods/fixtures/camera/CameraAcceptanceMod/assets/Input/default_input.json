@@ -49,7 +49,8 @@
             { "type": "Normalize" }
           ]
         },
-        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Select.Begin", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Select.End", "path": "<Mouse>/LeftButton" },
         { "actionId": "Command", "path": "<Mouse>/RightButton" },
         { "actionId": "Cancel", "path": "<Keyboard>/escape" },
         { "actionId": "PointerPos", "path": "<Mouse>/Pos" },

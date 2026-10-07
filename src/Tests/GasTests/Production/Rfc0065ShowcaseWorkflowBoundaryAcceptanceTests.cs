@@ -86,17 +86,13 @@ namespace Ludots.Tests.GAS.Production
 
             var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
                 ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
+            Assert.That(engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance mountedBattleContext), Is.True,
+                "steady state mounts the template-declared battle context on the local rep.");
             Assert.That(
-                contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _),
-                Is.True,
-                "the engine must install the reserved steady-state context profile.");
-            var collectionsService = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Assert.That(
-                collectionsService.KeyRegistry.GetName(steadyStateCollectionKeyId),
-                Is.EqualTo("collection.command.source"));
-            Assert.That(engine.World.Has<InteractionContextInstance>(localPlayer), Is.False,
-                "steady state is the absence of mounted interaction state on the local rep.");
+                contextProfiles.ProfileIdRegistry.GetName(mountedBattleContext.ContextId),
+                Is.EqualTo("interaction.context.interaction.battle"));
+            Assert.That(mountedBattleContext.Source, Is.EqualTo(InteractionContextInstanceSource.TemplateSpawn),
+                "the base mount comes from the spawn template's initialInteractionContext.");
             Assert.That(engine.World.TryGet<InteractionPref>(localPlayer, out InteractionPref localPlayerPref), Is.True,
                 "map binding must seed the player InteractionPref from Input/interaction_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
@@ -797,11 +793,6 @@ namespace Ludots.Tests.GAS.Production
             }
 
             builder.Append(" commandRoute=");
-            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
-            {
-                builder.Append("no-steady-state-profile");
-                return;
-            }
 
             InteractionPref repPref = default;
             bool hasPref = ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity repEntity) &&
@@ -841,10 +832,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            int activeCollectionKeyId = engine.World.TryGet<InteractionContextInstance>(repEntity, out InteractionContextInstance routeContext)
-                ? routeContext.ActiveCollectionKeyId
-                : steadyStateCollectionKeyId;
-            if (!collections.TryGet(owner, activeCollectionKeyId, out EntityCollectionHandle handle) ||
+            if (!collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 builder.Append(" collection=missing");

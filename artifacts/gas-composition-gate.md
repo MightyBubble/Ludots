@@ -1,54 +1,42 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #1196 / RFC-0067 **收口**：P2 标签世界位列（256→4096）+ P3 跨域守卫与 presenter 高槽读 + P4-lite 拆 T16 + P5 全量对照
-- **Date**: 2026-09-20
-- **Agent / Author**: ZCode（分支 feat/gas-tag-capacity-closeout）
+- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
+- **Date**: 2026-09-22
+- **Agent / Author**: ZCode（test-red-clearing session）
 
 ## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: 均不是——标签位列进既有 `WorldAttributeStore`（行共享、容量计划唯一真相）；TagOps 高车道（位 [256,Plan) 列存唯一真相）；presenter/exchange/query 读路由；`ExtensionAttributeRegistry` 删除（T16 唯一出口：死代码拆除）。无新 enum/preset/管线。
+新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
 
-结论: PASS
+结论: **PASS**
 
-一句话理由: 标签写入口径唯一（TagOps 世界级入口）；高 id 规则在注册期即被既有 256 守卫拒绝（失败关闭不降级）；跨域未对齐面全部显式失败关闭并指明 P3 边界；活差分门两轮全过零新增分配。
+一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
 
 ## 2. Layer assignment
 
 | 步骤/能力 | Layer | 实现载体 |
 |-----------|-------|----------|
-| 标签位列（镜像 + 高位真相） | 0 | `WorldAttributeStore`（tagBits/tagLastSnapshot/tagDirtyRows 列） |
-| TagOps 高车道（含稀疏计数） | 0 | `TagOps.AddTagHigh/RemoveTagHigh/HasTagRouted/MirrorTagLow` |
-| 高标签延迟触发 | 2 | `AttributeHighLane.CollectHighTagChanges` |
-| 标签 authoring 种子 | 3 | ComponentRegistry.SetGameplayTagContainer 高 id 建行 |
-| presenter/exchange/query 高槽读 | 2 | PresenterBehaviorSystem 路由；内联初始/定义条件高 id 显式失败关闭 |
-| T16 拆除 | — | ExtensionAttributeRegistry/AttributeSchemaUpdateSystem/接线/测试 删除 |
-| 活差分对比门 | 测试设施 | LUDOTS_COMPARE_LIVE=1（同进程背靠背双测，抗外部负载） |
+| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
+| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
+| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
+| 文档 | 3 | wiki 端口表 |
 
 ## 3. Reuse list
 
-P1 全套基建（store/ambient/reads/highlane）；TagCountContainer 稀疏表（任意 id 天然支持）；TagRuleRegistry 既有 256 注册守卫（高 id 规则失败关闭由此免费获得）；DirtyEntityQueue 既有脏通道。
+- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
+- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
+- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
 
-## 4. New Layer 0 ops
+## 4. New Layer 0 ops (if any)
 
-N/A
+N/A（无新 op，仅既有 op 加可选参数）
 
 ## 5. Transaction boundary
 
-标签事务沿用 TagRuleTransaction 既有合同；高 id 规则不存在故事务不触高车道。
+无（纯查询过滤参数化，无副作用）
 
 ## 6. Config SSOT
 
-容量真相唯一：`GasLoadTimeCapacityPlan`（GameEngine 传参升级为绝对天花板 4096）。基准入库 `benchmark-baseline.json` + `benchmark-final.json`。
+行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
 
-是否新增 JSON schema: NO。
-
-## 7. Red flag scan
-
-- [x] 未新增 profile enum/开关
-- [x] 未新建平行管线（标签写仍 TagOps 单口）
-- [x] 高 id 规则/未对齐跨域全部显式失败关闭（TagRuleNotAligned / RequiredAttributeHighSlot / InlineInitialHighAttribute / HighLaneUnavailable）
-- [x] 计数叠层语义与内嵌对齐（重复 Add 叠层不丢）
-
-## 8. Next variant test
-
-下一个变体（第 300 个标签名/第 200 个属性名）零代码改动：注册窗口直接登记，UAT `GasTagCapacityTests`/`GasWorldAttributeStoreTests` 钉死全链。
+是否新增 JSON schema: **NO**

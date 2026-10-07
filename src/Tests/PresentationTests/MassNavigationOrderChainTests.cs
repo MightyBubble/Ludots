@@ -60,7 +60,7 @@ public sealed class MassNavigationOrderChainTests
             new[]
             {
                 new MassNavigationAgentSeed(
-                    teamId: LocalTeamId,
+                    relationshipDomainId: LocalTeamId,
                     localPositionXCm: 1200f,
                     localPositionYCm: 1300f,
                     heavy: false,

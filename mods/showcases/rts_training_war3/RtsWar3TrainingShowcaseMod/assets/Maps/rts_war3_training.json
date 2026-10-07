@@ -19,8 +19,20 @@
       "Name": "default",
       "SpatialType": "HexGrid",
       "DataFile": "war3_forest.hex",
-      "WidthCells": 16384,
-      "HeightCells": 16384
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
@@ -37,7 +49,13 @@
         "Name": {
           "Value": "Barracks"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "war3_training_barracks",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "rts_war3_footman",
@@ -66,25 +84,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "war3_training_barracks"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "RtsDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsDemo.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

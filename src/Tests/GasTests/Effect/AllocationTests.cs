@@ -1,3 +1,4 @@
+using Ludots.Core.Gameplay.GAS.Input;
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
@@ -175,7 +176,7 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 budget: null,
                 templates: templates,
-                inputRequests: null,
+                promptState: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
@@ -386,6 +387,7 @@ namespace Ludots.Tests.GAS
             gameplayEffect.AggregatesModifiers = true;
             GameplayEffectFactory.AddModifier(world, effect, attrId, ModifierOp.Add, 7f);
             That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+            tagOps.AggregateDirty.MarkDirty(target);
 
             const int timedTagId = 7;
             ref var tags = ref world.Get<GameplayTagContainer>(target);

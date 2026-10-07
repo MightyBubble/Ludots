@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Association;
+using Ludots.Core.Gameplay.Components;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships.Config;
@@ -21,6 +23,9 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
         private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
+        private OwnershipResolver? _identityOwnership;
+        private int _identityOwnsTypeId = -1;
+        private int _identityMemberOfTypeId = -1;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -42,6 +47,42 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
+        }
+
+        public void BindParticipantIdentityProjection(OwnershipResolver ownership, int ownsTypeId, int memberOfTypeId)
+        {
+            _identityOwnership = ownership ?? throw new ArgumentNullException(nameof(ownership));
+            if (ownsTypeId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ownsTypeId));
+            }
+
+            if (memberOfTypeId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(memberOfTypeId));
+            }
+
+            _identityOwnsTypeId = ownsTypeId;
+            _identityMemberOfTypeId = memberOfTypeId;
+        }
+
+        private void ProjectParticipantIdentity(Entity source, Entity target, int typeId)
+        {
+            if (_identityOwnership == null)
+            {
+                return;
+            }
+
+            if (typeId == _identityOwnsTypeId)
+            {
+                ParticipantIdentityProjector.SyncPlayerOwner(_world, target, _identityOwnership);
+                return;
+            }
+
+            if (typeId == _identityMemberOfTypeId && _world.IsAlive(target) && _world.Has<TeamIdentity>(target))
+            {
+                ParticipantIdentityProjector.SyncTeam(_world, source, this, _identityMemberOfTypeId);
+            }
         }
 
         /// <summary>#1570：引擎装配期注入（tagOps 在 runtime 之后构造）；metric 写穿前必须已装。</summary>
@@ -219,6 +260,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
+            ProjectParticipantIdentity(source, target, validatedTypeId);
             Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
             SeedMetricDefaults(relationshipEntity);
             _changes.TryAdd(new RelationshipChangeRecord(
@@ -256,6 +298,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
+            ProjectParticipantIdentity(source, target, validatedTypeId);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
                 metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
@@ -385,6 +428,120 @@ namespace Ludots.Core.Gameplay.Relationships
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
             _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, oldValue: 0, newValue: 0, oldFlags, newFlags));
+        }
+
+        public int CaptureChangeCount() => _changes.Count;
+
+        public void TruncateChanges(int count) => _changes.Truncate(count);
+
+        public bool AreLinkEndpointsAlive(Entity source, Entity target)
+            => IsAliveInRuntimeWorld(source) && IsAliveInRuntimeWorld(target);
+
+        public void RequireLinkEndpoints(Entity source, Entity target)
+            => EnsureAliveInRuntimeWorld(source, target);
+
+        public int RequireRelationshipTypeId(int typeId) => ValidateTypeId(typeId);
+
+        public short ClampMetric(int metricId, int value)
+        {
+            _metrics.Get(metricId);
+            return ClampToDefinition(metricId, value);
+        }
+
+        public short MetricDefault(int metricId) => _metrics.Get(metricId).DefaultValue;
+
+        public uint RequireFlagMask(int flagId) => _flags.GetMask(flagId);
+
+        public RelationshipEdge CreateDefaultEdge() => RelationshipEdge.CreateDefault(_metrics);
+
+        public bool TryCopyEdge(Entity source, Entity target, int typeId, out RelationshipEdge edge)
+        {
+            if (!TryGetEdge(source, target, typeId, out edge))
+            {
+                return false;
+            }
+
+            edge = edge.Clone();
+            return true;
+        }
+
+        public int CopyLinkTypeIds(Entity source, Entity target, Span<int> destination)
+        {
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target) ||
+                !TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
+            {
+                return 0;
+            }
+
+            if (set.Count > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Relationship pair {source.Id}->{target.Id} has {set.Count} types; the staging buffer holds {destination.Length}.");
+            }
+
+            for (int i = 0; i < set.Count; i++)
+            {
+                set.TryGetAt(i, out int typeId, out _);
+                destination[i] = typeId;
+            }
+
+            return set.Count;
+        }
+
+        public void RestoreEdge(Entity source, Entity target, int typeId, bool existed, in RelationshipEdge edge)
+        {
+            bool now = HasLink(source, target, typeId);
+            if (!existed)
+            {
+                if (now)
+                {
+                    RemoveLink(source, target, typeId);
+                }
+
+                return;
+            }
+
+            if (!now)
+            {
+                EnsureLink(source, target, typeId);
+            }
+
+            for (int metricId = 0; metricId < _metrics.Count; metricId++)
+            {
+                short want = edge.GetMetric(metricId);
+                if (GetMetric(source, target, typeId, metricId) != want)
+                {
+                    SetMetric(source, target, typeId, metricId, want);
+                }
+            }
+
+            if (!TryGetEdge(source, target, typeId, out RelationshipEdge current))
+            {
+                throw new InvalidOperationException(
+                    $"Relationship edge {source.Id}->{target.Id} type {typeId} disappeared while restoring a committed effect write.");
+            }
+
+            if (current.Flags == edge.Flags)
+            {
+                return;
+            }
+
+            for (int flagId = 0; flagId < 32; flagId++)
+            {
+                uint mask = 1u << flagId;
+                bool wantOn = (edge.Flags & mask) != 0;
+                if (!TryGetEdge(source, target, typeId, out current))
+                {
+                    throw new InvalidOperationException(
+                        $"Relationship edge {source.Id}->{target.Id} type {typeId} disappeared while restoring flags.");
+                }
+
+                bool haveOn = (current.Flags & mask) != 0;
+                if (wantOn != haveOn)
+                {
+                    SetFlag(source, target, typeId, flagId, wantOn);
+                }
+            }
         }
 
         public bool TryGetHighestMetricTarget(Entity source, ReadOnlySpan<Entity> candidates, int typeId, int metricId, out Entity target, out short value)

@@ -127,7 +127,7 @@ export class HudRenderer {
 
   private resolveHudText(item: ScreenHudItem): string {
     if (item.textPacket && item.textTemplate) {
-      const text = this.formatTextPacket(item.textPacket, item.textTemplate);
+      const text = this.formatTextPacket(item.textPacket, item.textTemplate, item.textTemplates);
       if (text) {
         return text;
       }
@@ -151,7 +151,7 @@ export class HudRenderer {
 
   private resolveOverlayText(item: ScreenOverlayItem): string {
     if (item.textPacket && item.textTemplate) {
-      const text = this.formatTextPacket(item.textPacket, item.textTemplate);
+      const text = this.formatTextPacket(item.textPacket, item.textTemplate, item.textTemplates);
       if (text) {
         return text;
       }
@@ -160,7 +160,11 @@ export class HudRenderer {
     return item.text;
   }
 
-  private formatTextPacket(packet: PresentationTextPacket, template: string): string {
+  private formatTextPacket(
+    packet: PresentationTextPacket,
+    template: string,
+    templates?: Map<number, string>,
+  ): string {
     if (packet.tokenId <= 0 || !template) {
       return '';
     }
@@ -189,7 +193,7 @@ export class HudRenderer {
           continue;
         }
 
-        text += this.formatTextArg(packet, argIndex);
+        text += this.formatTextArg(packet, argIndex, templates);
         i = closeIndex;
         continue;
       }
@@ -208,7 +212,11 @@ export class HudRenderer {
     return text;
   }
 
-  private formatTextArg(packet: PresentationTextPacket, argIndex: number): string {
+  private formatTextArg(
+    packet: PresentationTextPacket,
+    argIndex: number,
+    templates?: Map<number, string>,
+  ): string {
     if (argIndex < 0 || argIndex >= packet.argCount || argIndex >= packet.args.length) {
       return '';
     }
@@ -232,9 +240,45 @@ export class HudRenderer {
             return value.toFixed(3).replace(/\.?0+$/, '');
         }
       }
+      case 4:
+        return this.formatNestedTextToken(templates?.get(arg.raw32), arg.raw32);
       default:
         return '';
     }
+  }
+
+  private formatNestedTextToken(source: string | undefined, tokenId: number): string {
+    if (source == null) {
+      throw new Error(`Presentation text token argument ${tokenId} is missing from the template table.`);
+    }
+
+    let text = '';
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '{') {
+        if (i + 1 < source.length && source[i + 1] === '{') {
+          text += '{';
+          i++;
+          continue;
+        }
+
+        throw new Error(`Presentation text token argument ${tokenId} must be a zero-argument template.`);
+      }
+
+      if (ch === '}') {
+        if (i + 1 < source.length && source[i + 1] === '}') {
+          text += '}';
+          i++;
+          continue;
+        }
+
+        throw new Error(`Presentation text token argument ${tokenId} must be a zero-argument template.`);
+      }
+
+      text += ch;
+    }
+
+    return text;
   }
 
   private int32BitsToFloat32(raw32: number): number {

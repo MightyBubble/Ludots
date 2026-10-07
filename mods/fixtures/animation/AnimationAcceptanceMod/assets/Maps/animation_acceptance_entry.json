@@ -11,9 +11,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 256,
-      "HeightCells": 256,
-      "GridCellSizeCm": 100
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
@@ -23,11 +31,31 @@
   "Entities": [
     {
       "Template": "animation_acceptance_tank",
-      "InstanceId": "animation-acceptance-tank"
+      "InstanceId": "animation-acceptance-tank",
+      "Relations": [
+        {
+          "To": "animation-acceptance-tank",
+          "Type": "Friendly"
+        },
+        {
+          "To": "animation-acceptance-humanoid",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "animation_acceptance_humanoid",
-      "InstanceId": "animation-acceptance-humanoid"
+      "InstanceId": "animation-acceptance-humanoid",
+      "Relations": [
+        {
+          "To": "animation-acceptance-humanoid",
+          "Type": "Friendly"
+        },
+        {
+          "To": "animation-acceptance-tank",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",

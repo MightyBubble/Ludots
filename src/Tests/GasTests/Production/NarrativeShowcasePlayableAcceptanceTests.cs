@@ -1469,9 +1469,11 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreInputMod.ViewMode.ViewModeManager.ActiveModeIdKey, out var modeIdObj) && modeIdObj is string modeId
-                ? modeId
-                : string.Empty;
+            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            {
+                Ludots.Core.Input.Orders.CastModeType.SmartCast => "Interaction.Mode.LoL",
+                _ => string.Empty
+            };
         }
         private static void CaptureSnapshot(
             GameEngine engine,

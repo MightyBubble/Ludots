@@ -25,7 +25,17 @@
   "Entities": [
     {
       "InstanceId": "case-e-commander",
-      "Template": "case_e_commander"
+      "Template": "case_e_commander",
+      "Relations": [
+        {
+          "To": "case-e-commander",
+          "Type": "Friendly"
+        },
+        {
+          "To": "case-e-raider-1",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "case-e-marine-1",
@@ -89,7 +99,17 @@
             "Y": 1800
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "case-e-raider-1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "case-e-commander",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "case-e-raider-2",

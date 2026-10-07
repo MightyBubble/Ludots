@@ -152,15 +152,25 @@ namespace Ludots.Core.Config
 
         private JsonNode ResolveOverrideData(string componentName, JsonNode overrideNode)
         {
+            JsonNode templateNode = null;
+            if (_activeTemplate != null)
+            {
+                _activeTemplate.Components.TryGetValue(componentName, out templateNode);
+            }
+
+            return MergeComponentOverride(templateNode, overrideNode);
+        }
+
+        internal static JsonNode MergeComponentOverride(JsonNode templateComponent, JsonNode overrideNode)
+        {
             if (TryConsumeReplaceMarker(overrideNode, out JsonNode replaced))
             {
                 return replaced;
             }
 
-            if (_activeTemplate != null &&
-                _activeTemplate.Components.TryGetValue(componentName, out JsonNode templateNode))
+            if (templateComponent != null)
             {
-                var merged = templateNode.DeepClone();
+                JsonNode merged = templateComponent.DeepClone();
                 JsonMerger.Merge(merged, overrideNode);
                 return merged;
             }

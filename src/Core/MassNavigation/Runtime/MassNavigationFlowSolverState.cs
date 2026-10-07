@@ -281,6 +281,9 @@ public sealed partial class MassNavigationFlowSolverState
         return new Vector2(localCm.X + _worldOriginXCm, localCm.Y + _worldOriginYcm);
     }
 
+    public float LocalToWorldXCm(float localXCm) => localXCm + _worldOriginXCm;
+    public float LocalToWorldYCm(float localYCm) => localYCm + _worldOriginYcm;
+
     public float GetPositionX(int index) => _positionsCm[index << 1];
     public float GetPositionY(int index) => _positionsCm[(index << 1) + 1];
 
@@ -440,14 +443,12 @@ public sealed partial class MassNavigationFlowSolverState
         for (int i = 0; i < newAgentSeeds.Length; i++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[i];
-            int teamId = seed.TeamId;
+            int teamId = seed.RelationshipDomainId;
             if (!_teamStateIndexById.TryGetValue(teamId, out _))
             {
                 var state = new TeamRuntimeState(teamId)
                 {
                     UnitCount = 0,
-                    TargetX = seed.LocalPositionXCm,
-                    TargetY = seed.LocalPositionYCm,
                 };
                 _teamStateIndexById[teamId] = _teamStates.Count;
                 _teamStates.Add(state);
@@ -458,16 +459,16 @@ public sealed partial class MassNavigationFlowSolverState
         for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[unitIndex - startIndex];
-            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            if (!_teamStateIndexById.TryGetValue(seed.RelationshipDomainId, out int teamStateIndex))
             {
-                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.TeamId}.");
+                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.RelationshipDomainId}.");
             }
 
             int localIndex = _teamStates[teamStateIndex].UnitCount;
             _teamStates[teamStateIndex].UnitCount++;
             int i2 = unitIndex << 1;
             ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
-            _teams[unitIndex] = seed.TeamId;
+            _teams[unitIndex] = seed.RelationshipDomainId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = localIndex;
             _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
@@ -495,6 +496,10 @@ public sealed partial class MassNavigationFlowSolverState
             _arrivalEventEmittedFlags[unitIndex] = 0;
             _unitRetryCounts[unitIndex] = 0;
             _unitStuckSeconds[unitIndex] = 0f;
+            if (!_teamStates[teamStateIndex].HasAuthoredTarget)
+            {
+                AnchorUnitToCurrentPosition(unitIndex);
+            }
         }
 
         UnitCount = newTotal;
@@ -714,7 +719,21 @@ public sealed partial class MassNavigationFlowSolverState
             MarkEntityDirty(index);
         }
 
-        if (resetRecovery || wasInactive)
+        // A settled (held or arrived) unit must mobilize when the incoming
+        // target sits beyond its stop threshold — an explicit far target is a
+        // move request, and per-frame slot drift past the threshold means the
+        // formation left the unit behind. Within-threshold drift keeps it
+        // settled, so gliding slots do not churn the arrival machinery.
+        float effectiveStopThresholdCm = stopThresholdCm > 0f
+            ? stopThresholdCm
+            : Semantics.Group.UnitTargetStopThresholdCm;
+        float wakeDx = xCm - _positionsCm[offset];
+        float wakeDy = yCm - _positionsCm[offset + 1];
+        bool wakesSettledUnit =
+            targetChanged &&
+            _unitSettledFlags[index] != 0 &&
+            ((wakeDx * wakeDx) + (wakeDy * wakeDy)) > effectiveStopThresholdCm * effectiveStopThresholdCm;
+        if (resetRecovery || wasInactive || wakesSettledUnit)
         {
             ResetUnitArrivalState(index, clearRetryCount: true);
         }
@@ -841,10 +860,20 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow release target index {index} exceeds current unit count {UnitCount}.");
         }
 
-        ResetUnitArrivalState(index, clearRetryCount: true);
-        _hasUnitTarget[index] = 0;
-        _unitTargetStopThresholdsCm[index] = 0f;
-        _arrivalEventEmittedFlags[index] = 0;
+        if (_teamStates[_teamRuntimeIndices[index]].HasAuthoredTarget)
+        {
+            ResetUnitArrivalState(index, clearRetryCount: true);
+            _hasUnitTarget[index] = 0;
+            _unitTargetStopThresholdsCm[index] = 0f;
+            _arrivalEventEmittedFlags[index] = 0;
+        }
+        else
+        {
+            // No team sink to fall back to: the released unit holds where it
+            // stands instead of drifting as a free body.
+            AnchorUnitToCurrentPosition(index);
+        }
+
         MarkEntityDirty(index);
     }
 
@@ -856,6 +885,18 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow hold target index {index} exceeds current unit count {UnitCount}.");
         }
 
+        AnchorUnitToCurrentPosition(index);
+        EnqueueArrivalEvent(index);
+        MarkEntityDirty(index);
+    }
+
+    // Parallel-step-safe hold core: only per-agent slots, no arrival event and no
+    // shared dirty marking, so it can run inside StepRange jobs. Held units stay
+    // in the separation/obstacle scans (hard-resolve candidates keep getting
+    // marked) and wake to walk back to the anchor when pushed past the
+    // arrival-recovery threshold.
+    private void AnchorUnitToCurrentPosition(int index)
+    {
         int offset = index << 1;
         float x = _positionsCm[offset];
         float y = _positionsCm[offset + 1];
@@ -866,8 +907,6 @@ public sealed partial class MassNavigationFlowSolverState
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
-        EnqueueArrivalEvent(index);
-        MarkEntityDirty(index);
     }
 
     public Vector2 ResolveUnitNavigableTarget(
@@ -1213,6 +1252,21 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 FlowRuntimeState flowState = _flowStates[i];
                 TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+                if (!team.HasAuthoredTarget)
+                {
+                    // No scenario-authored sink: idle authored agents hold position and
+                    // never sample the flow, so the field stays zeroed.
+                    if (flowState.LastComputedCostRevision != -1)
+                    {
+                        Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
+                        flowState.LastComputedCostRevision = -1;
+                        flowState.LastComputedTargetX = float.NaN;
+                        flowState.LastComputedTargetY = float.NaN;
+                    }
+
+                    continue;
+                }
+
                 if (crowdStampBudgetUnits == 0 &&
                     flowState.LastComputedCostRevision == _staticCostRevision &&
                     flowState.LastComputedTargetX == team.TargetX &&
@@ -1373,6 +1427,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 TargetX = target.X,
                 TargetY = target.Y,
+                HasAuthoredTarget = true,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1440,6 +1495,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 TargetX = target.X,
                 TargetY = target.Y,
+                HasAuthoredTarget = true,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1453,7 +1509,7 @@ public sealed partial class MassNavigationFlowSolverState
         _teamStateIndexById.Clear();
         for (int i = 0; i < agentSeeds.Length; i++)
         {
-            int teamId = agentSeeds[i].TeamId;
+            int teamId = agentSeeds[i].RelationshipDomainId;
             if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
             {
                 _teamStates[teamStateIndex].UnitCount++;
@@ -1463,8 +1519,6 @@ public sealed partial class MassNavigationFlowSolverState
             var state = new TeamRuntimeState(teamId)
             {
                 UnitCount = 1,
-                TargetX = agentSeeds[i].LocalPositionXCm,
-                TargetY = agentSeeds[i].LocalPositionYCm,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1588,6 +1642,15 @@ public sealed partial class MassNavigationFlowSolverState
         {
             FlowRuntimeState flowState = _flowStates[i];
             TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+            if (!team.HasAuthoredTarget)
+            {
+                Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
+                flowState.LastComputedCostRevision = -1;
+                flowState.LastComputedTargetX = float.NaN;
+                flowState.LastComputedTargetY = float.NaN;
+                continue;
+            }
+
             RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
             ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
         }
@@ -1715,14 +1778,14 @@ public sealed partial class MassNavigationFlowSolverState
         for (int unitIndex = 0; unitIndex < agentSeeds.Length; unitIndex++)
         {
             MassNavigationAgentSeed seed = agentSeeds[unitIndex];
-            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            if (!_teamStateIndexById.TryGetValue(seed.RelationshipDomainId, out int teamStateIndex))
             {
-                throw new InvalidOperationException($"MassNavigationFlow agent seed references unregistered team {seed.TeamId}.");
+                throw new InvalidOperationException($"MassNavigationFlow agent seed references unregistered team {seed.RelationshipDomainId}.");
             }
 
             int i2 = unitIndex << 1;
             ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
-            _teams[unitIndex] = seed.TeamId;
+            _teams[unitIndex] = seed.RelationshipDomainId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
             _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
@@ -1740,6 +1803,10 @@ public sealed partial class MassNavigationFlowSolverState
             _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
             _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            if (!_teamStates[teamStateIndex].HasAuthoredTarget)
+            {
+                AnchorUnitToCurrentPosition(unitIndex);
+            }
         }
 
         _maxInteractingBodyRadiiDirty = true;
@@ -2069,7 +2136,7 @@ public sealed partial class MassNavigationFlowSolverState
                         unitArrivalFactor = 0f;
                     }
                 }
-                else
+                else if (team.HasAuthoredTarget)
                 {
                     hasGoalTarget = true;
                     int gx = (int)(px / _flowCellSizeCm);
@@ -2144,6 +2211,19 @@ public sealed partial class MassNavigationFlowSolverState
                         desiredX = flowX;
                         desiredY = flowY;
                     }
+                }
+                else
+                {
+                    // No unit target and no scenario-authored team target: hold
+                    // position at an anchor planted where idleness began. The
+                    // separation/obstacle scans below still run (hard-resolve
+                    // candidates keep getting marked), and a push past the
+                    // arrival-recovery threshold wakes the unit to walk back —
+                    // the same contract as released order members. A free-body
+                    // fall-through here lets obstacle soft-push and crowd shoves
+                    // displace idle agents with nothing pulling them home.
+                    AnchorUnitToCurrentPosition(i);
+                    suppressTargetMotion = true;
                 }
             }
 

@@ -38,9 +38,6 @@ namespace Ludots.Platform.Abstractions
         AbilityAimEnded = 61,
         AbilityAimBegun = 62,
         AbilityAimSlotAdvanced = 63,
-        MovePathUpdated = 64,
-        MovePathEnded = 65,
-        MovePathBegun = 66,
 
         // Entity collection presentation events
         EntityCollectionMemberAdded = 70,

@@ -551,7 +551,6 @@ namespace Ludots.Core.Engine
             Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {session.MapId.Value}...");
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
             CaptureFocusedParticipantOverrides(session);
-            session.TeamRelationships = TeamManager.CaptureSnapshot();
             TryActivateNetworkRuntime();
         }
 
@@ -560,7 +559,6 @@ namespace Ludots.Core.Engine
             session.TeamEntityLookup = participants.Teams;
             session.PlayerEntityLookup = participants.Players;
             session.LocalSeats = participants.LocalSeats;
-            session.TeamRelationships = participants.TeamRelationships;
 
             SeedPlayerInteractionPrefs(participants.Players);
 
@@ -603,8 +601,7 @@ namespace Ludots.Core.Engine
                 new ParticipantBindingResult(
                     session.TeamEntityLookup,
                     session.PlayerEntityLookup,
-                    session.LocalSeats,
-                    session.TeamRelationships));
+                    session.LocalSeats));
         }
 
         private void CaptureFocusedParticipantOverrides(MapSession session)
@@ -663,7 +660,6 @@ namespace Ludots.Core.Engine
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);
-            session.TeamRelationships = TeamManager.CaptureSnapshot();
         }
 
         /// <summary>
@@ -691,11 +687,16 @@ namespace Ludots.Core.Engine
                     "before the MovePlan order adapter can install.");
             }
 
+            // Composite engage plans (MoveThenCast) and legacy profiles submit plain
+            // moveTo orders; on mass-navigation maps those must flow into the same
+            // nav move-plan pipeline (formation slots + arrival completion), so the
+            // adapter accepts both order ids.
+            orderTypes.TryGetId("moveTo", out int legacyMoveOrderTypeId);
             InsertSystemBeforeRequired<IMovePlanCommandGroupExecutionSystem>(
-                new MovePlanOrderProjectionSystem(World, moveOrderTypeId),
+                new MovePlanOrderProjectionSystem(World, moveOrderTypeId, legacyMoveOrderTypeId),
                 SystemGroup.AbilityActivation);
             RegisterSystem(
-                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId),
+                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId, legacyMoveOrderTypeId),
                 SystemGroup.AbilityActivation);
             GlobalContext[MassNavigationMovePlanOrderAdapterInstalledKey] = true;
         }

@@ -99,9 +99,9 @@ namespace Ludots.Tests.GAS
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
-                    inputRequests: new InputRequestQueue(), chainOrders: chainOrders,
+                    promptState: new ResponseChainPromptState(), chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -156,10 +156,10 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget: new GasBudget(),
                     templates: templates,
-                    inputRequests: new InputRequestQueue(),
+                    promptState: new ResponseChainPromptState(),
                     chainOrders: new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64)),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -219,9 +219,9 @@ namespace Ludots.Tests.GAS
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
-                    inputRequests: new InputRequestQueue(), chainOrders: chainOrders,
+                    promptState: new ResponseChainPromptState(), chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)
@@ -334,10 +334,10 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 budget: new GasBudget(),
                 templates: templates,
-                inputRequests: new InputRequestQueue(),
+                promptState: new ResponseChainPromptState(),
                 chainOrders: new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64)),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
 
             proposalSys.Update(0.016f);
 
@@ -376,7 +376,7 @@ namespace Ludots.Tests.GAS
                 },
                 new TargetFilterDescriptor
                 {
-                    RelationFilter = RelationshipFilter.All,
+                    RelationFilter = RelationFilter.All,
                 },
                 new TargetDispatchDescriptor
                 {
@@ -387,7 +387,8 @@ namespace Ludots.Tests.GAS
                 buffer,
                 candidateCount: 1,
                 budget,
-                commands);
+                commands,
+                teamRelations: null);
 
             That(count, Is.EqualTo(1));
             That(commands.Count, Is.EqualTo(1));
@@ -516,8 +517,6 @@ namespace Ludots.Tests.GAS
             var abilityExec = new AbilityExecSystem(
                 world,
                 clock,
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 requests,
                 snapshotCapacity: 16,
                 abilityDefinitions: abilityDefinitions,
@@ -559,7 +558,7 @@ namespace Ludots.Tests.GAS
                 phaseExecutor: phaseExecutor,
                 aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(),
                 graphApi: graphApi,
-                tagOps: tagOps,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()),
                 presentationEvents: new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(16));
 
             abilityExec.Update(0f);

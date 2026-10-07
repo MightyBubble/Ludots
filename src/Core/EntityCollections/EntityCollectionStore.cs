@@ -7,7 +7,6 @@ namespace Ludots.Core.EntityCollections
 {
     public sealed class EntityCollectionStore
     {
-        internal readonly CollectionWrite.Scratch WriteScratch = new();
         public IEntityCollectionSource RequireSource(Entity owner, int keyId) =>
             _sources.TryGetValue((owner, keyId), out SourceBinding? binding) ? binding.Source :
                 throw new InvalidOperationException("COLLECTION.ERR.DerivedSourceRequired");
@@ -26,6 +25,21 @@ namespace Ludots.Core.EntityCollections
                 }
                 if (!found.HasValue) return;
                 Remove(found.Value.Owner, found.Value.Key);
+            }
+        }
+
+        /// <summary>Removes every bound collection; used at world-restore boundaries where all
+        /// entity references the sources held belong to the replaced world.</summary>
+        public void Clear()
+        {
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot] &&
+                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
+                    _owners[slot] != Entity.Null)
+                {
+                    Remove(_owners[slot], payload.KeyId);
+                }
             }
         }
 

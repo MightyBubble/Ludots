@@ -22,6 +22,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly Gameplay.Rng.RngPickService? _rngPicks;
         private readonly PresentationTextCatalog? _presentationTextCatalog;
         private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -32,7 +33,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             GraphLookupTableRegistry? lookupTables = null,
             Gameplay.Rng.RngPickService? rngPicks = null,
             PresentationTextCatalog? presentationTextCatalog = null,
-            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null)
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null,
+            Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -43,6 +45,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _rngPicks = rngPicks;
             _presentationTextCatalog = presentationTextCatalog;
             _orderTypes = orderTypes;
+            _eqsQueries = eqsQueries;
+        }
+
+        public int ResolveEqsQuery(string name)
+        {
+            if (_eqsQueries == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references EQS query '{name}', but no EqsQueryRegistry was provided.");
+            }
+
+            if (!_eqsQueries.Ids.TryGetId(name, out int queryId) || queryId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown EQS query '{name}'. Declare it in Spatial/eqs_queries.json before loading graph programs.");
+            }
+
+            return queryId;
         }
 
         public int ResolveOrderType(string name)

@@ -23,6 +23,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly Dictionary<int, ScreenHudResolvedTextCacheEntry> _screenHudResolvedTextCache = new();
         private int _lastScreenHudRevision = -1;
         private bool _screenHudBuilt;
+        private int _sceneLocaleId = int.MinValue;
 
         public PresentationOverlaySceneBuilder(
             ScreenHudBatchBuffer screenHud,
@@ -45,6 +46,11 @@ namespace Ludots.Core.Presentation.Hud
             if (scene == null)
             {
                 throw new ArgumentNullException(nameof(scene));
+            }
+
+            if (ConsumeLocaleChange() && _screenHudBuilt)
+            {
+                _screenHudBuilt = false;
             }
 
             // 终局合同：screenHud 双计数为零而 scene 的 UnderUi 仍有条目 = 增量移除链已漏，
@@ -229,7 +235,7 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        item.DirtySerial);
+                        SceneTextSerial(item.DirtySerial));
                 }
             }
 
@@ -328,15 +334,15 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     if (appendOnly)
                     {
-                        scene.TryAppendText(
-                            PresentationOverlayLayer.UnderUi,
-                            item.ScreenX,
-                            item.ScreenY,
-                            text,
-                            item.FontSize <= 0 ? 16 : item.FontSize,
-                            item.Color0,
-                            item.StableId,
-                            item.DirtySerial);
+                    scene.TryAppendText(
+                        PresentationOverlayLayer.UnderUi,
+                        item.ScreenX,
+                        item.ScreenY,
+                        text,
+                        item.FontSize <= 0 ? 16 : item.FontSize,
+                        item.Color0,
+                        item.StableId,
+                        SceneTextSerial(item.DirtySerial));
                         continue;
                     }
 
@@ -348,7 +354,7 @@ namespace Ludots.Core.Presentation.Hud
                         item.FontSize <= 0 ? 16 : item.FontSize,
                         item.Color0,
                         item.StableId,
-                        item.DirtySerial);
+                        SceneTextSerial(item.DirtySerial));
                 }
             }
         }
@@ -376,7 +382,7 @@ namespace Ludots.Core.Presentation.Hud
                                     item.FontSize <= 0 ? 16 : item.FontSize,
                                     item.Color,
                                     item.StableId,
-                                    item.DirtySerial);
+                                    SceneTextSerial(item.DirtySerial));
                             }
 
                             break;
@@ -425,10 +431,12 @@ namespace Ludots.Core.Presentation.Hud
         private string? ResolveScreenHudText(in ScreenHudTextItem item)
         {
             bool allowResolvedCache = item.Text.HasValue || item.Id0 != 0 || item.Id1 != 0;
+            int localeId = ActiveLocaleId;
             if (allowResolvedCache &&
                 item.StableId != 0 &&
                 _screenHudResolvedTextCache.TryGetValue(item.StableId, out ScreenHudResolvedTextCacheEntry cached) &&
-                cached.DirtySerial == item.DirtySerial)
+                cached.DirtySerial == item.DirtySerial &&
+                cached.LocaleId == localeId)
             {
                 return cached.Text;
             }
@@ -533,7 +541,37 @@ namespace Ludots.Core.Presentation.Hud
                 return;
             }
 
-            _screenHudResolvedTextCache[item.StableId] = new ScreenHudResolvedTextCacheEntry(item.DirtySerial, text);
+            _screenHudResolvedTextCache[item.StableId] = new ScreenHudResolvedTextCacheEntry(item.DirtySerial, ActiveLocaleId, text);
+        }
+
+        private int ActiveLocaleId => _localeSelection?.ActiveLocaleId ?? 0;
+
+        // 场景把相同 DirtySerial 当成同一句字。语种变了字也要变，所以画面序号混入当前语种。
+        private int SceneTextSerial(int dirtySerial)
+        {
+            int localeId = ActiveLocaleId;
+            if (localeId == 0 || dirtySerial == 0)
+            {
+                return dirtySerial;
+            }
+
+            int mixed = unchecked((dirtySerial * 16777619) ^ localeId);
+            mixed &= int.MaxValue;
+            return mixed == 0 ? 1 : mixed;
+        }
+
+        private bool ConsumeLocaleChange()
+        {
+            int localeId = ActiveLocaleId;
+            if (localeId == _sceneLocaleId)
+            {
+                return false;
+            }
+
+            _sceneLocaleId = localeId;
+            _screenHudResolvedTextCache.Clear();
+            _textPacketCache.Clear();
+            return true;
         }
 
         private readonly record struct TextPacketCacheKey(
@@ -558,6 +596,7 @@ namespace Ludots.Core.Presentation.Hud
 
         private readonly record struct ScreenHudResolvedTextCacheEntry(
             int DirtySerial,
+            int LocaleId,
             string Text);
     }
 }

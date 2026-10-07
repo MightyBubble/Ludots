@@ -190,6 +190,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.AddInt:
+                case GraphNodeOp.SubInt:
                 case GraphNodeOp.CompareLtInt:
                 case GraphNodeOp.CompareEqInt:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -405,6 +406,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCommandIntent:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
+                    ValidateSubmitGroundLayout(node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
                     {
@@ -413,7 +416,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.SubmitEngageBatch:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
+                    RequireNonEmpty(node.EngageProfile, "engageProfile", node, graphId, diagnostics);
+                    RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SubmitCast:
+                    ValidateSubmitQueue(node, graphId, diagnostics);
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
@@ -480,9 +492,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     if (op.NodeOp == GraphNodeOp.QueryFilterRelationship)
                     {
-                        RequireNonEmpty(node.RelationshipMode, "relationshipMode", node, graphId, diagnostics);
+                        RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
                     }
 
+                    break;
+
+                case GraphNodeOp.QueryFilterSelectable:
                     break;
 
                 case GraphNodeOp.TargetListGet:
@@ -698,7 +713,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitAssignedOrder:
-                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
@@ -707,7 +726,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CompleteActiveOrder:
                     break;
                 case GraphNodeOp.LoadOrderTypeId:
+                case GraphNodeOp.SubmitResponseChainOrder:
                     RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.ActivateVirtualCamera:
+                    RequireNonEmpty(node.Camera, "camera", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadEntityPosValid:
@@ -805,6 +828,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
+                case GraphNodeOp.ApplyCalendarStart:
+                case GraphNodeOp.SetCalendarDayIndex:
+                case GraphNodeOp.SetCalendarTicksIntoDay:
+                    ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by linear ControlFlow compiler.", node.Id));
@@ -812,6 +860,41 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             _ = controlEdges;
+        }
+
+        private static void ValidateSubmitGroundLayout(GraphControlFlowNode node, string graphId, List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Layout == null)
+            {
+                if (node.LayoutSpacingCm != 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                        $"Node '{node.Id}' sets layoutSpacingCm without a layout.", node.Id));
+                }
+
+                return;
+            }
+
+            if (!SubmitGroundLayout.IsKnown(node.Layout))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                    $"Node '{node.Id}' layout must be '{SubmitGroundLayout.PreserveRelativeName}' or '{SubmitGroundLayout.ActorOrderName}' (got '{node.Layout}').", node.Id));
+            }
+
+            if (node.LayoutSpacingCm <= 0)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitGroundLayout,
+                    $"Node '{node.Id}' layout '{node.Layout}' needs a positive layoutSpacingCm.", node.Id));
+            }
+        }
+
+        private static void ValidateSubmitQueue(GraphControlFlowNode node, string graphId, List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Queue != null && !SubmitQueueFlags.IsKnown(node.Queue))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidSubmitQueue,
+                    $"Node '{node.Id}' queue must be '{SubmitQueueFlags.OnQueueModifierName}' or '{SubmitQueueFlags.AlwaysName}' (got '{node.Queue}').", node.Id));
+            }
         }
 
         private static void RequireNonEmpty(
@@ -1119,6 +1202,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.AddInt:
+                case GraphNodeOp.SubInt:
                 case GraphNodeOp.CompareLtInt:
                 case GraphNodeOp.CompareEqInt:
                     instruction.A = ResolveValueInput(
@@ -1450,6 +1534,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitCommandIntent:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
+                    instruction.C = SubmitGroundLayout.Encode(node.Layout);
+                    instruction.Imm = node.LayoutSpacingCm;
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1460,7 +1547,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         : byte.MaxValue;
                     break;
 
+                case GraphNodeOp.SubmitEngageBatch:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
+                    instruction.Imm = RequireSymbol(node.EngageProfile, "engageProfile", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.OrderTypeKey, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SubmitCast:
+                    instruction.Flags = SubmitQueueFlags.Encode(node.Queue);
                     instruction.Imm = RequireSymbol(node.OrderTypeKey, "orderTypeKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
@@ -1566,12 +1666,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
 
                 case GraphNodeOp.QueryFilterRelationship:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = ParseLinearRelationshipFilterMode(node.RelationshipMode, node, graphId, diagnostics);
+                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
 
                 case GraphNodeOp.TargetListGet:
@@ -1864,9 +1966,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.SubmitAssignedOrder:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Target))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1880,7 +1984,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadOrderTypeId:
+                case GraphNodeOp.SubmitResponseChainOrder:
                     instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ActivateVirtualCamera:
+                    instruction.Imm = RequireSymbol(node.Camera, "camera", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadEntityPosValid:
@@ -2012,6 +2121,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                case GraphNodeOp.ReadCalendarCyclePhaseIndex:
+                case GraphNodeOp.ReadCalendarDaysUntilPhase:
+                case GraphNodeOp.LoadConfigKey:
+                case GraphNodeOp.ApplyCalendarStart:
+                case GraphNodeOp.SetCalendarDayIndex:
+                case GraphNodeOp.SetCalendarTicksIntoDay:
+                    EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    EmitTimeFlowNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by linear ControlFlow compiler.", node.Id));
@@ -2076,42 +2240,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return Enum.TryParse(trimmed, ignoreCase: false, out surface) &&
                    Enum.IsDefined(typeof(GraphPresentationTextSurface), surface) &&
                    string.Equals(surface.ToString(), trimmed, StringComparison.Ordinal);
-        }
-
-        private static int ParseLinearRelationshipFilterMode(
-            string? mode,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(mode))
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                    $"Node '{node.Id}' requires a non-empty relationshipMode.", node.Id));
-                return 0;
-            }
-
-            return mode switch
-            {
-                "Hostile" => 1,
-                "Friendly" => 2,
-                "Neutral" => 3,
-                "NotFriendly" => 4,
-                "NotHostile" => 5,
-                _ => AddLinearUnsupportedRelationshipMode(mode, node, graphId, diagnostics),
-            };
-        }
-
-        private static int AddLinearUnsupportedRelationshipMode(
-            string mode,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                $"Node '{node.Id}' has unsupported relationshipMode '{mode}'. Supported: Hostile, Friendly, Neutral, NotFriendly, NotHostile.",
-                node.Id));
-            return 0;
         }
 
         private static byte RequirePayloadPresetSymbol(

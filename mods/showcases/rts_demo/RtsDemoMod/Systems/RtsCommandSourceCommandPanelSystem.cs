@@ -24,6 +24,7 @@ namespace RtsDemoMod.Systems
         private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
         private MapConfig? _cachedMapConfig;
+        private MapConfig? _openingFocusPublishedForMap;
         private RtsCommandSourceUiMapConfig? _cachedUiConfig;
         private bool _skillBarVisibilityOwned;
         private bool _hadPreviousSkillBarVisibility;
@@ -69,6 +70,7 @@ namespace RtsDemoMod.Systems
 
             if (!IsPanelTarget(commandSource, localPlayerId))
             {
+                TryPublishOpeningFocus(localPlayerId);
                 SetVisible(service, _commandDeckHandle, visible: false);
                 SetVisible(service, _orderMonitorHandle, visible: false);
                 _lastTarget = Entity.Null;
@@ -133,9 +135,44 @@ namespace RtsDemoMod.Systems
                    owner.PlayerId == localPlayerId;
         }
 
-        // TODO(#711-merge): main removed the name-based default command source seeding (FindFallbackTarget
-        // chain) — ownership is authored in map data and initial selection comes from the quick-select
-        // toolbar; the PR's per-player seeding path was not resurrected under the seat model.
+        // Initial selection stays with the quick-select toolbar, but the opening view still needs the
+        // authored close framing once: with no command source selected the panel focuses the seat's first
+        // controllable unit through a camera request only - no collection or world writes, which a
+        // map-load seeding of selection state proved to break save/load determinism.
+        private void TryPublishOpeningFocus(int localPlayerId)
+        {
+            MapConfig? mapConfig = _engine.CurrentMapSession?.MapConfig;
+            if (localPlayerId <= 0 || mapConfig == null || ReferenceEquals(mapConfig, _openingFocusPublishedForMap))
+            {
+                return;
+            }
+
+            _openingFocusPublishedForMap = mapConfig;
+            Entity firstControllable = FindFirstControllableUnit(localPlayerId);
+            if (firstControllable != Entity.Null)
+            {
+                RtsShowcaseCommandSourceHelper.WriteCameraFocusRequests(_engine, firstControllable, snapCamera: true);
+            }
+        }
+
+        private Entity FindFirstControllableUnit(int localPlayerId)
+        {
+            var query = new QueryDescription().WithAll<AbilityStateBuffer, PlayerOwner, Ludots.Core.Components.WorldPositionCm>();
+            foreach (ref var chunk in _engine.World.Query(in query))
+            {
+                ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+                for (int index = 0; index < chunk.Count; index++)
+                {
+                    if (owners[index].PlayerId == localPlayerId)
+                    {
+                        return chunk.Entity(index);
+                    }
+                }
+            }
+
+            return Entity.Null;
+        }
+
         private int ResolveLocalPlayerId()
         {
             return ClientLocalSeatAccess.RequireRegistry(_engine).TryGetSoleSeat(out ClientLocalSeat seat) &&

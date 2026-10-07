@@ -276,9 +276,7 @@ public sealed partial class EntityInfoPanelService
             return dirty;
         }
 
-        string title = world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value)
-            ? name.Value
-            : $"Entity #{entity.Id}";
+        string title = ResolveEntityInfoTitle(world, entity);
         dirty |= SetString(_titles, slot, title);
 
         if (!world.TryGet(entity, out EntityTemplateKeyRef templateKey) ||

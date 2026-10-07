@@ -43,7 +43,7 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Entity brute = FindEntity(world, "Utility Autocast Enemy Brute");
         Entity scout = FindEntity(world, "Utility Autocast Enemy Scout");
 
-        AssertParticipantRelationships(engine);
+        AssertTeamRelationEdges(engine);
 
         float injuredBefore = ReadHealth(world, injuredAlly);
         float healthyBefore = ReadHealth(world, healthyAlly);
@@ -98,7 +98,7 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         return engine;
     }
 
-    private static void AssertParticipantRelationships(GameEngine engine)
+    private static void AssertTeamRelationEdges(GameEngine engine)
     {
         TeamEntityLookup teams = engine.GetService(CoreServiceKeys.TeamEntityLookup)
             ?? throw new InvalidOperationException("TeamEntityLookup missing.");
@@ -113,14 +113,12 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Assert.That(teams.TryGet(2, out Entity hostileTeam), Is.True);
         Assert.That(players.TryGet(1, out Entity localPlayer), Is.True);
         Assert.That(players.TryGet(2, out Entity hostilePlayer), Is.True);
-        int participantTypeId = types.GetId("UtilityAutocast.Participant");
-        Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, participantTypeId), Is.True);
-        Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, participantTypeId), Is.True);
-        Assert.That(relationships.HasLink(localPlayer, hostilePlayer, participantTypeId), Is.True);
-        Assert.That(relationships.HasLink(hostilePlayer, localPlayer, participantTypeId), Is.True);
-        Assert.That(relationships.HasLink(localPlayer, friendlyTeam, participantTypeId), Is.True);
-        Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, participantTypeId), Is.True);
-        Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
+        int memberOfTypeId = types.GetId("MemberOf");
+        Assert.That(relationships.HasLink(localPlayer, friendlyTeam, memberOfTypeId), Is.True);
+        Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, memberOfTypeId), Is.True);
+        int hostileTypeId = types.GetId("Hostile");
+        Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, hostileTypeId), Is.True);
+        Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, hostileTypeId), Is.True);
     }
 
     private static UtilityAiDecisionTrace TickUntilSubmittedOrder(

@@ -129,8 +129,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
   - 提供 upstream data-only 共享 3C virtual camera profile
   - 供 launch graph / fixture / showcase 显式依赖
 - `mods/capabilities/camera/CameraProfilesMod`
-  - 提供可复用基础 virtual camera profile
-  - 提供 `viewmodes.json`
+  - 提供可复用基础 virtual camera profile（纯资产：`virtual_cameras.json` + id 常量，不携带按键或系统）
 - `mods/capabilities/camera/VirtualCameraShotsMod`
   - 提供声明式 shot
   - 通过 map tag 或 trigger 激活
@@ -145,8 +144,8 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 
 - profile 和 shot 都必须落到 `virtual_cameras.json`
 - 可跨多个 Mod 复用的纯声明式 3C profile，优先收口到 `SharedThreeCProfilesMod`
-- 视角模式切换通过 `mods/CoreInputMod/ViewMode/ViewModeManager.cs`
-- 通用选择 / ViewMode / TabTarget 输入绑定收口在 `mods/CoreInputMod/assets/Input/default_input.json`
+- 相机模式切换由消费方 mod 自持：在自己的输入上下文里绑键，经 `VirtualCameraRequest`（或 `ActivateVirtualCamera` 图节点）激活定义；共享资产 mod 不携带按键
+- 需要随模式切换输入上下文的，声明 `Input/interaction_modes.json` 模式（mode → IMC context 集合），由 `InputContextProjectionSystem` 投影
 - 地图级默认机位只写 `DefaultCamera.VirtualCameraId`
 - 短时镜头通过 `VirtualCameraRequest`
 

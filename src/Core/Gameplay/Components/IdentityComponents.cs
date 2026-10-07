@@ -1,8 +1,7 @@
 namespace Ludots.Core.Gameplay.Components
 {
     /// <summary>
-    /// Represents the Team ID this entity belongs to.
-    /// Used for Friend/Foe identification.
+    /// Team id for this entity. Once a MemberOf edge reaches a team representative, the id is projected from that representative.
     /// </summary>
     public struct Team
     {
@@ -10,8 +9,7 @@ namespace Ludots.Core.Gameplay.Components
     }
 
     /// <summary>
-    /// Represents the Player ID that owns/controls this entity.
-    /// Used for input routing and ownership logic.
+    /// Player id for this entity. Once the Owns chain reaches a player representative, the id is projected from that representative.
     /// </summary>
     public struct PlayerOwner
     {

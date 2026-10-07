@@ -282,7 +282,7 @@ public sealed class CombatStanceBehaviorTests
             TagRegistry.Clear();
             TagRegistry.Register("Event.DamageTaken");
             var relationshipTypes = new RelationshipTypeRegistry();
-            int hostileRelationshipTypeId = relationshipTypes.Register("CombatStance.Hostile", isSymmetric: true);
+            int hostileRelationshipTypeId = relationshipTypes.Register("Hostile", isSymmetric: false);
             var relationshipMetrics = new RelationshipMetricRegistry();
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();

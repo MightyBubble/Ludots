@@ -6,6 +6,11 @@ internal static class UxPrototypeIds
 {
     public const string BattleMapId = "ux_prototype_battle";
     public const string PlayModeId = "UxPrototype.Mode.Play";
+
+    public const string PlayModeSwitchActionId = "ModePlay";
+    public const string RoadEditorModeSwitchActionId = "ModeRoad";
+    public const string ObstacleEditorModeSwitchActionId = "ModeObstacle";
+    public const string NavmeshModeSwitchActionId = "ModeNavmesh";
     public const string RoadEditorModeId = "UxPrototype.Mode.RoadEditor";
     public const string ObstacleEditorModeId = "UxPrototype.Mode.ObstacleEditor";
     public const string NavmeshModeId = "UxPrototype.Mode.Navmesh";

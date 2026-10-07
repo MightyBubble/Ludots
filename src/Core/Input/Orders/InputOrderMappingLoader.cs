@@ -214,6 +214,18 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.autoTargetRangeCm must be positive when autoTargetPolicy is {mapping.AutoTargetPolicy}.");
                 }
 
+                if (mapping.AutoTargetPolicy != AutoTargetPolicy.None && string.IsNullOrWhiteSpace(mapping.AutoTargetRelation))
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.autoTargetRelation must name 'All' or a relationship type when autoTargetPolicy is {mapping.AutoTargetPolicy}.");
+                }
+
+                if (mapping.CursorTargetPolicy != AutoTargetPolicy.None && string.IsNullOrWhiteSpace(mapping.CursorTargetRelation))
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.cursorTargetRelation must name 'All' or a relationship type when cursorTargetPolicy is {mapping.CursorTargetPolicy}.");
+                }
+
                 if (mapping.CursorTargetPolicy != AutoTargetPolicy.None && mapping.CursorTargetRangeCm <= 0)
                 {
                     throw new InvalidOperationException(

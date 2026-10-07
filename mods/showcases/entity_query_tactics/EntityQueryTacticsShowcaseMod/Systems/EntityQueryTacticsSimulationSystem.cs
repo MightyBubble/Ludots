@@ -114,7 +114,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
             {
-                System.Console.Error.WriteLine($"[EQT-P2] commitDown={input.IsDown(Config.Actions.CommitSelection)} selectBeginDown={input.IsDown("Select.Begin")} enterPressed={input.PressedThisFrame(Config.Actions.CommitSelection)}");
                 HandlePlayerInput(input);
             }
 

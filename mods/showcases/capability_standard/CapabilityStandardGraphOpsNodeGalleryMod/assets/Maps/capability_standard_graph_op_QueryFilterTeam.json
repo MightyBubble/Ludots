@@ -38,7 +38,17 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "unit0",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "unit0",
@@ -61,7 +71,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "unit0",
+          "Type": "Friendly"
+        },
+        {
+          "To": "caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "unit1",

@@ -3,7 +3,6 @@
     {
       "id": "interaction.context.arpg.battle",
       "inputContextId": "Arpg_Gameplay",
-      "activeCollectionKey": "arpg.active",
       "bindings": [
         "Arpg.Skill1",
         "Arpg.Skill2",
@@ -34,6 +33,9 @@
         {
           "trigger": "graph.arpg.cast_slot5"
         }
+      ],
+      "onActivated": [
+        "graph.arpg.roster_sync"
       ]
     }
   ]

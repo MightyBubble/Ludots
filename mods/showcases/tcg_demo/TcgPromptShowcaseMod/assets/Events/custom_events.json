@@ -1,0 +1,8 @@
+[
+  {
+    "id": "TcgPrompt.TurnEnded",
+    "description": "玩家按下结束回合：轮到敌方法师出手。挂在法师身上的图收到后朝英雄放火球。",
+    "scope": "map",
+    "params": []
+  }
+]

@@ -6,6 +6,13 @@ namespace Ludots.Core.Gameplay.Calendar
 
     public sealed record CalendarPhaseDefinition(string Id, string Label, int LengthDays);
 
+    public enum CalendarDaysUntilStatus : byte
+    {
+        Found = 0,
+        MissingPhase = 1,
+        DayExceedsPhase = 2,
+    }
+
     public sealed record CalendarCycleDefinition(
         string Id,
         int LengthDays,

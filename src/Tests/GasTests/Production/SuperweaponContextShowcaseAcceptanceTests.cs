@@ -103,9 +103,6 @@ namespace Ludots.Tests.GAS.Production
                 Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
             Assert.That(mountedContext.ContextEntity, Is.EqualTo(state.Commander));
             Assert.That(
-                store.KeyRegistry.GetName(mountedContext.ActiveCollectionKeyId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.TargetsCollectionKey));
-            Assert.That(
                 filters.ProfileIdRegistry.GetName(mountedContext.FilterProfileId),
                 Is.EqualTo(SuperweaponContextShowcaseIds.FilterProfileId));
             Assert.That(
@@ -147,13 +144,17 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<AbilityExecInstance>(state.Commander), Is.False);
             Assert.That(
-                engine.World.Has<InteractionContextInstance>(state.SolePossessedRep),
-                Is.False,
+                engine.World.TryGet<InteractionContextInstance>(state.SolePossessedRep, out InteractionContextInstance steadyAnchor),
+                Is.True,
                 "confirming the ability must release the entity-mounted context back to the steady-state anchor.");
+            Assert.That(steadyAnchor.Source, Is.EqualTo(InteractionContextInstanceSource.TemplateSpawn));
+            Assert.That(
+                contextProfiles.ProfileIdRegistry.GetName(steadyAnchor.ContextId),
+                Is.EqualTo("interaction.context.interaction.battle"));
 
             var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
                 ?? throw new InvalidOperationException("CollectionApplier service is missing.");
-            writer.CommitCast(state.SolePossessedRep, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(state.SolePossessedRep, commandSourceKey, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
             Entity[] commandSource = CopyCollection(store, state.Commander, commandSourceKey);
             Assert.That(commandSource, Is.EqualTo(new[] { state.Commander }));
 

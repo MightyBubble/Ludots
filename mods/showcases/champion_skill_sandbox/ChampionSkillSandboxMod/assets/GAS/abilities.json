@@ -28,7 +28,8 @@
       ]
     },
     "input": {
-      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetPolicy": "NearestInRange",
+      "autoTargetRelation": "Hostile",
       "autoTargetRangeCm": 760
     },
     "presentation": {

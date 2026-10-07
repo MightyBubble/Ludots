@@ -8,7 +8,6 @@ using System.Reflection;
 using Arch.Core;
 using Arch.System;
 using CapabilityStandardMassNavigationLargeWorld10kMod;
-using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -72,7 +71,6 @@ namespace Ludots.Tests.Presentation
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardMassNavigationLargeWorld10kMod"
@@ -786,11 +784,7 @@ namespace Ludots.Tests.Presentation
 
             int appliedCommands = DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
 
-            string orderDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
-                ? order?.ToString() ?? "<null>" : "<missing>";
-            string groundDebug = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
-                ? ground?.ToString() ?? "<null>" : "<missing>";
-            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics + $"; order={orderDebug}; ground={groundDebug}");
+            Assert.That(appliedCommands, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
             Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
@@ -1195,7 +1189,6 @@ namespace Ludots.Tests.Presentation
             ref InteractionContextInstance context = ref engine.World.Get<InteractionContextInstance>(player);
             var collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             Assert.That(context.ContextEntity, Is.EqualTo(player));
-            Assert.That(context.ActiveCollectionKeyId, Is.EqualTo(collections.KeyRegistry.GetId("selected")));
             Assert.That(context.CommandIntentProfileId, Is.GreaterThan(0));
             backend.SetMousePosition(position);
             backend.SetButton(MouseRightButtonPath, false);
@@ -1205,10 +1198,7 @@ namespace Ludots.Tests.Presentation
             int applied = 0;
             AdvanceFixedClock(engine, hudProjection, 2);
             applied += RequireMassNavigationSimulation(engine).CommandCountFrame;
-            Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("Command"), Is.True);
-            var localOrderMapping = RequireService(engine, CoreServiceKeys.ActiveInputOrderMapping);
-            Assert.That(localOrderMapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted),
-                $"Command routing: {localOrderMapping.LastActivationResult.State}, {localOrderMapping.LastActivationResult.Rejection}");
+            Assert.That(RequireService(engine, CoreServiceKeys.InputHandler).IsDown("CaseE.Command"), Is.True);
 
             backend.SetButton(MouseRightButtonPath, false);
             for (int frame = 0; frame < 4; frame++)
@@ -1477,7 +1467,9 @@ namespace Ludots.Tests.Presentation
                         engine.GlobalContext,
                         localPlayer,
                         entity,
-                        (commandSourceConfig.TargetFilter ?? throw new InvalidOperationException("commandSource.targetFilter is missing.")).ParseRelationFilter());
+                        (commandSourceConfig.TargetFilter ?? throw new InvalidOperationException("commandSource.targetFilter is missing.")).ParseRelationFilter(
+                            engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.")));
                 if (canAcquire)
                 {
                     eligible++;
@@ -1586,8 +1578,7 @@ namespace Ludots.Tests.Presentation
                 string diagnostics = DescribeEntityCommandState(engine, entity);
                 Assert.That(engine.World.IsAlive(entity), Is.True, diagnostics);
                 Assert.That(controlDomains.IsControllableBy(localPlayer, entity), Is.True, diagnostics);
-                Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, diagnostics);
-                Assert.That(engine.World.Has<Team>(entity), Is.False, diagnostics);
+                AssertProjectedParticipant(engine, entity, localPlayer, diagnostics);
             }
         }
 
@@ -1599,19 +1590,20 @@ namespace Ludots.Tests.Presentation
 
             int totalAgents = 0;
             int controllableAgents = 0;
-            int legacyIdentityMirrors = 0;
+            int missingProjection = 0;
             var query = new QueryDescription().WithAll<MassNavigationAgent>();
             engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _) =>
             {
                 totalAgents++;
-                if (controlDomains.IsControllableBy(localPlayer, entity))
+                bool controllable = controlDomains.IsControllableBy(localPlayer, entity);
+                if (controllable)
                 {
                     controllableAgents++;
                 }
 
-                if (engine.World.Has<PlayerOwner>(entity) || engine.World.Has<Team>(entity))
+                if (!engine.World.Has<PlayerOwner>(entity) || !engine.World.Has<Team>(entity))
                 {
-                    legacyIdentityMirrors++;
+                    missingProjection++;
                 }
             });
 
@@ -1621,9 +1613,19 @@ namespace Ludots.Tests.Presentation
                 Is.EqualTo(simulation.AgentsPerTeam),
                 "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
             Assert.That(
-                legacyIdentityMirrors,
+                missingProjection,
                 Is.Zero,
-                "MassNavigation agents must not mirror ownership or membership into PlayerOwner/Team components.");
+                "MassNavigation agents project PlayerOwner and Team from their ownership and membership edges.");
+        }
+
+        private static void AssertProjectedParticipant(GameEngine engine, Entity entity, Entity localPlayer, string diagnostics)
+        {
+            Assert.That(engine.World.TryGet(localPlayer, out PlayerIdentity identity), Is.True, diagnostics);
+            Assert.That(engine.World.TryGet(localPlayer, out Team localTeam), Is.True, diagnostics);
+            Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True, diagnostics);
+            Assert.That(owner.PlayerId, Is.EqualTo(identity.PlayerId), diagnostics);
+            Assert.That(engine.World.TryGet(entity, out Team team), Is.True, diagnostics);
+            Assert.That(team.Id, Is.EqualTo(localTeam.Id), diagnostics);
         }
 
         private static string DescribeEntityCommandState(GameEngine engine, Entity entity)

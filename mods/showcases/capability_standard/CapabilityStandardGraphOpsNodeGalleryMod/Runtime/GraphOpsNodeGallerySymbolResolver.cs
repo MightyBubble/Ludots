@@ -33,6 +33,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly PresentationTextCatalog? _presentationTextCatalog;
     private readonly Ludots.Core.Gameplay.Rng.RngPickService? _rngPicks;
     private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+    private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
 
     public GraphOpsNodeGallerySymbolResolver(
         EntityTemplateKeyRegistry templates,
@@ -43,7 +44,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         GraphLookupTableRegistry? lookupTables = null,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
         PresentationTextCatalog? presentationTextCatalog = null,
-        Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null)
+        Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null,
+        Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -54,6 +56,24 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _rngPicks = rngPicks;
         _orderTypes = orderTypes;
         _presentationTextCatalog = presentationTextCatalog;
+        _eqsQueries = eqsQueries;
+    }
+
+    public int ResolveEqsQuery(string name)
+    {
+        if (_eqsQueries == null)
+        {
+            throw new InvalidOperationException(
+                $"Graph references EQS query '{name}', but the gallery resolver has no EqsQueryRegistry.");
+        }
+
+        if (!_eqsQueries.Ids.TryGetId(name, out int queryId) || queryId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown EQS query '{name}'. Declare it in assets/Spatial/eqs_queries.json.");
+        }
+
+        return queryId;
     }
 
     public int ResolveOrderType(string name)
@@ -93,15 +113,9 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _ = templates.Register(GraphOpsVisualTemplates.Ally);
         _ = templates.Register(GraphOpsVisualTemplates.Target);
         var types = new RelationshipTypeRegistry();
-        types.Register("SocialBond");
-        types.Register("Owns");
-        types.Register("Controls");
-        types.Register("MemberOf");
         var metrics = new RelationshipMetricRegistry();
-        metrics.Register("Loyalty", -100, 100, 0);
         var flags = new RelationshipFlagRegistry();
-        flags.Register("Trusted");
-        flags.Register("Estranged");
+        RegisterStandaloneRelationshipCatalogs(assetsRoot, types, metrics, flags);
         var presets = new TargetDispatchPresetRegistry();
         presets.Register(
             TargetToResolvedPreset,
@@ -121,7 +135,58 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")),
             LoadDistributionPicks(assetsRoot),
             LoadPresentationTextCatalog(assetsRoot),
-            CreateStandaloneOrderTypes());
+            CreateStandaloneOrderTypes(),
+            LoadStandaloneEqsQueries(assetsRoot));
+    }
+
+    private static void RegisterStandaloneRelationshipCatalogs(
+        string assetsRoot,
+        RelationshipTypeRegistry types,
+        RelationshipMetricRegistry metrics,
+        RelationshipFlagRegistry flags)
+    {
+        string repoRoot = GraphOpsHeadlessGameEngine.FindRepoRoot(assetsRoot);
+        string[] catalogPaths =
+        {
+            Path.Combine(repoRoot, "assets", "Relationships", "catalog.json"),
+            Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Relationships", "catalog.json"),
+            Path.Combine(assetsRoot, "Relationships", "catalog.json"),
+        };
+        var bands = new RelationshipBandRegistry();
+        for (int i = 0; i < catalogPaths.Length; i++)
+        {
+            string path = catalogPaths[i];
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("Gallery standalone compile requires the relationship catalog layer.", path);
+            }
+
+            var catalog = JsonSerializer.Deserialize<Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogConfig>(
+                    File.ReadAllText(path),
+                    Ludots.Core.Gameplay.Relationships.Config.RelationshipCatalogPipelineLoader.SerializerOptions)
+                ?? throw new InvalidOperationException($"Relationship catalog '{path}' is empty.");
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, metrics, flags, bands);
+        }
+    }
+
+    private static Ludots.Core.Spatial.Eqs.EqsQueryRegistry? LoadStandaloneEqsQueries(string assetsRoot)
+    {
+        string path = System.IO.Path.Combine(assetsRoot, "Spatial", "eqs_queries.json");
+        if (!System.IO.File.Exists(path))
+        {
+            return null;
+        }
+
+        var ids = new Ludots.Core.Registry.StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var registry = new Ludots.Core.Spatial.Eqs.EqsQueryRegistry(ids, capacity: 16);
+        var configs = Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.ParseQueriesDocument(
+            System.IO.File.ReadAllText(path));
+        for (int i = 0; i < configs.Length; i++)
+        {
+            registry.Install(configs[i].Id, Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.CreateQuery(configs[i]));
+        }
+
+        return registry;
     }
 
     private static Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry CreateStandaloneOrderTypes()
@@ -140,6 +205,24 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             Key = "attackTarget",
             OrderTypeId = 102,
             Label = "Attack Target",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainPass",
+            OrderTypeId = 1,
+            Label = "Pass",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainNegate",
+            OrderTypeId = 2,
+            Label = "Negate",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "chainActivateEffect",
+            OrderTypeId = 3,
+            Label = "Chain",
         });
         return orderTypes;
     }

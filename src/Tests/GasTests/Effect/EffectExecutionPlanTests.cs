@@ -130,12 +130,8 @@ public sealed class EffectExecutionPlanTests
             Is.EqualTo(EffectExecutionPlanKind.GasTransactional));
     }
 
-    // RemoveParent 不在本用例：#1064 事务对称化后它是已认证的 GasTransactional
-    // 原子 op（StageRemoveParent），uncertified fail-closed 合同只覆盖仍无事务路径的操作。
-    [TestCase(RelationOperation.EnsureLink, "ApplyRelation.EnsureLink")]
-    public void Finalize_UncertifiedRelationOperation_FailsClosed(
-        RelationOperation operation,
-        string operationName)
+    [Test]
+    public void Finalize_EnsureLink_IsGasTransactional()
     {
         const int templateId = 116;
         var templates = new EffectTemplateRegistry();
@@ -148,18 +144,18 @@ public sealed class EffectExecutionPlanTests
             LifetimeKind = EffectLifetimeKind.Instant,
             Relation = new RelationDescriptor
             {
-                Operation = operation,
+                Operation = RelationOperation.EnsureLink,
                 Subject = RelationEntitySlot.Source,
                 Parent = RelationEntitySlot.Target,
                 RelationshipTypeId = 1,
             },
         });
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
-            () => Finalize(templates, presets, new GraphProgramRegistry()))!;
+        Finalize(templates, presets, new GraphProgramRegistry());
 
-        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
-        Assert.That(error.Message, Does.Contain(operationName));
+        Assert.That(
+            templates.RequireExecutionPlans(templateId).Activation.Kind,
+            Is.EqualTo(EffectExecutionPlanKind.GasTransactional));
     }
 
     [Test]

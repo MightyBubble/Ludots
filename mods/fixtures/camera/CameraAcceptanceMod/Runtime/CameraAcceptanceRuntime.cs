@@ -2,9 +2,6 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CameraAcceptanceMod.UI;
-using CoreInputMod;
-using CoreInputMod.ViewMode;
-using CoreInputMod.Triggers;
 using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
@@ -31,7 +28,6 @@ namespace CameraAcceptanceMod.Runtime
 {
     internal sealed class CameraAcceptanceRuntime
     {
-        private const string AcceptanceModePrefix = "Camera.Acceptance.Mode.";
         private const float TwoPiRadians = 6.2831855f;
         private const float GoldenAngleRadians = 2.3999631f;
         private const float ProjectionScatterSpacingCm = 120f;
@@ -40,7 +36,6 @@ namespace CameraAcceptanceMod.Runtime
         private const string CommandSourceSummary = "Map-owned camera actors.";
 
         private CameraAcceptancePanelController? _panelController;
-        private bool _commandSourceAcquiredCallbacksInstalled;
         private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
@@ -70,23 +65,6 @@ namespace CameraAcceptanceMod.Runtime
 
             engine.GlobalContext[CameraAcceptanceIds.ProjectionSpawnCountKey] = next;
             return next;
-        }
-
-        public void InstallCommandSourceAcquiredCallbacks(GameEngine engine)
-        {
-            if (_commandSourceAcquiredCallbacksInstalled)
-            {
-                return;
-            }
-
-            if (!CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out var callbacks))
-            {
-                throw new System.InvalidOperationException(
-                    "CameraAcceptanceMod requires CoreInputMod command-source acquisition callbacks to be installed before GameStart handlers run.");
-            }
-
-            callbacks.Add((worldCm, entity) => HandleSelectionConfirmed(engine, worldCm, entity));
-            _commandSourceAcquiredCallbacksInstalled = true;
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -300,17 +278,6 @@ namespace CameraAcceptanceMod.Runtime
                 }
             }
 
-            if (!CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
-            {
-                return;
-            }
-
-            string activeModeId = manager.ActiveMode?.Id ?? string.Empty;
-            if (!isAcceptanceMap &&
-                activeModeId.StartsWith(AcceptanceModePrefix, System.StringComparison.OrdinalIgnoreCase))
-            {
-                manager.ClearActiveMode();
-            }
         }
 
         private CameraAcceptancePanelController EnsurePanelController(GameEngine engine)
@@ -427,7 +394,7 @@ namespace CameraAcceptanceMod.Runtime
             _lastConfiguredMapId = mapId;
         }
 
-        private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
+        internal void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity, Entity cueOwnerEntity)
         {
             string? mapId = engine.CurrentMapSession?.MapId.Value;
             if (string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, System.StringComparison.OrdinalIgnoreCase))
@@ -437,8 +404,9 @@ namespace CameraAcceptanceMod.Runtime
                     return;
                 }
 
+                Entity cueOwner = ResolveProjectionCueOwner(engine, cueOwnerEntity);
                 EnqueueProjectionSpawnBatch(engine, worldCm);
-                EmitCueMarker(engine, worldCm);
+                EmitCueMarker(engine, worldCm, cueOwner);
                 return;
             }
 
@@ -459,7 +427,25 @@ namespace CameraAcceptanceMod.Runtime
             }
         }
 
-        private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
+        private static Entity ResolveProjectionCueOwner(GameEngine engine, Entity cueOwnerEntity)
+        {
+            if (cueOwnerEntity != Entity.Null && engine.World.IsAlive(cueOwnerEntity))
+            {
+                return cueOwnerEntity;
+            }
+
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity owner) &&
+                owner != Entity.Null &&
+                engine.World.IsAlive(owner))
+            {
+                return owner;
+            }
+
+            throw new System.InvalidOperationException(
+                "Camera projection acceptance requires a live ClientLocalSeat possession before emitting the cue presenter.");
+        }
+
+        private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm, Entity cueOwner)
         {
             if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
@@ -488,7 +474,7 @@ namespace CameraAcceptanceMod.Runtime
             {
                 CommandKind = PresenterCommandKind.CreatePresenter,
                 PresenterDefinitionId = defId,
-                Source = Entity.Null,
+                Source = cueOwner,
                 AnchorKind = PresentationAnchorKind.WorldPosition,
                 Position = WorldUnits.WorldCmToVisualMeters(worldCm),
             }))

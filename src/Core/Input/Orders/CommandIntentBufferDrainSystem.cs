@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Navigation.Pathing;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -19,9 +20,8 @@ namespace Ludots.Core.Input.Orders
     /// <para>
     /// Routing reads only declared data: the acting rep's active interaction context chain is
     /// walked LIFO (op-activated instances newest-first, then the base mounted instance) for
-    /// the most recent context declaring <see cref="InteractionContextInstance.ActiveCollectionKeyId"/>;
-    /// its carrier entity owns the active collection and its declared command intent profile
-    /// routes the members. No engine-reserved key, no steady-state fallback: no declaring
+    /// the most recent context declaring a command intent profile; actor sets ride the
+    /// submission itself (v2). No engine-reserved key, no steady-state fallback: no declaring
     /// context on the chain is a named rejection, never a silent route elsewhere.
     /// </para>
     /// </summary>
@@ -39,7 +39,23 @@ namespace Ludots.Core.Input.Orders
         private readonly CommandIntentRoute[] _routeScratch;
         private readonly Entity[] _dispatchScratch;
         private readonly Order[] _orderScratch;
+        private readonly bool[] _orderExactGroundPoint;
+        private readonly int[] _layoutOrderIndex;
+        private readonly Ludots.Platform.Abstractions.WorldCmInt2[] _layoutPositions;
+        private readonly int[] _layoutSlotByActor;
+        private readonly int[] _layoutActorIndices;
+        private readonly int[] _layoutSlotIndices;
+        private readonly Int128[] _layoutActorForward;
+        private readonly Int128[] _layoutActorLateral;
+        private readonly Int128[] _layoutSlotForward;
+        private readonly Int128[] _layoutSlotLateral;
         private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner? _engage;
+        private readonly Func<IPathService?>? _pathServiceAccessor;
+        private readonly Func<PathStore?>? _pathStoreAccessor;
+        private readonly Ludots.Core.Spatial.Eqs.EqsItem[] _eqsScratch = new Ludots.Core.Spatial.Eqs.EqsItem[256];
+        private readonly bool[] _eqsCandidateUsed = new bool[256];
 
         /// <summary>Diagnostic counters from the last drain; not world state, never persisted.</summary>
         public int LastDrainedCount;
@@ -57,7 +73,13 @@ namespace Ludots.Core.Input.Orders
             OrderQueue orders,
             PlayerEntityLookup players,
             ControlDomainQuery controlDomains,
-            int scratchCapacity)
+            int scratchCapacity,
+            Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null,
+            Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities = null,
+            int castAbilityOrderTypeId = 0,
+            int moveToOrderTypeId = 0,
+            Func<IPathService?>? pathServiceAccessor = null,
+            Func<PathStore?>? pathStoreAccessor = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _submissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
@@ -68,6 +90,8 @@ namespace Ludots.Core.Input.Orders
             _orders = orders ?? throw new ArgumentNullException(nameof(orders));
             _players = players ?? throw new ArgumentNullException(nameof(players));
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+            _pathServiceAccessor = pathServiceAccessor;
+            _pathStoreAccessor = pathStoreAccessor;
             if (scratchCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(scratchCapacity), "Command intent scratch capacity must be positive.");
@@ -77,6 +101,20 @@ namespace Ludots.Core.Input.Orders
             _routeScratch = new CommandIntentRoute[scratchCapacity];
             _dispatchScratch = new Entity[scratchCapacity];
             _orderScratch = new Order[scratchCapacity];
+            _orderExactGroundPoint = new bool[scratchCapacity];
+            _layoutOrderIndex = new int[scratchCapacity];
+            _layoutPositions = new Ludots.Platform.Abstractions.WorldCmInt2[scratchCapacity];
+            _layoutSlotByActor = new int[scratchCapacity];
+            _layoutActorIndices = new int[scratchCapacity];
+            _layoutSlotIndices = new int[scratchCapacity];
+            _layoutActorForward = new Int128[scratchCapacity];
+            _layoutActorLateral = new Int128[scratchCapacity];
+            _layoutSlotForward = new Int128[scratchCapacity];
+            _layoutSlotLateral = new Int128[scratchCapacity];
+            _eqsQueries = eqsQueries;
+            _engage = eqsQueries != null && abilities != null && castAbilityOrderTypeId > 0 && moveToOrderTypeId > 0
+                ? new Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner(world, orders, abilities, castAbilityOrderTypeId, moveToOrderTypeId)
+                : null;
         }
 
         public void Initialize() { }
@@ -84,7 +122,7 @@ namespace Ludots.Core.Input.Orders
         public void Update(in float dt)
         {
             int count = _submissions.Count;
-            if (count == 0 && _submissions.CastCount == 0)
+            if (count == 0 && _submissions.CastCount == 0 && _submissions.EngageCount == 0)
             {
                 return;
             }
@@ -117,13 +155,26 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
+            for (int i = 0; i < _submissions.EngageCount; i++)
+            {
+                if (TryRouteEngageSubmission(_submissions.Engage(i)))
+                {
+                    LastAcceptedCount++;
+                }
+                else
+                {
+                    LastRejectedCount++;
+                }
+            }
+
             LastDrainedCount += _submissions.CastCount;
+            LastDrainedCount += _submissions.EngageCount;
             _submissions.Clear();
         }
 
         /// <summary>
-        /// Cast side of the §12 bridge: actors are the same active-context-declared collection
-        /// members; each authorized member receives one cast order with Args.I0 = slot. The cast
+        /// Cast side of the §12 bridge: actors are the intent-carried member set. An empty set is a
+        /// named rejection; each authorized member receives one cast order with Args.I0 = slot. The cast
         /// order-type key resolves through the OrderTypeRegistry at drain time (cold path).
         /// </summary>
         private bool TryRouteCastSubmission(in CastIntentSubmission submission)
@@ -139,16 +190,6 @@ namespace Ludots.Core.Input.Orders
                     $"ORDER.CAST_INTENT.ERR.RepHasNoPlayerOwner: rep {submission.Rep} submitted a cast intent but carries no PlayerOwner.");
             }
 
-            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
-            {
-                return Reject("cast: no active context declares activeCollectionKey");
-            }
-
-            if (!_world.IsAlive(routingContext.ContextEntity))
-            {
-                return Reject("cast: routing context carrier is dead");
-            }
-
             var orderTypes = _orderTypes
                 ?? throw new InvalidOperationException(
                     "ORDER.CAST_INTENT.ERR.OrderTypeRegistryUnavailable: cast intent drain requires the OrderTypeRegistry.");
@@ -161,22 +202,10 @@ namespace Ludots.Core.Input.Orders
                     $"ORDER.CAST_INTENT.ERR.UnknownCastOrderType: SubmitCast references order type key '{orderTypeKey}' which is not registered.");
             }
 
-            if (!_entityCollections.TryGet(routingContext.ContextEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
-                !_entityCollections.TryGetView(handle, out EntityCollectionView view))
-            {
-                return Reject("cast: active collection is not mounted");
-            }
-
-            if (view.Count > _actorScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"ORDER.CAST_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}.");
-            }
-
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("cast: active collection is empty");
+                return Reject("cast: intent carries no actors — the graph must attach its actor set");
             }
 
             bool allAccepted = true;
@@ -209,6 +238,7 @@ namespace Ludots.Core.Input.Orders
                     CommandSource = Entity.Null,
                     Target = submission.HasTarget && _world.IsAlive(submission.Target) ? submission.Target : Entity.Null,
                     Args = args,
+                    SubmitMode = submission.SubmitMode,
                 };
                 OrderSubmitResult result = _orders.SubmitAssigned(ref order);
                 if (!OrderSubmitResultSemantics.IsAccepted(result))
@@ -216,6 +246,173 @@ namespace Ludots.Core.Input.Orders
                     LastRejectionReason = $"cast: order submit returned {result}";
                     allAccepted = false;
                 }
+            }
+
+            return allAccepted;
+        }
+
+        /// <summary>
+        /// Engage side of the §12 bridge: actors are the intent-carried member set (empty is a
+        /// named rejection); the profile's EQS query runs around the target
+        /// and each authorized member gets a move-then-cast plan — moveTo its assigned ring
+        /// point with the cast as an order continuation, plus a per-target slot claim so a
+        /// later batch excludes occupied points.
+        /// </summary>
+        private bool TryRouteEngageSubmission(in Ludots.Core.Gameplay.GAS.Orders.EngageIntentSubmission submission)
+        {
+            if (!_world.IsAlive(submission.Rep))
+            {
+                return Reject("engage acting rep is dead");
+            }
+
+            if (!_world.TryGet<PlayerOwner>(submission.Rep, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.RepHasNoPlayerOwner: rep {submission.Rep} submitted an engage intent but carries no PlayerOwner.");
+            }
+
+            if (_engage == null)
+            {
+                return Reject("engage: composite order planner unavailable (missing EQS registry, abilities, or cast/move order type ids)");
+            }
+
+            if (_eqsQueries == null ||
+                !_eqsQueries.TryGet(submission.ProfileKeyId, out var query))
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.UnknownProfile: engage profile key id {submission.ProfileKeyId} is not registered; declare the query in Spatial/eqs_queries.json.");
+            }
+
+            var orderTypes = _orderTypes
+                ?? throw new InvalidOperationException(
+                    "ORDER.ENGAGE_INTENT.ERR.OrderTypeRegistryUnavailable: engage intent drain requires the OrderTypeRegistry.");
+            string orderTypeKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(submission.OrderTypeKeyId);
+            if (string.IsNullOrWhiteSpace(orderTypeKey) ||
+                !orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
+                orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.UnknownCastOrderType: SubmitEngageBatch references order type key '{orderTypeKey}' which is not registered.");
+            }
+
+            if (!_world.IsAlive(submission.Target) ||
+                !_world.Has<Ludots.Core.Components.WorldPositionCm>(submission.Target))
+            {
+                return Reject("engage: target is dead or carries no world position");
+            }
+
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
+            if (actorCount <= 0)
+            {
+                return Reject("engage: intent carries no actors — the graph must attach its actor set");
+            }
+
+            var targetPos = _world.Get<Ludots.Core.Components.WorldPositionCm>(submission.Target).Value.ToWorldCmInt2();
+            IPathService? pathService = _pathServiceAccessor?.Invoke();
+            PathStore? pathStore = _pathStoreAccessor?.Invoke();
+
+            if (!_world.Has<Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims>(submission.Target))
+            {
+                _world.Add(submission.Target, new Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims());
+            }
+
+            ref var claims = ref _world.Get<Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims>(submission.Target);
+
+            bool allAccepted = true;
+            for (int i = 0; i < actorCount; i++)
+            {
+                Entity actor = _actorScratch[i];
+                if (!InputOrderActorAuthorization.IsAuthorized(_world, _players, _controlDomains, actor, owner.PlayerId))
+                {
+                    LastRejectionReason = "engage: actor failed authorization";
+                    allAccepted = false;
+                    continue;
+                }
+
+                if (!_world.TryGet<Ludots.Core.Components.WorldPositionCm>(actor, out var actorPosition))
+                {
+                    LastRejectionReason = "engage: actor carries no world position";
+                    allAccepted = false;
+                    continue;
+                }
+
+                var eqsContext = new Ludots.Core.Spatial.Eqs.EqsContext(
+                    targetPos,
+                    _world,
+                    pathService: pathService,
+                    pathStore: pathStore,
+                    sourceWorldCm: actorPosition.Value.ToWorldCmInt2(),
+                    sourceEntity: actor);
+                int candidateCount = query.Run(eqsContext, _eqsScratch);
+                if (candidateCount <= 0)
+                {
+                    LastRejectionReason = "engage: EQS profile produced no candidates";
+                    allAccepted = false;
+                    continue;
+                }
+
+                if (candidateCount > _eqsScratch.Length)
+                {
+                    candidateCount = _eqsScratch.Length;
+                }
+
+                System.Array.Clear(_eqsCandidateUsed, 0, candidateCount);
+
+                int best = -1;
+                float bestScore = float.MinValue;
+                for (int c = 0; c < candidateCount; c++)
+                {
+                    if (_eqsScratch[c].Filtered || _eqsCandidateUsed[c])
+                    {
+                        continue;
+                    }
+
+                    if (claims.IsClaimed(_world, _eqsScratch[c].Position.X, _eqsScratch[c].Position.Y, claimRadiusCm: 32))
+                    {
+                        continue;
+                    }
+
+                    if (_eqsScratch[c].Score > bestScore)
+                    {
+                        bestScore = _eqsScratch[c].Score;
+                        best = c;
+                    }
+                }
+
+                if (best < 0)
+                {
+                    LastRejectionReason = "engage: no unclaimed EQS candidate left for actor";
+                    allAccepted = false;
+                    continue;
+                }
+
+                _eqsCandidateUsed[best] = true;
+                int pointX = _eqsScratch[best].Position.X;
+                int pointY = _eqsScratch[best].Position.Y;
+
+                var order = new Order
+                {
+                    OrderTypeId = orderTypeId,
+                    PlayerId = owner.PlayerId,
+                    Actor = actor,
+                    CommandSource = Entity.Null,
+                    Target = submission.Target,
+                    Args = new OrderArgs { I0 = submission.Slot },
+                    SubmitMode = submission.SubmitMode,
+                };
+
+                Ludots.Core.Gameplay.GAS.Orders.OrderContinuationStateInstaller.EnsureInstalled(_world, actor);
+
+                var anchor = new Vector3(pointX, 0f, pointY);
+                OrderSubmitResult result = _engage.SubmitWithMoveAnchor(order, anchor);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    LastRejectionReason = $"engage: planner returned {result}";
+                    allAccepted = false;
+                    continue;
+                }
+
+                claims.Claim(_world, pointX, pointY, actor);
             }
 
             return allAccepted;
@@ -235,43 +432,16 @@ namespace Ludots.Core.Input.Orders
                     "map binding publishes player owners on player representatives.");
             }
 
-            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
+            if (!TryResolveIntentProfileContext(submission.Rep, out int commandIntentProfileId))
             {
-                return Reject("no active context declares activeCollectionKey");
+                return Reject("no active context declares commandIntentId");
             }
 
-            if (!_world.IsAlive(routingContext.ContextEntity))
-            {
-                return Reject("routing context carrier is dead");
-            }
-
-            if (routingContext.CommandIntentProfileId == 0)
-            {
-                return Reject("routing context declares no commandIntentId");
-            }
-
-            Entity ownerEntity = routingContext.ContextEntity;
-            if (!_entityCollections.TryGet(ownerEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle))
-            {
-                return Reject("active collection is not mounted on the context carrier");
-            }
-
-            if (!_entityCollections.TryGetView(handle, out EntityCollectionView view))
-            {
-                return Reject("active collection view is unavailable");
-            }
-
-            if (view.Count > _actorScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"ORDER.COMMAND_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}; " +
-                    "raise gasRuntimeCapacity.commandIntentScratchCapacity.");
-            }
-
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            Entity ownerEntity = submission.Rep;
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("active collection is empty");
+                return Reject("intent carries no actors — the graph must attach its actor set");
             }
 
             var facts = new CommandIntentTargetFacts(
@@ -281,7 +451,7 @@ namespace Ludots.Core.Input.Orders
 
             Span<Entity> actors = _actorScratch.AsSpan(0, actorCount);
             Span<CommandIntentRoute> routes = _routeScratch.AsSpan(0, actorCount);
-            _intentProfiles.RouteGroup(routingContext.CommandIntentProfileId, actors, ownerEntity, in facts, routes);
+            _intentProfiles.RouteGroup(commandIntentProfileId, actors, ownerEntity, in facts, routes);
 
             int routedCount = 0;
             for (int i = 0; i < actorCount; i++)
@@ -318,7 +488,7 @@ namespace Ludots.Core.Input.Orders
             int dispatchCount = _dispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_world, groundWorldCm, GroupKey(routingContext)),
+                new CastDispatchContext(_world, groundWorldCm, GroupKey(submission.Rep)),
                 dispatchSpan,
                 out CastDispatchRouting routing);
             if (dispatchCount <= 0)
@@ -355,10 +525,17 @@ namespace Ludots.Core.Input.Orders
                     return Reject("dispatched actor has no resolved route");
                 }
 
-                _orderScratch[i] = BuildOrder(dispatchedActor, owner.PlayerId, in _routeScratch[routeIndex], in facts, groundWorldCm);
+                _orderScratch[i] = BuildOrder(dispatchedActor, owner.PlayerId, in _routeScratch[routeIndex], in facts, groundWorldCm, submission.SubmitMode);
+                _orderExactGroundPoint[i] = _routeScratch[routeIndex].ExactGroundPoint;
             }
 
             Span<Order> dispatchOrders = _orderScratch.AsSpan(0, dispatchCount);
+            if (submission.Layout.Assignment != GroundLayoutAssignment.None &&
+                !TryApplyGroundLayout(submission.Layout, dispatchOrders, groundWorldCm))
+            {
+                return false;
+            }
+
             if (routing.SharedOrderId && dispatchCount > 1)
             {
                 OrderSubmitResult result = _orders.TryEnqueueSharedBatch(dispatchOrders);
@@ -383,35 +560,50 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// LIFO walk of the active context chain: op-activated instances newest-first, then the
-        /// base mounted instance. Only contexts declaring an active collection key count; a dead
-        /// carrier instance is skipped as an unresolved step (fail-closed per instance, the
-        /// pre-reclaim window must not silently route through a dead carrier's collections).
+        /// Intents carry their own actor set. The actor span is exactly what the submitting
+        /// graph attached; an empty span routes nothing and each lane rejects by name.
+        /// Direct possession is a roster graph that submits those entities, never a kernel substitution.
         /// </summary>
-        private bool TryResolveRoutingContext(Entity rep, out InteractionContextInstance routingContext)
+        private int ResolveActors(Entity rep, int memberOffset, int memberCount)
+        {
+            if (memberCount == 0)
+            {
+                return 0;
+            }
+
+            if (memberCount > _actorScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.INTENT.ERR.ActorScratchCapacityExceeded: intent carries {memberCount} actors, capacity {_actorScratch.Length}; " +
+                    "raise gasRuntimeCapacity.commandIntentScratchCapacity.");
+            }
+
+            _submissions.Members(memberOffset, memberCount).CopyTo(_actorScratch);
+            return memberCount;
+        }
+
+        private bool TryResolveIntentProfileContext(Entity rep, out int commandIntentProfileId)
         {
             if (_world.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances instances))
             {
                 for (int i = instances.Count - 1; i >= 0; i--)
                 {
-                    InteractionContextInstance candidate = instances[i];
-                    if (candidate.ActiveCollectionKeyId != 0 && _world.IsAlive(candidate.ContextEntity))
+                    if (instances[i].CommandIntentProfileId != 0)
                     {
-                        routingContext = candidate;
+                        commandIntentProfileId = instances[i].CommandIntentProfileId;
                         return true;
                     }
                 }
             }
 
             if (_world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance baseInstance) &&
-                baseInstance.ActiveCollectionKeyId != 0 &&
-                _world.IsAlive(baseInstance.ContextEntity))
+                baseInstance.CommandIntentProfileId != 0)
             {
-                routingContext = baseInstance;
+                commandIntentProfileId = baseInstance.CommandIntentProfileId;
                 return true;
             }
 
-            routingContext = default;
+            commandIntentProfileId = 0;
             return false;
         }
 
@@ -420,7 +612,8 @@ namespace Ludots.Core.Input.Orders
             int playerId,
             in CommandIntentRoute route,
             in CommandIntentTargetFacts facts,
-            Vector3 groundWorldCm)
+            Vector3 groundWorldCm,
+            OrderSubmitMode submitMode)
         {
             var args = new OrderArgs();
             Entity target = Entity.Null;
@@ -455,7 +648,74 @@ namespace Ludots.Core.Input.Orders
                 CommandSource = Entity.Null,
                 Target = target,
                 Args = args,
+                SubmitMode = submitMode,
             };
+        }
+
+        /// <summary>
+        /// Spreads the dispatched ground-point orders onto a centered grid around the intent's ground
+        /// point. With <see cref="GroundLayoutAssignment.PreserveRelative"/> the slots
+        /// follow the actors' positions across the move direction; when the ground point is the
+        /// group's own centroid there is no move direction and the slots follow submitted order.
+        /// </summary>
+        private bool TryApplyGroundLayout(GroundLayout layout, Span<Order> orders, Vector3 groundWorldCm)
+        {
+            int count = 0;
+            for (int i = 0; i < orders.Length; i++)
+            {
+                ref readonly Order order = ref orders[i];
+                if (!_orderExactGroundPoint[i] &&
+                    order.Target == Entity.Null &&
+                    order.Args.Spatial.Kind == OrderSpatialKind.WorldCm &&
+                    order.Args.Spatial.Mode == OrderCollectionMode.Single)
+                {
+                    _layoutOrderIndex[count++] = i;
+                }
+            }
+
+            if (count <= 1)
+            {
+                return true;
+            }
+
+            bool preserved = false;
+            if (layout.Assignment == GroundLayoutAssignment.PreserveRelative)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Entity actor = orders[_layoutOrderIndex[i]].Actor;
+                    if (!_world.TryGet(actor, out Ludots.Core.Components.WorldPositionCm position))
+                    {
+                        return Reject("ground layout: actor carries no world position");
+                    }
+
+                    _layoutPositions[i] = position.Value.ToWorldCmInt2();
+                }
+
+                preserved = MoveTargetLayoutPlanner.TryComputePositionPreservingSlots(
+                    _layoutPositions.AsSpan(0, count),
+                    groundWorldCm,
+                    layout.SpacingCm,
+                    _layoutSlotByActor.AsSpan(0, count),
+                    _layoutActorIndices.AsSpan(0, count),
+                    _layoutSlotIndices.AsSpan(0, count),
+                    _layoutActorForward.AsSpan(0, count),
+                    _layoutActorLateral.AsSpan(0, count),
+                    _layoutSlotForward.AsSpan(0, count),
+                    _layoutSlotLateral.AsSpan(0, count));
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                ref Order order = ref orders[_layoutOrderIndex[i]];
+                order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
+                    groundWorldCm,
+                    preserved ? _layoutSlotByActor[i] : i,
+                    count,
+                    layout.SpacingCm);
+            }
+
+            return true;
         }
 
         private static int IndexOfRoute(ReadOnlySpan<Entity> routedActors, ReadOnlySpan<CommandIntentRoute> routes, Entity actor)
@@ -471,12 +731,11 @@ namespace Ludots.Core.Input.Orders
             return -1;
         }
 
-        private static long GroupKey(in InteractionContextInstance routingContext)
+        private static long GroupKey(Entity rep)
         {
-            Entity carrier = routingContext.ContextEntity;
-            return carrier == default
+            return rep == default
                 ? 0
-                : ((long)(uint)carrier.Id << 32) | (uint)carrier.Version;
+                : ((long)(uint)rep.Id << 32) | (uint)rep.Version;
         }
 
         private bool Reject(string reason)

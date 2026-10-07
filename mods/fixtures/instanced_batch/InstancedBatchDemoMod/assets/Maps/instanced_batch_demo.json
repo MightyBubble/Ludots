@@ -12,9 +12,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 256,
-      "HeightCells": 256,
-      "GridCellSizeCm": 100
+      "WidthCm": 25600,
+      "HeightCm": 25600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
@@ -27,7 +35,13 @@
   "Entities": [
     {
       "Template": "instanced_batch_demo_anchor",
-      "InstanceId": "instanced-batch-demo-anchor"
+      "InstanceId": "instanced-batch-demo-anchor",
+      "Relations": [
+        {
+          "To": "instanced-batch-demo-anchor",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [

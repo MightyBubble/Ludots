@@ -20,19 +20,50 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 8192,
-      "HeightCells": 8192,
-      "HexEdgeLengthCm": 400
+      "WidthCm": 819200,
+      "HeightCm": 819200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
     {
       "InstanceId": "combat-stance-team-one",
-      "Template": "combat_stance_team_one"
+      "Template": "combat_stance_team_one",
+      "Relations": [
+        {
+          "To": "combat-stance-team-one",
+          "Type": "Friendly"
+        },
+        {
+          "To": "combat-stance-team-two",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "combat-stance-team-two",
-      "Template": "combat_stance_team_two"
+      "Template": "combat_stance_team_two",
+      "Relations": [
+        {
+          "To": "combat-stance-team-two",
+          "Type": "Friendly"
+        },
+        {
+          "To": "combat-stance-team-one",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "combat-stance-player-one",
@@ -104,59 +135,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "combat-stance-player-two"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "CombatStance.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "CombatStance.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "CombatStance.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "CombatStance.Hostile",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "CombatStance.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "CombatStance.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "CombatStance.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

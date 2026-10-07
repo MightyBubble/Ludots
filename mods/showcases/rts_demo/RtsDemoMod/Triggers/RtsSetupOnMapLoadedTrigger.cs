@@ -76,11 +76,15 @@ namespace RtsDemoMod.Triggers
             var query = new QueryDescription().WithAll<Team>();
             world.Query(in query, (Entity entity, ref Team team) =>
             {
+                // The participant resolver binds PlayerOwner from the map's declared Players,
+                // so a player may command another team's faction units (training maps seat
+                // player 1 over the Protoss team-3 templates); require an owned entity, not
+                // PlayerId == TeamId.
                 if (!world.TryGet(entity, out PlayerOwner owner) ||
-                    owner.PlayerId != team.Id)
+                    owner.PlayerId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"RTS showcase entity {entity} has Team {team.Id} but no matching PlayerOwner. Author ownership in the entity template or map data.");
+                        $"RTS showcase entity {entity} has Team {team.Id} but no bound PlayerOwner. Author ownership in the entity template or map data.");
                 }
             });
         }

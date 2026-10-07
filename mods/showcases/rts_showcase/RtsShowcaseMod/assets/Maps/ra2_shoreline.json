@@ -18,8 +18,20 @@
       "Name": "default",
       "SpatialType": "HexGrid",
       "DataFile": "ra2_shoreline.hex",
-      "WidthCells": 16384,
-      "HeightCells": 16384
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
@@ -36,7 +48,17 @@
         "Name": {
           "Value": "Allied ConYard"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "allied_conyard",
+          "Type": "Friendly"
+        },
+        {
+          "To": "soviet_conyard",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra2_power_plant",
@@ -124,7 +146,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "soviet_conyard",
+          "Type": "Friendly"
+        },
+        {
+          "To": "allied_conyard",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra2_rhino",
@@ -165,52 +197,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "soviet_conyard"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

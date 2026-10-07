@@ -2,15 +2,26 @@
   "profiles": [
     {
       "id": "interaction.context.ux.battle",
-      "activeCollectionKey": "collection.command.source",
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "UxPrototype.Command",
+        "Stop",
+        "QueueModifier"
       ],
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.ux.command_commit"
+        },
+        {
+          "trigger": "graph.ux.stop"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
         }
       ]
     }

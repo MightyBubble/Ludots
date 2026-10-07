@@ -229,9 +229,9 @@ namespace Ludots.Tests.Presentation
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation map must author a primary board.");
-            Assert.That(board["WidthCells"]?.GetValue<int>(), Is.EqualTo(250 * 256));
-            Assert.That(board["HeightCells"]?.GetValue<int>(), Is.EqualTo(250 * 256));
-            Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
+            Assert.That(board["WidthCm"]?.GetValue<int>(), Is.EqualTo(250 * 256 * 100));
+            Assert.That(board["HeightCm"]?.GetValue<int>(), Is.EqualTo(250 * 256 * 100));
+            Assert.That(board["Grid"]?["CellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
         [Test]
@@ -466,13 +466,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(moveRule["interruptsActiveOrderTypeKeys"]?.AsArray()?.Select(node => node?.GetValue<string>()).ToArray(),
                 Does.Contain("attackTarget"));
 
-            JsonObject game = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
-            string[] previewOrderKeys = game["commandSource"]?["movePathPreviewOrderTypeKeys"]?.AsArray()
-                ?.Select(node => node?.GetValue<string>() ?? string.Empty)
-                .ToArray()
-                ?? throw new InvalidOperationException("MassNavigation game.json must author move path preview keys.");
-            Assert.That(previewOrderKeys, Is.EqualTo(new[] { "massNavigationMove" }));
-
             Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPresenterSyncSystem.cs")),
@@ -615,8 +608,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigation map must declare DefaultCamera.");
 
             Assert.That(RequireString(defaultCamera, "VirtualCameraId"), Is.EqualTo(LargeWorldCameraId));
-            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(0f));
-            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(0f));
+            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(3_200_000f));
+            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(3_200_000f));
 
             JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "config_catalog.json"));
             Assert.That(

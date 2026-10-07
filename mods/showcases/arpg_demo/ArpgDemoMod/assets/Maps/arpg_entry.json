@@ -22,7 +22,17 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "arpg-entry-hero",
+          "Type": "Friendly"
+        },
+        {
+          "To": "arpg-entry-enemy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "arpg_enemy",
@@ -34,7 +44,17 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "arpg-entry-enemy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "arpg-entry-hero",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -47,31 +67,11 @@
       "RepresentativeInstanceId": "arpg-entry-enemy"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "ArpgDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "ArpgDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "ArpgDemo.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  }
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "arpg-entry-hero"
+    }
+  ]
 }

@@ -85,6 +85,7 @@ public static class NavObstacleAuthoringCatalog
         }
 
         return Directory.GetFiles(modsRoot, "mod.json", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutputPath(path))
             .Select(path =>
             {
                 using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
@@ -430,11 +431,6 @@ public static class NavObstacleAuthoringCatalog
         {
             target.ContinuousHeightmap = source.ContinuousHeightmap;
         }
-
-        if (source.ParticipantRelationships != null)
-        {
-            target.ParticipantRelationships = source.ParticipantRelationships;
-        }
     }
 
     private static bool MapFileExists(string rootPath, string mapId)
@@ -464,6 +460,21 @@ public static class NavObstacleAuthoringCatalog
         }
 
         return element.GetString()!;
+    }
+
+    private static bool IsBuildOutputPath(string path)
+    {
+        // mod.json copies under bin/obj are build artifacts, not authored mod sources;
+        // scanning them double-counts mods by name and breaks catalog key uniqueness.
+        foreach (string segment in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (segment == "bin" || segment == "obj")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private sealed record ModInfo(

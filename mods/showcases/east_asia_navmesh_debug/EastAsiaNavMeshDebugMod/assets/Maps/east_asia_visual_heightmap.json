@@ -13,11 +13,19 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 1792,
-      "HeightCells": 1024,
-      "GridCellSizeCm": 3571,
       "TerrainHeightStepCm": 100,
-      "TerrainBlockedAtOrBelowHeightCm": 0
+      "TerrainBlockedAtOrBelowHeightCm": 0,
+      "WidthCm": 6399232,
+      "HeightCm": 3656704,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 3571
+      }
     }
   ],
   "Metadata": {

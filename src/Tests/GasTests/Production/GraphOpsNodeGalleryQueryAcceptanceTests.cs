@@ -384,6 +384,19 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         Assert.That(runtime.Context.CaptionValues.ContainsKey("count"), Is.True, "认知筛执行后名单计数可读");
     }
 
+    [Test]
+    public void QueryFilterSelectable_KeepsOnlySelectableCandidatesInOrder()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryFilterSelectable");
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+
+        Assert.That(runtime.Context.CaptionValues.ContainsKey("count"), Is.True, "可选筛执行后名单计数可读");
+    }
+
     private static GraphOpsNodeGalleryRuntime Play(string op)
     {
         var runtime = new GraphOpsNodeGalleryRuntime();

@@ -1001,7 +1001,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static ProjectileDescriptor CompileProjectile(ProjectileConfig? cfg, string ownerId, string relativePath)
+        private ProjectileDescriptor CompileProjectile(ProjectileConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -1022,7 +1022,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
             }
 
-            RelationshipFilter collisionRelationFilter = ParseRequiredRelationshipFilter(
+            RelationFilter collisionRelationFilter = ParseRequiredRelationFilter(
                 cfg.CollisionRelationFilter,
                 ownerId,
                 "projectile.collisionRelationFilter",
@@ -1881,12 +1881,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static TargetFilterDescriptor CompileTargetFilter(TargetFilterConfig cfg, string effectId, string path)
+        private TargetFilterDescriptor CompileTargetFilter(TargetFilterConfig cfg, string effectId, string path)
         {
             var desc = default(TargetFilterDescriptor);
             desc.ExcludeSource = RequireBool(cfg.ExcludeSource, effectId, path, "targetFilter.excludeSource");
             desc.MaxTargets = RequireInt(cfg.MaxTargets, effectId, path, "targetFilter.maxTargets");
-            desc.RelationFilter = ParseRequiredRelationshipFilter(
+            desc.RelationFilter = ParseRequiredRelationFilter(
                 cfg.RelationFilter,
                 effectId,
                 "targetFilter.relationFilter",
@@ -1896,7 +1896,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return desc;
         }
 
-        private static RelationshipFilter ParseRequiredRelationshipFilter(
+        private RelationFilter ParseRequiredRelationFilter(
             string? raw,
             string effectId,
             string fieldPath,
@@ -1907,7 +1907,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} is required.");
             }
 
-            return RelationshipFilterUtil.Parse(raw);
+            try
+            {
+                return RelationFilter.Parse(raw, _relationshipTypes);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath}: {ex.Message}", ex);
+            }
         }
 
         private static string RequireString(string? raw, string effectId, string path, string fieldPath)

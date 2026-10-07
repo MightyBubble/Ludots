@@ -10,8 +10,11 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -579,6 +582,51 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void EmptyPolygon_RefusesToQuery_InsteadOfTreatingTheAreaAsEmpty()
+        {
+            using var harness = RegionHarness.Create(null);
+            harness.SpawnVolumeEntity(
+                "hole",
+                new RegionVolumeShape
+                {
+                    Kind = RegionVolumeShapeKind.Polygon,
+                    PolygonPoints = Array.Empty<Fix64Vec2>(),
+                },
+                Fix64Vec2.FromInt(0, 0));
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => harness.Tick());
+            Assert.That(ex!.Message, Does.Contain("no vertices"));
+        }
+
+        [Test]
+        public void UnindexedEntity_InsideVolume_StillEnters()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(100, 100, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""));
+            Entity entity = harness.SpawnPositioned(100, 100, index: false);
+
+            harness.Tick();
+
+            Assert.That(harness.Entered.Count, Is.EqualTo(1),
+                "A unit the partition has not indexed yet still enters the ring it is standing in.");
+            Assert.That(harness.Entered[0].Entity, Is.EqualTo(entity));
+        }
+
+        [Test]
+        public void DeactivatedMembership_InsideVolume_StillEnters()
+        {
+            using var harness = RegionHarness.Create(
+                VolumeAt(100, 100, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""));
+            Entity entity = harness.SpawnDeactivated(100, 100);
+
+            harness.Tick();
+
+            Assert.That(harness.Entered.Count, Is.EqualTo(1),
+                "A concealed unit is absent from the partition and still enters the ring it is standing in.");
+            Assert.That(harness.Entered[0].Entity, Is.EqualTo(entity));
+        }
+
+        [Test]
         public void FastCrossing_ThroughThinSegment_FiresEnterExitPair()
         {
             using var harness = RegionHarness.Create(
@@ -680,14 +728,20 @@ namespace Ludots.Tests.Gas.Graph
 
         private sealed class RegionHarness : IDisposable
         {
+            private const int CellSizeCm = 100;
+
             private static readonly QueryDescription VolumeQuery = new QueryDescription()
                 .WithAll<MapEntity, RegionVolumeCm>();
+
+            private readonly ChunkedGridSpatialPartitionWorld _partition;
+            private readonly Dictionary<Entity, (int X, int Y)> _cells = new Dictionary<Entity, (int X, int Y)>();
 
             private RegionHarness(
                 World world,
                 MapSession session,
                 TriggerManager triggers,
                 RegionVolumeTriggerSystem system,
+                ChunkedGridSpatialPartitionWorld partition,
                 List<RegionEvent> entered,
                 List<RegionEvent> exited,
                 List<PoisonEvent> poisonEntered,
@@ -697,6 +751,8 @@ namespace Ludots.Tests.Gas.Graph
                 Session = session;
                 Triggers = triggers;
                 System = system;
+                _partition = partition;
+                World.SubscribeEntityDestroyed(OnEntityDestroyed);
                 Entered = entered;
                 Exited = exited;
                 PoisonEntered = poisonEntered;
@@ -763,6 +819,7 @@ namespace Ludots.Tests.Gas.Graph
                 triggers.RegisterEventHandler(new EventKey(PoisonEnteredEventName), ctx => CapturePoison(poisonEntered, ctx));
                 triggers.RegisterEventHandler(new EventKey(PoisonExitedEventName), ctx => CapturePoison(poisonExited, ctx));
 
+                Entity? volumeEntity = null;
                 if (templateComponentsJson != null)
                 {
                     string merged = extraComponents == null
@@ -790,42 +847,79 @@ namespace Ludots.Tests.Gas.Graph
 
                     Entity entity = builder.Build();
                     world.Add(entity, new MapEntity { MapId = new MapId(MapId) });
+                    volumeEntity = entity;
                 }
 
                 session.RegionVolumeKeys = RegionVolumeBakePass.Bake(world, session, customEvents, schemas);
-                var system = new RegionVolumeTriggerSystem(world, () => sessions, triggers, () => new ScriptContext());
+                var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
+                var spec = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), CellSizeCm);
+                var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
+                var system = new RegionVolumeTriggerSystem(world, () => sessions, triggers, () => new ScriptContext(), spatial);
                 system.Initialize();
-                return new RegionHarness(world, session, triggers, system, entered, exited, poisonEntered, poisonExited);
+                var harness = new RegionHarness(
+                    world, session, triggers, system, partition, entered, exited, poisonEntered, poisonExited);
+                if (volumeEntity.HasValue && world.Has<WorldPositionCm>(volumeEntity.Value))
+                {
+                    harness.Place(volumeEntity.Value);
+                }
+
+                return harness;
             }
 
-            public Entity SpawnPositioned(int xCm, int yCm)
+            public Entity SpawnPositioned(int xCm, int yCm, bool index = true)
             {
-                return World.Create(
+                Entity entity = World.Create(
                     new MapEntity { MapId = new MapId(MapId) },
                     new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+                if (index)
+                {
+                    Place(entity);
+                }
+
+                return entity;
+            }
+
+            public Entity SpawnDeactivated(int xCm, int yCm)
+            {
+                Entity entity = SpawnPositioned(xCm, yCm, index: false);
+                World.Add(entity, new SpatialCellRef
+                {
+                    CellX = 0,
+                    CellY = 0,
+                    State = SpatialMembershipState.Deactivated,
+                });
+                return entity;
             }
 
             public Entity SpawnPositionedTagged(int xCm, int yCm, int tagId)
             {
                 var tags = new GameplayTagContainer();
                 tags.AddTag(tagId);
-                return World.Create(
+                Entity entity = World.Create(
                     new MapEntity { MapId = new MapId(MapId) },
                     new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) },
                     tags);
+                Place(entity);
+                return entity;
             }
 
             public Entity SpawnVolumeEntity(string volumeKey, RegionVolumeShape shape, Fix64Vec2 anchor)
             {
-                return World.Create(
+                Entity entity = World.Create(
                     new MapEntity { MapId = new MapId(MapId) },
                     new WorldPositionCm { Value = anchor },
                     new RegionVolumeCm { VolumeKey = volumeKey, Shape = shape });
+                Place(entity);
+                return entity;
             }
 
             public void MoveTo(Entity entity, int xCm, int yCm)
             {
                 World.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+                if (_cells.ContainsKey(entity))
+                {
+                    Place(entity);
+                }
             }
 
             /// <summary>
@@ -845,6 +939,10 @@ namespace Ludots.Tests.Gas.Graph
                 }
 
                 World.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+                if (_cells.ContainsKey(entity))
+                {
+                    Place(entity);
+                }
             }
 
             public void DestroyVolume(string volumeKey)
@@ -866,8 +964,53 @@ namespace Ludots.Tests.Gas.Graph
                     if (World.Get<RegionVolumeCm>(entity).VolumeKey == volumeKey)
                     {
                         World.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+                        Place(entity);
                         return;
                     }
+                }
+            }
+
+            private void Place(Entity entity)
+            {
+                WorldCmInt2 cm = World.Get<WorldPositionCm>(entity).Value.ToWorldCmInt2();
+                int cellX = MathUtil.FloorDiv(cm.X, CellSizeCm);
+                int cellY = MathUtil.FloorDiv(cm.Y, CellSizeCm);
+                if (_cells.TryGetValue(entity, out (int X, int Y) old))
+                {
+                    if (old.X != cellX || old.Y != cellY)
+                    {
+                        _partition.Remove(entity, old.X, old.Y);
+                        _partition.Add(entity, cellX, cellY);
+                        _cells[entity] = (cellX, cellY);
+                    }
+                }
+                else
+                {
+                    _partition.Add(entity, cellX, cellY);
+                    _cells[entity] = (cellX, cellY);
+                }
+
+                var membership = new SpatialCellRef
+                {
+                    CellX = cellX,
+                    CellY = cellY,
+                    State = SpatialMembershipState.Active,
+                };
+                if (World.Has<SpatialCellRef>(entity))
+                {
+                    World.Set(entity, membership);
+                }
+                else
+                {
+                    World.Add(entity, membership);
+                }
+            }
+
+            private void OnEntityDestroyed(in Entity entity)
+            {
+                if (_cells.Remove(entity, out (int X, int Y) cell))
+                {
+                    _partition.Remove(entity, cell.X, cell.Y);
                 }
             }
 

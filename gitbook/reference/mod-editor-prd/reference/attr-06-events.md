@@ -8,6 +8,7 @@
 - 玩法面链路：任意属性写打属性脏位（写入权威与聚合器两处）→ 延迟触发收集逐位与 AttributeLastSnapshot 比较得 Old/New 入队并清位更新快照；无 snapshot 先补建且 OldValue=0。快照来源：实体模板创建与批量生成器。处理系统查映射，非无效 id 则事件总线发布 GameplayEvent（TagId、Source=Target、Magnitude=NewValue）；无映射直接 return——当前内容下永不发布。
 - 表现面链路（并行）：变化位由写入权威与聚合器打点；表现投影系统对置位属性产出 PresentationEventKind.AttributeValueChanged 与 PresentationOwnerChange；清位系统消费后移除组件。
 - 两面差异事实：玩法面带 Old/New、延迟一帧；表现面只报变化事实、当帧消费即清。
+- 因果归属：属性层永不携带写入者，`Source=Target` 是属性层能给的全部事实；"谁改的"从 effect 域取（裁决 #1460，后续 #1720）。
 
 ## 2. 代码锚点
 

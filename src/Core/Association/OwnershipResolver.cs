@@ -11,6 +11,8 @@ namespace Ludots.Core.Association
         private readonly int _ownsTypeId;
         private readonly List<Entity> _queue = new(32);
         private readonly List<Entity> _visited = new(32);
+        private readonly List<Entity> _projectionScratch = new(32);
+        private World? _projectionWorld;
         private Entity[] _edgeScratch = new Entity[8];
         private Entity[] _incomingScratch = new Entity[2];
 
@@ -27,6 +29,11 @@ namespace Ludots.Core.Association
 
         public int OwnsTypeId => _ownsTypeId;
 
+        public void BindIdentityProjection(World world)
+        {
+            _projectionWorld = world ?? throw new ArgumentNullException(nameof(world));
+        }
+
         public void EnsureOwnership(Entity owner, Entity owned)
         {
             if (owner == Entity.Null)
@@ -41,11 +48,13 @@ namespace Ludots.Core.Association
 
             ClearOwnership(owned, owner);
             _relationships.EnsureLink(owner, owned, _ownsTypeId);
+            ProjectPlayerOwnerTree(owned);
         }
 
         public void ClearOwnership(Entity owned)
         {
             ClearOwnership(owned, Entity.Null);
+            ProjectPlayerOwnerTree(owned);
         }
 
         public bool TryGetDirectOwner(Entity owned, out Entity owner)
@@ -150,6 +159,22 @@ namespace Ludots.Core.Association
                     _queue.Add(child);
                     output.Add(child);
                 }
+            }
+        }
+
+        private void ProjectPlayerOwnerTree(Entity owned)
+        {
+            if (_projectionWorld == null || owned == Entity.Null)
+            {
+                return;
+            }
+
+            ParticipantIdentityProjector.SyncPlayerOwner(_projectionWorld, owned, this);
+            _projectionScratch.Clear();
+            CollectOwned(owned, _projectionScratch);
+            for (int i = 0; i < _projectionScratch.Count; i++)
+            {
+                ParticipantIdentityProjector.SyncPlayerOwner(_projectionWorld, _projectionScratch[i], this);
             }
         }
 

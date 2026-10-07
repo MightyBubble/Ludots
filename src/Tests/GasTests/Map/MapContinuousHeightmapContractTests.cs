@@ -353,9 +353,10 @@ namespace Ludots.Tests.Gas
               "boards": [
                 {
                   "name": "default",
-                  "widthCells": 256,
-                  "heightCells": 256,
-                  "gridCellSizeCm": 100,
+                  "widthCm": 25600,
+                  "heightCm": 25600,
+                  "grid": { "cellSizeCm": 100 },
+                  "anchor": { "localXCm": 0, "localYCm": 0, "worldXCm": 0, "worldYCm": 0 },
                   "continuousHeightmapAsset": "assets/terrain/board.height"
                 }
               ]

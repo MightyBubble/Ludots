@@ -73,6 +73,17 @@ namespace Ludots.Core.Gameplay.Relationships
             }
         }
 
+        public RelationshipEdge Clone()
+        {
+            RelationshipEdge copy = this;
+            if (_metrics != null)
+            {
+                copy._metrics = (short[])_metrics.Clone();
+            }
+
+            return copy;
+        }
+
         public static RelationshipEdge CreateDefault(RelationshipMetricRegistry metrics)
         {
             var edge = default(RelationshipEdge);

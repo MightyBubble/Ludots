@@ -532,5 +532,217 @@
         "key": "fourx.summary.bestTradePartner"
       }
     ]
+  },
+  {
+    "id": "Graph.Fourx.GovernorCard",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "governor",
+        "op": "QueryFilterTemplate",
+        "template": "fourx_governor"
+      },
+      {
+        "id": "count",
+        "op": "AggCount"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "governor"
+      },
+      {
+        "from": "governor",
+        "fromPort": "next",
+        "to": "count"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "governor",
+        "toPort": "list"
+      },
+      {
+        "from": "governor",
+        "fromPort": "list",
+        "to": "count",
+        "toPort": "list"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "governor",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "panel.fourx.governor.entity",
+        "role": "Display",
+        "title": "Governor",
+        "summary": "Map governor entity as the single card row."
+      },
+      {
+        "id": "count",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "count",
+        "key": "panel.fourx.governor.count"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Fourx.GovernorCard.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.fourx.governorCard",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.fourx.governorCard"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Fourx.CmdCard.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.cmdcard.abilityBar",
+        "panelAnchor": "screen.bottomLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.cmdcard.abilityBar"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
   }
 ]

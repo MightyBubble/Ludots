@@ -26,29 +26,24 @@ namespace Ludots.Core.Gameplay.Teams
         public ParticipantBindingResult(
             TeamEntityLookup teams,
             PlayerEntityLookup players,
-            IReadOnlyList<ResolvedLocalSeatPossession> localSeats,
-            TeamRelationshipSnapshot? teamRelationships = null)
+            IReadOnlyList<ResolvedLocalSeatPossession> localSeats)
         {
             Teams = teams ?? throw new ArgumentNullException(nameof(teams));
             Players = players ?? throw new ArgumentNullException(nameof(players));
             LocalSeats = localSeats ?? Array.Empty<ResolvedLocalSeatPossession>();
-            TeamRelationships = teamRelationships;
         }
 
         public TeamEntityLookup Teams { get; }
         public PlayerEntityLookup Players { get; }
         public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; }
-        public TeamRelationshipSnapshot? TeamRelationships { get; }
     }
 
     public static class ParticipantBindingResolver
     {
         /// <summary>
-        /// Binds map participants and materializes the control-plane topology.
-        /// <paramref name="stanceCatalog"/> selects the stance-bridging semantics (RFC-0065 DEC-3):
-        /// when configured, every map attitude must match a registered stance type and is double-written
-        /// as a relationship edge next to the TeamManager matrix; when null, no stance edges are built
-        /// (explicit data absence = pure legacy TeamManager behavior).
+        /// Binds map participants and materializes the control-plane topology (MemberOf, Owns).
+        /// Relationships between teams or players are authored as instance relations on their
+        /// representative entities, not here.
         /// </summary>
         public static ParticipantBindingResult Resolve(
             MapSession session,
@@ -56,8 +51,7 @@ namespace Ludots.Core.Gameplay.Teams
             MapLoadEntityIndex entityIndex,
             RelationshipRuntime? relationships,
             RelationshipTypeRegistry? relationshipTypes,
-            OwnershipResolver? ownership = null,
-            DomainStanceConfig? stanceCatalog = null)
+            OwnershipResolver? ownership = null)
         {
             ArgumentNullException.ThrowIfNull(session);
             ArgumentNullException.ThrowIfNull(world);
@@ -140,8 +134,8 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 Upsert(world, entity, new PlayerIdentity { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new PlayerOwner { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new Team { Id = binding.TeamId });
+                ParticipantIdentityProjector.UpsertPlayerOwner(world, entity, binding.PlayerId);
+                ParticipantIdentityProjector.UpsertTeam(world, entity, binding.TeamId);
                 playerLookup.Register(binding.PlayerId, entity);
             }
 
@@ -150,15 +144,12 @@ namespace Ludots.Core.Gameplay.Teams
                 session.LaunchContext,
                 playerLookup);
 
-            ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);
             BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
 
-            bool hasParticipantBindings = mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0;
             return new ParticipantBindingResult(
                 teamLookup,
                 playerLookup,
-                localSeats,
-                hasParticipantBindings ? TeamManager.CaptureSnapshot() : null);
+                localSeats);
         }
 
         public static void PublishFocused(
@@ -170,10 +161,6 @@ namespace Ludots.Core.Gameplay.Teams
 
             PublishTeamLookup(globals, participants.Teams);
             PublishPlayerLookup(globals, participants.Players);
-            if (participants.TeamRelationships != null)
-            {
-                TeamManager.RestoreSnapshot(participants.TeamRelationships);
-            }
 
             PublishLocalSeats(globals, participants.LocalSeats);
         }
@@ -258,6 +245,18 @@ namespace Ludots.Core.Gameplay.Teams
                     $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered before publishing focused participants.");
             }
 
+            // 空座位且无既有座位可替换时不清 seats/views：装载链会先以空座位发布、
+            // 再随实体阶段发布真实座位，过早清空会把 bootstrap 呈现眼连同相机实例
+            // 一起丢掉（DefaultCamera 随后只能落到新相机上，旧实例成为孤儿）。
+            if (localSeats.Count == 0 && seats.Count == 0)
+            {
+                return;
+            }
+
+            // 重建 views 前收养既有呈现相机：地图 DefaultCamera 位姿可能已落在 bootstrap
+            // 或既有参与者视图上，重建实例会把作者取景连同实例丢弃——与 sole-seat
+            // 绑定（ClientLocalSeatBindings.BindSoleSeat）同一合同。
+            Gameplay.Camera.CameraManager? adoptedPresentCamera = Client.ClientLocalSeatBindings.ResolveAdoptablePresentCamera(views);
             seats.Clear();
             views.Clear();
             string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
@@ -271,7 +270,9 @@ namespace Ludots.Core.Gameplay.Teams
                     PossessedPlayerId = possession.PlayerId,
                     PossessedRep = possession.RepEntity,
                 };
-                string viewId = views.EnsureDefaultView(possession.RepEntity);
+                string viewId = views.EnsureDefaultView(
+                    possession.RepEntity,
+                    camera: i == 0 ? adoptedPresentCamera : null);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
                     seat.PresentBinding = PresentBinding.FromDeclaredLayout(
@@ -467,126 +468,6 @@ namespace Ludots.Core.Gameplay.Teams
             globals[CoreServiceKeys.PlayerEntityLookup.Name] = source;
         }
 
-        private static void ResolveRelationships(
-            string mapId,
-            MapConfig mapConfig,
-            TeamEntityLookup teams,
-            PlayerEntityLookup players,
-            RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes,
-            DomainStanceConfig? stanceCatalog)
-        {
-            ParticipantRelationshipConfig config = mapConfig.ParticipantRelationships ?? new ParticipantRelationshipConfig();
-            ValidateCollection(config.Teams, $"Map '{mapId}' ParticipantRelationships.Teams");
-            ValidateCollection(config.Players, $"Map '{mapId}' ParticipantRelationships.Players");
-            ValidateCollection(config.PlayerTeams, $"Map '{mapId}' ParticipantRelationships.PlayerTeams");
-
-            bool hasEntityRelationships =
-                config.Teams.Count > 0 ||
-                config.Players.Count > 0 ||
-                config.PlayerTeams.Count > 0;
-            if (hasEntityRelationships && (relationships == null || relationshipTypes == null))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' declares participant relationships but RelationshipRuntime is unavailable.");
-            }
-
-            if (mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0)
-            {
-                TeamManager.Clear();
-            }
-
-            for (int i = 0; i < config.Teams.Count; i++)
-            {
-                TeamRelationshipBindingData binding = config.Teams[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.Teams[{i}] requires an object payload.");
-                Entity teamA = RequireTeam(teams, binding.TeamA, mapId, $"ParticipantRelationships.Teams[{i}].TeamA");
-                Entity teamB = RequireTeam(teams, binding.TeamB, mapId, $"ParticipantRelationships.Teams[{i}].TeamB");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.Teams[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, teamA, teamB, typeId, symmetric: binding.Symmetric);
-
-                if (!TeamManager.TryParseRelationship(binding.Attitude, out TeamRelationship attitude))
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' ParticipantRelationships.Teams[{i}].Attitude is invalid: '{binding.Attitude}'.");
-                }
-
-                if (binding.Symmetric)
-                {
-                    TeamManager.SetRelationshipSymmetric(binding.TeamA, binding.TeamB, attitude);
-                }
-                else
-                {
-                    TeamManager.SetRelationship(binding.TeamA, binding.TeamB, attitude);
-                }
-
-                // RFC-0065 DEC-3 bridge: double-write the attitude as a teamRep→teamRep stance edge so
-                // DomainStanceQuery and the legacy TeamManager matrix stay consistent until CTRL-3 retires the latter.
-                if (stanceCatalog != null)
-                {
-                    int stanceTypeId = ResolveStanceType(
-                        relationshipTypes!,
-                        stanceCatalog,
-                        mapId,
-                        $"ParticipantRelationships.Teams[{i}]",
-                        binding.Attitude);
-                    EnsureRelationship(relationships!, teamA, teamB, stanceTypeId, symmetric: binding.Symmetric);
-                }
-            }
-
-            for (int i = 0; i < config.Players.Count; i++)
-            {
-                PlayerRelationshipBindingData binding = config.Players[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.Players[{i}] requires an object payload.");
-                Entity playerA = RequirePlayer(players, binding.PlayerA, mapId, $"ParticipantRelationships.Players[{i}].PlayerA");
-                Entity playerB = RequirePlayer(players, binding.PlayerB, mapId, $"ParticipantRelationships.Players[{i}].PlayerB");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.Players[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, playerA, playerB, typeId, symmetric: binding.Symmetric);
-            }
-
-            for (int i = 0; i < config.PlayerTeams.Count; i++)
-            {
-                PlayerTeamRelationshipBindingData binding = config.PlayerTeams[i] ?? throw new InvalidOperationException($"Map '{mapId}' ParticipantRelationships.PlayerTeams[{i}] requires an object payload.");
-                Entity player = RequirePlayer(players, binding.PlayerId, mapId, $"ParticipantRelationships.PlayerTeams[{i}].PlayerId");
-                Entity team = RequireTeam(teams, binding.TeamId, mapId, $"ParticipantRelationships.PlayerTeams[{i}].TeamId");
-                int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.PlayerTeams[{i}]", binding.TypeId);
-                EnsureRelationship(relationships!, player, team, typeId, symmetric: binding.Symmetric);
-
-                if (stanceCatalog != null && !string.IsNullOrEmpty(binding.Attitude))
-                {
-                    int stanceTypeId = ResolveStanceType(
-                        relationshipTypes!,
-                        stanceCatalog,
-                        mapId,
-                        $"ParticipantRelationships.PlayerTeams[{i}]",
-                        binding.Attitude);
-                    EnsureRelationship(relationships!, player, team, stanceTypeId, symmetric: binding.Symmetric);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Resolves a map attitude string against the data-declared stance catalog (no code-level mapping):
-        /// the attitude must literally match one of the registered stance names, otherwise fail fast.
-        /// </summary>
-        private static int ResolveStanceType(
-            RelationshipTypeRegistry registry,
-            DomainStanceConfig stanceCatalog,
-            string mapId,
-            string context,
-            string attitude)
-        {
-            for (int i = 0; i < stanceCatalog.StanceTypes.Count; i++)
-            {
-                if (string.Equals(stanceCatalog.StanceTypes[i], attitude, StringComparison.Ordinal))
-                {
-                    return registry.GetId(attitude);
-                }
-            }
-
-            throw new InvalidOperationException(
-                $"Map '{mapId}' {context}.Attitude '{attitude}' does not match any registered stance type " +
-                $"[{string.Join(", ", stanceCatalog.StanceTypes)}]. Stance names are relationship catalog data (RFC-0065 DEC-3); " +
-                "align the map attitude with the catalog stance names or extend the catalog stance section.");
-        }
-
         /// <summary>
         /// RFC-0065 CTRL-2: materializes the control-plane topology at participant binding time —
         /// <c>MemberOf(playerRep → teamRep)</c> for every bound player and <c>Owns(playerRep → unit)</c>
@@ -621,23 +502,24 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity playerRep = players.Get(binding.PlayerId);
                 Entity teamRep = teams.Get(binding.TeamId);
                 relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, playerRep, teamRep);
             }
 
-            var stanceMembers = new List<(Entity Entity, int TeamId)>();
-            var stanceMemberQuery = new QueryDescription()
+            var teamMembers = new List<(Entity Entity, int TeamId)>();
+            var teamMemberQuery = new QueryDescription()
                 .WithAll<Team, MapEntity>()
                 .WithNone<PlayerIdentity, TeamIdentity>();
-            world.Query(in stanceMemberQuery, (Entity entity, ref Team team, ref MapEntity mapEntity) =>
+            world.Query(in teamMemberQuery, (Entity entity, ref Team team, ref MapEntity mapEntity) =>
             {
                 if (mapEntity.MapId == session.MapId && team.Id > 0)
                 {
-                    stanceMembers.Add((entity, team.Id));
+                    teamMembers.Add((entity, team.Id));
                 }
             });
 
-            for (int i = 0; i < stanceMembers.Count; i++)
+            for (int i = 0; i < teamMembers.Count; i++)
             {
-                (Entity member, int teamId) = stanceMembers[i];
+                (Entity member, int teamId) = teamMembers[i];
                 if (!world.IsAlive(member))
                 {
                     throw new InvalidOperationException(
@@ -651,58 +533,10 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 relationships.EnsureLink(member, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, member, teamRep);
             }
 
             OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
-        }
-
-        private static void EnsureRelationship(RelationshipRuntime relationships, Entity source, Entity target, int typeId, bool symmetric)
-        {
-            relationships.EnsureLink(source, target, typeId);
-            if (symmetric)
-            {
-                relationships.EnsureLink(target, source, typeId);
-            }
-        }
-
-        private static Entity RequireTeam(TeamEntityLookup lookup, int teamId, string mapId, string context)
-        {
-            if (teamId <= 0)
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} must be positive.");
-            }
-
-            if (!lookup.TryGet(teamId, out Entity entity))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} references unbound TeamId {teamId}.");
-            }
-
-            return entity;
-        }
-
-        private static Entity RequirePlayer(PlayerEntityLookup lookup, int playerId, string mapId, string context)
-        {
-            if (playerId <= 0)
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} must be positive.");
-            }
-
-            if (!lookup.TryGet(playerId, out Entity entity))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context} references unbound PlayerId {playerId}.");
-            }
-
-            return entity;
-        }
-
-        private static int ResolveRelationshipType(RelationshipTypeRegistry registry, string mapId, string context, string typeId)
-        {
-            if (string.IsNullOrWhiteSpace(typeId))
-            {
-                throw new InvalidOperationException($"Map '{mapId}' {context}.TypeId requires a non-empty relationship type id.");
-            }
-
-            return registry.GetId(typeId);
         }
 
         private static string RequireRepresentativeInstanceId(string mapId, string context, string instanceId)

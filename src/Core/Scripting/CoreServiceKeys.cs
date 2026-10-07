@@ -290,7 +290,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
         public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
         public static readonly ServiceKey<ControlDomainQuery> ControlDomainQuery = new("ControlDomainQuery");
-        public static readonly ServiceKey<DomainStanceQuery> DomainStanceQuery = new("DomainStanceQuery");
+        public static readonly ServiceKey<TeamRelationQuery> TeamRelationQuery = new("TeamRelationQuery");
+        public static readonly ServiceKey<Ludots.Core.Presentation.Presenters.PresentTeamRelationClassifier> PresentTeamRelationClassifier = new("PresentTeamRelationClassifier");
         public static readonly ServiceKey<AssociationControlProfileRuntime> AssociationControlProfileRuntime = new("AssociationControlProfileRuntime");
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
@@ -316,9 +317,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> RelationshipEventCount = new("RelationshipEvent.Count");
 
         // --- GAS Input / Command Sources / Orders ---
-        public static readonly ServiceKey<InputRequestQueue> InputRequestQueue = new("InputRequestQueue");
-        public static readonly ServiceKey<InputRequestQueue> AbilityInputRequestQueue = new("AbilityInputRequestQueue");
-        public static readonly ServiceKey<InputResponseBuffer> InputResponseBuffer = new("InputResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleQueue> RuntimeEntityLifecycleQueue = new("RuntimeEntityLifecycleQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleReceiptQueue> RuntimeEntityLifecycleReceiptQueue = new("RuntimeEntityLifecycleReceiptQueue");
@@ -357,6 +355,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ResponseChainTelemetryBuffer> ResponseChainTelemetryBuffer = new("ResponseChainTelemetryBuffer");
         public static readonly ServiceKey<OrderQueue> ChainOrderQueue = new("ChainOrderQueue");
         public static readonly ServiceKey<ResponseChainUiState> ResponseChainUiState = new("ResponseChainUiState");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState> ResponseChainPromptState = new("ResponseChainPromptState");
         public static readonly ServiceKey<NetworkRuntimeConfig> NetworkRuntimeConfig = new("NetworkRuntimeConfig");
         public static readonly ServiceKey<ContentFingerprint> NetworkContentFingerprint = new("NetworkContentFingerprint");
         public static readonly ServiceKey<NetworkProcessRole> NetworkProcessRole = new("NetworkProcessRole");
@@ -419,6 +418,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
+        public static readonly ServiceKey<IEntityInfoTitleProfiles> EntityInfoTitleProfiles = new("EntityInfoTitleProfiles");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
         public static readonly ServiceKey<PresentationSemanticMapCatalog> PresentationSemanticMapCatalog = new("PresentationSemanticMapCatalog");
         public static readonly ServiceKey<PresentationImageAssetCatalog> PresentationImageAssetCatalog = new("PresentationImageAssetCatalog");
@@ -426,7 +426,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");
-        public static readonly ServiceKey<MinimapFocusCollectionProvider> MinimapFocusCollectionProvider = new("MinimapFocusCollectionProvider");
         public static readonly ServiceKey<MinimapKnowledgeViewerProvider> MinimapKnowledgeViewerProvider = new("MinimapKnowledgeViewerProvider");
         public static readonly ServiceKey<MinimapMarkerBuffer> MinimapMarkerBuffer = new("MinimapMarkerBuffer");
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
@@ -460,6 +459,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ISpatialCoordinateConverter> SpatialCoordinateConverter = new("SpatialCoordinateConverter");
         public static readonly ServiceKey<ISpatialQueryService> SpatialQueryService = new("SpatialQueryService");
         public static readonly ServiceKey<ISpatialPartitionMembership> SpatialPartitionMembership = new("SpatialPartitionMembership");
+        public static readonly ServiceKey<Ludots.Core.Spatial.Eqs.EqsQueryRegistry> EqsQueries = new("EqsQueries");
         public static readonly ServiceKey<HexMetrics> HexMetrics = new("HexMetrics");
         public static readonly ServiceKey<ILoadedChunks> LoadedChunks = new("LoadedChunks");
 
@@ -484,7 +484,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatDeviceBinding> ClientLocalSeatDeviceBinding = new("ClientLocalSeatDeviceBinding");
         public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatInputRuntime> ClientLocalSeatInputRuntime = new("ClientLocalSeatInputRuntime");
         public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
-        public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -21,12 +20,6 @@ namespace Ludots.Tests.GAS
         private const string DutyAttribute = "Tests.Kinship.Duty";
         private const string BloodTag = "Tests.Kinship.Blood";
         private const string PatriarchTag = "Tests.Kinship.Patriarch";
-
-        private static readonly JsonSerializerOptions CatalogOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() },
-        };
 
         [Test]
         public void TypeTemplate_FromCatalogJson_MaterializesInitialAttributesAndBirthTags()
@@ -213,7 +206,16 @@ namespace Ludots.Tests.GAS
                 }
                 """);
             using var world = World.Create();
-            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            RelationshipTypeRegistry types = new RelationshipTypeRegistry();
+            RelationshipChangeBuffer changes = new RelationshipChangeBuffer();
+            RelationshipRuntime runtime = new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                changes,
+                new RelationshipReverseIndex(world));
             var flags = new RelationshipFlagRegistry();
             RelationshipCatalogInstaller.RegisterCatalog(catalog, types, new RelationshipMetricRegistry(), flags, new RelationshipBandRegistry());
             runtime.InstallTypeTemplates(catalog);
@@ -231,8 +233,8 @@ namespace Ludots.Tests.GAS
                 runtime.RemoveLink(source, target, fatherSonTypeId);
             }
 
-            long allocated = MeasureTemplatedChurn(runtime, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
-            long second = MeasureTemplatedChurn(runtime, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
+            long allocated = MeasureTemplatedChurn(runtime, changes, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
+            long second = MeasureTemplatedChurn(runtime, changes, source, target, fatherSonTypeId, kinshipFlagId, iterations: 1_024);
 
             Assert.That(Math.Min(allocated, second), Is.EqualTo(0),
                 "Warmed typed edge churn through template application must stay allocation-free.");
@@ -247,6 +249,7 @@ namespace Ludots.Tests.GAS
 
         private static long MeasureTemplatedChurn(
             RelationshipRuntime runtime,
+            RelationshipChangeBuffer changes,
             Entity source,
             Entity target,
             int typeId,
@@ -267,6 +270,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 runtime.RemoveLink(source, target, typeId);
+                changes.Clear();
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
@@ -274,7 +278,7 @@ namespace Ludots.Tests.GAS
 
         private static RelationshipCatalogConfig LoadCatalog(string json)
         {
-            return JsonNode.Parse(json)!.Deserialize<RelationshipCatalogConfig>(CatalogOptions)
+            return JsonNode.Parse(json)!.Deserialize<RelationshipCatalogConfig>(RelationshipCatalogPipelineLoader.SerializerOptions)
                 ?? throw new InvalidOperationException("Failed to deserialize relationship catalog fixture.");
         }
 

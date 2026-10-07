@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Arch.Core.Utils;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -34,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
         private int _overflowHead;
         private int _overflowTail;
         private int _overflowCount;
+        private static readonly ComponentType ResponseChainListenerType = Component<ResponseChainListener>.ComponentType;
         private int _responseChainListenerRevision;
         private World? _responseChainListenerWorld;
 
@@ -246,6 +248,15 @@ namespace Ludots.Core.Gameplay.GAS
 
             _responseChainListenerWorld = world;
             world.SubscribeEntityDestroyed(OnResponseChainEntityDestroyed);
+            world.ComponentChanged += OnResponseChainComponentChanged;
+        }
+
+        private void OnResponseChainComponentChanged(Entity entity, ComponentType type)
+        {
+            if (type == ResponseChainListenerType)
+            {
+                NotifyResponseChainListenersChanged();
+            }
         }
 
         private void OnResponseChainEntityDestroyed(in Entity entity)

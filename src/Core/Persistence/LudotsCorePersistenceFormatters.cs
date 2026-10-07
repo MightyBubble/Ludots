@@ -87,6 +87,8 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new RelationshipComponentFormatter<RelationshipEdgeSet>());
             AddComponentFormatter(formatters, new RelationshipComponentFormatter<InRelationship>());
             AddComponentFormatter(formatters, new NameFormatter());
+            AddComponentFormatter(formatters, new PlacedInstanceIdFormatter());
+            AddComponentFormatter(formatters, new EntityInfoTitleTokenFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
             AddComponentFormatter(formatters, new PresentationFrameStateFormatter());
             AddComponentFormatter(formatters, new Physics2DRuntimeStateFormatter());

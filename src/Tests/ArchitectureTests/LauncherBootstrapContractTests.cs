@@ -1238,32 +1238,14 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void Launcher_ResolvesCefBrowserRuntime_FromProviderPackageRoot()
         {
-            var repoRoot = FindRepoRoot();
-            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-cef-runtime-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(tempDirectory);
-
-            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
-            var originalGraph = CaptureFile(graphPath);
-
-            try
+            if (!OperatingSystem.IsWindows())
             {
-                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
-                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
-                File.WriteAllText(preferencesPath, "{}");
-                File.WriteAllText(userConfigPath, "{}");
+                Assert.Ignore("browserRuntime provider 'cef' requires Windows (CefSharp.OffScreen.NETCore win-x64).");
+            }
 
-                var launcher = new LauncherService(
-                    repoRoot,
-                    Path.Combine(repoRoot, "launcher.config.json"),
-                    Path.Combine(repoRoot, "launcher.presets.json"),
-                    preferencesPath,
-                    userConfigPath);
-
-                var plan = launcher.Resolve(
-                    new[] { "preset:browser_react_flow_cef_raylib" },
-                    LauncherPlatformIds.Raylib,
-                    LauncherBuildMode.Never).Plan;
-                var runtime = plan.BrowserRuntime;
+            WithCefReactFlowPresetLauncher("launcher-cef-runtime", (repoRoot, launcher) =>
+            {
+                var runtime = ResolveCefReactFlowPreset(launcher).BrowserRuntime;
                 string packageRootPath = Path.Combine(repoRoot, "BrowserRuntime", "cef");
 
                 Assert.That(runtime, Is.Not.Null);
@@ -1276,15 +1258,24 @@ namespace Ludots.Tests.Architecture
                     "Libraries",
                     "Ludots.UI.Browser.Cef",
                     "Ludots.UI.Browser.Cef.csproj")));
-            }
-            finally
+            });
+        }
+
+        [Test]
+        public void Launcher_RefusesCefBrowserRuntime_OnNonWindows()
+        {
+            if (OperatingSystem.IsWindows())
             {
-                RestoreFile(graphPath, originalGraph);
-                if (Directory.Exists(tempDirectory))
-                {
-                    Directory.Delete(tempDirectory, recursive: true);
-                }
+                Assert.Ignore("This contract asserts the explicit non-Windows refusal of provider 'cef'.");
             }
+
+            WithCefReactFlowPresetLauncher("launcher-cef-runtime-unsupported", (_, launcher) =>
+            {
+                var ex = Assert.Throws<PlatformNotSupportedException>(() => ResolveCefReactFlowPreset(launcher));
+                Assert.That(ex!.Message, Does.Contain("provider 'cef'"));
+                Assert.That(ex.Message, Does.Contain("requires Windows"));
+                Assert.That(ex.Message, Does.Contain("Ultralight"));
+            });
         }
 
         [Test]
@@ -1380,12 +1371,11 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "SelectionInteractionMod",
                         "MassNavigationMod",
                         "CapabilityStandardMassNavigationLargeWorld10kMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -2279,6 +2269,37 @@ namespace Ludots.Tests.Architecture
                 Path.Combine(repoRoot, "launcher.presets.json"),
                 preferencesPath,
                 userConfigPath);
+        }
+
+        private static void WithCefReactFlowPresetLauncher(string tempDirectoryPrefix, Action<string, LauncherService> body)
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"{tempDirectoryPrefix}-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                body(repoRoot, CreateLauncher(repoRoot, tempDirectory));
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        private static LauncherLaunchPlan ResolveCefReactFlowPreset(LauncherService launcher)
+        {
+            return launcher.Resolve(
+                new[] { "preset:browser_react_flow_cef_raylib" },
+                LauncherPlatformIds.Raylib,
+                LauncherBuildMode.Never).Plan;
         }
 
         private static LauncherNetworkProcessReadinessDefinition Readiness(

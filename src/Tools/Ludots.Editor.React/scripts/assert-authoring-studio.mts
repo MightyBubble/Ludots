@@ -14,10 +14,10 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 assert(AUTHORING_STUDIO_HOME === '/', 'studio home must be / so one-click opens the desk, not the map');
-assert(AUTHORING_TOOLS.length === 5, `studio must list exactly 5 tools, got ${AUTHORING_TOOLS.length}`);
+assert(AUTHORING_TOOLS.length === 6, `studio must list exactly 6 tools, got ${AUTHORING_TOOLS.length}`);
 assert(
-  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,timeline',
-  `studio tool order must be blueprint, bt, fsm, dialogue, timeline; got ${AUTHORING_TOOL_IDS.join(',')}`,
+  AUTHORING_TOOL_IDS.join(',') === 'blueprint,bt,fsm,dialogue,text,timeline',
+  `studio tool order must be blueprint, bt, fsm, dialogue, text, timeline; got ${AUTHORING_TOOL_IDS.join(',')}`,
 );
 
 const forbidden = ['/map', '/ui-panel-authoring', '/gas', '/data'];
@@ -33,6 +33,7 @@ assert(matchAuthoringTool('/story-authoring')?.id === 'dialogue', '/story-author
 assert(matchAuthoringTool('/blueprint')?.id === 'blueprint', '/blueprint is the studio card path');
 assert(matchAuthoringTool('/dialogue')?.id === 'dialogue', '/dialogue is the studio card path');
 assert(matchAuthoringTool('/timeline')?.id === 'timeline', '/timeline is a first-class studio room');
+assert(matchAuthoringTool('/text-bank')?.id === 'text', '/text-bank is a first-class studio room');
 assert(matchAuthoringTool('/map') === undefined, 'map editor must not be a studio tool');
 assert(matchAuthoringTool('/ui-panel-authoring') === undefined, 'panel authoring must not be a studio tool');
 assert(AUTHORING_TOOLS.find((tool) => tool.id === 'dialogue')?.blurb.includes('树'), 'dialogue card must say it is a tree');
@@ -97,6 +98,12 @@ const studioSurfaces = [
   'src/pages/gas-graph-editor/gasGraphTheme.ts',
   'src/pages/gas-graph-editor/GasEdges.tsx',
   'src/pages/authoring-studio/authoringTheme.ts',
+  'src/pages/text-bank/TextBankPage.tsx',
+  'src/pages/text-bank/textBank.css',
+  'src/pages/text-bank/textBankModel.ts',
+  'src/pages/text-bank/RichTextArea.tsx',
+  'src/pages/dialogue-tree-editor/StatementInspector.tsx',
+  'src/pages/dialogue-tree-editor/inlineAuthoring.ts',
 ];
 const bannedPalette = /violet-|indigo-|fuchsia-|purple-|cyan-|sky-|#a78bfa|#e879f9|#c084fc|#a855f7|#7c3aed|#8b5cf6|#22d3ee|#67e8f9|#a78bfa/;
 for (const rel of studioSurfaces) {
@@ -119,11 +126,19 @@ assert(topologyPage.includes('&source=${encodeURIComponent(source)}'), 'topology
 assert(!topologyPage.includes('mod=core&graph='), 'leaf jump must not hardcode Core as the graph owner');
 const dialoguePage = readFileSync(join(here, '../src/pages/dialogue-tree-editor/DialogueTreeCanvas.tsx'), 'utf8');
 assert(dialoguePage.includes('加一句'), 'dialogue canvas must offer add-say');
-assert(dialoguePage.includes('删除此句'), 'dialogue inspector must offer delete-say');
-assert(dialoguePage.includes('删除此选项'), 'dialogue inspector must offer delete-choice');
 assert(dialoguePage.includes('onNodesDelete'), 'dialogue canvas delete must sync back to the tree');
+const statementInspector = readFileSync(join(here, '../src/pages/dialogue-tree-editor/StatementInspector.tsx'), 'utf8');
+assert(statementInspector.includes('删除此句'), 'dialogue inspector must offer delete-say');
+assert(statementInspector.includes('删除此选项'), 'dialogue inspector must offer delete-choice');
+assert(statementInspector.includes('新建说话人'), 'dialogue inspector must offer inline speaker quick-add');
+assert(statementInspector.includes('RichTextArea'), 'dialogue inspector reuses the shared markup editor');
 const storyPage = readFileSync(join(here, '../src/pages/StoryAuthoringPage.tsx'), 'utf8');
 assert(storyPage.includes('新建'), 'story catalogs must offer create');
 assert(storyPage.includes('删除此轨道') || storyPage.includes('删除'), 'story catalogs must offer delete');
+const textBankPage = readFileSync(join(here, '../src/pages/text-bank/TextBankPage.tsx'), 'utf8');
+assert(textBankPage.includes('缺这条翻译'), 'text bank must flag missing translations');
+assert(textBankPage.includes('story/text/validate'), 'text bank save must gate on the engine validate endpoint');
+const richTextArea = readFileSync(join(here, '../src/pages/text-bank/RichTextArea.tsx'), 'utf8');
+assert(richTextArea.includes('wrapSelection'), 'inline markup toolbar lives in the shared RichTextArea');
 
 console.log('assert-authoring-studio: ok');

@@ -7,9 +7,8 @@ namespace Ludots.Core.Input.Interaction
     public static class InteractionContextIds
     {
         /// <summary>
-        /// Data-declared steady-state profile: never mounted (absence of
-        /// <see cref="InteractionContextInstance"/> is the steady state), but its collection key
-        /// and filter profile anchor steady-state cast commits and command routing.
+        /// Reserved profile id data may declare. The engine does not install it. Steady state is
+        /// the absence of <see cref="InteractionContextInstance"/>, not this profile.
         /// </summary>
         public const string Default = "interaction.context.default";
     }
@@ -29,9 +28,6 @@ namespace Ludots.Core.Input.Interaction
     public sealed class InteractionContextProfileDefinition
     {
         public string Id { get; set; } = string.Empty;
-
-        /// <summary>Collection key context-bound cast commits write while the context is active.</summary>
-        public string ActiveCollectionKey { get; set; } = string.Empty;
 
         /// <summary>Optional filter profile applied to cast commits (empty = pass-through).</summary>
         public string FilterProfileId { get; set; }

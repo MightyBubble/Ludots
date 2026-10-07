@@ -399,7 +399,8 @@ namespace Ludots.Core.Navigation.Terrain
             int layerIndex = -1,
             float? blockedAtOrBelowHeightCm = null,
             int originXcm = 0,
-            int originZcm = 0)
+            int originZcm = 0,
+            bool markAsRamp = false)
         {
             if (heightStepCm <= 0) throw new ArgumentOutOfRangeException(nameof(heightStepCm));
             HeightStepCm = heightStepCm;
@@ -407,6 +408,7 @@ namespace Ludots.Core.Navigation.Terrain
             BlockedAtOrBelowHeightCm = blockedAtOrBelowHeightCm;
             OriginXcm = originXcm;
             OriginYcm = originZcm;
+            MarkAsRamp = markAsRamp;
         }
 
         public int HeightStepCm { get; }
@@ -418,6 +420,19 @@ namespace Ludots.Core.Navigation.Terrain
         public int OriginXcm { get; }
 
         public int OriginYcm { get; }
+
+        /// <summary>
+        /// Projects every sample as ramp surface instead of discrete-step floor.
+        /// <para>
+        /// A continuous heightmap is a smoothly varying surface, but the logic grid stores only
+        /// quantized levels. Without this flag a gentle slope lands on two different levels and is
+        /// judged by the discrete cliff rule (level delta &lt;= cliffHeightThreshold), so relief finer
+        /// than one height step is rejected as a cliff and the agent's <c>maxSlopeDeg</c> never takes
+        /// part in the decision. Marking the cells as ramp routes them through the surface-normal
+        /// rule instead, which is the criterion a continuous relief map is authored for.
+        /// </para>
+        /// </summary>
+        public bool MarkAsRamp { get; }
 
         public static LogicTerrainProjectionOptions Default { get; } =
             new LogicTerrainProjectionOptions(SpatialScaleDefaults.CellCm);
@@ -454,11 +469,18 @@ namespace Ludots.Core.Navigation.Terrain
 
                     int level = (int)MathF.Round(heightCm / options.HeightStepCm);
                     level = Math.Clamp(level, 0, SpatialScaleDefaults.LogicTerrainMaxHeightLevel);
-                    LogicTerrainSurfaceFlags flags =
-                        options.BlockedAtOrBelowHeightCm.HasValue &&
-                        heightCm <= options.BlockedAtOrBelowHeightCm.Value
-                            ? LogicTerrainSurfaceFlags.Blocked
-                            : LogicTerrainSurfaceFlags.None;
+                    LogicTerrainSurfaceFlags flags = LogicTerrainSurfaceFlags.None;
+                    if (options.BlockedAtOrBelowHeightCm.HasValue &&
+                        heightCm <= options.BlockedAtOrBelowHeightCm.Value)
+                    {
+                        flags |= LogicTerrainSurfaceFlags.Blocked;
+                    }
+
+                    if (options.MarkAsRamp)
+                    {
+                        flags |= LogicTerrainSurfaceFlags.Ramp;
+                    }
+
                     field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, flags));
                 }
             }

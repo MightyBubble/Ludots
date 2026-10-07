@@ -122,8 +122,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.Multiple(() =>
         {
             Assert.That(input.Actions.Any(action => action.Id == "SkillQ"), Is.True);
-            Assert.That(input.Actions.Any(action => action.Id == "CommandSourceAcquire"), Is.True);
             Assert.That(input.Actions.Any(action => action.Id == "Command"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "Select.Begin"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "Select.End"), Is.True);
             Assert.That(frontlinePaths, Does.Contain("<Keyboard>/q"));
             Assert.That(frontlinePaths, Does.Contain("<Mouse>/LeftButton"));
             Assert.That(frontlinePaths, Does.Contain("<Mouse>/RightButton"));
@@ -464,6 +465,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
                 world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
             4,
             "The first queued training order should start on the next fixed simulation step.");
+        // The admission guard runs before OrderBufferSystem in the tick, so activation lands
+        // on tick N and the crystal charge on tick N+1 (one-tick admission contract).
+        AdvanceCommittedTicks(engine, 1);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
@@ -524,6 +528,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
                 world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
             4,
             "The first queued training order should start on the next fixed simulation step.");
+        // The admission guard runs before OrderBufferSystem in the tick, so activation lands
+        // on tick N and the crystal charge on tick N+1 (one-tick admission contract).
+        AdvanceCommittedTicks(engine, 1);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
@@ -531,7 +538,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
         });
 
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
             "The first squad must not finish before eight seconds.");
 
@@ -553,7 +561,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(second.OrderId));
         });
 
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
         TickUntil(engine, () => CountNamed(world, "Infantry") == startingInfantry + 2, 8,
             "The second squad should finish after its own eight-second training time.");
@@ -595,7 +604,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 0f,
             20,
             "An admitted training order should charge exactly 60 crystals.");
-        AdvanceCommittedTicks(engine, 239);
+        // Charge is observed one committed tick after admission (snapshot lag); anchoring
+        // 239 on the observation tick lands exactly on the admission+240 completion tick.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry),
             "The squad must not arrive before the configured training time.");
 
@@ -637,7 +648,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 0f,
             20,
             "An admitted southern training order should charge exactly 60 crystals.");
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
             "The southern squad must not arrive before the configured training time.");
 
@@ -1050,7 +1062,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string modRoot = Path.Combine(repoRoot, "mods", "showcases", "rts_multiplayer_frontline", "RtsMultiplayerFrontlineMod");
         using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "RtsMultiplayerFrontlineConfig.json")));
         using JsonDocument map = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Maps", "rts_duel_v1.json")));
-        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json")));
+        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Camera", "virtual_cameras.json")));
         using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Entities", "templates.json")));
 
         JsonElement sides = config.RootElement.GetProperty("sides");
@@ -1075,7 +1087,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(openingCamera.GetProperty("FovYDeg").GetInt32(), Is.InRange(1, 179));
             Assert.That(frontlineCamera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"));
             Assert.That(frontlineCamera.GetProperty("enableGrabDrag").GetBoolean(), Is.True);
-            Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("VisualHeightmap"));
+            Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("ContinuousHeightmap"));
             JsonElement commandUi = map.RootElement.GetProperty("Metadata").GetProperty("rts.commandSourceUi");
             Assert.That(commandUi.GetProperty("cameraFocusDistanceCm").GetInt32(), Is.EqualTo(5200));
             Assert.That(commandUi.GetProperty("cameraFocusFovYDeg").GetInt32(), Is.EqualTo(46));

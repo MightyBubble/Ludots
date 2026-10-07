@@ -25,7 +25,6 @@ namespace CameraAcceptanceMod
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;
-                    runtime.InstallCommandSourceAcquiredCallbacks(engine);
                     var inputOwnership = new CameraAcceptanceInputOwnershipSystem(engine);
                     // #709 places AuthoritativeInputSnapshotSystem in LocalInput (replicated-client local intent group).
                     engine.InsertSystemBeforeRequired<AuthoritativeInputSnapshotSystem>(inputOwnership, SystemGroup.LocalInput);
@@ -36,8 +35,15 @@ namespace CameraAcceptanceMod
                     engine.RegisterSystem(new CameraAcceptanceLocalAvatarMoveSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
+                    var projectionClick = new CameraAcceptanceProjectionClickSystem(runtime);
+                    engine.RegisterSystem(projectionClick, SystemGroup.InputCollection);
+                    if (engine.GetService(CoreServiceKeys.InputFrameConsumers) is System.Collections.Generic.List<IInputFrameConsumer> clickConsumers)
+                    {
+                        clickConsumers.Add(projectionClick);
+                    }
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraStackAcceptanceSystem(engine), SystemGroup.InputCollection);
+                    engine.RegisterSystem(new CameraAcceptanceModeSystem(engine), SystemGroup.LocalInput);
                     engine.RegisterPresentationSystem(new CameraAcceptancePanelPresentationSystem(engine, runtime));
                     engine.RegisterPresentationSystem(new CameraAcceptanceProjectionBoundsOverlaySystem(engine));
                     engine.RegisterPresentationSystem(new CameraAcceptanceHotpathLaneSystem(engine));

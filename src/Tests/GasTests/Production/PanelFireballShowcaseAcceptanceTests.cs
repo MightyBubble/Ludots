@@ -16,6 +16,8 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
@@ -38,7 +40,6 @@ public sealed class PanelFireballShowcaseAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FireballSharedMod",
     };
 
@@ -60,8 +61,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("InputHandler missing.");
         Assert.That(liveInput.HasContext("Default_Gameplay"), Is.True);
         Assert.That(liveInput.HasAction("SkillQ"), Is.True);
-        Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null);
-        Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
+        Assert.That(IsTeamHostile(engine, 1, 2), Is.True);
 
         World world = engine.World;
         Entity hero = FindEntity(world, "Hero");
@@ -79,6 +79,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         AssertPanelValues(panelHost, panel, health: 100f, mana: 80f, attack: 25f);
         AssertSkinMounted(engine, skinMod);
 
+        AimPointerAt(engine, input, target);
         PressButton(engine, input, "<Keyboard>/q");
         TickUntil(
             engine,
@@ -112,6 +113,13 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             ?? throw new InvalidOperationException("PanelHost missing.");
         PanelInstanceHandle panel = FindPanel(panelHost, hero);
 
+        AimPointerAtWorldCm(engine, input, Fix64Vec2.FromFloat(100f, 900f));
+        PressButton(engine, input, "<Keyboard>/q");
+        Tick(engine, 30);
+        Assert.That(ReadAttribute(world, hero, "Mana"), Is.EqualTo(80f).Within(0.001f),
+            "Q with no enemy under the cursor casts nothing and spends no mana.");
+
+        AimPointerAt(engine, input, target);
         PressButton(engine, input, "<Keyboard>/q");
         TickUntil(
             engine,
@@ -269,15 +277,30 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
+        engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)new CentimeterScreenProjector());
         return backend;
+    }
+
+    private static void AimPointerAt(GameEngine engine, TestInputBackend backend, Entity entity)
+    {
+        AimPointerAtWorldCm(engine, backend, engine.World.Get<WorldPositionCm>(entity).Value);
+    }
+
+    private static void AimPointerAtWorldCm(GameEngine engine, TestInputBackend backend, Fix64Vec2 worldCm)
+    {
+        IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+            ?? throw new InvalidOperationException("ScreenProjector missing.");
+        backend.MousePosition = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(worldCm));
     }
 
     private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
     {
+        // Hold each edge across one full fixed step (manual clock: frame capture + step
+        // consumption) so the press edge is observed by exactly one step — single submit.
         backend.SetButton(path, true);
-        Tick(engine, 1);
+        Tick(engine, 2);
         backend.SetButton(path, false);
-        Tick(engine, 1);
+        Tick(engine, 2);
     }
 
     private static void TickUntil(
@@ -397,22 +420,22 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
     private static string BuildFireballDiagnostics(GameEngine engine, World world, Entity hero, Entity target)
     {
-        string lastOrder = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? lastOrderObj)
-            ? lastOrderObj?.ToString() ?? "<null>"
-            : "<missing>";
-        InputOrderMappingSystem? mapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
         string localSeat = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localRep)
             ? $"{localRep.Id}:{localRep.WorldId}:{localRep.Version}"
             : "<missing>";
         return string.Join(" | ",
-            $"mapping={(mapping == null ? "<missing>" : mapping.InteractionMode.ToString())}",
-            $"activation={mapping?.LastActivationResult.State.ToString() ?? "<missing>"}",
-            $"lastOrder={lastOrder}",
             $"localSeat={localSeat}",
             $"heroMP={ReadAttribute(world, hero, "Mana"):0.###}",
             $"targetHP={ReadAttribute(world, target, "Health"):0.###}",
-            $"team12={TeamManager.GetRelationship(1, 2)}",
+            $"team12Hostile={IsTeamHostile(engine, 1, 2)}",
             $"errors={engine.TriggerManager.Errors.Count}");
+    }
+
+    private static bool IsTeamHostile(GameEngine engine, int sourceTeamId, int targetTeamId)
+    {
+        TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+            ?? throw new InvalidOperationException("TeamRelationQuery missing.");
+        return teamRelations.Has(sourceTeamId, targetTeamId, teamRelations.Types.GetId("Hostile"));
     }
 
     private static string FindRepoRoot()
@@ -441,7 +464,9 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         public bool GetButton(string devicePath) =>
             _buttons.TryGetValue(devicePath, out bool isDown) && isDown;
 
-        public Vector2 GetMousePosition() => Vector2.Zero;
+        public Vector2 MousePosition { get; set; }
+
+        public Vector2 GetMousePosition() => MousePosition;
 
         public float GetMouseWheel() => 0f;
 
@@ -459,5 +484,11 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         }
 
         public string GetCharBuffer() => string.Empty;
+    }
+
+    private sealed class CentimeterScreenProjector : IScreenProjector
+    {
+        public Vector2 WorldToScreen(Vector3 worldPosition) =>
+            new(960f + worldPosition.X * 100f, 540f + worldPosition.Z * 100f);
     }
 }

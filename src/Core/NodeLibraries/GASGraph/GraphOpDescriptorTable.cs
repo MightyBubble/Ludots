@@ -94,6 +94,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     return true;
                 }
 
+                // Effect graphs stage these writes and commit them with the phase.
+                // Script and TriggerGraph have no effect transaction, so they write the store directly.
+                if (op is GraphNodeOp.RelationshipEnsureLink or GraphNodeOp.RelationshipRemoveLink)
+                {
+                    return true;
+                }
+
                 return metadata.Kind == EffectOperationKind.Pure;
             }
 

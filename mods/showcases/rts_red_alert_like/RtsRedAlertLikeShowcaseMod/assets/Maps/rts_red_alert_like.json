@@ -23,9 +23,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 16384,
-      "HeightCells": 16384,
-      "GridCellSizeCm": 400
+      "WidthCm": 6553600,
+      "HeightCm": 6553600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 400
+      }
     }
   ],
   "Entities": [
@@ -54,7 +62,17 @@
             "Ore": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "allied_team_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "soviet_team_anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra_team_anchor",
@@ -81,7 +99,17 @@
             "Ore": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "soviet_team_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "allied_team_anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_ra_player_anchor",
@@ -467,52 +495,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "soviet_player_anchor"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsRedAlertLike.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

@@ -67,6 +67,7 @@ public sealed class EntityInsightProfile
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }
+    public int TitleTokenId { get; init; }
     public required EntityInsightBadgeProfile[] Badges { get; init; }
     public required EntityInsightStatProfile[] Stats { get; init; }
     public required EntityInsightTipProfile[] Tips { get; init; }

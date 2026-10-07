@@ -19,8 +19,20 @@
       "Name": "default",
       "SpatialType": "HexGrid",
       "DataFile": "sc2_highlands.hex",
-      "WidthCells": 16384,
-      "HeightCells": 16384
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
@@ -37,7 +49,13 @@
         "Name": {
           "Value": "Gateway"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "sc2_training_gateway",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_zealot",
@@ -66,25 +84,5 @@
       "TeamId": 3,
       "RepresentativeInstanceId": "sc2_training_gateway"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "RtsDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 3,
-        "TypeId": "RtsDemo.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

@@ -242,13 +242,17 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public const string ActiveTargetName = "Order.ActiveTarget";
         public const string PlayerIdName = "Order.PlayerId";
 
-        public static readonly int ActiveTypeId = ConfigKeyRegistry.Register(ActiveTypeIdName);
-        public static readonly int SpatialXCm = ConfigKeyRegistry.Register(SpatialXCmName);
-        public static readonly int SpatialYCm = ConfigKeyRegistry.Register(SpatialYCmName);
-        public static readonly int HasActive = ConfigKeyRegistry.Register(HasActiveName);
-        public static readonly int HasPending = ConfigKeyRegistry.Register(HasPendingName);
-        public static readonly int ActiveTarget = ConfigKeyRegistry.Register(ActiveTargetName);
-        public static readonly int PlayerId = ConfigKeyRegistry.Register(PlayerIdName);
+        // Resolve per access: static readonly ids bake at type-init against whichever ambient
+        // table was current; later ambient replacements (per-fixture Clears) strand compiled
+        // graph programs on stale ids (full-suite-only MissingBlackboard). Register returns the
+        // existing id for already-registered names, so this is a dictionary hit per think tick.
+        public static int ActiveTypeId => ConfigKeyRegistry.Register(ActiveTypeIdName);
+        public static int SpatialXCm => ConfigKeyRegistry.Register(SpatialXCmName);
+        public static int SpatialYCm => ConfigKeyRegistry.Register(SpatialYCmName);
+        public static int HasActive => ConfigKeyRegistry.Register(HasActiveName);
+        public static int HasPending => ConfigKeyRegistry.Register(HasPendingName);
+        public static int ActiveTarget => ConfigKeyRegistry.Register(ActiveTargetName);
+        public static int PlayerId => ConfigKeyRegistry.Register(PlayerIdName);
     }
 
     private sealed class BrainPool

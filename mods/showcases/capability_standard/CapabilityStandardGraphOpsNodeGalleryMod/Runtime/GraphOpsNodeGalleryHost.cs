@@ -63,10 +63,14 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public bool OwnsSimulationWorld => _ownsWorld;
     public RelationshipRuntime Relationships { get; private set; } = null!;
     public RelationshipTypeRegistry RelationshipTypes { get; private set; } = null!;
+    public TeamRelationQuery TeamRelations { get; private set; } = null!;
     public RelationshipMetricRegistry RelationshipMetrics { get; private set; } = null!;
     public RelationshipFlagRegistry RelationshipFlags { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
     public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer CommandIntents { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState ResponseChainPrompt { get; private set; } = null!;
+    public Ludots.Core.Gameplay.Camera.VirtualCameraRegistry VirtualCameras { get; private set; } = null!;
+    public Dictionary<string, object> Globals { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
         public TagOps TagOps { get; private set; } = null!;
         public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
@@ -87,6 +91,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
         host.FinishResolver(
+            assetsRoot,
             Path.Combine(assetsRoot, "GraphTables"),
             engine.GetService(CoreServiceKeys.RngPickService),
             engine.GetService(CoreServiceKeys.PresentationTextCatalog));
@@ -107,19 +112,20 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     /// <summary>
     /// Advances the headless-owned engine until the registered production
     /// EffectProcessingLoopSystem (plus AttributeCalculation) closes its slice and drains
-    /// EffectRequests. Engine ticks are cooperative (4ms budget per frame), so a single tick
+    /// EffectRequests, or parks on a response-chain prompt that only a player's answer can move.
+    /// Engine ticks are cooperative (4ms budget per frame), so a single tick
     /// can leave the settlement transaction open — swapping maps then would orphan half-settled
     /// effects. No-op when the gallery runs inside an externally ticked engine: that engine's
     /// own loop settles the queue, and ticking it here would double-settle.
     /// </summary>
-    public void SettleEffectRequests()
+    public void SettleEffectRequests(bool forceTick)
     {
         if (_ownedEngine == null)
         {
             return;
         }
 
-        for (int tick = 0; EffectSettlementOpen(); tick++)
+        for (int tick = 0; (forceTick && tick == 0) || EffectSettlementOpen(); tick++)
         {
             if (tick >= SettlementTickLimit)
             {
@@ -134,6 +140,11 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
 
     private bool EffectSettlementOpen()
     {
+        if (ResponseChainPrompt.IsOpen)
+        {
+            return false;
+        }
+
         if (EffectRequests.Count > 0)
         {
             return true;
@@ -180,6 +191,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Relationships = Relationships,
             Collections = Collections,
             CommandIntents = CommandIntents,
+            ResponseChainPrompt = ResponseChainPrompt,
+            VirtualCameras = VirtualCameras,
+            Globals = Globals,
             TagOps = TagOps,
             EventBus = EventBus,
             GraphCallbacks = GraphCallbacks,
@@ -188,6 +202,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Coords = Coords,
             SpatialQueries = SpatialQueries,
             RelationshipTypes = RelationshipTypes,
+            TeamRelations = TeamRelations,
             RelationshipMetrics = RelationshipMetrics,
             RelationshipFlags = RelationshipFlags,
             BuiltinHandlers = _builtinHandlers,
@@ -254,11 +269,15 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TagOps = RequireEngineService(engine, CoreServiceKeys.TagOps);
         Relationships = RequireEngineService(engine, CoreServiceKeys.RelationshipRuntime);
         RelationshipTypes = RequireEngineService(engine, CoreServiceKeys.RelationshipTypeRegistry);
+        TeamRelations = RequireEngineService(engine, CoreServiceKeys.TeamRelationQuery);
         RelationshipMetrics = RequireEngineService(engine, CoreServiceKeys.RelationshipMetricRegistry);
         RelationshipFlags = RequireEngineService(engine, CoreServiceKeys.RelationshipFlagRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
         CommandIntents = RequireEngineService(engine, CoreServiceKeys.CommandIntentSubmissions);
+        ResponseChainPrompt = RequireEngineService(engine, CoreServiceKeys.ResponseChainPromptState);
+        VirtualCameras = RequireEngineService(engine, CoreServiceKeys.VirtualCameraRegistry);
+        Globals = engine.GlobalContext;
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
         _templateRegistry = engine.MapLoader.TemplateRegistry;
@@ -272,18 +291,12 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         int ownsType = RelationshipTypes.Register("Owns");
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
-        EnsureHostileCasterAndEnemyTeams();
         _itemDefinitions = RequireEngineService(engine, CoreServiceKeys.ItemDefinitionRegistry);
         _inventoryRuntime = RequireEngineService(engine, CoreServiceKeys.InventoryRuntimeService);
     }
 
-    private static void EnsureHostileCasterAndEnemyTeams()
-    {
-        TeamManager.SetRelationship(1, 2, TeamRelationship.Hostile);
-        TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
-    }
-
     private void FinishResolver(
+        string assetsRoot,
         string? graphTablesDir,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
         Ludots.Core.Presentation.Hud.PresentationTextCatalog? presentationTextCatalog = null)
@@ -297,7 +310,28 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
             rngPicks,
             presentationTextCatalog,
-            OrderTypes);
+            OrderTypes,
+            LoadEqsQueryRegistry(assetsRoot));
+    }
+
+    private static Ludots.Core.Spatial.Eqs.EqsQueryRegistry? LoadEqsQueryRegistry(string assetsRoot)
+    {
+        string path = System.IO.Path.Combine(assetsRoot, "Spatial", "eqs_queries.json");
+        if (!System.IO.File.Exists(path))
+        {
+            return null;
+        }
+
+        var ids = new Ludots.Core.Registry.StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var registry = new Ludots.Core.Spatial.Eqs.EqsQueryRegistry(ids, capacity: 16);
+        var configs = Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.ParseQueriesDocument(
+            System.IO.File.ReadAllText(path));
+        for (int i = 0; i < configs.Length; i++)
+        {
+            registry.Install(configs[i].Id, Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.CreateQuery(configs[i]));
+        }
+
+        return registry;
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)

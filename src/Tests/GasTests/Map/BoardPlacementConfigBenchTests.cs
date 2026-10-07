@@ -24,11 +24,11 @@ namespace Ludots.Tests.GAS
             var config = new MapConfig { Id = "bench-dual-domain" };
             config.Boards = new List<BoardConfig>
             {
-                new() { Name = "world", SpatialType = "Grid", WidthCells = 8000, HeightCells = 8000, GridCellSizeCm = 100, LoadedChunkCapacity = 4096 },
-                new() { Name = "arena_west", SpatialType = "Grid", WidthCells = 40, HeightCells = 30, GridCellSizeCm = 100, OriginXCm = -400_000, OriginYcm = 300_000, LoadedChunkCapacity = 4096 },
-                new() { Name = "arena_east", SpatialType = "Grid", WidthCells = 64, HeightCells = 64, GridCellSizeCm = 200, OriginXCm = 200_000, OriginYcm = 350_000, LoadedChunkCapacity = 4096 },
-                new() { Name = "harbor_south", SpatialType = "HexGrid", WidthCells = 999, HeightCells = 999, GridCellSizeCm = 100, HexEdgeLengthCm = 400, WidthHexes = 24, HeightHexes = 10, OriginXCm = 320_000, OriginYcm = -140_000, LoadedChunkCapacity = 4096 },
-                new() { Name = "harbor_north", SpatialType = "HexGrid", WidthCells = 999, HeightCells = 999, GridCellSizeCm = 50, HexEdgeLengthCm = 400, WidthHexes = 16, HeightHexes = 32, OriginXCm = -350_000, OriginYcm = -200_000, LoadedChunkCapacity = 4096 },
+                new() { Name = "world", SpatialType = "Grid", WidthCm = 800_000, HeightCm = 800_000, Grid = new BoardGridAuthoring { CellSizeCm = 100 }, LoadedChunkCapacity = 4096 },
+                new() { Name = "arena_west", SpatialType = "Grid", WidthCm = 4_000, HeightCm = 3_000, Grid = new BoardGridAuthoring { CellSizeCm = 100 }, Anchor = new BoardAnchor { WorldXCm = 10_000, WorldYCm = 300_000 }, LoadedChunkCapacity = 4096 },
+                new() { Name = "arena_east", SpatialType = "Grid", WidthCm = 12_800, HeightCm = 12_800, Grid = new BoardGridAuthoring { CellSizeCm = 200 }, Anchor = new BoardAnchor { WorldXCm = 200_000, WorldYCm = 350_000 }, LoadedChunkCapacity = 4096 },
+                new() { Name = "harbor_south", SpatialType = "HexGrid", WidthCm = 19_800, HeightCm = 6_200, Grid = new BoardGridAuthoring { CellSizeCm = 100 }, Hex = new BoardHexAuthoring { EdgeLengthCm = 400 }, Anchor = new BoardAnchor { WorldXCm = 320_000, WorldYCm = 10_000 }, LoadedChunkCapacity = 4096 },
+                new() { Name = "harbor_north", SpatialType = "HexGrid", WidthCm = 12_800, HeightCm = 19_800, Grid = new BoardGridAuthoring { CellSizeCm = 50 }, Hex = new BoardHexAuthoring { EdgeLengthCm = 400 }, Anchor = new BoardAnchor { WorldXCm = 50_000, WorldYCm = 500_000 }, LoadedChunkCapacity = 4096 },
             };
             return config;
         }

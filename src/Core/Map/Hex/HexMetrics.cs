@@ -58,6 +58,35 @@ namespace Ludots.Core.Map.Hex
         /// pitch √3·e with odd rows shifted half a column, row pitch 1.5·e, half-hex
         /// margins on all sides), in whole centimeters.
         /// </summary>
+        public bool TryCountFittingHexes(int widthCm, int heightCm, out int widthHexes, out int heightHexes)
+        {
+            widthHexes = 0;
+            heightHexes = 0;
+            if (widthCm <= 0 || heightCm <= 0 || EdgeLengthCm <= 0)
+            {
+                return false;
+            }
+
+            int maxHeight = (int)MathF.Floor((heightCm - (0.5f * EdgeLengthCm)) / (1.5f * EdgeLengthCm));
+            for (int height = maxHeight; height >= 1; height--)
+            {
+                float halfRows = (height - 1) / 2f;
+                int maxWidth = (int)MathF.Floor((widthCm / (Sqrt3 * EdgeLengthCm)) - halfRows);
+                for (int width = maxWidth; width >= 1; width--)
+                {
+                    (int footprintWidth, int footprintHeight) = FootprintWorldCm(width, height);
+                    if (footprintWidth <= widthCm && footprintHeight <= heightCm)
+                    {
+                        widthHexes = width;
+                        heightHexes = height;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         public (int WidthCm, int HeightCm) FootprintWorldCm(int widthHexes, int heightHexes)
         {
             if (widthHexes <= 0) throw new ArgumentOutOfRangeException(nameof(widthHexes));

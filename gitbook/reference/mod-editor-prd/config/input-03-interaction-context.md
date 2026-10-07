@@ -15,8 +15,6 @@
 ```json
 { "profiles": [
   { "id": "ctx.guided",
-    "activeCollectionKey": "collection.guided.targets",
-    "activeEntityViewKey": "view.enemies.visible",
     "filterProfileId": "filter.controllable.default",
     "inputContextId": "GuidedAim",
     "commandIntentId": "intent.command.default" } ] }
@@ -27,8 +25,6 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 档案标识；能力 exec 声明 `interactionContextProfile` 时引用 |
-| `activeCollectionKey` | 上下文激活期间生效的实体集合键 |
-| `activeEntityViewKey` | 上下文激活期间生效的实体视图键（声明数据，运行期暂无 id 消费方） |
 | `filterProfileId` | 过滤档案（input-05）；可空 = 不过滤直通 |
 | `inputContextId` | 上下文激活期间该座位应激活的输入上下文（default_input 的 contexts，input-05）；由 `InputContextProjectionSystem` 每 tick 按座位 diff 派生 push/pop，上下文回收后下一 tick 弹出 |
 | `commandIntentId` | 挂载上下文携带的命令意图；仲裁时优先于玩家默认（DEC-14） |
@@ -48,6 +44,7 @@
 | 能力声明的档案名未注册 | 该能力执行开始时报错（非启动期） |
 | 档案声明的过滤/意图名未安装 | 档案安装期失败（启动期） |
 | `interactionContextProfile` 为空串 | 能力加载失败 |
+| 档案里写了 `activeCollectionKey` 或 `activeEntityViewKey` | 装载失败，报出字段名（成员集由提交图随意图带上；视图键没有人读） |
 | exec 结束 | 挂载上下文随下一次系统更新回收（系统负责） |
 
 ## 6. 实例

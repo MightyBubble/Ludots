@@ -22,41 +22,22 @@
     "IdField": "id"
   },
   {
-    "Path": "Entities/templates.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/abilities.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/effects.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/graphs.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
     "Path": "GAS/graphs/*.json",
     "Policy": "ArrayById",
     "IdField": "id"
   },
   {
-    "Path": "GAS/attribute_constraints.json",
+    "Path": "Maps/ballista_route_field.json",
     "Policy": "DeepObject"
   },
   {
-    "Path": "GAS/tag_rules.json",
+    "Path": "Spatial/eqs_queries.json",
     "Policy": "ArrayById",
-    "IdField": "id"
+    "IdField": "id",
+    "AllowEmpty": true
   },
   {
-    "Path": "Maps/ballista_route_field.json",
+    "Path": "Maps/ballista_engage_field.json",
     "Policy": "DeepObject"
   }
 ]

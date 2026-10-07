@@ -163,6 +163,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.War3.TrainFootman",
+    "categories": [
+      "ability.family.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -268,6 +271,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.Cnc.TrainRhino",
+    "categories": [
+      "ability.family.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -349,6 +355,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.Sc2.TrainZealot",
+    "categories": [
+      "ability.family.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [

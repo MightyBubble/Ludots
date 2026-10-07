@@ -55,6 +55,15 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "members_caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
       }
     ],
     "controlEdges": [
@@ -84,11 +93,6 @@
         "to": "halt"
       },
       {
-        "from": "slot",
-        "fromPort": "next",
-        "to": "submit"
-      },
-      {
         "from": "submit",
         "fromPort": "next",
         "to": "rep"
@@ -107,6 +111,21 @@
         "from": "ok",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "members_caster"
+      },
+      {
+        "from": "members_caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "submit"
       }
     ],
     "valueEdges": [
@@ -151,6 +170,12 @@
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "members_caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
       }
     ]
   }

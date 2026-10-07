@@ -18,7 +18,17 @@
         "Name": {
           "Value": "Gateway Prime"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "protoss_gateway",
+          "Type": "Friendly"
+        },
+        {
+          "To": "zerg_drone",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_probe",
@@ -61,7 +71,17 @@
         "Name": {
           "Value": "Drone"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "zerg_drone",
+          "Type": "Friendly"
+        },
+        {
+          "To": "protoss_gateway",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_zerg_spawning_pool",
@@ -96,11 +116,21 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 16384,
-      "HeightCells": 16384,
-      "GridCellSizeCm": 100,
-      "HexEdgeLengthCm": 400,
-      "DataFile": "sc2_highlands.hex"
+      "DataFile": "sc2_highlands.hex",
+      "WidthCm": 1638400,
+      "HeightCm": 1638400,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "TriggerTypes": [],
@@ -131,52 +161,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "zerg_drone"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 3,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsShowcase.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

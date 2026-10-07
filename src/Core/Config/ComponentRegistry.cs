@@ -80,6 +80,7 @@ namespace Ludots.Core.Config
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
             Register("AbilityStateBuffer", SetAbilityStateBuffer, null, Component<AbilityStateBuffer>.ComponentType);
             Register<GrantedSlotBuffer>("GrantedSlotBuffer");
+            Register("ResponseChainListener", SetResponseChainListener, null, Component<ResponseChainListener>.ComponentType);
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);
             Register("ProgressionScopeHost", SetProgressionScopeHost);
@@ -868,6 +869,81 @@ namespace Ludots.Core.Config
                 }
             }
             entity.Add(buffer);
+        }
+
+        private static void SetResponseChainListener(Entity entity, JsonNode data)
+        {
+            const string context = "ResponseChainListener";
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "responses");
+            JsonArray responses = RequireArrayProperty(obj, "responses", context);
+            if (responses.Count == 0 || responses.Count > ResponseChainListener.CAPACITY)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.responses requires 1..{ResponseChainListener.CAPACITY} entries, got {responses.Count}.");
+            }
+
+            var listener = default(ResponseChainListener);
+            for (int i = 0; i < responses.Count; i++)
+            {
+                string itemContext = $"{context}.responses[{i}]";
+                if (responses[i] is not JsonObject item)
+                {
+                    throw new InvalidOperationException($"{itemContext} requires an object payload.");
+                }
+
+                ValidateProperties(item, itemContext, "category", "type", "priority", "effect", "modifyValue", "modifyOp");
+                string categoryName = RequireStringProperty(item, "category", itemContext);
+                int categoryId = EffectCategoryRegistry.GetId(categoryName);
+                if (categoryId == EffectCategoryRegistry.InvalidId)
+                {
+                    throw new InvalidOperationException($"{itemContext}.category references unknown effect category '{categoryName}'.");
+                }
+
+                string typeName = RequireStringProperty(item, "type", itemContext);
+                if (!Enum.TryParse(typeName, ignoreCase: false, out ResponseType type) || !Enum.IsDefined(type))
+                {
+                    throw new InvalidOperationException($"{itemContext}.type '{typeName}' is unknown (allowed: Hook, Modify, Chain, PromptInput).");
+                }
+
+                int priority = ReadIntProperty(item, "priority", itemContext);
+                int effectTemplateId = -1;
+                float modifyValue = 0f;
+                ModifierOp modifyOp = ModifierOp.Add;
+                switch (type)
+                {
+                    case ResponseType.Chain:
+                    case ResponseType.PromptInput:
+                        RequireAbsentProperties(item, itemContext, "modifyValue", "modifyOp");
+                        string effectName = RequireStringProperty(item, "effect", itemContext);
+                        effectTemplateId = EffectTemplateIdRegistry.GetId(effectName);
+                        if (effectTemplateId <= 0)
+                        {
+                            throw new InvalidOperationException($"{itemContext}.effect references unknown effect template '{effectName}'.");
+                        }
+                        break;
+                    case ResponseType.Modify:
+                        RequireAbsentProperties(item, itemContext, "effect");
+                        modifyValue = ReadFloatProperty(item, "modifyValue", itemContext);
+                        string opName = RequireStringProperty(item, "modifyOp", itemContext);
+                        if (!Enum.TryParse(opName, ignoreCase: false, out modifyOp) || !Enum.IsDefined(modifyOp))
+                        {
+                            throw new InvalidOperationException($"{itemContext}.modifyOp '{opName}' is unknown (allowed: Add, Multiply, Override).");
+                        }
+                        break;
+                    default:
+                        RequireAbsentProperties(item, itemContext, "effect", "modifyValue", "modifyOp");
+                        break;
+                }
+
+                listener.Add(categoryId, type, priority, effectTemplateId, modifyValue, modifyOp);
+            }
+
+            entity.Add(listener);
         }
 
         private static void SetAbilityProgressionRequirements(Entity entity, JsonNode data)

@@ -10,8 +10,8 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
-    "TargetXCm": 250,
-    "TargetYCm": 350,
+    "TargetXCm": 3200250,
+    "TargetYCm": 3200350,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 12000,
@@ -26,7 +26,7 @@
             "player:1"
           ],
           "Target": "entity:npc-amber-envoy",
-          "RelationshipType": "Participant"
+          "RelationshipType": "ParticipantViews.KnowledgeShare"
         }
       ],
       "Collections": [
@@ -78,7 +78,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -109,7 +109,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -140,7 +140,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -171,7 +171,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         },
@@ -202,7 +202,7 @@
             "Health"
           ],
           "RelationshipTypes": [
-            "Participant"
+            "ParticipantViews.KnowledgeShare"
           ],
           "ConfidencePermille": 1000
         }
@@ -213,9 +213,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 64000,
-      "HeightCells": 64000,
-      "GridCellSizeCm": 100
+      "WidthCm": 6400000,
+      "HeightCm": 6400000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [
@@ -232,7 +240,21 @@
             "Morale": 72
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-azure",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-crimson",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-emerald",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "team-crimson",
@@ -247,7 +269,21 @@
             "Morale": 61
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-crimson",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-azure",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-amber",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "team-amber",
@@ -262,7 +298,21 @@
             "Morale": 88
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-amber",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-crimson",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-emerald",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "team-emerald",
@@ -277,7 +327,21 @@
             "Morale": 80
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "team-emerald",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team-azure",
+          "Type": "Hostile"
+        },
+        {
+          "To": "team-amber",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "player-azure-alpha",
@@ -291,7 +355,13 @@
             "Focus": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-azure-beta",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-azure-beta",
@@ -305,7 +375,13 @@
             "Focus": 68
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-azure-alpha",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-crimson-alpha",
@@ -319,7 +395,13 @@
             "Focus": 91
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-crimson-beta",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-crimson-beta",
@@ -333,7 +415,13 @@
             "Focus": 63
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "player-crimson-alpha",
+          "Type": "ParticipantViews.KnowledgeShare"
+        }
+      ]
     },
     {
       "InstanceId": "player-amber-alpha",
@@ -372,8 +460,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -3600,
-            "Y": -1800
+            "X": 3196400,
+            "Y": 3198200
           }
         },
         "Team": {
@@ -393,8 +481,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -3000,
-            "Y": -1400
+            "X": 3197000,
+            "Y": 3198600
           }
         },
         "Team": {
@@ -414,8 +502,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -2300,
-            "Y": -2100
+            "X": 3197700,
+            "Y": 3197900
           }
         },
         "Team": {
@@ -435,8 +523,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -1800,
-            "Y": -1600
+            "X": 3198200,
+            "Y": 3198400
           }
         },
         "Team": {
@@ -456,8 +544,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2200,
-            "Y": -1700
+            "X": 3202200,
+            "Y": 3198300
           }
         },
         "Team": {
@@ -477,8 +565,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2800,
-            "Y": -1200
+            "X": 3202800,
+            "Y": 3198800
           }
         },
         "Team": {
@@ -498,8 +586,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 3500,
-            "Y": -2100
+            "X": 3203500,
+            "Y": 3197900
           }
         },
         "Team": {
@@ -519,8 +607,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 4100,
-            "Y": -1600
+            "X": 3204100,
+            "Y": 3198400
           }
         },
         "Team": {
@@ -540,8 +628,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -1200,
-            "Y": 2100
+            "X": 3198800,
+            "Y": 3202100
           }
         },
         "Team": {
@@ -561,8 +649,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -700,
-            "Y": 2700
+            "X": 3199300,
+            "Y": 3202700
           }
         },
         "Team": {
@@ -582,8 +670,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 1700,
-            "Y": 2100
+            "X": 3201700,
+            "Y": 3202100
           }
         },
         "Team": {
@@ -603,8 +691,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 2300,
-            "Y": 2600
+            "X": 3202300,
+            "Y": 3202600
           }
         },
         "Team": {
@@ -624,8 +712,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 400,
-            "Y": 1700
+            "X": 3200400,
+            "Y": 3201700
           }
         },
         "Team": {
@@ -639,8 +727,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 9800,
-            "Y": 9800
+            "X": 3209800,
+            "Y": 3209800
           }
         },
         "ManifestationObstacleIntent2D": {
@@ -704,131 +792,5 @@
       "TeamId": 4,
       "RepresentativeInstanceId": "player-emerald-alpha"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 4,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Attitude": "Neutral",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Attitude": "Neutral",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
-        "TypeId": "Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "Participant",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 3,
-        "PlayerB": 4,
-        "TypeId": "Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 1,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 2,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 4,
-        "TeamId": 2,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 5,
-        "TeamId": 3,
-        "TypeId": "Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 6,
-        "TeamId": 4,
-        "TypeId": "Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

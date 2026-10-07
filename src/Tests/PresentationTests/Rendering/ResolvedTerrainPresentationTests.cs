@@ -98,8 +98,8 @@ namespace Ludots.Tests.Presentation
                 new BoardConfig
                 {
                     Name = name,
-                    WidthCells = 256,
-                    HeightCells = 256,
+                    WidthCm = 25_600,
+                    HeightCm = 25_600,
                     LoadedChunkCapacity = 16,
                 })
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Gameplay.MapTriggers;
@@ -75,7 +76,6 @@ namespace Ludots.Core.Config
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
         public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
         public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();
-        public ParticipantRelationshipConfig ParticipantRelationships { get; set; } = new ParticipantRelationshipConfig();
 
         /// <summary>
         /// Board configurations for this map. Each board is a spatial domain.
@@ -180,6 +180,18 @@ namespace Ludots.Core.Config
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
         /// <summary>
+        /// 这一份摆放要盖过模板档案标题时写的文案槽。档案本身不记录摆放编号。
+        /// </summary>
+        [JsonPropertyName("entityInfo")]
+        public EntityInfoPlacement EntityInfo { get; set; }
+
+        /// <summary>
+        /// 路径级组件差异还没装载。子实体的标题文案槽可以写在对应 path 的 entityInfo 上。
+        /// </summary>
+        [JsonPropertyName("overridePaths")]
+        public List<EntityPathNameOverride> OverridePaths { get; set; }
+
+        /// <summary>
         /// 实例对外关系 authoring 段：from 即本实例，to 为绝对 instanceId 或组内可寻址路径。
         /// 跨 mod 合并按 (to, type) 后写赢；__delete 删边（合并层消化）。物化发生在地图装载站。
         /// </summary>
@@ -188,6 +200,27 @@ namespace Ludots.Core.Config
         /// <summary>跨 mod 合并墓碑：与资产层 ConfigMerger 同键；只认 __delete，不引入 Disabled。</summary>
         [JsonPropertyName("__delete")]
         public bool? Delete { get; set; }
+    }
+
+    public sealed class EntityInfoPlacement
+    {
+        [JsonPropertyName("titleToken")]
+        public string TitleToken { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> Extra { get; set; }
+    }
+
+    public sealed class EntityPathNameOverride
+    {
+        [JsonPropertyName("path")]
+        public string Path { get; set; }
+
+        [JsonPropertyName("set")]
+        public Dictionary<string, JsonNode> Set { get; set; }
+
+        [JsonPropertyName("entityInfo")]
+        public EntityInfoPlacement EntityInfo { get; set; }
     }
 
     public class EntityRelationAuthoring
@@ -213,40 +246,6 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string RepresentativeInstanceId { get; set; }
-    }
-
-    public class ParticipantRelationshipConfig
-    {
-        public List<TeamRelationshipBindingData> Teams { get; set; } = new List<TeamRelationshipBindingData>();
-        public List<PlayerRelationshipBindingData> Players { get; set; } = new List<PlayerRelationshipBindingData>();
-        public List<PlayerTeamRelationshipBindingData> PlayerTeams { get; set; } = new List<PlayerTeamRelationshipBindingData>();
-    }
-
-    public class TeamRelationshipBindingData
-    {
-        public int TeamA { get; set; }
-        public int TeamB { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        public string Attitude { get; set; } = string.Empty;
-        public bool Symmetric { get; set; } = true;
-    }
-
-    public class PlayerRelationshipBindingData
-    {
-        public int PlayerA { get; set; }
-        public int PlayerB { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        public bool Symmetric { get; set; } = true;
-    }
-
-    public class PlayerTeamRelationshipBindingData
-    {
-        public int PlayerId { get; set; }
-        public int TeamId { get; set; }
-        public string TypeId { get; set; } = string.Empty;
-        /// <summary>Optional stance name for the playerRep→teamRep edge; empty means no stance is declared.</summary>
-        public string Attitude { get; set; } = string.Empty;
-        public bool Symmetric { get; set; }
     }
 
     public class ParamOverrideData

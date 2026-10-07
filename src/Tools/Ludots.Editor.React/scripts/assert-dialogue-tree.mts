@@ -82,6 +82,10 @@ for (let i = 0; i < boxes.length; i += 1) {
 const roundTrip = applyFlowToDialogue(gate, flow.nodes, flow.edges);
 assert(roundTrip.entryNode === 'open', 'entry survives round-trip');
 assert(roundTrip.nodes.length === 4, 'hub nodes are not written into Dialogue JSON');
+assert(
+  roundTrip.nodes.find((node) => node.id === 'allowed')?.portraitImageId === 'portrait.speaker.guard.nod',
+  'node-level portrait override survives the canvas round-trip',
+);
 const open = roundTrip.nodes.find((node) => node.id === 'open');
 assert(open?.choices?.find((choice) => choice.id === 'write_pass')?.nextNode === 'recorded', 'write_pass → recorded');
 assert(open?.choices?.find((choice) => choice.id === 'ask_enter')?.conditionGraphId === 'Graph.AuthorKit.Condition.PassGranted', 'condition graph stays on the choice');

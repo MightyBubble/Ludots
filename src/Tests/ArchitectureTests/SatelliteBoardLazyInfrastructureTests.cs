@@ -22,11 +22,10 @@ namespace Ludots.Tests.Architecture
             {
                 Name = "arena",
                 SpatialType = "Grid",
-                WidthCells = 40,
-                HeightCells = 30,
-                GridCellSizeCm = 100,
-                OriginXCm = -400_000,
-                OriginYcm = 300_000,
+                WidthCm = 4_000,
+                HeightCm = 3_000,
+                Grid = new BoardGridAuthoring { CellSizeCm = 100 },
+                Anchor = new BoardAnchor { WorldXCm = -400_000, WorldYCm = 300_000 },
                 LoadedChunkCapacity = 4096,
             };
         }
@@ -64,8 +63,7 @@ namespace Ludots.Tests.Architecture
         {
             var config = SatelliteBoard();
             config.SpatialType = "HexGrid";
-            config.WidthHexes = 12;
-            config.HeightHexes = 5;
+            config.Hex = new BoardHexAuthoring { EdgeLengthCm = 400 };
             var board = new HexGridBoard(new BoardId("arena"), "arena", config);
             try
             {

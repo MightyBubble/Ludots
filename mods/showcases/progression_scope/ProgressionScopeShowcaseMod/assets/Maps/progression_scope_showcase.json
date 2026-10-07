@@ -19,15 +19,32 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 8192,
-      "HeightCells": 8192,
-      "HexEdgeLengthCm": 400
+      "WidthCm": 819200,
+      "HeightCm": 819200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      },
+      "Hex": {
+        "EdgeLengthCm": 400
+      }
     }
   ],
   "Entities": [
     {
       "Template": "progression_scope_city_host",
-      "InstanceId": "progression-scope-city-host"
+      "InstanceId": "progression-scope-city-host",
+      "Relations": [
+        {
+          "To": "progression-scope-city-host",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "progression_scope_faction_host"
