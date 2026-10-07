@@ -1,0 +1,14 @@
+[
+  {
+    "id": "panel.Ui.CastFire",
+    "description": "面板按钮 Ui.CastFire 的载荷伴随事件：slot=被点 chip 的槽位索引（AbilitySlot item 的 slotIndex 字段烘焙）。消费图读 slot 后经 SubmitCast 走与键盘同一条施法意图管线。",
+    "scope": "map",
+    "params": [
+      {
+        "name": "slot",
+        "type": "int",
+        "key": "Ucp.Slot"
+      }
+    ]
+  }
+]

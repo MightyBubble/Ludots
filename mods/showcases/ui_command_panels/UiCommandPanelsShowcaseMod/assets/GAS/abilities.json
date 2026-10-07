@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Ability.Ucp.Fireball",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Ucp.FireballHit"
+        }
+      ]
+    },
+    "input": {
+      "autoTargetPolicy": "NearestInRange",
+      "autoTargetRelation": "Hostile",
+      "autoTargetRangeCm": 200000
+    }
+  },
+  {
+    "id": "Ability.Ucp.Rally",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  }
+]

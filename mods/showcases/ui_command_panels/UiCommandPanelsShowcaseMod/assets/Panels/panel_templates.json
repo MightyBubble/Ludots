@@ -1,0 +1,140 @@
+[
+  {
+    "id": "panel.ucp.skills",
+    "subject": "Entity",
+    "graph": "Graph.Ucp.Skills",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "ucp.skills.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "slots",
+        "source": "selfGraph",
+        "collectionKey": "ucp.slots",
+        "template": "panel.ucp.slotChip"
+      }
+    ],
+    "width": 300,
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "text": "指挥官技能"
+        },
+        {
+          "type": "list",
+          "bind": "slots",
+          "viewportHeight": 96,
+          "itemExtent": 40
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.ucp.slotChip",
+    "subject": "AbilitySlot",
+    "graph": "Graph.Ucp.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "ucp.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "events": [
+      {
+        "eventId": "Ui.CastFire",
+        "control": "cast",
+        "gesture": "tap",
+        "payload": {
+          "Ucp.Slot": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "button",
+          "control": "cast",
+          "bind": "displayName",
+          "tip": {
+            "titleBind": "displayName",
+            "text": "点击下令施放"
+          },
+          "payload": {
+            "Ucp.Slot": "slotIndex"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.ucp.command",
+    "subject": "Entity",
+    "graph": "Graph.Ucp.Command",
+    "pins": [
+      {
+        "name": "built",
+        "key": "ucp.command.built",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "width": 220,
+    "events": [
+      {
+        "eventId": "Ui.CmdBuild",
+        "control": "build",
+        "gesture": "tap"
+      },
+      {
+        "eventId": "Ui.CastFire",
+        "control": "super",
+        "gesture": "tap",
+        "payload": {
+          "Ucp.Slot": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "text": "生产指令"
+        },
+        {
+          "type": "button",
+          "control": "build",
+          "text": "建造 兵营",
+          "tip": {
+            "title": "兵营",
+            "text": "下令生产一座兵营"
+          }
+        },
+        {
+          "type": "button",
+          "control": "super",
+          "text": "超级武器",
+          "tip": {
+            "title": "超级武器",
+            "text": "发射超级武器（火球）"
+          },
+          "payload": {
+            "Ucp.Slot": "0"
+          }
+        },
+        {
+          "type": "label",
+          "bind": "built",
+          "prefix": "已建造: "
+        }
+      ]
+    }
+  }
+]
