@@ -376,10 +376,10 @@ namespace Ludots.Tests.ThreeC
                 EnableZoom = false
             });
 
-            SetBehaviorInput(behaviorInput, look: new Vector2(0f, 400f), rotateHold: true);
+            SetBehaviorInput(behaviorInput, look: new Vector2(0f, -400f), rotateHold: true);
             manager.Update(0.016f);
 
-            That(manager.State.Pitch, Is.EqualTo(85f).Within(0.01f), "Upward drag should raise pitch until MaxPitchDeg");
+            That(manager.State.Pitch, Is.EqualTo(85f).Within(0.01f), "Downward look (mouse back) should raise pitch until MaxPitchDeg");
         }
 
         private static CameraManager CreateOrbitCameraManager(CameraBehaviorInputState behaviorInput, VirtualCameraDefinition definition)

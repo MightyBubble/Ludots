@@ -13,7 +13,7 @@ namespace Ludots.Tests.ThreeC
     public sealed class CameraInputSemanticsTests
     {
         [Test]
-        public void VirtualCameraRuntime_DragRotate_UsesLookActionWithPositiveYUp()
+        public void VirtualCameraRuntime_DragRotate_MouseUpLooksUp()
         {
             var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
@@ -36,7 +36,8 @@ namespace Ludots.Tests.ThreeC
             SetBehaviorInput(input, look: new Vector2(0f, 60f), rotateHold: true);
             manager.Update(0.016f);
 
-            Assert.That(manager.State.Pitch, Is.GreaterThan(45f));
+            Assert.That(manager.State.Pitch, Is.LessThan(45f),
+                "Look.Y+ (mouse up) must pitch the view up: orbit rig lowers toward the horizon.");
         }
 
         [Test]

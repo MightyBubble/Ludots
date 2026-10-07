@@ -35,7 +35,8 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
             }
 
             state.Yaw += look.X * _degPerPixel;
-            state.Pitch += look.Y * _degPerPixel;
+            // 非反转约定：Look.Y+（鼠标上推）= 视线上仰，orbit rig 上即相机下沉（pitch 减小）。
+            state.Pitch -= look.Y * _degPerPixel;
             state.Pitch = Math.Clamp(state.Pitch, _minPitchDeg, _maxPitchDeg);
             state.Yaw = WorldPlane2D.NormalizeDegreesPositive(state.Yaw);
         }
