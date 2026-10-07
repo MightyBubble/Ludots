@@ -250,6 +250,64 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void ConfigureRuntime_FirstConfiguration_SnapsPreviousToState()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "FollowCamera",
+                Priority = 0,
+                FacingMode = CameraFacingMode.FollowTarget,
+                DistanceCm = 400f,
+                Pitch = 15f,
+                Yaw = 180f,
+                FollowMode = CameraFollowMode.AlwaysFollow,
+                FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
+            });
+            manager.State.TargetCm = new Vector2(1234f, -567f);
+
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+
+            Assert.That(manager.PreviousState.TargetCm, Is.EqualTo(manager.State.TargetCm));
+        }
+
+        // 合同:重配置只重绑 provider,不得触碰 Previous/State 插值对;
+        // 宿主每渲染帧会经 EnsureCameraRuntimeConfigured 重调本方法。
+        [Test]
+        public void ConfigureRuntime_Reconfiguration_PreservesInterpolationPair()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "FollowCamera",
+                Priority = 0,
+                FacingMode = CameraFacingMode.FollowTarget,
+                DistanceCm = 400f,
+                Pitch = 15f,
+                Yaw = 180f,
+                FollowMode = CameraFollowMode.AlwaysFollow,
+                FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
+            });
+            var target = new StaticFollowTarget { PositionCm = new Vector2(1000f, 2000f) };
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+            manager.ActivateVirtualCamera("FollowCamera", blendDurationSeconds: 0f, followTarget: target);
+
+            manager.Update(0.05f);
+            target.PositionCm = new Vector2(1030f, 2000f);
+            manager.Update(0.05f);
+
+            Vector2 previousBeforeReconfigure = manager.PreviousState.TargetCm;
+            Vector2 stateBeforeReconfigure = manager.State.TargetCm;
+            Assert.That(previousBeforeReconfigure, Is.Not.EqualTo(stateBeforeReconfigure));
+
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+
+            Assert.That(manager.PreviousState.TargetCm, Is.EqualTo(previousBeforeReconfigure));
+            Assert.That(manager.State.TargetCm, Is.EqualTo(stateBeforeReconfigure));
+
+            Vector2 midpoint = manager.GetInterpolatedState(0.5f).TargetCm;
+            Assert.That(midpoint, Is.EqualTo((previousBeforeReconfigure + stateBeforeReconfigure) * 0.5f));
+        }
+
+        [Test]
         public void EntityCollectionGroupFollowTarget_UsesExplicitCollectionCentroid_AndTracksPrimary()
         {
             using var world = World.Create();
