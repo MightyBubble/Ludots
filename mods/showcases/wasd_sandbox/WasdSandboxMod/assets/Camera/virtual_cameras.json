@@ -39,8 +39,13 @@
     "rotateMode": "None",
     "enableZoom": true,
     "zoomCmPerWheel": 150,
-    "followMode": "AlwaysFollow",
-    "followTargetKind": "SolePossessedRep",
-    "allowUserInput": true
+    "followMode": "None",
+    "followTargetKind": "None",
+    "allowUserInput": true,
+    "targetSource": "Fixed",
+    "fixedTargetCm": {
+      "X": 1200,
+      "Y": 0
+    }
   }
 ]
