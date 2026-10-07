@@ -71,6 +71,7 @@ namespace CameraAcceptanceMod
         public const string HeroName = "CameraAcceptanceHero";
         public const string ScoutName = "CameraAcceptanceScout";
         public const string CaptainName = "CameraAcceptanceCaptain";
+        public const string ProjectionTeamRepName = "CameraAcceptanceProjectionTeamRep";
         public const string FocusDummyName = "CameraAcceptanceDummy";
         public const string AlarmDummyName = "CameraAcceptanceAlarmDummy";
         public const string ProjectionSpawnTemplateId = "moba_dummy";

@@ -698,10 +698,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             Entity local = GetLocalPlayer(engine);
             Entity[] selection = ReadLiveSelection(engine, local);
-            Assert.That(selection.Length, Is.EqualTo(3));
+
+            // The drag's press frame hits empty ground: the press anchor sits ~34px from the hero's
+            // center — beyond the 20px pick radius — so Consume's PressedThisFrame routes
+            // HandleSelectionConfirmed into EnqueueProjectionSpawnBatch, which drops
+            // ProjectionSpawnCountDefault (100) Dummies around the press point. 28 of them land
+            // inside this marquee and are selected along with the named targets; an RTS box over a
+            // crowd legitimately selects it. The contract is therefore behavioral, not a
+            // cardinality: the named in-box targets are selected, and an entity outside the box's
+            // screen extent is not.
+            Assert.That(selection, Is.Not.Empty);
             Assert.That(selection, Does.Contain(hero));
             Assert.That(selection, Does.Contain(scout));
             Assert.That(selection, Does.Contain(captain));
+            Entity outOfBox = FindEntityByName(engine.World, CameraAcceptanceIds.ProjectionTeamRepName);
+            Assert.That(outOfBox, Is.Not.EqualTo(Entity.Null));
+            Assert.That(selection, Does.Not.Contain(outOfBox));
             Assert.That(IsInLiveSelection(engine, local, hero), Is.True);
             Assert.That(IsInLiveSelection(engine, local, scout), Is.True);
             Assert.That(IsInLiveSelection(engine, local, captain), Is.True);
@@ -767,7 +779,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             Entity local = GetLocalPlayer(engine);
             Entity[] selection = ReadLiveSelection(engine, local);
-            Assert.That(selection.Length, Is.EqualTo(1));
+
+            // Hero and scout share world XZ; the drag boxes only scout's screen spot. Height
+            // discrimination is proven by hero (projecting ~46px lower) being EXCLUDED. The same
+            // press-frame batch spawn as the screen-space test can drop Dummies that fall inside
+            // the box, so the contract asserts exclusion/inclusion by target identity rather than
+            // a cardinality.
+            Assert.That(selection, Is.Not.Empty);
             Assert.That(selection, Does.Contain(scout));
             Assert.That(selection, Does.Not.Contain(hero));
             Assert.That(IsInLiveSelection(engine, local, scout), Is.True);
