@@ -2709,6 +2709,14 @@
         "type": "path",
         "value": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod"
       }
+    },
+    {
+      "name": "crowd_simulation_s3_path_1337",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod",
+        "projectPath": "CrowdSimulationS3PathMod.csproj"
+      }
     }
   ],
   "adapters": {

@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）已交付。S3 剩余（走廊 / 流场 / 固定生效帧）见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）已交付。S3 完成,S4（部署与命令回放）见文末路线。
 
 ## 这是什么
 
@@ -94,7 +94,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **对拍**：导出器把五种上下文共享的 tile 缓存逐条目（内容键指纹对齐）落真相,C# 逐字段 FNV 全等——三种子各 769 / 700 / 883 个不同 tile,缓存命中 / 烘焙计数也一致。
 - **踩过的坑（已固化成回归测试 `S3RegressionTests`）**：定点 `Sqrt` 在"路径端点格"上的 ~1e-5 误差会吃掉覆盖判断的 EPS——桥 / 路径跨度按生成器约定轴对齐,轴对齐时单位向量与长度取精确值;斜线路径（S7 道路 / 泛洪）届时再定精度口径。
 - **目视**：探针 `--s3` 渲染 NavMesh 多边形网格叠加图（`crowd_simulation_s1337_navmesh_foot.png`）。
-- **S3 剩余**：走廊（A* + 漏斗）、流场 Dijkstra、路径服务固定生效帧——S3-c。
+- **S3 剩余**：走廊（A* + 漏斗）、流场 Dijkstra、路径服务固定生效帧——S3-c 已交付,见下。
 
 ## S3-b 交付：全局拼装与 HPA* 抽象图（本次）
 
@@ -104,6 +104,15 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **目视**：探针 `--s3` 视图叠加了 cluster 网格与入口节点。
 - **验收（真机）**：Raylib 宿主经 launcher 预设启动，地图、阻挡物实体与高度图地形（含高程着色）真实渲染，见 `artifacts/acceptance/crowdsimulation-s1/raylib-s1337-live.png`。地形类型着色叠加层在宿主内尚无 presenter，由探针视图承担。
 - **顺手的基建修复**：`ContinuousHeightSampleScale.Decode` 的 int32 溢出（大缩放比例资产会触发，10k 资产因恒等比例从未踩到）改为先 widening 再乘。
+
+## S3-c 交付：两点之间的路线（本次）
+
+- **移植**：`TilePathQuery`（tile 寻址的多边形 A* + 跨 tile 缝合 + 桥头 portal 跨层）、`NavFunnel`（简单愚蠢漏斗）、`HpaQuery`（抽象图 A* + 簇内 Dijkstra 起收尾）、`FlowField` / `FlowPool` / `FlowFieldBuilder`（积分场 Dijkstra 限走廊掩码 + 按弹出序拉直 + 路点链）、`CorridorQuery`（corridorTo：无链接先 NavMesh,有链接直走 HPA*,失败回落;桥面起点 BFS 下桥）、`PathQueryService`（固定生效帧路径服务）。
+- **对拍契约（两套浮点体系下唯一诚实的口径）**：逐位 FNV 只对真整数——分支选择（NavMesh / HPA* / 不可达）与 trace 是否到达;代价类（integ / 路径代价）紧带宽 5e-6;几何类（折线总长 / len）松带宽——等代价的十字路口择路被最后位差翻转时两解同最优,几何却不同;到达集合 / 路点是浮点派生量,按"独占格必须在走廊分歧的 cluster 内或交集洪泛外"与"决定性全等、平局双解皆合法"规则校验。实测三种子 64 对 × 5 上下文:代价最大分歧 2.6e-6,约 497 万到达格路点全等、1475 个平局格全部按规则通过,独占格（三种子合计 1626 个）全部是整 cluster 的走廊择路分歧。
+- **服务验收（`S3PathServiceTests` / `S3SoakTests`）**：后台线程 1 / 2 / 4 的 320 份答复滚动 FNV-1a 64 逐字节等价（每 worker 独占搜索缓冲,RT-03）;生效帧恒为请求帧 + latencyTicks,后台慢注入时仿真原地等待、答复内容与帧序不变;单次规划超 planTimeoutMs 即故障报错,不重试不换算法;浸泡 10 仿真分钟（18000 帧 × 3000 请求）池 allocated 预热后恒为 2、托管内存平在 26 MB。
+- **踩过的坑（已固化成测试或注释）**：链接端未到达时 `integ + cost` 在 Fix64 下溢出回绕成负数、判等即真（参考实现靠 Infinity 语义天然免疫）,加未到达守卫;stitch 记忆化按 uid 做键,跨缓存实例撞号（三个种子连跑才暴露）,改条目引用键;tile 多边形代价备忘挂在 worker 暂存上,跨上下文复用时串味,键补 navId;流场回收全进 0 号 worker 的池,另一池永远得不到还回、无法平台化,改按 OriginPool 物归原主;worker 崩溃曾经悬挂所有在途请求,改为服务故障（报错,绝不静默）。
+- **演示**：探针 `--s3c` 渲染折线 + 方向箭头（`artifacts/acceptance/crowdsimulation-s1/crowd_simulation_s1337_s3c_*`）;`CrowdSimulationS3PathMod` 真机演示自动巡回 64 组起终点,HUD 实时显示请求帧 / 生效帧 / 当前帧 / 等待次数 / 线程巡回 / 分支 / 可达性,世界内折线 + 箭头叠加（`raylib-s1337-s3path-live.png`）。顺带的通用能力：`RaylibDebugDrawRenderer.GroundSamplerM`——调试绘制从固定平面改为地形高度跟随,宿主接线 ContinuousHeightmap 采样。
+- **缺口**：鼠标点选起终点（spec 演示的左键起点 / 右键终点）走 InputMap / 选择系统,那是 S4 选择链路的活,本阶段先自动巡回。
 
 ## 当前缺口（诚实清单）
 

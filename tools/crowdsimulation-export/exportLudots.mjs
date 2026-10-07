@@ -410,5 +410,106 @@ function canonComp(comp, n2) {
       writeFileSync(join(outRoot, 'parity', 's3b-costs.bin'), wc.build());
       console.log(`[export] ${mapId} s3b fnv=${fnv1a(truthBytes)}`);
     }
+
+    // ───────────────────────────── S3-c:两点路径 + 流场真相 ─────────────────────────────
+    // 64 组确定性起终点 × 每上下文。对拍契约(两套浮点体系下唯一诚实的口径):
+    //   逐位(FNV):分支(tile A*+漏斗 / HPA* / 不可达)、trace 是否到达;
+    //   带宽:折线总长度(点列由浮点派生,平局时点数与顶点都可不同,坐标入诊断流)、
+    //   路径代价、起格积分 / 绷紧长度;
+    //   结构容差(s3c-detail.bin):HPA 走廊 / poly 链 / 到达集合是浮点派生量——等代价
+    //     十字路口的择路会被最后位差翻转(两解同最优),逐格 integ / len 在两侧到达集合的
+    //     交集上按带宽比较,独占格计数限容差;
+    //   路点(s3c-wp.bin):决定性全等,平局双解按规则校验。
+    {
+      const { findTilePath, markTileClusters } = await import('../src/engine/navtile/tileQuery.js');
+      const { findPath } = await import('../src/engine/hpa.js');
+      const { buildFlowField, padMask, tracePath } = await import('../src/engine/flowfield.js');
+      const { clusterOf } = await import('../src/engine/grid.js');
+      const { FlowPool } = await import('../src/engine/planning/flowPool.js');
+
+      // 固定种子的 LCG 取点,过滤到全部上下文地面可走;对子随真相落盘,C# 端直接读取
+      let rngState = 0x2f6e2b1;
+      const rng = () => (rngState = (Math.imul(rngState, 1103515245) + 12345) & 0x7fffffff) / 0x80000000;
+      const pairs = [];
+      let sampleGuard = 0;
+      while (pairs.length < 64 && sampleGuard++ < 200000) {
+        const sx = (rng() * N) | 0, sy = (rng() * N) | 0, gx = (rng() * N) | 0, gy = (rng() * N) | 0;
+        if (Math.abs(sx - gx) + Math.abs(sy - gy) < 8) continue;
+        const sCell = sy * N + sx, gCell = gy * N + gx;
+        if (contexts.every(({ nav }) => nav.passable[sCell] && nav.passable[gCell])) pairs.push([sCell, gCell]);
+      }
+      if (pairs.length < 64) throw new Error(`S3-c 起终点采样不足: ${pairs.length}/64`);
+
+      const inset = config.navmesh.portalInsetCells, pad = config.flowfield.corridorPadding;
+      const pool = new FlowPool(N, config.flowfield.poolCapacity);
+      const wq = new BW(); // 逐位流(FNV)
+      const wf = new BW(); // 浮点流(带宽)
+      const wd = new BW(); // 结构容差流(链 / 到达集合)
+      const ww = new BW(); // 路点与路点链(派生量诊断流)
+      const wi32s = (w, arr) => { w.i32(arr.length); for (let i = 0; i < arr.length; i++) w.i32(arr[i]); };
+      wq.bytes(Buffer.from('LS3C', 'ascii'));
+      wq.i32(N); wq.i32(contexts.length); wq.i32(pairs.length);
+      wd.bytes(Buffer.from('LS3D', 'ascii'));
+      wd.i32(N); wd.i32(contexts.length); wd.i32(pairs.length);
+      ww.bytes(Buffer.from('LS3W', 'ascii'));
+      ww.i32(N); ww.i32(contexts.length); ww.i32(pairs.length);
+      const perCtxQ = [];
+      for (const { id, nav } of contexts) {
+        wq.i32(id);
+        wd.i32(id);
+        ww.i32(id);
+        const { S, C } = nav.hpa;
+        let reachable = 0;
+        for (const [start, goal] of pairs) {
+          const mask = new Uint8Array(C * C);
+          mask[clusterOf(goal, N, S, C)] = 1;
+          let branch = 0, polyRefs = [], hpaClusters = [], hpaCells = [], points = null, cost = 0;
+          const r = nav.links ? null : findTilePath(nav, start, goal, nav.minCost, inset);
+          if (r) {
+            branch = 1; polyRefs = r.polys; points = r.points; cost = r.cost;
+            markTileClusters(nav, r.polys, mask);
+          } else {
+            const p = findPath(nav, start, goal);
+            if (p) {
+              branch = 2; hpaClusters = p.clusters; hpaCells = p.cells; cost = p.cost;
+              for (const c of p.clusters) mask[c] = 1;
+              points = [];
+              for (const c of p.cells) points.push((c % N) + 0.5, ((c / N) | 0) + 0.5);
+            }
+          }
+          const flow = buildFlowField(nav, goal, padMask(mask, C, pad), pool);
+          const trace = tracePath(flow, start, N * N);
+          const traceOk = trace[trace.length - 1] === goal ? 1 : 0;
+          const cells = Array.from(pool.order.subarray(0, flow.reached)).sort((a, b) => a - b);
+          wq.u8(branch); wq.u8(traceOk);
+          // 折线:总长度带宽对齐(点列由浮点派生,平局时点数与顶点都可不同);坐标入诊断流
+          let plen = 0;
+          if (points) for (let i = 2; i < points.length; i += 2) plen += Math.hypot(points[i] - points[i - 2], points[i + 1] - points[i - 1]);
+          wf.f64(plen);
+          wf.f64(cost);
+          wd.i32(points ? points.length / 2 : -1);
+          if (points) for (const v of points) wd.f64(v);
+          wi32s(wd, polyRefs); wi32s(wd, hpaClusters); wi32s(wd, hpaCells);
+          wd.i32(flow.reached);
+          wd.i32(cells.length);
+          for (const cell of cells) { wd.i32(cell); wf.f64(flow.integ[cell]); wf.f64(flow.len[cell]); }
+          wf.f64(flow.integ[start]); wf.f64(flow.len[start]);
+          wi32s(ww, trace);
+          ww.i32(cells.length);
+          for (const cell of cells) { ww.i32(cell); ww.i32(flow.wp[cell]); }
+          if (branch || traceOk) reachable++;
+        }
+        perCtxQ.push({ navId: id, reachable });
+      }
+      const queryBytes = wq.build();
+      writeFileSync(join(outRoot, 'parity', 's3c-topology.bin'), queryBytes); // 分歧定位用;摘要是权威
+      writeFileSync(join(outRoot, 'parity', 's3c-detail.bin'), wd.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-wp.bin'), ww.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-floats.bin'), wf.build());
+      writeFileSync(join(outRoot, 'parity', 's3c-query-truth.json'), JSON.stringify({
+        mapId, seed, pairs, contexts: perCtxQ, fnv1a: fnv1a(queryBytes),
+      }, null, 2));
+      console.log(`[export] ${mapId} s3c pairs=${pairs.length} fnv=${fnv1a(queryBytes)}`);
+    }
   }
 }

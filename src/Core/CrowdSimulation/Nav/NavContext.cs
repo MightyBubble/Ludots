@@ -38,6 +38,22 @@ public sealed class NavContext
     public required Fix64[] UpCost { get; init; }
     /// <summary>逐 tile 的缓存条目(拼装 / 查询的输入;仅在烘焙拿到缓存时填充)。</summary>
     public NavTileEntry?[]? Tiles { get; set; }
+    /// <summary>桥面 tile 条目(tile → 条目 + 桥头格 + 逐多边形代价;无桥为 null)。</summary>
+    public Dictionary<int, UpperTileInfo>? UpperTiles { get; set; }
+    /// <summary>该移动类型最便宜的已定价区域代价(A* 启发缩放,minCostOf 移植)。</summary>
+    public required Fix64 MinCost { get; init; }
+    /// <summary>HPA* 抽象图(烘焙末尾随上下文一起构建,与 buildNavContext 同点)。</summary>
+    public HpaGraph? Hpa { get; set; }
+}
+
+/// <summary>桥面 tile 的查询视图(bakeUpper 的 { entry, portals, pc } 移植)。</summary>
+public sealed class UpperTileInfo
+{
+    public required NavTileEntry Entry { get; init; }
+    /// <summary>桥头 portal 格(tile 内 T² 下标)——与地面层唯一的互通处。</summary>
+    public required int[] Portals { get; init; }
+    /// <summary>逐多边形代价(桥面区域代价按多边形格均值)。</summary>
+    public required Fix64[] PolyCost { get; init; }
 }
 
 /// <summary>

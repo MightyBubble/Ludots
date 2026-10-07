@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -34,13 +35,28 @@ public sealed class NavMeshView
 /// </summary>
 public static class NavMeshAssembler
 {
-    // 边界重叠对(stitchPairs):(entryA uid, sideA, entryB uid) → [i, j, lo, hi]×k
-    private static readonly Dictionary<(int, int, int), int[]> _stitchMemo = new();
+    // 边界重叠对(stitchPairs):(条目A, sideA, 条目B) → [i, j, lo, hi]×k
+    // 键是条目引用(条目不可变且被缓存共享;uid 跨缓存实例会撞号,已踩过——静态 memo 不能只靠 uid)
+    // 记忆化结果是条目的纯函数,多 worker 查询共享;加锁只保线程安全,不影响结果(RT-03)
+    private sealed class StitchKeyComparer : IEqualityComparer<(NavTileEntry A, int SideA, NavTileEntry B)>
+    {
+        public bool Equals((NavTileEntry A, int SideA, NavTileEntry B) x, (NavTileEntry A, int SideA, NavTileEntry B) y)
+            => ReferenceEquals(x.A, y.A) && ReferenceEquals(x.B, y.B) && x.SideA == y.SideA;
+
+        public int GetHashCode((NavTileEntry A, int SideA, NavTileEntry B) obj)
+            => HashCode.Combine(RuntimeHelpers.GetHashCode(obj.A), obj.SideA, RuntimeHelpers.GetHashCode(obj.B));
+    }
+
+    private static readonly Dictionary<(NavTileEntry A, int SideA, NavTileEntry B), int[]> _stitchMemo = new(new StitchKeyComparer());
+    private static readonly object _stitchMemoLock = new();
 
     public static int[] StitchPairs(NavTileEntry ea, NavTileEntry eb, int sideA, int sideB)
     {
-        var key = (ea.Uid, sideA, eb.Uid);
-        if (_stitchMemo.TryGetValue(key, out var cached)) return cached;
+        var key = (ea, sideA, eb);
+        lock (_stitchMemoLock)
+        {
+            if (_stitchMemo.TryGetValue(key, out var cached)) return cached;
+        }
 
         var res = new List<int>();
         var (polyA, sideArrA, loA, hiA) = (ea.BorderPoly, ea.BorderSide, ea.BorderLo, ea.BorderHi);
@@ -57,15 +73,28 @@ public static class NavMeshAssembler
         }
 
         var output = res.ToArray();
-        _stitchMemo[key] = output;
+        lock (_stitchMemoLock)
+        {
+            _stitchMemo[key] = output;
+        }
+
         return output;
+    }
+
+    /// <summary>清空记忆化(新烘焙会话的条目 uid 会复用,防陈旧引用)。</summary>
+    public static void ClearStitchMemo()
+    {
+        lock (_stitchMemoLock)
+        {
+            _stitchMemo.Clear();
+        }
     }
 
     /// <summary>拼装某上下文的全部 tile(传 null 的槽位 = 该 tile 无内容,按空处理)。</summary>
     public static NavMeshView Assemble(NavTileEntry?[] tiles, Fix64[] cost, int n, int tileCells)
     {
         ArgumentNullException.ThrowIfNull(tiles);
-        _stitchMemo.Clear(); // memo 键是缓存 uid,跨烘焙复用;新会话清空避免陈旧引用
+        ClearStitchMemo(); // memo 键是条目引用,跨烘焙复用;新会话清空避免老条目常驻
         int c = n / tileCells, cc = c * c;
 
         var polyBase = new int[cc + 1];

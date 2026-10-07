@@ -332,7 +332,15 @@ namespace Ludots.Adapter.Raylib
 
                 ValidateRequiredContextBeforeLoop(engine);
 
-                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                var debugDrawRenderer = new RaylibDebugDrawRenderer
+                {
+                    PlaneY = 0.35f,
+                    GroundSamplerM = (x, z) =>
+                        engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) &&
+                        hm.TrySampleHeightCm(x * 100f, z * 100f, out float heightCm)
+                            ? heightCm / 100f
+                            : (float?)null,
+                };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 var discreteFieldProjector = new FieldDiscreteVisualProjector(

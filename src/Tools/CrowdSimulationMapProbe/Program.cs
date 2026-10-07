@@ -4,6 +4,7 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Terrain;
 
@@ -34,6 +35,12 @@ public static class Program
         {
             // --s3 <seedAssetsDir> <capabilityAssetsDir> <outDir>
             return RunS3(args[1], args[2], args[3]);
+        }
+
+        if (args.Length >= 1 && args[0] == "--s3c")
+        {
+            // --s3c <seedAssetsDir> <capabilityAssetsDir> <outDir>
+            return RunS3C(args[1], args[2], args[3]);
         }
 
         if (args.Length < 3)
@@ -190,6 +197,111 @@ public static class Program
         PngWriter.Write(path, RenderSize, RenderSize, px);
         Console.WriteLine($"[probe:s3] {bundle.MapId} foot: tiles={cache.Count} bakes={cache.Bakes} hits={cache.Hits} comps={nav.CompCount}");
         return 0;
+    }
+
+    /// <summary>S3-c:两点路径 + 方向图视图(前 6 组对子的流场箭头与折线;另含跳跃层 2 组)。</summary>
+    private static int RunS3C(string seedDir, string capabilityDir, string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var bundle = Load(seedDir, capabilityDir);
+        var runtime = bundle.Runtime;
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
+        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize;
+
+        var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
+        var pairs = truth["pairs"]!.AsArray().Select(p => (Start: p![0]!.GetValue<int>(), Goal: p[1]!.GetValue<int>())).ToArray();
+
+        var cache = new NavTileCache(
+            runtime.NavtileCacheCapacity, t,
+            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
+            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+
+        // 逐移动类型(去重上下文):0 = 步兵(地面,含桥面),最后一个 = 跳跃层
+        var agentIndices = new[] { 0, runtime.AgentTypes.Count - 1 };
+        foreach (int a in agentIndices)
+        {
+            var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, a, 1, cache);
+            string typeId = runtime.AgentTypes[a].Id;
+            var scratch = new CorridorQuery.Scratch(t * t);
+            var pool = new FlowPool(n, runtime.Flowfield.PoolCapacity);
+            int shown = 0;
+            foreach (var (start, goal) in pairs)
+            {
+                if (shown >= (a == 0 ? 6 : 2)) break;
+                var mask = new byte[(n / t) * (n / t)];
+                mask[NavGridSteps.ClusterOf(goal, n, t, n / t)] = 1;
+                var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
+                var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, n / t, runtime.Flowfield.CorridorPadding), pool);
+                var trace = FlowFieldBuilder.TracePath(flow, start, n * n);
+                if (trace[trace.Count - 1] != goal && corridor.Points == null) { pool.Give(flow); continue; }
+
+                var pts = corridor.Points != null && nav.Links == null
+                    ? corridor.Points
+                    : CorridorQuery.FlowPoints(flow, start)?.Points;
+                RenderPath(bundle, nav, flow, trace, pts, start, goal,
+                    Path.Combine(outDir, $"{bundle.MapId}_s3c_{typeId}_p{shown}.png"));
+                shown++;
+                pool.Give(flow);
+            }
+
+            Console.WriteLine($"[probe:s3c] {bundle.MapId} {typeId}: 路径视图 {shown} 张");
+        }
+
+        return 0;
+    }
+
+    private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int start, int goal, string path)
+    {
+        var px = BaseLayer(bundle.Surface, bundle.Height);
+        int n = nav.CellCount, n2 = n * n;
+        float worldCm = n * bundle.Runtime.NavCellSizeCm;
+
+        // 方向箭头:每 6 格抽样,从格心指向路点格心
+        for (int cy = 2; cy < n - 2; cy += 6)
+        {
+            for (int cx = 2; cx < n - 2; cx += 6)
+            {
+                int u = cy * n + cx;
+                if (flow.Integ[u] >= Fix64.MaxValue / 4) continue;
+                int w = flow.Wp[u];
+                if (w < 0) continue;
+                int wc = w % n2;
+                float cs = bundle.Runtime.NavCellSizeCm;
+                float x0 = (cx + 0.5f) * cs, y0 = (cy + 0.5f) * cs;
+                float x1 = (wc % n + 0.5f) * cs, y1 = (wc / n + 0.5f) * cs;
+                float dx = x1 - x0, dy = y1 - y0;
+                float len = MathF.Sqrt(dx * dx + dy * dy);
+                if (len < 1e-3f) continue;
+                float arrow = Math.Min(len, 3 * cs);
+                DrawLine(px, x0, y0, x0 + dx / len * arrow, y0 + dy / len * arrow, worldCm, (220, 235, 245));
+            }
+        }
+
+        // 路点链(单位实际行走的绷紧路径)青色
+        float csCm = bundle.Runtime.NavCellSizeCm;
+        for (int k = 1; k < trace.Count; k++)
+        {
+            int a = trace[k - 1] % n2, b = trace[k] % n2;
+            DrawLine(px, (a % n + 0.5f) * csCm, (a / n + 0.5f) * csCm, (b % n + 0.5f) * csCm, (b / n + 0.5f) * csCm, worldCm, (64, 196, 255));
+        }
+
+        // 折线(查询结果)品红
+        if (pts != null)
+        {
+            for (int k = 2; k < pts.Length; k += 2)
+            {
+                DrawLine(px,
+                    (float)pts[k - 2].ToDouble() * csCm, (float)pts[k - 1].ToDouble() * csCm,
+                    (float)pts[k].ToDouble() * csCm, (float)pts[k + 1].ToDouble() * csCm,
+                    worldCm, (255, 64, 200));
+            }
+        }
+
+        // 起点绿 / 终点红
+        FillDisc(px, (start % n + 0.5f) * csCm / worldCm * RenderSize, (start / n + 0.5f) * csCm / worldCm * RenderSize, 5, (76, 217, 100));
+        FillDisc(px, (goal % n + 0.5f) * csCm / worldCm * RenderSize, (goal / n + 0.5f) * csCm / worldCm * RenderSize, 5, (255, 69, 58));
+        PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
     private static void DrawTileEntry(byte[] px, NavTileCache cache, byte[] passable, byte[] area, int n, int tx, int ty, int tileCells, (int r, int g, int b) color, float cellPx, float csCm)

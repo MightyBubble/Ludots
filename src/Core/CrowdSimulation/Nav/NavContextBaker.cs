@@ -119,6 +119,7 @@ public static class NavContextBaker
 
         // tile 缓存填充(与 buildNavContext 同点同序):地面全部 tile + 有可走格的桥面 tile
         NavTileEntry?[]? tiles = null;
+        Dictionary<int, UpperTileInfo>? upperTiles = null;
         if (tileCache != null)
         {
             int t = config.Hpa.ClusterSize, c = n / t;
@@ -143,13 +144,39 @@ public static class NavContextBaker
                     }
                 }
 
-                if (any) tileCache.Acquire(upPass, upArea, n, tx, ty);
+                if (!any) continue;
+                var entry = tileCache.Acquire(upPass, upArea, n, tx, ty);
+                var portals = new List<int>();
+                var pc = new Fix64[entry.Count];
+                var cnt = new int[entry.Count];
+                for (int k = 0; k < t * t; k++)
+                {
+                    int cell = (ty * t + k / t) * n + tx * t + k % t;
+                    if (portal[cell] != 0) portals.Add(k);
+                    int p = entry.PolyOf[k];
+                    if (p >= 0) { pc[p] += upCost[cell]; cnt[p]++; }
+                }
+
+                for (int p = 0; p < entry.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
+                (upperTiles ??= new Dictionary<int, UpperTileInfo>())[tileId] = new UpperTileInfo
+                {
+                    Entry = entry,
+                    Portals = portals.ToArray(),
+                    PolyCost = pc,
+                };
             }
         }
 
         var links = BuildLinks(config, surface, profile, passable, comp);
 
-        return new NavContext
+        // 最便宜定价区域代价(minCostOf):A* 启发缩放,只取已定价值的行项
+        Fix64 minCost = Fix64.MaxValue;
+        foreach (var areaCost in row)
+        {
+            if (areaCost > Fix64.Zero && areaCost < minCost) minCost = areaCost;
+        }
+
+        var nav = new NavContext
         {
             Id = CrowdSimulationSpace.NavContextId(agent.Layer, clearanceCells),
             LayerIndex = agentTypeIndex,
@@ -167,7 +194,11 @@ public static class NavContextBaker
             UpArea = upArea,
             UpCost = upCost,
             Tiles = tiles,
+            UpperTiles = upperTiles,
+            MinCost = minCost,
         };
+        nav.Hpa = HpaGraph.Build(nav, config);
+        return nav;
     }
 
     /// <summary>

@@ -39,4 +39,28 @@ public static class NavGridSteps
 
     public static int LocalIndex(int cell, int n, int s)
         => ((cell / n) % s) * s + (cell % n) % s;
+
+    /// <summary>两格中心间的超覆盖视线(保守切角;lineOfSight 移植,流场拉直用)。</summary>
+    public static bool LineOfSight(byte[] passable, int n, int a, int b)
+    {
+        int x = a % n, y = a / n;
+        int x1 = b % n, y1 = b / n;
+        int dx = Math.Abs(x1 - x), dy = Math.Abs(y1 - y);
+        int sx = x < x1 ? 1 : -1, sy = y < y1 ? 1 : -1;
+        for (int ix = 0, iy = 0; ix < dx || iy < dy;)
+        {
+            int decision = (1 + 2 * ix) * dy - (1 + 2 * iy) * dx;
+            if (decision == 0)
+            {
+                if (passable[y * n + x + sx] == 0 || passable[(y + sy) * n + x] == 0) return false;
+                x += sx; y += sy; ix++; iy++;
+            }
+            else if (decision < 0) { x += sx; ix++; }
+            else { y += sy; iy++; }
+
+            if (passable[y * n + x] == 0) return false;
+        }
+
+        return true;
+    }
 }
