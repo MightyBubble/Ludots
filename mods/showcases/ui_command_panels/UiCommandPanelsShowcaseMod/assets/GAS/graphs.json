@@ -245,6 +245,20 @@
         "op": "TargetListGet"
       },
       {
+        "id": "actors",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "actorTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "actorTemplate",
+        "op": "QueryFilterTemplate",
+        "template": "ucp_commander"
+      },
+      {
         "id": "submit",
         "op": "SubmitCast",
         "orderTypeKey": "castAbility"
@@ -286,11 +300,6 @@
         "to": "get0"
       },
       {
-        "from": "get0",
-        "fromPort": "next",
-        "to": "submit"
-      },
-      {
         "from": "submit",
         "fromPort": "next",
         "to": "ok"
@@ -299,6 +308,26 @@
         "from": "ok",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "get0",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "actorTeam"
+      },
+      {
+        "from": "actorTeam",
+        "fromPort": "next",
+        "to": "actorTemplate"
+      },
+      {
+        "from": "actorTemplate",
+        "fromPort": "next",
+        "to": "submit"
       }
     ],
     "valueEdges": [
@@ -483,70 +512,6 @@
         "fromPort": "list",
         "to": "template",
         "toPort": "list"
-      }
-    ]
-  },
-  {
-    "id": "Graph.Ucp.RosterBind",
-    "kind": "TriggerGraph",
-    "entries": [
-      {
-        "label": "bind_roster",
-        "event": "MapLoaded",
-        "start": "owner",
-        "refire": "restart"
-      }
-    ],
-    "nodes": [
-      {
-        "id": "owner",
-        "op": "LoadExplicitTarget"
-      },
-      {
-        "id": "bind",
-        "op": "BindQueryCollection",
-        "functionName": "Graph.Ucp.Roster",
-        "collectionKey": "ucp.roster"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "halt",
-        "op": "HaltReturnInt"
-      }
-    ],
-    "controlEdges": [
-      {
-        "from": "owner",
-        "fromPort": "next",
-        "to": "bind"
-      },
-      {
-        "from": "bind",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "halt"
-      }
-    ],
-    "valueEdges": [
-      {
-        "from": "owner",
-        "fromPort": "value",
-        "to": "bind",
-        "toPort": "source"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
       }
     ]
   },

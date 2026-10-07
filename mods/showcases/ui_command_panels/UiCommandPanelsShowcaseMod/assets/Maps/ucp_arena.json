@@ -28,10 +28,6 @@
       "scopeInstanceId": "ucp_commander"
     },
     {
-      "graph": "Graph.Ucp.RosterBind",
-      "scopeInstanceId": "ucp_commander"
-    },
-    {
       "graph": "Graph.Ucp.EnemiesBind",
       "scopeInstanceId": "ucp_commander"
     }

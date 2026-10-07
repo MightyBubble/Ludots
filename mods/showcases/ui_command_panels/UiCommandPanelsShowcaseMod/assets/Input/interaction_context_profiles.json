@@ -14,8 +14,7 @@
         {
           "trigger": "Graph.Ucp.Build"
         }
-      ],
-      "activeCollectionKey": "ucp.roster"
+      ]
     }
   ]
 }
