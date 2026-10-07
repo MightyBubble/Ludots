@@ -70,6 +70,36 @@
       "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
       "reason": "graph-op provider 注册库，供跨 Mod 威胁评分 showcase 消费；非独立 showcase 条目"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/ballista_units/BallistaUnitsMod",
+      "reason": "既有纯数据可玩 binding（kind=binding 已豁免），registry 条目缺失为存量债——mod.json 对账暴露，归属 ballista 线裁决（#1738 跟进）"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/east_asia_playable_terrain/EastAsiaGridEntryMod",
+      "reason": "showcase 内容子 mod（同 graph_op_entries 形态），无独立展示——mod.json 对账暴露的存量缺口，归 east_asia 线补父条目或维持豁免"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/east_asia_playable_terrain/EastAsiaHexEntryMod",
+      "reason": "同 EastAsiaGridEntryMod"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapEntryMod",
+      "reason": "同 EastAsiaGridEntryMod"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_collection_bags/PanelCollectionBagsShowcaseMod",
+      "reason": "registry 已有 9 个场景级子条目，父 mod 目录本身未注册——mod.json 对账暴露的形状缺口，归 panel 线裁决"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod",
+      "reason": "共享主题资产库（binding 已豁免），mod.json 对账暴露的存量缺口"
     }
   ],
   "showcases": [
@@ -4538,7 +4568,7 @@
       "preset": null,
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "Ludots.Tests.Presentation.EntityCommandPanelAuthoringAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
@@ -4761,14 +4791,14 @@
       "path": "mods/showcases/fourx_demo/FourXDemoMod",
       "projectPath": "FourXDemoMod.csproj",
       "title": "4X 演示",
-      "summary": "4X 策略玩法演示 mod（game.fourx.json 正式入口），外交/阵营/经济参考实现。",
+      "summary": "4X 策略玩法演示 mod（game.fourx.json 正式入口），外交/阵营/经济参考实现；fourx_entry 上总督档案卡 + 指令卡两张作者面随 MapLoaded 0 码开卡（#1728/#1733）",
       "tier": "T2",
       "category": "demo",
       "binding": null,
       "preset": null,
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "Ludots.Tests.Presentation.GenreInfoPanelAuthoringAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",

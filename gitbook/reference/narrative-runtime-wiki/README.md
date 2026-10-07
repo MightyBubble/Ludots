@@ -30,7 +30,7 @@
 
 ## 总装与验收
 
-- 活动拍板台 showcase：`activity_dispatch`（三条派发路径可玩，内容纯 JSON），启动 `activity_dispatch_cef_raylib`
+- 活动拍板台 showcase：`activity_dispatch`（三条派发路径可玩，内容纯 JSON），启动 `capability_standard_graph_op_OfferActivity_raylib`（活动拍板经由图节点画廊的 OfferActivity 场景演示）
 - 叙事总装 showcase：`narrative` / `narrative_frontend`（Story/Dialogue/Sequencer/Task 串成一场戏）
 - 存档：三类内容的运行时状态都在通用存档系统里（domain `activities` / `task` / `dialogue` / `sequencer`），见[通用存档系统](../../architecture/save-system.md)
 

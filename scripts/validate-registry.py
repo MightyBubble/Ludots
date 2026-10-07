@@ -292,7 +292,9 @@ def main() -> int:
         )
 
     # ---------- ⑤ csproj / mod.json 覆盖 ----------
-    for d in list_csproj_dirs(repo, scan_root) + list_mod_manifest_dirs(repo, scan_root):
+    csproj_dirs = list_csproj_dirs(repo, scan_root)
+    mod_manifest_dirs = [d for d in list_mod_manifest_dirs(repo, scan_root) if d not in csproj_dirs]
+    for d in csproj_dirs + mod_manifest_dirs:
         if d in covered_dirs:
             continue
         # 豁免可按 csproj 文件路径或目录路径声明
@@ -302,10 +304,16 @@ def main() -> int:
         )
         if csproj_hit:
             continue
-        errors.append(
-            f"{scan_root} 下目录 '{d}' 含 csproj 但无注册表条目"
-            f"（需新增条目或加入 exemptions: kind=csproj）"
-        )
+        if d in csproj_dirs:
+            errors.append(
+                f"{scan_root} 下目录 '{d}' 含 csproj 但无注册表条目"
+                f"（需新增条目或加入 exemptions: kind=csproj）"
+            )
+        else:
+            errors.append(
+                f"{scan_root} 下目录 '{d}' 含 mod.json 但无注册表条目"
+                f"（纯数据 mod 也必须注册或列入 exemptions: kind=csproj）"
+            )
 
     # ---------- 汇总 ----------
     for w in warnings:
