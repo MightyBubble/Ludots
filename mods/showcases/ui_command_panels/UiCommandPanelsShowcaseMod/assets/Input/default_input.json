@@ -1,7 +1,0 @@
-{
-  "actions": [
-    { "id": "Ui.CastFire", "type": "Button" },
-    { "id": "Ui.CmdBuild", "type": "Button" }
-  ],
-  "contexts": []
-}

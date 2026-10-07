@@ -15,6 +15,11 @@
     "IdField": "id"
   },
   {
+    "Path": "GAS/effects.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Panels/panel_templates.json",
     "Policy": "ArrayById",
     "IdField": "id"

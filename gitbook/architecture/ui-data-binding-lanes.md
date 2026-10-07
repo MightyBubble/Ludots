@@ -6,11 +6,11 @@
 
 | # | 机制 | 出生 | 驱动方式 | 取数语言 | 管辖表面 | 真实消费者 |
 |---|------|------|----------|----------|----------|------------|
-| 1 | Presenter 声明式绑定 | 初版（2026-02）持续演进 | 脏位推送 + 可见者每帧重解析 | `ValueRef` 13 种来源（属性直读/比值/基值、跑图、实体色、朝向、黑板、指针坐标…） | 世界空间：蒙皮网格、世界 HUD（头顶条/字）、屏幕 HUD 行 | 全部世界视觉（massnav 实测 presenterActive 30009、worldHud 20000、screenBars/screenText 各 10000） |
+| 1 | Presenter 声明式绑定 | 初版（2026-02）持续演进 | 脏位推送 + 可见者每帧重解析 | `ValueRef` 12 种来源（属性直读/比值/基值、跑图、实体色、朝向、黑板、指针坐标…） | 世界空间：蒙皮网格、世界 HUD（头顶条/字）、屏幕 HUD 行 | 全部世界视觉（massnav 实测 presenterActive 30009、worldHud 20000、screenBars/screenText 各 10000） |
 | 2 | EntityInfoPanelsMod 自营 | 2026-04（#163–#167 线） | 自研 Service 取样/格式化/渲染 | 自研（Sample/Storage/Format/Insight + 自营模板目录） | 屏幕面板：实体信息卡 | 该 mod 自身 |
-| 3 | PanelKit manifest | 2026-07 | manifest 声明 + C# 登记 descriptor | topic/profile/layout/density 引用 | 屏幕面板：HUD 布局 | 4 个 showcase 试点 + 小地图 |
+| 3 | PanelKit manifest | 2026-07 | manifest 声明 + C# 登记 descriptor | topic/profile/layout/density 引用 | 屏幕面板：HUD 布局 | 7 个 panel_kit_* 试点 + 小地图（车道冻结，#850/#1112 待裁决） |
 | 4 | PanelHost pin | 2026-08（#1026） | 图求值（realtime 每帧 / snapshot）→ GraphOutputValueStore | 图输出 float | 屏幕面板：标量 | 仅 float；Bool/Entity/String 缺（#1010） |
-| 5 | PanelHost collection | 2026-08（#1390 起） | 图求值产出包 → 列表投影 | `PanelSubjectKind` 13 种 subject（Entity/Ability/AbilitySlot/AbilityDefinition/Task/Tag/DialogueChoice/Item×2/Effect×2/Activity/ProgressionNode），实体包 + IntId 包 | 屏幕面板：列表 | 写表时（10-05）仅叙事选项面板；#1728/#1733 后新增总督档案卡（Entity 组）与总督指令卡（AbilitySlot 组）——两个自营 mod 的作者面已上车道 |
+| 5 | PanelHost collection | 2026-08（#1390 起） | 图求值产出包 → 列表投影 | `PanelSubjectKind` 13 种 subject（Entity/Ability/AbilitySlot/AbilityDefinition/Task/Tag/DialogueChoice/Item×2/Effect×2/Activity/ProgressionNode），实体包 + IntId 包 | 屏幕面板：列表 | 写表时（10-05）玩法 mod 仅叙事选项面板（showcase 侧另有 panel_collection_bags 族 9 场景在消费）；#1728/#1733 后新增总督档案卡（Entity 组）、总督指令卡（AbilitySlot 组）与面板按钮下令技能格（#1608） |
 
 代码锚点：车道 1 在 `src/Core/Presentation/Presenters/`（`ValueRef.cs`、`PresenterParamBinding.cs`、`BehaviorSlot.cs` 的 `AttributeBindingConfig`、`PresenterDefinition.cs` 的 OwnerAttribute/TagWorkItem）；车道 2 在 `mods/capabilities/entityinfo/EntityInfoPanelsMod/`（无 PanelHost 引用）；车道 4/5 在 `src/Core/UI/PanelHosting/` 与 `src/Core/UI/PanelProjection/`（`PanelGraphEvaluator.cs`、`PanelRealtimeRefreshSystem.cs`、`PanelListProjector.cs`）。
 
