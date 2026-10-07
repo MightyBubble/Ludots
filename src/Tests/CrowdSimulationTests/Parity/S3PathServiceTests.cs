@@ -128,6 +128,20 @@ public class S3PathServiceTests
     }
 
     [Test]
+    public void Discard_SkipsComputeAndDropsReply()
+    {
+        using var service = new PathQueryService(_navs, _runtime, 1, TimeSpan.FromSeconds(10));
+        int navId = _navs.Keys.First();
+        int id1 = service.Request(new PathQuery(navId, _pairs[0].Start, _pairs[0].Goal, 0), 0);
+        int id2 = service.Request(new PathQuery(navId, _pairs[1].Start, _pairs[1].Goal, 0), 0);
+        service.Discard(id1);
+        var result = service.AwaitDue(id2);
+        Assert.That(result.Query.StartCell, Is.EqualTo(_pairs[1].Start));
+        Assert.That(service.Faulted, Is.False);
+        if (result.Flow != null) service.Recycle(result.Flow);
+    }
+
+    [Test]
     public void WorkerCount_CanSwitchAtRuntime()
     {
         using var service = new PathQueryService(_navs, _runtime, 1, TimeSpan.FromSeconds(10));

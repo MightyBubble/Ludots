@@ -17,22 +17,23 @@ using Ludots.Core.Presentation.Terrain;
 namespace CrowdSimulationS3PathMod.Runtime;
 
 /// <summary>
-/// S3 两点路径演示运行时:从 S1 地形 mod 与能力 mod 的资产烘焙导航上下文,
-/// 起终点取真值对拍用的同一 64 组;每个演示对走完整的服务契约——
-/// 请求于 requestTick 发出,生效帧 = requestTick + latencyTicks,没算完仿真原地等待。
-/// 巡回切换后台线程 1 → 2 → 4;每 5 对注入一次后台变慢(仿真暂停等待,画面不卡)。
+/// S3 两点路径演示运行时(spec 演示契约):左键点起点、右键点终点,路线与方向图
+/// 经完整服务契约生效——请求于 requestTick 发出,生效帧 = requestTick + latencyTicks,
+/// 没算完仿真原地等待。按键:Q 巡回代理体型(移动类型 × 净空)、T 巡回后台线程
+/// 1/2/4、G 注入后台变慢(仿真暂停等待,画面不卡)。呈现线程只入队,仿真 tick 消费。
 /// </summary>
 public sealed class S3PathDemoRuntime : IDisposable
 {
-    public const int ShowTicksPerPair = 150; // 5 仿真秒一对
-
     public required CrowdSimulationRuntimeConfig Config { get; init; }
-    public required NavContext Nav { get; init; }
+    public required IReadOnlyList<NavContext> Contexts { get; init; }
+    public required IReadOnlyList<string> ContextLabels { get; init; }
     public required PathQueryService Service { get; init; }
-    public required (int Start, int Goal)[] Pairs { get; init; }
 
     public int TickCounter { get; private set; }
-    public int PairIndex { get; private set; } = -1;
+    public int ContextIndex { get; private set; }
+    public int StartCell { get; private set; } = -1;
+    public int GoalCell { get; private set; } = -1;
+    public int HoveredCell { get; set; } = -1;
     public int RequestTick { get; private set; }
     public int DueTick { get; private set; }
     public PathResult? Current { get; private set; }
@@ -42,10 +43,13 @@ public sealed class S3PathDemoRuntime : IDisposable
     public int TotalWaits => Service.Waits;
     public bool SlowInjected { get; private set; }
     public string? Fault => Service.FaultMessage;
+    public NavContext Nav => Contexts[ContextIndex];
+    public string ContextLabel => ContextLabels[ContextIndex];
 
     private int? _pendingId;
-    private int _ticksUntilRequest = 30;
-    private readonly int[] _threadCycle = { 1, 2, 4 };
+    private bool _pathDirty;
+    private readonly object _inputGate = new();
+    private readonly Queue<Action> _inputQueue = new();
 
     public static S3PathDemoRuntime Load(IModContext context)
     {
@@ -80,27 +84,82 @@ public sealed class S3PathDemoRuntime : IDisposable
             runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
             runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
             runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
-        // 演示用步兵上下文(foot,c1)
-        var nav = NavContextBaker.Bake(runtime, grid, heights, deck, 0, 1, cache);
 
+        // 全部去重导航上下文(移动类型 × 净空)——Q 键巡回的对象
+        var contexts = new List<NavContext>();
+        var labels = new List<string>();
+        var seen = new HashSet<int>();
+        for (int a = 0; a < runtime.AgentTypes.Count; a++)
+        {
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            {
+                var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
+                if (!seen.Add(nav.Id)) continue;
+                contexts.Add(nav);
+                labels.Add($"{runtime.AgentTypes[a].Id} c{clearance}");
+            }
+        }
+
+        // 初始起终点:真值 64 对的第 0 组(与对拍同一份数据,不另造)
         var truth = JsonNode.Parse(Res(seed, "assets/CrowdSimulation/parity/s3c-query-truth.json"))!;
-        var pairs = truth["pairs"]!.AsArray()
-            .Select(p => (Start: p![0]!.GetValue<int>(), Goal: p[1]!.GetValue<int>())).ToArray();
-
-        var navs = new Dictionary<int, NavContext> { [nav.Id] = nav };
+        var firstPair = truth["pairs"]!.AsArray()[0]!;
+        var navs = contexts.ToDictionary(n => n.Id);
         return new S3PathDemoRuntime
         {
             Config = runtime,
-            Nav = nav,
+            Contexts = contexts,
+            ContextLabels = labels,
             Service = new PathQueryService(navs, runtime, workerThreads: 1, TimeSpan.FromSeconds(5)),
-            Pairs = pairs,
+            StartCell = firstPair[0]!.GetValue<int>(),
+            GoalCell = firstPair[1]!.GetValue<int>(),
+            _pathDirty = true,
         };
     }
 
-    /// <summary>仿真 tick(固定 30 Hz;每对展示 5 秒)。</summary>
+    // ── 呈现线程输入(只入队) ─────────────────────────────
+    public void EnqueueSetStart(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { StartCell = cell; _pathDirty = true; }); }
+    public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
+    public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }
+    public void EnqueueCycleThreads() { lock (_inputGate) _inputQueue.Enqueue(() => Service.SetWorkerCount(Service.WorkerCount == 1 ? 2 : Service.WorkerCount == 2 ? 4 : 1)); }
+    public void EnqueueToggleSlow()
+    {
+        lock (_inputGate) _inputQueue.Enqueue(() =>
+        {
+            SlowInjected = !SlowInjected;
+            Service.TestDelayPerJob = SlowInjected ? TimeSpan.FromMilliseconds(400) : TimeSpan.Zero;
+        });
+    }
+
+    /// <summary>仿真 tick(固定 30 Hz)。</summary>
     public void Tick()
     {
         TickCounter++;
+        for (; ; )
+        {
+            Action? action = null;
+            lock (_inputGate)
+            {
+                if (_inputQueue.Count > 0) action = _inputQueue.Dequeue();
+            }
+
+            if (action == null) break;
+            action();
+        }
+
+        if (_pathDirty && StartCell >= 0 && GoalCell >= 0 && !Service.Faulted)
+        {
+            _pathDirty = false;
+            if (_pendingId.HasValue)
+            {
+                Service.Discard(_pendingId.Value);
+                _pendingId = null;
+            }
+
+            RequestTick = TickCounter;
+            _pendingId = Service.Request(new PathQuery(Nav.Id, StartCell, GoalCell, 0), TickCounter);
+            DueTick = Service.DueTick(_pendingId.Value);
+        }
+
         if (_pendingId.HasValue && TickCounter >= DueTick)
         {
             // 生效帧取答复:没算完就原地等待(仿真时钟不走,等待计数)
@@ -109,30 +168,6 @@ public sealed class S3PathDemoRuntime : IDisposable
             if (Current?.Flow != null) Service.Recycle(Current.Flow);
             Current = result;
             if (FlowVisual != null) FlowVisual.Flow = result.Flow;
-            if (Service.Faulted) return;
-            Service.TestDelayPerJob = TimeSpan.Zero;
-            SlowInjected = false;
-            _ticksUntilRequest = ShowTicksPerPair;
-        }
-
-        if (_ticksUntilRequest > 0 && --_ticksUntilRequest == 0 && !Service.Faulted)
-        {
-            PairIndex = (PairIndex + 1) % Pairs.Length;
-            var (start, goal) = Pairs[PairIndex];
-            if (PairIndex % _threadCycle.Length == 0)
-            {
-                Service.SetWorkerCount(_threadCycle[PairIndex / _threadCycle.Length % _threadCycle.Length]);
-            }
-
-            if (PairIndex % 5 == 4)
-            {
-                Service.TestDelayPerJob = TimeSpan.FromMilliseconds(400);
-                SlowInjected = true;
-            }
-
-            RequestTick = TickCounter;
-            _pendingId = Service.Request(new PathQuery(Nav.Id, start, goal, 0), TickCounter);
-            DueTick = Service.DueTick(_pendingId.Value);
         }
     }
 

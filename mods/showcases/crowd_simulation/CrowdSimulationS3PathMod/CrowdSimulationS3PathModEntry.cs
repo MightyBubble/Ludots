@@ -2,9 +2,11 @@ using System.Threading.Tasks;
 using CrowdSimulationS3PathMod.Runtime;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -39,10 +41,16 @@ public sealed class CrowdSimulationS3PathModEntry : IMod
             var routeVisuals = new RouteVisualBuffer();
             engine.SetService(CoreServiceKeys.RouteVisualBuffer, routeVisuals);
 
+            var input = engine.GetService(CoreServiceKeys.InputBackend)
+                ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 InputBackend。");
+            var rays = engine.GetService(CoreServiceKeys.ScreenRayProvider)
+                ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenRayProvider。");
+            engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmap);
+
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new S3PathDemoSimulationSystem(_runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(_runtime, routeVisuals, overlay));
+            engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(_runtime, routeVisuals, overlay, input, rays, heightmap));
             return Task.CompletedTask;
         });
     }

@@ -50,6 +50,7 @@ public sealed class PathQueryService : IDisposable
     private readonly Dictionary<int, PathResult> _replies = new();
     private readonly Dictionary<int, int> _dueTick = new();
     private readonly Dictionary<int, long> _sentAtMs = new();
+    private readonly HashSet<int> _discarded = new();
     private readonly List<Thread> _workers = new();
     private readonly System.Collections.Concurrent.ConcurrentBag<FlowPool> _pools = new();
     private int _workerTarget;
@@ -118,6 +119,18 @@ public sealed class PathQueryService : IDisposable
             _pending.Enqueue((id, query));
             Monitor.PulseAll(_gate);
             return id;
+        }
+    }
+
+    /// <summary>作废一个请求(被更新的起终点取代):未开工的不再算,已算完的答复直接丢弃。</summary>
+    public void Discard(int id)
+    {
+        lock (_gate)
+        {
+            _discarded.Add(id);
+            _replies.Remove(id);
+            _dueTick.Remove(id);
+            _sentAtMs.Remove(id);
         }
     }
 
@@ -200,6 +213,11 @@ public sealed class PathQueryService : IDisposable
                 job = _pending.Dequeue();
             }
 
+            lock (_gate)
+            {
+                if (_discarded.Remove(job.Id)) continue;
+            }
+
             if (TestDelayPerJob > TimeSpan.Zero) Thread.Sleep(TestDelayPerJob);
             PathResult result;
             try
@@ -219,7 +237,7 @@ public sealed class PathQueryService : IDisposable
 
             lock (_gate)
             {
-                _replies[job.Id] = result;
+                if (!_discarded.Remove(job.Id)) _replies[job.Id] = result;
                 Monitor.PulseAll(_gate);
             }
         }

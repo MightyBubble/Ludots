@@ -1,7 +1,7 @@
 {
   "name": "CrowdSimulationS3PathMod",
   "version": "0.1.0",
-  "description": "CrowdSimulation S3 两点路径演示(种子 1337):自动巡回 64 组真值起终点,显示折线 + 方向箭头 + 请求帧 / 生效帧 / 等待次数,巡回切换后台线程 1/2/4 与慢注入。",
+  "description": "CrowdSimulation S3 两点路径演示(种子 1337,交互版):左键起点/右键终点/Q 体型/T 线程 1/2/4/G 后台变慢,显示折线 + 方向贴花 + 请求帧 / 生效帧 / 等待次数。",
   "main": "bin/net9.0/CrowdSimulationS3PathMod.dll",
   "priority": 0,
   "dependencies": {
