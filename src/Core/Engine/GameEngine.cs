@@ -857,6 +857,10 @@ namespace Ludots.Core.Engine
             var engineClockConfigLoader = new EngineClockConfigLoader(ConfigPipeline);
             var engineClockConfig = engineClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             Time.FixedDeltaTime = 1f / engineClockConfig.FixedHz;
+            if (Pacemaker is RealtimePacemaker realtimePacemaker)
+            {
+                realtimePacemaker.MaxAccumulatedSeconds = engineClockConfig.MaxAccumulatedSeconds;
+            }
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
@@ -2503,6 +2507,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(new CameraProfileBindingSystem(World, GlobalContext, virtualCameraRegistry), SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);

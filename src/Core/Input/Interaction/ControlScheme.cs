@@ -1,7 +1,28 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Ludots.Core.Input.Interaction
 {
+    /// <summary>
+    /// Reference frame the declared Axis2D action maps into. <c>None</c> is the unset state and
+    /// fails fast at load and install — a movement declaration without a stated frame is authoring
+    /// debt, not a default.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum ControlSchemeAxisMoveDirectionMode
+    {
+        None = 0,
+
+        /// <summary>Axis X/Y map directly onto the ground-plane world axes.</summary>
+        WorldAbsolute = 1,
+
+        /// <summary>
+        /// Axis rotates by the possessed rep's logic-view camera yaw at order time
+        /// (<see cref="OrbitCameraDirectionUtil.MoveInputToDirection"/>): W is always screen-up.
+        /// </summary>
+        CameraRelative = 2,
+    }
+
     /// <summary>Merged root of <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11, DEC-15).</summary>
     public sealed class ControlSchemesConfig
     {
@@ -30,8 +51,8 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Optional WASD-style axis move declaration (RFC-0065 INT-6, DEC-15). Null means the scheme
-        /// has no axis movement: a topology fact, not a fallback. When declared, all four fields
-        /// are mandatory and validated fail-fast.
+        /// has no axis movement: a topology fact, not a fallback. When declared, all fields are
+        /// mandatory and validated fail-fast.
         /// </summary>
         public ControlSchemeAxisMove AxisMove { get; set; }
     }
@@ -53,5 +74,8 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Distance in world centimeters from the actor's position to the order target.</summary>
         public int StepDistanceCm { get; set; }
+
+        /// <summary>Whether the axis maps onto world axes directly or rotates with the seat's camera.</summary>
+        public ControlSchemeAxisMoveDirectionMode DirectionMode { get; set; } = ControlSchemeAxisMoveDirectionMode.None;
     }
 }

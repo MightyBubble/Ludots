@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -112,8 +113,8 @@ namespace Ludots.Tests.GAS
             Assert.That(first.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
             Assert.That(first.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(first.Args.Spatial.WorldCm.X, Is.EqualTo(StartXcm + 240f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(StartYcm + 320f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(StartYcm + 320f).Within(0.01f));
 
             Assert.That(harness.Orders.TryDequeue(out Order second), Is.True);
             Assert.That(second.Args.Spatial.WorldCm, Is.EqualTo(first.Args.Spatial.WorldCm));
@@ -187,9 +188,100 @@ namespace Ludots.Tests.GAS
                             OrderTypeKey = "orders.test.unknown",
                             ThrottleTicks = 6,
                             StepDistanceCm = 400,
+                            DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
                         }),
                     },
                 }));
+        }
+
+        [Test]
+        public void Install_UndeclaredDirectionMode_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Assert.Throws<InvalidOperationException>(
+                () => harness.Schemes.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        Harness.Scheme("scheme.test.noframe", new ControlSchemeAxisMove
+                        {
+                            ActionId = "Move",
+                            OrderTypeKey = "moveTo",
+                            ThrottleTicks = 6,
+                            StepDistanceCm = 400,
+                            DirectionMode = ControlSchemeAxisMoveDirectionMode.None,
+                        }),
+                    },
+                }),
+                "an axis move declaration without a stated reference frame is authoring debt, not a default.");
+        }
+
+        [Test]
+        public void Update_CameraRelative_RotatesAxisByLogicViewCameraYaw()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            harness.Schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    Harness.Scheme(AxisScheme, new ControlSchemeAxisMove
+                    {
+                        ActionId = "Move",
+                        OrderTypeKey = "moveTo",
+                        ThrottleTicks = 6,
+                        StepDistanceCm = 400,
+                        DirectionMode = ControlSchemeAxisMoveDirectionMode.CameraRelative,
+                    }),
+                },
+            });
+            harness.Switch(AxisScheme);
+
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(harness.Globals);
+            Assert.That(views.TryGetDefaultViewId(harness.Avatar, out string viewId), Is.True);
+            views.Require(viewId).Camera.State.Yaw = 90f;
+
+            var system = harness.CreateSystem();
+            harness.Input.SetActionValue("Move", new Vector3(0f, 1f, 0f));
+            system.Update(0f);
+
+            // Camera yaw 90 looks along (-1, 0): W (screen-up) must target -X world, not +Y.
+            Assert.That(harness.Orders.TryDequeue(out Order order), Is.True);
+            Assert.That(order.Args.Spatial.WorldCm.X, Is.EqualTo(StartXcm - 400f).Within(0.01f));
+            Assert.That(order.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(order.Args.Spatial.WorldCm.Z, Is.EqualTo(StartYcm).Within(0.01f));
+        }
+
+        [Test]
+        public void Update_CameraRelative_MissingLogicView_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            harness.Schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    Harness.Scheme(AxisScheme, new ControlSchemeAxisMove
+                    {
+                        ActionId = "Move",
+                        OrderTypeKey = "moveTo",
+                        ThrottleTicks = 6,
+                        StepDistanceCm = 400,
+                        DirectionMode = ControlSchemeAxisMoveDirectionMode.CameraRelative,
+                    }),
+                },
+            });
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
+            harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
+            harness.Globals[CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry();
+
+            Assert.Throws<InvalidOperationException>(
+                () => system.Update(0f),
+                "camera-relative axis move without the rep's logic view camera is a wiring error.");
+            Assert.That(harness.Orders.Count, Is.EqualTo(0));
         }
 
         [Test]
@@ -349,6 +441,7 @@ namespace Ludots.Tests.GAS
                             OrderTypeKey = "moveTo",
                             ThrottleTicks = axisThrottleTicks,
                             StepDistanceCm = axisStepDistanceCm,
+                            DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
                         }),
                         Scheme(PlainScheme, axisMove: null),
                     },

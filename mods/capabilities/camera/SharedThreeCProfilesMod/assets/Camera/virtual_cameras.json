@@ -3,7 +3,6 @@
     "id": "Shared3C.Profile.RtsMoba",
     "displayName": "Shared RTS MOBA Follow",
     "priority": 100,
-    "rigKind": "Orbit",
     "targetSource": "FollowTarget",
     "distanceCm": 6500,
     "pitch": 58,
@@ -22,6 +21,7 @@
     "followTargetKind": "SolePossessedRep",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
-    "allowUserInput": false
+    "allowUserInput": false,
+    "facingMode": "none"
   }
 ]

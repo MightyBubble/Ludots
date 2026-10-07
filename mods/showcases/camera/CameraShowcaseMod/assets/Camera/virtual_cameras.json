@@ -1,13 +1,16 @@
-﻿[
+[
   {
     "id": "Camera.Showcase.Profile.CommandSourceFollow",
     "displayName": "Command Source Follow",
     "priority": 100,
-    "rigKind": "Orbit",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 1200, "y": 800 },
+    "fixedTargetCm": {
+      "x": 1200,
+      "y": 800
+    },
     "distanceCm": 2800,
     "pitch": 48,
+    "facingMode": "none",
     "fovYDeg": 52,
     "yaw": 190,
     "minDistanceCm": 1600,
@@ -31,11 +34,14 @@
     "id": "Camera.Showcase.Shot.CommandReveal",
     "displayName": "Command Reveal",
     "priority": 1200,
-    "rigKind": "TopDown",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 3200, "y": 2000 },
+    "fixedTargetCm": {
+      "x": 3200,
+      "y": 2000
+    },
     "yaw": 215,
     "pitch": 74,
+    "facingMode": "none",
     "distanceCm": 15000,
     "fovYDeg": 44,
     "defaultBlendDuration": 0.35,

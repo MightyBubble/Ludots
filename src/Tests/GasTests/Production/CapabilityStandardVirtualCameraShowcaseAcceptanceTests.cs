@@ -85,12 +85,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(behaviorOrbit!.RotateRequiresHold, Is.True);
             Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(heightmapOrbit.RotateRequiresHold, Is.True);
-            Assert.That(tps!.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
+            Assert.That(tps!.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(tps.RigPivotOffsetCm, Is.EqualTo(new Vector3(65f, 35f, 90f)));
             Assert.That(tps.RigCameraOffsetCm, Is.EqualTo(new Vector3(70f, 10f, -20f)));
             Assert.That(tps.RotateRequiresHold, Is.False);
-            Assert.That(fps!.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
+            Assert.That(fps!.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(fps.DistanceCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(fps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(fps.RotateRequiresHold, Is.False);
@@ -124,7 +124,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(brain, Is.Not.Null);
             Assert.That(brain!.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId));
             Assert.That(brain.IsActive(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId), Is.True);
-            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4200f, 2600f)));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(9180f).Within(0.001f));
 
@@ -234,7 +233,6 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(localPlayerPositionCm));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(localPlayerPositionCm));
@@ -284,7 +282,7 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
+            Assert.That(brain.ActiveDefinition?.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedLocalPlayerPositionCm));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(0f).Within(0.001f));
@@ -340,7 +338,6 @@ namespace Ludots.Tests.GAS.Production
                 () => brain.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
         }
 
         [Test]

@@ -3,7 +3,6 @@
     "id": "Camera.Profile.Tactical",
     "displayName": "Camera Tactical",
     "priority": 100,
-    "rigKind": "Orbit",
     "distanceCm": 6500,
     "pitch": 58,
     "fovYDeg": 50,
@@ -21,13 +20,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 1200,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "Camera.Profile.Follow",
     "displayName": "Camera Follow",
     "priority": 100,
-    "rigKind": "ThirdPerson",
     "distanceCm": 500,
     "pitch": 18,
     "fovYDeg": 60,
@@ -44,13 +43,13 @@
     "zoomCmPerWheel": 120,
     "followMode": "AlwaysFollow",
     "followTargetKind": "SolePossessedRep",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "followTarget"
   },
   {
     "id": "Camera.Profile.Inspect",
     "displayName": "Camera Inspect",
     "priority": 100,
-    "rigKind": "TopDown",
     "distanceCm": 4200,
     "pitch": 82,
     "fovYDeg": 52,
@@ -68,13 +67,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 900,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "Camera.Profile.FixedArena",
     "displayName": "Fixed Arena",
     "priority": 100,
-    "rigKind": "Orbit",
     "distanceCm": 2600,
     "pitch": 75,
     "fovYDeg": 50,
@@ -88,6 +87,7 @@
     "rotateMode": "None",
     "enableZoom": false,
     "followMode": "None",
-    "allowUserInput": false
+    "allowUserInput": false,
+    "facingMode": "none"
   }
 ]

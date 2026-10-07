@@ -59,7 +59,7 @@ namespace Ludots.Core.Gameplay.Camera
                         Priority = config.Priority,
                         ControlMode = config.ControlMode,
                         PlatformDriverId = config.PlatformDriverId,
-                        RigKind = config.RigKind,
+                        FacingMode = ResolveFacingMode(config),
                         TargetSource = config.TargetSource,
                         FixedTargetCm = config.FixedTargetCm == null
                             ? Vector2.Zero
@@ -181,7 +181,7 @@ namespace Ludots.Core.Gameplay.Camera
             ValidatePlatformDriver(config);
             ValidateInputBehavior(config, panMode, rotateMode, enableZoom);
             ValidateDefinedEnum(config.Id, nameof(config.ControlMode), config.ControlMode);
-            ValidateDefinedEnum(config.Id, nameof(config.RigKind), config.RigKind);
+            ValidateFacingMode(config);
             ValidateDefinedEnum(config.Id, nameof(config.TargetSource), config.TargetSource);
             ValidateDefinedEnum(config.Id, nameof(config.TargetHeightMode), config.TargetHeightMode);
             ValidateDefinedEnum(config.Id, nameof(config.FollowMode), config.FollowMode);
@@ -192,21 +192,25 @@ namespace Ludots.Core.Gameplay.Camera
         private static void ValidateDistance(VirtualCameraDefinitionConfig config)
         {
             ValidateFinite(config.Id, nameof(config.DistanceCm), config.DistanceCm);
-            if (config.RigKind == CameraRigKind.FirstPerson)
-            {
-                if (config.DistanceCm < 0f)
-                {
-                    throw new System.InvalidOperationException(
-                        $"Virtual camera '{config.Id}' distanceCm must be >= 0 for first-person rigs.");
-                }
-
-                return;
-            }
-
-            if (config.DistanceCm <= 0f)
+            if (config.DistanceCm < 0f)
             {
                 throw new System.InvalidOperationException(
-                    $"Virtual camera '{config.Id}' distanceCm must be > 0.");
+                    $"Virtual camera '{config.Id}' distanceCm must be >= 0 (0 = at-pivot arm).");
+            }
+        }
+
+        private static CameraFacingMode ResolveFacingMode(VirtualCameraDefinitionConfig config)
+        {
+            return config.FacingMode ?? CameraFacingMode.None;
+        }
+
+        private static void ValidateFacingMode(VirtualCameraDefinitionConfig config)
+        {
+            if (config.FacingMode == null)
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' facingMode must be explicitly declared (none | followTarget); " +
+                    "an unstated facing semantic is authoring debt, not a default.");
             }
         }
 
@@ -446,7 +450,7 @@ namespace Ludots.Core.Gameplay.Camera
             public int Priority { get; set; }
             public VirtualCameraControlMode ControlMode { get; set; } = VirtualCameraControlMode.BuiltIn;
             public string PlatformDriverId { get; set; } = string.Empty;
-            public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
+            public CameraFacingMode? FacingMode { get; set; }
             public VirtualCameraTargetSource TargetSource { get; set; } = VirtualCameraTargetSource.CurrentState;
             public Vector2Config? FixedTargetCm { get; set; }
             public VirtualCameraTargetHeightMode TargetHeightMode { get; set; } = VirtualCameraTargetHeightMode.Flat;

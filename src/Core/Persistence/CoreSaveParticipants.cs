@@ -867,7 +867,6 @@ namespace Ludots.Core.Persistence
                 ["pitch"] = camera.Pitch,
                 ["distanceCm"] = camera.DistanceCm,
                 ["fovYDeg"] = camera.FovYDeg,
-                ["rigKind"] = camera.RigKind.ToString(),
                 ["zoomLevel"] = camera.ZoomLevel,
                 ["isFollowing"] = camera.IsFollowing
             };
@@ -883,7 +882,6 @@ namespace Ludots.Core.Persistence
                 Pitch = RequireSingle(camera, "pitch"),
                 DistanceCm = RequireSingle(camera, "distanceCm"),
                 FovYDeg = RequireSingle(camera, "fovYDeg"),
-                RigKind = Enum.Parse<CameraRigKind>(RequireString(camera, "rigKind")),
                 ZoomLevel = RequireInt(camera, "zoomLevel"),
                 IsFollowing = RequireBool(camera, "isFollowing")
             };

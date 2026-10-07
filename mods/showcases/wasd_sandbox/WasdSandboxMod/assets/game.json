@@ -1,0 +1,10 @@
+{
+  "startupMapId": "wasd_sandbox_entry",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.wasd_move"
+    }
+  ]
+}

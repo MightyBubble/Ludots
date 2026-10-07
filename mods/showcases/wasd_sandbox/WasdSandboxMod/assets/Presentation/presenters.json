@@ -1,0 +1,120 @@
+[
+  {
+    "id": "wasd.character.static_body",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "mass_navigation.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [
+            0.45,
+            0.45,
+            0.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.72,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "mass_navigation.agent.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
+    "id": "wasd.template.zhangsan_visual",
+    "extends": "wasd.character.static_body",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "wasd_zhangsan"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "wasd.template.zhangsan_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "wasd_zhangsan"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "wasd.template.lisi_visual",
+    "extends": "wasd.character.static_body",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "wasd_lisi"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "wasd.template.lisi_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "wasd_lisi"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

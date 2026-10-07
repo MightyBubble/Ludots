@@ -134,8 +134,7 @@ namespace Ludots.Tests.Presentation
                 sampledYawCount++;
                 var state = new CameraState
                 {
-                    RigKind = CameraRigKind.Orbit,
-                    TargetCm = Vector2.Zero,
+                        TargetCm = Vector2.Zero,
                     Yaw = yaw,
                     Pitch = 45f,
                     DistanceCm = 2000f,

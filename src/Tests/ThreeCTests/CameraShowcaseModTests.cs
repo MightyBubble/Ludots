@@ -136,7 +136,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(brain!.HasActiveCamera, Is.True);
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.RevealShotId));
             Assert.That(brain.IsActive(CameraShowcaseIds.FollowProfileId), Is.True);
-            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
@@ -147,7 +146,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, BlendSettleFrames);
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.FollowProfileId));
-            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.EqualTo(new Vector2(1200f, 800f)));
         }
@@ -185,7 +183,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             LoadMap(engine, CameraShowcaseIds.BootstrapMapId);
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TacticalProfileId));
-            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.Orbit));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4000f, 2500f)));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(8100f));
         }

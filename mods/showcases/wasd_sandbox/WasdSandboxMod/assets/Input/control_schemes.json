@@ -1,0 +1,25 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.wasd_move",
+      "inputContexts": [
+        "WasdSandbox.Controls"
+      ],
+      "axisMove": {
+        "actionId": "Move",
+        "orderTypeKey": "moveTo",
+        "throttleTicks": 6,
+        "stepDistanceCm": 400,
+        "directionMode": "cameraRelative"
+      }
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.wasd_move"
+  ]
+}

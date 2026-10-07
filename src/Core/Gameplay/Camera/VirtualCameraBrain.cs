@@ -353,8 +353,7 @@ namespace Ludots.Core.Gameplay.Camera
 
             if (transform.HasFacingYawRad &&
                 (forceFacing || runtime.Definition.RotateMode == CameraRotateMode.None) &&
-                (runtime.Definition.RigKind == CameraRigKind.FirstPerson ||
-                 runtime.Definition.RigKind == CameraRigKind.ThirdPerson))
+                runtime.Definition.FacingMode == CameraFacingMode.FollowTarget)
             {
                 runtime.RuntimeState.Yaw = FacingRadToCameraYawDegrees(transform.FacingYawRad);
             }
@@ -443,7 +442,6 @@ namespace Ludots.Core.Gameplay.Camera
                 FovYDeg = definition.FovYDeg,
                 RigPivotOffsetCm = definition.RigPivotOffsetCm,
                 RigCameraOffsetCm = definition.RigCameraOffsetCm,
-                RigKind = definition.RigKind,
                 ZoomLevel = currentState.ZoomLevel,
                 IsFollowing = false
             };

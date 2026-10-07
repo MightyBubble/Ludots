@@ -3,7 +3,6 @@
     "id": "Moba",
     "displayName": "MOBA",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 3000,
     "pitch": 55,
     "fovYDeg": 50,
@@ -21,13 +20,13 @@
     "zoomCmPerWheel": 500,
     "followMode": "HoldToLock",
     "followTargetKind": "SolePossessedRep",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "Rts",
     "displayName": "RTS",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 5000,
     "pitch": 50,
     "fovYDeg": 55,
@@ -45,13 +44,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 2000,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "TopDown",
     "displayName": "TopDown",
     "priority": 0,
-    "rigKind": "TopDown",
     "distanceCm": 5000,
     "pitch": 80,
     "fovYDeg": 55,
@@ -69,13 +68,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 1500,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "Tactical",
     "displayName": "Tactical",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 3000,
     "pitch": 55,
     "fovYDeg": 55,
@@ -94,13 +93,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 1000,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "Default",
     "displayName": "Default",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 5000,
     "pitch": 45,
     "fovYDeg": 60,
@@ -119,13 +118,13 @@
     "enableZoom": true,
     "zoomCmPerWheel": 2000,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   },
   {
     "id": "TPS",
     "displayName": "TPS",
     "priority": 0,
-    "rigKind": "ThirdPerson",
     "distanceCm": 400,
     "pitch": 15,
     "fovYDeg": 60,
@@ -142,13 +141,13 @@
     "zoomCmPerWheel": 100,
     "followMode": "AlwaysFollow",
     "followTargetKind": "SolePossessedRep",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "followTarget"
   },
   {
     "id": "FPS",
     "displayName": "FPS",
     "priority": 0,
-    "rigKind": "FirstPerson",
     "distanceCm": 0,
     "pitch": 0,
     "fovYDeg": 90,
@@ -164,13 +163,13 @@
     "enableZoom": false,
     "followMode": "AlwaysFollow",
     "followTargetKind": "SolePossessedRep",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "followTarget"
   },
   {
     "id": "NavDebug.OpenWorld",
     "displayName": "NavMesh Debug Open World",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 65000,
     "pitch": 50,
     "fovYDeg": 60,
@@ -186,6 +185,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 10000,
     "followMode": "None",
-    "allowUserInput": true
+    "allowUserInput": true,
+    "facingMode": "none"
   }
 ]

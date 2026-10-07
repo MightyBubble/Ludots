@@ -19,7 +19,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "DragRotate",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -46,7 +46,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "DragRotateRequiresHold",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -73,7 +73,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "DragRotateFreeLook",
                 Priority = 0,
-                RigKind = CameraRigKind.ThirdPerson,
+                FacingMode = CameraFacingMode.FollowTarget,
                 DistanceCm = 1000f,
                 Pitch = 18f,
                 FovYDeg = 60f,
@@ -101,7 +101,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "DragRotateBehaviorState",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 DistanceCm = 1000f,
                 Pitch = 45f,
                 FovYDeg = 60f,
@@ -135,7 +135,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "GrabDrag",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.None,
                 RotateMode = CameraRotateMode.None,
                 EnableGrabDrag = true,
@@ -161,7 +161,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "GrabDrag",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.None,
                 RotateMode = CameraRotateMode.None,
                 EnableGrabDrag = true,
@@ -187,7 +187,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "EdgePanBehaviorInput",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.EdgePan,
                 EdgePanMarginPx = 10f,
                 EdgePanSpeedCmPerSec = 8000f,
@@ -219,7 +219,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "EdgePanRequiresInsideViewport",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.EdgePan,
                 EdgePanMarginPx = 10f,
                 EdgePanSpeedCmPerSec = 8000f,
@@ -247,7 +247,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "EdgePanAllowsOutsideViewport",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 PanMode = CameraPanMode.EdgePan,
                 EdgePanMarginPx = 10f,
                 EdgePanSpeedCmPerSec = 8000f,
@@ -275,7 +275,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "WorldConfined",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     PanMode = CameraPanMode.None,
                     RotateMode = CameraRotateMode.None,
                     DistanceCm = 5000f,

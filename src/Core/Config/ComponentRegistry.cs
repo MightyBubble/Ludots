@@ -61,6 +61,7 @@ namespace Ludots.Core.Config
             Register<Health>("Health");
             Register<Name>("Name");
             Register<FacingDirection>("FacingDirection");
+            Register<CameraProfileBinding>("CameraProfileBinding");
             Register<MapEntity>("MapEntity");
             Register("WorldPositionCm", SetWorldPositionCm);
             Register<SpatialPartitionExcluded>("SpatialPartitionExcluded");
