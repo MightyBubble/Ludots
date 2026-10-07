@@ -4,8 +4,8 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// S4 指令集(sim 指令面子的子集):spawn(批量部署)、spawnAt(点名生成)、
-/// select(框选)、selectAll(全选)、clearSelection(清空选择)。
+/// S4+S5 指令集:spawn(批量部署)、spawnAt(点名生成)、select(框选)、selectAll(全选)、
+/// clearSelection(清空选择)、order(移动下令:S5,右键点=移动,拖线=摆阵)。
 /// 指令是数据,只在 tick 边界执行——仿真频率就是 FixedHz,不存在第二个时钟。
 /// </summary>
 public static class CrowdSimCommands
@@ -43,6 +43,16 @@ public static class CrowdSimCommands
             case "clearSelection":
                 ClearSelection(sim);
                 return null;
+            case "order":
+                return Movement.CrowdIssueOrder.Issue(
+                    sim,
+                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
+                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()),
+                    cmd["player"]!.GetValue<int>(),
+                    cmd["shape"]?.GetValue<string>() ?? "box",
+                    cmd["auto"]?.GetValue<bool>(),
+                    cmd["face"] is { } f ? new Fix64Vec2(Fix64.FromDouble(f[0]!.GetValue<double>()), Fix64.FromDouble(f[1]!.GetValue<double>())) : (Fix64Vec2?)null,
+                    cmd["widthCm"] is { } w ? Fix64.FromInt(w.GetValue<int>()) : Fix64.Zero);
             default:
                 throw new System.InvalidOperationException($"未知指令 {type}。");
         }

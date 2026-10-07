@@ -35,10 +35,10 @@ public static class CrowdSimChecksum
             h = Mix(h, (uint)(pos.Y.RawValue >> 32));
         }
 
-        // 生成初值的运动字段(vx / vy / slotX / slotY / blend / stall,本阶段恒 0,与参考实现同序)
+        // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序;S4 恒零,S5 起为真值)
         for (int k = 0; k < 6; k++)
         {
-            for (int i = 0; i < n; i++) h = Mix(h, 0u);
+            for (int i = 0; i < n; i++) h = Mix(h, MotionWord(sim, i, k));
         }
 
         // 整型字段:state / group / id / order / mode / level
@@ -53,4 +53,26 @@ public static class CrowdSimChecksum
     }
 
     private static uint Mix(uint h, uint v) => (h ^ v) * Prime;
+
+    /// <summary>
+    /// 运动字段的校验词:Fix64 原始值低 32 位。参考实现是 f64 词(double 位型),
+    /// 两端都取"内部存储的原始整型低 32"——跨引擎一致性由 S5 的轨迹带宽口径兜底,
+    /// 回放自一致(同引擎同输入同位流)不受影响。
+    /// </summary>
+    private static uint MotionWord(CrowdSimSession sim, int dense, int field)
+    {
+        var entity = sim.Units.EntityAt(dense);
+        if (!sim.World.Has<CrowdSimulationKinematics>(entity)) return 0u;
+        var kin = sim.World.Get<CrowdSimulationKinematics>(entity);
+        Fix64 v = field switch
+        {
+            0 => kin.Velocity.X,
+            1 => kin.Velocity.Y,
+            2 => kin.SlotOffsetCm.X,
+            3 => kin.SlotOffsetCm.Y,
+            4 => kin.Blend,
+            _ => kin.StallSeconds,
+        };
+        return (uint)v.RawValue;
+    }
 }

@@ -168,6 +168,7 @@ public static class NavContextBaker
         }
 
         var links = BuildLinks(config, surface, profile, passable, comp);
+        var (upComp, compCountTotal, reachOut) = BuildDeckReachability(n, comp, compCount, links, upPass, portal, upArea);
 
         // 最便宜定价区域代价(minCostOf):A* 启发缩放,只取已定价值的行项
         Fix64 minCost = Fix64.MaxValue;
@@ -196,6 +197,9 @@ public static class NavContextBaker
             Tiles = tiles,
             UpperTiles = upperTiles,
             MinCost = minCost,
+            UpComp = upComp,
+            CompCountTotal = compCountTotal,
+            ReachOut = reachOut,
         };
         nav.Hpa = HpaGraph.Build(nav, config);
         return nav;
@@ -290,6 +294,54 @@ public static class NavContextBaker
         list = new int[keys.Count];
         for (int e = 0; e < keys.Count; e++) list[fill[keys[e]]++] = e;
         return start;
+    }
+
+    /// <summary>
+    /// 桥面可达性(LY-4 移植:上层标号接在地面连通域之后顺排):桥面区域(UpArea)按格升序首见
+    /// 分配编号(确定性);桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向互通边。可达图 = 跳跃链接边 + 互通边。
+    /// </summary>
+    private static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(
+        int n, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, byte[] upArea)
+    {
+        int n2 = n * n;
+        var reachOut = new Dictionary<int, HashSet<int>>();
+        if (links != null)
+        {
+            foreach (var kv in links.CompOut) reachOut[kv.Key] = new HashSet<int>(kv.Value);
+        }
+
+        var upComp = new int[n2];
+        Array.Fill(upComp, -1);
+        var areaComp = new Dictionary<int, int>();
+        int next = compCount;
+        for (int c = 0; c < n2; c++)
+        {
+            if (upPass[c] == 0) continue;
+            int area = upArea[c];
+            if (!areaComp.TryGetValue(area, out int id))
+            {
+                id = next++;
+                areaComp[area] = id;
+            }
+
+            upComp[c] = id;
+        }
+
+        for (int c = 0; c < n2; c++)
+        {
+            if (portal[c] == 0 || comp[c] < 0 || upPass[c] == 0) continue;
+            int ground = comp[c], deck = upComp[c];
+            AddEdge(reachOut, ground, deck);
+            AddEdge(reachOut, deck, ground);
+        }
+
+        return (upComp, next, reachOut);
+
+        static void AddEdge(Dictionary<int, HashSet<int>> graph, int from, int to)
+        {
+            if (!graph.TryGetValue(from, out var set)) graph[from] = set = new HashSet<int>();
+            set.Add(to);
+        }
     }
 
     /// <summary>切比雪夫净空腐蚀（erodeRect 移植）:先行扫描再列扫描,两遍各计连续可走段。</summary>

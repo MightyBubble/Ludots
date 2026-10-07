@@ -44,6 +44,49 @@ public sealed class NavContext
     public required Fix64 MinCost { get; init; }
     /// <summary>HPA* 抽象图(烘焙末尾随上下文一起构建,与 buildNavContext 同点)。</summary>
     public HpaGraph? Hpa { get; set; }
+    /// <summary>桥面格 → 全局连通域编号(地面域之后顺排;-1 = 无桥面)。</summary>
+    public int[]? UpComp { get; set; }
+    /// <summary>连通域总数(地面 + 桥面),可达备忘的键步长。</summary>
+    public int CompCountTotal { get; set; }
+    /// <summary>合并可达图:跳跃链接出边 + 桥头双层互通边(桥面域 = 两岸地面的接驳节)。</summary>
+    public Dictionary<int, HashSet<int>>? ReachOut { get; set; }
+
+    private readonly Dictionary<long, bool> _reachMemo = new();
+
+    /// <summary>格在某层的连通域(0 地面 / 1 桥面;桥面格没有桥面编号时 -1)。compAt 移植。</summary>
+    public int CompAt(int cell, int level = 0)
+    {
+        if (level == 0) return Comp[cell];
+        return UpComp != null ? UpComp[cell] : -1;
+    }
+
+    /// <summary>连通域 a 能否到达 b(域内可走,域间靠跳跃链接与桥头互通边;canReach 移植)。</summary>
+    public bool CanReach(int a, int b)
+    {
+        if (a == b) return a >= 0;
+        if (a < 0 || b < 0) return false;
+        var reachOut = ReachOut;
+        if (reachOut == null) return false;
+        long key = (long)a * CompCountTotal + b;
+        if (_reachMemo.TryGetValue(key, out bool cached)) return cached;
+
+        var seen = new HashSet<int> { a };
+        var queue = new Queue<int>(new[] { a });
+        bool result = false;
+        while (queue.Count > 0 && !result)
+        {
+            int cur = queue.Dequeue();
+            if (!reachOut.TryGetValue(cur, out var next)) continue;
+            foreach (int c in next)
+            {
+                if (c == b) { result = true; break; }
+                if (seen.Add(c)) queue.Enqueue(c);
+            }
+        }
+
+        _reachMemo[key] = result;
+        return result;
+    }
 }
 
 /// <summary>桥面 tile 的查询视图(bakeUpper 的 { entry, portals, pc } 移植)。</summary>
@@ -74,34 +117,6 @@ public sealed class NavLinkSet
     /// <summary>CSR：格 → 入边。</summary>
     public required int[] InStart { get; init; }
     public required int[] InList { get; init; }
-    /// <summary>连通域 → 可达连通域（有向）。</summary>
+    /// <summary>连通域 → 可达连通域（有向;只含跳跃链接边,桥头互通边在 NavContext.ReachOut 合并）。</summary>
     public required Dictionary<int, HashSet<int>> CompOut { get; init; }
-
-    private readonly Dictionary<long, bool> _reachMemo = new();
-
-    /// <summary>连通域 a 能否到达 b（域内可走,域间靠有向链接）。</summary>
-    public bool CanReach(int a, int b, int compCount)
-    {
-        if (a == b) return a >= 0;
-        if (a < 0 || b < 0) return false;
-        long key = (long)a * compCount + b;
-        if (_reachMemo.TryGetValue(key, out bool cached)) return cached;
-
-        var seen = new HashSet<int> { a };
-        var queue = new Queue<int>(new[] { a });
-        bool result = false;
-        while (queue.Count > 0 && !result)
-        {
-            int cur = queue.Dequeue();
-            if (!CompOut.TryGetValue(cur, out var next)) continue;
-            foreach (int c in next)
-            {
-                if (c == b) { result = true; break; }
-                if (seen.Add(c)) queue.Enqueue(c);
-            }
-        }
-
-        _reachMemo[key] = result;
-        return result;
-    }
 }

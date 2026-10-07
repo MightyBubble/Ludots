@@ -50,6 +50,9 @@ public sealed class CrowdSimUnits
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
 
+    /// <summary>稠密下标 → 体型 id(运动参数解析用;不写存储,从组件读)。</summary>
+    public string ProfileIdAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).ProfileId;
+
     /// <summary>生成一个单位;满容量返回 -1(D54:失败不留痕迹)。
     /// 接线存在时同时挂上呈现投影所需的事实(稳定 id / 模板键 / 朝向),
     /// 之后由 PresentationEntityLifecycleSystem 数据驱动地建 presenter——生成路径本身不变。</summary>
@@ -69,6 +72,7 @@ public sealed class CrowdSimUnits
             entity = _world.Create(
                 new CrowdSimulationAgent { ProfileId = profileId },
                 new CrowdSimulationUnitState { Slot = slot, GroupId = groupId, State = 0, Mode = 0, Level = 0, Order = 0 },
+                new CrowdSimulationKinematics(),
                 new WorldPositionCm { Value = posCm },
                 // WorldToVisualSyncSystem 的查询要求 PreviousWorldPositionCm 同帧就位
                 // (生成管线预置件同款),否则 VisualTransform 永远停在默认值、presenter 沉在原点。
@@ -91,6 +95,7 @@ public sealed class CrowdSimUnits
             entity = _world.Create(
                 new CrowdSimulationAgent { ProfileId = profileId },
                 new CrowdSimulationUnitState { Slot = slot, GroupId = groupId, State = 0, Mode = 0, Level = 0, Order = 0 },
+                new CrowdSimulationKinematics(),
                 new WorldPositionCm { Value = new Fix64Vec2(x, y) },
                 new PlayerOwner { PlayerId = playerId });
         }

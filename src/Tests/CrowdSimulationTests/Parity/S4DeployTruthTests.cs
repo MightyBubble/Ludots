@@ -102,7 +102,7 @@ public class S4DeployTruthTests
         return v;
     }
 
-    private static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed)
+    internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed)
     {
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);

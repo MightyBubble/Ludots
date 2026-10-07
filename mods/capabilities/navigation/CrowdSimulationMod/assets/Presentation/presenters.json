@@ -540,7 +540,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -596,7 +596,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -652,7 +652,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -708,7 +708,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -764,7 +764,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -820,7 +820,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -876,7 +876,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -932,7 +932,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -988,7 +988,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1044,7 +1044,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1100,7 +1100,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1156,7 +1156,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1218,7 +1218,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1280,7 +1280,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1342,7 +1342,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1404,7 +1404,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1489,7 +1489,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1574,7 +1574,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1659,7 +1659,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],
@@ -1744,7 +1744,7 @@
         "grounding": {
           "mode": "SnapToGround",
           "offset": 0,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       }
     ],

@@ -45,6 +45,9 @@ public sealed class CrowdSimulationRuntime
     private string? _activeMapId;
     private bool _systemsInstalled;
     private PresenterEntityRuntime? _presenterRuntime;
+    private CrowdSimulation.Nav.Pathing.PathQueryService? _pathService;
+    private bool _stallLogged;
+    private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
     private readonly List<(int Tick, string Hash)> _hashes = new(4096);
     private readonly List<CrowdCommand> _pendingScript = new();
     private int _autoReplayAtTick = -1;
@@ -223,6 +226,15 @@ public sealed class CrowdSimulationRuntime
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
         _activeMapId = mapId.Value;
 
+        // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 阻挡盒索引
+        _pathService?.Dispose();
+        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, TimeSpan.FromSeconds(5));
+        var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
+        var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
+        _session.EnableMovement(kernel, planner);
+        _session.Blockers = CrowdSimulation.Movement.CrowdBlockerColliders.Build(
+            mapSurface.Blockers, runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
+
         // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
         var palette = new Vector4[maxPlayer + 1];
@@ -257,6 +269,14 @@ public sealed class CrowdSimulationRuntime
 
         engine.SetService(CoreServiceKeys.CrowdSimulationSession, _session);
         engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, this);
+        // 演示相机:debug 配置指名一个虚拟相机(数据),经引擎现成的 VirtualCameraRequest 通道切换
+        if (_debug["session"]?["cameraId"]?.GetValue<string>() is { } cameraId && !string.IsNullOrWhiteSpace(cameraId))
+        {
+            engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest { Id = cameraId };
+            Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+                $"CrowdSimulation demo camera switch requested: {cameraId}.");
+        }
+
         Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
             $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_pendingScript.Count}, autoReplayAt={_autoReplayAtTick}.");
     }
@@ -264,6 +284,8 @@ public sealed class CrowdSimulationRuntime
     private void Deactivate(GameEngine engine)
     {
         _session?.Units.Clear();
+        _pathService?.Dispose();
+        _pathService = null;
         if (engine.World.IsAlive(_sessionEntity)) engine.World.Destroy(_sessionEntity);
         _sessionEntity = Entity.Null;
         _session = null;
@@ -277,12 +299,25 @@ public sealed class CrowdSimulationRuntime
         engine.RemoveService(CoreServiceKeys.TeamColorPalette);
     }
 
-    /// <summary>固定步进一次(系统组每个 FixedHz tick 调一次)。</summary>
+    /// <summary>固定步进一次(系统组每个 FixedHz tick 调一次);答复未按生效帧返回时本 tick 停摆。</summary>
     public void Tick()
     {
         var session = _session;
         if (session == null) return;
-        string hash = session.Step();
+        string? hash = session.Step();
+        if (hash == null)
+        {
+            if (!_stallLogged)
+            {
+                _stallLogged = true;
+                Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"CrowdSimulation stalled at tick {session.TickCount}: waiting for path reply (planner pending={session.Planner?.PendingCount ?? -1}, serviceFault={_pathService?.Faulted}).");
+            }
+
+            return;
+        }
+
+        _stallLogged = false;
         if (_hashes.Count >= 4096) _hashes.RemoveAt(0);
         _hashes.Add((session.TickCount, hash));
         if (!_autoReplayDone && _autoReplayAtTick >= 0 && session.TickCount >= _autoReplayAtTick)
@@ -293,11 +328,11 @@ public sealed class CrowdSimulationRuntime
                 $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick}.");
         }
 
-        if (session.TickCount % 300 == 0)
+        if (session.TickCount % 30 == 0)
         {
             string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={hash}, presenters=[{presenters}].");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={hash}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
         }
 
         WriteStats(session);
@@ -313,10 +348,31 @@ public sealed class CrowdSimulationRuntime
             .ToArray();
         int ticks = session.TickCount;
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius);
-        replay.Commands.Schedule(entries);
-        var replayHashes = new List<string>(ticks);
-        replay.Advance(ticks, replayHashes);
+        // 回放会话同样挂运动栈(一次性世界 + 自己的路径服务;不入引擎世界,不碰呈现)
+        if (session.Movement != null)
+        {
+            using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
+                session.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5));
+            replay.EnableMovement(
+                CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
+                new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
+            replay.Blockers = session.Blockers;
+            replay.BlockOnDueReplies = true;
+            replay.Commands.Schedule(entries);
+            var replayHashes = new List<string>(ticks);
+            replay.Advance(ticks, replayHashes);
+            CompareReplay(ticks, replayHashes);
+            return;
+        }
 
+        replay.Commands.Schedule(entries);
+        var replayHashes2 = new List<string>(ticks);
+        replay.Advance(ticks, replayHashes2);
+        CompareReplay(ticks, replayHashes2);
+    }
+
+    private void CompareReplay(int ticks, List<string> replayHashes)
+    {
         ReplayDivergenceTick = -1;
         for (int i = 0; i < Math.Min(_hashes.Count, replayHashes.Count); i++)
         {
