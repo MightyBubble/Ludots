@@ -43,19 +43,6 @@
       "RepresentativeInstanceId": "wasd-sandbox-zhangsan"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "WasdSandbox.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  },
   "Players": [
     {
       "PlayerId": 1,
