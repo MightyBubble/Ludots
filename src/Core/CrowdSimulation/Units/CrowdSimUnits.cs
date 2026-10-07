@@ -5,6 +5,7 @@ using ArchWorld = Arch.Core.World;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Units;
@@ -21,6 +22,7 @@ public sealed class CrowdSimUnits
     public const int SlotBits = 18, SlotMask = (1 << SlotBits) - 1, GenMask = (1 << 14) - 1;
 
     private readonly ArchWorld _world;
+    private readonly CrowdSimPresentationWiring? _presentation;
     private readonly List<Entity> _dense = new();
     private readonly List<int> _slotOfDense = new();
     private readonly int[] _sparse;
@@ -28,10 +30,11 @@ public sealed class CrowdSimUnits
     private readonly int[] _freeSlots;
     private int _freeTop;
 
-    public CrowdSimUnits(ArchWorld world, int capacity)
+    public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring? presentation = null)
     {
         if (capacity > SlotMask + 1) throw new ArgumentOutOfRangeException(nameof(capacity), "单位容量超过句柄槽位上限。");
         _world = world ?? throw new ArgumentNullException(nameof(world));
+        _presentation = presentation;
         Capacity = capacity;
         _sparse = new int[capacity];
         _gen = new ushort[capacity];
@@ -47,18 +50,51 @@ public sealed class CrowdSimUnits
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
 
-    /// <summary>生成一个单位;满容量返回 -1(D54:失败不留痕迹)。</summary>
-    public int Add(Fix64 x, Fix64 y, string profileId, int groupId, int playerId)
+    /// <summary>生成一个单位;满容量返回 -1(D54:失败不留痕迹)。
+    /// 接线存在时同时挂上呈现投影所需的事实(稳定 id / 模板键 / 朝向),
+    /// 之后由 PresentationEntityLifecycleSystem 数据驱动地建 presenter——生成路径本身不变。</summary>
+    public int Add(Fix64 x, Fix64 y, string profileId, int groupId, int playerId, Fix64 radiusCm)
     {
         if (_dense.Count >= Capacity) return -1;
         int slot = _freeSlots[--_freeTop];
         int dense = _dense.Count;
         _sparse[slot] = dense;
-        var entity = _world.Create(
-            new CrowdSimulationAgent { ProfileId = profileId },
-            new CrowdSimulationUnitState { Slot = slot, GroupId = groupId, State = 0, Mode = 0, Level = 0, Order = 0 },
-            new WorldPositionCm { Value = new Fix64Vec2(x, y) },
-            new PlayerOwner { PlayerId = playerId });
+        Entity entity;
+        if (_presentation != null)
+        {
+            _presentation.TemplateKeyByProfileId.TryGetValue(profileId, out int templateKeyId);
+            var posCm = new Fix64Vec2(x, y);
+            var blackboard = new Ludots.Core.Gameplay.GAS.Components.BlackboardFloatBuffer();
+            blackboard.Set(_presentation.RadiusMetersBlackboardKeyId, (float)radiusCm.ToDouble() / 100f);
+            entity = _world.Create(
+                new CrowdSimulationAgent { ProfileId = profileId },
+                new CrowdSimulationUnitState { Slot = slot, GroupId = groupId, State = 0, Mode = 0, Level = 0, Order = 0 },
+                new WorldPositionCm { Value = posCm },
+                // WorldToVisualSyncSystem 的查询要求 PreviousWorldPositionCm 同帧就位
+                // (生成管线预置件同款),否则 VisualTransform 永远停在默认值、presenter 沉在原点。
+                new PreviousWorldPositionCm { Value = posCm },
+                new PlayerOwner { PlayerId = playerId },
+                new Ludots.Core.Presentation.Components.PresentationStableId { Value = _presentation.StableIds.Allocate() },
+                new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
+                new FacingDirection { AngleRad = 0f },
+                // WorldToVisualSyncSystem 的读取端:VisualTransform 是它的输出槽,
+                // CullState 是相机剔除的状态槽——两者都是生成管线预置件的同款形状。
+                Ludots.Core.Presentation.Components.VisualTransform.Default,
+                new Ludots.Core.Presentation.Components.CullState { IsVisible = false, LOD = Ludots.Platform.Abstractions.LODLevel.Low },
+                // 地形高度采样的门控标记(模板 `{}` 空对象的等价物):没有它 TerrainHeightSyncSystem
+                // 不写 Y,单位会埋在海平面以下的地表里。
+                new Ludots.Core.Presentation.Components.ContinuousHeightmapSampleState(),
+                blackboard);
+        }
+        else
+        {
+            entity = _world.Create(
+                new CrowdSimulationAgent { ProfileId = profileId },
+                new CrowdSimulationUnitState { Slot = slot, GroupId = groupId, State = 0, Mode = 0, Level = 0, Order = 0 },
+                new WorldPositionCm { Value = new Fix64Vec2(x, y) },
+                new PlayerOwner { PlayerId = playerId });
+        }
+
         _dense.Add(entity);
         _slotOfDense.Add(slot);
         return dense;
@@ -67,6 +103,12 @@ public sealed class CrowdSimUnits
     /// <summary>清空(代 bump:旧句柄全部失效;槽池回到初始 LIFO 序,回放可复现)。</summary>
     public void Clear()
     {
+        // 先摘选中集合再毁实体:集合成员是实体引用,销毁后留着只会指到死实体。
+        _presentation?.Collections.Replace(
+            _presentation.SelectionOwner,
+            _presentation.SelectedCollectionKeyId,
+            SelectionMirror.Descriptor,
+            ReadOnlySpan<Entity>.Empty);
         for (int i = 0; i < _dense.Count; i++)
         {
             _world.Destroy(_dense[i]);

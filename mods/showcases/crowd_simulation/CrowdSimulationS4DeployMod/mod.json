@@ -1,0 +1,18 @@
+{
+  "name": "CrowdSimulationS4DeployMod",
+  "version": "0.2.0",
+  "description": "CrowdSimulation S4 部署演示(种子 1337,纯数据无代码):进入地图自动按规范脚本部署 12000 单位(形状×玩家色),框选/点名生成经由指令流执行,到点自动回放并对拍校验码。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^0.2.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "deploy",
+    "s4"
+  ]
+}

@@ -417,6 +417,7 @@ public sealed class CrowdSimulationConfigLoader
                     PlayerId = b.PlayerId,
                     XCm = b.XCm,
                     YCm = b.YCm,
+                    Color = b.Color,
                 }),
             },
             Telemetry = new RuntimeTelemetrySection

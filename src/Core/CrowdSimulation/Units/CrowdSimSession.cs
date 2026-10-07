@@ -18,13 +18,15 @@ public sealed class CrowdSimSession
         CrowdSimulationRuntimeConfig config,
         ArchWorld world,
         IReadOnlyDictionary<int, NavContext> navs,
-        IReadOnlyDictionary<(int Layer, int R), NavContext> navByLayerRadius)
+        IReadOnlyDictionary<(int Layer, int R), NavContext> navByLayerRadius,
+        CrowdSimPresentationWiring? presentation = null)
     {
         Config = config;
         World = world;
         Navs = navs;
         NavByLayerRadius = navByLayerRadius;
-        Units = new CrowdSimUnits(world, config.Sim.MaxUnits);
+        Presentation = presentation;
+        Units = new CrowdSimUnits(world, config.Sim.MaxUnits, presentation);
         Groups = new CrowdNavGroupSet();
         Commands = new CrowdCommandQueue();
     }
@@ -34,6 +36,8 @@ public sealed class CrowdSimSession
     public CrowdSimUnits Units { get; }
     public CrowdNavGroupSet Groups { get; }
     public CrowdCommandQueue Commands { get; }
+    /// <summary>呈现/交互接线(null = 无头模式:不投影、不镜像选中集合)。</summary>
+    public CrowdSimPresentationWiring? Presentation { get; }
     public IReadOnlyDictionary<int, NavContext> Navs { get; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }

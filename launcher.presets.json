@@ -3705,6 +3705,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "crowd_simulation_s4_deploy_1337_raylib",
+      "name": "CrowdSimulation S4 Deploy (seed 1337) Raylib",
+      "selectors": [
+        "$crowd_simulation_s4_deploy_1337"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

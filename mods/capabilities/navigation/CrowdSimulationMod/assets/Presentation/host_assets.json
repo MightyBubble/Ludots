@@ -1,0 +1,11 @@
+[
+  {
+    "id": "crowd_simulation.unit.triangle.raylib",
+    "assetKind": "Mesh",
+    "assetId": "crowd_simulation.unit.triangle",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CrowdSimulationMod:assets/Models/unit_triangle.gltf"
+    ]
+  }
+]

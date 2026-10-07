@@ -1,0 +1,1824 @@
+[
+  {
+    "id": "crowd_simulation.units.bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.infantry.r100"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.infantry.r100",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.infantry.r100"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.infantry.r200"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.infantry.r200",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.infantry.r200"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.infantry.r300"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.infantry.r300",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.infantry.r300"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.infantry.r400"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.infantry.r400",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.infantry.r400"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.navy.r100"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.navy.r100",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.navy.r100"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.navy.r200"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.navy.r200",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.navy.r200"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.navy.r300"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.navy.r300",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.navy.r300"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.navy.r400"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.navy.r400",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.navy.r400"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.mountaineer.r100"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.mountaineer.r100",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.mountaineer.r100"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.mountaineer.r200"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.mountaineer.r200",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.mountaineer.r200"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.mountaineer.r300"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.mountaineer.r300",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.mountaineer.r300"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.mountaineer.r400"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.mountaineer.r400",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.mountaineer.r400"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.amphibious.r100"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.amphibious.r100",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.amphibious.r100"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.amphibious.r200"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.amphibious.r200",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.amphibious.r200"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.amphibious.r300"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.amphibious.r300",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.amphibious.r300"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.amphibious.r400"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.amphibious.r400",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.amphibious.r400"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.jumper.r100"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.jumper.r100",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.jumper.r100"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.jumper.r200"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.jumper.r200",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.jumper.r200"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.jumper.r300"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.jumper.r300",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.jumper.r300"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "crowd_simulation.unit.jumper.r400"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.unit.jumper.r400",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "crowd_simulation.unit.jumper.r400"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "crowd_simulation.selection_ring",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "selected"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r100",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ],
+          "localScale": [
+            2.0,
+            0.7,
+            2.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r200",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.7,
+            0
+          ],
+          "localScale": [
+            4.0,
+            1.4,
+            4.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r300",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.05,
+            0
+          ],
+          "localScale": [
+            6.0,
+            2.1,
+            6.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r400",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.4,
+            0
+          ],
+          "localScale": [
+            8.0,
+            2.8,
+            8.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r100",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.circle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.5,
+            0
+          ],
+          "localScale": [
+            2.0,
+            1.0,
+            2.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r200",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.circle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.0,
+            0
+          ],
+          "localScale": [
+            4.0,
+            2.0,
+            4.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r300",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.circle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.5,
+            0
+          ],
+          "localScale": [
+            6.0,
+            3.0,
+            6.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r400",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.circle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2.0,
+            0
+          ],
+          "localScale": [
+            8.0,
+            4.0,
+            8.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r100",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.triangle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.0,
+            0
+          ],
+          "localScale": [
+            2.0,
+            0.9,
+            2.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r200",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.triangle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.0,
+            0
+          ],
+          "localScale": [
+            4.0,
+            1.8,
+            4.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r300",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.triangle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.0,
+            0
+          ],
+          "localScale": [
+            6.0,
+            2.7,
+            6.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r400",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.triangle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.0,
+            0
+          ],
+          "localScale": [
+            8.0,
+            3.6,
+            8.0
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r100",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ],
+          "localScale": [
+            1.9,
+            0.7,
+            1.9
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.382683,
+            0,
+            0.92388
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r200",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.7,
+            0
+          ],
+          "localScale": [
+            3.8,
+            1.4,
+            3.8
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.382683,
+            0,
+            0.92388
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r300",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.05,
+            0
+          ],
+          "localScale": [
+            5.7,
+            2.1,
+            5.7
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.382683,
+            0,
+            0.92388
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r400",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.4,
+            0
+          ],
+          "localScale": [
+            7.6,
+            2.8,
+            7.6
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.382683,
+            0,
+            0.92388
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r100",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.3,
+            0
+          ],
+          "localScale": [
+            2.2,
+            0.6,
+            0.7333
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "orientation",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.31,
+            0
+          ],
+          "localScale": [
+            2.2,
+            0.62,
+            0.7333
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.707107,
+            0,
+            0.707107
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r200",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.6,
+            0
+          ],
+          "localScale": [
+            4.4,
+            1.2,
+            1.4667
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "orientation",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.62,
+            0
+          ],
+          "localScale": [
+            4.4,
+            1.24,
+            1.4667
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.707107,
+            0,
+            0.707107
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r300",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "localScale": [
+            6.6,
+            1.8,
+            2.2
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "orientation",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.93,
+            0
+          ],
+          "localScale": [
+            6.6,
+            1.86,
+            2.2
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.707107,
+            0,
+            0.707107
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r400",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.2,
+            0
+          ],
+          "localScale": [
+            8.8,
+            2.4,
+            2.9333
+          ],
+          "colorParamKey": "crowd_simulation.unit.color"
+        }
+      },
+      {
+        "slot": "orientation",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "crowd_simulation.unit.square",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.24,
+            0
+          ],
+          "localScale": [
+            8.8,
+            2.48,
+            2.9333
+          ],
+          "colorParamKey": "crowd_simulation.unit.color",
+          "localRotation": [
+            0,
+            0.707107,
+            0,
+            0.707107
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "source": "entityColorVector"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crowd_simulation.selection_ring",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.6,
+            1,
+            2.6
+          ],
+          "scaleParamKey": "crowd_simulation.unit.ring_scale"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            0.55
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "crowd_simulation.unit.ring_scale",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "crowd_simulation.unit.radius_m"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "crowd_simulation.unit.ring_scale",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  }
+]

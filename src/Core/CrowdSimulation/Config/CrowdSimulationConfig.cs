@@ -126,6 +126,9 @@ public sealed class CrowdSimulationConfig
     public sealed class AgentsSection
     {
         public required double AvoidanceRadiusScale { get; init; }
+        /// <summary>本会话的体型档案来源(mod URI,如 "CrowdSimulationMod:assets/Navigation/agent_profiles.json")。
+        /// 缺失 = 用引擎全局档案注册表(与别的特性共享,半径级会并集——只对明确接受这一点的场景)。</summary>
+        public string? ProfilesUri { get; init; }
     }
 
     public sealed class NavmeshSection
@@ -291,6 +294,8 @@ public sealed class CrowdSimulationConfig
         public required int PlayerId { get; init; }
         public required int XCm { get; init; }
         public required int YCm { get; init; }
+        /// <summary>该玩家的单位配色(#rrggbb;呈现层调色板数据,仿真空口)。</summary>
+        public string? Color { get; init; }
     }
 
     public sealed class TelemetrySection

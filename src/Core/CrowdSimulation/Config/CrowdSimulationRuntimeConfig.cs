@@ -262,6 +262,8 @@ public sealed class RuntimeDeployBase
     public required int PlayerId { get; init; }
     public required int XCm { get; init; }
     public required int YCm { get; init; }
+    /// <summary>该玩家的单位配色(#rrggbb;null = 未配置,呈现层回退默认)。</summary>
+    public string? Color { get; init; }
 }
 
 public sealed class RuntimeTelemetrySection

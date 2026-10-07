@@ -70,6 +70,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IContinuousHeightmap?> _heightmapProvider;
         private readonly Func<IBoneTransformProvider?> _boneTransformProvider;
+        private readonly Func<TeamColorPalette?> _teamColorPaletteProvider;
         private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
         private readonly PresenterBehaviorOps _extensionBehaviorOps;
         private readonly GraphProgramRegistry? _graphPrograms;
@@ -159,7 +160,8 @@ namespace Ludots.Core.Presentation.Systems
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
             TrailMeshBuffer? trailMeshBuffer = null,
-            Dictionary<string, object>? globals = null)
+            Dictionary<string, object>? globals = null,
+            Func<TeamColorPalette?>? teamColorPaletteProvider = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -170,6 +172,7 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider ?? (static () => null);
+            _teamColorPaletteProvider = teamColorPaletteProvider ?? (static () => null);
             _extensionBehaviors = extensionBehaviors;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
@@ -3257,6 +3260,14 @@ namespace Ludots.Core.Presentation.Systems
             if (TryResolveViewerRelationshipColor(presenter, owner, out Vector4 relationshipColor))
             {
                 return relationshipColor;
+            }
+
+            // 场景注册的调色板优先(多玩家配色是数据);未注册回退双色解析。
+            if (World.IsAlive(owner) &&
+                World.TryGet(owner, out Ludots.Core.Gameplay.Components.PlayerOwner playerOwner) &&
+                _teamColorPaletteProvider()?.TryGet(playerOwner.PlayerId, out Vector4 paletteColor) == true)
+            {
+                return paletteColor;
             }
 
             return World.IsAlive(owner) ? TeamColorResolver.Resolve(World, owner) : TeamColorResolver.DefaultColor;

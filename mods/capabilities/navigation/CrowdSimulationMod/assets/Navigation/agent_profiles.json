@@ -7,7 +7,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 0
+    "layer": 0,
+    "templateId": "crowd_simulation.unit.infantry.r100"
   },
   {
     "id": "foot_r200",
@@ -17,7 +18,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 0
+    "layer": 0,
+    "templateId": "crowd_simulation.unit.infantry.r200"
   },
   {
     "id": "foot_r300",
@@ -27,7 +29,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 0
+    "layer": 0,
+    "templateId": "crowd_simulation.unit.infantry.r300"
   },
   {
     "id": "foot_r400",
@@ -37,7 +40,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 0
+    "layer": 0,
+    "templateId": "crowd_simulation.unit.infantry.r400"
   },
   {
     "id": "hull_r100",
@@ -47,7 +51,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 1
+    "layer": 1,
+    "templateId": "crowd_simulation.unit.navy.r100"
   },
   {
     "id": "hull_r200",
@@ -57,7 +62,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 1
+    "layer": 1,
+    "templateId": "crowd_simulation.unit.navy.r200"
   },
   {
     "id": "hull_r300",
@@ -67,7 +73,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 1
+    "layer": 1,
+    "templateId": "crowd_simulation.unit.navy.r300"
   },
   {
     "id": "hull_r400",
@@ -77,7 +84,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 1
+    "layer": 1,
+    "templateId": "crowd_simulation.unit.navy.r400"
   },
   {
     "id": "climber_r100",
@@ -87,7 +95,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 2
+    "layer": 2,
+    "templateId": "crowd_simulation.unit.mountaineer.r100"
   },
   {
     "id": "climber_r200",
@@ -97,7 +106,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 2
+    "layer": 2,
+    "templateId": "crowd_simulation.unit.mountaineer.r200"
   },
   {
     "id": "climber_r300",
@@ -107,7 +117,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 2
+    "layer": 2,
+    "templateId": "crowd_simulation.unit.mountaineer.r300"
   },
   {
     "id": "climber_r400",
@@ -117,7 +128,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 6,
-    "layer": 2
+    "layer": 2,
+    "templateId": "crowd_simulation.unit.mountaineer.r400"
   },
   {
     "id": "amphib_r100",
@@ -127,7 +139,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 1,
-    "layer": 3
+    "layer": 3,
+    "templateId": "crowd_simulation.unit.amphibious.r100"
   },
   {
     "id": "amphib_r200",
@@ -137,7 +150,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 3
+    "layer": 3,
+    "templateId": "crowd_simulation.unit.amphibious.r200"
   },
   {
     "id": "amphib_r300",
@@ -147,7 +161,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 3
+    "layer": 3,
+    "templateId": "crowd_simulation.unit.amphibious.r300"
   },
   {
     "id": "amphib_r400",
@@ -157,7 +172,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 3
+    "layer": 3,
+    "templateId": "crowd_simulation.unit.amphibious.r400"
   },
   {
     "id": "leaper_r100",
@@ -167,7 +183,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 2,
-    "layer": 4
+    "layer": 4,
+    "templateId": "crowd_simulation.unit.jumper.r100"
   },
   {
     "id": "leaper_r200",
@@ -177,7 +194,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 3,
-    "layer": 4
+    "layer": 4,
+    "templateId": "crowd_simulation.unit.jumper.r200"
   },
   {
     "id": "leaper_r300",
@@ -187,7 +205,8 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 4,
-    "layer": 4
+    "layer": 4,
+    "templateId": "crowd_simulation.unit.jumper.r300"
   },
   {
     "id": "leaper_r400",
@@ -197,6 +216,7 @@
     "draftCm": 0,
     "beamCm": 0,
     "mass": 5,
-    "layer": 4
+    "layer": 4,
+    "templateId": "crowd_simulation.unit.jumper.r400"
   }
 ]

@@ -1,0 +1,230 @@
+[
+  {
+    "id": "crowd_simulation.unit.infantry.r100",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.infantry.r100"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "foot_r100"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r200",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.infantry.r200"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "foot_r200"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r300",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.infantry.r300"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "foot_r300"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.r400",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.infantry.r400"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "foot_r400"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r100",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.navy.r100"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "hull_r100"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r200",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.navy.r200"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "hull_r200"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r300",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.navy.r300"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "hull_r300"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.navy.r400",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.navy.r400"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "hull_r400"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r100",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.mountaineer.r100"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "climber_r100"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r200",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.mountaineer.r200"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "climber_r200"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r300",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.mountaineer.r300"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "climber_r300"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.mountaineer.r400",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.mountaineer.r400"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "climber_r400"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r100",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.amphibious.r100"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "amphib_r100"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r200",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.amphibious.r200"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "amphib_r200"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r300",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.amphibious.r300"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "amphib_r300"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.amphibious.r400",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.amphibious.r400"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "amphib_r400"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r100",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.jumper.r100"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "leaper_r100"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r200",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.jumper.r200"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "leaper_r200"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r300",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.jumper.r300"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "leaper_r300"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.unit.jumper.r400",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Unit.jumper.r400"
+      },
+      "CrowdSimulationAgent": {
+        "ProfileId": "leaper_r400"
+      }
+    }
+  },
+  {
+    "id": "crowd_simulation.session",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Session"
+      }
+    }
+  }
+]

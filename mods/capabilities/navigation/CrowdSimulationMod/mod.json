@@ -1,11 +1,16 @@
 {
   "name": "CrowdSimulationMod",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CrowdSimulation 能力 Mod：确定性大规模群体导航（NavSurface 地表 + 分层导航 + 流场 + 避让推挤）。提供 CrowdSimulationConfig.json 全量默认值；地图 Mod 只写要改的字段。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["navigation", "crowd-simulation", "navsurface", "large-world"]
+  "tags": [
+    "navigation",
+    "crowd-simulation",
+    "navsurface",
+    "large-world"
+  ]
 }

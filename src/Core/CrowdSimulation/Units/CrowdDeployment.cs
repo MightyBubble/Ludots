@@ -147,9 +147,9 @@ public static class CrowdDeployment
         var w = Fix64.OneValue - 2 * e;
         var x = (Fix64.FromInt(cell % n) + e + rng.Next() * w) * cellSize;
         var y = (Fix64.FromInt(cell / n) + e + rng.Next() * w) * cellSize;
-        string profileId = ProfileOf(cfg, g.LayerIdx, g.RIdx).Id;
+        var profile = ProfileOf(cfg, g.LayerIdx, g.RIdx);
         // PlayerOwner 用 Ludots 玩家号(1..P;组内索引 0 基只服务于 RNG 与编号序)
-        int dense = sim.Units.Add(x, y, profileId, g.Id, cfg.Deploy.Bases[g.Player].PlayerId);
+        int dense = sim.Units.Add(x, y, profile.Id, g.Id, cfg.Deploy.Bases[g.Player].PlayerId, profile.RadiusCm);
         if (dense < 0) return dense;
         g.Count++;
         return dense;

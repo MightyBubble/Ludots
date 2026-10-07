@@ -74,6 +74,7 @@ public static class CrowdSimCommands
         }
 
         sim.SetSelectedCount(count);
+        SelectionMirror.Sync(sim);
     }
 
     /// <summary>全选(selectAll):本方全部单位入选。</summary>
@@ -91,6 +92,7 @@ public static class CrowdSimCommands
         }
 
         sim.SetSelectedCount(count);
+        SelectionMirror.Sync(sim);
     }
 
     public static void ClearSelection(CrowdSimSession sim)
@@ -103,5 +105,6 @@ public static class CrowdSimCommands
         }
 
         sim.SetSelectedCount(0);
+        SelectionMirror.Sync(sim);
     }
 }

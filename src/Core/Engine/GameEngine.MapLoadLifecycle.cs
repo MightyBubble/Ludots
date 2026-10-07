@@ -534,6 +534,8 @@ namespace Ludots.Core.Engine
                 {
                     InstallMassNavigationMovePlanOrderAdapter();
                 }
+
+                _crowdSimulationRuntime.HandleMapFocused(this, session.MapId, mapConfig);
             }
             else
             {
@@ -660,6 +662,8 @@ namespace Ludots.Core.Engine
             {
                 InstallMassNavigationMovePlanOrderAdapter();
             }
+
+            _crowdSimulationRuntime.HandleMapFocused(this, session.MapId, session.MapConfig);
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);

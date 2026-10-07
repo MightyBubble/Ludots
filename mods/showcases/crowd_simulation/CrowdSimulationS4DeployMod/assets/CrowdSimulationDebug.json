@@ -1,0 +1,118 @@
+{
+  "worker": {
+    "planTimeoutMs": 5000
+  },
+  "tools": {
+    "spawnCount": 20
+  },
+  "session": {
+    "autostart": true,
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawn",
+          "count": 12000
+        }
+      },
+      {
+        "tick": 5,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 1,
+          "xCm": 790000,
+          "yCm": 790000,
+          "count": 300,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 6,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 812000,
+          "yCm": 790000,
+          "count": 300,
+          "unitType": 2,
+          "rIdx": 1
+        }
+      },
+      {
+        "tick": 7,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 3,
+          "xCm": 790000,
+          "yCm": 812000,
+          "count": 300,
+          "unitType": 3,
+          "rIdx": 2
+        }
+      },
+      {
+        "tick": 8,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 4,
+          "xCm": 812000,
+          "yCm": 812000,
+          "count": 300,
+          "unitType": 4,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 30,
+        "cmd": {
+          "type": "select",
+          "player": 1,
+          "x0Cm": 167500,
+          "y0Cm": 247500,
+          "x1Cm": 792500,
+          "y1Cm": 872500,
+          "additive": false
+        }
+      },
+      {
+        "tick": 60,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 1120000,
+          "yCm": 1040000,
+          "count": 20,
+          "unitType": 0,
+          "rIdx": 0
+        }
+      },
+      {
+        "tick": 90,
+        "cmd": {
+          "type": "selectAll",
+          "player": 2
+        }
+      },
+      {
+        "tick": 100,
+        "cmd": {
+          "type": "select",
+          "player": 1,
+          "x0Cm": 770000,
+          "y0Cm": 770000,
+          "x1Cm": 810000,
+          "y1Cm": 810000,
+          "additive": false
+        }
+      },
+      {
+        "tick": 120,
+        "cmd": {
+          "type": "clearSelection"
+        }
+      }
+    ],
+    "autoReplayAtTick": 150
+  }
+}

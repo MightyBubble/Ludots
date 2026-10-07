@@ -254,6 +254,7 @@ namespace Ludots.Core.Engine
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
         private readonly MassNavigationRuntime _massNavigationRuntime = new();
+        private readonly CrowdSimulation.Runtime.CrowdSimulationRuntime _crowdSimulationRuntime = new();
         private readonly Dictionary<MapId, TransportNetworkMapRuntime> _transportNetworkRuntimes = new();
 
         // Multithreading
@@ -1464,7 +1465,8 @@ namespace Ludots.Core.Engine
                 graphPrograms: graphProgramRegistry,
                 graphApi: gasGraphApi,
                 trailMeshBuffer: trailMeshBuffer,
-                globals: GlobalContext);
+                globals: GlobalContext,
+                teamColorPaletteProvider: () => GetService(CoreServiceKeys.TeamColorPalette));
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
@@ -3027,6 +3029,7 @@ namespace Ludots.Core.Engine
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             _massNavigationRuntime.HandleMapUnloaded(this, mid);
+            _crowdSimulationRuntime.HandleMapUnloaded(this, mid);
             UnloadTransportNetworkForMap(mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
@@ -3163,6 +3166,7 @@ namespace Ludots.Core.Engine
             if (outerSession != null)
             {
                 _massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);
+                _crowdSimulationRuntime.HandleMapSuspended(this, outerSession.MapId);
                 var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
@@ -3201,6 +3205,7 @@ namespace Ludots.Core.Engine
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
+                _crowdSimulationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 UnloadTransportNetworkForMap(innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);

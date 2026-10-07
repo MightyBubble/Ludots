@@ -412,6 +412,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GlobalFieldVisualBuffer> GlobalFieldVisualBuffer = new("GlobalFieldVisualBuffer");
         public static readonly ServiceKey<Presentation.Fields.GlobalFieldVisualProjectorRegistry> GlobalFieldVisualProjectorRegistry = new("GlobalFieldVisualProjectorRegistry");
         public static readonly ServiceKey<Platform.Abstractions.RouteVisualBuffer> RouteVisualBuffer = new("RouteVisualBuffer");
+        public static readonly ServiceKey<Presentation.Utils.TeamColorPalette> TeamColorPalette = new("TeamColorPalette");
+        public static readonly ServiceKey<CrowdSimulation.Units.CrowdSimSession> CrowdSimulationSession = new("CrowdSimulationSession");
+        public static readonly ServiceKey<CrowdSimulation.Runtime.CrowdSimulationRuntime> CrowdSimulationRuntime = new("CrowdSimulationRuntime");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
