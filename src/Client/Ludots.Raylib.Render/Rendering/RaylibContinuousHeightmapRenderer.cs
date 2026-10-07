@@ -449,12 +449,15 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame = 0d;
 
             float aspect = ResolveFrameAspect();
-            bool useOverview = ShouldUseOverviewMesh(
-                source,
-                in camera,
-                aspect,
-                VisibleRadiusCm,
-                profile.OverviewSwitchChunkSpans);
+            // LOD 滞回(B2):已进入 overview 后,footprint 要低于阈值的 80% 才退回 chunk,
+            // 消除切换边界附近的逐帧抖动(已实测边界推拉会反复全量驱逐/重建)
+            float detailRadiusCm = ResolveDetailRadiusCm(source, VisibleRadiusCm);
+            float activationRadiusCm = detailRadiusCm * MathF.Max(1f, profile.OverviewSwitchChunkSpans);
+            float footprintRadiusCm = ComputeCameraFootprintRadiusCm(camera, aspect);
+            bool useOverview = _lastUseOverview
+                ? footprintRadiusCm > activationRadiusCm * OverviewHysteresisRatio
+                : footprintRadiusCm > activationRadiusCm;
+            _lastUseOverview = useOverview;
             if (useOverview)
             {
                 if (source is not IContinuousHeightmap heightSampleSource)
@@ -488,10 +491,13 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            // 窗口必须盖住当帧屏幕 footprint(B1):窗口与切换判据自洽,否则 1.7–3.68 km
+            // 距离带内屏幕边缘 / 四角稳定缺块(已实测,尤其斜视角远边缘)
+            float windowHalfCm = ResolveWindowHalfCm(source, in camera);
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
 
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
@@ -528,10 +534,11 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
 
             EnsureInitialized();
-            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
-            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
-            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            float windowHalfCm = ResolveWindowHalfCm(source, in camera);
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             RaylibMatrix identity = RaylibMatrix.Identity;
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
@@ -1810,11 +1817,7 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
-            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
-            float detailRadiusCm = MathF.Max(
-                MathF.Max(1f, detailVisibleRadiusCm),
-                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+            float detailRadiusCm = ResolveDetailRadiusCm(source, detailVisibleRadiusCm);
             float activationRadiusCm = detailRadiusCm * MathF.Max(1f, activationMultiplier);
             return ComputeCameraFootprintRadiusCm(camera, aspect) > activationRadiusCm;
         }
@@ -1833,6 +1836,25 @@ namespace Ludots.Raylib.Render
             float halfWidthMeters = halfHeightMeters * MathF.Max(0.001f, aspect);
             float radiusMeters = MathF.Sqrt((halfWidthMeters * halfWidthMeters) + (halfHeightMeters * halfHeightMeters));
             return radiusMeters * 100f;
+        }
+
+        // LOD 退回比例(滞回):进入 overview 后,footprint 低于阈值 × 该比例才退回 chunk
+        private const float OverviewHysteresisRatio = 0.8f;
+        private bool _lastUseOverview;
+
+        internal static float ResolveDetailRadiusCm(IContinuousHeightmapRenderSource source, float detailVisibleRadiusCm)
+        {
+            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
+            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
+            return MathF.Max(
+                MathF.Max(1f, detailVisibleRadiusCm),
+                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+        }
+
+        /// <summary>chunk 窗口半边(B1):盖住当帧屏幕 footprint,与切换判据自洽。</summary>
+        private float ResolveWindowHalfCm(IContinuousHeightmapRenderSource source, in Camera3D camera)
+        {
+            return MathF.Max(VisibleRadiusCm, ComputeCameraFootprintRadiusCm(camera, ResolveFrameAspect()));
         }
 
         internal static void ResolveOverviewTextureSize(

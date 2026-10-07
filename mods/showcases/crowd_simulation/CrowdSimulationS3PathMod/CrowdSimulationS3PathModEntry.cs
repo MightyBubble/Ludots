@@ -35,7 +35,10 @@ public sealed class CrowdSimulationS3PathModEntry : IMod
             _runtime.FlowVisual = flowSource;
             var registry = engine.GetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry)
                 ?? new GlobalFieldVisualProjectorRegistry();
-            registry.Register(new CrowdFlowFieldVisualProjector(flowSource));
+            registry.Register(new DemoViewProjector(
+                _runtime,
+                new CrowdFlowFieldVisualProjector(flowSource),
+                new CrowdWalkableVisualProjector(flowSource, () => _runtime.Nav)));
             engine.SetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, registry);
 
             var routeVisuals = new RouteVisualBuffer();
@@ -45,12 +48,13 @@ public sealed class CrowdSimulationS3PathModEntry : IMod
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 InputBackend。");
             var rays = engine.GetService(CoreServiceKeys.ScreenRayProvider)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenRayProvider。");
-            engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? heightmap);
 
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new S3PathDemoSimulationSystem(_runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(_runtime, routeVisuals, overlay, input, rays, heightmap));
+            engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(
+                _runtime, routeVisuals, overlay, input, rays,
+                () => engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) ? hm : null));
             return Task.CompletedTask;
         });
     }

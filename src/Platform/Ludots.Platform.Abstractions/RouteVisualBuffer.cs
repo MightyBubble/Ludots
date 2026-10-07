@@ -64,6 +64,19 @@ namespace Ludots.Platform.Abstractions
             });
         }
 
+        /// <summary>共享数组版(调用方保证数组不可变且寿命长于一帧;静态线框缓存用,避免逐帧拷贝)。</summary>
+        public void AddPolylineShared(RouteVisualId id, Vector2[] pointsMeters, float thicknessMeters, Vector4 color)
+        {
+            if (pointsMeters.Length < 2) throw new ArgumentException("折线至少需要两个点。", nameof(pointsMeters));
+            _polylines.Add(new RouteVisualPolyline
+            {
+                Id = id,
+                PointsMeters = pointsMeters,
+                ThicknessMeters = thicknessMeters,
+                Color = color,
+            });
+        }
+
         public void AddMarker(RouteVisualId id, Vector2 positionMeters, RouteVisualMarkerShape shape, float radiusMeters, float thicknessMeters, Vector4 color)
         {
             if (radiusMeters <= 0) throw new ArgumentOutOfRangeException(nameof(radiusMeters));

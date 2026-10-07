@@ -74,7 +74,7 @@ namespace Ludots.Client.Raylib.Rendering
         public int FlowDrapeMaxCellSizeCm { get; set; } = 10_000;
 
         /// <summary>
-        /// Flow 场是否由本渲染器直接绘制(false = 宿主改走地形贴花槽位,
+        /// Flow / Walkable 场是否由本渲染器直接绘制(false = 宿主改走地形贴花槽位,
         /// 本渲染器仍负责纹理暂存与上传,见 TryGetStagedTexture)。
         /// </summary>
         public bool DrawFlowKind { get; set; } = true;
@@ -130,11 +130,19 @@ namespace Ludots.Client.Raylib.Rendering
                     GlobalFieldVisualKind.Fog or
                     GlobalFieldVisualKind.Influence or
                     GlobalFieldVisualKind.Flow or
+                    GlobalFieldVisualKind.Walkable or
                     GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
                         $"Raylib Global Field renderer does not support field kind '{descriptor.Id.Kind}' yet. Publish through the shared buffer, then add an explicit Raylib renderer contract for that kind.");
+                }
+
+                if (descriptor.Id.Kind == GlobalFieldVisualKind.Walkable &&
+                    descriptor.ValueKind != GlobalFieldVisualValueKind.Vector4)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib walkable field renderer requires Vector4 cells (direct RGBA), but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.Id.Kind == GlobalFieldVisualKind.Flow &&
@@ -245,8 +253,8 @@ namespace Ludots.Client.Raylib.Rendering
                 int drapeMaxCellSizeCm = state.Id.Kind == GlobalFieldVisualKind.Flow
                     ? FlowDrapeMaxCellSizeCm
                     : DiscreteOwnershipDrapeMaxCellSizeCm;
-                bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow;
-                bool kindSuppressed = state.Id.Kind == GlobalFieldVisualKind.Flow && !DrawFlowKind;
+                bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable;
+                bool kindSuppressed = state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable && !DrawFlowKind;
                 if (!kindSuppressed &&
                     drapeCapable &&
                     HeightSampleSource is IContinuousHeightmap heightSampleSource &&
@@ -658,6 +666,17 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
+            if (kind == GlobalFieldVisualKind.Walkable)
+            {
+                // 直接 RGBA(数据端已着色,渲染端不再映射)
+                Vector4 c = cell.FloatValue;
+                r = ToColorByte(c.X);
+                g = ToColorByte(c.Y);
+                b = ToColorByte(c.Z);
+                a = ToColorByte(c.W);
+                return;
+            }
+
             if (valueKind == GlobalFieldVisualValueKind.Byte)
             {
                 ResolveDiscreteOwnershipColorBytes(cell.ByteValue, paletteId, out r, out g, out b, out a);
@@ -803,8 +822,8 @@ namespace Ludots.Client.Raylib.Rendering
             Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
             state.Texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
-            // Flow 方向场走地形贴花槽,双线性过滤把格粒度抹成连续渐变(迷雾/权属保留最近邻的硬边)
-            Rl.SetTextureFilter(state.Texture, state.Id.Kind == GlobalFieldVisualKind.Flow
+            // Flow 方向场 / Walkable 可走区域层走地形贴花槽,双线性过滤把格粒度抹成连续渐变(迷雾/权属保留最近邻的硬边)
+            Rl.SetTextureFilter(state.Texture, state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable
                 ? Rl.TextureFilter.TEXTURE_FILTER_BILINEAR
                 : Rl.TextureFilter.TEXTURE_FILTER_POINT);
             state.TextureLoaded = true;

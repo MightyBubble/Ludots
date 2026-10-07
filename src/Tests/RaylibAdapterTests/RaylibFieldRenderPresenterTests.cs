@@ -123,6 +123,39 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void BuildTexturePlan_StagesWalkableFieldWithDirectRgbaContract()
+    {
+        var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
+        var id = new GlobalFieldVisualId(
+            GlobalFieldVisualKind.Walkable,
+            scopeKeyId: 1,
+            layerKeyId: 0,
+            surfaceKeyId: 0);
+        var descriptor = new GlobalFieldVisualDescriptor(
+            id,
+            cellSizeCm: 100,
+            WorldCmInt2.Zero,
+            new IntRect(0, 0, 2, 1),
+            GlobalFieldVisualValueKind.Vector4);
+        GlobalFieldVisualCell[] cells =
+        {
+            new(new FieldCell2D(0, 0), new System.Numerics.Vector4(0.63f, 0.12f, 0.12f, 0.5f)),
+        };
+        IntRect[] dirty = { new(0, 0, 2, 1) };
+        buffer.BeginFrame();
+        buffer.Upsert(descriptor, cells, dirty);
+
+        var presenter = new RaylibFieldRenderPresenter();
+        ReadOnlySpan<RaylibFieldTexturePlan> plans = presenter.BuildTexturePlan(buffer);
+
+        Assert.That(plans.Length, Is.EqualTo(1));
+        Assert.That(presenter.LastUnsupportedFieldCount, Is.Zero);
+        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(0, 0), out Color color), Is.True);
+        Assert.That(color, Is.EqualTo(new Color(161, 31, 31, 128)));        Assert.That(presenter.TryGetStagedPixel(id, new FieldCell2D(1, 0), out Color empty), Is.True);
+        Assert.That(empty.a, Is.Zero);
+    }
+
+    [Test]
     public void BuildTexturePlan_StagesFlowFieldWithDirectionHueContract()
     {
         var buffer = new GlobalFieldVisualBuffer(2, 8, 2);

@@ -33,6 +33,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private const string KeyContext = "<Keyboard>/q";
     private const string KeyThreads = "<Keyboard>/t";
     private const string KeySlow = "<Keyboard>/g";
+    private const string KeyView = "<Keyboard>/v";
     private const int HudZoneBottomPx = 110; // HUD 面板区的点击不算世界点选
 
     private readonly S3PathDemoRuntime _runtime;
@@ -40,9 +41,12 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private readonly ScreenOverlayBuffer _overlay;
     private readonly IInputBackend _input;
     private readonly IScreenRayProvider _rays;
-    private readonly IContinuousHeightmap? _heightmap;
+    private readonly Func<IContinuousHeightmap?> _heightmapSource;
 
-    private bool _prevLeft, _prevRight, _prevContext, _prevThreads, _prevSlow;
+    private bool _prevLeft, _prevRight, _prevContext, _prevThreads, _prevSlow, _prevView;
+    private int _wireNavId = -1;
+    private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
+    private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
 
     public S3PathDemoPresentationSystem(
         S3PathDemoRuntime runtime,
@@ -50,14 +54,14 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         ScreenOverlayBuffer overlay,
         IInputBackend input,
         IScreenRayProvider rays,
-        IContinuousHeightmap? heightmap)
+        Func<IContinuousHeightmap?> heightmapSource)
     {
         _runtime = runtime;
         _routeVisuals = routeVisuals;
         _overlay = overlay;
         _input = input;
         _rays = rays;
-        _heightmap = heightmap;
+        _heightmapSource = heightmapSource;
     }
 
     public void Initialize() { }
@@ -74,12 +78,15 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         // ── 输入边沿 → 运行时队列 ─────────────────────────────
         bool left = _input.GetButton(MouseLeft), right = _input.GetButton(MouseRight);
         bool keyContext = _input.GetButton(KeyContext), keyThreads = _input.GetButton(KeyThreads), keySlow = _input.GetButton(KeySlow);
+        bool keyView = _input.GetButton(KeyView);
         Vector2 mouse = _input.GetMousePosition();
         int hoveredCell = -1;
-        if (_heightmap != null && mouse.Y >= HudZoneBottomPx)
+        // 高度图服务是地图加载后才注册的(GameStart 时还没有),必须逐帧取
+        var heightmap = _heightmapSource();
+        if (heightmap != null && mouse.Y >= HudZoneBottomPx)
         {
             var ray = _rays.GetRay(mouse);
-            if (_heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+            if (heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
             {
                 int cx = (int)MathF.Floor(hit.WorldXCm / csCm), cy = (int)MathF.Floor(hit.WorldYCm / csCm);
                 if (cx >= 0 && cy >= 0 && cx < n && cy < n) hoveredCell = cy * n + cx;
@@ -92,7 +99,8 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         if (keyContext && !_prevContext) _runtime.EnqueueCycleContext();
         if (keyThreads && !_prevThreads) _runtime.EnqueueCycleThreads();
         if (keySlow && !_prevSlow) _runtime.EnqueueToggleSlow();
-        _prevLeft = left; _prevRight = right; _prevContext = keyContext; _prevThreads = keyThreads; _prevSlow = keySlow;
+        if (keyView && !_prevView) _runtime.EnqueueCycleView();
+        _prevLeft = left; _prevRight = right; _prevContext = keyContext; _prevThreads = keyThreads; _prevSlow = keySlow; _prevView = keyView;
 
         // ── 覆盖层(gameplay 通道) ─────────────────────────────
         _routeVisuals.BeginFrame();
@@ -110,6 +118,15 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         if (_runtime.GoalCell >= 0)
         {
             _routeVisuals.AddMarker(RouteGoal, CellCenter(_runtime.GoalCell, n, csM), RouteVisualMarkerShape.Diamond, markerRadius, 1.5f, GoalRed);
+        }
+
+        // NavMesh + HPA 线框(视图模式 2)
+        if (_runtime.ViewMode == 2)
+        {
+            EnsureWireframe(n, csM);
+            var wireId = new RouteVisualId(100);
+            foreach (var (pts, thick, color) in _wireLines) _routeVisuals.AddPolylineShared(wireId, pts, thick, color);
+            foreach (var (pos, shape, radius, color) in _wireMarkers) _routeVisuals.AddMarker(wireId, pos, shape, radius, 1f, color);
         }
 
         var current = _runtime.Current;
@@ -144,11 +161,87 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         DrawCaption(_overlay,
             "CrowdSimulation S3 · 两点路径与固定生效帧",
             detail,
-            "左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢");
+            $"左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {S3PathDemoRuntime.ViewModeLabels[_runtime.ViewMode]}");
     }
 
     private static Vector2 CellCenter(int cell, int n, float csM)
         => new((cell % n + 0.5f) * csM, (cell / n + 0.5f) * csM);
+
+    // NavMesh 多边形线框 + cluster 网格 + HPA 入口 + 跳跃链接,按上下文缓存(线框是静态数据)
+    private void EnsureWireframe(int n, float csM)
+    {
+        var nav = _runtime.Nav;
+        if (_wireNavId == nav.Id) return;
+        _wireNavId = nav.Id;
+        _wireLines.Clear();
+        _wireMarkers.Clear();
+        int t = _runtime.Config.Hpa.ClusterSize, c = n / t;
+        var navmeshColor = new Vector4(0.9f, 0.9f, 0.9f, 0.55f);
+        var deckColor = new Vector4(1f, 0.84f, 0.31f, 0.85f);
+        for (int ty = 0; ty < c; ty++)
+        {
+            for (int tx = 0; tx < c; tx++)
+            {
+                int tileId = ty * c + tx;
+                AddEntryWire(nav.Tiles?[tileId], tx * t, ty * t, csM, navmeshColor);
+                if (nav.UpperTiles != null && nav.UpperTiles.TryGetValue(tileId, out var up)) AddEntryWire(up.Entry, tx * t, ty * t, csM, deckColor);
+            }
+        }
+
+        var gridColor = new Vector4(1f, 1f, 1f, 0.22f);
+        for (int b = 0; b <= c; b++)
+        {
+            _wireLines.Add((new[] { new Vector2(b * t * csM, 0f), new Vector2(b * t * csM, n * csM) }, csM * 0.1f, gridColor));
+            _wireLines.Add((new[] { new Vector2(0f, b * t * csM), new Vector2(n * csM, b * t * csM) }, csM * 0.1f, gridColor));
+        }
+
+        if (nav.Hpa != null)
+        {
+            int n2 = n * n;
+            var entranceColor = new Vector4(0.25f, 0.77f, 1f, 0.9f);
+            foreach (var block in nav.Hpa.Blocks)
+            {
+                foreach (int cell in block.Cells)
+                {
+                    bool deck = cell >= n2;
+                    int cc = deck ? cell - n2 : cell;
+                    _wireMarkers.Add((new Vector2((cc % n + 0.5f) * csM, (cc / n + 0.5f) * csM), RouteVisualMarkerShape.Ring, csM * 0.4f, deck ? deckColor : entranceColor));
+                }
+            }
+        }
+
+        if (nav.Links != null)
+        {
+            for (int e = 0; e < nav.Links.Count; e++)
+            {
+                int a = nav.Links.From[e], b2 = nav.Links.To[e];
+                var col = nav.Links.TwoWay[e] != 0 ? new Vector4(0.36f, 0.42f, 0.75f, 0.9f) : new Vector4(1f, 0.7f, 0f, 0.9f);
+                _wireLines.Add((new[]
+                {
+                    new Vector2((a % n + 0.5f) * csM, (a / n + 0.5f) * csM),
+                    new Vector2((b2 % n + 0.5f) * csM, (b2 / n + 0.5f) * csM),
+                }, csM * 0.2f, col));
+            }
+        }
+    }
+
+    private void AddEntryWire(NavTileEntry? e, int ox, int oy, float csM, Vector4 color)
+    {
+        if (e == null) return;
+        for (int p = 0; p < e.Count; p++)
+        {
+            int s = e.PolyStart[p], e2 = e.PolyStart[p + 1], count = e2 - s;
+            var pts = new Vector2[count + 1];
+            for (int k = 0; k < count; k++)
+            {
+                int v = e.PolyVerts[s + k];
+                pts[k] = new Vector2((ox + e.Vx[v]) * csM, (oy + e.Vy[v]) * csM);
+            }
+
+            pts[count] = pts[0];
+            _wireLines.Add((pts, csM * 0.12f, color));
+        }
+    }
 
     private static void DrawCaption(ScreenOverlayBuffer overlay, string title, string detail, string keys)
     {
