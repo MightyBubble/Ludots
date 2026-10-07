@@ -44,8 +44,8 @@
     "allowUserInput": true,
     "targetSource": "Fixed",
     "fixedTargetCm": {
-      "X": 1200,
-      "Y": 0
+      "x": 1200,
+      "y": 0
     }
   }
 ]
