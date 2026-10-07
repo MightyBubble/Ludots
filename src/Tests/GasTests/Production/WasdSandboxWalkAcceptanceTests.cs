@@ -36,6 +36,8 @@ namespace Ludots.Tests.GAS.Production
             "LudotsCoreMod",
             "CoreInputMod",
             "CameraProfilesMod",
+            "SelectionInteractionMod",
+            "MassNavigationMod",
             "WasdSandboxMod"
         };
 
