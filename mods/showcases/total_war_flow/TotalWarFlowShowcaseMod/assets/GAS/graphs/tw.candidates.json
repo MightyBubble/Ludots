@@ -1,0 +1,43 @@
+[
+ {
+  "id": "tw.candidates",
+  "kind": "Query",
+  "entry": "map",
+  "nodes": [
+   {
+    "id": "map",
+    "op": "QueryAllMapEntities"
+   },
+   {
+    "id": "template",
+    "op": "QueryFilterTemplate",
+    "template": "tw_marine"
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt",
+    "intValue": 1
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "map",
+    "fromPort": "next",
+    "to": "template"
+   },
+   {
+    "from": "template",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "map",
+    "fromPort": "list",
+    "to": "template",
+    "toPort": "list"
+   }
+  ]
+ }
+]

@@ -38,7 +38,13 @@
   "Entities": [
     {
       "Template": "progression_scope_city_host",
-      "InstanceId": "progression-scope-city-host"
+      "InstanceId": "progression-scope-city-host",
+      "Relations": [
+        {
+          "To": "progression-scope-city-host",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "progression_scope_faction_host"

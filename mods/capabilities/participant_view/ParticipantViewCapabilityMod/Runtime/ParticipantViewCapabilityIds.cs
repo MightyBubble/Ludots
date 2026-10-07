@@ -6,7 +6,6 @@ namespace ParticipantViewCapabilityMod.Runtime;
 public static class ParticipantViewCapabilityIds
 {
     public const string ActivationMapTag = "capability.participant_view";
-    public const string RelationshipType = "Participant";
 
     public static bool IsParticipantViewMap(MapConfig? mapConfig)
     {

@@ -118,7 +118,7 @@ Feature: 所有入口消费同一烘焙源
 
 核对基线：2026-09-08，`origin/main 63afc7626f419acedcc4bd2f1ade33c8f6cd941f`。
 
-命名迁移、连续高度图和严格 `NavBakeContext` 已在 main；独立 `NavBakeSource`、grid/hex adapter、完整 snapshot 和 policy 仍未收口。`codex/nav-bake-policy` 只能提取实现片段，不能整支合入。
+命名迁移、连续高度图和严格 `NavBakeContext` 已在 main。板子可以声明 `NavBakePolicy.heightSource = continuous-heightmap`：烘焙按高度图的厘米采样写成一列，寻路格子用导航档的 `cellSizeCm`（没写则用单位半径的三分之一），不再先收成 16 档，也不再跟地形格子取更大值。没声明这份来源的地图仍走逻辑地形投影。grid/hex 适配器、完整快照，以及把烘焙主链整个搬离逻辑地形，仍未收口。`codex/nav-bake-policy` 只能摘声明，不能整支合入，也不要搬它里面的第二套连续高度地形类型。
 
 分支接收判断：codex/nav-bake-policy 有 source/policy 实现片段；命名迁移和高度场直灌已经在 main，不能重复实现。
 

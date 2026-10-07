@@ -235,8 +235,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 3_000,
                 abilityDefinitions: definitions,
@@ -272,8 +270,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 5,
                 abilityDefinitions: definitions,
@@ -311,8 +307,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
@@ -370,8 +364,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
@@ -431,8 +423,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,

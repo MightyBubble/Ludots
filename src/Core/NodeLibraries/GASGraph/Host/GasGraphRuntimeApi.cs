@@ -116,6 +116,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EffectRequestQueue? _effectRequests;
         private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
         private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _responseChainOrders;
+        private Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState? _responseChainPrompt;
+        private Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -138,6 +141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
         private Func<MapId, IReadOnlySet<string>?>? _regionCatalogResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Func<ScriptContext>? _eventContextFactory;
         private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
         private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
         private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
@@ -147,6 +151,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
+        private Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? _virtualCameras;
+        private System.Collections.Generic.Dictionary<string, object>? _virtualCameraGlobals;
         private CalendarRuntime? _calendar;
         private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
@@ -293,12 +299,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
-        /// events via <see cref="FireEventKey"/>.
+        /// Binds the engine TriggerManager so graph programs can fire trigger events. Every fired
+        /// event starts from <paramref name="eventContextFactory"/> so receivers see the same engine
+        /// services as events raised by engine systems.
         /// </summary>
-        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
+        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager, Func<ScriptContext> eventContextFactory)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+            _eventContextFactory = eventContextFactory ?? throw new ArgumentNullException(nameof(eventContextFactory));
         }
 
         /// <summary>
@@ -862,7 +870,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             MapId mapId = ResolveRequiredMapId(scope);
-            var context = new ScriptContext();
+            var context = _eventContextFactory!();
             context.Set(ContextKeys.MapId, mapId);
             context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
             triggerManager.FireMapEvent(mapId, new EventKey(name), context);
@@ -952,9 +960,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return schema;
         }
 
-        private static ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
+        private ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
         {
-            var context = new ScriptContext();
+            var context = _eventContextFactory!();
             if (!string.IsNullOrEmpty(mapId.Value))
             {
                 context.Set(ContextKeys.MapId, mapId);
@@ -1133,7 +1141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// Pushes one command intent into the submission buffer; routing happens when the
         /// order kernel drains the buffer in its own system-group phase (constitution §12).
         /// </summary>
-        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm)
+        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, in Ludots.Core.Gameplay.GAS.Orders.GroundLayout layout, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1141,7 +1149,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 rep,
                 hasTarget ? target : Entity.Null,
                 hasTarget,
-                groundCm));
+                groundCm,
+                submitMode,
+                layout), members);
         }
 
         /// <summary>
@@ -1155,7 +1165,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             bool hasTarget,
             bool hasGround,
             in Ludots.Platform.Abstractions.IntVector2 groundCm,
-            int orderTypeKeyId)
+            int orderTypeKeyId,
+            Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode,
+            System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1166,14 +1178,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 hasTarget,
                 hasGround,
                 groundCm,
-                orderTypeKeyId));
+                orderTypeKeyId,
+                submitMode), members);
         }
 
         /// <summary>
         /// Pushes one engage intent into the submission buffer; the drain runs the profile's
         /// EQS query around the target and lands per-actor move-then-cast (constitution §12).
         /// </summary>
-        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId, Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode submitMode, System.ReadOnlySpan<Entity> members)
         {
             var submissions = _commandIntentSubmissions
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
@@ -1182,7 +1195,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 slot,
                 target,
                 profileKeyId,
-                orderTypeKeyId));
+                orderTypeKeyId,
+                submitMode), members);
         }
 
         /// <summary>
@@ -1994,9 +2008,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().FilterTeam(entities, count, teamId);
         }
 
-        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
         {
-            return RequireEntityQueries().FilterTeamRelationship(entities, count, reference, filter);
+            return RequireEntityQueries().FilterTeamRelationship(entities, count, reference, relationTypeId);
         }
 
         public int FilterTemplate(Span<Entity> entities, int count, int templateKeyId)
@@ -2121,10 +2135,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return 0;
         }
 
-        public int GetRelationship(int teamA, int teamB)
-        {
-            return (int)TeamManager.GetRelationship(teamA, teamB);
-        }
         public void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(EnsureRelationshipLink));
@@ -2339,6 +2349,106 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void BindVirtualCameras(
+            Ludots.Core.Gameplay.Camera.VirtualCameraRegistry registry,
+            System.Collections.Generic.Dictionary<string, object> globals)
+        {
+            _virtualCameras = registry ?? throw new ArgumentNullException(nameof(registry));
+            _virtualCameraGlobals = globals ?? throw new ArgumentNullException(nameof(globals));
+        }
+
+        public void ActivateVirtualCamera(Entity rep, int cameraKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateVirtualCamera));
+            if (_virtualCameras == null || _virtualCameraGlobals == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+            }
+
+            string cameraId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(cameraKeyId);
+            if (string.IsNullOrWhiteSpace(cameraId) || !_virtualCameras.TryGet(cameraId, out var definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.VirtualCameraUnknown: ActivateVirtualCamera names '{cameraId}', which Camera/virtual_cameras.json does not declare.");
+            }
+
+            Entity followOwner = Entity.Null;
+            if (Ludots.Core.Gameplay.Camera.CameraFollowTargetFactory.RequiresEntityCollection(definition.FollowTargetKind))
+            {
+                if (_world == null || !_world.IsAlive(rep))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.VirtualCameraFollowOwnerDead: virtual camera '{cameraId}' follows a collection, but the caster {rep} is not alive.");
+                }
+
+                followOwner = rep;
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = cameraId,
+                FollowCollectionOwnerOverride = followOwner,
+                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true,
+            };
+        }
+
+        public void BindResponseChain(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue chainOrders,
+            Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState prompt,
+            Ludots.Core.Gameplay.GAS.Systems.ResponseChainOrderTypes orderTypes)
+        {
+            _responseChainOrders = chainOrders ?? throw new ArgumentNullException(nameof(chainOrders));
+            _responseChainPrompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
+            _responseChainOrderTypes = orderTypes;
+        }
+
+        public void SubmitResponseChainOrder(Entity rep, int orderTypeId)
+        {
+            if (_responseChainOrders == null || _responseChainPrompt == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.ResponseChainUnavailable");
+            }
+
+            bool activate = orderTypeId == _responseChainOrderTypes.ChainActivateEffect;
+            if (!activate &&
+                orderTypeId != _responseChainOrderTypes.ChainPass &&
+                orderTypeId != _responseChainOrderTypes.ChainNegate)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NotResponseChainOrderType: SubmitResponseChainOrder references order type {orderTypeId}, which is not one of constants.responseChainOrderTypeIds.");
+            }
+
+            if (!_world.IsAlive(rep) || !_world.TryGet(rep, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ResponseChainRepHasNoPlayerOwner: rep {rep} answered a response-chain prompt but carries no positive PlayerOwner.");
+            }
+
+            var prompt = _responseChainPrompt;
+            if (!prompt.IsOpen || prompt.Answered || prompt.PlayerId != owner.PlayerId)
+            {
+                prompt.RecordRejectedWithoutPrompt();
+                return;
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = owner.PlayerId,
+                Actor = prompt.Responder,
+                Target = prompt.WindowTarget,
+                TargetContext = prompt.TargetContext,
+            };
+            if (activate)
+            {
+                order.Args.I0 = prompt.OfferedEffectTemplateId;
+            }
+
+            prompt.RecordSubmission(_responseChainOrders.SubmitAssigned(ref order), order.OrderId);
         }
 
         public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)

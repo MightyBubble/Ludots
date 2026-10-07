@@ -49,12 +49,6 @@ namespace RelationshipShowcaseMod.Triggers
                 RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, lookup, team.Id, team.Name);
             }
 
-            foreach (var relation in _config.TeamRelations)
-            {
-                TeamRelationship parsed = Enum.Parse<TeamRelationship>(relation.Relationship, ignoreCase: true);
-                TeamManager.SetRelationshipSymmetric(relation.TeamA, relation.TeamB, parsed);
-            }
-
             engine.RegisterSystem(new RelationshipShowcaseSimulationSystem(engine, _state), SystemGroup.InputCollection);
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RelationshipShowcasePresentationSystem(engine, _state));
 

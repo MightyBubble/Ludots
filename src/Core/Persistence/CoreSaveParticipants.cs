@@ -41,7 +41,6 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateSequencerParticipant(engine.GetService(CoreServiceKeys.SequencerRuntime)));
             registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
             registry.Register(CreateRngParticipant(engine.GetService(CoreServiceKeys.RngStreamService)));
-            registry.Register(CreateTeamParticipant());
             registry.Register(CreateTimeFlowParticipant(engine.GetService(CoreServiceKeys.TimeFlow)));
             registry.Register(CreateCalendarParticipant(engine.GetService(CoreServiceKeys.CalendarRuntime)));
         }
@@ -64,11 +63,6 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateCalendarParticipant(CalendarRuntime runtime)
         {
             return new CalendarSaveParticipant(runtime);
-        }
-
-        public static ISaveParticipant CreateTeamParticipant()
-        {
-            return new TeamSaveParticipant();
         }
 
         public static ISaveParticipant CreateMapSessionsParticipant(MapSessionManager manager)
@@ -385,65 +379,6 @@ namespace Ludots.Core.Persistence
                 {
                     throw new SaveContextException($"Calendar save state is invalid: {ex.Message}");
                 }
-            }
-        }
-
-        private sealed class TeamSaveParticipant : ISaveParticipant
-        {
-            public string DomainKey => "teams";
-
-            public JsonNode CaptureState()
-            {
-                TeamRelationshipSnapshot snapshot = TeamManager.CaptureSnapshot();
-                var relationships = new JsonArray();
-                foreach (KeyValuePair<long, TeamRelationship> pair in snapshot.Relationships)
-                {
-                    relationships.Add(new JsonObject
-                    {
-                        ["teamA"] = (int)(pair.Key >> 32),
-                        ["teamB"] = (int)pair.Key,
-                        ["relationship"] = pair.Value.ToString()
-                    });
-                }
-
-                return new JsonObject
-                {
-                    ["defaultRelationship"] = snapshot.DefaultRelationship.ToString(),
-                    ["relationships"] = relationships
-                };
-            }
-
-            public void RestoreState(JsonNode state)
-            {
-                if (state == null) throw new ArgumentNullException(nameof(state));
-
-                JsonObject root = state.AsObject();
-                string defaultRelationshipText = RequireString(root, "defaultRelationship");
-                if (!TeamManager.TryParseRelationship(defaultRelationshipText, out TeamRelationship defaultRelationship))
-                {
-                    throw new SaveContextException(
-                        $"Team save defaultRelationship '{defaultRelationshipText}' is invalid.");
-                }
-
-                JsonArray relationshipArray = RequireArray(root, "relationships");
-                var relationships = new Dictionary<long, TeamRelationship>(relationshipArray.Count);
-                for (int i = 0; i < relationshipArray.Count; i++)
-                {
-                    JsonObject item = RequireObject(relationshipArray[i], $"relationships[{i}]");
-                    string relationshipText = RequireString(item, "relationship");
-                    if (!TeamManager.TryParseRelationship(relationshipText, out TeamRelationship relationship))
-                    {
-                        throw new SaveContextException(
-                            $"Team save relationship '{relationshipText}' at relationships[{i}] is invalid.");
-                    }
-
-                    int teamA = RequireInt(item, "teamA");
-                    int teamB = RequireInt(item, "teamB");
-                    long key = ((long)teamA << 32) | (uint)teamB;
-                    relationships.Add(key, relationship);
-                }
-
-                TeamManager.RestoreSnapshot(new TeamRelationshipSnapshot(defaultRelationship, relationships));
             }
         }
 

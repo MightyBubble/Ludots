@@ -337,11 +337,74 @@ namespace Ludots.Tests.GAS.Production
             AssertSelectionContains(engine, formation);
         }
 
+        [Test]
+        public void UxPrototype_RightClickMovesSelectionAndStopKeyHaltsIt()
+        {
+            var frameTimesMs = new List<double>();
+
+            using var engine = CreateEngine();
+            LoadMap(engine, "ux_prototype_battle", frameTimesMs);
+            var backend = GetInputBackend(engine);
+            var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
+            Assert.That(orderTypes.TryGetId("moveTo", out int moveToId), Is.True);
+
+            ClickEntityByName(engine, backend, "Soldier A");
+            Entity soldier = FindEntityByName(engine.World, "Soldier A");
+
+            Vector2 ground = ProjectEntity(engine, soldier) + new Vector2(160f, 0f);
+            backend.SetMousePosition(ground);
+            Tick(engine, 2);
+            var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
+                as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem
+                ?? throw new InvalidOperationException("CommandIntentBufferDrain service is missing.");
+            backend.SetButton("<Mouse>/rightButton", true);
+            string moveDrain = TickRecordingDrain(engine, drain, 1);
+            moveDrain += TickRecordingDrain(engine, drain, 1);
+            backend.SetButton("<Mouse>/rightButton", false);
+            moveDrain += TickRecordingDrain(engine, drain, 3);
+
+            Assert.That(ActiveOrderTypeId(engine, soldier), Is.EqualTo(moveToId),
+                $"Right click on open ground must give the selected soldier a move order. {moveDrain} " +
+                string.Join(" | ", engine.TriggerManager.Errors));
+
+            backend.SetButton("<Keyboard>/s", true);
+            string stopDrain = TickRecordingDrain(engine, drain, 2);
+            backend.SetButton("<Keyboard>/s", false);
+            stopDrain += TickRecordingDrain(engine, drain, 3);
+
+            Assert.That(ActiveOrderTypeId(engine, soldier), Is.Not.EqualTo(moveToId),
+                $"Pressing S must stop the selected soldier's move order. {stopDrain} " +
+                string.Join(" | ", engine.TriggerManager.Errors));
+        }
+
+        private static string TickRecordingDrain(GameEngine engine, Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem drain, int frames)
+        {
+            var log = new System.Text.StringBuilder();
+            for (int i = 0; i < frames; i++)
+            {
+                Tick(engine, 1);
+                if (drain.LastDrainedCount > 0)
+                {
+                    log.Append($"[drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectedCount} reason={drain.LastRejectionReason ?? "<none>"}]");
+                }
+            }
+
+            return log.ToString();
+        }
+
+        private static int ActiveOrderTypeId(GameEngine engine, Entity entity)
+        {
+            return engine.World.TryGet(entity, out Ludots.Core.Gameplay.GAS.Components.OrderBuffer orders) && orders.HasActive
+                ? orders.ActiveOrder.Order.OrderTypeId
+                : 0;
+        }
+
         private static object BuildSnapshot(object state, GameEngine engine)
         {
             MethodInfo buildSnapshot = state.GetType().GetMethod("BuildSnapshot", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 ?? throw new MissingMethodException("BuildSnapshot");
-            object? snapshot = buildSnapshot.Invoke(state, new object?[] { engine, null });
+            object? snapshot = buildSnapshot.Invoke(state, new object?[] { engine });
             return snapshot ?? throw new InvalidOperationException("BuildSnapshot returned null.");
         }
 

@@ -21,7 +21,7 @@ champion 演示 mod（真实）——敌对、排除自己、至多 12 个：
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `excludeSource` | 必填布尔；true 时施法者本人出候选 |
-| `relationFilter` | 必填六值：All / Hostile / Friendly / Neutral / NotFriendly / NotHostile；双方须有阵营，否则滤掉 |
+| `relationFilter` | 必填：`All`（不筛）或一个已在关系目录里声明的关系类型名（如 `Hostile`、`Friendly`）；非 All 时，施法者所在队伍到候选所在队伍必须有这条关系边，任一方没有队伍就滤掉 |
 | `maxTargets` | 必填整数；0=不限量，N=截前 N 个候选 |
 | `layerMask` | 可选字符串数组；按层注册表挑候选，缺省不滤层 |
 
@@ -33,13 +33,13 @@ champion 演示 mod（真实）——敌对、排除自己、至多 12 个：
 
 ## 4. 运行时加载效果
 
-loader 校验必填与六值域；运行期过滤链在派发前执行，环内径一步仅对 Ring 查询有意义（其余形状自然通过）。
+loader 校验必填，并把关系类型名换成编号（写错名字启动失败）；运行期过滤链在派发前执行，环内径一步仅对 Ring 查询有意义（其余形状自然通过）。
 
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
 |---|---|
-| relationFilter 非六值 / 必填缺失 | 启动失败 |
+| relationFilter 不是 All 也不是已声明的关系类型 / 必填缺失 | 启动失败 |
 | layerMask 引用未注册层 | 启动失败 |
 
 ## 6. 实例

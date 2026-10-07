@@ -546,7 +546,10 @@ namespace Ludots.Tests.GAS
             public AiCompiledRuntime Load()
             {
                 var atoms = new AtomRegistry(capacity: 256);
-                var loader = new AiConfigLoader(_pipeline, atoms, _validation);
+                var relationshipTypes = new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry();
+                relationshipTypes.Register(TeamRelationTestHarness.HostileTypeName);
+                relationshipTypes.Register(TeamRelationTestHarness.FriendlyTypeName);
+                var loader = new AiConfigLoader(_pipeline, atoms, _validation, relationshipTypes: relationshipTypes);
                 return loader.LoadAndCompile(AiConfigCatalog.CreateDefault());
             }
 

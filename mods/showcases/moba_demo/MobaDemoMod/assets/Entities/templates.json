@@ -1,6 +1,7 @@
 [
   {
     "id": "moba_hero",
+    "initialInteractionContext": "interaction.context.moba_demo.battle",
     "components": {
       "CommandSourceSelectableTag": {},
       "TimedTagBuffer": {},
@@ -10,6 +11,28 @@
           "Ability.Moba.SkillW",
           "Ability.Moba.SkillE",
           "Ability.Moba.SkillR"
+        ]
+      },
+      "VisionEmitterCm": {
+        "scope": "moba_demo.local",
+        "layers": [
+          "ground"
+        ],
+        "polarity": "Reveal",
+        "aperture": {
+          "kind": "Disk",
+          "rangeCm": 1500
+        },
+        "detectionStrength": 1
+      }
+    }
+  },
+  {
+    "id": "moba_dummy",
+    "components": {
+      "FogOccupantCm": {
+        "layers": [
+          "ground"
         ]
       }
     }

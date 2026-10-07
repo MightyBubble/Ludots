@@ -109,7 +109,6 @@ type GraphNodeConfig = {
   rotationDeg?: number;
   hexRadius?: number;
   layerMask?: number;
-  relationshipMode?: string | null;
   sort?: string | null;
   relationshipType?: string | null;
   metric?: string | null;
@@ -361,7 +360,6 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     rotationDeg: n.rotationDeg,
     hexRadius: n.hexRadius,
     layerMask: n.layerMask,
-    relationshipMode: n.relationshipMode ?? undefined,
     sort: n.sort ?? undefined,
     relationshipType: n.relationshipType ?? undefined,
     metric: n.metric ?? undefined,

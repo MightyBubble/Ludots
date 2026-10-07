@@ -277,13 +277,6 @@
       "threatSourceName": "Yellow Turban Captain"
     }
   },
-  "teamRelations": [
-    {
-      "teamA": 1,
-      "teamB": 2,
-      "relationship": "Hostile"
-    }
-  ],
   "logs": {
     "scenarioBootstrap": "Scenario bootstrapped: Peach Garden trio holds center while Yellow Turbans probe threat.",
     "selectionRotated": "Selection moved to {0}.",

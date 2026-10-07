@@ -178,16 +178,10 @@ namespace Ludots.Core.Input.Orders
         None = 0,
         
         /// <summary>
-        /// Automatically select the nearest valid entity within cast range.
-        /// Uses ISpatialQueryService to find the closest target.
+        /// Automatically select the nearest valid entity within range whose team relation passes the
+        /// mapping's declared relation filter.
         /// </summary>
         NearestInRange = 1,
-        
-        /// <summary>
-        /// Automatically select the nearest enemy entity within cast range.
-        /// Filters by Team component (different team from caster).
-        /// </summary>
-        NearestEnemyInRange = 2,
     }
 
     /// <summary>
@@ -433,6 +427,12 @@ namespace Ludots.Core.Input.Orders
         public int AutoTargetRangeCm { get; set; } = 0;
 
         /// <summary>
+        /// Relation filter (<c>All</c> or a relationship type name) from the actor's team to a candidate's
+        /// team. Required when <see cref="AutoTargetPolicy"/> is not None.
+        /// </summary>
+        public string? AutoTargetRelation { get; set; }
+
+        /// <summary>
         /// Cursor-centric entity resolution policy for position / direction casts.
         /// The spatial query is centered on the resolved cursor ground point, not on the actor.
         /// </summary>
@@ -444,6 +444,12 @@ namespace Ludots.Core.Input.Orders
         /// Only meaningful when <see cref="CursorTargetPolicy"/> is not None.
         /// </summary>
         public int CursorTargetRangeCm { get; set; } = 0;
+
+        /// <summary>
+        /// Relation filter (<c>All</c> or a relationship type name) for cursor-centric resolution.
+        /// Required when <see cref="CursorTargetPolicy"/> is not None.
+        /// </summary>
+        public string? CursorTargetRelation { get; set; }
 
         public InputOrderMapping Clone()
         {
@@ -465,8 +471,10 @@ namespace Ludots.Core.Input.Orders
                 CastModeOverride = CastModeOverride,
                 AutoTargetPolicy = AutoTargetPolicy,
                 AutoTargetRangeCm = AutoTargetRangeCm,
+                AutoTargetRelation = AutoTargetRelation,
                 CursorTargetPolicy = CursorTargetPolicy,
-                CursorTargetRangeCm = CursorTargetRangeCm
+                CursorTargetRangeCm = CursorTargetRangeCm,
+                CursorTargetRelation = CursorTargetRelation
             };
         }
     }

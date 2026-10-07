@@ -29,7 +29,7 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
     private const string MapId = "combat_stance_showcase";
 
     [Test]
-    public void CombatStanceShowcase_UsesParticipantRelationshipsAndRunsPlayableStanceOrders()
+    public void CombatStanceShowcase_UsesTeamRelationEdgesAndRunsPlayableStanceOrders()
     {
         using GameEngine engine = CreateEngine();
         engine.Start();
@@ -54,7 +54,7 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         Entity priorityUnit = FindEntity(world, "Combat Stance Priority Unit");
         Entity priorityCritical = FindEntity(world, "Combat Stance Priority Critical Far");
 
-        AssertParticipantRelationships(engine);
+        AssertTeamRelationEdges(engine);
         Assert.That(world.Has<OrderBuffer>(switchUnit), Is.True, "switch unit should load with OrderBuffer.");
         Assert.That(world.Has<CombatStanceState>(switchUnit), Is.True, "switch unit should load with CombatStanceState.");
 
@@ -122,7 +122,7 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         return engine;
     }
 
-    private static void AssertParticipantRelationships(GameEngine engine)
+    private static void AssertTeamRelationEdges(GameEngine engine)
     {
         TeamEntityLookup teams = engine.GetService(CoreServiceKeys.TeamEntityLookup)
             ?? throw new InvalidOperationException("TeamEntityLookup missing.");
@@ -138,18 +138,14 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         Assert.That(players.TryGet(1, out Entity localPlayer), Is.True);
         Assert.That(players.TryGet(2, out Entity hostilePlayer), Is.True);
 
-        int participantTypeId = types.GetId("CombatStance.Participant");
-        int hostileTypeId = types.GetId("CombatStance.Hostile");
+        int hostileTypeId = types.GetId("Hostile");
+        int memberOfTypeId = types.GetId("MemberOf");
         Assert.Multiple(() =>
         {
-            Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, hostileTypeId), Is.True);
             Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, hostileTypeId), Is.True);
-            Assert.That(relationships.HasLink(localPlayer, hostilePlayer, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostilePlayer, localPlayer, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(localPlayer, friendlyTeam, participantTypeId), Is.True);
-            Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, participantTypeId), Is.True);
+            Assert.That(relationships.HasLink(localPlayer, friendlyTeam, memberOfTypeId), Is.True);
+            Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, memberOfTypeId), Is.True);
         });
     }
 

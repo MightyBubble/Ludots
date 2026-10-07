@@ -85,21 +85,21 @@ authoring 写在 presenter 定义（或 bootstrap 定义）的 rules[].command.*
 - **做什么**：按 definitionId + scopeTag 精确销毁**单个** scoped 实例（不动同 scope 的其他 definition），`useEventPosition: true` 时按事件位置匹配实例。
 - **authoring**：`definitionId` + `scopeTag`/`scopeSource` + 可选 `useEventPosition`。
 - **在哪执行**：PresenterRuntimeSystem → `HandleDestroyScopedPresenter`（`src/Core/Presentation/Systems/PresenterRuntimeSystem.cs:429-464`）。
-- **现有演示与验收**：58 处 / 13 个 mod（典型：RTS 移动路径预览线随 MovePathEnded 拆除、技能瞄准预览随 AbilityAimEnded 拆除）；此前文档缺条目，本页补齐。
+- **现有演示与验收**：58 处 / 13 个 mod（典型：超级武器 showcase 的施法者标记随集合成员移除而拆除）；此前文档缺条目，本页补齐。
 - **缺口状态**：无缺口。
 
 ```jsonc
 {
-  "event": { "kind": "MovePathEnded", "key": "core_input.move_path.line" },
+  "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.superweapon.caster" },
   "command": {
     "kind": "DestroyScopedPresenter",
-    "definitionId": "core_input.move_path.line",
-    "scopeSource": "EventPayloadA"
+    "definitionId": "presenter.ability.superweapon.caster_marker",
+    "scopeSource": "SourceStableId"
   }
 }
 ```
 
-来源：`mods/CoreInputMod/assets/Presentation/presenters.json:1121-1131`。
+来源：`mods/showcases/superweapon_context/SuperweaponContextShowcaseMod/assets/Presentation/presenters.json:114-124`。
 
 ### SetParam
 

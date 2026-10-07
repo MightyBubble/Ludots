@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
@@ -39,10 +38,6 @@ namespace RtsDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
             _ctx.Log("[RtsDemoMod] Ability definitions loaded via GAS/abilities.json");
 
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
-
             var saveParticipants = engine.GetService(CoreServiceKeys.SaveParticipants);
             saveParticipants?.Register(new Runtime.RtsSelectionSaveParticipant(engine));
 
@@ -70,7 +65,6 @@ namespace RtsDemoMod.Triggers
             {
                 engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
                 engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
-                ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
                 _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
             }
             else

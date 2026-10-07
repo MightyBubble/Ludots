@@ -76,7 +76,12 @@ namespace Ludots.Tests.GAS
                 }
             };
 
-            var bindings = new InteractionActionBindings();
+            var bindings = new InteractionActionBindings
+            {
+                ConfirmActionId = "Select.Begin",
+                CommandActionId = "Command",
+                CancelActionId = "Cancel",
+            };
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetInteractionActionBindings(bindings);
             using var world = World.Create();
@@ -178,7 +183,12 @@ namespace Ludots.Tests.GAS
             };
 
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetInteractionActionBindings(new InteractionActionBindings());
+            mapping.SetInteractionActionBindings(new InteractionActionBindings
+            {
+                ConfirmActionId = "Select.Begin",
+                CommandActionId = "Command",
+                CancelActionId = "Cancel",
+            });
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();

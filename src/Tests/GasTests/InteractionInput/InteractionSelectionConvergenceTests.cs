@@ -39,206 +39,6 @@ namespace Ludots.Tests.GAS
     public sealed class InteractionSelectionConvergenceTests
     {
         [Test]
-        public void GasInputResponseSystem_UsesSharedInteractionBindings()
-        {
-            using var world = World.Create();
-
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var ambientTarget = world.Create();
-            var requestTarget = world.Create();
-            var local = world.Create();
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.InputHandler.Name] = input,
-                [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
-                [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
-                [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
-            };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
-            CreateCommandSourceRuntime(world, globals);
-            SeedCommandSource(world, globals, local, ambientTarget);
-
-            var system = new GasInputResponseSystem(world, globals);
-            var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
-            var responses = (InputResponseBuffer)globals[CoreServiceKeys.InputResponseBuffer.Name];
-            requests.TryEnqueue(new InputRequest { RequestId = 9, RequestTagId = 501, Target = requestTarget });
-
-            SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
-            input.Update(1f / 60f);
-            system.Update(0f);
-
-            That(responses.TryConsume(9, out var response), Is.True);
-            That(response.Target, Is.EqualTo(requestTarget));
-            That(response.Target, Is.Not.EqualTo(ambientTarget));
-            That(response.ResponseTagId, Is.EqualTo(501));
-        }
-
-        [Test]
-        public void AbilityExecSystem_TargetCollectionGate_ConsumesInputResponseTargetContext()
-        {
-            using var world = World.Create();
-            var actor = world.Create(
-                OrderBuffer.CreateEmpty(),
-                new BlackboardIntBuffer(),
-                new AbilityStateBuffer());
-            var enemy = world.Create();
-            var targetContext = world.Create();
-
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(9001);
-
-            var order = new Order
-            {
-                OrderId = 7,
-                Actor = actor,
-                OrderTypeId = 100,
-                Args = new OrderArgs { I0 = 0 }
-            };
-            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
-            orderBuffer.SetActiveDirect(in order, priority: 100);
-
-            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
-            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
-
-            var defs = new AbilityDefinitionRegistry();
-            var spec = default(AbilityExecSpec);
-            spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
-            spec.SetItem(1, ExecItemKind.EventGate, tick: 1, tagId: 999);
-            var def = new AbilityDefinition { ExecSpec = spec };
-            defs.Register(9001, in def);
-
-            var inputRequests = new InputRequestQueue();
-            var inputResponses = new InputResponseBuffer();
-            var system = new AbilityExecSystem(
-                world,
-                new DiscreteClock(),
-                inputRequests,
-                inputResponses,
-                new EffectRequestQueue(),
-                snapshotCapacity: 16,
-                defs,
-                castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)),
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-
-            system.Update(0f);
-
-            That(world.Has<AbilityExecInstance>(actor), Is.True);
-            That(inputRequests.Count, Is.EqualTo(1));
-            ref var waitingExec = ref world.Get<AbilityExecInstance>(actor);
-            That(waitingExec.State, Is.EqualTo(AbilityExecRunState.GateWaiting));
-            That(waitingExec.WaitRequestId, Is.EqualTo(7));
-
-            var response = new InputResponse
-            {
-                RequestId = 7,
-                ResponseTagId = 77,
-                Target = enemy,
-                TargetContext = targetContext,
-            };
-            That(inputResponses.TryAdd(response), Is.True);
-
-            system.Update(0f);
-
-            That(world.Has<AbilityExecInstance>(actor), Is.True);
-            ref var exec = ref world.Get<AbilityExecInstance>(actor);
-            That(exec.State, Is.EqualTo(AbilityExecRunState.Running));
-            That(exec.Target, Is.EqualTo(enemy));
-            That(exec.TargetContext, Is.EqualTo(targetContext));
-        }
-
-        [Test]
-        public void AbilityExecSystem_TargetCollectionGate_WhenInputQueueFull_FailsOrderAndDoesNotWait()
-        {
-            using var world = World.Create();
-            const int castOrderTypeId = 100;
-            const int abilityId = 9001;
-
-            var actor = world.Create(
-                OrderBuffer.CreateEmpty(),
-                new BlackboardIntBuffer(),
-                new AbilityStateBuffer());
-
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(abilityId);
-
-            var order = new Order
-            {
-                OrderId = 17,
-                Actor = actor,
-                OrderTypeId = castOrderTypeId,
-                Args = new OrderArgs { I0 = 0 }
-            };
-            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
-            orderBuffer.SetActiveDirect(in order, priority: 100);
-
-            ref var blackboard = ref world.Get<BlackboardIntBuffer>(actor);
-            blackboard.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
-
-            var spec = default(AbilityExecSpec);
-            spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
-
-            var definitions = new AbilityDefinitionRegistry();
-            var definition = new AbilityDefinition { ExecSpec = spec };
-            definitions.Register(abilityId, in definition);
-
-            var inputRequests = new InputRequestQueue(capacity: 16);
-            for (int i = 0; i < inputRequests.Capacity; i++)
-            {
-                var request = new InputRequest { RequestId = 1000 + i, RequestTagId = 77 };
-                That(inputRequests.TryEnqueue(in request), Is.True);
-            }
-
-            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig
-            {
-                OrderTypeId = castOrderTypeId,
-                Label = "Cast",
-                Priority = 100,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
-                EntityBlackboardKey = -1,
-                SpatialBlackboardKey = -1,
-            });
-            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
-
-            var system = new AbilityExecSystem(
-                world,
-                new DiscreteClock(),
-                inputRequests,
-                new InputResponseBuffer(),
-                new EffectRequestQueue(),
-                snapshotCapacity: 16,
-                definitions,
-                castAbilityOrderTypeId: castOrderTypeId,
-                presentationEvents: presentationEvents,
-                orderTypeRegistry: orderTypes,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-
-            system.Update(0f);
-
-            That(world.Has<AbilityExecInstance>(actor), Is.False);
-            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
-            That(inputRequests.Count, Is.EqualTo(inputRequests.Capacity));
-            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
-            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(17));
-            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
-            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
-
-            bool castFailed = false;
-            foreach (ref readonly var evt in presentationEvents.Events)
-            {
-                if (evt.Kind != GasPresentationEventKind.CastFailed) continue;
-                castFailed = true;
-                That(evt.FailReason, Is.EqualTo(AbilityCastFailReason.PreconditionFailed));
-            }
-            That(castFailed, Is.True);
-        }
-
-        [Test]
         public void InputOrderMapping_PositionCommand_FansOutAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
@@ -506,7 +306,6 @@ namespace Ludots.Tests.GAS
         }
 
 
-
         [Test]
         public void CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull()
         {
@@ -551,42 +350,6 @@ namespace Ludots.Tests.GAS
 
 
 
-
-        [Test]
-        public void TabTargetCycleSystem_SkipsRuntimeDisabledCandidates()
-        {
-            using var world = World.Create();
-
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(
-                new Team { Id = 1 },
-                WorldPositionCm.FromCm(0, 0));
-            _ = world.Create(
-                new Team { Id = 2 },
-                WorldPositionCm.FromCm(500, 0),
-                new CommandSourceSelectableTag(),
-                CommandSourceSelectableState.Disabled);
-            var enabledEnemy = world.Create(
-                new Team { Id = 2 },
-                WorldPositionCm.FromCm(1000, 0),
-                new CommandSourceSelectableTag());
-
-            var globals = new Dictionary<string, object>
-            {
-                [CoreServiceKeys.AuthoritativeInput.Name] = input,
-            };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
-
-            var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
-
-            input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
-            input.Update(1f / 60f);
-            system.Update(0f);
-
-            That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out var targetObj), Is.True);
-            That(targetObj, Is.EqualTo(enabledEnemy));
-        }
-
         private static InputConfigRoot CreateInputConfig()
         {
             return new InputConfigRoot
@@ -597,11 +360,9 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                     new() { Id = "Stop", Name = "Stop", Type = InputActionType.Button },
                     new() { Id = "Confirm", Name = "Confirm", Type = InputActionType.Button },
-                    new() { Id = InteractionActionBindings.DefaultConfirmActionId, Name = "Command Source Acquire", Type = InputActionType.Button },
+                    new() { Id = "Select.Begin", Name = "Command Source Acquire", Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Additive, Name = CommandSourceModifierActionIds.Additive, Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Toggle, Name = CommandSourceModifierActionIds.Toggle, Type = InputActionType.Button },
-                    new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
-                    new() { Id = "TabTargetReverse", Name = "TabTargetReverse", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Name = "PointerPos", Type = InputActionType.Axis2D },
                     new() { Id = AuthoritativeGroundPointerHelper.ActionId, Name = AuthoritativeGroundPointerHelper.ActionId, Type = InputActionType.Axis3D },
                 },
@@ -613,34 +374,6 @@ namespace Ludots.Tests.GAS
         }
 
 
-
-
-        private static void SetConfirmSnapshot(Dictionary<string, object> globals, Vector2 pointer, bool pressedThisFrame, bool isDown, bool releasedThisFrame = false)
-        {
-            string actionId = InteractionActionBindingsResolver.Require(globals, nameof(InteractionSelectionConvergenceTests)).ConfirmActionId;
-            SetActionSnapshot(globals, actionId, pointer, pressedThisFrame, isDown, releasedThisFrame);
-        }
-
-        private static void SetActionSnapshot(Dictionary<string, object> globals, string actionId, Vector2 pointer, bool pressedThisFrame, bool isDown, bool releasedThisFrame = false)
-        {
-            var pointerButtons = globals.TryGetValue(CoreServiceKeys.AuthoritativePointerButtons.Name, out object? snapshotObj) &&
-                                 snapshotObj is AuthoritativePointerButtonSnapshot snapshot
-                ? snapshot
-                : throw new InvalidOperationException("AuthoritativePointerButtons missing from globals.");
-            pointerButtons.SetState(
-                actionId,
-                new PointerButtonState(
-                    pointer,
-                    pointer,
-                    pointer,
-                    pointer,
-                    isDown: isDown,
-                    pressedThisFrame: pressedThisFrame,
-                    releasedThisFrame: releasedThisFrame,
-                    hasPressPointer: pressedThisFrame,
-                    hasReleasePointer: releasedThisFrame,
-                    hasLastDownPointer: isDown || releasedThisFrame));
-        }
 
         private static void SetAuthoritativeGroundPoint(PlayerInputHandler input, in WorldCmInt2 worldCm)
         {
@@ -664,79 +397,6 @@ namespace Ludots.Tests.GAS
             {
                 That(actual[i], Is.EqualTo(expected[i]));
             }
-        }
-
-        private static EntityCollectionStore CreateCommandSourceRuntime(World world, Dictionary<string, object> globals, string relationFilter = "All")
-        {
-            var config = new CommandSourceAcquisitionConfig
-            {
-                TargetFilter = new CommandSourceTargetFilterConfig { RelationFilter = relationFilter },
-                Acquisition = new CommandSourceAcquisitionCollectionConfig
-                {
-                    CollectionKey = "collection.ui.command.acquisition",
-                    Title = "Command acquisition",
-                },
-            };
-            var collectionRegistry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var collections = new EntityCollectionStore(collectionRegistry);
-            globals[CoreServiceKeys.CommandSourceAcquisitionConfig.Name] = config;
-            globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
-            globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry;
-            return collections;
-        }
-
-        private static CommandSourceDomainHarness InstallCommandSourceDomainServices(
-            World world,
-            Dictionary<string, object> globals)
-        {
-            var types = new RelationshipTypeRegistry();
-            int ownsTypeId = types.Register("Owns");
-            int controlsTypeId = types.Register("Controls");
-            int memberOfTypeId = types.Register("MemberOf");
-            types.Register("Hostile", isSymmetric: true);
-            types.Register("Friendly", isSymmetric: true);
-            types.Register("Neutral", isSymmetric: true);
-            var relationships = new RelationshipRuntime(
-                world,
-                types,
-                new RelationshipMetricRegistry(),
-                new RelationshipFlagRegistry(),
-                new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 8),
-                new RelationshipReverseIndex(world));
-            var ownership = new OwnershipResolver(relationships, ownsTypeId);
-            var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
-            var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
-            {
-                StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
-                SameDomainStance = "Friendly",
-                SameTeamStance = "Friendly",
-                DefaultStance = "Neutral",
-            });
-            globals[CoreServiceKeys.ControlDomainQuery.Name] = controlDomains;
-            globals[CoreServiceKeys.DomainStanceQuery.Name] = stances;
-            return new CommandSourceDomainHarness(relationships, memberOfTypeId);
-        }
-
-        private readonly record struct CommandSourceDomainHarness(
-            RelationshipRuntime Relationships,
-            int MemberOfTypeId);
-
-        private static void SeedCommandSource(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
-        {
-            var collections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) &&
-                              storeObj is EntityCollectionStore store
-                ? store
-                : throw new InvalidOperationException("EntityCollectionStore missing from globals.");
-            var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
-                EntityCollectionSourceKind.UiAcquisition,
-                EntityCollectionRoleKind.CommandSource,
-                owner,
-                targets.Length > 0 ? targets[0] : Entity.Null,
-                "Command source",
-                $"Seed | {targets.Length} actor(s)");
-            collections.Replace(owner, descriptor, targets, owner);
         }
 
         private static WorldSizeSpec CreateWorldSizeSpec()

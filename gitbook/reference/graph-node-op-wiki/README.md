@@ -94,6 +94,12 @@
 - [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
+## 响应链
+
+> 作者语义与全量字段见手册分册 [响应链 · fx-07](../mod-editor-prd/config/fx-07-response-chain.md)。
+
+- [替玩家回答响应窗口](SubmitResponseChainOrder.md) — 指挥打出一记引子，他身上的追击想接招，响应窗口停下来问他；图替他回答一次：发动追击。
+
 ## 子图调用与事件派发
 
 > 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
@@ -286,6 +292,12 @@
 - [亲手把令办结](CompleteActiveOrder.md) — 手上那道移动令由图里销账，订单缓冲腾出来接下一单。
 - [替自己下移动令](SubmitAssignedOrder.md) — 行为图不等玩家发话，直接往订单队列里塞一道移动令。
 - [认出移动令的编号](LoadOrderTypeId.md) — 图里先把移动令的编号认出来，认得出才指挥得动。
+
+## 镜头
+
+> 作者语义与全量字段见手册分册 [视野与相机 · infra-03](../mod-editor-prd/config/infra-03-vision-camera.md)。
+
+- [图里切镜头](ActivateVirtualCamera.md) — 开场是俯瞰全场的远景，图点名一台近景机位，镜头拉近到指挥和木桩身边。
 
 ## 集合写入
 

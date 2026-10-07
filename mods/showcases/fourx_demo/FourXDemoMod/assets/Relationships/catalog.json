@@ -26,16 +26,5 @@
     {
       "id": "AtWar"
     }
-  ],
-  "reasons": [
-    {
-      "id": "Scenario.Setup"
-    },
-    {
-      "id": "Diplomacy.Pact"
-    },
-    {
-      "id": "Diplomacy.War"
-    }
   ]
 }

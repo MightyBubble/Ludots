@@ -29,7 +29,7 @@
 | 常量 | `intValue` / `floatValue` / `boolValue` | Const 节点的字面值 |
 | 图符号 | `graphId`（调用图）/ `functionName`（FuncLib） | 两者互斥，同现即拒；装载期换成整数 id |
 | 数据符号 | `attribute` `tag` `template` `collectionKey` `effectTemplate` `payloadPreset` `builtinHandler` `blackboardKey` `configKey` | 按节点语义取其一，装载期解析（gr-04 符号 patch） |
-| 关系 | `relationshipType` / `relationshipMode` / `metric` / `flag` | 关系族节点引用 rel-01 目录条目 |
+| 关系 | `relationshipType` / `metric` / `flag` | 关系族节点引用 rel-01 目录条目 |
 | 查询 | `slot` `queryCapacityPolicy` `droppedOutput` `validOutput` | 事件槽位与查询容量/落点策略 |
 | 形状 | `radiusCm`…`hexRadius` `layerMask` `teamId` `descending` | 空间查询节点的形状与过滤参数 |
 | 寄存器 | `pinRegister` | 钉死写目标寄存器；缺省 -1 由分配器决定；仅 int 类节点 |

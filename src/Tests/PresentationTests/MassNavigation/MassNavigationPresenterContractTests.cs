@@ -466,13 +466,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(moveRule["interruptsActiveOrderTypeKeys"]?.AsArray()?.Select(node => node?.GetValue<string>()).ToArray(),
                 Does.Contain("attackTarget"));
 
-            JsonObject game = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
-            string[] previewOrderKeys = game["commandSource"]?["movePathPreviewOrderTypeKeys"]?.AsArray()
-                ?.Select(node => node?.GetValue<string>() ?? string.Empty)
-                .ToArray()
-                ?? throw new InvalidOperationException("MassNavigation game.json must author move path preview keys.");
-            Assert.That(previewOrderKeys, Is.EqualTo(new[] { "massNavigationMove" }));
-
             Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPresenterSyncSystem.cs")),

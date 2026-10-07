@@ -711,7 +711,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 new PreviousWorldPositionCm { Value = launchOrigin });
 
             using var system = new ProjectileRuntimeSystem(
-                world, requests, spatialQueries: null, collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+                world, requests, spatialQueries: null, collisionCandidateCapacity: 128, runtimeEntityCapacity: 64, teamRelations: TeamRelationTestHarness.Create(world).Query);
             system.Update(0.2f);
 
             That(world.IsAlive(projectile), Is.False, "Projectile should despawn after reaching the preserved target point.");
@@ -734,60 +734,52 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         [Test]
         public void ProjectileRuntimeSystem_DestroyOnFirstHit_PublishesHitEffectAndDespawns()
         {
-            TeamManager.Clear();
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using var world = World.Create();
+            var relations = TeamRelationTestHarness.Create(world);
+            relations.LinkSymmetric(1, 2, relations.HostileTypeId);
+            var requests = new EffectRequestQueue();
+            var caster = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new Team { Id = 1 });
+            var hostile = world.Create(
+                WorldPositionCm.FromCm(260, 0),
+                new Team { Id = 2 });
+            var bystander = world.Create(
+                WorldPositionCm.FromCm(520, 0),
+                new Team { Id = 2 });
+            var projectile = world.Create(
+                new ProjectileState
+                {
+                    RootId = 5381,
+                    Speed = Fix64.FromInt(1200),
+                    Range = 900,
+                    HitEffectTemplateId = 88,
+                    PresentationEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                    CollisionHalfWidthCm = 60,
+                    CollisionRelationFilter = relations.Hostile,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = 1,
+                    Source = caster,
+                    LaunchOriginCm = Fix64Vec2.Zero,
+                    HasLaunchOrigin = 1,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
 
-            try
-            {
-                using var world = World.Create();
-                var requests = new EffectRequestQueue();
-                var caster = world.Create(
-                    WorldPositionCm.FromCm(0, 0),
-                    new Team { Id = 1 });
-                var hostile = world.Create(
-                    WorldPositionCm.FromCm(260, 0),
-                    new Team { Id = 2 });
-                var bystander = world.Create(
-                    WorldPositionCm.FromCm(520, 0),
-                    new Team { Id = 2 });
-                var projectile = world.Create(
-                    new ProjectileState
-                    {
-                        RootId = 5381,
-                        Speed = Fix64.FromInt(1200),
-                        Range = 900,
-                        HitEffectTemplateId = 88,
-                        PresentationEffectTemplateId = 88,
-                        TravelMode = ProjectileTravelMode.Direction,
-                        ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
-                        CollisionHalfWidthCm = 60,
-                        CollisionRelationFilter = RelationshipFilter.Hostile,
-                        CollisionExcludeSource = 1,
-                        MaxHitCount = 1,
-                        Source = caster,
-                        LaunchOriginCm = Fix64Vec2.Zero,
-                        HasLaunchOrigin = 1,
-                        Direction = Fix64Vec2.UnitX,
-                        HasDirection = 1,
-                    },
-                    WorldPositionCm.FromCm(0, 0),
-                    new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(hostile, bystander),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64, teamRelations: relations.Query);
+            system.Update(0.3f);
 
-                using var system = new ProjectileRuntimeSystem(
-                    world, requests, new TestLineQueryService(hostile, bystander),
-                    collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
-                system.Update(0.3f);
-
-                That(world.IsAlive(projectile), Is.False);
-                That(requests.Count, Is.EqualTo(1));
-                That(requests[0].RootId, Is.EqualTo(5381));
-                That(requests[0].TemplateId, Is.EqualTo(88));
-                That(requests[0].Target, Is.EqualTo(hostile));
-            }
-            finally
-            {
-                TeamManager.Clear();
-            }
+            That(world.IsAlive(projectile), Is.False);
+            That(requests.Count, Is.EqualTo(1));
+            That(requests[0].RootId, Is.EqualTo(5381));
+            That(requests[0].TemplateId, Is.EqualTo(88));
+            That(requests[0].Target, Is.EqualTo(hostile));
         }
 
         [Test]
@@ -813,7 +805,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                     TravelMode = ProjectileTravelMode.Direction,
                     ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
                     CollisionHalfWidthCm = 10,
-                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionRelationFilter = RelationFilter.All,
                     CollisionExcludeSource = 1,
                     MaxHitCount = 1,
                     Source = caster,
@@ -824,7 +816,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             using var system = new ProjectileRuntimeSystem(
                 world, requests, new TestLineQueryService(hits),
-                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64, teamRelations: TeamRelationTestHarness.Create(world).Query);
             system.Update(1f);
 
             Assert.That(world.IsAlive(projectile), Is.False);
@@ -848,7 +840,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                     TravelMode = ProjectileTravelMode.Direction,
                     ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
                     CollisionHalfWidthCm = 10,
-                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionRelationFilter = RelationFilter.All,
                     CollisionExcludeSource = 1,
                     MaxHitCount = 1,
                     Source = caster,
@@ -859,7 +851,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             using var system = new ProjectileRuntimeSystem(
                 world, requests, new TestLineQueryService(dropped: 1, target),
-                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64, teamRelations: TeamRelationTestHarness.Create(world).Query);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
             Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.CollisionCandidateCapacityExceeded"));
@@ -887,7 +879,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                     TravelMode = ProjectileTravelMode.Direction,
                     ImpactPolicy = ProjectileImpactPolicy.ContinueOnHit,
                     CollisionHalfWidthCm = 10,
-                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionRelationFilter = RelationFilter.All,
                     CollisionExcludeSource = 1,
                     MaxHitCount = ProjectileState.HitHistoryCapacity + 1,
                     Source = caster,
@@ -898,7 +890,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             using var system = new ProjectileRuntimeSystem(
                 world, requests, new TestLineQueryService(hits),
-                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64, teamRelations: TeamRelationTestHarness.Create(world).Query);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
             Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.InvalidMaxHitCount"));

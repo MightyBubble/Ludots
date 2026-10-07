@@ -65,7 +65,6 @@ namespace Ludots.Core.Input.Interaction
         private readonly StringIntRegistry _profileIds;
         private readonly StringIntRegistry _inputContextIds;
         private InteractionContextProfileDefinition[] _profiles = new InteractionContextProfileDefinition[8];
-        private int[] _collectionKeyIds = new int[8];
         private int[] _filterProfileIds = new int[8];
         private int[] _commandIntentProfileIds = new int[8];
         private int[] _inputContextIdsByProfile = new int[8];
@@ -175,7 +174,6 @@ namespace Ludots.Core.Input.Interaction
             {
                 ContextId = profileId,
                 ContextEntity = contextEntity,
-                ActiveCollectionKeyId = _collectionKeyIds[profileId],
                 FilterProfileId = _filterProfileIds[profileId],
                 CommandIntentProfileId = _commandIntentProfileIds[profileId],
                 InputContextId = _inputContextIdsByProfile[profileId],
@@ -217,26 +215,6 @@ namespace Ludots.Core.Input.Interaction
             return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
         }
 
-        /// <summary>
-        /// Steady-state routing anchor: the reserved default profile's resolved collection key
-        /// and filter profile ids (the data-declared home of the retired engine default frame).
-        /// Returns false when the default profile is not installed.
-        /// </summary>
-        public bool TryGetSteadyStateRouting(out int collectionKeyId, out int filterProfileId)
-        {
-            int defaultProfileId = _profileIds.GetId(InteractionContextIds.Default);
-            if (!IsInstalled(defaultProfileId))
-            {
-                collectionKeyId = 0;
-                filterProfileId = 0;
-                return false;
-            }
-
-            collectionKeyId = _collectionKeyIds[defaultProfileId];
-            filterProfileId = _filterProfileIds[defaultProfileId];
-            return true;
-        }
-
         private int _inputContextIdsFor(int profileId)
         {
             string inputContextId = _profiles[profileId].InputContextId;
@@ -267,7 +245,6 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 Array.Resize(ref _profiles, next);
-                Array.Resize(ref _collectionKeyIds, next);
                 Array.Resize(ref _filterProfileIds, next);
                 Array.Resize(ref _commandIntentProfileIds, next);
                 Array.Resize(ref _inputContextIdsByProfile, next);
@@ -290,9 +267,6 @@ namespace Ludots.Core.Input.Interaction
                 "command intent profile");
 
             _profiles[profileId] = definition;
-            _collectionKeyIds[profileId] = string.IsNullOrWhiteSpace(definition.ActiveCollectionKey)
-                ? collectionKeyRegistry.InvalidId
-                : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
             _filterProfileIds[profileId] = filterProfileId;
             _commandIntentProfileIds[profileId] = commandIntentProfileId;
             _isForeground[profileId] = definition.Foreground;
@@ -309,136 +283,6 @@ namespace Ludots.Core.Input.Interaction
                 referenceCatalog);
             ValidateBindings(definition, referenceCatalog);
             ValidateTriggers(definition, referenceCatalog);
-            (int graphKeyId, string graphName) = ResolveGraphDeclaredRoutingCollectionKey(definition, referenceCatalog);
-            if (graphKeyId != 0 && _collectionKeyIds[profileId] != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{definition.Id}' declares activeCollectionKey '{definition.ActiveCollectionKey.Trim()}' " +
-                    $"and graph '{graphName}' also declares collectionKey. The routing collection key is declared on the submit graph " +
-                    "and persisted on the entity interaction instance; remove activeCollectionKey from the profile.");
-            }
-
-            if (graphKeyId != 0)
-            {
-                _collectionKeyIds[profileId] = graphKeyId;
-            }
-        }
-
-        /// <summary>
-        /// Routing collection key declared on this profile's submit graphs
-        /// (SubmitCommandIntent Imm, SubmitCast / SubmitEngageBatch ImmF after patch).
-        /// Zero when no bound graph declares one. Disagreeing keys fail closed.
-        /// </summary>
-        private static (int KeyId, string GraphName) ResolveGraphDeclaredRoutingCollectionKey(
-            InteractionContextProfileDefinition definition,
-            InteractionContextProfileReferenceCatalog? referenceCatalog)
-        {
-            if (referenceCatalog == null)
-            {
-                return (0, string.Empty);
-            }
-
-            int resolved = 0;
-            string resolvedGraph = string.Empty;
-            if (definition.Triggers != null)
-            {
-                for (int i = 0; i < definition.Triggers.Count; i++)
-                {
-                    (resolved, resolvedGraph) = MergeRoutingCollectionKey(
-                        resolved,
-                        resolvedGraph,
-                        referenceCatalog.Programs,
-                        definition.Triggers[i].Trigger,
-                        definition.Id);
-                }
-            }
-
-            (resolved, resolvedGraph) = MergeRoutingCollectionKeys(
-                resolved, resolvedGraph, referenceCatalog.Programs, definition.OnActivated, definition.Id);
-            (resolved, resolvedGraph) = MergeRoutingCollectionKeys(
-                resolved, resolvedGraph, referenceCatalog.Programs, definition.OnDeactivated, definition.Id);
-            return (resolved, resolvedGraph);
-        }
-
-        private static (int KeyId, string GraphName) MergeRoutingCollectionKeys(
-            int resolved,
-            string resolvedGraph,
-            GraphProgramRegistry programs,
-            List<string>? graphNames,
-            string profileId)
-        {
-            if (graphNames == null)
-            {
-                return (resolved, resolvedGraph);
-            }
-
-            for (int i = 0; i < graphNames.Count; i++)
-            {
-                (resolved, resolvedGraph) = MergeRoutingCollectionKey(
-                    resolved, resolvedGraph, programs, graphNames[i], profileId);
-            }
-
-            return (resolved, resolvedGraph);
-        }
-
-        private static (int KeyId, string GraphName) MergeRoutingCollectionKey(
-            int resolved,
-            string resolvedGraph,
-            GraphProgramRegistry programs,
-            string graphName,
-            string profileId)
-        {
-            int graphId = GraphIdRegistry.GetId(graphName);
-            if (graphId == GraphIdRegistry.InvalidId ||
-                !programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
-            {
-                return (resolved, resolvedGraph);
-            }
-
-            for (int i = 0; i < program.Length; i++)
-            {
-                int candidate = ReadRoutingCollectionKeyId(program[i], profileId, graphName);
-                if (candidate == 0)
-                {
-                    continue;
-                }
-
-                if (resolved == 0)
-                {
-                    resolved = candidate;
-                    resolvedGraph = graphName;
-                    continue;
-                }
-
-                if (resolved != candidate)
-                {
-                    throw new InvalidOperationException(
-                        $"Interaction context profile '{profileId}' persists one routing collection key on the entity interaction instance, " +
-                        $"but graph '{resolvedGraph}' and graph '{graphName}' declare different collection keys.");
-                }
-            }
-
-            return (resolved, resolvedGraph);
-        }
-
-        private static int ReadRoutingCollectionKeyId(in GraphInstruction instruction, string profileId, string graphName)
-        {
-            GraphNodeOp op = (GraphNodeOp)instruction.Op;
-            if (op is not (GraphNodeOp.SubmitCommandIntent or GraphNodeOp.SubmitCast or GraphNodeOp.SubmitEngageBatch))
-            {
-                return 0;
-            }
-
-            if ((instruction.Flags & GraphInstructionFlags.CollectionKeyAuthored) != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Interaction context profile '{profileId}' graph '{graphName}' still carries an unpatched collectionKey. " +
-                    "Graph programs must be patched before interaction context install.");
-            }
-
-            return op == GraphNodeOp.SubmitCommandIntent
-                ? instruction.Imm
-                : BitConverter.SingleToInt32Bits(instruction.ImmF);
         }
 
         private static int[] ResolveLifecycleGraphIds(

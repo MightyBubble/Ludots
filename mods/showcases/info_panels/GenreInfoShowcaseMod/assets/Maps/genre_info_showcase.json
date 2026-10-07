@@ -78,7 +78,13 @@
             "Y": -420
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "genre_info_marine_01",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "rts_marine",

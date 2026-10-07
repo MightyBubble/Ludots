@@ -620,9 +620,8 @@ namespace Ludots.Tests.GAS
                 InstanceId = "harbor.crew",
                 Relations = [new() { To = "harbor.crew", Type = "WorksFor" }],
             });
-            InvalidOperationException loopEx = Assert.Throws<InvalidOperationException>(() =>
-                InstanceRelationMaterializer.Materialize(CreateSession("harbor"), selfLoop, index, harness.Runtime, harness.Types, harness.Metrics))!;
-            Assert.That(loopEx.Message, Does.Contain("self-edges"));
+            InstanceRelationMaterializer.Materialize(CreateSession("harbor"), selfLoop, index, harness.Runtime, harness.Types, harness.Metrics);
+            Assert.That(harness.Runtime.HasLink(crew, crew, harness.Types.GetId("WorksFor")), Is.True, "to 可以是自己：队伍代表的自边表达同队关系");
 
             var withRelations = new MapConfig { Id = "harbor" };
             withRelations.Entities.Add(new EntitySpawnData

@@ -1,0 +1,270 @@
+[
+  {
+    "id": "graph.rts.command_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "Command",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "candidates",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 32
+      },
+      {
+        "id": "members_caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "member_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "member_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "has_members",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "members_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent",
+        "queue": "onQueueModifier",
+        "layout": "preserveRelative",
+        "layoutSpacingCm": 140
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "ground_branch"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "true",
+        "to": "candidates"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "candidates",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "members_caster"
+      },
+      {
+        "from": "members_caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "member_count"
+      },
+      {
+        "from": "member_count",
+        "fromPort": "next",
+        "to": "member_count_f"
+      },
+      {
+        "from": "member_count_f",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "has_members"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "next",
+        "to": "members_branch"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "true",
+        "to": "submit"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "members_caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "member_count",
+        "fromPort": "value",
+        "to": "member_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "member_count_f",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "b"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "value",
+        "to": "members_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

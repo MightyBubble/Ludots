@@ -339,7 +339,6 @@ namespace Ludots.Tests.Gas.Graph
                         new()
                         {
                             Id = BattleProfile,
-                            ActiveCollectionKey = "collection.gate.battle",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -348,7 +347,6 @@ namespace Ludots.Tests.Gas.Graph
                         new()
                         {
                             Id = BoxingProfile,
-                            ActiveCollectionKey = "collection.gate.boxing",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -357,12 +355,10 @@ namespace Ludots.Tests.Gas.Graph
                         new()
                         {
                             Id = IdleProfile,
-                            ActiveCollectionKey = "collection.gate.idle",
                         },
                         new()
                         {
                             Id = CounterProfile,
-                            ActiveCollectionKey = "collection.gate.counter",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = GraphName, Event = GameEvents.MapLoaded.Value },
@@ -374,7 +370,6 @@ namespace Ludots.Tests.Gas.Graph
                         new()
                         {
                             Id = ParentProfile,
-                            ActiveCollectionKey = "collection.gate.parent",
                             Triggers = new List<InteractionContextTriggerMount>
                             {
                                 new() { Trigger = HybridGraphName },
@@ -384,7 +379,6 @@ namespace Ludots.Tests.Gas.Graph
                         new()
                         {
                             Id = ForegroundChildProfile,
-                            ActiveCollectionKey = "collection.gate.foreground",
                             Foreground = true,
                         },
                     },

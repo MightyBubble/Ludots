@@ -34,6 +34,27 @@
       }
     },
     {
+      "name": "ballista_units",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ballista_units/BallistaUnitsMod"
+      }
+    },
+    {
+      "name": "ballista_route_by_target",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/gas/BallistaRouteByTargetMod"
+      }
+    },
+    {
+      "name": "total_war_flow",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",
@@ -1733,6 +1754,13 @@
       }
     },
     {
+      "name": "tcg_prompt_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/tcg_demo/TcgPromptShowcaseMod"
+      }
+    },
+    {
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
@@ -2695,6 +2723,22 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubIntEntryMod",
         "projectPath": "CapabilityStandardGraphOpSubIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitResponseChainOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitResponseChainOrderEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateVirtualCamera",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateVirtualCameraEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateVirtualCameraEntryMod.csproj"
       }
     }
   ],

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "graph.fireball.caster_holders",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "holders",
+        "op": "QueryCollectAbilityHolders",
+        "ability": "Ability.Fireball.Cast"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "holders"
+      },
+      {
+        "from": "holders",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "holders",
+        "toPort": "list"
+      }
+    ]
+  }
+]

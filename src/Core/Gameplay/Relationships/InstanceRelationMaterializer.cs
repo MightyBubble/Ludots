@@ -11,7 +11,8 @@ namespace Ludots.Core.Gameplay.Relationships
     /// entity.relations 解析成实体对并写入 RelationshipRuntime。to 支持绝对 instanceId
     /// 与组内可寻址路径（两层命名空间共用 MapLoadEntityIndex）；type/metric 必须已在
     /// Relationships catalog 注册，未知即装载期 fail-fast；对称（isSymmetric）类型只写
-    /// from→to 单向，需要双向边请显式写两条。变更走 EnsureLink/SetMetric，
+    /// from→to 单向，需要双向边请显式写两条。to 可以是自己：队伍代表对自己的边就是
+    /// "同队之间"的关系，敌我查询不会默认同队友好。变更走 EnsureLink/SetMetric，
     /// 天然进关系变更缓冲，下一拍以 Relation* 事件暴露给 trigger 图——初始边与运行时
     /// 变更同一条事件路径。
     /// </summary>
@@ -87,12 +88,6 @@ namespace Ludots.Core.Gameplay.Relationships
                     if (!byInstanceId)
                     {
                         target = pathTarget;
-                    }
-
-                    if (target == source)
-                    {
-                        throw new InvalidOperationException(
-                            $"{context} targets the relation owner itself; self-edges are not authored through instance relations.");
                     }
 
                     if (!types.TryGetId(relation.Type, out int typeId))

@@ -32,7 +32,13 @@
             "Y": 900
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ui-player-aggregate-faction-owner",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "ui_player_aggregate_producer",

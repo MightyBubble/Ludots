@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.UI;
 using InteractionShowcaseMod.Runtime;
@@ -504,7 +503,7 @@ namespace InteractionShowcaseMod.UI
         {
             if (_engine != null)
             {
-                ViewModeRuntime.TrySwitchTo(_engine.GlobalContext, modeId);
+                InteractionShowCastModes.TrySetActive(_engine, modeId);
             }
         }
 
@@ -518,10 +517,8 @@ namespace InteractionShowcaseMod.UI
             string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
-            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
-            string activeModeName = ViewModeRuntime.TryGetActiveModeDisplayName(engine.GlobalContext, out string displayName)
-                ? displayName
-                : "Unassigned";
+            string activeModeId = InteractionShowCastModes.GetActive(engine) ?? InteractionShowcaseIds.LolModeId;
+            string activeModeName = InteractionShowCastModes.GetDisplayName(activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);
@@ -977,16 +974,14 @@ namespace InteractionShowcaseMod.UI
         }
 
         /// <summary>
-        /// Owner + collection key paired read for command group evidence: the local player rep's
-        /// mounted active context wins (owner = its carrier while alive), and the steady state
-        /// routes through the default profile's collection key.
+        /// Owner + collection key paired read for command group evidence (v2: the key is this
+        /// showcase's own declaration; contexts no longer route collections).
         /// </summary>
         private static bool TryResolveActiveCommandRouting(GameEngine engine, out Entity owner, out int collectionKeyId)
         {
             owner = Entity.Null;
             collectionKeyId = 0;
-            if (engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry) is not InteractionContextProfileRegistry contextProfiles ||
-                !contextProfiles.TryGetSteadyStateRouting(out int steadyStateKeyId, out _) ||
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not Ludots.Core.EntityCollections.EntityCollectionStore collections ||
                 !InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity localPlayer) ||
                 localPlayer == Entity.Null ||
                 !engine.World.IsAlive(localPlayer))
@@ -995,16 +990,7 @@ namespace InteractionShowcaseMod.UI
             }
 
             owner = localPlayer;
-            collectionKeyId = steadyStateKeyId;
-            if (engine.World.TryGet<InteractionContextInstance>(localPlayer, out InteractionContextInstance context))
-            {
-                collectionKeyId = context.ActiveCollectionKeyId;
-                if (context.ContextEntity != Entity.Null && engine.World.IsAlive(context.ContextEntity))
-                {
-                    owner = context.ContextEntity;
-                }
-            }
-
+            collectionKeyId = collections.KeyRegistry.Register("collection.command.source");
             return true;
         }
 

@@ -110,8 +110,8 @@ namespace Ludots.Tests.GAS
             api.Layers[kept] = 0b0010;
             api.Layers[filteredByLayer] = 0b0100;
             api.Layers[filteredByRelationship] = 0b0010;
-            api.Relationships[(caster, kept)] = RelationshipFilter.Hostile;
-            api.Relationships[(caster, filteredByRelationship)] = RelationshipFilter.Friendly;
+            api.RelationEdges.Add((caster, kept, TestGraphSymbolResolver.RelationshipTypeId("Hostile")));
+            api.RelationEdges.Add((caster, filteredByRelationship, TestGraphSymbolResolver.RelationshipTypeId("Friendly")));
 
             GraphProgramRegistry programs = LoadPrograms(QueryCoverageGraphJson);
             Execute(programs, "tests.graph.query-coverage", world, caster, kept, api);
@@ -539,7 +539,7 @@ namespace Ludots.Tests.GAS
       { "id": "cone", "op": "QueryCone", "queryCapacityPolicy": "RequireComplete", "rangeCm": 800 },
       { "id": "layer", "op": "QueryFilterLayer", "layerMask": 2 },
       { "id": "notSelf", "op": "QueryFilterNotEntity" },
-      { "id": "hostile", "op": "QueryFilterRelationship", "relationshipMode": "Hostile" },
+      { "id": "hostile", "op": "QueryFilterRelationship", "relationshipType": "Hostile" },
       { "id": "zero", "op": "ConstInt", "intValue": 0 },
       { "id": "first", "op": "TargetListGet" },
       { "id": "filteredCount", "op": "AggCount" },
@@ -657,7 +657,9 @@ namespace Ludots.Tests.GAS
             public int ResolveTag(string name) => TagRegistry.Register(name);
             public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
             public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
-            public int ResolveRelationshipType(string name) => ConfigKeyRegistry.Register($"relationship.type.{name}");
+            public int ResolveRelationshipType(string name) => RelationshipTypeId(name);
+
+            public static int RelationshipTypeId(string name) => ConfigKeyRegistry.Register($"relationship.type.{name}");
             public int ResolveRelationshipMetric(string name) => ConfigKeyRegistry.Register($"relationship.metric.{name}");
             public int ResolveRelationshipFlag(string name) => ConfigKeyRegistry.Register($"relationship.flag.{name}");
             public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
@@ -687,7 +689,7 @@ namespace Ludots.Tests.GAS
             public Dictionary<int, float> ConfigFloats { get; } = new();
             public Dictionary<int, int> ConfigInts { get; } = new();
             public Dictionary<Entity, uint> Layers { get; } = new();
-            public Dictionary<(Entity Reference, Entity Target), RelationshipFilter> Relationships { get; } = new();
+            public HashSet<(Entity Reference, Entity Target, int RelationTypeId)> RelationEdges { get; } = new();
             public Entity[] QueryConeResult { get; set; } = Array.Empty<Entity>();
             public Entity[] QueryRectangleResult { get; set; } = Array.Empty<Entity>();
             public Entity[] QueryLineResult { get; set; } = Array.Empty<Entity>();
@@ -778,7 +780,6 @@ namespace Ludots.Tests.GAS
             }
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => Layers.TryGetValue(entity, out uint layer) ? layer : 0u;
-            public int GetRelationship(int teamA, int teamB) => GraphRelationship.Neutral;
 
             public int FilterLayer(Span<Entity> entities, int count, uint requiredMask)
             {
@@ -808,13 +809,12 @@ namespace Ludots.Tests.GAS
                 return write;
             }
 
-            public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+            public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, int relationTypeId)
             {
                 int write = 0;
                 for (int i = 0; i < count; i++)
                 {
-                    Relationships.TryGetValue((reference, entities[i]), out RelationshipFilter actual);
-                    if (Matches(filter, actual))
+                    if (RelationEdges.Contains((reference, entities[i], relationTypeId)))
                     {
                         entities[write++] = entities[i];
                     }
@@ -840,19 +840,6 @@ namespace Ludots.Tests.GAS
             public void WriteBlackboardEntity(Entity entity, int keyId, Entity value) => EntityBlackboard[(entity, keyId)] = value;
             public bool TryLoadConfigFloat(int keyId, out float value) => ConfigFloats.TryGetValue(keyId, out value);
             public bool TryLoadConfigInt(int keyId, out int value) => ConfigInts.TryGetValue(keyId, out value);
-
-            private static bool Matches(RelationshipFilter filter, RelationshipFilter actual)
-            {
-                return filter switch
-                {
-                    RelationshipFilter.Hostile => actual == RelationshipFilter.Hostile,
-                    RelationshipFilter.Friendly => actual == RelationshipFilter.Friendly,
-                    RelationshipFilter.Neutral => actual == RelationshipFilter.Neutral,
-                    RelationshipFilter.NotFriendly => actual != RelationshipFilter.Friendly,
-                    RelationshipFilter.NotHostile => actual != RelationshipFilter.Hostile,
-                    _ => false,
-                };
-            }
 
             private static int Copy(Entity[] source, Span<Entity> target)
             {

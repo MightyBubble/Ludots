@@ -2,7 +2,6 @@
   "profiles": [
     {
       "id": "interaction.context.entityquery.battle",
-      "activeCollectionKey": "collection.command.source",
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
