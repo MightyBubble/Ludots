@@ -23,7 +23,7 @@
     "id": "Camera.GraphOps.CloseUp",
     "displayName": "近景机位",
     "priority": 100,
-    "rigKind": "Orbit",
+    "facingMode": "none",
     "distanceCm": 1400,
     "pitch": 50,
     "yaw": 180,
