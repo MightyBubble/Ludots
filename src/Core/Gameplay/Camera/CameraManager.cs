@@ -57,12 +57,19 @@ namespace Ludots.Core.Gameplay.Camera
             Func<WorldAabbCm>? targetBoundsProvider = null,
             Func<IContinuousHeightmap?>? continuousHeightmapProvider = null)
         {
+            // Re-configuration (the host rebinds providers every render frame) must not touch the
+            // Previous/State pair: wiping PreviousState here resets the fixed-step interpolation
+            // and the drawn camera snaps to the raw sim position every tick.
+            bool firstConfigure = _runtimeContext == null;
             _behaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
             _runtimeContext = new CameraBehaviorContext(_behaviorInput, view ?? throw new ArgumentNullException(nameof(view)));
             _targetBoundsProvider = targetBoundsProvider;
             _continuousHeightmapProvider = continuousHeightmapProvider;
             InvalidateController();
-            CopyState(State, PreviousState);
+            if (firstConfigure)
+            {
+                CopyState(State, PreviousState);
+            }
         }
 
         public void SetVirtualCameraRegistry(VirtualCameraRegistry registry)
