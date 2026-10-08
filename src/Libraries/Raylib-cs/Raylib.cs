@@ -394,6 +394,16 @@ namespace Raylib_cs
         public static extern void CloseWindow();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DisableCursor();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EnableCursor();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsCursorHidden();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void MaximizeWindow();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
