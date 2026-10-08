@@ -53,6 +53,20 @@ public static class CrowdSimCommands
                     cmd["auto"]?.GetValue<bool>(),
                     cmd["face"] is { } f ? new Fix64Vec2(Fix64.FromDouble(f[0]!.GetValue<double>()), Fix64.FromDouble(f[1]!.GetValue<double>())) : (Fix64Vec2?)null,
                     cmd["widthCm"] is { } w ? Fix64.FromInt(w.GetValue<int>()) : Fix64.Zero);
+            case "placeStructure":
+                return Structures.CrowdStructureOps.PlaceStructure(
+                    sim,
+                    cmd["template"]!.GetValue<string>(),
+                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
+                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()),
+                    Fix64.FromInt(cmd["sizeCm"]!.GetValue<int>()),
+                    cmd["toXCm"] is { } tx ? Fix64.FromInt(tx.GetValue<int>()) : Fix64.Zero,
+                    cmd["toYCm"] is { } ty ? Fix64.FromInt(ty.GetValue<int>()) : Fix64.Zero);
+            case "removeStructureAt":
+                return Structures.CrowdStructureOps.RemoveStructureAt(
+                    sim,
+                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
+                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()));
             default:
                 throw new System.InvalidOperationException($"未知指令 {type}。");
         }

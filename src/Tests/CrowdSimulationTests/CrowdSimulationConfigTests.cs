@@ -255,4 +255,77 @@ public class CrowdSimulationConfigTests
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
         Assert.That(ex!.Message, Does.Contain("playerId = 9"));
     }
+
+    [Test]
+    public void StructureTemplates_ParseFromModDefaults()
+    {
+        var runtime = TestDefaults.Assemble();
+        var templates = runtime.Structures.Templates;
+        // 与参考端默认表同序同 id(S7 真值脚本按 id 引用,追加模板在表尾)
+        Assert.That(templates.Select(t => t.Id).ToArray(), Is.EqualTo(
+            new[] { "building", "bridge", "road", "flood", "fire", "s7barrier" }));
+        Assert.That(templates[0].Blocker, Is.True);
+        Assert.That(templates[0].AreaIndex, Is.Null);
+        Assert.That(templates[1].Layered, Is.True);
+        Assert.That(templates[1].AreaIndex, Is.Not.Null);
+        Assert.That(templates[2].Priority, Is.EqualTo(10));
+        Assert.That(templates[4].LifetimeSec, Is.Not.Null);
+        Assert.That(templates[5].Blocker, Is.True);
+        Assert.That(templates[5].LifetimeSec, Is.EqualTo(Fix64.FromDouble(4)));
+        Assert.That(templates[5].LifetimeSecRaw, Is.EqualTo(4.0));
+    }
+
+    [Test]
+    public void StructureTemplates_InvalidRules_AreRejected()
+    {
+        // blocker 只支持 rect
+        var json = TestDefaults.DefaultConfigJson();
+        json["structures"]!["templates"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"x","name":"X","footprint":"disc","blocker":true}""")!,
+        };
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("blocker 只支持 rect"));
+
+        // area 与 priority 同进同出
+        json = TestDefaults.DefaultConfigJson();
+        json["structures"]!["templates"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","area":"road"}""")!,
+        };
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("area 与 priority 需同时给出"));
+
+        // 未知区域
+        json = TestDefaults.DefaultConfigJson();
+        json["structures"]!["templates"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","area":"nowhere","priority":1}""")!,
+        };
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("未知导航区域"));
+
+        // 非阻挡且无 area = 无效实体
+        json = TestDefaults.DefaultConfigJson();
+        json["structures"]!["templates"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect"}""")!,
+        };
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("无效实体"));
+
+        // lifetimeSec 需 > 0
+        json = TestDefaults.DefaultConfigJson();
+        json["structures"]!["templates"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","blocker":true,"lifetimeSec":0}""")!,
+        };
+        ex = Assert.Throws<InvalidOperationException>(
+            () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
+        Assert.That(ex!.Message, Does.Contain("lifetimeSec"));
+    }
 }

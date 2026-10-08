@@ -20,25 +20,27 @@ public sealed class HpaGraph
     public required int MaxEntranceWidth { get; init; }
 
     /// <summary>每 cluster 的东边界入口(cellA, cellB)对列表。</summary>
-    public required int[][] BorderE { get; init; }
+    public required int[][] BorderE { get; set; }
     /// <summary>每 cluster 的南边界入口对列表。</summary>
-    public required int[][] BorderS { get; init; }
+    public required int[][] BorderS { get; set; }
     /// <summary>每 cluster 的桥面东/南跨界边(keyA, keyB, cost)三元组。</summary>
-    public required int[][] UpE { get; init; }
-    public required Fix64[][] UpECost { get; init; }
-    public required int[][] UpS { get; init; }
-    public required Fix64[][] UpSCost { get; init; }
+    public required int[][] UpE { get; set; }
+    public required Fix64[][] UpECost { get; set; }
+    public required int[][] UpS { get; set; }
+    public required Fix64[][] UpSCost { get; set; }
     /// <summary>每 cluster 的节点格表(地面格在前,桥面节点 = N² + 格号 在后)。</summary>
-    public required int[][] Cells { get; init; }
+    public required int[][] Cells { get; set; }
     /// <summary>簇内边:(i, j, dist) 三元组,下标为 Cells 内序号。</summary>
-    public required int[][] Intra { get; init; }
-    public required Fix64[][] IntraDist { get; init; }
+    public required int[][] Intra { get; set; }
+    public required Fix64[][] IntraDist { get; set; }
     /// <summary>跨层 0 代价边(ground cell, deck key)对。</summary>
-    public required int[][] CrossLayer { get; init; }
+    public required int[][] CrossLayer { get; set; }
     /// <summary>不可变簇块:节点格 + 格→局部号 + CSR 出边(目标为格号,桥面目标带层位)。</summary>
-    public required HpaClusterBlock[] Blocks { get; init; }
+    public required HpaClusterBlock[] Blocks { get; set; }
     /// <summary>跳跃链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
     public required Dictionary<int, List<(int To, Fix64 Cost)>> LinkOut { get; set; }
+    /// <summary>跳跃链接端点按簇的归属表(D23 增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
+    public Dictionary<int, List<int>>? LinkClusters { get; set; }
     public required int NodeCount { get; set; }
     public required int EdgeCount { get; set; }
 
@@ -87,10 +89,108 @@ public sealed class HpaGraph
 
         for (int cl = 0; cl < cc; cl++) { ScanE(g, nav, cl); ScanS(g, nav, cl); UpScan(g, nav, cl, true); UpScan(g, nav, cl, false); }
         var lk = LinksByCluster(nav.Links, n, s, c);
-        for (int cl = 0; cl < cc; cl++) BakeCluster(g, nav, cl, lk);
+        g.LinkClusters = lk;
+        for (int cl = 0; cl < cc; cl++) BakeCluster(g, nav, cl, lk, keep: false);
         for (int cl = 0; cl < cc; cl++) g.Blocks[cl] = BuildBlock(g, nav, cl);
         FinishGraph(g, nav.Links);
         return g;
+    }
+
+    // ── 增量维护(updateHpa 移植) ─────────────────────────────────────
+    /// <summary>脏 tile 的 HPA 增量维护:触到的共享边界各重扫一次,入口表变化的簇(及边界对面
+    /// 的邻居)重烘簇内边——入口未变的邻居块仍重建(边代价从本侧格现读)。结果与同一栅格的
+    /// 全量构建逐位一致。</summary>
+    public void Update(NavContext nav, NavLinkSet? links, IReadOnlyCollection<int> tiles, HashSet<int>? same)
+    {
+        int c = ClustersPerSide;
+        var own = new HashSet<int>(tiles);
+        var aff = new HashSet<int>(tiles);
+        var rebake = new HashSet<int>(tiles);
+        var east = new HashSet<int>();
+        var south = new HashSet<int>();
+        foreach (int t in tiles)
+        {
+            int cx = t % c, cy = t / c;
+            east.Add(t);
+            south.Add(t);
+            if (cx > 0) east.Add(t - 1);
+            if (cy > 0) south.Add(t - c);
+        }
+
+        // 每条触到脏 tile 的边界只重扫一次(相邻脏 tile 共享边界);入口表未变则对面簇不重烘簇内边
+        void Rescan(int cl, int nb, bool isEast)
+        {
+            var b0 = (isEast ? BorderE : BorderS)[cl];
+            var u0 = (isEast ? UpE : UpS)[cl];
+            var u0c = (isEast ? UpECost : UpSCost)[cl];
+            if (isEast) ScanE(this, nav, cl);
+            else ScanS(this, nav, cl);
+            UpScan(this, nav, cl, isEast);
+            if (nb < 0) return;
+            aff.Add(cl);
+            aff.Add(nb);
+            bool changed = !SameCells(b0, (isEast ? BorderE : BorderS)[cl])
+                || !SameCells(u0, (isEast ? UpE : UpS)[cl])
+                || !SameCosts(u0c, (isEast ? UpECost : UpSCost)[cl]);
+            if (changed)
+            {
+                rebake.Add(cl);
+                rebake.Add(nb);
+            }
+        }
+
+        foreach (int cl in east) Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
+        foreach (int cl in south) Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
+        foreach (int cl in own) aff.Add(cl);
+        var lk = LinksByCluster(links, nav.CellCount, ClusterSize, c);
+        // D23:重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
+        var oldLk = LinkClusters ?? new Dictionary<int, List<int>>();
+        foreach (int cl in oldLk.Keys) aff.Add(cl);
+        foreach (int cl in lk.Keys) aff.Add(cl);
+        foreach (int cl in oldLk.Keys)
+        {
+            oldLk.TryGetValue(cl, out var a);
+            lk.TryGetValue(cl, out var b);
+            if (!SameIntLists(a, b)) rebake.Add(cl);
+        }
+
+        LinkClusters = lk;
+        foreach (int cl in rebake) BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
+        foreach (int cl in aff) Blocks[cl] = BuildBlock(this, nav, cl);
+        FinishGraph(this, links);
+    }
+
+    private static bool SameCells(int[]? a, int[]? b)
+    {
+        if (a == null || b == null || a.Length != b.Length) return false;
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i] != b[i]) return false;
+        }
+
+        return true;
+    }
+
+    private static bool SameCosts(Fix64[]? a, Fix64[]? b)
+    {
+        if (a == null || b == null || a.Length != b.Length) return false;
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i] != b[i]) return false;
+        }
+
+        return true;
+    }
+
+    private static bool SameIntLists(List<int>? a, List<int>? b)
+    {
+        if (a == null || b == null || a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i] != b[i]) return false;
+        }
+
+        return true;
     }
 
     // ── 边界入口扫描 ─────────────────────────────────────────────
@@ -192,7 +292,7 @@ public sealed class HpaGraph
         return m;
     }
 
-    private static void BakeCluster(HpaGraph g, NavContext nav, int cl, Dictionary<int, List<int>> lk)
+    private static void BakeCluster(HpaGraph g, NavContext nav, int cl, Dictionary<int, List<int>> lk, bool keep)
     {
         int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount, n2 = n * n;
         int cx = cl % c, cy = cl / c;
@@ -232,13 +332,58 @@ public sealed class HpaGraph
             }
         }
 
-        // 簇内边:逐节点对(i<j)的簇内 Dijkstra(只读到 j 的距离即停)
+        // 簇内边:逐节点对(i<j)的簇内 Dijkstra(只读到 j 的距离即停)。
+        // keep(节点集未变的干净簇/同内容 tile):旧 Dijkstra 距离逐位复用——旧表与新的节点集
+        // 前缀一致时,同源同内积的距离不变(参考实现 bakeCluster 的 oldIdx/oldD 复用)。
         var intra = new List<int>();
         var intraDist = new List<Fix64>();
         int gCount = cells.Count;
-        PrepareLocal(g, nav, cl);
+        Dictionary<int, int>? oldIdx = null;
+        Dictionary<long, Fix64>? oldDist = null;
+        if (keep && g.Cells[cl] != null)
+        {
+            var oc = g.Cells[cl];
+            var oi = g.Intra[cl];
+            var od = g.IntraDist[cl];
+            oldIdx = new Dictionary<int, int>();
+            for (int k = 0; k < oc.Length && oc[k] < n2; k++) oldIdx[oc[k]] = k;
+            oldDist = new Dictionary<long, Fix64>();
+            for (int k = 0, d = 0; k < oi.Length; k += 2, d++) oldDist[(long)oi[k] * 65536 + oi[k + 1]] = od[d];
+        }
+
+        bool prepared = false;
         for (int i = 0; i < gCount; i++)
         {
+            if (oldIdx != null && oldIdx.TryGetValue(cells[i], out int oiIdx))
+            {
+                bool ok = true;
+                for (int j = i + 1; j < gCount && ok; j++)
+                {
+                    ok = oldIdx.TryGetValue(cells[j], out int oj) && oj > oiIdx;
+                }
+
+                if (ok)
+                {
+                    for (int j = i + 1; j < gCount; j++)
+                    {
+                        if (oldDist!.TryGetValue((long)oiIdx * 65536 + oldIdx[cells[j]], out Fix64 d))
+                        {
+                            intra.Add(i);
+                            intra.Add(j);
+                            intraDist.Add(d);
+                        }
+                    }
+
+                    continue;
+                }
+            }
+
+            if (!prepared)
+            {
+                PrepareLocal(g, nav, cl);
+                prepared = true;
+            }
+
             int need = 0;
             for (int j = i + 1; j < gCount; j++)
             {
@@ -253,7 +398,8 @@ public sealed class HpaGraph
                 var d = g._dist[NavGridSteps.LocalIndex(cells[j], n, s)];
                 if (d < Fix64.MaxValue / 4)
                 {
-                    intra.Add(i); intra.Add(j);
+                    intra.Add(i);
+                    intra.Add(j);
                     intraDist.Add(d);
                 }
             }
@@ -508,10 +654,10 @@ public sealed class HpaGraph
 
 public sealed class HpaClusterBlock
 {
-    public required int[] Cells { get; init; }
-    public required Dictionary<int, int> Index { get; init; }
-    public required int[] AdjStart { get; init; }
-    public required int[] AdjTo { get; init; }
-    public required Fix64[] AdjCost { get; init; }
-    public required int EdgeCount { get; init; }
+    public required int[] Cells { get; set; }
+    public required Dictionary<int, int> Index { get; set; }
+    public required int[] AdjStart { get; set; }
+    public required int[] AdjTo { get; set; }
+    public required Fix64[] AdjCost { get; set; }
+    public required int EdgeCount { get; set; }
 }

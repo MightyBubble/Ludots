@@ -18,9 +18,17 @@ public sealed class CrowdSimPlanner
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
     private readonly List<PendingPlan> _pending = new();
+    private readonly List<PendingRefresh> _pendingRefreshes = new();
+    /// <summary>待刷新流场的组队列(S7 队伍反应;每 tick 预算 maxRefreshesPerTick)。</summary>
+    private readonly List<CrowdNavGroupSet.Group> _refreshQueue = new();
     private int _seq;
     private bool _loggedFirstPlan;
     private bool _loggedFirstApply;
+
+    /// <summary>路径服务(RT-05:结构变更与在途路径计算共用同一份导航态,经它的互斥锁串行)。</summary>
+    public PathQueryService Service => _service;
+    /// <summary>当前待刷新流场的队列长度(重烘报告字段)。</summary>
+    public int RefreshQueueCount => _refreshQueue.Count;
 
     private sealed class PendingPlan
     {
@@ -42,6 +50,20 @@ public sealed class CrowdSimPlanner
         public required int NavId { get; init; }
         public required int Goal { get; init; }
         public required int RequestId { get; init; }
+        /// <summary>请求时的导航版本:答复落帧时版本变了 = 陈旧答复,按 F-5 裁决。</summary>
+        public required int Version { get; init; }
+    }
+
+    /// <summary>流场刷新的到点答复(S7 队伍反应:同走廊在新导航上重建流场,领队与槽位不动)。</summary>
+    private sealed class PendingRefresh
+    {
+        public required int RequestId { get; init; }
+        public required int DueTick { get; init; }
+        public required int GroupId { get; init; }
+        public required CrowdNavGroupSet.Group Group { get; init; }
+        public required int Seq { get; init; }
+        public required int NavId { get; init; }
+        public required int Version { get; init; }
     }
 
     private sealed class PendingLeader
@@ -78,6 +100,7 @@ public sealed class CrowdSimPlanner
                 g.Flow = null;
                 g.Leader = null;
                 g.Planning = true;
+                g.StateSeq++;
             }
         }
 
@@ -180,7 +203,7 @@ public sealed class CrowdSimPlanner
 
                 int repCell = RepresentativeCell(session, mem);
                 int reqId = _service.Request(new PathQuery(g.NavId, repCell, g.Goal, 0), tick);
-                po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId });
+                po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId, Version = session.Navs[g.NavId].Version });
                 if (!byLayer.TryGetValue(g.LayerIdx, out var bucket)) byLayer[g.LayerIdx] = bucket = new List<int>();
                 bucket.Add(g.Id);
             }
@@ -256,12 +279,12 @@ public sealed class CrowdSimPlanner
     /// 服务故障(答复永不回)直接抛——不静默停摆。</summary>
     public bool ApplyDue(int tick, bool block)
     {
-        if (_pending.Count > 0 && _service.Faulted)
+        if ((_pending.Count > 0 || _pendingRefreshes.Count > 0) && _service.Faulted)
         {
             throw new PathServiceFaultException(_service.FaultMessage ?? "路径服务故障(原因未记录)");
         }
 
-        int k = 0;
+        int k = 0, rk = 0;
         if (!block)
         {
             while (k < _pending.Count && _pending[k].DueTick <= tick)
@@ -282,18 +305,40 @@ public sealed class CrowdSimPlanner
 
                 k++;
             }
+
+            while (rk < _pendingRefreshes.Count && _pendingRefreshes[rk].DueTick <= tick)
+            {
+                if (!_service.Ready(_pendingRefreshes[rk].RequestId)) return false;
+                rk++;
+            }
         }
         else
         {
             while (k < _pending.Count && _pending[k].DueTick <= tick) k++;
+            while (rk < _pendingRefreshes.Count && _pendingRefreshes[rk].DueTick <= tick) rk++;
         }
 
+        var stale = new List<CrowdNavGroupSet.Group>();
         for (int i = 0; i < k; i++)
         {
-            ApplyPlan(_pending[i]);
+            ApplyPlan(_pending[i], stale);
+        }
+
+        for (int i = 0; i < rk; i++)
+        {
+            ApplyRefresh(_pendingRefreshes[i]);
         }
 
         if (k > 0) _pending.RemoveRange(0, k);
+        if (rk > 0) _pendingRefreshes.RemoveRange(0, rk);
+        if (stale.Count > 0)
+        {
+            // F-5:在途期间导航变了(重烘)的规划已按答复应用,现在按现行导航裁决:
+            // 目标被挡或无场 → 重规划;否则刷新流场(它来自旧导航)
+            var orders = AfterStalePlan(stale);
+            if (orders.Count > 0) Plan(orders, tick);
+        }
+
         if (k > 0 && !_loggedFirstApply)
         {
             _loggedFirstApply = true;
@@ -304,7 +349,7 @@ public sealed class CrowdSimPlanner
         return true;
     }
 
-    private void ApplyPlan(PendingPlan plan)
+    private void ApplyPlan(PendingPlan plan, List<CrowdNavGroupSet.Group> stale)
     {
         foreach (var po in plan.Orders)
         {
@@ -325,6 +370,9 @@ public sealed class CrowdSimPlanner
                     continue;
                 }
 
+                // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单
+                var nav = _session.Navs[g.NavId];
+                if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
                 g.Flow = result.Flow;
                 g.Planning = false;
                 live[pg.GroupId] = (pg, result);
@@ -539,6 +587,262 @@ public sealed class CrowdSimPlanner
     private static void RecycleFlow(FlowField f)
     {
         f.OriginPool?.Give(f);
+    }
+
+    private void ApplyRefresh(PendingRefresh pr)
+    {
+        var g = pr.Group;
+        if (!_session.Groups.TryGet(pr.GroupId, out var live) || live != g || g.StateSeq != pr.Seq)
+        {
+            return; // 被更新请求取代:静默丢弃(D20)
+        }
+
+        var result = _service.AwaitDue(pr.RequestId);
+        var nav = _session.Navs[g.NavId];
+        if (g.NavId != pr.NavId || nav.Version != pr.Version)
+        {
+            // 答复基于旧导航:丢弃并重新排队刷新(参考 applyExtend 的重排队语义)
+            Recycle(result);
+            RefreshFlow(g);
+            return;
+        }
+
+        if (result.Flow == null)
+        {
+            Recycle(result);
+            return;
+        }
+
+        if (g.Flow is { } old) RecycleFlow(old);
+        g.Flow = result.Flow;
+    }
+
+    /// <summary>队伍反应(reactRebake 移植):对看到本次变更的组逐个判定——目标被挡 → 重规划指令;
+    /// 行进中且变更落在剩余路线上 → 领队线/成员可达被切断则重规划,否则同走廊刷新流场;
+    /// 驻扎组不动槽位。返回需要重规划的指令清单。</summary>
+    public List<CrowdOrder> ReactRebake(IReadOnlyList<CrowdNavRebakeContextResult> dirty)
+    {
+        var session = _session;
+        var dirtyByNav = new Dictionary<int, List<int>>();
+        foreach (var r in dirty)
+        {
+            if (r.DirtyTiles.Count > 0) dirtyByNav[r.NavId] = r.DirtyTiles;
+        }
+
+        int n = session.Config.NavCellCount;
+        var units = session.Units;
+        var underway = new HashSet<int>();
+        var reach = new Dictionary<int, Fix64>();
+        for (int i = 0; i < units.Count; i++)
+        {
+            var entity = units.EntityAt(i);
+            var st = session.World.Get<CrowdSimulationUnitState>(entity);
+            if (!session.Groups.TryGet(st.GroupId, out var g0)) continue;
+            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(g0.Id);
+            if (g0.Flow == null) continue;
+            int cell = CellOfUnit(session, i, st);
+            var len = g0.Flow.Len[(st.Level != 0 ? n * n : 0) + cell];
+            if (!reach.TryGetValue(g0.Id, out var cur) || len > cur) reach[g0.Id] = len;
+        }
+
+        var orders = new List<CrowdOrder>();
+        var orderSet = new HashSet<int>();
+        var hit = new List<CrowdNavGroupSet.Group>();
+        foreach (var g in session.Groups.Groups)
+        {
+            if (g == null || g.Count == 0 || g.OrderId == 0) continue;
+            if (!dirtyByNav.TryGetValue(g.NavId, out var tiles) || tiles.Count == 0) continue;
+            if (g.Planning) continue; // F-5:在途规划由落帧裁决处理
+            if (g.Goal < 0) continue;
+            var nav = session.Navs[g.NavId];
+            if (nav.Passable[g.Goal] == 0)
+            {
+                AddOrder(session, orders, orderSet, g);
+                continue;
+            }
+
+            g.GoalComp = nav.Comp[g.Goal]; // 连通域每次重烘都重标号
+            if (!underway.Contains(g.Id) || g.Flow == null || !OnRemainingRoute(session, g, tiles, reach)) continue;
+            hit.Add(g);
+        }
+
+        React(session, hit, orders, orderSet);
+        return orders;
+    }
+
+    private void React(
+        CrowdSimSession session, List<CrowdNavGroupSet.Group> hit, List<CrowdOrder> orders, HashSet<int> orderSet)
+    {
+        var lost = ReachLost(session, hit);
+        foreach (var g in hit)
+        {
+            var nav = session.Navs[g.NavId];
+            if (lost.Contains(g.Id) || LeaderPathBlocked(g.Leader, nav, session)) AddOrder(session, orders, orderSet, g);
+            else RefreshFlow(g);
+        }
+    }
+
+    /// <summary>F-6:行进中成员(脚下格 / 跳跃落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
+    private HashSet<int> ReachLost(CrowdSimSession session, List<CrowdNavGroupSet.Group> hit)
+    {
+        var want = new HashSet<int>();
+        foreach (var g in hit) want.Add(g.Id);
+        var lost = new HashSet<int>();
+        var memo = new Dictionary<(int GroupId, int Comp), bool>();
+        var units = session.Units;
+        for (int i = 0; i < units.Count; i++)
+        {
+            var entity = units.EntityAt(i);
+            var st = session.World.Get<CrowdSimulationUnitState>(entity);
+            if (!want.Contains(st.GroupId) || lost.Contains(st.GroupId)) continue;
+            if (st.State != (byte)CrowdUnitState.Moving && st.State != (byte)CrowdUnitState.Jump) continue;
+            if (!session.Groups.TryGet(st.GroupId, out var g)) continue;
+            var nav = session.Navs[g.NavId];
+            int cell = CellOfUnit(session, i, st);
+            int c = nav.CompAt(cell, st.Level);
+            if (c < 0) continue;
+            var key = (st.GroupId, c);
+            if (!memo.TryGetValue(key, out var ok)) memo[key] = ok = nav.CanReach(c, g.GoalComp);
+            if (!ok) lost.Add(st.GroupId);
+        }
+
+        return lost;
+    }
+
+    /// <summary>领队剩余路线是否被挡(leaderPathBlocked 移植):沿线四角探边的坏格带;
+    /// 桥面托线由 upPass 覆盖(参考端的 wall 集在 C# 领队无对应物,省略)。</summary>
+    private static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
+    {
+        if (leader == null || leader.Done) return false;
+        int cs = session.Config.NavCellSizeCm, n = session.Config.NavCellCount;
+        Fix64 step = Fix64.FromInt(cs) / 2, e = Fix64.FromInt(cs) / 4;
+        var pass = nav.Passable;
+        var up = nav.UpPass;
+        bool bad(int c) => pass[c] == 0 && up[c] == 0;
+        bool blockedAt(Fix64 x, Fix64 y) =>
+            bad(CrowdSimCell.At(x - e, y - e, cs, n)) && bad(CrowdSimCell.At(x + e, y - e, cs, n)) &&
+            bad(CrowdSimCell.At(x - e, y + e, cs, n)) && bad(CrowdSimCell.At(x + e, y + e, cs, n));
+        var path = leader.Path;
+        Fix64 ax = leader.X, ay = leader.Y;
+        for (int k = leader.Seg; k < path.Count; k++)
+        {
+            Fix64 bx = path[k].X, by = path[k].Y;
+            int m = (int)Fix64.Ceiling(CrowdFix.Hypot(bx - ax, by - ay) / step).ToLong();
+            for (int s = 1; s <= m; s++)
+            {
+                if (blockedAt(ax + (bx - ax) * s / m, ay + (by - ay) * s / m)) return true;
+            }
+
+            ax = bx;
+            ay = by;
+        }
+
+        return false;
+    }
+
+    /// <summary>变更是否落在组的剩余路线上(onRemainingRoute 移植):走廊掩码触到脏 tile,
+    /// 且脏 tile 内存在某成员剩余路线长度可达的格——只用掩码会把身后的变更也算进来。</summary>
+    private static bool OnRemainingRoute(
+        CrowdSimSession session,
+        CrowdNavGroupSet.Group g,
+        List<int> tiles,
+        Dictionary<int, Fix64> reach)
+    {
+        var f = g.Flow!;
+        int n = session.Config.NavCellCount, n2 = n * n;
+        var nav = session.Navs[g.NavId];
+        int s = nav.Hpa!.ClusterSize, c = nav.Hpa.ClustersPerSide;
+        if (!reach.TryGetValue(g.Id, out var r)) return false;
+        foreach (int t in tiles)
+        {
+            if (f.Mask![t] == 0) continue;
+            int x0 = t % c * s, y0 = t / c * s;
+            int x1 = Math.Min(n, x0 + s), y1 = Math.Min(n, y0 + s);
+            for (int y = y0; y < y1; y++)
+            {
+                for (int x = x0; x < x1; x++)
+                {
+                    if (f.Len[y * n + x] <= r || f.Len[n2 + y * n + x] <= r) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>同走廊流场刷新排队(不在队列才入队;预算在 ProcessRefreshes 扣)。</summary>
+    public void RefreshFlow(CrowdNavGroupSet.Group g)
+    {
+        if (!_refreshQueue.Contains(g)) _refreshQueue.Add(g);
+    }
+
+    /// <summary>每 tick 预算内的流场刷新提交(processRefreshes 移植;生效帧 = tick + refreshLatencyTicks)。
+    /// 参考端还有走廊外单位的 stray 扩展与同目标组共乘——C# 无走廊扩展,共乘属缓存优化,均不在本层。</summary>
+    public void ProcessRefreshes(int tick)
+    {
+        int n = 0;
+        while (_refreshQueue.Count > 0 && n < _session.Config.Planning.MaxRefreshesPerTick)
+        {
+            var g = _refreshQueue[0];
+            _refreshQueue.RemoveAt(0);
+            if (!_session.Groups.TryGet(g.Id, out var live) || live != g || g.Flow == null || g.Planning) continue;
+            SubmitRefresh(g, tick);
+            n++;
+        }
+    }
+
+    private void SubmitRefresh(CrowdNavGroupSet.Group g, int tick)
+    {
+        var nav = _session.Navs[g.NavId];
+        // 同走廊:掩码用组现流场的走廊(未填 padding),服务侧按 padMask ∪ 原掩码建场
+        var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = g.Flow!.Mask };
+        int id = _service.Request(req, tick);
+        g.StateSeq++;
+        _pendingRefreshes.Add(new PendingRefresh
+        {
+            RequestId = id,
+            DueTick = tick + _session.Config.Planning.RefreshLatencyTicks,
+            GroupId = g.Id,
+            Group = g,
+            Seq = g.StateSeq,
+            NavId = g.NavId,
+            Version = nav.Version,
+        });
+    }
+
+    /// <summary>F-5 落帧裁决(afterStalePlan 移植):陈旧答复的组——无场或目标被挡 → 重规划;
+    /// 否则按现行导航刷新流场。返回需要重规划的指令。</summary>
+    private List<CrowdOrder> AfterStalePlan(List<CrowdNavGroupSet.Group> stale)
+    {
+        var orders = new List<CrowdOrder>();
+        var orderSet = new HashSet<int>();
+        var hit = new List<CrowdNavGroupSet.Group>();
+        foreach (var g in stale)
+        {
+            if (!_session.Groups.TryGet(g.Id, out var live) || live != g || g.OrderId == 0 || g.Planning || g.Goal < 0) continue;
+            if (g.Flow == null || _session.Navs[g.NavId].Passable[g.Goal] == 0)
+            {
+                AddOrder(_session, orders, orderSet, g);
+                continue;
+            }
+
+            g.GoalComp = _session.Navs[g.NavId].Comp[g.Goal];
+            hit.Add(g);
+        }
+
+        React(_session, hit, orders, orderSet);
+        return orders;
+    }
+
+    private static void AddOrder(
+        CrowdSimSession session, List<CrowdOrder> orders, HashSet<int> seen, CrowdNavGroupSet.Group g)
+    {
+        foreach (var o in session.Orders.List)
+        {
+            if (o.Id != g.OrderId) continue;
+            if (seen.Add(o.Id)) orders.Add(o);
+            return;
+        }
     }
 
     private static int FindOrderIdOf(CrowdSimSession session, int groupId)

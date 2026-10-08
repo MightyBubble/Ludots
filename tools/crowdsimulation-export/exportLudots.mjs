@@ -29,6 +29,9 @@ const { entityList } = await import('../src/engine/structures/store.js');
 
 const sources = structuredClone(DEFAULT_SOURCES);
 sources.scenario.world.seed = seed;
+// S7(F03-a)追加的寿命模板:4 秒寿命的建筑阻挡,驱动寿命到期路径;C# mod 配置同位序同 id
+sources.templates.structures.push({ id: 's7barrier', name: '路障', footprint: 'rect', blocker: true, lifetimeSec: 4 });
+sources.globals.render.structures.s7barrier = { fill: 'rgba(214,116,52,0.9)', stroke: 'rgba(120,60,26,0.95)' };
 const config = validateConfig(sources);
 const world = generateWorld(config);
 const reach = Math.max(...config.agents.radiusClasses.map((_, r) => personalRadius(config, r)));
@@ -670,6 +673,114 @@ function canonComp(comp, n2) {
         ticks: TICKS, script,
       }, null, 2));
       console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);
+    }
+
+    // ───────────────────────────── S7:结构动态化真相(F03-a) ─────────────────────────────
+    // 放置 / 拆除 / 寿命到期 → 脏 tile 增量重烘 → 队伍反应(重规划/流场刷新)+ 唤醒 + 挤离。
+    // 镜像协议与 headless 同形(createHeadless):路径 host 持烘焙深拷贝,结构 op 按指令序应用
+    // 两侧,job 只见其请求前生效的 op。重烘报告以 stats.rebake 完结态为准(rebakes 计数前进且
+    // 无在途 job 的 tick 采样),执行 tick 由脚本序与寿命公式(ceil(lifetimeSec/simDt))推出,
+    // 两侧同构。gate = S5 口径(状态机逐位 + 位置带宽 + contacts 双容忍),报告逐字段一致。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      // S7 归一补丁(镜像侧 fog.js/beliefSync.js 的 __S7_TRUTH_NAV__ 同款门):S7-a 内核无迷雾
+      // (F02 另单),参考端可见性与认知槽冻结在 truth——队伍反应走真值直反应,与 C# 同构。
+      globalThis.__S7_TRUTH_NAV__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic, unpackStatic, withoutScratch } = await import('../src/engine/workers/bake.js');
+      const navList = contexts.map((c) => c.nav);
+      const baked = { world: worldQ, worldCached: true, structures, navs: navList, tileCache, ms: 0 };
+      const copy = unpackStatic(withoutScratch(navList, () => structuredClone(packStatic(baked))), config);
+      const host = createNavHost(config, copy.world, copy.structures, copy.navs, copy.tileCache);
+      const sim = new Simulation(sources, baked, new LocalPathService(host));
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+
+      // 脚本(厘米 / 玩家 1..P):部署 → 行军 → 建筑挡路(重规划路径)→ 拆除(重烘复原)→
+      // 寿命路障(4s = 12 tick @simDt=1/3s,到期拆除)→ 道路(仅代价重烘 + 流场刷新)。
+      // 格距 62.5m:尺寸/位置按静态图同档(mapGen 35–140m)且中心落在格心,覆盖份额 0/1 清晰无骑线。
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 30, cmd: { type: 'placeStructure', template: 'building', xCm: 503125, yCm: 565625, sizeCm: 14000 } },
+        { tick: 60, cmd: { type: 'removeStructureAt', xCm: 503125, yCm: 565625 } },
+        { tick: 90, cmd: { type: 'placeStructure', template: 's7barrier', xCm: 521875, yCm: 571875, sizeCm: 7000 } },
+        { tick: 120, cmd: { type: 'placeStructure', template: 'road', xCm: 496875, yCm: 565625, sizeCm: 3000, toXCm: 521875, toYCm: 565625 } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape } } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100, ...(c.toXCm !== undefined ? { to: [c.toXCm / 100, c.toYCm / 100] } : {}) } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      // op 的执行 tick:脚本 place/remove 的 tick + 隐式寿命到期 tick(s7barrier 唯一寿命实体),
+      // 按时间升序(报告按 op 完成序产出,与执行序一致)
+      const simDt = config.sim.timeScale / config.movement.tickRate;
+      const barrier = sources.templates.structures.find((t) => t.id === 's7barrier');
+      const barrierTick = script.find((e) => e.cmd.template === 's7barrier').tick;
+      const expireTick = barrierTick + Math.ceil(barrier.lifetimeSec / simDt);
+      const opList = script.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      opList.push({ tick: expireTick, kind: 2 });
+      opList.sort((a, b) => a.tick - b.tick);
+      const opExecTicks = opList.map((o) => o.tick);
+      const opKinds = opList.map((o) => o.kind);
+
+      const TICKS = 360;
+      const w = new BW();
+      w.bytes(Buffer.from('LS7T', 'ascii'));
+      w.i32(TICKS);
+      const frames = [];
+      const ops = [];
+      let seenRebakes = 0;
+      for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        sim.advance(1);
+        // 帧校验码 = 参考端自身 unitChecksum(f32 口径,诊断列;跨引擎 gate 走 bin 的带宽与状态机口径)
+        frames.push(sim.checksum());
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100); // 厘米
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
+        }
+        // 重烘报告采样:job 完结且计数前进的 tick(stage 2 已发布 evicted/stuck)
+        if (sim.rebakeJob === null && sim.stats.rebakes > seenRebakes) {
+          seenRebakes = sim.stats.rebakes;
+          ops.push({ reportTick: sim.tickCount, r: sim.stats.rebake, union: [...sim.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+      }
+      if (ops.length !== opExecTicks.length) throw new Error(`S7 重烘报告数 ${ops.length} ≠ 预期 op 数 ${opExecTicks.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7-rebake.bin'), w.build());
+      const wo = new BW();
+      wo.bytes(Buffer.from('LS7O', 'ascii'));
+      wo.i32(ops.length);
+      ops.forEach((op, i) => {
+        wo.i32(opExecTicks[i]);
+        wo.u8(opKinds[i]);
+        wo.i32(op.reportTick);
+        wo.i32(op.r.tiles); wo.i32(op.r.contexts); wo.i32(op.r.costOnly);
+        wo.i32(op.r.hits); wo.i32(op.r.misses);
+        wo.i32(op.r.orders); wo.i32(op.r.refreshes);
+        wo.i32(op.r.evicted); wo.i32(op.r.stuck);
+        wo.i32(op.union.length);
+        for (const tile of op.union) wo.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7-ops.bin'), wo.build());
+      writeFileSync(join(outRoot, 'parity', 's7-rebake-truth.json'), JSON.stringify({
+        mapId, seed,
+        note: 'S7 结构动态化:逐 tick 真值与 S5 块同构(位置带宽 + 状态机逐位 + contacts 双容忍);s7-ops.bin 为每次结构 op 的重烘焙报告(执行 tick / 类别 / 报告 tick / tiles/contexts/costOnly/hits/misses/orders/refreshes/evicted/stuck / 受影响 tile 并集升序),逐字段硬门。frames 为参考端自身 unitChecksum(f32 口径,诊断列,不跨引擎比对);gate 走 bin。口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾(S7-a 内核无迷雾,F02 另单),组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;重烘报告在 job 完结 tick 采样,执行 tick 由脚本序 + 寿命公式推出(C# 同构)。s7barrier 为 S7 追加的 4 秒寿命模板,C# mod 配置同位序同 id。格距 62.5m:足迹尺寸取静态图同档(35–140m)、中心落在格心,覆盖份额无骑线。',
+        ticks: TICKS, script, opExecTicks, frames,
+      }, null, 2));
+      console.log(`[export] ${mapId} s7 ticks=${TICKS} units=${sim.units.count} ops=${ops.length} rebakes=${sim.stats.rebakes}`);
     }
 
   }

@@ -27,8 +27,9 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new();
         public Dictionary<int, int> Parent = new();
         public HashSet<int> Closed = new();
-        /// <summary>逐 (navId, tile) 的地面多边形代价备忘(参考实现挂在 nav 上;worker 跨上下文复用暂存,键必须带上下文)。</summary>
-        public Dictionary<(int NavId, int Tile), Fix64[]> GroundCostMemo = new();
+        /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘(参考实现挂在 nav 上;worker 跨上下文
+        /// 复用暂存,键必须带上下文与条目引用——增量重烘换条目即失效,旧 poly 表不复用)。</summary>
+        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> GroundCostMemo = new();
         public List<Fix64> Portals = new();
         public HashSet<int> PortalSeen = new();
     }
@@ -143,12 +144,12 @@ public static class TilePathQuery
         return p < 0 ? -1 : tile * 2 * t * t + p;
     }
 
-    // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,重烘焙即随上下文废弃)
+    // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
     private static Fix64[] GroundCost(NavContext nav, int t, int tile, Scratch s)
     {
-        if (s.GroundCostMemo.TryGetValue((nav.Id, tile), out var memo)) return memo;
         int n = nav.CellCount, c = n / t;
         var e = nav.Tiles![tile];
+        if (s.GroundCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
         int ox = tile % c * t, oy = tile / c * t;
         var pc = new Fix64[e.Count];
         var cnt = new int[e.Count];
@@ -162,7 +163,7 @@ public static class TilePathQuery
         }
 
         for (int p = 0; p < e.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
-        s.GroundCostMemo[(nav.Id, tile)] = pc;
+        s.GroundCostMemo[(nav.Id, e)] = pc;
         return pc;
     }
 

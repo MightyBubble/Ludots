@@ -32,6 +32,8 @@ public sealed class CrowdNavGroupSet
         public bool LosAll { get; set; }
         /// <summary>上一任未完成的领队(重发指令时供 D61/D62 继承;答复落帧后清空)。</summary>
         public Movement.CrowdLeader? PrevLeader { get; set; }
+        /// <summary>组状态序:每次规划 / 流场刷新提交时 +1;到点答复按它判陈旧(被更新请求取代的静默丢弃)。</summary>
+        public int StateSeq { get; set; }
     }
 
     private const int MaxGroups = 4096;

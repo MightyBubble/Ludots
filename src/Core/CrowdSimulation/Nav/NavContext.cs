@@ -22,12 +22,12 @@ public sealed class NavContext
     /// <summary>逐格可通行（walk 经净空腐蚀,地图边缘视为阻挡）。</summary>
     public required byte[] Passable { get; init; }
     /// <summary>升序可走格表。</summary>
-    public required int[] Cells { get; init; }
+    public required int[] Cells { get; set; }
     /// <summary>逐格连通域编号（-1 = 不可通行;4 连通洪泛,跳跃链接不参与标号）。</summary>
-    public required int[] Comp { get; init; }
-    public required int CompCount { get; init; }
+    public required int[] Comp { get; set; }
+    public required int CompCount { get; set; }
     /// <summary>跳跃链接（无跳跃能力的移动类型为 null）。</summary>
-    public required NavLinkSet? Links { get; init; }
+    public required NavLinkSet? Links { get; set; }
     /// <summary>桥面层可走格（RT-16;无桥时全 0）。</summary>
     public required byte[] UpPass { get; init; }
     /// <summary>桥头 portal 格（桥面与地面唯一互通处）。</summary>
@@ -52,6 +52,14 @@ public sealed class NavContext
     public Dictionary<int, HashSet<int>>? ReachOut { get; set; }
 
     private readonly Dictionary<long, bool> _reachMemo = new();
+
+    /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
+    public int Version { get; set; }
+    /// <summary>最近一次增量重烘的类别(0 = 无变化,1 = 仅代价,2 = 可走位翻转)。</summary>
+    public byte LastRebake { get; set; }
+
+    /// <summary>连通域重标后失效可达备忘(comp 编号随重烘改变,旧键不再对应)。</summary>
+    public void InvalidateReach() => _reachMemo.Clear();
 
     /// <summary>格在某层的连通域(0 地面 / 1 桥面;桥面格没有桥面编号时 -1)。compAt 移植。</summary>
     public int CompAt(int cell, int level = 0)
@@ -117,6 +125,7 @@ public sealed class NavLinkSet
     /// <summary>CSR：格 → 入边。</summary>
     public required int[] InStart { get; init; }
     public required int[] InList { get; init; }
-    /// <summary>连通域 → 可达连通域（有向;只含跳跃链接边,桥头互通边在 NavContext.ReachOut 合并）。</summary>
-    public required Dictionary<int, HashSet<int>> CompOut { get; init; }
+    /// <summary>连通域 → 可达连通域（有向;只含跳跃链接边,桥头互通边在 NavContext.ReachOut 合并）。
+    /// 增量重烘的 relink 会按新连通域标号整表重导出(链表本体不动)。</summary>
+    public required Dictionary<int, HashSet<int>> CompOut { get; set; }
 }

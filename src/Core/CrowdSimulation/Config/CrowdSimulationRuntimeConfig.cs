@@ -248,6 +248,8 @@ public sealed class RuntimeSimSection
 {
     public required int MaxUnits { get; init; }
     public required Fix64 TimeScale { get; init; }
+    /// <summary>timeScale 的配置原始值(到期 tick 等整数契约按参考端 f64 公式换算,不走 Fix64)。</summary>
+    public required double TimeScaleRaw { get; init; }
 }
 
 public sealed class RuntimeSpawnSection
@@ -262,6 +264,26 @@ public sealed class RuntimeStructuresSection
 {
     public required Fix64 BlockCoverage { get; init; }
     public required int PortalCells { get; init; }
+    /// <summary>结构实体模板(下标即 place 指令的模板号;areaId 已解析为导航区域下标)。</summary>
+    public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
+}
+
+public sealed class RuntimeStructureTemplate
+{
+    public required string Id { get; init; }
+    public required string Name { get; init; }
+    /// <summary>足迹形状:rect / disc / path(厘米域,尺寸由 place 指令给出)。</summary>
+    public required string Footprint { get; init; }
+    public required bool Blocker { get; init; }
+    /// <summary>导航区域下标;null = 不改区域。</summary>
+    public required int? AreaIndex { get; init; }
+    /// <summary>区域覆盖优先级(area 非空时必有);同级后放置者胜。</summary>
+    public required int Priority { get; init; }
+    /// <summary>寿命(仿真秒);null = 永久。到期 tick 换算用参考端原始 double 公式(整数 tick 不容骑线)。</summary>
+    public required Fix64? LifetimeSec { get; init; }
+    /// <summary>寿命的配置原始值(到期 tick = placeTick + ceil(lifetime / (timeScale/fixedHz)),与参考端同式同值)。</summary>
+    public double? LifetimeSecRaw { get; init; }
+    public required bool Layered { get; init; }
 }
 
 public sealed class RuntimeDeploySection

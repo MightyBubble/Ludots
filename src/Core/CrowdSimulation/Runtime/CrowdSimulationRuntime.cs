@@ -46,6 +46,12 @@ public sealed class CrowdSimulationRuntime
     private bool _systemsInstalled;
     private PresenterEntityRuntime? _presenterRuntime;
     private CrowdSimulation.Nav.Pathing.PathQueryService? _pathService;
+    /// <summary>地图烘焙输入(回放会话重建结构仓与全新导航用;与活会话的仓互不共享可变栅格)。</summary>
+    private CrowdSimulation.World.SurfaceGrid? _surfaceGrid;
+    private CrowdSimulation.World.NavSurfaceJumpCandidate[]? _jumpCandidates;
+    private CrowdSimulation.World.NavHeightField? _heights;
+    private CrowdSimulation.Nav.DeckSurface? _deck;
+    private IReadOnlyList<CrowdSimulation.World.BlockerFootprint>? _mapSurfaceBlockers;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
     private readonly List<(int Tick, string Hash)> _hashes = new(4096);
@@ -159,10 +165,15 @@ public sealed class CrowdSimulationRuntime
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
                 .ToDictionary(t => t.Id, StringComparer.Ordinal));
         var grid = SurfaceGrid.Build(runtimeConfig, surface, mapSurface.Blockers);
+        _surfaceGrid = grid;
+        _jumpCandidates = surface.JumpCandidates;
+        _mapSurfaceBlockers = mapSurface.Blockers;
         var heights = NavHeightField.FromHeightmap(
             ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
             runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
+        _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
+        _deck = deck;
         var cache = new NavTileCache(
             runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.ClusterSize,
             runtimeConfig.Navmesh.MinRegionArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationError.ToDouble(),
@@ -277,16 +288,26 @@ public sealed class CrowdSimulationRuntime
         };
 
         _session = new CrowdSimSession(runtimeConfig, engine.World, navs, navByLayerRadius, wiring);
+        // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
+        // 阻挡盒索引取仓的 CSR(reach 生长,参考同形;S5 对拍会话不装阻挡盒,不受影响)。
+        var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
+        _session.Structures = structures;
+        _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
+            runtimeConfig, heights, deck, surface.JumpCandidates);
+        _session.NavTileCache = cache;
+        // DB-03 调试开关:每次结构变更后跑增量 vs 全量一致性检查(debug 配置驱动)
+        _session.VerifyIncrementalNav = _debug["session"]?["incrementalNavVerify"]?.GetValue<bool>() == true;
         _activeMapId = mapId.Value;
 
-        // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 阻挡盒索引
+        // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
+        // (有结构仓时 Blockers 跟随仓的活 CSR,这里的静态索引不生效)
         _pathService?.Dispose();
         _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, TimeSpan.FromSeconds(5));
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.EnableMovement(kernel, planner);
-        _session.Blockers = CrowdSimulation.Movement.CrowdBlockerColliders.Build(
-            mapSurface.Blockers, runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
+        _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
+            mapSurface.Blockers, runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm));
 
         // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
@@ -401,15 +422,43 @@ public sealed class CrowdSimulationRuntime
             .ToArray();
         int ticks = session.TickCount;
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius);
+        // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
+        // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
+        // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。
+        if (session.Structures != null && _surfaceGrid != null && _heights != null && _deck != null && _mapSurfaceBlockers != null)
+        {
+            var replayNavs = new Dictionary<int, NavContext>();
+            var replayCache = new NavTileCache(
+                session.Config.NavtileCacheCapacity, session.Config.Hpa.ClusterSize,
+                session.Config.Navmesh.MinRegionArea.ToDouble(), session.Config.Navmesh.MaxSimplificationError.ToDouble(),
+                session.Config.Navmesh.MaxEdgeLen.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
+            var seenIds = new HashSet<int>();
+            for (int a = 0; a < session.Config.AgentTypes.Count; a++)
+            {
+                foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+                {
+                    var nav = NavContextBaker.Bake(session.Config, _surfaceGrid, _heights, _deck, a, clearance, replayCache);
+                    if (!seenIds.Add(nav.Id)) continue;
+                    replayNavs[nav.Id] = nav;
+                }
+            }
+
+            replay.ReplaceNavs(replayNavs);
+            replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
+                session.Config, _surfaceGrid, _mapSurfaceBlockers);
+            replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
+                session.Config, _heights, _deck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
+            replay.NavTileCache = replayCache;
+        }
         // 回放会话同样挂运动栈(一次性世界 + 自己的路径服务;不入引擎世界,不碰呈现)
         if (session.Movement != null)
         {
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
-                session.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5));
+                replay.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5));
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
-            replay.Blockers = session.Blockers;
+            replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
             replay.Commands.Schedule(entries);
             var replayHashes = new List<string>(ticks);

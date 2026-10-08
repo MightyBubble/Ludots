@@ -102,12 +102,12 @@
       "pushPriority": 2,
       "profile": "foot",
       "areaCost": {
-        "open": 1.0,
+        "open": 1,
         "shallow": 1.3,
         "road": 0.7,
-        "deck": 1.0,
-        "flooded": 3.0,
-        "burning": 8.0
+        "deck": 1,
+        "flooded": 3,
+        "burning": 8
       }
     },
     {
@@ -117,7 +117,7 @@
       "pushPriority": 2,
       "profile": "hull",
       "areaCost": {
-        "deep": 1.0,
+        "deep": 1,
         "shallow": 1.6,
         "flooded": 1.2
       }
@@ -129,13 +129,13 @@
       "pushPriority": 3,
       "profile": "climber",
       "areaCost": {
-        "open": 1.0,
+        "open": 1,
         "shallow": 1.4,
         "rough": 1.8,
         "road": 0.8,
-        "deck": 1.0,
+        "deck": 1,
         "flooded": 3.5,
-        "burning": 8.0
+        "burning": 8
       }
     },
     {
@@ -146,11 +146,11 @@
       "profile": "amphib",
       "areaCost": {
         "deep": 1.5,
-        "shallow": 1.0,
+        "shallow": 1,
         "open": 1.1,
         "road": 0.9,
-        "deck": 1.0,
-        "flooded": 1.0
+        "deck": 1,
+        "flooded": 1
       }
     },
     {
@@ -161,12 +161,12 @@
       "profile": "leaper",
       "areaCost": {
         "shallow": 1.2,
-        "open": 1.0,
+        "open": 1,
         "rough": 1.6,
         "road": 0.8,
-        "deck": 1.0,
-        "flooded": 3.0,
-        "burning": 6.0
+        "deck": 1,
+        "flooded": 3,
+        "burning": 6
       }
     }
   ],
@@ -380,7 +380,52 @@
   },
   "structures": {
     "blockCoverage": 0.5,
-    "portalCells": 4
+    "portalCells": 4,
+    "templates": [
+      {
+        "id": "building",
+        "name": "建筑",
+        "footprint": "rect",
+        "blocker": true
+      },
+      {
+        "id": "bridge",
+        "name": "桥梁",
+        "footprint": "path",
+        "area": "deck",
+        "priority": 30,
+        "layered": true
+      },
+      {
+        "id": "road",
+        "name": "道路",
+        "footprint": "path",
+        "area": "road",
+        "priority": 10
+      },
+      {
+        "id": "flood",
+        "name": "泛洪区",
+        "footprint": "disc",
+        "area": "flooded",
+        "priority": 20
+      },
+      {
+        "id": "fire",
+        "name": "火场",
+        "footprint": "disc",
+        "area": "burning",
+        "priority": 40,
+        "lifetimeSec": 900
+      },
+      {
+        "id": "s7barrier",
+        "name": "路障",
+        "footprint": "rect",
+        "blocker": true,
+        "lifetimeSec": 4
+      }
+    ]
   },
   "deploy": {
     "initialUnits": 12000,

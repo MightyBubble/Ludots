@@ -73,26 +73,7 @@ public static class NavContextBaker
         // 连通域:4 连通洪泛(与参考实现的 tile 局部标号 + 边界合并同划分)
         var comp = new int[n2];
         Array.Fill(comp, -1);
-        int compCount = 0;
-        var queue = new int[n2];
-        for (int s = 0; s < n2; s++)
-        {
-            if (passable[s] == 0 || comp[s] >= 0) continue;
-            int head = 0, tail = 0;
-            queue[tail++] = s;
-            comp[s] = compCount;
-            while (head < tail)
-            {
-                int c = queue[head++];
-                int x = c % n, y = c / n;
-                if (x > 0 && passable[c - 1] != 0 && comp[c - 1] < 0) { comp[c - 1] = compCount; queue[tail++] = c - 1; }
-                if (x < n - 1 && passable[c + 1] != 0 && comp[c + 1] < 0) { comp[c + 1] = compCount; queue[tail++] = c + 1; }
-                if (y > 0 && passable[c - n] != 0 && comp[c - n] < 0) { comp[c - n] = compCount; queue[tail++] = c - n; }
-                if (y < n - 1 && passable[c + n] != 0 && comp[c + n] < 0) { comp[c + n] = compCount; queue[tail++] = c + n; }
-            }
-
-            compCount++;
-        }
+        int compCount = Components(passable, n, comp);
 
         // 桥面层(RT-16):桥面格烘焙 + portal 合并进连通域
         var upPass = new byte[n2];
@@ -205,11 +186,10 @@ public static class NavContextBaker
         return nav;
     }
 
-    /// <summary>
-    /// 跳跃链接过滤（buildProfileLinks 移植）：候选端点都可走、格距 ≤ rangeCells、
+    /// <summary>跳跃链接过滤（buildProfileLinks 移植）：候选端点都可走、格距 ≤ rangeCells、
     /// 落差 ≤ downCm 才成链;落差 ≤ upCm 的双向。判定只读 .navsurface 里的量化候选值。
-    /// </summary>
-    private static NavLinkSet? BuildLinks(
+    /// 增量重烘在候选端点触到变更矩形时重建整表(与全量同码)。</summary>
+    internal static NavLinkSet? BuildLinks(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid surface,
         RuntimeNavProfile profile,
@@ -300,7 +280,7 @@ public static class NavContextBaker
     /// 桥面可达性(LY-4 移植:上层标号接在地面连通域之后顺排):桥面区域(UpArea)按格升序首见
     /// 分配编号(确定性);桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向互通边。可达图 = 跳跃链接边 + 互通边。
     /// </summary>
-    private static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(
+    internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(
         int n, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, byte[] upArea)
     {
         int n2 = n * n;
@@ -342,6 +322,33 @@ public static class NavContextBaker
             if (!graph.TryGetValue(from, out var set)) graph[from] = set = new HashSet<int>();
             set.Add(to);
         }
+    }
+
+    /// <summary>连通域标号(4 连通洪泛,格号升序首见分配编号):全量烘焙与增量重烘共用一份划分。</summary>
+    internal static int Components(byte[] passable, int n, int[] comp)
+    {
+        int n2 = n * n, compCount = 0;
+        var queue = new int[n2];
+        for (int s = 0; s < n2; s++)
+        {
+            if (passable[s] == 0 || comp[s] >= 0) continue;
+            int head = 0, tail = 0;
+            queue[tail++] = s;
+            comp[s] = compCount;
+            while (head < tail)
+            {
+                int c = queue[head++];
+                int x = c % n, y = c / n;
+                if (x > 0 && passable[c - 1] != 0 && comp[c - 1] < 0) { comp[c - 1] = compCount; queue[tail++] = c - 1; }
+                if (x < n - 1 && passable[c + 1] != 0 && comp[c + 1] < 0) { comp[c + 1] = compCount; queue[tail++] = c + 1; }
+                if (y > 0 && passable[c - n] != 0 && comp[c - n] < 0) { comp[c - n] = compCount; queue[tail++] = c - n; }
+                if (y < n - 1 && passable[c + n] != 0 && comp[c + n] < 0) { comp[c + n] = compCount; queue[tail++] = c + n; }
+            }
+
+            compCount++;
+        }
+
+        return compCount;
     }
 
     /// <summary>切比雪夫净空腐蚀（erodeRect 移植）:先行扫描再列扫描,两遍各计连续可走段。</summary>

@@ -4,6 +4,7 @@ using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Units;
@@ -59,8 +60,29 @@ public sealed class CrowdSimSession
     public CrowdSimPlanner? Planner { get; private set; }
     /// <summary>到点答复未到时的口径:false = 引擎停摆等下帧(默认);true = 调用线程同步等(无头对拍/回放用)。</summary>
     public bool BlockOnDueReplies { get; set; }
-    /// <summary>阻挡盒碰撞索引(宿主按地图阻挡物建;null = 无阻挡碰撞)。</summary>
-    public CrowdBlockerColliders? Blockers { get; set; }
+    /// <summary>阻挡盒碰撞索引:有结构仓时跟随仓的活 CSR(每次结构变更整体重建,新实例),
+    /// 否则用宿主按地图阻挡物建的静态索引(null = 无阻挡碰撞)。</summary>
+    public CrowdBlockerColliders? Blockers => Structures?.Colliders ?? _staticBlockers;
+
+    /// <summary>静态阻挡盒索引(无结构仓的会话用;S5 冻结口径)。</summary>
+    private CrowdBlockerColliders? _staticBlockers;
+
+    /// <summary>无结构仓会话的静态阻挡盒装配入口(有仓时无效——仓是唯一真相)。</summary>
+    public void SetStaticBlockers(CrowdBlockerColliders? blockers) => _staticBlockers = blockers;
+    /// <summary>结构实体仓(S7;null = 无结构动态的会话,结构指令不可用)。</summary>
+    public CrowdStructuresStore? Structures { get; set; }
+    /// <summary>增量重烘的烘焙输入(与初始烘焙同源);null = 结构指令不可用。</summary>
+    public Nav.CrowdRebakeSources? RebakeSources { get; set; }
+    /// <summary>导航 tile 内容键缓存(初始烘焙所用的同一份;增量重烘靠它命中复用)。</summary>
+    public Nav.NavTileCache? NavTileCache { get; set; }
+    /// <summary>跨 tick 推进的重烘收尾 job(RT-04 切片;null = 无在途变更)。</summary>
+    public CrowdRebakeJob? RebakeJob { get; set; }
+    /// <summary>最近一次已完结的结构变更报告(遥测 / 对拍)。</summary>
+    public CrowdRebakeReport? LastRebakeReport { get; set; }
+    /// <summary>最近一次挤离中无处安放的单位数(D44 计数,进重烘报告)。</summary>
+    public int EvictStuck { get; set; }
+    /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(DB-03;对拍免谈,验收必跑)。</summary>
+    public bool VerifyIncrementalNav { get; set; }
     /// <summary>每 tick 的仿真秒数(timeScale/FixedHz)与子步进。</summary>
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
@@ -74,9 +96,13 @@ public sealed class CrowdSimSession
         Movement = kernel;
         Planner = planner;
     }
-    public IReadOnlyDictionary<int, NavContext> Navs { get; }
+    public IReadOnlyDictionary<int, NavContext> Navs { get; private set; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
+
+    /// <summary>回放会话换装全新烘焙的导航上下文(参考端回放 = 全新仿真:结构 op 会改写共享上下文,
+    /// 带着已生效的变更从头跑必然分歧)。</summary>
+    public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
     public int TickCount { get; private set; }
     public int SpawnSeq { get; set; }
@@ -86,16 +112,32 @@ public sealed class CrowdSimSession
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
     public event Action<string>? Notified;
 
+    /// <summary>结构变更重烘报告发布(遥测日志:rebake 报告与缓存命中计数,真机冒烟的重量证据)。</summary>
+    public event Action<CrowdRebakeReport>? RebakeReported;
+
+    public void NotifyRebake(CrowdRebakeReport report)
+    {
+        RebakeReported?.Invoke(report);
+        Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+            $"CrowdSimulation rebake: kind={(report.Kind == CrowdRebakeReport.KindPlace ? "place" : "remove")} " +
+            $"tiles={report.Tiles} contexts={report.Contexts} costOnly={report.CostOnly} " +
+            $"cacheHits={report.Hits} misses={report.Misses} orders={report.Orders} refreshes={report.Refreshes} " +
+            $"evicted={report.Evicted} stuck={report.Stuck} (tick {report.ExecTick}→{report.ReportTick})");
+    }
+
     public NavContext NavFor(int layer, int r) => NavByLayerRadius[(layer, r)];
 
     /// <summary>
-    /// 推进一个 tick:冲到点指令 → 落到点路径答复(未回则停摆,tick 不动) →
-    /// 运动内核子步进(领队→意图→马达)× SubSteps → tickCount+1 → 校验码。
+    /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
+    /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
+    /// (领队→意图→马达)× SubSteps → tickCount+1 → 流场刷新排队 → 校验码。
     /// 停摆时返回 null(调用方下一帧重试同一 tick;回放对停摆逐帧同构)。
     /// </summary>
     public string? Step()
     {
         Commands.Flush(this, CrowdSimCommands.Exec);
+        if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
+        if (Structures != null) CrowdStructureOps.ExpireStructures(this);
         if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies)) return null;
         if (Movement != null)
         {
@@ -110,6 +152,7 @@ public sealed class CrowdSimSession
         }
 
         TickCount++;
+        Planner?.ProcessRefreshes(TickCount);
         return CrowdSimChecksum.Compute(this);
     }
 
@@ -128,13 +171,15 @@ public sealed class CrowdSimSession
         }
     }
 
-    /// <summary>重置到初始态(回放第一帧之前:单位清空、组清空、指令队列与指令簿清空、计数归零)。</summary>
+    /// <summary>重置到初始态(回放第一帧之前:单位清空、组清空、指令队列与指令簿清空、计数归零;
+    /// 在途重烘 job 作废——回放是全新仿真,结构仓不重置,静态地图状态即初始态)。</summary>
     public void Reset()
     {
         Units.Clear();
         Groups.Reset();
         Commands.Reset();
         Orders.Clear();
+        RebakeJob = null;
         TickCount = 0;
         SpawnSeq = 0;
         SelectedCount = 0;

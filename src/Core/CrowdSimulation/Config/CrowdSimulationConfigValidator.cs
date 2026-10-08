@@ -145,6 +145,7 @@ public static class CrowdSimulationConfigValidator
         Rule("sim.timeScale", config.Sim.TimeScale, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
         Rule("structures.portalCells", config.Structures.PortalCells, intRequired: true, min: 1);
+        ValidateStructureTemplates(config);
         Rule("deploy.initialUnits", config.Deploy.InitialUnits, intRequired: true, min: 0);
         Rule("deploy.centersPerGroup", config.Deploy.CentersPerGroup, intRequired: true, min: 1);
         Rule("deploy.spreadCells", config.Deploy.SpreadCells, min: 0);
@@ -291,6 +292,63 @@ public static class CrowdSimulationConfigValidator
             if (mode.value is not ("priority" or "rigid"))
             {
                 throw Invalid(mode.path, "需为 priority / rigid");
+            }
+        }
+    }
+
+    /// <summary>结构模板表校验(参考 config.js templates.structures 规则):footprint 枚举、
+    /// blocker 只支持 rect、area 与 priority 同进同出、area 必须已定义、priority ≥ 0 整数、
+    /// 非阻挡且无 area 的模板是无效实体、lifetimeSec &gt; 0、id 唯一。</summary>
+    private static void ValidateStructureTemplates(CrowdSimulationConfig config)
+    {
+        var templates = config.Structures.Templates;
+        if (templates == null) return;
+        var areaIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var area in config.NavAreas) areaIds.Add(area.Id);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var footprints = new HashSet<string> { "rect", "disc", "path" };
+        for (int i = 0; i < templates.Length; i++)
+        {
+            var t = templates[i];
+            string path = $"structures.templates[{i}]";
+            if (string.IsNullOrWhiteSpace(t.Id) || !ids.Add(t.Id))
+            {
+                throw Invalid($"{path}.id", "需为非空且唯一的字符串");
+            }
+
+            if (!footprints.Contains(t.Footprint))
+            {
+                throw Invalid($"{path}.footprint", "需为 rect / disc / path");
+            }
+
+            if (t.Blocker && t.Footprint != "rect")
+            {
+                throw Invalid($"{path}", "blocker 只支持 rect 占地");
+            }
+
+            if ((t.Area == null) != (t.Priority == null))
+            {
+                throw Invalid($"{path}", "area 与 priority 需同时给出");
+            }
+
+            if (t.Area != null && !areaIds.Contains(t.Area))
+            {
+                throw Invalid($"{path}.area", "未知导航区域");
+            }
+
+            if (t.Priority is { } p && p < 0)
+            {
+                throw Invalid($"{path}.priority", "需为 ≥ 0 的整数");
+            }
+
+            if (!t.Blocker && t.Area == null)
+            {
+                throw Invalid($"{path}", "既不阻挡也不改导航区域（无效实体）");
+            }
+
+            if (t.LifetimeSec is { } life && !(life > 0))
+            {
+                throw Invalid($"{path}.lifetimeSec", "需 > 0");
             }
         }
     }

@@ -321,6 +321,22 @@ public sealed class CrowdSimulationConfig
     {
         public required double BlockCoverage { get; init; }
         public required int PortalCells { get; init; }
+        /// <summary>结构实体模板(参考实现 templates.structures):place/remove 指令按 id 引用。</summary>
+        public StructureTemplateEntry[]? Templates { get; init; }
+    }
+
+    /// <summary>结构实体模板条目(参考 config.js validateConfig 的结构规则):
+    /// footprint 必填;blocker 只支持 rect;area 与 priority 同进同出;lifetimeSec &gt; 0。</summary>
+    public sealed class StructureTemplateEntry
+    {
+        public required string Id { get; init; }
+        public string? Name { get; init; }
+        public required string Footprint { get; init; }
+        public bool Blocker { get; init; }
+        public string? Area { get; init; }
+        public int? Priority { get; init; }
+        public double? LifetimeSec { get; init; }
+        public bool Layered { get; init; }
     }
 
     public sealed class DeploySection

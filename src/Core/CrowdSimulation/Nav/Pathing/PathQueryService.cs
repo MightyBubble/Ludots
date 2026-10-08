@@ -7,8 +7,12 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Nav.Pathing;
 
-/// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。</summary>
-public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level);
+/// <summary>一次两点路径请求(格号 + 上下文 + 起端层)。
+/// CorridorMask 非空 = 同走廊刷新(S7 队伍反应):不重推走廊,按 padMask ∪ 该掩码建流场。</summary>
+public readonly record struct PathQuery(int NavContextId, int StartCell, int GoalCell, int Level)
+{
+    public byte[]? CorridorMask { get; init; }
+}
 
 /// <summary>路径答复:折线 + 方向图(流场);不可达时 Points 为 null。</summary>
 public sealed class PathResult
@@ -46,6 +50,10 @@ public sealed class PathQueryService : IDisposable
     private readonly TimeSpan _planTimeout;
 
     private readonly object _gate = new();
+    /// <summary>导航态互斥(RT-05 的 C# 同源实现):worker 计算与仿真侧结构变更重烘共用同一份
+    /// 导航上下文,经本锁串行——任何在途计算恰好看见其请求之前生效的全部结构 op,时序不进结果。
+    /// (参考端用 worker 私有镜像 + 消息序达到同一契约;C# 单份状态省镜像内存。)</summary>
+    private readonly object _navGate = new();
     private readonly Queue<(int Id, PathQuery Query)> _pending = new();
     private readonly Dictionary<int, PathResult> _replies = new();
     private readonly Dictionary<int, int> _dueTick = new();
@@ -222,14 +230,17 @@ public sealed class PathQueryService : IDisposable
             PathResult result;
             try
             {
-                result = Compute(job.Query, pool, scratch);
+                lock (_navGate)
+                {
+                    result = Compute(job.Query, pool, scratch);
+                }
             }
             catch (Exception ex)
             {
                 // worker 崩溃 = 服务故障(navClient 契约:报错,绝不静默重试或换算法)
                 lock (_gate)
                 {
-                    FailLocked($"路径 worker 内部错误(请求 #{job.Id}): {ex.GetType().Name}: {ex.Message}");
+                    FailLocked($"路径 worker 内部错误(请求 #{job.Id}): {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
                 }
 
                 return;
@@ -243,11 +254,40 @@ public sealed class PathQueryService : IDisposable
         }
     }
 
+    /// <summary>导航态互斥执行(结构变更重烘在锁内应用,见 _navGate)。</summary>
+    public void RunExclusive(Action action)
+    {
+        lock (_navGate) action();
+    }
+
+    public T RunExclusive<T>(Func<T> action)
+    {
+        lock (_navGate) return action();
+    }
+
     private PathResult Compute(PathQuery q, FlowPool pool, CorridorQuery.Scratch scratch)
     {
         var nav = _navs[q.NavContextId];
         int n = nav.CellCount;
         int cs = nav.Hpa!.ClusterSize, cc = nav.Hpa.ClustersPerSide;
+        if (q.CorridorMask != null)
+        {
+            // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
+            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, cc, _config.Flowfield.CorridorPadding);
+            var region = FlowFieldBuilder.OrMask(padRegion, q.CorridorMask);
+            var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, region, pool);
+            return new PathResult
+            {
+                Query = q,
+                Reachable = true,
+                Branch = CorridorQuery.Branch.None,
+                Points = null,
+                PointLayers = null,
+                Flow = refreshed,
+                CorridorMask = q.CorridorMask,
+            };
+        }
+
         var mask = new byte[cc * cc];
         mask[NavGridSteps.ClusterOf(q.GoalCell, n, cs, cc)] = 1;
         var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, mask, q.Level, scratch);

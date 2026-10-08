@@ -415,7 +415,7 @@ public sealed class CrowdSimulationConfigLoader
                 Hostile = ParsePushMode(config.Push.Modes.Hostile),
             },
             Relations = BuildRelations(config, map),
-            Sim = new RuntimeSimSection { MaxUnits = config.Sim.MaxUnits, TimeScale = Fix64.FromDouble(config.Sim.TimeScale) },
+            Sim = new RuntimeSimSection { MaxUnits = config.Sim.MaxUnits, TimeScale = Fix64.FromDouble(config.Sim.TimeScale), TimeScaleRaw = config.Sim.TimeScale },
             Spawn = new RuntimeSpawnSection
             {
                 PlacementTries = config.Spawn.PlacementTries,
@@ -427,6 +427,7 @@ public sealed class CrowdSimulationConfigLoader
             {
                 BlockCoverage = Fix64.FromDouble(config.Structures.BlockCoverage),
                 PortalCells = config.Structures.PortalCells,
+                Templates = BuildStructureTemplates(config),
             },
             Deploy = new RuntimeDeploySection
             {
@@ -456,6 +457,28 @@ public sealed class CrowdSimulationConfigLoader
         "rigid" => CrowdSimulationPushMode.Rigid,
         _ => throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: push.modes 值 \"{value}\" 需为 priority / rigid"),
     };
+
+    /// <summary>结构模板表装载(参考 templates.structures):模板 area id 解析为导航区域下标,
+    /// 未知区域在装载即报错;下标 = 声明序,place 指令按 id 查本表。</summary>
+    private static RuntimeStructureTemplate[] BuildStructureTemplates(CrowdSimulationConfig config)
+    {
+        var entries = config.Structures.Templates;
+        if (entries == null || entries.Length == 0) return Array.Empty<RuntimeStructureTemplate>();
+        var areaIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < config.NavAreas.Length; i++) areaIndex.Add(config.NavAreas[i].Id, i);
+        return Array.ConvertAll(entries, t => new RuntimeStructureTemplate
+        {
+            Id = t.Id,
+            Name = t.Name ?? t.Id,
+            Footprint = t.Footprint,
+            Blocker = t.Blocker,
+            AreaIndex = t.Area != null ? areaIndex[t.Area] : null,
+            Priority = t.Priority ?? 0,
+            LifetimeSec = t.LifetimeSec is { } sec ? Fix64.FromDouble(sec) : null,
+            LifetimeSecRaw = t.LifetimeSec,
+            Layered = t.Layered,
+        });
+    }
 
     /// <summary>关系推挤矩阵(core/relations.js buildRelations 移植):解析序 overrides > 同玩家 > 同队 > default;
     /// overrides 的玩家号必须存在于地图 Players。矩阵下标 = Players 表序,另存玩家号 → 下标表。</summary>

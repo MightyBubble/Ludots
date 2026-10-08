@@ -138,7 +138,13 @@ public class S4DeployTruthTests
         }
 
         var world = ArchWorld.Create();
-        return (runtime, new CrowdSimSession(runtime, world, navs, navByLayerRadius));
+        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius);
+        // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
+        // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
+        session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
+        session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
+        session.NavTileCache = cache;
+        return (runtime, session);
     }
 
     private static string S1Dir(string seed) => Path.Combine("assets", "s1", seed);

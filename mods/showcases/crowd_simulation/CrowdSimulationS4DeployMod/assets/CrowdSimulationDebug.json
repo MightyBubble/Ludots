@@ -34,9 +34,50 @@
           "yCm": 900000,
           "shape": "box"
         }
+      },
+      {
+        "tick": 120,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "building",
+          "xCm": 503125,
+          "yCm": 565625,
+          "sizeCm": 14000
+        }
+      },
+      {
+        "tick": 150,
+        "cmd": {
+          "type": "removeStructureAt",
+          "xCm": 503125,
+          "yCm": 565625
+        }
+      },
+      {
+        "tick": 180,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "s7barrier",
+          "xCm": 521875,
+          "yCm": 571875,
+          "sizeCm": 7000
+        }
+      },
+      {
+        "tick": 210,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "road",
+          "xCm": 496875,
+          "yCm": 565625,
+          "sizeCm": 3000,
+          "toXCm": 521875,
+          "toYCm": 565625
+        }
       }
     ],
     "autoReplayAtTick": 260,
-    "cameraId": "CrowdSimulation.Camera.S4Deploy"
+    "cameraId": "CrowdSimulation.Camera.S4Deploy",
+    "incrementalNavVerify": true
   }
 }
