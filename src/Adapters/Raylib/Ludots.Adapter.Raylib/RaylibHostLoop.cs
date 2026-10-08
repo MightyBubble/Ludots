@@ -14,6 +14,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.FieldRegions;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
@@ -680,6 +681,8 @@ namespace Ludots.Adapter.Raylib
                         {
                             soundConsumer.Consume(soundRequests.GetSpan(), cameraAdapter.Camera.position);
                         }
+
+                        UpdateCursorCapturePolicy(engine);
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         presentFrames.Clear();
