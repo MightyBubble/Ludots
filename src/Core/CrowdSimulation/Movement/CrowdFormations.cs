@@ -39,7 +39,7 @@ public static class CrowdFormations
         Fix64 area = Fix64.Zero;
         for (int k = 0; k < n; k++)
         {
-            Fix64 radiusCm = session.ProfilePersonalRadiusCm(units.ProfileIdAt(members[k]));
+            Fix64 radiusCm = units.PersonalRadiusCmAt(members[k]);
             d[k] = radiusCm * 2 * ks;
             area += d[k] * d[k];
         }

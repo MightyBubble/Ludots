@@ -17,8 +17,6 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// </summary>
 public sealed class CrowdSimSession
 {
-    private readonly Dictionary<string, RuntimeAgentProfile> _profileById;
-
     public CrowdSimSession(
         CrowdSimulationRuntimeConfig config,
         ArchWorld world,
@@ -35,8 +33,6 @@ public sealed class CrowdSimSession
         Groups = new CrowdNavGroupSet();
         Commands = new CrowdCommandQueue();
         Orders = new CrowdOrderBook();
-        _profileById = new Dictionary<string, RuntimeAgentProfile>(StringComparer.Ordinal);
-        foreach (var p in config.Profiles) _profileById[p.Id] = p;
 
         // 子步数:单步位移不超过 maxStepCells 格(封顶 maxSubSteps)——与参考实现同推导
         Fix64 maxSpeed = Fix64.Zero;
@@ -70,12 +66,6 @@ public sealed class CrowdSimSession
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
 
-    /// <summary>体型 → 速度(厘米/秒)与半径(厘米),配置常量,不算状态。</summary>
-    public Fix64 ProfileSpeedCmPerSecond(string profileId) =>
-        Config.AgentTypes[_profileById[profileId].AgentTypeIndex].SpeedCmPerSecond;
-    public Fix64 ProfileRadiusCm(string profileId) => _profileById[profileId].RadiusCm;
-    /// <summary>体型 → 个人(避让/碰撞)半径 = 半径 × avoidanceRadiusScale(参考实现 units.radius 的口径)。</summary>
-    public Fix64 ProfilePersonalRadiusCm(string profileId) => _profileById[profileId].PersonalRadiusCm;
     /// <summary>移动类型(层) → 速度(领队步伐用)。</summary>
     public Fix64 LayerSpeedCmPerSecond(int layerIdx) => Config.AgentTypes[layerIdx].SpeedCmPerSecond;
 

@@ -289,6 +289,7 @@ public sealed class CrowdSimulationConfigLoader
                 Id = u.Id,
                 AgentTypeIndex = Array.FindIndex(config.AgentTypes, a => a.Id == u.AgentType),
                 Special = u.Special,
+                TemplatesByRadiusCm = ParseTemplatesByRadiusCm(u),
             }),
             Profiles = runtimeProfiles,
             AvoidanceRadiusScale = avoidanceRadiusScale,
@@ -436,4 +437,29 @@ public sealed class CrowdSimulationConfigLoader
         "rigid" => CrowdSimulationPushMode.Rigid,
         _ => throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: push.modes 值 \"{value}\" 需为 priority / rigid"),
     };
+
+    /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>
+    private static Dictionary<int, string>? ParseTemplatesByRadiusCm(CrowdSimulationConfig.UnitTypeEntry unitType)
+    {
+        if (unitType.Templates == null) return null;
+        var parsed = new Dictionary<int, string>(unitType.Templates.Count);
+        foreach (var kvp in unitType.Templates)
+        {
+            if (!int.TryParse(kvp.Key, System.Globalization.CultureInfo.InvariantCulture, out int radiusCm) || radiusCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: unitTypes.{unitType.Id}.templates 的键 \"{kvp.Key}\" 需为 > 0 的整数半径(厘米)");
+            }
+
+            if (string.IsNullOrWhiteSpace(kvp.Value))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: unitTypes.{unitType.Id}.templates[{kvp.Key}] 需为非空模板 id");
+            }
+
+            parsed[radiusCm] = kvp.Value;
+        }
+
+        return parsed;
+    }
 }

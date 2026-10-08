@@ -12,8 +12,6 @@ namespace Ludots.Core.Navigation.AgentProfiles
         public float BeamCm { get; set; }
         public float Mass { get; set; }
         public int Layer { get; set; }
-        /// <summary>呈现身份:该体型单位出生时要挂的实体模板键(presenter 规则的 key)。空 = 不投影到呈现层。</summary>
-        public string? TemplateId { get; set; }
 
         public void Validate(int index)
         {

@@ -97,6 +97,8 @@ public sealed class RuntimeUnitType
     public required int AgentTypeIndex { get; init; }
     /// <summary>特殊单位(不参与批量部署,只能由生成工具点名)。</summary>
     public bool Special { get; init; }
+    /// <summary>半径级(厘米)→ 单位实体模板 id;生成管线按(兵种 × 半径级)实例化模板。</summary>
+    public required IReadOnlyDictionary<int, string>? TemplatesByRadiusCm { get; init; }
 }
 
 public sealed class RuntimeAgentProfile

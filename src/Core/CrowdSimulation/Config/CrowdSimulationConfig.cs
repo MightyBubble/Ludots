@@ -121,6 +121,9 @@ public sealed class CrowdSimulationConfig
         public required string AgentType { get; init; }
         /// <summary>特殊单位(不参与批量部署,只能由生成工具点名;参考实现的 unitTypes[].special)。</summary>
         public bool Special { get; init; }
+        /// <summary>半径级(厘米)→ 单位实体模板 id:该兵种出生时实例化的模板,模板自身声明 profile。
+        /// 键是 JSON 字符串,装载时按整数半径厘米解析。</summary>
+        public Dictionary<string, string>? Templates { get; init; }
     }
 
     public sealed class AgentsSection

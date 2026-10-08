@@ -205,18 +205,66 @@ public sealed class CrowdSimulationRuntime
             new Gameplay.Spawning.EntityTemplateKeyRef { TemplateKeyId = sessionTemplateKeyId },
             new BlackboardFloatBuffer());
 
-        var templateKeyByProfileId = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (int i = 0; i < agentProfiles.Count; i++)
+        // 单位模板映射:unitTypes[].templates 按(兵种 × 半径级)声明,模板自身声明 profile;
+        // 在此预解析成 id 表并做闭包校验(模板存在、profile 的移动类型与半径级一致)。
+        var templateRegistry = engine.MapLoader.TemplateRegistry;
+        var unitTypeTemplates = new (string TemplateId, int TemplateKeyId)[runtimeConfig.UnitTypes.Count][];
+        for (int t = 0; t < runtimeConfig.UnitTypes.Count; t++)
         {
-            string? templateId = agentProfiles[i].TemplateId;
-            if (string.IsNullOrWhiteSpace(templateId)) continue;
-            templateKeyByProfileId[agentProfiles[i].Id] = templateKeys.GetId(templateId);
+            var unitType = runtimeConfig.UnitTypes[t];
+            if (unitType.TemplatesByRadiusCm == null || unitType.TemplatesByRadiusCm.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id} 未声明 templates(半径级厘米 → 模板 id);单位生成管线按(兵种 × 半径级)实例化模板。");
+            }
+
+            var row = new (string TemplateId, int TemplateKeyId)[radiusClasses.Count];
+            for (int r = 0; r < radiusClasses.Count; r++)
+            {
+                int radiusCm = radiusClasses[r];
+                if (!unitType.TemplatesByRadiusCm.TryGetValue(radiusCm, out string? templateId))
+                {
+                    throw new InvalidOperationException(
+                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates 缺半径级 {radiusCm} 的模板声明。");
+                }
+
+                var template = templateRegistry.Get(templateId)
+                    ?? throw new InvalidOperationException(
+                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates[{radiusCm}] 引用未知实体模板 \"{templateId}\"。");
+                string? profileId = template.Components.TryGetValue("CrowdSimulationAgent", out var agentNode)
+                    ? agentNode?["profileId"]?.GetValue<string>()
+                    : null;
+                if (string.IsNullOrWhiteSpace(profileId) || !agentProfiles.TryGet(profileId, out var profile))
+                {
+                    throw new InvalidOperationException(
+                        $"Entities/templates.json: 模板 \"{templateId}\" 的 CrowdSimulationAgent 缺有效 profileId(需存在于 Navigation/agent_profiles.json)。");
+                }
+
+                int agentTypeLayer = runtimeConfig.AgentTypes[unitType.AgentTypeIndex].Layer;
+                if (profile.Layer != agentTypeLayer || (int)profile.RadiusCm != radiusCm)
+                {
+                    throw new InvalidOperationException(
+                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates[{radiusCm}] 的模板 \"{templateId}\" 声明 profile \"{profileId}\"(layer {profile.Layer}, 半径 {profile.RadiusCm}),与本兵种(layer {agentTypeLayer})半径级 {radiusCm} 不一致。");
+                }
+
+                int templateKeyId = templateKeys.GetId(templateId);
+                if (templateKeyId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"CrowdSimulation 单位模板键 '{templateId}' 未注册(应由 CrowdSimulationMod 的 Entities/templates.json 提供)。");
+                }
+
+                row[r] = (templateId, templateKeyId);
+            }
+
+            unitTypeTemplates[t] = row;
         }
 
         var wiring = new CrowdSimPresentationWiring
         {
             StableIds = stableIds,
-            TemplateKeyByProfileId = templateKeyByProfileId,
+            TemplateRegistry = templateRegistry,
+            TemplatesByUnitTypeRadius = unitTypeTemplates,
             RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusM),
             SelectionOwner = _sessionEntity,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),

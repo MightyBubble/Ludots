@@ -1907,9 +1907,54 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
             }
 
-            ValidateProperties(obj, "CrowdSimulationAgent", "profileId");
+            ValidateProperties(
+                obj,
+                "CrowdSimulationAgent",
+                "profileId",
+                "agentType",
+                "radiusClassCm",
+                "speedCmPerSecond",
+                "radiusCm",
+                "personalRadiusCm");
             string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
-            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId });
+            var agent = new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId };
+            if (obj.TryGetPropertyValue("agentType", out JsonNode? agentType))
+            {
+                agent.AgentType = agentType!.GetValue<string>();
+            }
+
+            if (obj.TryGetPropertyValue("radiusClassCm", out JsonNode? radiusClassCm))
+            {
+                agent.RadiusClassCm = radiusClassCm!.GetValue<int>();
+            }
+
+            if (obj.TryGetPropertyValue("speedCmPerSecond", out JsonNode? speed))
+            {
+                agent.SpeedCmPerSecond = RequirePositiveCm(speed!, "speedCmPerSecond");
+            }
+
+            if (obj.TryGetPropertyValue("radiusCm", out JsonNode? radius))
+            {
+                agent.RadiusCm = RequirePositiveCm(radius!, "radiusCm");
+            }
+
+            if (obj.TryGetPropertyValue("personalRadiusCm", out JsonNode? personalRadius))
+            {
+                agent.PersonalRadiusCm = RequirePositiveCm(personalRadius!, "personalRadiusCm");
+            }
+
+            entity.Add(agent);
+        }
+
+        private static Ludots.Core.Mathematics.FixedPoint.Fix64 RequirePositiveCm(JsonNode node, string field)
+        {
+            double value = node.GetValue<double>();
+            if (!double.IsFinite(value) || value <= 0)
+            {
+                throw new InvalidOperationException($"CrowdSimulationAgent.{field} = {value}，需为 > 0 的数值。");
+            }
+
+            return Ludots.Core.Mathematics.FixedPoint.Fix64.FromDouble(value);
         }
 
         private static void SetCrowdSimulationNavArea(Entity entity, JsonNode data)

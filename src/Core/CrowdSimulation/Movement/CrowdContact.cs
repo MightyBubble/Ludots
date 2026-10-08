@@ -19,7 +19,7 @@ public static class CrowdContact
         var entity = units.EntityAt(i);
         var posI = world.Get<WorldPositionCm>(entity).Value;
         var stateI = world.Get<CrowdSimulationUnitState>(entity);
-        Fix64 ri = session.ProfilePersonalRadiusCm(world.Get<CrowdSimulationAgent>(entity).ProfileId);
+        Fix64 ri = world.Get<CrowdSimulationAgent>(entity).ResolvedPersonalRadiusCm;
         uint oi = stateI.Order;
         int li = stateI.Level;
         int scanned = 0;
@@ -36,7 +36,7 @@ public static class CrowdContact
                 if (stateJ.State != (byte)CrowdUnitState.Arrived || stateJ.Order != oi || stateJ.Level != li) continue;
                 var posJ = world.Get<WorldPositionCm>(entityJ).Value;
                 Fix64 dx = posI.X - posJ.X, dy = posI.Y - posJ.Y;
-                Fix64 rs = ri + session.ProfilePersonalRadiusCm(world.Get<CrowdSimulationAgent>(entityJ).ProfileId);
+                Fix64 rs = ri + world.Get<CrowdSimulationAgent>(entityJ).ResolvedPersonalRadiusCm;
                 if (dx * dx + dy * dy < rs * rs) return true;
             }
         }

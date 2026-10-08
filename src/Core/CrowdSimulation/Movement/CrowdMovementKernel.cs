@@ -71,7 +71,7 @@ public sealed class CrowdMovementKernel
         {
             var entity = session.Units.EntityAt(i);
             _positions[i] = session.World.Get<Components.WorldPositionCm>(entity).Value;
-            _radii[i] = session.ProfilePersonalRadiusCm(session.Units.ProfileIdAt(i));
+            _radii[i] = session.Units.PersonalRadiusCmAt(i);
         }
 
         Hash.Build(_positions, _radii, n);

@@ -173,24 +173,54 @@
   "unitTypes": [
     {
       "id": "infantry",
-      "agentType": "foot"
+      "agentType": "foot",
+      "templates": {
+        "100": "crowd_simulation.unit.infantry.r100",
+        "200": "crowd_simulation.unit.infantry.r200",
+        "300": "crowd_simulation.unit.infantry.r300",
+        "400": "crowd_simulation.unit.infantry.r400"
+      }
     },
     {
       "id": "navy",
-      "agentType": "hull"
+      "agentType": "hull",
+      "templates": {
+        "100": "crowd_simulation.unit.navy.r100",
+        "200": "crowd_simulation.unit.navy.r200",
+        "300": "crowd_simulation.unit.navy.r300",
+        "400": "crowd_simulation.unit.navy.r400"
+      }
     },
     {
       "id": "mountaineer",
-      "agentType": "climber"
+      "agentType": "climber",
+      "templates": {
+        "100": "crowd_simulation.unit.mountaineer.r100",
+        "200": "crowd_simulation.unit.mountaineer.r200",
+        "300": "crowd_simulation.unit.mountaineer.r300",
+        "400": "crowd_simulation.unit.mountaineer.r400"
+      }
     },
     {
       "id": "amphibious",
-      "agentType": "amphib"
+      "agentType": "amphib",
+      "templates": {
+        "100": "crowd_simulation.unit.amphibious.r100",
+        "200": "crowd_simulation.unit.amphibious.r200",
+        "300": "crowd_simulation.unit.amphibious.r300",
+        "400": "crowd_simulation.unit.amphibious.r400"
+      }
     },
     {
       "id": "jumper",
       "agentType": "leaper",
-      "special": true
+      "special": true,
+      "templates": {
+        "100": "crowd_simulation.unit.jumper.r100",
+        "200": "crowd_simulation.unit.jumper.r200",
+        "300": "crowd_simulation.unit.jumper.r300",
+        "400": "crowd_simulation.unit.jumper.r400"
+      }
     }
   ],
   "agents": {

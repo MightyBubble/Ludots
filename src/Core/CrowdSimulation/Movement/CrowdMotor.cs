@@ -206,8 +206,8 @@ public static class CrowdMotor
     }
 
     private static Fix64 ProfileSpeed(CrowdSimSession session, Arch.Core.Entity entity) =>
-        session.ProfileSpeedCmPerSecond(session.World.Get<CrowdSimulationAgent>(entity).ProfileId);
+        session.World.Get<CrowdSimulationAgent>(entity).ResolvedSpeed;
 
     private static Fix64 ProfileRadius(CrowdSimSession session, Arch.Core.Entity entity) =>
-        session.ProfilePersonalRadiusCm(session.World.Get<CrowdSimulationAgent>(entity).ProfileId);
+        session.World.Get<CrowdSimulationAgent>(entity).ResolvedPersonalRadiusCm;
 }

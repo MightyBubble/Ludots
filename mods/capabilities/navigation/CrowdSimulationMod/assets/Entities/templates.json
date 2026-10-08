@@ -6,7 +6,12 @@
         "Value": "CrowdSimulation.Unit.infantry.r100"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "foot_r100"
+        "profileId": "foot_r100",
+        "agentType": "foot",
+        "radiusClassCm": 100,
+        "speedCmPerSecond": 1400,
+        "radiusCm": 100,
+        "personalRadiusCm": 600
       }
     }
   },
@@ -17,7 +22,12 @@
         "Value": "CrowdSimulation.Unit.infantry.r200"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "foot_r200"
+        "profileId": "foot_r200",
+        "agentType": "foot",
+        "radiusClassCm": 200,
+        "speedCmPerSecond": 1400,
+        "radiusCm": 200,
+        "personalRadiusCm": 1200
       }
     }
   },
@@ -28,7 +38,12 @@
         "Value": "CrowdSimulation.Unit.infantry.r300"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "foot_r300"
+        "profileId": "foot_r300",
+        "agentType": "foot",
+        "radiusClassCm": 300,
+        "speedCmPerSecond": 1400,
+        "radiusCm": 300,
+        "personalRadiusCm": 1800
       }
     }
   },
@@ -39,7 +54,12 @@
         "Value": "CrowdSimulation.Unit.infantry.r400"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "foot_r400"
+        "profileId": "foot_r400",
+        "agentType": "foot",
+        "radiusClassCm": 400,
+        "speedCmPerSecond": 1400,
+        "radiusCm": 400,
+        "personalRadiusCm": 2400
       }
     }
   },
@@ -50,7 +70,12 @@
         "Value": "CrowdSimulation.Unit.navy.r100"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "hull_r100"
+        "profileId": "hull_r100",
+        "agentType": "hull",
+        "radiusClassCm": 100,
+        "speedCmPerSecond": 1100,
+        "radiusCm": 100,
+        "personalRadiusCm": 600
       }
     }
   },
@@ -61,7 +86,12 @@
         "Value": "CrowdSimulation.Unit.navy.r200"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "hull_r200"
+        "profileId": "hull_r200",
+        "agentType": "hull",
+        "radiusClassCm": 200,
+        "speedCmPerSecond": 1100,
+        "radiusCm": 200,
+        "personalRadiusCm": 1200
       }
     }
   },
@@ -72,7 +102,12 @@
         "Value": "CrowdSimulation.Unit.navy.r300"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "hull_r300"
+        "profileId": "hull_r300",
+        "agentType": "hull",
+        "radiusClassCm": 300,
+        "speedCmPerSecond": 1100,
+        "radiusCm": 300,
+        "personalRadiusCm": 1800
       }
     }
   },
@@ -83,7 +118,12 @@
         "Value": "CrowdSimulation.Unit.navy.r400"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "hull_r400"
+        "profileId": "hull_r400",
+        "agentType": "hull",
+        "radiusClassCm": 400,
+        "speedCmPerSecond": 1100,
+        "radiusCm": 400,
+        "personalRadiusCm": 2400
       }
     }
   },
@@ -94,7 +134,12 @@
         "Value": "CrowdSimulation.Unit.mountaineer.r100"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "climber_r100"
+        "profileId": "climber_r100",
+        "agentType": "climber",
+        "radiusClassCm": 100,
+        "speedCmPerSecond": 800,
+        "radiusCm": 100,
+        "personalRadiusCm": 600
       }
     }
   },
@@ -105,7 +150,12 @@
         "Value": "CrowdSimulation.Unit.mountaineer.r200"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "climber_r200"
+        "profileId": "climber_r200",
+        "agentType": "climber",
+        "radiusClassCm": 200,
+        "speedCmPerSecond": 800,
+        "radiusCm": 200,
+        "personalRadiusCm": 1200
       }
     }
   },
@@ -116,7 +166,12 @@
         "Value": "CrowdSimulation.Unit.mountaineer.r300"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "climber_r300"
+        "profileId": "climber_r300",
+        "agentType": "climber",
+        "radiusClassCm": 300,
+        "speedCmPerSecond": 800,
+        "radiusCm": 300,
+        "personalRadiusCm": 1800
       }
     }
   },
@@ -127,7 +182,12 @@
         "Value": "CrowdSimulation.Unit.mountaineer.r400"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "climber_r400"
+        "profileId": "climber_r400",
+        "agentType": "climber",
+        "radiusClassCm": 400,
+        "speedCmPerSecond": 800,
+        "radiusCm": 400,
+        "personalRadiusCm": 2400
       }
     }
   },
@@ -138,7 +198,12 @@
         "Value": "CrowdSimulation.Unit.amphibious.r100"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "amphib_r100"
+        "profileId": "amphib_r100",
+        "agentType": "amphib",
+        "radiusClassCm": 100,
+        "speedCmPerSecond": 1000,
+        "radiusCm": 100,
+        "personalRadiusCm": 600
       }
     }
   },
@@ -149,7 +214,12 @@
         "Value": "CrowdSimulation.Unit.amphibious.r200"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "amphib_r200"
+        "profileId": "amphib_r200",
+        "agentType": "amphib",
+        "radiusClassCm": 200,
+        "speedCmPerSecond": 1000,
+        "radiusCm": 200,
+        "personalRadiusCm": 1200
       }
     }
   },
@@ -160,7 +230,12 @@
         "Value": "CrowdSimulation.Unit.amphibious.r300"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "amphib_r300"
+        "profileId": "amphib_r300",
+        "agentType": "amphib",
+        "radiusClassCm": 300,
+        "speedCmPerSecond": 1000,
+        "radiusCm": 300,
+        "personalRadiusCm": 1800
       }
     }
   },
@@ -171,7 +246,12 @@
         "Value": "CrowdSimulation.Unit.amphibious.r400"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "amphib_r400"
+        "profileId": "amphib_r400",
+        "agentType": "amphib",
+        "radiusClassCm": 400,
+        "speedCmPerSecond": 1000,
+        "radiusCm": 400,
+        "personalRadiusCm": 2400
       }
     }
   },
@@ -182,7 +262,12 @@
         "Value": "CrowdSimulation.Unit.jumper.r100"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "leaper_r100"
+        "profileId": "leaper_r100",
+        "agentType": "leaper",
+        "radiusClassCm": 100,
+        "speedCmPerSecond": 1200,
+        "radiusCm": 100,
+        "personalRadiusCm": 600
       }
     }
   },
@@ -193,7 +278,12 @@
         "Value": "CrowdSimulation.Unit.jumper.r200"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "leaper_r200"
+        "profileId": "leaper_r200",
+        "agentType": "leaper",
+        "radiusClassCm": 200,
+        "speedCmPerSecond": 1200,
+        "radiusCm": 200,
+        "personalRadiusCm": 1200
       }
     }
   },
@@ -204,7 +294,12 @@
         "Value": "CrowdSimulation.Unit.jumper.r300"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "leaper_r300"
+        "profileId": "leaper_r300",
+        "agentType": "leaper",
+        "radiusClassCm": 300,
+        "speedCmPerSecond": 1200,
+        "radiusCm": 300,
+        "personalRadiusCm": 1800
       }
     }
   },
@@ -215,7 +310,12 @@
         "Value": "CrowdSimulation.Unit.jumper.r400"
       },
       "CrowdSimulationAgent": {
-        "ProfileId": "leaper_r400"
+        "profileId": "leaper_r400",
+        "agentType": "leaper",
+        "radiusClassCm": 400,
+        "speedCmPerSecond": 1200,
+        "radiusCm": 400,
+        "personalRadiusCm": 2400
       }
     }
   },

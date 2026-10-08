@@ -120,7 +120,7 @@ public static class CrowdIntents
                 }
             }
 
-            Fix64 spd = ProfileSpeedOf(session, world.Get<CrowdSimulationAgent>(entity).ProfileId);
+            Fix64 spd = world.Get<CrowdSimulationAgent>(entity).ResolvedSpeed;
             Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cell];
             spd = spd / (costHere == Fix64.Zero ? Fix64.OneValue : costHere);
 
@@ -288,8 +288,6 @@ public static class CrowdIntents
 
         return null;
     }
-
-    private static Fix64 ProfileSpeedOf(CrowdSimSession session, string profileId) => session.ProfileSpeedCmPerSecond(profileId);
 
     private static int CompAt(NavContext nav, int cell, int lv) => nav.CompAt(cell, lv);
 
