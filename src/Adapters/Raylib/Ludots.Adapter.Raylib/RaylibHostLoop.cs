@@ -85,6 +85,12 @@ namespace Ludots.Adapter.Raylib
                 captureWanted = true;
             }
 
+            // 窗口未聚焦（用户还没点进来/切走了）绝不锁鼠标——否则用户连聚焦都做不到。
+            if (!Rl.IsWindowFocused())
+            {
+                captureWanted = false;
+            }
+
             bool hidden = Rl.IsCursorHidden();
             if (captureWanted && !hidden)
             {
