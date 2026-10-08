@@ -246,7 +246,9 @@
     "goalArriveCells": 1,
     "settleRadiusCells": 2,
     "clumpSlack": 1.3,
-    "minClumpCells": 1.5
+    "minClumpCells": 1.5,
+    "headingInheritDot": 0.94,
+    "mirrorFlipDot": -0.5
   },
   "formations": [
     {

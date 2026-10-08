@@ -446,7 +446,7 @@ public sealed class CrowdSimPlanner
             // D61:反转继承 mirror;D62 同向继承朝向(近似同向才继,真转弯立刻按新朝向排槽)
             if (pl.Prev is { } prev)
             {
-                leader.InheritFrom(prev);
+                leader.InheritFrom(prev, fc.MirrorFlipDot, fc.HeadingInheritDot);
             }
 
             o.Leaders.Add(leader);

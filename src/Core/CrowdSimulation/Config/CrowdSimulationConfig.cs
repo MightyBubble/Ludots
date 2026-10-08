@@ -194,6 +194,10 @@ public sealed class CrowdSimulationConfig
         public required double SettleRadiusCells { get; init; }
         public required double ClumpSlack { get; init; }
         public required double MinClumpCells { get; init; }
+        /// <summary>与上一任领队朝向的点积上限继承阈值(参考实现 planner.js 内联 0.94)。</summary>
+        public required double HeadingInheritDot { get; init; }
+        /// <summary>与上一任领队朝向的点积反转阈值(参考实现 planner.js 内联 -0.5)。</summary>
+        public required double MirrorFlipDot { get; init; }
     }
 
     public sealed class FormationShapeEntry

@@ -172,6 +172,8 @@ public sealed class RuntimeFormationSection
     public required Fix64 SettleRadiusCells { get; init; }
     public required Fix64 ClumpSlack { get; init; }
     public required Fix64 MinClumpCells { get; init; }
+    public required Fix64 HeadingInheritDot { get; init; }
+    public required Fix64 MirrorFlipDot { get; init; }
 }
 
 public sealed class RuntimeFormationShape

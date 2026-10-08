@@ -44,6 +44,9 @@ public class CrowdSimulationConfigTests
 
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
         Assert.That(runtime.Formation.MagicBoxMaxSpreadCm, Is.EqualTo(Fix64.FromInt(250000)));
+        // 领队继承阈值与参考实现内联字面量同值(D61 反转 -0.5 / D62 同向 0.94)。
+        Assert.That(runtime.Formation.HeadingInheritDot, Is.EqualTo(Fix64.FromDouble(0.94)));
+        Assert.That(runtime.Formation.MirrorFlipDot, Is.EqualTo(Fix64.FromDouble(-0.5)));
         Assert.That(runtime.Deploy.Bases[0].XCm, Is.EqualTo(480000));
         Assert.That(runtime.Deploy.Bases[0].YCm, Is.EqualTo(560000));
 
@@ -99,6 +102,14 @@ public class CrowdSimulationConfigTests
         Assert.That(ex!.Message, Does.Contain("hpa.clusterSize = 2"));
         Assert.That(ex.Message, Does.Contain("≥ 4"));
         Assert.That(ex.Message, Does.Contain("≤ 128"));
+
+        var dotJson = TestDefaults.DefaultConfigJson();
+        dotJson["formation"]!["mirrorFlipDot"] = 0.5;
+        var dotConfig = CrowdSimulationConfig.Load(dotJson);
+        var dotEx = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(dotConfig));
+        Assert.That(dotEx!.Message, Does.Contain("formation.mirrorFlipDot = 0.5"));
+        Assert.That(dotEx.Message, Does.Contain("≥ -1"));
+        Assert.That(dotEx.Message, Does.Contain("≤ 0"));
     }
 
     [Test]

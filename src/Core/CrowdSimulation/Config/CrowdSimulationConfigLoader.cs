@@ -342,6 +342,8 @@ public sealed class CrowdSimulationConfigLoader
                 SettleRadiusCells = Fix64.FromDouble(config.Formation.SettleRadiusCells),
                 ClumpSlack = Fix64.FromDouble(config.Formation.ClumpSlack),
                 MinClumpCells = Fix64.FromDouble(config.Formation.MinClumpCells),
+                HeadingInheritDot = Fix64.FromDouble(config.Formation.HeadingInheritDot),
+                MirrorFlipDot = Fix64.FromDouble(config.Formation.MirrorFlipDot),
             },
             Formations = Array.ConvertAll(config.Formations, f => new RuntimeFormationShape
             {

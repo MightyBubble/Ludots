@@ -68,13 +68,14 @@ public sealed class CrowdLeader
     }
 
     /// <summary>
-    /// 继承上一任领队(D61/D62):方向点积 &lt; -0.5 的反转令 mirror 翻转并继承;
-    /// 近似同向(点积 &gt; 0.94)且非固定朝向时继承旧朝向,避免整队绕领队自拧。
+    /// 继承上一任领队(D61/D62):方向点积 &lt; mirrorFlipDot 的反转令 mirror 翻转并继承;
+    /// 近似同向(点积 &gt; headingInheritDot)且非固定朝向时继承旧朝向,避免整队绕领队自拧。
     /// </summary>
-    public void InheritFrom(CrowdLeader prev)
+    public void InheritFrom(CrowdLeader prev, Fix64 mirrorFlipDot, Fix64 headingInheritDot)
     {
-        Mirror = prev.Mirror != (prev.Hx * Hx + prev.Hy * Hy < Fix64.FromFloat(-0.5f));
-        if (!Fixed && prev.Hx * Hx + prev.Hy * Hy > Fix64.FromFloat(0.94f))
+        Fix64 dot = prev.Hx * Hx + prev.Hy * Hy;
+        Mirror = prev.Mirror != (dot < mirrorFlipDot);
+        if (!Fixed && dot > headingInheritDot)
         {
             Hx = prev.Hx;
             Hy = prev.Hy;

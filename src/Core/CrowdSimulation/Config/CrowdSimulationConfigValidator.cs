@@ -83,6 +83,8 @@ public static class CrowdSimulationConfigValidator
         Rule("formation.goalArriveCells", config.Formation.GoalArriveCells, gt: 0);
         Rule("formation.settleRadiusCells", config.Formation.SettleRadiusCells, gt: 0);
         Rule("formation.leaderLookAhead", config.Formation.LeaderLookAhead, gt: 0);
+        Rule("formation.headingInheritDot", config.Formation.HeadingInheritDot, min: 0, max: 1);
+        Rule("formation.mirrorFlipDot", config.Formation.MirrorFlipDot, min: -1, max: 0);
         Rule("fog.rateHz", config.Fog.RateHz, gt: 0, max: 30);
         Rule("fog.cellCells", config.Fog.CellCells, intRequired: true, min: 1, max: 32);
         Rule("fog.visionCm", config.Fog.VisionCm, gt: 0);
