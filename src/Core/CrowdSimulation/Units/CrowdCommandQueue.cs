@@ -11,6 +11,7 @@ public readonly record struct CrowdCommand(int Tick, JsonNode Payload);
 /// TICK 戳指令队列(core/commands.js CommandQueue 移植):
 /// submit(现场指令,当前 tick 执行并记日志)、schedule(按 tick 升序的脚本,与存量归并)、
 /// flush(执行本 tick 及以前的全部到点指令;迟到的指令按实际执行 tick 记日志并标 lateFrom)。
+/// 两个入队口都先过指令面校验(L23):坏指令不进日志/队列,live 与回放对称拒收。
 /// 日志是会话的完整输入:sources + log 重放即复现状态。
 /// </summary>
 public sealed class CrowdCommandQueue
@@ -25,12 +26,13 @@ public sealed class CrowdCommandQueue
     public T Submit<T>(CrowdSimSession sim, JsonNode cmd, Func<CrowdSimSession, JsonNode, T> exec)
     {
         var copy = (JsonNode)cmd.DeepClone();
+        CrowdSimCommands.Validate(sim, copy);
         _log.Add((sim.TickCount, copy));
         return exec(sim, copy);
     }
 
     /// <summary>脚本入队(须按 tick 升序;与未执行的存量按 tick 归并,同 tick 先到先执行)。</summary>
-    public void Schedule(IReadOnlyList<CrowdCommand> entries)
+    public void Schedule(CrowdSimSession sim, IReadOnlyList<CrowdCommand> entries)
     {
         for (int k = 1; k < entries.Count; k++)
         {
@@ -39,6 +41,8 @@ public sealed class CrowdCommandQueue
                 throw new InvalidOperationException("指令脚本需按 tick 升序。");
             }
         }
+
+        foreach (var e in entries) CrowdSimCommands.Validate(sim, e.Payload);
 
         var rest = _queue.GetRange(_head, PendingCount);
         var add = new List<(int Tick, JsonNode Cmd)>(entries.Count);

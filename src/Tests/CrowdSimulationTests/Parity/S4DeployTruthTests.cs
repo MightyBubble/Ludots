@@ -36,7 +36,7 @@ public class S4DeployTruthTests
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
         var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), (JsonNode)e["cmd"]!.DeepClone())).ToArray();
 
-        session.Commands.Schedule(script);
+        session.Commands.Schedule(session, script);
         for (int t = 0; t < frames.Length; t++)
         {
             string hash = session.Step();
@@ -79,13 +79,13 @@ public class S4DeployTruthTests
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
         var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), (JsonNode)e["cmd"]!.DeepClone())).ToArray();
 
-        session.Commands.Schedule(script);
+        session.Commands.Schedule(session, script);
         var first = new List<string>();
         session.Advance(frames.Length, first);
 
         // 同一份记录回放:全新会话(参考实现的回放也是新仿真,句柄代从 0 起)
         var (_, session2) = BuildSession(seed);
-        session2.Commands.Schedule(script);
+        session2.Commands.Schedule(session2, script);
         var second = new List<string>();
         session2.Advance(frames.Length, second);
 

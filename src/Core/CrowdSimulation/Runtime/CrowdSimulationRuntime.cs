@@ -334,7 +334,7 @@ public sealed class CrowdSimulationRuntime
             }
         }
 
-        _session.Commands.Schedule(_pendingScript);
+        _session.Commands.Schedule(_session, _pendingScript);
         _autoReplayAtTick = _debug["session"]?["autoReplayAtTick"]?.GetValue<int>() ?? -1;
         _autoReplayDone = false;
         ReplayStatus = 0;
@@ -460,14 +460,14 @@ public sealed class CrowdSimulationRuntime
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
             replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
-            replay.Commands.Schedule(entries);
+            replay.Commands.Schedule(replay, entries);
             var replayHashes = new List<string>(ticks);
             replay.Advance(ticks, replayHashes);
             CompareReplay(ticks, replayHashes);
             return;
         }
 
-        replay.Commands.Schedule(entries);
+        replay.Commands.Schedule(replay, entries);
         var replayHashes2 = new List<string>(ticks);
         replay.Advance(ticks, replayHashes2);
         CompareReplay(ticks, replayHashes2);

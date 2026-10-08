@@ -10,7 +10,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// </summary>
 public static class CrowdSimCommands
 {
-    /// <summary>指令玩家号门禁:关系矩阵按玩家号直查(1..P),表外 id 不允许进求解器。</summary>
+    /// <summary>指令玩家号门禁:关系矩阵按玩家号直查(1..P),表外 id 不允许进求解器。
+    /// 主门在入队时(Validate);Exec 内的调用是防御断言,兜住绕过队列直呼 Exec 的路径。</summary>
     private static void RequirePlayer(CrowdSimSession sim, int player)
     {
         int count = sim.Config.Relations.PlayerCount;
@@ -19,6 +20,17 @@ public static class CrowdSimCommands
             throw new System.InvalidOperationException(
                 $"指令 player = {player},有效范围 1..{count}(关系矩阵按玩家号直查,表外 id 不允许)。");
         }
+    }
+
+    /// <summary>入队校验(L23):坏指令在进日志/队列之前拒绝——拖到 Exec 时刻才抛,坏指令已入
+    /// 日志再停摆,live 与回放不对称(D29 同型)。覆盖带玩家号的指令面;缺字段/未知 type 的
+    /// 结构性坏指令仍由 Exec 防御层拦(不入队路径的合同不变)。</summary>
+    public static void Validate(CrowdSimSession sim, JsonNode cmd)
+    {
+        string? type = cmd["type"]?.GetValue<string>();
+        if (type is not ("spawnAt" or "select" or "selectAll" or "order")) return;
+        var player = cmd["player"] ?? throw new System.InvalidOperationException($"指令 {type} 缺少 player 字段。");
+        RequirePlayer(sim, player.GetValue<int>());
     }
 
     public static object? Exec(CrowdSimSession sim, JsonNode cmd)

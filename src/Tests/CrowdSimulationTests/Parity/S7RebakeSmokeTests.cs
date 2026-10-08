@@ -40,7 +40,7 @@ public class S7RebakeSmokeTests
         };
         var script = new List<CrowdCommand>();
         foreach (var (tick, json) in entries) script.Add(new CrowdCommand(tick, Cmd(json)));
-        session.Commands.Schedule(script);
+        session.Commands.Schedule(session, script);
 
         int rebakes = 0;
         int dirtyTiles = 0;
@@ -62,7 +62,7 @@ public class S7RebakeSmokeTests
         using var service2 = new PathQueryService(session2.Navs, runtime2, 1, TimeSpan.FromSeconds(30));
         session2.EnableMovement(CrowdMovementKernel.Create(session2), new CrowdSimPlanner(session2, service2));
         session2.BlockOnDueReplies = true;
-        session2.Commands.Schedule(script);
+        session2.Commands.Schedule(session2, script);
         var second = new List<string>();
         session2.Advance(240, second);
         Assert.That(second, Is.EqualTo(first).AsCollection, "同脚本回放校验码不一致(结构 op 管线非确定)");
