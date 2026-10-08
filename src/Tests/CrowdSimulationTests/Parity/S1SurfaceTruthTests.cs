@@ -34,6 +34,32 @@ public class S1SurfaceTruthTests
     }
 
     [Test]
+    public void NavSurfaceContract_RejectsMismatchedAssets()
+    {
+        var runtime = LoadRuntime("s1337");
+        using var stream = File.OpenRead(Path.Combine(SeedDir("s1337"), "terrain", "crowd_simulation_s1337.navsurface"));
+        var surface = NavSurfaceAsset.Read(stream);
+
+        NavSurfaceAsset Mutate(int cellsX, int cellsY, int cellSizeCm, string[] typeIds) => new()
+        {
+            CellsX = cellsX,
+            CellsY = cellsY,
+            CellSizeCm = cellSizeCm,
+            TerrainTypeIds = typeIds,
+            TerrainCells = surface.TerrainCells,
+            JumpCandidates = surface.JumpCandidates,
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.Validate(Mutate(surface.CellsX + 1, surface.CellsY, surface.CellSizeCm, surface.TerrainTypeIds), runtime));
+        Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.Validate(Mutate(surface.CellsX, surface.CellsY, surface.CellSizeCm * 2, surface.TerrainTypeIds), runtime));
+        string[] renamed = surface.TerrainTypeIds.Select(id => id + "_x").ToArray();
+        Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.Validate(Mutate(surface.CellsX, surface.CellsY, surface.CellSizeCm, renamed), runtime));
+    }
+
+    [Test]
     public void TruthDigest_MatchesWebExport([ValueSource(nameof(Seeds))] string seed)
     {
         var runtime = LoadRuntime(seed);
