@@ -93,6 +93,12 @@ artifacts/showcases/*
 !artifacts/showcases/graph-fsm-bt-refactor-design.md
 !artifacts/showcases/enum-driven-fsm-showcase-design.md
 !artifacts/showcases/capability-standard-*/
+!artifacts/camera-rig-explainer/
+artifacts/camera-rig-explainer/*
+!artifacts/camera-rig-explainer/index.html
+!artifacts/camera-rig-explainer/three.min.js
+!artifacts/camera-rig-explainer/OrbitControls.js
+!artifacts/camera-rig-explainer/README.md
 !artifacts/evidence/
 artifacts/evidence/*
 !artifacts/evidence/capability_standard_graph_op_*/
