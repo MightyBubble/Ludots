@@ -551,7 +551,8 @@ function canonComp(comp, n2) {
         let h = mix32(mix32(2166136261, sim.tickCount), n);
         for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonX[i] * 100 * 4294967296)));
         for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonY[i] * 100 * 4294967296)));
-        for (let k = 0; k < 6; k++) for (let i = 0; i < n; i++) h = mix32(h, 0);
+        // L02:运动字段按原始 int64 低 32 → 高 32 两词混入(与 C# CrowdSimChecksum 同形);部署会话无运动栈,两词恒零
+        for (let k = 0; k < 6; k++) for (let i = 0; i < n; i++) h = mixI64(h, 0n);
         for (let i = 0; i < n; i++) h = mix32(h, u.state[i]);
         for (let i = 0; i < n; i++) h = mix32(h, u.group[i]);
         for (let i = 0; i < n; i++) h = mix32(h, u.id[i]);
@@ -594,7 +595,7 @@ function canonComp(comp, n2) {
       }
       writeFileSync(join(outRoot, 'parity', 's4-deploy-truth.json'), JSON.stringify({
         mapId, seed,
-        note: 'S4 规范校验码以 Fix64 原始值为口径(甲方体系);生成位置经镜像侧 S4 归一补丁按 Fix64 语义逐 op 求值。脚本玩家编号 1..P 为 Ludots 约定。',
+        note: 'S4 规范校验码以 Fix64 原始值为口径(甲方体系);生成位置经镜像侧 S4 归一补丁按 Fix64 语义逐 op 求值。运动字段按原始 int64 低→高两词混入(L02;部署会话无运动栈恒零)。脚本玩家编号 1..P 为 Ludots 约定。',
         script, frames,
         unitCount: sim.units.count,
         spawnSeq: sim.spawnSeq,
@@ -606,10 +607,8 @@ function canonComp(comp, n2) {
     // ───────────────────────────── S5:移动与阵型轨迹真相 ─────────────────────────────
     // 轨迹是浮点派生量:参考端 f64(detMath),Ludots 端 Fix64(甲方体系)——对拍口径 =
     // 状态机字段逐位 + 位置逐 tick 带宽(带值实证校准后写进测试,不藏在导出器里)。
-    // 两端同一显式开关关避让/推挤(__S5_NO_AVOIDANCE__:哈希照建,只跳分离求解)。
     {
       globalThis.__S4_FIX64_SPAWN__ = true;
-      globalThis.__S5_NO_AVOIDANCE__ = true;
       const { Simulation } = await import('../src/engine/simulation.js');
       const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
       const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
@@ -654,7 +653,7 @@ function canonComp(comp, n2) {
       writeFileSync(join(outRoot, 'parity', 's5-trajectory.bin'), w.build());
       writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify({
         mapId, seed,
-        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。两端同一屏蔽开关 __S5_NO_AVOIDANCE__ 关避让/推挤(哈希照建,到达接触语义不变)。',
+        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。',
         ticks: TICKS, script,
       }, null, 2));
       console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);

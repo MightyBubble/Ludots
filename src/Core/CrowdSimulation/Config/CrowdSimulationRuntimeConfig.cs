@@ -44,6 +44,8 @@ public sealed class CrowdSimulationRuntimeConfig
     public required RuntimeMovementSection Movement { get; init; }
     public required RuntimeAvoidanceSection Avoidance { get; init; }
     public required RuntimePushSection Push { get; init; }
+    /// <summary>关系推挤矩阵(P×P,玩家下标 = 地图 Players 表序):逐对推挤模式,避让热路径查表。</summary>
+    public required RuntimeRelations Relations { get; init; }
     public required RuntimeSimSection Sim { get; init; }
     public required RuntimeSpawnSection Spawn { get; init; }
     public required RuntimeStructuresSection Structures { get; init; }
@@ -229,6 +231,14 @@ public sealed class RuntimePushSection
     public required CrowdSimulationPushMode Friendly { get; init; }
     public required CrowdSimulationPushMode Neutral { get; init; }
     public required CrowdSimulationPushMode Hostile { get; init; }
+}
+
+/// <summary>关系推挤矩阵(core/relations.js buildRelations 产物):PushModeByPair[a * P + b] 为
+/// 玩家下标 a 对 b 的推挤模式(下标 = 地图 Players 表序;PlayerOwner.PlayerId = 下标 + 1)。</summary>
+public sealed class RuntimeRelations
+{
+    public required int PlayerCount { get; init; }
+    public required CrowdSimulationPushMode[] PushModeByPair { get; init; }
 }
 
 public sealed class RuntimeSimSection

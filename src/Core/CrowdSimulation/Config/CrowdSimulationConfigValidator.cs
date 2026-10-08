@@ -60,6 +60,56 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.laneSpread", config.Movement.LaneSpread, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
+        // 关系种类上限 256(D36:P×P Uint8 矩阵的编号域)。
+        if (config.Relations.Kinds.Count < 1 || config.Relations.Kinds.Count > 256)
+        {
+            throw Invalid("relations.kinds", $"需要 1~256 项（当前 {config.Relations.Kinds.Count} 项）");
+        }
+
+        foreach (var (name, kind) in config.Relations.Kinds)
+        {
+            if (kind.Push is not ("priority" or "rigid"))
+            {
+                throw Invalid($"relations.kinds.{name}.push", "需为 priority / rigid");
+            }
+        }
+
+        foreach (var (path, kind) in new[]
+        {
+            (path: "relations.self", kind: config.Relations.Self),
+            (path: "relations.sameTeam", kind: config.Relations.SameTeam),
+            (path: "relations.default", kind: config.Relations.Default),
+        })
+        {
+            if (!config.Relations.Kinds.ContainsKey(kind))
+            {
+                throw Invalid(path, $"引用未定义的关系 \"{kind}\"");
+            }
+        }
+
+        foreach (var o in config.Relations.Overrides)
+        {
+            if (!config.Relations.Kinds.ContainsKey(o.Kind))
+            {
+                throw Invalid("relations.overrides", $"引用未定义的关系 \"{o.Kind}\"");
+            }
+        }
+
+        var radiusSeen = new HashSet<int>();
+        foreach (var rc in config.Agents.RadiusClasses)
+        {
+            if (rc.RadiusCm <= 0)
+            {
+                throw Invalid("agents.radiusClasses.radiusCm", "需为 > 0 的整数");
+            }
+
+            if (!radiusSeen.Add(rc.RadiusCm))
+            {
+                throw Invalid("agents.radiusClasses", $"半径 {rc.RadiusCm} 重复");
+            }
+
+            Rule($"agents.radiusClasses[{rc.RadiusCm}].pushPriority", rc.PushPriority, min: 0);
+        }
         Rule("avoidance.rateHz", config.Avoidance.RateHz, gt: 0);
         Rule("avoidance.acceleration", config.Avoidance.Acceleration, gt: 0);
         Rule("avoidance.maxPush", config.Avoidance.MaxPush, gt: 0);

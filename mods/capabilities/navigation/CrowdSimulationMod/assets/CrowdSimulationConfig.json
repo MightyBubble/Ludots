@@ -225,7 +225,25 @@
   ],
   "agents": {
     "avoidanceRadiusScale": 6,
-    "profilesUri": "CrowdSimulationMod:assets/Navigation/agent_profiles.json"
+    "profilesUri": "CrowdSimulationMod:assets/Navigation/agent_profiles.json",
+    "radiusClasses": [
+      {
+        "radiusCm": 100,
+        "pushPriority": 0
+      },
+      {
+        "radiusCm": 200,
+        "pushPriority": 1
+      },
+      {
+        "radiusCm": 300,
+        "pushPriority": 2
+      },
+      {
+        "radiusCm": 400,
+        "pushPriority": 3
+      }
+    ]
   },
   "navmesh": {
     "minRegionArea": 12,
@@ -399,5 +417,22 @@
   "telemetry": {
     "turnEpsRad": 0.035,
     "ema": 0.2
+  },
+  "relations": {
+    "kinds": {
+      "self": {
+        "push": "priority"
+      },
+      "ally": {
+        "push": "priority"
+      },
+      "enemy": {
+        "push": "rigid"
+      }
+    },
+    "self": "self",
+    "sameTeam": "ally",
+    "default": "enemy",
+    "overrides": []
   }
 }

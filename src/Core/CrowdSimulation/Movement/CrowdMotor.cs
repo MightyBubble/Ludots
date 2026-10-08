@@ -67,9 +67,15 @@ public static class CrowdMotor
             }
 
             bool rest = state.State != (byte)CrowdUnitState.Moving;
-            // 静止跳过以休眠(calm)为前提:S5 关避让 calm 恒 0,静止单位照样过马达——
-            // 生成落点压住被挡格时墙面滑出是真实位置来源(参考端 calm=0 的新单位即如此);
-            // S6 接休眠后此分支才恢复"calm 且全零则跳过"。
+            // 静态岛休眠(rest && calm && 全零则整步跳过,参考 motor 同款条件):推力/意图/速度
+            // 全零的睡单位不耗马达;新生单位 calm=0 必醒——生成落点压住被挡格时墙面滑出仍是真实位置来源。
+            if (rest && k.Calm[i] != 0
+                && kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero
+                && k.Separation[i].X == Fix64.Zero && k.Separation[i].Y == Fix64.Zero
+                && k.Intent[i].X == Fix64.Zero && k.Intent[i].Y == Fix64.Zero)
+            {
+                continue;
+            }
 
             var nav = session.Navs[session.Groups.Groups[state.GroupId]!.NavId];
             int lv = state.Level;

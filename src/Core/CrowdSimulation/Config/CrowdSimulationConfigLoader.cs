@@ -164,6 +164,18 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         var avoidanceRadiusScale = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);
+        // 原型推挤优先级(参考 core/archetypes.js)= agentTypes[].pushPriority + 半径级份额(authored 数据,
+        // 参考端 radiusClasses[].pushPriority);份额按半径厘米查表,每个派生半径级必须有条目。
+        var radiusShareByRadiusCm = new Dictionary<int, double>();
+        foreach (var rc in config.Agents.RadiusClasses)
+        {
+            if (!radiusShareByRadiusCm.TryAdd(rc.RadiusCm, rc.PushPriority))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 半径 {rc.RadiusCm} 重复");
+            }
+        }
+
         var runtimeProfiles = new List<RuntimeAgentProfile>(profiles.Count);
         for (int i = 0; i < profiles.Count; i++)
         {
@@ -182,12 +194,19 @@ public sealed class CrowdSimulationConfigLoader
                     $"Navigation/agent_profiles.json: AgentProfile \"{p.Id}\" 换算的净空 {clearance} 超过 255 格");
             }
 
+            int radiusKey = (int)radiusCm.ToInt();
+            if (!radiusShareByRadiusCm.TryGetValue(radiusKey, out double radiusShare))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 缺半径 {radiusKey} 的条目(profile \"{p.Id}\")");
+            }
+
             runtimeProfiles.Add(new RuntimeAgentProfile
             {
                 Id = p.Id,
                 RadiusCm = radiusCm,
                 PersonalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidanceRadiusScale),
-                PushPriority = Fix64.FromDouble(p.Mass),
+                PushPriority = Fix64.FromDouble(config.AgentTypes[agentTypeIndex].PushPriority + radiusShare),
                 AgentTypeIndex = agentTypeIndex,
                 ClearanceCells = clearance,
                 NavContextId = CrowdSimulationSpace.NavContextId(p.Layer, clearance),
@@ -395,6 +414,7 @@ public sealed class CrowdSimulationConfigLoader
                 Neutral = ParsePushMode(config.Push.Modes.Neutral),
                 Hostile = ParsePushMode(config.Push.Modes.Hostile),
             },
+            Relations = BuildRelations(config, map),
             Sim = new RuntimeSimSection { MaxUnits = config.Sim.MaxUnits, TimeScale = Fix64.FromDouble(config.Sim.TimeScale) },
             Spawn = new RuntimeSpawnSection
             {
@@ -436,6 +456,83 @@ public sealed class CrowdSimulationConfigLoader
         "rigid" => CrowdSimulationPushMode.Rigid,
         _ => throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: push.modes 值 \"{value}\" 需为 priority / rigid"),
     };
+
+    /// <summary>关系推挤矩阵(core/relations.js buildRelations 移植):解析序 overrides > 同玩家 > 同队 > default;
+    /// overrides 的玩家号必须存在于地图 Players。矩阵下标 = Players 表序,另存玩家号 → 下标表。</summary>
+    private static RuntimeRelations BuildRelations(CrowdSimulationConfig config, MapConfig map)
+    {
+        var kinds = config.Relations.Kinds;
+        var kindIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var name in kinds.Keys)
+        {
+            if (!kindIndexByName.TryAdd(name, kindIndexByName.Count))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: relations.kinds 关系 \"{name}\" 重复");
+            }
+        }
+
+        var kindPush = new CrowdSimulationPushMode[kinds.Count];
+        foreach (var (name, entry) in kinds)
+        {
+            if (entry.Push is not ("priority" or "rigid"))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: relations.kinds.{name}.push 值 \"{entry.Push}\" 需为 priority / rigid");
+            }
+
+            kindPush[kindIndexByName[name]] = ParsePushMode(entry.Push);
+        }
+
+        int P = map.Players.Count;
+        var indexByPlayerId = new Dictionary<int, int>(P);
+        var teamByIndex = new int?[P];
+        for (int i = 0; i < P; i++)
+        {
+            indexByPlayerId[map.Players[i].PlayerId] = i;
+            teamByIndex[i] = map.Players[i].TeamId > 0 ? map.Players[i].TeamId : null;
+        }
+
+        string KindOf(int a, int b) =>
+            a == b ? config.Relations.Self
+            : teamByIndex[a] != null && teamByIndex[a] == teamByIndex[b] ? config.Relations.SameTeam
+            : config.Relations.Default;
+
+        var matrix = new CrowdSimulationPushMode[P * P];
+        for (int a = 0; a < P; a++)
+        {
+            for (int b = 0; b < P; b++)
+            {
+                string kindName = KindOf(a, b);
+                if (!kindIndexByName.TryGetValue(kindName, out int kindIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"{CrowdSimulationConfigValidator.FileName}: relations.self / relations.sameTeam / relations.default 引用未定义的关系 \"{kindName}\"");
+                }
+
+                matrix[a * P + b] = kindPush[kindIndex];
+            }
+        }
+
+        foreach (var o in config.Relations.Overrides)
+        {
+            if (!indexByPlayerId.TryGetValue(o.A, out int a) || !indexByPlayerId.TryGetValue(o.B, out int b))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未知玩家 {o.A} / {o.B}");
+            }
+
+            if (!kindIndexByName.TryGetValue(o.Kind, out int kindIndex))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未定义的关系 \"{o.Kind}\"");
+            }
+
+            matrix[a * P + b] = matrix[b * P + a] = kindPush[kindIndex];
+        }
+
+        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix };
+    }
 
     /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>
     private static Dictionary<int, string>? ParseTemplatesByRadiusCm(CrowdSimulationConfig.UnitTypeEntry unitType)

@@ -1915,7 +1915,8 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 "radiusClassCm",
                 "speedCmPerSecond",
                 "radiusCm",
-                "personalRadiusCm");
+                "personalRadiusCm",
+                "pushPriority");
             string profileId = RequireStringProperty(obj, "profileId", "CrowdSimulationAgent");
             var agent = new Ludots.Core.CrowdSimulation.CrowdSimulationAgent { ProfileId = profileId };
             if (obj.TryGetPropertyValue("agentType", out JsonNode? agentType))
@@ -1941,6 +1942,11 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
             if (obj.TryGetPropertyValue("personalRadiusCm", out JsonNode? personalRadius))
             {
                 agent.PersonalRadiusCm = RequirePositiveCm(personalRadius!, "personalRadiusCm");
+            }
+
+            if (obj.TryGetPropertyValue("pushPriority", out JsonNode? pushPriority))
+            {
+                agent.PushPriority = RequirePositiveCm(pushPriority!, "pushPriority");
             }
 
             entity.Add(agent);

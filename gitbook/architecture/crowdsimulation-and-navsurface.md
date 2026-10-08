@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）、S4-a（ECS 单位部署 + 规范校验码 + 指令记录回放内核）、S4-b（部署演示纯数据化：单位经 presenter 管线进画面,自动部署 + 自动回放对拍）、S5-a（移动内核与阵型：虚拟领队 / 意图 / 马达 / 槽位 / 规划器,轨迹对拍）已交付。S5-b（拖线摆阵演示与走廊扩展）与 S6（避让推挤）见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）、S4-a（ECS 单位部署 + 规范校验码 + 指令记录回放内核）、S4-b（部署演示纯数据化：单位经 presenter 管线进画面,自动部署 + 自动回放对拍）、S5-a（移动内核与阵型：虚拟领队 / 意图 / 马达 / 槽位 / 规划器,轨迹对拍）、S5-b（最小避让：非对称分离 / 关系推挤矩阵 / calm 休眠,L02 校验码运动字段重钉）已交付。拖线摆阵演示与走廊扩展、S6 剩余（态度模式推挤 / 阻挡盒推挤）见文末路线。
 
 ## 这是什么
 
@@ -164,11 +164,21 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 - **移植**（`src/Core/CrowdSimulation/Movement/`,对照参考实现 `movement/{leaders,intent,motor,flowSample,contact,walls}.js`、`orders/order.js`、`formation.js`、`planning/planner.js`、`sim/issueOrder.js`）：`CrowdLeader`（虚拟领队：前视转向 / 限速 / D61 镜像 / D62 朝向继承 / SetStart）、`CrowdIntents`（槽位 ↔ 流场 blend、LOS 滞回、D59、车道展开、D60、停滞触碰到达、LY-5 桥头层切换）、`CrowdMotor`（一阶响应 / 转向限速 / 速度上限 / 墙面滑动 / 跳跃）、`CrowdFormations`（assignSlots / relativeSlots / layoutSideBySide）、`CrowdOrderBook` + `CrowdIssueOrder`（magic box chooseMode、D57 去重、重组）、`CrowdSimPlanner`（plan / applyDue / finishOrder,走 S3-c 的固定生效帧路径服务）、`CrowdSpatialHash` / `CrowdWalls` / `CrowdContact` / `CrowdBlockerColliders` / `CrowdFlowSample`。
 - **会话接线**：`CrowdSimSession.Step()` 返回 `string?`——规划答复未回时返 null,引擎让出本帧（`BlockOnDueReplies` 区分真机让出与无头同步等待）;`CrowdSimulationKinematics` 恒挂;校验码运动字段从占位零改读真值;`NavContext` 收编 `CanReach`（LY-4：上层编号接地面顺排 + 桥头互通边）,`NavLinkSet` 退回纯数据。`order` 指令进 `CrowdSimCommands.Exec`。
-- **对拍（`S5TrajectoryTruthTests`,600 tick × 241 单位,种子 1337,crowd 全量 75/75）**：状态机字段（state / mode / level / order）全程逐位全等;位置是浮点派生量,按逐 tick 带宽比对。初校实测 p99 = 2234 cm,当时判为等代价隘口的合法平局翻转并据此定带;静态审计抓出马达转向限速乘法溢出（P0,修复于 a83d929585）后复校,p99 = 0.17 cm、max = 0.66 cm、末 30 tick max 0.17 cm——大分歧全是溢出所致,带值收紧为 `MaxTrajectoryBandCm = 100`、`FinalBandCm = 10`（各留约 150 / 60 倍余量,内核回归以米级偏差触警）。两端挂同一屏蔽开关 `__S5_NO_AVOIDANCE__` 关避让推挤（避让是 S6 的活;哈希照建,到达与接触语义不变）。真值资产 `s5-trajectory.bin` + 脚本 JSON 进 S1Terrain1337Mod 的 parity 目录。
+- **对拍（`S5TrajectoryTruthTests`,600 tick × 241 单位,种子 1337,crowd 全量 75/75）**：状态机字段（state / mode / level / order）全程逐位全等;位置是浮点派生量,按逐 tick 带宽比对。初校实测 p99 = 2234 cm,当时判为等代价隘口的合法平局翻转并据此定带;静态审计抓出马达转向限速乘法溢出（P0,修复于 a83d929585）后复校,p99 = 0.17 cm、max = 0.66 cm、末 30 tick max 0.17 cm——大分歧全是溢出所致,带值收紧为 `MaxTrajectoryBandCm = 100`、`FinalBandCm = 10`（各留约 150 / 60 倍余量,内核回归以米级偏差触警）。两端当时挂同一屏蔽开关 `__S5_NO_AVOIDANCE__` 关避让推挤（哈希照建,到达与接触语义不变）;该开关随 S5-b 摘除,避让成为内核固有行为,带值同步按避让开启口径重测（见 S5-b 段）。真值资产 `s5-trajectory.bin` + 脚本 JSON 进 S1Terrain1337Mod 的 parity 目录。
 - **踩过的坑（已固化成代码注释或测试）**：① Fix64（Q32.32）的平方在厘米域约 463 m 就溢出——领队 aim / step、拉直路点方向、槽位距离、chooseMode spread 全部中招（山地领队曾因此瞬间走完全路径、路点方向曾全零致单位卡死）,`CrowdFix.Hypot` 先按最大值归一再开方,厘米域长度一律走它;② 碰撞半径口径是**个人半径**（radiusCm × avoidanceRadiusScale = 600 cm）,不是导航半径 100 cm——墙面滑出 / 接触 / 阵型占地 / 空间哈希环统一读 `ProfilePersonalRadiusCm`（真值里 u173/u174 钉在面 − 600 实锤）;③ 马达静止分支的跳过条件是 `rest && calm && 全零`——S5 关避让后 calm 恒 0,静止单位照过马达,压住被挡格时的墙面滑出是真实位置来源;曾误加成全零即跳,已还原（S6 接 calm 时再评估是否恢复跳过）。
 - **真机演示**：S4Deploy 演示相机补 `targetSource: Fixed` + `fixedTargetCm`——此前 `VirtualCameraRequest` 只带相机 id,轨道目标沿用地图默认相机位姿（世界中心、19.2 km 视距）,12000 单位全程在画幅外;Fixed 位姿是 `VirtualCameraBrain` 的现成激活语义,零代码。视距定在 400 m：r400 单位（8 m 方块）约 7 px,阵型间距与玩家色可读,`allowUserInput` 保持,可自由缩放平移跟随行军。验收图 `raylib-s1337-s5move{4,5,6}.png`（1.5 km 行军带 / 800 m 阵型散布 / 400 m 单位特写）。
 - **审计**：交叉对抗审计 A 链 8 片（leader / intents / motor / formations / orders / planner 两片 / support）+ B 链 3 片（会话停摆 / 导出契约 / 运行时指令）全绿,托管 deepseek-v4-pro;spark 抽查 s5-intents 空响应（已知不稳,未计入）。两片附注确认审计真实读码：motor 片的 metrics / calm 裁剪与 support 片的定点等价表达均被识别为声明过的移植口径,不计缺陷。
-- **S5 剩余（S5-b）**：拖线摆阵演示（走 S3-c 路线视觉缓冲同一条路）、走廊扩展 processPending、多起点 D08 规划;避让推挤归 S6。
+- **S5 剩余**：拖线摆阵演示（走 S3-c 路线视觉缓冲同一条路）、走廊扩展 processPending、多起点 D08 规划;最小避让已随 S5-b 交付,态度模式推挤与阻挡盒推挤仍归 S6。
+
+## S5-b 交付：最小避让（本次）
+
+- **移植**（`Movement/CrowdAvoidance.cs`,对照 `avoidance.js computeSeparation` 全 13 条语义）：哈希序聚集(腾空 JUMP 半径记 0)、逐格唤醒标记与静态岛跳过、只同层相碰（LY-6）、同组双动对称对半、关系矩阵推挤模式（priority:低者让 1−dominantShare / 相等对半 / rigid:休息单位对移动单位不可动）、双预算（maxNeighbors 数重叠对,maxScan 数所有读到的候选,D07）、查询范围 = 单位自己的哈希环、格剔除（边格永不剔）、完全堆叠对的确定性伪随机反对称轴（下标对派生,绝不同向）、接触边界连续的分离式、calm 休眠、maxPush 截断 + 时间平滑、stride 行错峰降频。关系矩阵（`core/relations.js buildRelations` 移植,进 `CrowdSimulationConfigLoader`）：overrides > 同玩家 > 同队 > default 逐对解析成 P×P 推挤模式表;config 新增 `relations` 节（kinds ≤ 256 即 D36、push 枚举、self/sameTeam/default 闭包、overrides 玩家闭包）与 `agents.radiusClasses`（半径级推挤份额,原型优先级 = agentTypes[].pushPriority + 份额——此前误用 profiles 的 mass,首次真消费时按参考语义纠正）。
+- **内核接线**：子步序与参考 `tick()` 一致（哈希重建 → 分离求解 + 相位前移 → 领队 → 意图 → 马达）;stride 按参考 setRates 推导（30 Hz × 1 子步 ÷ avoidHz 15 = 2,行错峰）;马达接 sepW 权重并恢复 rest∧calm∧全零 的休眠跳过;意图层补 ARRIVED∧calm∧零速 直接休眠门;spawn 清推挤与 calm（D54）。`pushPriority` 下沉为模板组件字段（与速度/半径同层,模板缺省按配置补全）。
+- **屏蔽开关摘除**：两端 `__S5_NO_AVOIDANCE__` 同步删除（导出器与沙盒引擎）,避让成为内核固有行为,会话与内核不留开关位。
+- **L02 校验码重钉**：运动字段（vx/vy/slotX/slotY/blend/stall）从"每字段混一个零词"改为按原始 int64 低 32 → 高 32 两词混入——导出端 canonChecksum（mixI64）与 `CrowdSimChecksum` 同步;部署会话无运动栈,两词恒零,真值变化来自混法本身。S4 真值三种子重导,150 帧逐字全等。
+- **对拍（`S5TrajectoryTruthTests`,600 tick × 241 单位,种子 1337,crowd 全量 76/76）**：状态机字段全程逐位全等（0 处不一致）;位置带宽按避让开启口径实测重定——p50 = 0.07 cm、p99 = 17.3 cm、max = 136.1 cm、末 30 tick max = 35.1 cm,带值定 `MaxTrajectoryBandCm = 500` / `FinalBandCm = 100`（3.7× / 2.9× 余量;参考端 f32 存储在 11 km 坐标上的量化噪声被推挤接触逐步放大,属浮点派生量带宽;结构级分歧照常以米-公里级偏差触警）。
+- **踩过的坑（已固化成代码或注释）**：① 堆叠伪随机轴是米口径,厘米域须 ×100,漏乘则堆叠推力量级差 60 倍;② sep 是无量纲公式值（两端同数）,restDeadband/maxPush 阈值必须与参考逐字同数,按"米→厘米 ×100"换算会把休眠判定错 100 倍、单位集体睡死;③ 空间哈希的 reach 与格距必须用最大**个人**半径（2400 cm → 格 4800）,误用导航半径(400)时 S5-a 无预算路径侥幸等价,预算裁剪（maxNeighbors/maxScan）下接触子集即分叉。
+- **真机**：12000 单位上屏,行军/到达区无叠点（避让可视）,tick 速率无明显劣化;截图 `raylib-s1337-s5move9-avoidance.png`。
 
 ## 当前缺口（诚实清单）
 

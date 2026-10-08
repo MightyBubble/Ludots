@@ -36,6 +36,7 @@ public sealed class CrowdSimulationConfig
     public required MovementSection Movement { get; init; }
     public required AvoidanceSection Avoidance { get; init; }
     public required PushSection Push { get; init; }
+    public required RelationsSection Relations { get; init; }
     public required SimSection Sim { get; init; }
     public required SpawnSection Spawn { get; init; }
     public required StructuresSection Structures { get; init; }
@@ -132,6 +133,16 @@ public sealed class CrowdSimulationConfig
         /// <summary>本会话的体型档案来源(mod URI,如 "CrowdSimulationMod:assets/Navigation/agent_profiles.json")。
         /// 缺失 = 用引擎全局档案注册表(与别的特性共享,半径级会并集——只对明确接受这一点的场景)。</summary>
         public string? ProfilesUri { get; init; }
+        /// <summary>半径级表(参考实现 templates.radiusClasses):半径级厘米 + 该级的推挤优先级份额,
+        /// 与 agentTypes[].pushPriority 合成原型优先级(参考 core/archetypes.js)。</summary>
+        public required RadiusClassEntry[] RadiusClasses { get; init; }
+    }
+
+    /// <summary>半径级(参考实现 templates.radiusClasses 条目):净空与推挤份额的 authored 数据。</summary>
+    public sealed class RadiusClassEntry
+    {
+        public required int RadiusCm { get; init; }
+        public required double PushPriority { get; init; }
     }
 
     public sealed class NavmeshSection
@@ -252,6 +263,32 @@ public sealed class CrowdSimulationConfig
         public required double MovingBonus { get; init; }
         public required double DominantShare { get; init; }
         public required PushModesSection Modes { get; init; }
+    }
+
+    /// <summary>
+    /// 关系接口(参考实现 globals.relations):(玩家 a, 玩家 b) → 关系种类,一次解析进 P×P 矩阵。
+    /// 解析序 overrides > 同玩家(self) > 同队(sameTeam) > default;每种关系带推挤模式
+    /// (priority = 高优先级推低 / rigid = 刚性,休息单位挡住移动单位)。
+    /// </summary>
+    public sealed class RelationsSection
+    {
+        public required Dictionary<string, RelationsKindEntry> Kinds { get; init; }
+        public required string Self { get; init; }
+        public required string SameTeam { get; init; }
+        public required string Default { get; init; }
+        public RelationsOverrideEntry[] Overrides { get; init; } = Array.Empty<RelationsOverrideEntry>();
+    }
+
+    public sealed class RelationsKindEntry
+    {
+        public required string Push { get; init; }
+    }
+
+    public sealed class RelationsOverrideEntry
+    {
+        public required int A { get; init; }
+        public required int B { get; init; }
+        public required string Kind { get; init; }
     }
 
     public sealed class PushModesSection

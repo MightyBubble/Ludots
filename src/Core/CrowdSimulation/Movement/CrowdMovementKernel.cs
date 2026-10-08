@@ -10,11 +10,28 @@ public sealed class CrowdMovementKernel
     public required CrowdSpatialHash Hash { get; init; }
     /// <summary>意图输出(厘米/秒,按稠密序);马达层读它做一阶响应。</summary>
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
-    /// <summary>避让分离推力(S6 才写入;S5 恒零,马达照常读)。</summary>
+    /// <summary>避让分离推力(厘米;每子步由分离求解写入,马达读)。</summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
+    /// <summary>静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。</summary>
+    public byte[] Calm = Array.Empty<byte>();
+    /// <summary>哈希序聚集缓冲(分离求解的逐格读取面,与参考 sepCtx 同构)。</summary>
+    public Fix64[] GatherX = Array.Empty<Fix64>();
+    public Fix64[] GatherY = Array.Empty<Fix64>();
+    public Fix64[] GatherRadius = Array.Empty<Fix64>();
+    public Fix64[] GatherPriority = Array.Empty<Fix64>();
+    public byte[] GatherPlayer = Array.Empty<byte>();
+    public byte[] GatherLevel = Array.Empty<byte>();
+    public byte[] GatherMoving = Array.Empty<byte>();
+    public int[] GatherGroup = Array.Empty<int>();
+    /// <summary>逐占格唤醒标记(下标 = 哈希 Active 槽位)。</summary>
+    public byte[] Awake = Array.Empty<byte>();
     public CrowdWalls.OpenCellCache OpenCache { get; init; } = new();
     /// <summary>流场采样的本帧暂存(方向写出)。</summary>
     public int Tick;
+
+    // ── 避让相位(参考 sepCtx.stride/phase):avoidHz 对子步频率的降频错峰 ──
+    public required int Stride { get; set; }
+    public int Phase { get; set; }
 
     // ── 参数包(参考实现 p = {...formation, ...movement, slotGain: 1/slotTimeConstant, ...avoidance 局部})──
     public required Fix64 BlendRate { get; init; }
@@ -38,6 +55,12 @@ public sealed class CrowdMovementKernel
     public required Fix64 SeparationWeight { get; init; }
     public required Fix64 RestDeadband { get; init; }
     public required int MaxScan { get; init; }
+    public required int MaxNeighbors { get; init; }
+    /// <summary>单单位单次求解的推力上限(sep 与参考同为无量纲公式值,阈值逐字同参考 maxPush)。</summary>
+    public required Fix64 MaxPush { get; init; }
+    public required Fix64 Smoothing { get; init; }
+    public required Fix64 MovingBonus { get; init; }
+    public required Fix64 DominantShare { get; init; }
     public required Fix64 UnitTurnRate { get; init; }
     public required Fix64 StopSpeedRatio { get; init; }
     public required Fix64 SpeedCapRatio { get; init; }
@@ -56,6 +79,35 @@ public sealed class CrowdMovementKernel
         if (Separation.Length < unitCapacity) Separation = new Fix64Vec2[unitCapacity];
         if (_positions.Length < unitCapacity) _positions = new Fix64Vec2[unitCapacity];
         if (_radii.Length < unitCapacity) _radii = new Fix64[unitCapacity];
+        EnsureAvoidanceCapacity(unitCapacity);
+    }
+
+    /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>
+    public void EnsureAvoidanceCapacity(int unitCapacity)
+    {
+        if (Calm.Length < unitCapacity) Calm = new byte[unitCapacity];
+        if (GatherX.Length < unitCapacity) GatherX = new Fix64[unitCapacity];
+        if (GatherY.Length < unitCapacity) GatherY = new Fix64[unitCapacity];
+        if (GatherRadius.Length < unitCapacity) GatherRadius = new Fix64[unitCapacity];
+        if (GatherPriority.Length < unitCapacity) GatherPriority = new Fix64[unitCapacity];
+        if (GatherPlayer.Length < unitCapacity) GatherPlayer = new byte[unitCapacity];
+        if (GatherLevel.Length < unitCapacity) GatherLevel = new byte[unitCapacity];
+        if (GatherMoving.Length < unitCapacity) GatherMoving = new byte[unitCapacity];
+        if (GatherGroup.Length < unitCapacity) GatherGroup = new int[unitCapacity];
+    }
+
+    /// <summary>D54:新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>
+    public void ClearPush(int dense)
+    {
+        if (dense < Separation.Length) Separation[dense] = Fix64Vec2.Zero;
+        if (dense < Calm.Length) Calm[dense] = 0;
+    }
+
+    /// <summary>分离求解 + 相位前移(参考 tick():哈希重建后、领队之前)。</summary>
+    public void SolveSeparation()
+    {
+        CrowdAvoidance.Solve(this);
+        if (Stride > 1) Phase = (Phase + 1) % Stride;
     }
 
     private Fix64Vec2[] _positions = Array.Empty<Fix64Vec2>();
@@ -100,20 +152,29 @@ public sealed class CrowdMovementKernel
         Tick++;
     }
 
-    /// <summary>从运行时配置装配内核(参数包 = formation + movement + slotGain=1/slotTimeConstant + avoidance 局部;空间哈希按体型上限定尺寸)。</summary>
+    /// <summary>从运行时配置装配内核(参数包 = formation + movement + slotGain=1/slotTimeConstant + avoidance 局部;空间哈希按体型上限定尺寸)。
+    /// sep 是无量纲公式值(restDeadband/maxPush 阈值与参考逐字同数);降频 stride 按参考 setRates 推导:stepHz/min(avoidHz, stepHz) 四舍五入。</summary>
     public static CrowdMovementKernel Create(CrowdSimSession session, CrowdWalls.OpenCellCache? openCache = null)
     {
         var cfg = session.Config;
         var fc = cfg.Formation;
         var mv = cfg.Movement;
         var av = cfg.Avoidance;
+        // 哈希几何按最大个人(避让)半径:参考端 reach = max(personal),格距 = 2×reach/rings
         Fix64 maxRadiusCm = Fix64.Zero;
-        foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.RadiusCm);
+        foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);
         int hashCellCm = Math.Max(1, (int)(maxRadiusCm * 2).ToLong() / Math.Max(1, av.HashRings));
+        var hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, (int)maxRadiusCm.ToLong());
+        int stepHz = cfg.FixedHz * session.SubSteps;
+        int avoidHz = (int)av.RateHz.ToDouble();
+        int stride = Math.Max(1, (int)(stepHz / Math.Min(avoidHz, (double)stepHz) + 0.5));
+        int hashCells = hash.Dim * hash.Dim;
         return new CrowdMovementKernel
         {
             Session = session,
-            Hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, (int)maxRadiusCm.ToLong()),
+            Hash = hash,
+            Awake = new byte[hashCells],
+            Stride = stride,
             OpenCache = openCache ?? new CrowdWalls.OpenCellCache(),
             BlendRate = mv.BlendRate,
             BlendCommit = mv.BlendCommit,
@@ -136,6 +197,11 @@ public sealed class CrowdMovementKernel
             SeparationWeight = av.SeparationWeight,
             RestDeadband = av.RestDeadband,
             MaxScan = av.MaxScan,
+            MaxNeighbors = av.MaxNeighbors,
+            MaxPush = av.MaxPush,
+            Smoothing = av.Smoothing,
+            MovingBonus = cfg.Push.MovingBonus,
+            DominantShare = cfg.Push.DominantShare,
             UnitTurnRate = mv.UnitTurnRate,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,

@@ -35,10 +35,17 @@ public static class CrowdSimChecksum
             h = Mix(h, (uint)(pos.Y.RawValue >> 32));
         }
 
-        // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序;S4 恒零,S5 起为真值)
+        // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序)
+        // L02 重钉:每个定点字段按原始 int64 低 32 → 高 32 两词混入(与导出端 mixI64 同形);
+        // 旧口径只混低 32 词,随 S6 校验码混法变更一并作废。
         for (int k = 0; k < 6; k++)
         {
-            for (int i = 0; i < n; i++) h = Mix(h, MotionWord(sim, i, k));
+            for (int i = 0; i < n; i++)
+            {
+                long raw = MotionRaw(sim, i, k);
+                h = Mix(h, (uint)raw);
+                h = Mix(h, (uint)(raw >> 32));
+            }
         }
 
         // 整型字段:state / group / id / order / mode / level
@@ -55,14 +62,12 @@ public static class CrowdSimChecksum
     private static uint Mix(uint h, uint v) => (h ^ v) * Prime;
 
     /// <summary>
-    /// 运动字段的校验词:Fix64 原始值低 32 位。参考实现是 f64 词(double 位型),
-    /// 两端都取"内部存储的原始整型低 32"——跨引擎一致性由 S5 的轨迹带宽口径兜底,
-    /// 回放自一致(同引擎同输入同位流)不受影响。
+    /// 运动字段的定点原始值:Fix64 原始 int64(校验码按低→高两词混入,与导出端 mixI64 同形)。
     /// </summary>
-    private static uint MotionWord(CrowdSimSession sim, int dense, int field)
+    private static long MotionRaw(CrowdSimSession sim, int dense, int field)
     {
         var entity = sim.Units.EntityAt(dense);
-        if (!sim.World.Has<CrowdSimulationKinematics>(entity)) return 0u;
+        if (!sim.World.Has<CrowdSimulationKinematics>(entity)) return 0;
         var kin = sim.World.Get<CrowdSimulationKinematics>(entity);
         Fix64 v = field switch
         {
@@ -73,6 +78,6 @@ public static class CrowdSimChecksum
             4 => kin.Blend,
             _ => kin.StallSeconds,
         };
-        return (uint)v.RawValue;
+        return v.RawValue;
     }
 }

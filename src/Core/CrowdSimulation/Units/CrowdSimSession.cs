@@ -101,7 +101,9 @@ public sealed class CrowdSimSession
         {
             for (int s = 0; s < SubSteps; s++)
             {
+                // 子步序与参考 tick() 一致:哈希重建 → 分离求解(+相位前移) → 领队 → 意图 → 马达
                 Movement.RebuildHash();
+                Movement.SolveSeparation();
                 Movement.Step(SubStepDt);
             }
         }

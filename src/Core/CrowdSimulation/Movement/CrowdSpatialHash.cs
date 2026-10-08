@@ -26,6 +26,12 @@ public sealed class CrowdSpatialHash
 
     public readonly int CellSizeCm;
     public int Rings => _rings;
+    /// <summary>网格边长(格)与查询触及距离(厘米):格剔除的矩形几何用。</summary>
+    public int Dim => _dim;
+    public int ReachCm => _reachCm;
+    public int CellRingOf(int cell) => _cellRing[cell];
+    public int StartOf(int cell) => _start[cell];
+    public int CountOf(int cell) => _count[cell];
     public readonly int[] Active;
     public int ActiveCount { get; private set; }
     public int Reused { get; private set; }

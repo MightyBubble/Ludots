@@ -160,9 +160,12 @@ public static class CrowdDeployment
             profile.Id,
             profile.RadiusCm,
             profile.PersonalRadiusCm,
-            cfg.AgentTypes[g.LayerIdx].SpeedCmPerSecond);
+            cfg.AgentTypes[g.LayerIdx].SpeedCmPerSecond,
+            profile.PushPriority);
         int dense = sim.Units.Add(in unit);
         if (dense < 0) return dense;
+        // D54:槽位复用不带陈旧推挤;新单位 calm=0,首次求解前必醒
+        sim.Movement?.ClearPush(dense);
         g.Count++;
         return dense;
     }

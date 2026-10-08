@@ -45,11 +45,13 @@ public static class CrowdIntents
             var state = world.Get<CrowdSimulationUnitState>(entity);
             var kin = world.Get<CrowdSimulationKinematics>(entity);
 
-            // ARRIVED 且无速度:只在被推离休息锚点足够远时醒来(S5 无休眠位,恒醒)
+            // 静态岛在 resting 锚点上睡着(参考 intent 同款门):calm 且零速的到达单位不做任何决策;
+            // 不 calm 的到达单位仍走位移唤醒测试——被推离休息锚点足够远才醒。
             if (state.State == (byte)CrowdUnitState.Arrived)
             {
                 if (kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero)
                 {
+                    if (k.Calm[i] != 0) continue;
                     var pos0 = world.Get<WorldPositionCm>(entity).Value;
                     Fix64 ox = kin.RestCm.X - pos0.X, oy = kin.RestCm.Y - pos0.Y;
                     if (ox * ox + oy * oy > wake2)

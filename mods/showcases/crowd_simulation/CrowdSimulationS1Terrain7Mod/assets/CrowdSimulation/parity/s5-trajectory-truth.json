@@ -1,6 +1,6 @@
 {
-  "mapId": "crowd_simulation_s1337",
-  "seed": 1337,
+  "mapId": "crowd_simulation_s7",
+  "seed": 7,
   "note": "S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。",
   "ticks": 600,
   "script": [

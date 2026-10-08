@@ -23,7 +23,8 @@ public readonly record struct CrowdUnitSpawnRequest(
     string ProfileId,
     Fix64 RadiusCm,
     Fix64 PersonalRadiusCm,
-    Fix64 SpeedCmPerSecond);
+    Fix64 SpeedCmPerSecond,
+    Fix64 PushPriority);
 
 /// <summary>
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
@@ -99,6 +100,7 @@ public sealed class CrowdSimUnits
                 SpeedCmPerSecond = unit.SpeedCmPerSecond,
                 RadiusCm = unit.RadiusCm,
                 PersonalRadiusCm = unit.PersonalRadiusCm,
+                PushPriority = unit.PushPriority,
             },
             new CrowdSimulationUnitState { Slot = slot, GroupId = unit.GroupId, State = 0, Mode = 0, Level = 0, Order = 0 },
             new CrowdSimulationKinematics(),
@@ -152,6 +154,7 @@ public sealed class CrowdSimUnits
         agent.SpeedCmPerSecond ??= unit.SpeedCmPerSecond;
         agent.RadiusCm ??= unit.RadiusCm;
         agent.PersonalRadiusCm ??= unit.PersonalRadiusCm;
+        agent.PushPriority ??= unit.PushPriority;
         _world.Set(entity, agent);
     }
 
