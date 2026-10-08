@@ -18,6 +18,8 @@ NavSurface（`.navsurface`）是新增的地表资产：逐导航格的地形类
 
 不引入第二套数学：内核全部使用 `src/Core/Math/FixedPoint` 的 Fix64 / Fix64Math（Q31.32 与其确定性超越函数），长度单位为厘米，与 `WorldPositionCm` 同单位制。配置文件维持 Ludots 约定（厘米、`Cm` 后缀），文件值在组装层一次性转 Fix64，内核不再做单位换算。Web 侧的 `DetMath` 计划由此废止——对拍时以 Ludots 定点语义为准生成基线，Web 参考实现如需对拍要适配同一套定点算法。
 
+烘焙期边界：运行期内核（部署 / 移动 / 规划）全 Fix64；`NavHeightField` 的 .height 样本解码与 `NavTileBaker` 的简化 / 边长阈值比较、格心归属判定允许 IEEE double，产物进定点域（定点厘米 / 整数格角点）前一次性转换，依据见 S2 段——定点域内直接乘会溢出 Q31.32，且 Web 导出端同样从量化样本重建，两端读同一份输入。
+
 ## 目录落点
 
 ```
@@ -53,6 +55,27 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 - 组件注册走 `ComponentRegistry`（`CrowdSimulationAgent` 已登记）
 - 测试沿用 NUnit + `src/Tests/*` 项目格局
 
+## 与主干平行组件的存留理由
+
+内核里有四组与主干既有设施功能平行的组件，每组对应参考实现（CrowdSimulation Web 沙盒）的一个文件。它们是逐 op 对拍的移植面，替换即破对拍，处置原则是保留并写明对应物：
+
+- `Nav/NavMinHeap` ↔ 主干 `Collections/Fix64PriorityQueue<T>`。参考对应物 `engine/heap.js`。移植保持同构：穴插法上滤 / 下滤、同级并列取左孩子、Fix64 键 + int 值并行数组、零逐节点分配。S3-b 抽象图拓扑逐位 FNV 对拍挂在它的弹出序上；换泛型堆需要重新证明同键并列的弹出序一致，对拍表面不动。
+- `Units/CrowdSimRng` ↔ 主干 `Engine/Randomization/RngStreamService`。参考对应物 `engine/noise.js` 的 mulberry32。两者算法不同（RngStream 是 xorshift32，CrowdSimRng 是 mulberry32）、输出转换不同（RngStream 的 NextFloat01 是 24 位整数 ÷ (2²⁴−1)，CrowdSimRng 是 u32 ÷ 2³² 直进 Fix64 原始值——二进分数，精确）；盐流合同也不同：部署按指令加盐（`CrowdDeployment` 用 worldSeed × spawnSeq 组合派生每条指令自己的流），RngStreamService 是先声明后取用的命名流注册表。S4 部署对拍要求 12020 个单位位置原始值逐位一致，换流必破。
+- `Units/CrowdSimCommands` + `CrowdCommandQueue` ↔ 主干 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录；日志 = 完整输入，回放 = 新会话 + 同一日志。它记录的是仿真输入指令，不是引擎权威帧，两者不是同一类东西的两种实现。
+- `Nav/NavFunnel` ↔ 主干 `Navigation/NavMesh/Bake/FunnelAlgorithm`。参考对应物 `engine/navquery.js` 的漏斗。判等语义是硬分界：NavFunnel 全 Fix64 精确等（`ax == rx`，与参考实现的 JS 数值严格等一致），主干版是 float32 Vector2 + 1e-6 容差近似等；漏斗折线是领队路径的直接输入，退化 portal 处顶点差一位，后续 600 tick 轨迹全变。
+
+四件均非历史遗留（各有活跃消费者与对拍义务），无收编项。
+
+### 指令日志能否由 ReplayRecorder 承载：不能
+
+边缘接入评估的结论：记录面留在 `CrowdCommandQueue`，内核语义不变。阻塞理由：
+
+1. 帧载荷装不下。`AuthoritativeAction` =（ActionId 字符串，Vector3 float32，三个布尔），帧内 ActionId 按字典序唯一、浮点必须有限；JSON 指令的字符串字段（type / shape）、嵌套数组（face[2]）、同 tick 内的提交顺序都没有无损落点。任何编码器都是新的有损适配层，压在逐位对拍的输入上。
+2. 检查点生产者不存在。`ReplayRecorder.SetCheckpoint` 要求 `WorldSaveSnapshot`（engine.World 二进制 + ModSetHash / RegistryFingerprint 头），只能由 `WorldSnapshotService.Capture(GameEngine, boundary)` 产出；对拍与回放会话是一次性 `ArchWorld.Create()`（无 GameEngine，无 save participant 注册表）。
+3. 播放端同样要 `GameEngine` + `WorldRestoreService`（`ReplayPlayer.PlayFromCheckpoint`）；crowd 回放契约"新会话 + 同一日志"已由 `CrowdSimulationRuntime.RunReplay` 与 `S4DeployTruthTests`（同一记录回放两次校验码相同）覆盖，换播放端不增加能力，只增加依赖。
+
+重开条件：指令载荷进入引擎权威帧合同（字符串 / 嵌套 / 顺序可无损表达），且 crowd 会话具备检查点的生产与消费管线。
+
 ## 配置门禁（S0 的核心交付）
 
 加载在进入地图时进行，错误消息写明文件、字段路径与规则，例如：
@@ -61,7 +84,7 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 CrowdSimulationConfig.json: hpa.clusterSize = 2，需为整数、≥ 4、≤ 128
 ```
 
-覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。版本不等于当前 v7 一律拒绝，无迁移。
+覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。版本不等于当前 v7 一律拒绝，无迁移。例外：formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充——参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
 
 ## .navsurface v1 格式要点
 
