@@ -95,7 +95,8 @@ public static class CrowdWalls
                 Fix64 qy = Fix64.Min(by + cs, Fix64.Max(by, py));
                 Fix64 dx = px - qx, dy = py - qy;
                 Fix64 d2 = dx * dx + dy * dy;
-                if (d2 >= r2 || d2 <= Fix64.FromFloat(1e-12f)) continue;
+                // 参考端 1e-12 是双精度域守卫,Q31.32 下 FromFloat(1e-12f) 截断为 0——最小正 raw 量即等价语义
+                if (d2 >= r2 || d2 <= Fix64.FromRaw(1)) continue;
                 Fix64 d = Fix64Math.Sqrt(d2);
                 dx /= d;
                 dy /= d;

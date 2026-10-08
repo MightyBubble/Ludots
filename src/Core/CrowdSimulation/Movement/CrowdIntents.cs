@@ -34,8 +34,8 @@ public static class CrowdIntents
         Fix64 commit = k.BlendCommit;
         int every = k.SlotCheckInterval;
         Fix64 wake2 = Square(cs * k.WakeDistanceCells);
-        Fix64 arriveSlot2 = Square(cs * k.SlotArriveCells);
-        Fix64 settle2 = Square(cs * k.SettleRadiusCells);
+        Fix64 arriveSlot = cs * k.SlotArriveCells;
+        Fix64 settle = cs * k.SettleRadiusCells;
         Fix64 stallV2 = k.StallSpeedRatio * k.StallSpeedRatio;
 
         for (int i = 0; i < n; i++)
@@ -167,10 +167,10 @@ public static class CrowdIntents
             bool arrived = false;
             Fix64 route = Fix64.FromInt(-1);
             Fix64 ox2 = tx - px, oy2 = ty - py;
-            Fix64 slotD2 = CrowdFix.DistSq(ox2, oy2);
+            Fix64 slotDist = CrowdFix.Hypot(ox2, oy2);
             if (w > Fix64.Zero)
             {
-                if (leader.Done && w > commit && slotD2 < arriveSlot2)
+                if (leader.Done && w > commit && slotDist < arriveSlot)
                 {
                     arrived = true;
                 }
@@ -232,7 +232,7 @@ public static class CrowdIntents
 
             // 群体到达:撞上同指令的静止单位,或近目标后长期无进展——只在靠近自己目的地时才算
             bool near = slotOk
-                ? slotD2 <= settle2
+                ? slotDist <= settle
                 : (route >= Fix64.Zero ? route : CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, px, py, cell, lv)) <= Fix64.FromInt(order?.ReachCells ?? 1);
             if (!arrived && leader.Done && near)
             {

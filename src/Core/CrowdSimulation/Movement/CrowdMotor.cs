@@ -104,7 +104,8 @@ public static class CrowdMotor
             // 转向限速:旧朝向朝新朝向最多转 maxTurn
             if (state.State == (byte)CrowdUnitState.Moving && o2 > slow2 && n2v > slow2)
             {
-                if (ovx * nvx + ovy * nvy < cosT * Fix64Math.Sqrt(o2 * n2v))
+                // o2·n2v 是速度平方的乘积,厘米域轻易超 Q31.32 界——分开开方,中间量不进同一乘法
+                if (ovx * nvx + ovy * nvy < cosT * Fix64Math.Sqrt(o2) * Fix64Math.Sqrt(n2v))
                 {
                     Fix64 s = ovx * nvy - ovy * nvx >= Fix64.Zero ? sinT : -sinT;
                     Fix64 f = Fix64Math.Sqrt(n2v / o2);
