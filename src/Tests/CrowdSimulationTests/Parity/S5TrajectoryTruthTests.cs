@@ -14,16 +14,16 @@ namespace CrowdSimulationTests.Parity;
 /// S5 轨迹对拍(带宽口径——浮点派生量的家规,与 S3-c 同族):
 /// 状态机字段(state/mode/level/order)逐 tick 逐单位逐位一致;
 /// 位置逐 tick 逐单位 |Δ| ≤ MaxTrajectoryBandCm;末 30 tick 再收束 ≤ FinalBandCm。
-/// 带值校准(2026-10-08,600 tick × 241 单位,seed 1337):p50=0.06cm、p99=22m、
-/// p99.9=67m(等代价隘口的择路被末位数值翻转,两解同最优、末端再收束——与 S3-c 的平局规则同族);
-/// 状态机全程零不一致。
+/// 带值校准(2026-10-08 复校,600 tick × 241 单位,seed 1337):p50=0.06cm、p99=0.17cm、max=0.66cm、
+/// 末 30 tick max 0.17cm;状态机全程零不一致。初校时的 22m 隘口分歧实证为马达转向限速乘法溢出所致
+/// (修复提交 a83d929585),非合法平局翻转——带值据此收紧两个数量级,内核回归将以米级偏差触警。
 /// </summary>
 public sealed class S5TrajectoryTruthTests
 {
-    /// <summary>逐 tick 轨迹位置带宽(厘米):瞬态隘口翻转的上界,实测 69m,留约 45% 余量。</summary>
-    private const double MaxTrajectoryBandCm = 10000.0;
-    /// <summary>末态收束带(厘米):行进末段仍在收束的单位允许的位置差;实测末 30 tick max 3.76m 且随 tick 递减(再收束中)。</summary>
-    private const double FinalBandCm = 500.0;
+    /// <summary>逐 tick 轨迹位置带宽(厘米):实测 max 0.66cm,留约 150 倍余量。</summary>
+    private const double MaxTrajectoryBandCm = 100.0;
+    /// <summary>末态收束带(厘米):实测末 30 tick max 0.17cm,留约 60 倍余量。</summary>
+    private const double FinalBandCm = 10.0;
     private const int FinalTicks = 30;
 
     [Test]
