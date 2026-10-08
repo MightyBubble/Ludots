@@ -56,7 +56,8 @@ public static class CrowdFlowSample
             int tc = t % n2;
             Fix64 wx = (Fix64.FromInt(tc % n) + Fix64.HalfValue) * cs - pxCm;
             Fix64 wy = (Fix64.FromInt(tc / n) + Fix64.HalfValue) * cs - pyCm;
-            Fix64 l = Fix64Math.Sqrt(wx * wx + wy * wy);
+            // 拉直路点可能远在数十格外,厘米平方必炸(Q32.32 界约 463m)——归一化 hypot,见 CrowdFix。
+            Fix64 l = CrowdFix.Hypot(wx, wy);
             if (l < Fix64.FromFloat(1e-3f)) continue;
             Fix64 w = ((k & 1) != 0 ? tx : Fix64.OneValue - tx) * ((k >> 1) != 0 ? ty : Fix64.OneValue - ty);
             sx += (wx / l) * w;

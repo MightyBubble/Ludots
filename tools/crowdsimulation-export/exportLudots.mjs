@@ -602,5 +602,63 @@ function canonComp(comp, n2) {
       }, null, 2));
       console.log(`[export] ${mapId} s4 units=${sim.units.count} frames=${frames.length} edge=${minEdge.toFixed(2)}m`);
     }
+
+    // ───────────────────────────── S5:移动与阵型轨迹真相 ─────────────────────────────
+    // 轨迹是浮点派生量:参考端 f64(detMath),Ludots 端 Fix64(甲方体系)——对拍口径 =
+    // 状态机字段逐位 + 位置逐 tick 带宽(带值实证校准后写进测试,不藏在导出器里)。
+    // 两端同一显式开关关避让/推挤(__S5_NO_AVOIDANCE__:哈希照建,只跳分离求解)。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      globalThis.__S5_NO_AVOIDANCE__ = true;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const navList = contexts.map((c) => c.nav);
+      const host = createNavHost(config, worldQ, structures, navList, tileCache);
+      const sim = new Simulation(sources, { world: worldQ, structures, navs: navList, tileCache, ms: 0 }, new LocalPathService(host));
+
+      // 脚本(Ludots 约定:厘米、玩家 1..P):多类型集群 + 单单位无接触轨迹
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'spawnAt', player: 2, xCm: 1120000, yCm: 1040000, count: 60, unitType: 1, rIdx: 0 } },
+        { tick: 4, cmd: { type: 'spawnAt', player: 3, xCm: 1120000, yCm: 480000, count: 60, unitType: 2, rIdx: 0 } },
+        { tick: 6, cmd: { type: 'spawnAt', player: 4, xCm: 480000, yCm: 1120000, count: 1, unitType: 4, rIdx: 0 } },
+        { tick: 10, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 14, cmd: { type: 'order', player: 2, xCm: 400000, yCm: 900000, shape: 'box' } },
+        { tick: 18, cmd: { type: 'order', player: 3, xCm: 500000, yCm: 500000, shape: 'box' } },
+        { tick: 22, cmd: { type: 'order', player: 4, xCm: 900000, yCm: 700000, shape: 'box' } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape } } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      const TICKS = 600;
+      const w = new BW();
+      w.bytes(Buffer.from('LS5T', 'ascii'));
+      w.i32(TICKS);
+      for (let t = 0; t < TICKS; t++) {
+        sim.advance(1);
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100); // 厘米
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+        }
+      }
+      writeFileSync(join(outRoot, 'parity', 's5-trajectory.bin'), w.build());
+      writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify({
+        mapId, seed,
+        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。两端同一屏蔽开关 __S5_NO_AVOIDANCE__ 关避让/推挤(哈希照建,到达接触语义不变)。',
+        ticks: TICKS, script,
+      }, null, 2));
+      console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);
+    }
+
   }
 }

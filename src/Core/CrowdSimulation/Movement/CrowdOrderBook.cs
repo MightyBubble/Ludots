@@ -35,7 +35,7 @@ public static class CrowdOrderModeChooser
         }
 
         Fix64 dx = boxMaxX - boxMinX, dy = boxMaxY - boxMinY;
-        Fix64 spread = Fix64Math.Sqrt(dx * dx + dy * dy);
+        Fix64 spread = CrowdFix.Hypot(dx, dy);
         return spread <= maxSpreadCm ? CrowdOrderMode.Preserve : CrowdOrderMode.Formation;
     }
 }

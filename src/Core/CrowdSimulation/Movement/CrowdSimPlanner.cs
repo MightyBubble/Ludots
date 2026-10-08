@@ -363,7 +363,7 @@ public sealed class CrowdSimPlanner
             if (!membersByGroup.TryGetValue(gid, out var mem)) continue;
             foreach (var i in mem)
             {
-                Fix64 d = session.ProfileRadiusCm(units.ProfileIdAt(i)) * 2 * fc.SpacingScale;
+                Fix64 d = session.ProfilePersonalRadiusCm(units.ProfileIdAt(i)) * 2 * fc.SpacingScale;
                 area += d * d;
             }
 

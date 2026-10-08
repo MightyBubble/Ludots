@@ -151,7 +151,7 @@ public static class CrowdIntents
                     Fix64 ra = CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, px, py, cell, 0);
                     Fix64 rb = CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, tx, ty, sc, 0);
                     if (ra < CrowdFlowSample.Unreachable / 4 && rb < CrowdFlowSample.Unreachable / 4 &&
-                        ra - rb > Fix64Math.Sqrt(Square(tx - px) + Square(ty - py)) / cs * RouteRatio + Fix64.OneValue)
+                        ra - rb > CrowdFix.Hypot(tx - px, ty - py) / cs * RouteRatio + Fix64.OneValue)
                     {
                         vis = false;
                     }
@@ -167,7 +167,7 @@ public static class CrowdIntents
             bool arrived = false;
             Fix64 route = Fix64.FromInt(-1);
             Fix64 ox2 = tx - px, oy2 = ty - py;
-            Fix64 slotD2 = ox2 * ox2 + oy2 * oy2;
+            Fix64 slotD2 = CrowdFix.DistSq(ox2, oy2);
             if (w > Fix64.Zero)
             {
                 if (leader.Done && w > commit && slotD2 < arriveSlot2)
@@ -208,7 +208,7 @@ public static class CrowdIntents
                     k.OnStray?.Invoke(g.Id, cell);
                     // D60:走廊外保持朝领队速度,等走廊扩展落地
                     Fix64 lx = leader.X - px, ly = leader.Y - py;
-                    Fix64 ld = Fix64Math.Sqrt(lx * lx + ly * ly);
+                    Fix64 ld = CrowdFix.Hypot(lx, ly);
                     if (ld > Fix64.FromFloat(1e-6f))
                     {
                         dvx += (lx / ld) * spd * (Fix64.OneValue - w);

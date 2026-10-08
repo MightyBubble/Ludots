@@ -91,7 +91,7 @@ public sealed class CrowdLeader
             if (a.Full)
             {
                 Fix64 dx = a.X - _path[0].X, dy = a.Y - _path[0].Y;
-                Fix64 l = Fix64Math.Sqrt(dx * dx + dy * dy);
+                Fix64 l = CrowdFix.Hypot(dx, dy);
                 if (l > Eps) return new Fix64Vec2(dx / l, dy / l);
             }
         }
@@ -99,7 +99,7 @@ public sealed class CrowdLeader
         if (_path.Length >= 2)
         {
             Fix64 dx = _path[1].X - _path[0].X, dy = _path[1].Y - _path[0].Y;
-            Fix64 l = Fix64Math.Sqrt(dx * dx + dy * dy);
+            Fix64 l = CrowdFix.Hypot(dx, dy);
             if (l > Eps) return new Fix64Vec2(dx / l, dy / l);
         }
 
@@ -110,7 +110,7 @@ public sealed class CrowdLeader
     private (Fix64 X, Fix64 Y, bool Full) AimPoint(int seg, Fix64 x, Fix64 y, Fix64 look)
     {
         Fix64 dx = _path[seg].X - x, dy = _path[seg].Y - y;
-        Fix64 d = Fix64Math.Sqrt(dx * dx + dy * dy);
+        Fix64 d = CrowdFix.Hypot(dx, dy);
         if (d >= look)
         {
             Fix64 t = look / d;
@@ -124,7 +124,7 @@ public sealed class CrowdLeader
         {
             Fix64 nx = _path[k].X, ny = _path[k].Y;
             Fix64 sx = nx - ax, sy = ny - ay;
-            Fix64 sl = Fix64Math.Sqrt(sx * sx + sy * sy);
+            Fix64 sl = CrowdFix.Hypot(sx, sy);
             if (sl <= Fix64.Zero) { ax = nx; ay = ny; continue; }
             if (sl >= rem) return (ax + (sx / sl) * rem, ay + (sy / sl) * rem, true);
             ax = nx;
@@ -154,19 +154,19 @@ public sealed class CrowdLeader
         while (rem > Fix64.Zero && Seg < n)
         {
             Fix64 tx = _path[Seg].X - X, ty = _path[Seg].Y - Y;
-            Fix64 d = Fix64Math.Sqrt(tx * tx + ty * ty);
+            Fix64 d = CrowdFix.Hypot(tx, ty);
             if (d > Eps && !Fixed)
             {
                 var aim = AimPoint(Seg, X, Y, _lookAheadCm);
                 if (aim.Full)
                 {
                     Fix64 rdx = aim.X - X, rdy = aim.Y - Y;
-                    Fix64 rl = Fix64Math.Sqrt(rdx * rdx + rdy * rdy);
+                    Fix64 rl = CrowdFix.Hypot(rdx, rdy);
                     if (rl > Eps)
                     {
                         Fix64 hx = Hx + (rdx / rl - Hx) * turnK;
                         Fix64 hy = Hy + (rdy / rl - Hy) * turnK;
-                        Fix64 hl = Fix64Math.Sqrt(hx * hx + hy * hy);
+                        Fix64 hl = CrowdFix.Hypot(hx, hy);
                         if (hl > Eps)
                         {
                             Hx = hx / hl;

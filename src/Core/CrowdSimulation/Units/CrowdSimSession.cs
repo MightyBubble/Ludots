@@ -74,6 +74,8 @@ public sealed class CrowdSimSession
     public Fix64 ProfileSpeedCmPerSecond(string profileId) =>
         Config.AgentTypes[_profileById[profileId].AgentTypeIndex].SpeedCmPerSecond;
     public Fix64 ProfileRadiusCm(string profileId) => _profileById[profileId].RadiusCm;
+    /// <summary>体型 → 个人(避让/碰撞)半径 = 半径 × avoidanceRadiusScale(参考实现 units.radius 的口径)。</summary>
+    public Fix64 ProfilePersonalRadiusCm(string profileId) => _profileById[profileId].PersonalRadiusCm;
     /// <summary>移动类型(层) → 速度(领队步伐用)。</summary>
     public Fix64 LayerSpeedCmPerSecond(int layerIdx) => Config.AgentTypes[layerIdx].SpeedCmPerSecond;
 

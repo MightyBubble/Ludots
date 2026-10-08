@@ -67,13 +67,9 @@ public static class CrowdMotor
             }
 
             bool rest = state.State != (byte)CrowdUnitState.Moving;
-            // S5 无休眠位(避让关闭时 calm 恒 0):静止单位有速度/推力/意图才继续
-            if (rest && kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero &&
-                k.Separation[i].X == Fix64.Zero && k.Separation[i].Y == Fix64.Zero &&
-                k.Intent[i].X == Fix64.Zero && k.Intent[i].Y == Fix64.Zero)
-            {
-                continue;
-            }
+            // 静止跳过以休眠(calm)为前提:S5 关避让 calm 恒 0,静止单位照样过马达——
+            // 生成落点压住被挡格时墙面滑出是真实位置来源(参考端 calm=0 的新单位即如此);
+            // S6 接休眠后此分支才恢复"calm 且全零则跳过"。
 
             var nav = session.Navs[session.Groups.Groups[state.GroupId]!.NavId];
             int lv = state.Level;
@@ -212,5 +208,5 @@ public static class CrowdMotor
         session.ProfileSpeedCmPerSecond(session.World.Get<CrowdSimulationAgent>(entity).ProfileId);
 
     private static Fix64 ProfileRadius(CrowdSimSession session, Arch.Core.Entity entity) =>
-        session.ProfileRadiusCm(session.World.Get<CrowdSimulationAgent>(entity).ProfileId);
+        session.ProfilePersonalRadiusCm(session.World.Get<CrowdSimulationAgent>(entity).ProfileId);
 }

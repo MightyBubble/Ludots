@@ -21,7 +21,7 @@ public class S1SurfaceTruthTests
 {
     public static readonly string[] Seeds = { "s1337", "s2024", "s7" };
 
-    private static string SeedDir(string seed) => Path.Combine("assets", "s1", seed);
+    internal static string SeedDir(string seed) => Path.Combine("assets", "s1", seed);
 
     [Test]
     public void NavSurface_Loads_EverySeed([ValueSource(nameof(Seeds))] string seed)

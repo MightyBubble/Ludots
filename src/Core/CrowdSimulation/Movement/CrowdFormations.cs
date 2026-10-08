@@ -39,7 +39,7 @@ public static class CrowdFormations
         Fix64 area = Fix64.Zero;
         for (int k = 0; k < n; k++)
         {
-            Fix64 radiusCm = session.ProfileRadiusCm(units.ProfileIdAt(members[k]));
+            Fix64 radiusCm = session.ProfilePersonalRadiusCm(units.ProfileIdAt(members[k]));
             d[k] = radiusCm * 2 * ks;
             area += d[k] * d[k];
         }
@@ -149,7 +149,7 @@ public static class CrowdFormations
             var kin = world.Get<CrowdSimulationKinematics>(e);
             kin.SlotOffsetCm = new Fix64Vec2(-dx * fy + dy * fx, -(dx * fx + dy * fy));
             world.Set(e, kin);
-            Fix64 dist = Fix64Math.Sqrt(dx * dx + dy * dy);
+            Fix64 dist = CrowdFix.Hypot(dx, dy);
             ext = Fix64.Max(ext, dist);
         }
 

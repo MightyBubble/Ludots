@@ -120,16 +120,21 @@ public static class CrowdDeployment
         for (; made < count && sim.Units.Count < sim.Units.Capacity; made++)
         {
             int cell = c0;
+            int triesUsed = 0;
             for (int t = 0; t < cfg.Spawn.PlacementTries; t++)
             {
+                triesUsed++;
                 int x = cx0 + DetRound((rng.Next() * 2 - Fix64.OneValue) * spread);
                 int y = cy0 + DetRound((rng.Next() * 2 - Fix64.OneValue) * spread);
-                if (x >= 0 && y >= 0 && x < n && y < n && nav.Passable[y * n + x] != 0 && nav.Comp[y * n + x] == comp)
+                bool ok = x >= 0 && y >= 0 && x < n && y < n && nav.Passable[y * n + x] != 0 && nav.Comp[y * n + x] == comp;
+                if (made >= 52 && made <= 54) System.Console.WriteLine($"[spawnAt] made={made} try{t}: cand=({x},{y}) pass={(x>=0&&y>=0&&x<n&&y<n?nav.Passable[y*n+x]:-9)} comp={(x>=0&&y>=0&&x<n&&y<n?nav.Comp[y*n+x]:-9)} want={comp} ok={ok}");
+                if (ok)
                 {
                     cell = y * n + x;
                     break;
                 }
             }
+            
 
             AddUnit(sim, cell, rng, g, unitType, cellSize);
         }
