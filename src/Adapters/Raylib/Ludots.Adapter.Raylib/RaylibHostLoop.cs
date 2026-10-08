@@ -57,6 +57,44 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibHostLoop
     {
+        /// <summary>
+        /// 指针捕获策略（sole-seat）：UI 路由 → 释放；世界路由 + 活动虚拟相机带无按住
+        /// DragRotate（look 模式）→ 捕获并隐藏（raylib 虚拟移动，指针出窗 look 不断流）。
+        /// 指针路由语义归 InteractionContextProfile（#1585），捕获是实现，不新增声明字段。
+        /// </summary>
+        private static void UpdateCursorCapturePolicy(GameEngine engine)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) ||
+                seats is not { Count: 1 })
+            {
+                return;
+            }
+
+            string seatId = seats.SeatIds[0];
+            var profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            bool uiRouted = profiles != null &&
+                UiPointerRoutingQuery.RoutesPointerToUi(engine.World, seats, profiles, seatId);
+
+            bool captureWanted = false;
+            if (!uiRouted &&
+                ClientLocalSeatAccess.TryResolvePresentCamera(engine, seatId, out var camera, out _) &&
+                camera.VirtualCameraBrain is { } brain &&
+                brain.ActiveDefinition is { RotateMode: CameraRotateMode.DragRotate, AllowUserInput: true } &&
+                brain.AllowsInput)
+            {
+                captureWanted = true;
+            }
+
+            bool hidden = Rl.IsCursorHidden();
+            if (captureWanted && !hidden)
+            {
+                Rl.DisableCursor();
+            }
+            else if (!captureWanted && hidden)
+            {
+                Rl.EnableCursor();
+            }
+        }
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
