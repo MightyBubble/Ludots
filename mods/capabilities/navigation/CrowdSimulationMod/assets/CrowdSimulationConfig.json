@@ -369,24 +369,6 @@
     "spreadCells": 30,
     "baseJitterCells": 20,
     "centersPerGroup": 3,
-    "templates": [
-      "crowd_simulation_infantry_r100",
-      "crowd_simulation_infantry_r200",
-      "crowd_simulation_infantry_r300",
-      "crowd_simulation_infantry_r400",
-      "crowd_simulation_navy_r100",
-      "crowd_simulation_navy_r200",
-      "crowd_simulation_navy_r300",
-      "crowd_simulation_navy_r400",
-      "crowd_simulation_mountaineer_r100",
-      "crowd_simulation_mountaineer_r200",
-      "crowd_simulation_mountaineer_r300",
-      "crowd_simulation_mountaineer_r400",
-      "crowd_simulation_amphibious_r100",
-      "crowd_simulation_amphibious_r200",
-      "crowd_simulation_amphibious_r300",
-      "crowd_simulation_amphibious_r400"
-    ],
     "bases": [
       {
         "playerId": 1,

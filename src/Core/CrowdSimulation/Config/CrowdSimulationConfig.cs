@@ -292,7 +292,6 @@ public sealed class CrowdSimulationConfig
         public required double SpreadCells { get; init; }
         public required double BaseJitterCells { get; init; }
         public required int CentersPerGroup { get; init; }
-        public required string[] Templates { get; init; }
         public required DeployBaseEntry[] Bases { get; init; }
     }
 

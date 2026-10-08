@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
@@ -8,7 +9,8 @@ using NUnit.Framework;
 
 namespace CrowdSimulationTests;
 
-/// <summary>S0 验收的模板级契约：阻挡物形状、双求解器组件互斥、部署清单组件要求。</summary>
+/// <summary>S0 验收的模板级契约：阻挡物形状、双求解器组件互斥、模板 profileId 引用闭包。
+/// 契约本体在 CrowdSimulationRuntime 进图激活时执行（见 ActivationPath_InvokesTemplateContract）。</summary>
 [TestFixture]
 public class CrowdSimulationAuthoringContractTests
 {
@@ -29,19 +31,10 @@ public class CrowdSimulationAuthoringContractTests
         return new EntityTemplate { Id = id, Components = components };
     }
 
-    private static IEnumerable<EntityTemplate> DeployTemplates()
-    {
-        var config = TestDefaults.DefaultConfig();
-        foreach (var id in config.Deploy.Templates)
-        {
-            yield return Template(id, "CrowdSimulationAgent");
-        }
-    }
-
     [Test]
     public void SquareBoxBlocker_Passes()
     {
-        var templates = new[] { Template("blocker_140m", "ManifestationObstacleIntent2D") }.Concat(DeployTemplates()).ToArray();
+        var templates = new[] { Template("blocker_140m", "ManifestationObstacleIntent2D") };
         var map = TestDefaults.DemoMap();
         map.Entities.Add(new EntitySpawnData { InstanceId = "b1", Template = "blocker_140m" });
         Assert.DoesNotThrow(() =>
@@ -80,9 +73,8 @@ public class CrowdSimulationAuthoringContractTests
         t.Components["ManifestationObstacleIntent2D"] = JsonNode.Parse("""{ "shape": "Circle", "sinkNavigationObstacle": false, "radiusCm": 7000 }""")!;
         var map = TestDefaults.DemoMap();
         map.Entities.Add(new EntitySpawnData { InstanceId = "f1", Template = "fire_zone" });
-        var templates = new[] { t }.Concat(DeployTemplates()).ToArray();
         Assert.DoesNotThrow(() =>
-            CrowdSimulationAuthoringContract.Validate(templates, TestDefaults.DefaultConfig(), map, TestDefaults.DemoProfiles()));
+            CrowdSimulationAuthoringContract.Validate(new[] { t }, TestDefaults.DefaultConfig(), map, TestDefaults.DemoProfiles()));
     }
 
     [Test]
@@ -95,21 +87,40 @@ public class CrowdSimulationAuthoringContractTests
     }
 
     [Test]
-    public void DeployTemplate_WithoutCrowdSimulationAgent_IsRejected()
+    public void Template_ReferencingUnknownProfile_IsRejected()
     {
-        var t = Template("crowd_simulation_infantry_r100"); // 名字在清单里，但没带组件
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            CrowdSimulationAuthoringContract.Validate(new[] { t }, TestDefaults.DefaultConfig(), TestDefaults.DemoMap(), TestDefaults.DemoProfiles()));
-        Assert.That(ex!.Message, Does.Contain("必须带 CrowdSimulationAgent 组件"));
-    }
-
-    [Test]
-    public void DeployTemplate_ReferencingUnknownProfile_IsRejected()
-    {
-        var t = Template("crowd_simulation_infantry_r100", "CrowdSimulationAgent");
+        var t = Template("ghost_unit", "CrowdSimulationAgent");
         t.Components["CrowdSimulationAgent"] = JsonNode.Parse("""{ "profileId": "ghost_r999" }""")!;
         var ex = Assert.Throws<InvalidOperationException>(() =>
             CrowdSimulationAuthoringContract.Validate(new[] { t }, TestDefaults.DefaultConfig(), TestDefaults.DemoMap(), TestDefaults.DemoProfiles()));
         Assert.That(ex!.Message, Does.Contain("ghost_r999"));
+    }
+
+    [Test]
+    public void ActivationPath_InvokesTemplateContract()
+    {
+        // 激活路径要完整 Mod 宿主（地图聚焦 → 会话激活），单元测试不可达；端到端由真机
+        // 冒烟（crowd_simulation_s4_deploy_1337）覆盖。这里钉住 Runtime 激活代码里的契约
+        // 调用，防止活接线被静默拆除（契约曾是只有测试调用的死代码）。
+        string repoRoot = FindRepoRoot();
+        string runtimeSource = File.ReadAllText(
+            Path.Combine(repoRoot, "src", "Core", "CrowdSimulation", "Runtime", "CrowdSimulationRuntime.cs"));
+        Assert.That(runtimeSource, Does.Contain("CrowdSimulationAuthoringContract.Validate("));
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "src", "Core", "Ludots.Core.csproj")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("未找到仓库根（src/Core/Ludots.Core.csproj）。");
     }
 }

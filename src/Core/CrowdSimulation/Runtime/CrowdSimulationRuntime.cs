@@ -147,6 +147,11 @@ public sealed class CrowdSimulationRuntime
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
             _configDto!, mapConfig, agentProfiles, (int)MathF.Round(1f / Time.FixedDeltaTime));
 
+        // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
+        // 与配置门禁构成同一条装载检查链;失败即报错,不进入烘焙与生成。
+        CrowdSimulationAuthoringContract.Validate(
+            engine.MapLoader.TemplateRegistry.GetAll(), _configDto!, mapConfig, agentProfiles);
+
         // ── 资产(走 VFS,跨 mod 解析,冲突即 fail-fast)──
         var surface = NavSurfaceAsset.Read(OpenAsset(engine, "assets/" + runtimeConfig.SurfaceAsset));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(

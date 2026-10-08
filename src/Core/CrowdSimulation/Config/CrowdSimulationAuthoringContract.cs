@@ -89,21 +89,5 @@ public static class CrowdSimulationAuthoringContract
                     $"Maps/{config.MapId}.json: 阻挡物 \"{entity.InstanceId}\"（模板 \"{entity.Template}\"）必须是正方形（halfWidthCm {view.HalfWidthCm} ≠ halfHeightCm {view.HalfHeightCm}）。");
             }
         }
-
-        // 部署清单：模板必须存在且带 CrowdSimulationAgent。
-        foreach (var templateId in config.Deploy.Templates)
-        {
-            if (!byId.TryGetValue(templateId, out var template))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: deploy.templates 引用未知实体模板 \"{templateId}\"。");
-            }
-
-            if (!template.Components.ContainsKey("CrowdSimulationAgent"))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: deploy.templates 的模板 \"{templateId}\" 必须带 CrowdSimulationAgent 组件。");
-            }
-        }
     }
 }

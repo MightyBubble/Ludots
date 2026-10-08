@@ -27,7 +27,7 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
   Config/                            CrowdSimulationConfig（DTO，严格 camelCase 全必填）
                                      CrowdSimulationConfigValidator（数值 + 结构规则）
                                      CrowdSimulationConfigLoader（LU-20 组装入口）
-                                     CrowdSimulationAuthoringContract（模板级契约）
+                                     CrowdSimulationAuthoringContract（模板级契约,进图激活时执行）
   World/                             NavSurfaceAsset（.navsurface v1 读写与格式门禁）
                                      NavSurfaceContract（资产 ↔ 配置一致性）
                                      CrowdSimulationSpace（格几何原语）
@@ -85,6 +85,8 @@ CrowdSimulationConfig.json: hpa.clusterSize = 2，需为整数、≥ 4、≤ 128
 ```
 
 覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。版本不等于当前 v7 一律拒绝，无迁移。例外：formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充——参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
+
+需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
 ## .navsurface v1 格式要点
 

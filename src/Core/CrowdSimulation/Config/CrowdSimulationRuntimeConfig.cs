@@ -257,7 +257,6 @@ public sealed class RuntimeDeploySection
     public required Fix64 SpreadCells { get; init; }
     public required Fix64 BaseJitterCells { get; init; }
     public required int CentersPerGroup { get; init; }
-    public required IReadOnlyList<string> Templates { get; init; }
     public required IReadOnlyList<RuntimeDeployBase> Bases { get; init; }
 }
 

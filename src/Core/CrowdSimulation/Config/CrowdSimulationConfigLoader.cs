@@ -414,7 +414,6 @@ public sealed class CrowdSimulationConfigLoader
                 SpreadCells = Fix64.FromDouble(config.Deploy.SpreadCells),
                 BaseJitterCells = Fix64.FromDouble(config.Deploy.BaseJitterCells),
                 CentersPerGroup = config.Deploy.CentersPerGroup,
-                Templates = config.Deploy.Templates,
                 Bases = Array.ConvertAll(config.Deploy.Bases, b => new RuntimeDeployBase
                 {
                     PlayerId = b.PlayerId,
