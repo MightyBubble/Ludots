@@ -559,6 +559,11 @@ function canonComp(comp, n2) {
         for (let i = 0; i < n; i++) h = mix32(h, u.order[i]);
         for (let i = 0; i < n; i++) h = mix32(h, u.mode[i]);
         for (let i = 0; i < n; i++) h = mix32(h, u.level[i]);
+        // L14:避让隐藏状态(分离两轴 + calm 逐单位 mixI64 双词 + 相位一词)——部署会话恒零,词数与 C# 侧对齐
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        for (let i = 0; i < n; i++) h = mixI64(h, 0n);
+        h = mix32(h, 0);
         return h.toString(16).padStart(8, '0');
       };
 
@@ -634,13 +639,23 @@ function canonComp(comp, n2) {
         return e;
       });
       sim.commands.schedule(webScript);
+      // L12-④:逐单位接触计数进真值 bin(u16/单位/tick;求解行累加,跳过行保持 0,两端同构逐位可比)
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
 
+      const u0 = (sim, i) => sim.units.x[i].toFixed(4), u1 = (sim, i) => sim.units.y[i].toFixed(4);
       const TICKS = 600;
       const w = new BW();
       w.bytes(Buffer.from('LS5T', 'ascii'));
       w.i32(TICKS);
       for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        if (t >= 10 && t <= 12) { sim.sepCtx.__dbg = 163; sim.sepCtx.__dbgLog = []; }
         sim.advance(1);
+        if (t >= 10 && t <= 12) {
+          for (const line of sim.sepCtx.__dbgLog) console.log(`[dbg163] t${t} ${line}`);
+          console.log(`[dbg163] t${t} u163 pos=(${u0(sim, 163)},${u1(sim, 163)}) v=(${sim.units.vx[163].toFixed(3)},${sim.units.vy[163].toFixed(3)}) sep=(${sim.sepX[163].toFixed(4)},${sim.sepY[163].toFixed(4)}) contacts=${sim.sepCtx.unitContacts[163]}`);
+          sim.sepCtx.__dbg = undefined;
+        }
         const u = sim.units, n = u.count;
         w.i32(n);
         for (let i = 0; i < n; i++) {
@@ -648,12 +663,13 @@ function canonComp(comp, n2) {
           w.f64(u.x[i] * 100); w.f64(u.y[i] * 100); // 厘米
           w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
           w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
         }
       }
       writeFileSync(join(outRoot, 'parity', 's5-trajectory.bin'), w.build());
       writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify({
         mapId, seed,
-        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。',
+        note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。每单位记录后附 u16 接触计数(L12-④ 硬门:每 tick 清零、求解行累加,跳过行为 0,两端同构逐位可比)。',
         ticks: TICKS, script,
       }, null, 2));
       console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);

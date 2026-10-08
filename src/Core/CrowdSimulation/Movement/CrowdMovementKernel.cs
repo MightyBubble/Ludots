@@ -25,6 +25,8 @@ public sealed class CrowdMovementKernel
     public int[] GatherGroup = Array.Empty<int>();
     /// <summary>逐占格唤醒标记(下标 = 哈希 Active 槽位)。</summary>
     public byte[] Awake = Array.Empty<byte>();
+    /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的逐位硬门)。</summary>
+    public byte[] Contacts = Array.Empty<byte>();
     public CrowdWalls.OpenCellCache OpenCache { get; init; } = new();
     /// <summary>流场采样的本帧暂存(方向写出)。</summary>
     public int Tick;
@@ -94,6 +96,7 @@ public sealed class CrowdMovementKernel
         if (GatherLevel.Length < unitCapacity) GatherLevel = new byte[unitCapacity];
         if (GatherMoving.Length < unitCapacity) GatherMoving = new byte[unitCapacity];
         if (GatherGroup.Length < unitCapacity) GatherGroup = new int[unitCapacity];
+        if (Contacts.Length < unitCapacity) Contacts = new byte[unitCapacity];
     }
 
     /// <summary>D54:新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>
@@ -160,11 +163,12 @@ public sealed class CrowdMovementKernel
         var fc = cfg.Formation;
         var mv = cfg.Movement;
         var av = cfg.Avoidance;
-        // 哈希几何按最大个人(避让)半径:参考端 reach = max(personal),格距 = 2×reach/rings
+        // 哈希几何按最大个人(避让)半径:参考端 reach = max(personal),格距 = 2×reach/rings;
+        // 两值定点精确传入,不许整数截断(L13)
         Fix64 maxRadiusCm = Fix64.Zero;
         foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);
-        int hashCellCm = Math.Max(1, (int)(maxRadiusCm * 2).ToLong() / Math.Max(1, av.HashRings));
-        var hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, (int)maxRadiusCm.ToLong());
+        Fix64 hashCellCm = Fix64.Max(Fix64.OneValue, maxRadiusCm * 2 / Fix64.FromInt(Math.Max(1, av.HashRings)));
+        var hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
         int stepHz = cfg.FixedHz * session.SubSteps;
         int avoidHz = (int)av.RateHz.ToDouble();
         int stride = Math.Max(1, (int)(stepHz / Math.Min(avoidHz, (double)stepHz) + 0.5));

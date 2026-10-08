@@ -198,6 +198,41 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
+    public void Relations_Matrix_AlignsUnorderedPlayerIds()
+    {
+        // Players 不按 1..P 顺排(表序 [3,1,2])时,推挤矩阵按下标对齐:同队 ally、
+        // 跨队 enemy、overrides 翻转指定对(3↔1)——求解器的玩家号→下标换算吃同一张表。
+        var map = TestDefaults.DemoMap();
+        map.Players.Clear();
+        map.Players.Add(new PlayerBindingData { PlayerId = 3, TeamId = 1, RepresentativeInstanceId = "player_3" });
+        map.Players.Add(new PlayerBindingData { PlayerId = 1, TeamId = 2, RepresentativeInstanceId = "player_1" });
+        map.Players.Add(new PlayerBindingData { PlayerId = 2, TeamId = 1, RepresentativeInstanceId = "player_2" });
+        map.Players.Add(new PlayerBindingData { PlayerId = 4, TeamId = 2, RepresentativeInstanceId = "player_4" });
+
+        var json = TestDefaults.DefaultConfigJson();
+        json["relations"]!["overrides"] = new JsonArray
+        {
+            new JsonObject { ["a"] = 1, ["b"] = 3, ["kind"] = "ally" },
+        };
+        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map);
+
+        var relations = runtime.Relations;
+        Assert.That(relations.PlayerCount, Is.EqualTo(4));
+        Assert.That(relations.IndexByPlayerId[3], Is.EqualTo(0));
+        Assert.That(relations.IndexByPlayerId[1], Is.EqualTo(1));
+        Assert.That(relations.IndexByPlayerId[2], Is.EqualTo(2));
+        Assert.That(relations.IndexByPlayerId[4], Is.EqualTo(3));
+
+        // 表序 [3,1,2,4]:(3,2) 同队 A → sameTeam=ally → priority;(1,2)/(3,4) 跨队 →
+        // default=enemy → rigid;override 翻转 (1,3) → ally → priority,且对称。
+        Assert.That(relations.PushModeByPair[0 * 4 + 2], Is.EqualTo(CrowdSimulationPushMode.Priority));
+        Assert.That(relations.PushModeByPair[1 * 4 + 2], Is.EqualTo(CrowdSimulationPushMode.Rigid));
+        Assert.That(relations.PushModeByPair[0 * 4 + 3], Is.EqualTo(CrowdSimulationPushMode.Rigid));
+        Assert.That(relations.PushModeByPair[0 * 4 + 1], Is.EqualTo(CrowdSimulationPushMode.Priority));
+        Assert.That(relations.PushModeByPair[1 * 4 + 0], Is.EqualTo(CrowdSimulationPushMode.Priority));
+    }
+
+    [Test]
     public void PartialOverride_MergesOverDefaults()
     {
         var merged = TestDefaults.DefaultConfigJson();

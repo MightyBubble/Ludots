@@ -485,11 +485,11 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         int P = map.Players.Count;
-        var indexByPlayerId = new Dictionary<int, int>(P);
+        var indexByPlayerIdDict = new Dictionary<int, int>(P);
         var teamByIndex = new int?[P];
         for (int i = 0; i < P; i++)
         {
-            indexByPlayerId[map.Players[i].PlayerId] = i;
+            indexByPlayerIdDict[map.Players[i].PlayerId] = i;
             teamByIndex[i] = map.Players[i].TeamId > 0 ? map.Players[i].TeamId : null;
         }
 
@@ -516,7 +516,7 @@ public sealed class CrowdSimulationConfigLoader
 
         foreach (var o in config.Relations.Overrides)
         {
-            if (!indexByPlayerId.TryGetValue(o.A, out int a) || !indexByPlayerId.TryGetValue(o.B, out int b))
+            if (!indexByPlayerIdDict.TryGetValue(o.A, out int a) || !indexByPlayerIdDict.TryGetValue(o.B, out int b))
             {
                 throw new InvalidOperationException(
                     $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未知玩家 {o.A} / {o.B}");
@@ -531,7 +531,13 @@ public sealed class CrowdSimulationConfigLoader
             matrix[a * P + b] = matrix[b * P + a] = kindPush[kindIndex];
         }
 
-        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix };
+        var indexByPlayerId = new int[P + 1];
+        foreach (var (playerId, index) in indexByPlayerIdDict)
+        {
+            indexByPlayerId[playerId] = index;
+        }
+
+        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix, IndexByPlayerId = indexByPlayerId };
     }
 
     /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>

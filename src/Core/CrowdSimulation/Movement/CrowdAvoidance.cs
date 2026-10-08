@@ -38,12 +38,13 @@ public static class CrowdAvoidance
         var relations = session.Config.Relations;
         int P = relations.PlayerCount;
         var pushMode = relations.PushModeByPair;
+        var playerIndex = relations.IndexByPlayerId;
         var hash2 = hash;
         int dim = hash2.Dim, last = dim - 1;
         int rr = hash2.Rings + 1;
         int width = hash2.Width;
-        Fix64 cellCm = Fix64.FromInt(hash2.CellSizeCm);
-        Fix64 reach = Fix64.FromInt(hash2.ReachCm);
+        Fix64 cellCm = hash2.CellSize;
+        Fix64 reach = hash2.Reach;
         Fix64 keep = Fix64.OneValue - k.Smoothing;
         k.EnsureAvoidanceCapacity(units.Capacity);
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
@@ -69,7 +70,7 @@ public static class CrowdAvoidance
                 gx[kk] = pos.X;
                 gy[kk] = pos.Y;
                 gr[kk] = jump ? Fix64.Zero : agent.ResolvedPersonalRadiusCm;
-                gp[kk] = (byte)world.Get<PlayerOwner>(entity).PlayerId;
+                gp[kk] = (byte)playerIndex[world.Get<PlayerOwner>(entity).PlayerId]; // 玩家表序下标(参考端 gp 同口径)
                 gl[kk] = state.Level;
                 gg[kk] = state.GroupId;
                 gm[kk] = moving ? (byte)1 : (byte)0;
@@ -150,7 +151,7 @@ public static class CrowdAvoidance
                         {
                             share = Fix64.HalfValue;
                         }
-                        else if (pushMode[(pi - 1) * P + (gp[q] - 1)] == CrowdSimulationPushMode.Rigid)
+                        else if (pushMode[pi * P + gp[q]] == CrowdSimulationPushMode.Rigid)
                         {
                             share = mi == mj ? Fix64.HalfValue : mi != 0 ? Fix64.OneValue : Fix64.Zero;
                         }
@@ -182,6 +183,7 @@ public static class CrowdAvoidance
 
                 // 截断 + 时间平滑,消密集人群的逐帧推力抖动
                 int i2 = hash2.Items[kk];
+                k.Contacts[i2] += (byte)Math.Min(contacts, 255);
                 Fix64 m = CrowdFix.Hypot(sx, sy);
                 calm[i2] = m <= k.RestDeadband ? (byte)1 : (byte)0;
                 if (m > k.MaxPush)
