@@ -33,6 +33,12 @@
   input[type=range]{flex:1;accent-color:#5db8ff}
   .toggle{display:flex;align-items:center;gap:8px;margin:7px 0}
   .toggle label{color:var(--dim);font-size:12px}
+  .bandrow{display:grid;grid-template-columns:30px 1fr 1fr 1fr;gap:4px;align-items:center;
+    font-size:11px;color:var(--dim);margin:4px 0}
+  .bandrow input[type=range]{accent-color:#5dd66b}
+  .bandhead{color:#6b7d95;font-size:10.5px;letter-spacing:.5px}
+  .bandname{text-align:center}
+  .disabled{opacity:.35;pointer-events:none}
   .sec{border-top:1px solid var(--line);margin:10px -14px;padding:8px 14px 0}
   .secname{font-size:12px;color:#a9c4e8;letter-spacing:1px;margin-bottom:4px}
   .badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;margin:1px 3px 1px 0;
@@ -88,6 +94,7 @@
       <div class="kv">字段：<code>Yaw</code> / <code>Pitch</code> / <code>DistanceCm</code>（带上下限）</div>
       <p>挂在摇臂上的行为积木：<code>DragRotate</code>（拖转）、<code>Zoom</code>、<code>Grounding</code>（贴地）。摇臂的"阻尼"（arm lag）= 渲染帧连续积分的指数趋近——<b>不挂在 20Hz tick 上</b>，这正是抖动修复的核心约束。</p>
       <div class="kv">· 面向采信 <code>facingMode: followTarget</code>：角色调头时摇臂绕到背后（拖拽期间让位给玩家）</div>
+      <div class="kv">· 俯仰分层：距离与越肩偏移按俯仰分档混合（淡环 = 各档轨道）——同款思路：Cinemachine FreeLook 三环 rig、Lyra 按俯仰查偏移曲线</div>
       <div class="kv">· 指针捕获：look 模式时隐藏+锁定光标（出窗不断流），随 seat 的活动上下文走</div>
     </div>
   </details>
@@ -138,7 +145,7 @@
 
   <div class="sec">
     <div class="secname">锚点 Pivot（枢轴偏移）</div>
-    <div class="row"><label>偏移·右（m）</label><input type="range" id="pivR" min="-0.8" max="0.8" step="0.05" value="0"><output id="pivRV">0.00</output></div>
+    <div class="row" id="rowPivR"><label>偏移·右（m）</label><input type="range" id="pivR" min="-0.8" max="0.8" step="0.05" value="0"><output id="pivRV">0.00</output></div>
     <div class="row"><label>偏移·上（m）</label><input type="range" id="pivU" min="-0.5" max="1" step="0.05" value="0"><output id="pivUV">0.00</output></div>
     <div class="row"><label>偏移·前（m）</label><input type="range" id="pivF" min="-1" max="1" step="0.05" value="0"><output id="pivFV">0.00</output></div>
     <p style="color:var(--dim);margin:4px 0 0">基 = 视线右/世界up/视线前向。热端：轨道环与注视点一起平移（对比瞄准层的冷端镜体偏移）。</p>
@@ -146,10 +153,22 @@
 
   <div class="sec">
     <div class="secname">摇臂 Arm</div>
-    <div class="row"><label>Yaw（度）</label><input type="range" id="yaw" min="0" max="360" step="1" value="200"><output id="yawV">200</output></div>
+    <div class="row" id="rowYaw"><label>Yaw（度）</label><input type="range" id="yaw" min="0" max="360" step="1" value="200"><output id="yawV">200</output></div>
     <div class="row"><label>Pitch（度）</label><input type="range" id="pitch" min="5" max="85" step="1" value="18"><output id="pitchV">18</output></div>
-    <div class="row"><label>Distance（m）</label><input type="range" id="dist" min="2" max="12" step="0.1" value="5"><output id="distV">5.0</output></div>
-    <div class="row"><label>摇臂阻尼速度</label><input type="range" id="lagSpd" min="2" max="30" step="0.5" value="10"><output id="lagSpdV">10</output></div>
+    <div class="row" id="rowDist"><label>Distance（m）</label><input type="range" id="dist" min="2" max="12" step="0.1" value="5"><output id="distV">5.0</output></div>
+    <div class="row" id="rowLag"><label>摇臂阻尼速度</label><input type="range" id="lagSpd" min="2" max="30" step="0.5" value="10"><output id="lagSpdV">10</output></div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">俯仰分层（AAA 式按俯仰变参）</div>
+    <div class="toggle"><input type="checkbox" id="bands" checked><label for="bands">启用：距离与越肩偏移按俯仰分档线性混合</label></div>
+    <div id="bandTable">
+      <div class="bandrow bandhead"><span>档</span><span>俯仰°</span><span>距离m</span><span>右偏m</span></div>
+      <div class="bandrow"><span class="bandname">低</span><input type="range" id="b0p" min="0" max="85" step="1" value="12"><input type="range" id="b0d" min="2" max="12" step="0.1" value="5.5"><input type="range" id="b0r" min="-0.8" max="0.8" step="0.05" value="0.55"></div>
+      <div class="bandrow"><span class="bandname">中</span><input type="range" id="b1p" min="0" max="85" step="1" value="30"><input type="range" id="b1d" min="2" max="12" step="0.1" value="4.6"><input type="range" id="b1r" min="-0.8" max="0.8" step="0.05" value="0.4"></div>
+      <div class="bandrow"><span class="bandname">高</span><input type="range" id="b2p" min="0" max="85" step="1" value="55"><input type="range" id="b2d" min="2" max="12" step="0.1" value="3.6"><input type="range" id="b2r" min="-0.8" max="0.8" step="0.05" value="0.25"></div>
+      <p style="color:var(--dim);margin:6px 0 0">Pitch 滑杆仍是当前俯仰；Distance / 偏移·右 由相邻档混合（输出框实时显示混合值）。淡环 = 各档轨道，亮环 = 当前混合。同款思路：Cinemachine FreeLook 三环 rig、Lyra 按俯仰查 TargetOffset 曲线。</p>
+    </div>
   </div>
 
   <div class="sec">
@@ -257,7 +276,8 @@ armLine.layers.set(VIZ);
 scene.add(armLine);
 
 // Yaw 轨道环：锚点正上方、半径 = cos(pitch)*dist 的水平圆
-const ringSegs = 96;
+// 亮环 = 当前混合轨道；俯仰分层开启时另画各档淡环
+function makeRing(opacity)
 {
   const pts = [];
   for (let i = 0; i < ringSegs; i++)
@@ -265,12 +285,16 @@ const ringSegs = 96;
     const a = (i / ringSegs) * Math.PI * 2;
     pts.push(new THREE.Vector3(Math.sin(a), 0, Math.cos(a)));
   }
-  var orbitRing = new THREE.LineLoop(
+  const ring = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color: 0x5dd66b, transparent: true, opacity: 0.35 }));
-  orbitRing.layers.set(VIZ);
-  scene.add(orbitRing);
+    new THREE.LineBasicMaterial({ color: 0x5dd66b, transparent: true, opacity }));
+  ring.layers.set(VIZ);
+  scene.add(ring);
+  return ring;
 }
+const ringSegs = 96;
+const orbitRing = makeRing(0.35);
+const bandRings = [makeRing(0.14), makeRing(0.14), makeRing(0.14)];
 
 // 镜体：小盒 + 视锥。几何建在 +Z 上（Object3D.lookAt 让 +Z 朝向目标），单位锥随 FOV/远端缩放
 const lensGroup = new THREE.Group();
@@ -306,6 +330,12 @@ const S = {
   walk: true, ghost: true, lag: true, probe: false, aim: false, faceOn: true,
   yaw: 200, pitch: 18, dist: 5, lagSpd: 10, aimW: 0, aimFov: 35, aimOff: 0.3,
   pivR: 0, pivU: 0, pivF: 0,
+  bands: true,
+  bandDefs: [
+    { pitch: 12, dist: 5.5, right: 0.55 },
+    { pitch: 30, dist: 4.6, right: 0.4 },
+    { pitch: 55, dist: 3.6, right: 0.25 },
+  ],
   simPos: new THREE.Vector2(0, 0), simPrev: new THREE.Vector2(0, 0), dir: 1,
   heading: Math.PI / 2,
 };
@@ -323,6 +353,18 @@ bind('aimOff',e => { S.aimOff = +e.value;$('aimOffV').value = (+e.value).toFixed
 bind('pivR', e => { S.pivR = +e.value; $('pivRV').value = (+e.value).toFixed(2); });
 bind('pivU', e => { S.pivU = +e.value; $('pivUV').value = (+e.value).toFixed(2); });
 bind('pivF', e => { S.pivF = +e.value; $('pivFV').value = (+e.value).toFixed(2); });
+for (let i = 0; i < 3; i++)
+{
+  const ids = [['b0p','b0d','b0r'], ['b1p','b1d','b1r'], ['b2p','b2d','b2r']][i];
+  bind(ids[0], e => S.bandDefs[i].pitch = +e.value);
+  bind(ids[1], e => S.bandDefs[i].dist = +e.value);
+  bind(ids[2], e => S.bandDefs[i].right = +e.value);
+}
+$('bands').addEventListener('change', e => {
+  S.bands = e.target.checked;
+  document.getElementById('rowDist').classList.toggle('disabled', S.bands);
+  document.getElementById('rowPivR').classList.toggle('disabled', S.bands);
+});
 $('walk').addEventListener('change', e => S.walk = e.target.checked);
 $('ghost').addEventListener('change', e => { S.ghost = e.target.checked; ghost.visible = S.ghost; });
 $('lag').addEventListener('change', e => S.lag = e.target.checked);
@@ -376,6 +418,26 @@ function armEndOf(anchor, yawDeg, pitchDeg, dist)
     anchor.x + (cp * Math.sin(yaw)) * dist,
     anchor.y + sp * dist,
     anchor.z + (cp * Math.cos(yaw)) * dist);
+}
+
+// —— 俯仰分档混合：相邻档线性插值，出界钳到端档（FreeLook 三环 / Lyra 俯仰曲线的同类思路） ——
+function bandBlend(pitchDeg)
+{
+  const b = S.bandDefs;
+  if (pitchDeg <= b[0].pitch) return { dist: b[0].dist, right: b[0].right };
+  if (pitchDeg >= b[b.length - 1].pitch) return { dist: b[b.length - 1].dist, right: b[b.length - 1].right };
+  for (let i = 0; i < b.length - 1; i++)
+  {
+    if (pitchDeg <= b[i + 1].pitch)
+    {
+      const t = (pitchDeg - b[i].pitch) / (b[i + 1].pitch - b[i].pitch);
+      return {
+        dist: THREE.MathUtils.lerp(b[i].dist, b[i + 1].dist, t),
+        right: THREE.MathUtils.lerp(b[i].right, b[i + 1].right, t),
+      };
+    }
+  }
+  return { dist: b[b.length - 1].dist, right: b[b.length - 1].right };
 }
 
 // —— 标签投影（被面板盖住时隐藏）——
@@ -447,13 +509,19 @@ function frame()
   // 锚点链（对齐引擎 StateToRenderState 的顺序）：跟随点 → 视线基 → 枢轴偏移 → 摇臂解算。
   // 基 = 视线右/世界up/视线水平前向（ResolveCameraLocalOffsetMeters 同款）；
   // 阻尼关闭时解算直跟 sim 真值——复刻修复前"插值被清零、相机 20Hz 裸步进"的观感
+  const bl = S.bands ? bandBlend(S.pitch) : null;
+  const effPitch = S.pitch;
+  const effDist = bl ? bl.dist : S.dist;
+  const effRight = bl ? bl.right : S.pivR;
+  $('distV').value = effDist.toFixed(1);
+  $('pivRV').value = effRight.toFixed(2);
   const targetPos = new THREE.Vector3(S.lag ? vx : S.simPos.x, 1.2, S.lag ? vy : S.simPos.y);
-  const fwd0 = targetPos.clone().sub(armEndOf(targetPos, effYaw, S.pitch, S.dist));
+  const fwd0 = targetPos.clone().sub(armEndOf(targetPos, effYaw, effPitch, effDist));
   fwd0.y = 0;
   if (fwd0.lengthSq() > 1e-6) fwd0.normalize(); else fwd0.set(0, 0, 1);
   const right0 = new THREE.Vector3().crossVectors(fwd0, new THREE.Vector3(0, 1, 0));
   const pivotPos = targetPos.clone()
-    .addScaledVector(right0, S.pivR)
+    .addScaledVector(right0, effRight)
     .addScaledVector(new THREE.Vector3(0, 1, 0), S.pivU)
     .addScaledVector(fwd0, S.pivF);
   const hasPivotOff = Math.abs(S.pivR) + Math.abs(S.pivU) + Math.abs(S.pivF) > 1e-4;
@@ -464,7 +532,7 @@ function frame()
   offPos.setXYZ(0, targetPos.x, targetPos.y, targetPos.z);
   offPos.setXYZ(1, pivotPos.x, pivotPos.y, pivotPos.z);
   offPos.needsUpdate = true;
-  const rawEnd = armEndOf(pivotPos, effYaw, S.pitch, S.dist);
+  const rawEnd = armEndOf(pivotPos, effYaw, effPitch, effDist);
 
   // 摇臂阻尼（arm lag）：按渲染 dt 连续积分的指数趋近；关闭 = 直跟 sim（修复前观感）
   if (S.lag)
@@ -502,15 +570,29 @@ function frame()
   rigCam.lookAt(lookTarget);
   rigCam.updateProjectionMatrix();
 
-  // 摇臂线段 + Yaw 轨道环（都挂在偏移后的锚点上）
+  // 摇臂线段 + Yaw 轨道环（都挂在偏移后的锚点上；分层开启时另画各档淡环）
   const pos = armLine.geometry.attributes.position;
   pos.setXYZ(0, pivotPos.x, pivotPos.y, pivotPos.z);
   pos.setXYZ(1, lensPos.x, lensPos.y, lensPos.z);
   pos.needsUpdate = true;
   {
-    const pitch = THREE.MathUtils.degToRad(S.pitch);
-    orbitRing.position.set(pivotPos.x, pivotPos.y + Math.sin(pitch) * S.dist, pivotPos.z);
-    orbitRing.scale.setScalar(Math.max(Math.cos(pitch) * S.dist, 0.01));
+    const place = (ring, pitchDeg, distM, rightM) =>
+    {
+      const p = THREE.MathUtils.degToRad(pitchDeg);
+      const c = targetPos.clone()
+        .addScaledVector(right0, rightM)
+        .addScaledVector(new THREE.Vector3(0, 1, 0), S.pivU)
+        .addScaledVector(fwd0, S.pivF);
+      ring.position.set(c.x, c.y + Math.sin(p) * distM, c.z);
+      ring.scale.setScalar(Math.max(Math.cos(p) * distM, 0.01));
+    };
+    place(orbitRing, effPitch, effDist, effRight);
+    for (let i = 0; i < 3; i++)
+    {
+      bandRings[i].visible = S.bands && orbitRing.visible;
+      if (bandRings[i].visible)
+        place(bandRings[i], S.bandDefs[i].pitch, S.bandDefs[i].dist, S.bandDefs[i].right);
+    }
   }
 
   placeLabels();
