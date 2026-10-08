@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Units;
@@ -66,13 +67,13 @@ public static class CrowdFormations
             s[k] = dx * rx + dy * ry;
         }
 
-        var order = new int[n];
-        for (int k = 0; k < n; k++) order[k] = k;
-        Array.Sort(order, (a, b) =>
-        {
-            int c = mirror ? d[b].CompareTo(d[a]) : d[a].CompareTo(d[b]);
-            return c != 0 ? c : f[b].CompareTo(f[a]);
-        });
+        // 行分配排序:主键 d(mirror 反向),决胜 f 降序;JS sort 稳定,平局保输入(下标)序,
+        // Array.Sort 不稳定——大行(≥16 元素 introsort)会打乱参考端的平局序(TR-03)
+        var order = (mirror
+                ? Enumerable.Range(0, n).OrderByDescending(k => d[k])
+                : Enumerable.Range(0, n).OrderBy(k => d[k]))
+            .ThenByDescending(k => f[k])
+            .ToArray();
         int k0 = 0;
         Fix64 maxW = Fix64.Zero, back = Fix64.Zero, prevDepth = Fix64.Zero;
         for (int r = 0; k0 < n; r++)
@@ -89,8 +90,8 @@ public static class CrowdFormations
             }
 
             if (r != 0) back += (prevDepth + depth) / 2;
-            var row = order[k0..(k0 + m)];
-            Array.Sort(row, (a, b) => s[a].CompareTo(s[b]));
+            // 行内横向排序:单键 s;平局保上一处排序的产出序(不是下标序),同依赖稳定排序
+            var row = order[k0..(k0 + m)].OrderBy(k => s[k]).ToArray();
             Fix64 acc = -rw / 2;
             foreach (int k in row)
             {
