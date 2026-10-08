@@ -235,12 +235,13 @@ public sealed class RuntimePushSection
 
 /// <summary>关系推挤矩阵(core/relations.js buildRelations 产物):PushModeByPair[a * P + b] 为
 /// 玩家下标 a 对 b 的推挤模式(下标 = 地图 Players 表序)。IndexByPlayerId 把 PlayerOwner 的
-/// 玩家号换算成表序下标——Players 不按 1..P 顺排时查表仍对齐(参考端 gp 存的就是下标)。</summary>
+/// 玩家号换算成表序下标;门禁保证玩家号恰为 1..P 的排列,数组按玩家号直查,长度 = P + 1。</summary>
 public sealed class RuntimeRelations
 {
     public required int PlayerCount { get; init; }
     public required CrowdSimulationPushMode[] PushModeByPair { get; init; }
-    /// <summary>长度 = PlayerCount;IndexByPlayerId[ playerId ] = 表序下标。</summary>
+    /// <summary>长度 = P + 1(下标 0 弃用);IndexByPlayerId[ playerId ] = 表序下标,
+    /// 仅对 1..P 的玩家号有定义(装载门禁拒绝表外 id)。</summary>
     public required int[] IndexByPlayerId { get; init; }
 }
 

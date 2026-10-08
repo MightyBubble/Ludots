@@ -20,6 +20,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// </summary>
 public static class CrowdAvoidance
 {
+
     /// <summary>完全堆叠对的判定域:参考端 1e-6 m² = (1 mm)²,厘米域即 0.01 cm²(FromDouble 精确落格,非零)。</summary>
     private static readonly Fix64 StackedD2Cm = Fix64.FromDouble(0.01);
     /// <summary>堆叠守卫的防零垫:参考端 1e-3 m² = 10 cm²(垫出 ≈3.2 cm 的解算距离)。</summary>
@@ -183,7 +184,7 @@ public static class CrowdAvoidance
 
                 // 截断 + 时间平滑,消密集人群的逐帧推力抖动
                 int i2 = hash2.Items[kk];
-                k.Contacts[i2] += (byte)Math.Min(contacts, 255);
+                k.Contacts[i2] += (ushort)contacts;
                 Fix64 m = CrowdFix.Hypot(sx, sy);
                 calm[i2] = m <= k.RestDeadband ? (byte)1 : (byte)0;
                 if (m > k.MaxPush)

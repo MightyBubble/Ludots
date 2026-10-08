@@ -16,11 +16,13 @@ namespace CrowdSimulationTests.Parity;
 /// 位置逐 tick 逐单位 |Δ| ≤ MaxTrajectoryBandCm;末 30 tick 再收束 ≤ FinalBandCm。
 /// 带值校准(2026-10-08 F01 整改复测,S5-b 避让开启口径,600 tick × 241 单位,seed 1337):
 /// p50=0.07cm、p99=17.3cm、p99.9=35.2cm、max=136.1cm、末 30 tick max=35.2cm;
-/// 状态机全程零不一致。位置尾差定性:双算术体系(Fix64 与参考端 f32/f64 混合)的累积
-/// 舍入差在"马达停车线 / 接触边界"的不连续点上翻转离散事件(首个:tick 11 单位 163 的
-/// n2/slow2 骑线,差 5e-4)——f64 化参考端存储与求解缓冲后不收敛,证明不是 f32 量化噪声
-/// 单独所致;结构级分歧照常以米-公里级偏差触警。接触计数硬门实测:不一致 10/144234
-/// 样本(0.007%,全部 ±1 骑线),容忍线 0.05% + 幅度 ±1(7 倍余量 / 结构分歧击穿)。
+/// 状态机全程零不一致。位置尾差定性(F01 三轮整改 L18 修订):首个分歧点 tick 11 单位 163
+/// 的马达中间量逐语句对照 + 逐接触对照证明——接触集/公式/分支逐句同构,输入差来自参考端
+/// f32 状态存储(位置量化格 2^-10m;生成位置全精度,首次马达步即落格),经马达 spd≈687.5
+/// 因子放大翻转停车线(rest-stop)分支;穷举去量化实验(参考端全部 f32 缓冲→f64、删显式
+/// fround)仍不收敛——残余为双数值系每运算舍入差,现数值系下不可消除(2026-10-09)。
+/// 接触计数硬门(L19):不一致 10/144234 样本(0.007%,全部 ±1 骑线),容忍线 0.05% + 幅度
+/// ±1;失败断言输出全量不一致清单。系统性分歧(接触集大面积错)会同时击穿两条。
 /// </summary>
 public sealed class S5TrajectoryTruthTests
 {
@@ -54,7 +56,7 @@ public sealed class S5TrajectoryTruthTests
         int stateMismatches = 0;
         int contactMismatches = 0;
         int contactMaxDelta = 0;
-        string? firstContactMismatch = null;
+        var contactSamples_ = new List<string>();
         int contactSamples = 0;
         string? firstStateMismatch = null;
         for (int t = 0; t < ticks; t++)
@@ -87,7 +89,8 @@ public sealed class S5TrajectoryTruthTests
                 {
                     contactMismatches++;
                     contactMaxDelta = Math.Max(contactMaxDelta, contactDelta);
-                    firstContactMismatch ??= $"tick {t} 单位 {i}: 我 {session.Movement.Contacts[i]} vs 参考 {tContacts}";
+                    // L19:全量清单(不只首个),失败断言整体列出
+                    contactSamples_.Add($"tick {t} 单位 {i}: 我 {session.Movement.Contacts[i]} vs 参考 {tContacts}");
                 }
                 uint myHandle = session.Units.HandleAt(i);
                 Assert.That(myHandle, Is.EqualTo(handle), $"tick {t} 单位 {i} 句柄错位");
@@ -111,13 +114,20 @@ public sealed class S5TrajectoryTruthTests
         double p999 = deltas[(int)(deltas.Count * 0.999)];
         double p99 = deltas[(int)(deltas.Count * 0.99)];
         double p50 = deltas[deltas.Count / 2];
+        // L19:接触计数容忍线的证据链(F01 三轮整改 L18)——残余差定性为参考端 f32 状态存储
+        // (逐接触对照:同集合同公式,dx/dy 差 = f32 量化格 2^-10m;去量化实验仍不收敛,残余为
+        // 双数值系每运算舍入差),经马达 spd 因子放大翻转停车线等离散分支;逐位相等在现数值系
+        // 下不可达,故保留双容忍线,系统性分歧(接触集大面积错)仍会同时击穿两条。
+        string contactList = contactSamples_.Count > 8
+            ? string.Join("; ", contactSamples_.Take(8)) + $" …共 {contactSamples_.Count} 条"
+            : string.Join("; ", contactSamples_);
         TestContext.Out.WriteLine(
             $"S5 轨迹偏差(厘米): p50={p50:F4} p99={p99:F2} p99.9={p999:F2} max={maxDeltaCm:F2} 末{FinalTicks}帧max={finalMaxDeltaCm:F2};状态机不一致 {stateMismatches} 处");
         Assert.That(stateMismatches, Is.EqualTo(0), $"状态机字段逐位不一致:{firstStateMismatch}");
         Assert.That(contactMismatches, Is.LessThanOrEqualTo(contactSamples * 5 / 10000),
-            $"接触计数硬门:不一致 {contactMismatches}/{contactSamples} 样本超 0.05% 容忍(首个:{firstContactMismatch})");
+            $"接触计数硬门:不一致 {contactMismatches}/{contactSamples} 样本超 0.05% 容忍(全清单:{contactList})");
         Assert.That(contactMaxDelta, Is.LessThanOrEqualTo(1),
-            $"接触计数硬门:单样本幅度 {contactMaxDelta} 超过骑线翻转上限 ±1(首个:{firstContactMismatch})");
+            $"接触计数硬门:单样本幅度 {contactMaxDelta} 超过骑线翻转上限 ±1(全清单:{contactList})");
         Assert.That(maxDeltaCm, Is.LessThanOrEqualTo(MaxTrajectoryBandCm),
             $"轨迹逐 tick 位置最大偏差 {maxDeltaCm:F2}cm 超带宽 {MaxTrajectoryBandCm}cm(p99.9={p999:F2})");
         Assert.That(finalMaxDeltaCm, Is.LessThanOrEqualTo(FinalBandCm),

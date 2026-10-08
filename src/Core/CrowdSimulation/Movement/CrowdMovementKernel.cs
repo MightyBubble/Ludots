@@ -25,8 +25,9 @@ public sealed class CrowdMovementKernel
     public int[] GatherGroup = Array.Empty<int>();
     /// <summary>逐占格唤醒标记(下标 = 哈希 Active 槽位)。</summary>
     public byte[] Awake = Array.Empty<byte>();
-    /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的逐位硬门)。</summary>
-    public byte[] Contacts = Array.Empty<byte>();
+    /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
+    /// 跨子步累加不回绕)。</summary>
+    public ushort[] Contacts = Array.Empty<ushort>();
     public CrowdWalls.OpenCellCache OpenCache { get; init; } = new();
     /// <summary>流场采样的本帧暂存(方向写出)。</summary>
     public int Tick;
@@ -96,7 +97,7 @@ public sealed class CrowdMovementKernel
         if (GatherLevel.Length < unitCapacity) GatherLevel = new byte[unitCapacity];
         if (GatherMoving.Length < unitCapacity) GatherMoving = new byte[unitCapacity];
         if (GatherGroup.Length < unitCapacity) GatherGroup = new int[unitCapacity];
-        if (Contacts.Length < unitCapacity) Contacts = new byte[unitCapacity];
+        if (Contacts.Length < unitCapacity) Contacts = new ushort[unitCapacity];
     }
 
     /// <summary>D54:新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>

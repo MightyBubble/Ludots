@@ -328,4 +328,30 @@ public class CrowdSimulationConfigTests
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
         Assert.That(ex!.Message, Does.Contain("lifetimeSec"));
     }
+
+    [Test]
+    public void Relations_NonPermutationPlayerIds_AreRejected()
+    {
+        // L16:关系矩阵按玩家号直查(IndexByPlayerId 长度 P+1),玩家号必须恰为 1..P 的排列;
+        // 跳号/重复/0/超界全部进图即拒。
+        foreach (var (ids, expected) in new[]
+                 {
+                     (new[] { 1, 3 }, "缺失 2"),
+                     (new[] { 1, 1 }, "playerId 重复"),
+                     (new[] { 0, 1 }, "缺失 2"),
+                     (new[] { 1, 5 }, "缺失 2"),
+                 })
+        {
+            var map = TestDefaults.DemoMap();
+            map.Players.Clear();
+            for (int i = 0; i < ids.Length; i++)
+            {
+                map.Players.Add(new PlayerBindingData { PlayerId = ids[i], TeamId = 1, RepresentativeInstanceId = "player_" + i });
+            }
+
+            var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map),
+                $"玩家号 [{string.Join(',', ids)}] 应被拒绝");
+            Assert.That(ex!.Message, Does.Contain(expected), $"[{string.Join(',', ids)}] 的报错应写明规则");
+        }
+    }
 }

@@ -149,6 +149,21 @@ public sealed class CrowdSimulationConfigLoader
             playerIds.Add(p.PlayerId);
         }
 
+        // 关系矩阵按"玩家号 = 1..P 的排列"建表(IndexByPlayerId 以玩家号为下标直查,长度 P+1):
+        // 跳号/重复/0/负/超界都会让表外 id 越界或被当成别的玩家,进图即拒。
+        if (playerIds.Count != map.Players.Count)
+        {
+            throw new InvalidOperationException($"{mapFile}: Players[].playerId 重复(需恰为 1..{map.Players.Count} 的一个排列,当前 {map.Players.Count} 个条目只有 {playerIds.Count} 个不同 id)。");
+        }
+
+        for (int expected = 1; expected <= map.Players.Count; expected++)
+        {
+            if (!playerIds.Contains(expected))
+            {
+                throw new InvalidOperationException($"{mapFile}: Players[].playerId 必须恰为 1..{map.Players.Count} 的一个排列(缺失 {expected};求解器按玩家号直查关系矩阵,表外 id 不允许)。");
+            }
+        }
+
         foreach (var b in config.Deploy.Bases)
         {
             if (!playerIds.Contains(b.PlayerId))

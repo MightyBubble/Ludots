@@ -10,6 +10,17 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// </summary>
 public static class CrowdSimCommands
 {
+    /// <summary>指令玩家号门禁:关系矩阵按玩家号直查(1..P),表外 id 不允许进求解器。</summary>
+    private static void RequirePlayer(CrowdSimSession sim, int player)
+    {
+        int count = sim.Config.Relations.PlayerCount;
+        if (player < 1 || player > count)
+        {
+            throw new System.InvalidOperationException(
+                $"指令 player = {player},有效范围 1..{count}(关系矩阵按玩家号直查,表外 id 不允许)。");
+        }
+    }
+
     public static object? Exec(CrowdSimSession sim, JsonNode cmd)
     {
         string type = cmd["type"]?.GetValue<string>()
@@ -19,6 +30,7 @@ public static class CrowdSimCommands
             case "spawn":
                 return CrowdDeployment.Spawn(sim, cmd["count"]!.GetValue<int>());
             case "spawnAt":
+                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
                 return CrowdDeployment.SpawnAt(
                     sim,
                     Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
@@ -28,6 +40,7 @@ public static class CrowdSimCommands
                     cmd["unitType"]!.GetValue<int>(),
                     cmd["rIdx"]!.GetValue<int>());
             case "select":
+                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
                 SelectRect(
                     sim,
                     cmd["player"]!.GetValue<int>(),
@@ -38,12 +51,14 @@ public static class CrowdSimCommands
                     cmd["additive"]?.GetValue<bool>() ?? false);
                 return null;
             case "selectAll":
+                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
                 SelectAll(sim, cmd["player"]!.GetValue<int>());
                 return null;
             case "clearSelection":
                 ClearSelection(sim);
                 return null;
             case "order":
+                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
                 return Movement.CrowdIssueOrder.Issue(
                     sim,
                     Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
