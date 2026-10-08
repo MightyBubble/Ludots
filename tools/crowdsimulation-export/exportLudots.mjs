@@ -548,6 +548,9 @@ function canonComp(comp, n2) {
       const mixI64 = (h, raw) => mix32(mix32(h, Number(raw & 0xffffffffn) >>> 0), Number((raw >> 32n) & 0xffffffffn) >>> 0);
       const canonChecksum = () => {
         const u = sim.units, n = u.count;
+        // 防御:真值生成期单位数与 canonical 缓冲不一致时立刻炸,不产错位真值
+        if (sim.__canonX.length < n || sim.__canonY.length < n)
+          throw new Error(`canonChecksum: units.count=${n} 超出 canonical 缓冲 ${sim.__canonX.length}`);
         let h = mix32(mix32(2166136261, sim.tickCount), n);
         for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonX[i] * 100 * 4294967296)));
         for (let i = 0; i < n; i++) h = mixI64(h, BigInt(Math.round(sim.__canonY[i] * 100 * 4294967296)));
@@ -649,13 +652,7 @@ function canonComp(comp, n2) {
       w.i32(TICKS);
       for (let t = 0; t < TICKS; t++) {
         sim.sepCtx.unitContacts.fill(0);
-        if (t >= 10 && t <= 12) { sim.sepCtx.__dbg = 163; sim.sepCtx.__dbgLog = []; }
         sim.advance(1);
-        if (t >= 10 && t <= 12) {
-          for (const line of sim.sepCtx.__dbgLog) console.log(`[dbg163] t${t} ${line}`);
-          console.log(`[dbg163] t${t} u163 pos=(${u0(sim, 163)},${u1(sim, 163)}) v=(${sim.units.vx[163].toFixed(3)},${sim.units.vy[163].toFixed(3)}) sep=(${sim.sepX[163].toFixed(4)},${sim.sepY[163].toFixed(4)}) contacts=${sim.sepCtx.unitContacts[163]}`);
-          sim.sepCtx.__dbg = undefined;
-        }
         const u = sim.units, n = u.count;
         w.i32(n);
         for (let i = 0; i < n; i++) {
