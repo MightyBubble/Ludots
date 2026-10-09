@@ -40,7 +40,7 @@ public class S7RebakeSmokeTests
             (120, """{"type":"placeStructure","template":"road","xCm":496875,"yCm":565625,"sizeCm":3000,"toXCm":521875,"toYCm":565625}"""),
         };
         var script = new List<CrowdCommand>();
-        foreach (var (tick, json) in entries) script.Add(new CrowdCommand(tick, Cmd(json)));
+        foreach (var (tick, json) in entries) script.Add(new CrowdCommand(tick, CrowdSimCommand.Parse(Cmd(json))));
         session.Commands.Schedule(session, script);
 
         int rebakes = 0;

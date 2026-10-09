@@ -35,7 +35,7 @@ public sealed class CrowdCommandQueueGateTests
                 () => session.Commands.Submit<object?>(session, bad, CrowdSimCommands.Exec),
                 $"player={badPlayer} 现场指令应在入队即拒");
             Assert.Throws<InvalidOperationException>(
-                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, bad) }),
+                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, CrowdSimCommand.Parse(bad)) }),
                 $"player={badPlayer} 脚本指令应在入队即拒");
         }
 
@@ -84,7 +84,7 @@ public sealed class CrowdCommandQueueGateTests
                 () => session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec),
                 $"{label} 无迷雾会话现场指令应在入队即拒");
             Assert.Throws<InvalidOperationException>(
-                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, cmd) }),
+                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, CrowdSimCommand.Parse(cmd)) }),
                 $"{label} 无迷雾会话脚本指令应在入队即拒");
         }
 
@@ -125,7 +125,7 @@ public sealed class CrowdCommandQueueGateTests
                     () => session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec),
                     $"{label} 零/双形状应在入队即拒");
                 Assert.Throws<InvalidOperationException>(
-                    () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, cmd) }),
+                    () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, CrowdSimCommand.Parse(cmd)) }),
                     $"{label} 零/双形状脚本应在入队即拒");
             }
 
@@ -162,7 +162,7 @@ public sealed class CrowdCommandQueueGateTests
                 () => session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec),
                 "字段类型错的现场指令应在入队即拒(合同异常)");
             Assert.Throws<InvalidOperationException>(
-                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, cmd) }),
+                () => session.Commands.Schedule(session, new[] { new CrowdCommand(0, CrowdSimCommand.Parse(cmd)) }),
                 "字段类型错的脚本指令应在入队即拒(合同异常)");
         }
 

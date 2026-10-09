@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
@@ -51,24 +50,20 @@ public sealed class S4DeployDemoRuntime
     public void EnqueuePlace(int xCm, int yCm) => Enqueue(() =>
     {
         var tpl = Template;
-        var cmd = new JsonObject
+        bool road = tpl.RoadLengthCm > 0;
+        SubmitInteractive(new CrowdSimCommand
         {
-            ["type"] = "placeStructure",
-            ["template"] = tpl.Id,
-            ["xCm"] = xCm,
-            ["yCm"] = yCm,
-            ["sizeCm"] = tpl.SizeCm,
-        };
-        if (tpl.RoadLengthCm > 0)
-        {
-            cmd["toXCm"] = xCm + tpl.RoadLengthCm;
-            cmd["toYCm"] = yCm;
-        }
-
-        SubmitInteractive(cmd);
+            Kind = CrowdSimCommandKind.PlaceStructure,
+            TemplateId = tpl.Id,
+            XCm = xCm,
+            YCm = yCm,
+            SizeCm = tpl.SizeCm,
+            ToXCm = road ? xCm + tpl.RoadLengthCm : 0,
+            ToYCm = road ? yCm : 0,
+        });
     });
     public void EnqueueRemove(int xCm, int yCm) => Enqueue(() =>
-        SubmitInteractive(new JsonObject { ["type"] = "removeStructureAt", ["xCm"] = xCm, ["yCm"] = yCm }));
+        SubmitInteractive(new CrowdSimCommand { Kind = CrowdSimCommandKind.RemoveStructureAt, XCm = xCm, YCm = yCm }));
 
     private void Enqueue(Action action)
     {
@@ -91,7 +86,7 @@ public sealed class S4DeployDemoRuntime
         }
     }
 
-    private void SubmitInteractive(JsonObject cmd)
+    private void SubmitInteractive(CrowdSimCommand cmd)
     {
         var runtime = _engine.GetService(CoreServiceKeys.CrowdSimulationRuntime);
         var session = _engine.GetService(CoreServiceKeys.CrowdSimulationSession);

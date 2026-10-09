@@ -1,13 +1,13 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.Collections.Generic;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
 /// S4+S5 指令集:spawn(批量部署)、spawnAt(点名生成)、select(框选)、selectAll(全选)、
-/// clearSelection(清空选择)、order(移动下令:S5,右键点=移动,拖线=摆阵)。
-/// 指令是数据,只在 tick 边界执行——仿真频率就是 FixedHz,不存在第二个时钟。
+/// clearSelection(清空选择)、order(移动下令:S5,右键点=移动,拖线=摆阵)、迷雾面
+/// (fogSight/reveal/obscure/forget/fogShare)与结构面(placeStructure/removeStructureAt)。
+/// 指令是 struct 数据,只在 tick 边界执行——仿真频率就是 FixedHz,不存在第二个时钟。
 /// </summary>
 public static class CrowdSimCommands
 {
@@ -24,28 +24,27 @@ public static class CrowdSimCommands
     }
 
     /// <summary>入队校验:坏指令在进日志/队列之前拒绝——拖到 Exec 时刻才抛,坏指令已入
-    /// 日志再停摆,live 与回放不对称。三面:玩家号表外(1..P);迷雾面指令与 order.fogTerrain
-    /// 在迷雾未启用(会话无 Fog)的会话上;迷雾区域指令的 area 需且仅需一种形状。
-    /// player/with 的 JSON 值需为整数——GetValue 的转换异常不是指令合同异常。
-    /// 坐标/形状数值级的结构性校验仍由 Exec 防御层拦(不入队路径的合同不变)。</summary>
-    public static void Validate(CrowdSimSession sim, JsonNode cmd)
+    /// 日志再停摆,live 与回放不对称。会话域两面:玩家号表外(1..P);迷雾面指令与
+    /// order.fogTerrain 在迷雾未启用(会话无 Fog)的会话上。载荷结构面(字段缺失/类型/
+    /// area 恰一/obscure ticks 值)由边界 CrowdSimCommand.Parse 一次成形,不在这里。</summary>
+    public static void Validate(CrowdSimSession sim, CrowdSimCommand cmd)
     {
-        string? type = cmd["type"]?.GetValue<string>();
-        if (type is "fogSight" or "reveal" or "obscure" or "forget" or "fogShare") RequireFog(sim, type);
-        if (type is not ("spawnAt" or "select" or "selectAll" or "order" or "reveal" or "obscure" or "forget" or "fogShare")) return;
-        var player = cmd["player"] ?? throw new System.InvalidOperationException($"指令 {type} 缺少 player 字段。");
-        RequirePlayer(sim, RequireInt(player, type, "player"));
-        if (type == "fogShare")
+        if (cmd.Kind is CrowdSimCommandKind.FogSight or CrowdSimCommandKind.Reveal
+            or CrowdSimCommandKind.Obscure or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare)
         {
-            var with = cmd["with"] ?? throw new System.InvalidOperationException("fogShare 指令缺少 with 字段。");
-            RequirePlayer(sim, RequireInt(with, type, "with"));
-        }
-        else if (type is "reveal" or "obscure" or "forget")
-        {
-            Fog.CrowdFogShape.RequireExactlyOne(type, cmd);
+            RequireFog(sim, CrowdSimCommand.KindName(cmd.Kind));
         }
 
-        if (type == "order" && cmd["fogTerrain"] is { }) RequireFog(sim, type);
+        if (cmd.Kind is not (CrowdSimCommandKind.SpawnAt or CrowdSimCommandKind.Select or CrowdSimCommandKind.SelectAll
+            or CrowdSimCommandKind.Order or CrowdSimCommandKind.Reveal or CrowdSimCommandKind.Obscure
+            or CrowdSimCommandKind.Forget or CrowdSimCommandKind.FogShare))
+        {
+            return;
+        }
+
+        RequirePlayer(sim, cmd.Player);
+        if (cmd.Kind == CrowdSimCommandKind.FogShare) RequirePlayer(sim, cmd.With);
+        if (cmd.Kind == CrowdSimCommandKind.Order && cmd.HasFogTerrain) RequireFog(sim, "order");
     }
 
     /// <summary>迷雾启用门:迷雾面指令在无 Fog 会话(纯部署/未启用运动)上入队即拒,
@@ -55,136 +54,114 @@ public static class CrowdSimCommands
         _ = sim.Fog ?? throw new System.InvalidOperationException($"{type}: 迷雾未启用(会话没有运动内核)。");
     }
 
-    /// <summary>整数字段门:player/with 的 JSON 值不是整数(字符串/小数/数组/布尔)即拒;
-    /// 只认 JSON 整数 token——CLR 字符串值经数值转换放行是 BCL 行为,不是本合同。</summary>
-    private static int RequireInt(JsonNode node, string type, string field)
+    public static object? Exec(CrowdSimSession sim, CrowdSimCommand cmd)
     {
-        if (node is JsonValue v && v.TryGetValue<int>(out int value) && v.GetValueKind() == JsonValueKind.Number)
+        switch (cmd.Kind)
         {
-            return value;
-        }
-
-        throw new System.InvalidOperationException($"指令 {type} 的 {field} 字段需为整数。");
-    }
-
-    public static object? Exec(CrowdSimSession sim, JsonNode cmd)
-    {
-        string type = cmd["type"]?.GetValue<string>()
-            ?? throw new System.InvalidOperationException("指令缺少 type 字段。");
-        switch (type)
-        {
-            case "spawn":
-                return CrowdDeployment.Spawn(sim, cmd["count"]!.GetValue<int>());
-            case "spawnAt":
-                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
+            case CrowdSimCommandKind.Spawn:
+                return CrowdDeployment.Spawn(sim, cmd.Count);
+            case CrowdSimCommandKind.SpawnAt:
+                RequirePlayer(sim, cmd.Player);
                 return CrowdDeployment.SpawnAt(
                     sim,
-                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()),
-                    cmd["count"]!.GetValue<int>(),
-                    cmd["player"]!.GetValue<int>(),
-                    cmd["unitType"]!.GetValue<int>(),
-                    cmd["rIdx"]!.GetValue<int>());
-            case "select":
-                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
+                    Fix64.FromInt(cmd.XCm),
+                    Fix64.FromInt(cmd.YCm),
+                    cmd.Count,
+                    cmd.Player,
+                    cmd.UnitType,
+                    cmd.RIdx);
+            case CrowdSimCommandKind.Select:
+                RequirePlayer(sim, cmd.Player);
                 SelectRect(
                     sim,
-                    cmd["player"]!.GetValue<int>(),
-                    Fix64.FromInt(cmd["x0Cm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["y0Cm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["x1Cm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["y1Cm"]!.GetValue<int>()),
-                    cmd["additive"]?.GetValue<bool>() ?? false);
+                    cmd.Player,
+                    Fix64.FromInt(cmd.X0Cm),
+                    Fix64.FromInt(cmd.Y0Cm),
+                    Fix64.FromInt(cmd.X1Cm),
+                    Fix64.FromInt(cmd.Y1Cm),
+                    cmd.Additive);
                 return null;
-            case "selectAll":
-                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
-                SelectAll(sim, cmd["player"]!.GetValue<int>());
+            case CrowdSimCommandKind.SelectAll:
+                RequirePlayer(sim, cmd.Player);
+                SelectAll(sim, cmd.Player);
                 return null;
-            case "clearSelection":
+            case CrowdSimCommandKind.ClearSelection:
                 ClearSelection(sim);
                 return null;
-            case "order":
-                RequirePlayer(sim, cmd["player"]!.GetValue<int>());
+            case CrowdSimCommandKind.Order:
+                RequirePlayer(sim, cmd.Player);
                 // F02 乐观迷雾开关随下令提交(参考端 issueOrder 的 opts.fogTerrain;随日志回放,
                 // 确定性)。切换即同步认知(与参考端同点:指令内联)。
-                if (cmd["fogTerrain"] is { } ftNode)
+                if (cmd.HasFogTerrain)
                 {
                     var fog = sim.Fog ?? throw new System.InvalidOperationException("order: 迷雾未启用(会话没有运动内核)。");
-                    bool ft = ftNode.GetValue<bool>();
-                    if (fog.Terrain != ft)
+                    if (fog.Terrain != cmd.FogTerrain)
                     {
-                        fog.Terrain = ft;
+                        fog.Terrain = cmd.FogTerrain;
                         Fog.CrowdBeliefSync.Sync(sim);
                     }
                 }
 
                 return Movement.CrowdIssueOrder.Issue(
                     sim,
-                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()),
-                    cmd["player"]!.GetValue<int>(),
-                    cmd["shape"]?.GetValue<string>() ?? "box",
-                    cmd["auto"]?.GetValue<bool>(),
-                    cmd["face"] is { } f ? new Fix64Vec2(Fix64.FromDouble(f[0]!.GetValue<double>()), Fix64.FromDouble(f[1]!.GetValue<double>())) : (Fix64Vec2?)null,
-                    cmd["widthCm"] is { } w ? Fix64.FromInt(w.GetValue<int>()) : Fix64.Zero);
-            case "fogSight":
+                    Fix64.FromInt(cmd.XCm),
+                    Fix64.FromInt(cmd.YCm),
+                    cmd.Player,
+                    cmd.ShapeId!,
+                    cmd.HasAuto ? cmd.Auto : null,
+                    cmd.HasFace ? new Fix64Vec2(cmd.FaceX, cmd.FaceY) : null,
+                    Fix64.FromInt(cmd.WidthCm));
+            case CrowdSimCommandKind.FogSight:
                 (sim.Fog ?? throw new System.InvalidOperationException("fogSight: 迷雾未启用(会话没有运动内核)。")).Los =
-                    cmd["on"]?.GetValue<bool>() ?? true;
+                    cmd.On;
                 return null;
-            case "reveal":
-            case "obscure":
-            case "forget":
-            case "fogShare":
-                return FogCmd(sim, type, cmd);
-            case "placeStructure":
+            case CrowdSimCommandKind.Reveal:
+            case CrowdSimCommandKind.Obscure:
+            case CrowdSimCommandKind.Forget:
+            case CrowdSimCommandKind.FogShare:
+                return FogCmd(sim, cmd);
+            case CrowdSimCommandKind.PlaceStructure:
                 return Structures.CrowdStructureOps.PlaceStructure(
                     sim,
-                    cmd["template"]!.GetValue<string>(),
-                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["sizeCm"]!.GetValue<int>()),
-                    cmd["toXCm"] is { } tx ? Fix64.FromInt(tx.GetValue<int>()) : Fix64.Zero,
-                    cmd["toYCm"] is { } ty ? Fix64.FromInt(ty.GetValue<int>()) : Fix64.Zero);
-            case "removeStructureAt":
+                    cmd.TemplateId!,
+                    Fix64.FromInt(cmd.XCm),
+                    Fix64.FromInt(cmd.YCm),
+                    Fix64.FromInt(cmd.SizeCm),
+                    Fix64.FromInt(cmd.ToXCm),
+                    Fix64.FromInt(cmd.ToYCm));
+            case CrowdSimCommandKind.RemoveStructureAt:
                 return Structures.CrowdStructureOps.RemoveStructureAt(
                     sim,
-                    Fix64.FromInt(cmd["xCm"]!.GetValue<int>()),
-                    Fix64.FromInt(cmd["yCm"]!.GetValue<int>()));
+                    Fix64.FromInt(cmd.XCm),
+                    Fix64.FromInt(cmd.YCm));
             default:
-                throw new System.InvalidOperationException($"未知指令 {type}。");
+                throw new System.InvalidOperationException($"未知指令 {CrowdSimCommand.KindName(cmd.Kind)}。");
         }
     }
 
-    /// <summary>框选(selectRect 移植,位置单位为厘米):框内本方单位入选;
-    /// additive = false 时清空框外与其余玩家的选择。</summary>
     /// <summary>D50 迷雾/知识面命令(sim/playerCommands.js fogCmd 移植):主体 = 玩家(实体域
     /// 语法糖)→ 其视野组,组内玩家同享。area = rect/circle/poly 恰一(米→厘米在脚本边界换算)。
     /// 命令只改迷雾数据;认知同步在下一 tick 管线拾起(fogShare 的 force 除外——并组当场标记)。</summary>
-    private static object? FogCmd(CrowdSimSession sim, string type, JsonNode cmd)
+    private static object? FogCmd(CrowdSimSession sim, CrowdSimCommand cmd)
     {
+        string type = CrowdSimCommand.KindName(cmd.Kind);
         var fog = sim.Fog ?? throw new System.InvalidOperationException($"{type}: 迷雾未启用(会话没有运动内核)。");
         var relations = sim.Config.Relations;
-        int player = cmd["player"] is { } p ? p.GetValue<int>() : throw new System.InvalidOperationException($"{type}: 缺少 player 字段。");
-        if (player < 1 || player > relations.PlayerCount)
+        if (cmd.Player < 1 || cmd.Player > relations.PlayerCount)
         {
-            throw new System.InvalidOperationException($"{type}: 无效玩家 {player}。");
+            throw new System.InvalidOperationException($"{type}: 无效玩家 {cmd.Player}。");
         }
 
-        int g = fog.GroupOf[relations.IndexByPlayerId[player]];
-        if (type == "fogShare")
+        int g = fog.GroupOf[relations.IndexByPlayerId[cmd.Player]];
+        if (cmd.Kind == CrowdSimCommandKind.FogShare)
         {
-            int with = cmd["with"] is { } w ? w.GetValue<int>() : throw new System.InvalidOperationException("fogShare: 缺少 with 字段。");
-            if (with < 1 || with > relations.PlayerCount)
+            if (cmd.With < 1 || cmd.With > relations.PlayerCount)
             {
-                throw new System.InvalidOperationException($"fogShare: 无效玩家 {with}。");
+                throw new System.InvalidOperationException($"fogShare: 无效玩家 {cmd.With}。");
             }
 
-            if (cmd["on"]?.GetValue<bool>() == false)
-            {
-                throw new System.InvalidOperationException("fogShare: 拆分视野组尚未支持(需显式重组命令)。");
-            }
-
-            int to = fog.MergeGroups(g, fog.GroupOf[relations.IndexByPlayerId[with]]);
+            // on=false 的拆组在边界 Parse 拒收(坏指令不进日志);Exec 只见并组方向。
+            int to = fog.MergeGroups(g, fog.GroupOf[relations.IndexByPlayerId[cmd.With]]);
             if (to >= 0)
             {
                 var force = sim.Belief!.Force ??= new HashSet<int>();
@@ -194,24 +171,25 @@ public static class CrowdSimCommands
             return to;
         }
 
-        var shape = Fog.CrowdFogShape.Parse(type, cmd);
+        var shape = cmd.Area ?? throw new System.InvalidOperationException($"{type}: 缺少 area 形状。");
         var (cells, box) = Fog.CrowdFogArea.AreaCells(fog.F, fog.FcsCm, shape);
-        if (type == "reveal") fog.RevealArea(g, cells);
-        else if (type == "forget") fog.ForgetArea(g, cells, box);
+        if (cmd.Kind == CrowdSimCommandKind.Reveal) fog.RevealArea(g, cells);
+        else if (cmd.Kind == CrowdSimCommandKind.Forget) fog.ForgetArea(g, cells, box);
         else
         {
-            int ticks = cmd["ticks"] is { } t ? t.GetValue<int>() : throw new System.InvalidOperationException("obscure: 缺少 ticks(需为 ≥1 的整数)。");
-            if (ticks < 1)
+            if (cmd.Ticks < 1)
             {
                 throw new System.InvalidOperationException("obscure: ticks 需为 ≥1 的整数。");
             }
 
-            fog.ObscureArea(g, cells, sim.TickCount + ticks);
+            fog.ObscureArea(g, cells, sim.TickCount + cmd.Ticks);
         }
 
         return g;
     }
 
+    /// <summary>框选(selectRect 移植,位置单位为厘米):框内本方单位入选;
+    /// additive = false 时清空框外与其余玩家的选择。</summary>
     public static void SelectRect(CrowdSimSession sim, int player, Fix64 x0, Fix64 y0, Fix64 x1, Fix64 y1, bool additive)
     {
         var (ax, bx) = x0 < x1 ? (x0, x1) : (x1, x0);

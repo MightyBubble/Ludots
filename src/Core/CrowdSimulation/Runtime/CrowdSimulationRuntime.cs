@@ -362,9 +362,7 @@ public sealed class CrowdSimulationRuntime
         {
             foreach (var entry in script)
             {
-                int tick = entry!["tick"]!.GetValue<int>();
-                var cmd = (JsonObject)entry["cmd"]!.DeepClone();
-                _pendingScript.Add(new CrowdCommand(tick, cmd));
+                _pendingScript.Add(new CrowdCommand(entry!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(entry["cmd"]!)));
             }
         }
 
@@ -451,8 +449,9 @@ public sealed class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
+        // 日志载荷是边界一次成形的 struct,回放直接复用(无需克隆,解析后只读)。
         var entries = session.Commands.Log
-            .Select(e => new CrowdCommand(e.Tick, (JsonNode)e.Cmd.DeepClone()))
+            .Select(e => new CrowdCommand(e.Tick, e.Cmd))
             .ToArray();
         int ticks = session.TickCount;
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius);

@@ -93,8 +93,8 @@ public sealed class S5MovementSmokeTests
 
         var script = new List<CrowdCommand>
         {
-            new(0, new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 }),
-            new(10, new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" }),
+            new(0, CrowdSimCommand.Parse(new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 })),
+            new(10, CrowdSimCommand.Parse(new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" })),
         };
         session.Commands.Schedule(session, script);
         var live = new List<string>();
@@ -104,7 +104,7 @@ public sealed class S5MovementSmokeTests
         using var service2 = new PathQueryService(replay.Navs, runtime2, 1, TimeSpan.FromSeconds(10), replay.ResolveNavContext);
         replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, service2));
         replay.BlockOnDueReplies = true;
-        replay.Commands.Schedule(replay, script.Select(c => new CrowdCommand(c.Tick, (JsonNode)c.Payload.DeepClone())).ToArray());
+        replay.Commands.Schedule(replay, script);
         var reHashes = new List<string>();
         replay.Advance(200, reHashes);
 

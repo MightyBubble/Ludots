@@ -63,7 +63,7 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 - `Nav/NavMinHeap` ↔ 主干 `Collections/Fix64PriorityQueue<T>`。参考对应物 `engine/heap.js`。移植保持同构：穴插法上滤 / 下滤、同级并列取左孩子、Fix64 键 + int 值并行数组、零逐节点分配。S3-b 抽象图拓扑逐位 FNV 对拍挂在它的弹出序上；换泛型堆需要重新证明同键并列的弹出序一致，对拍表面不动。
 - `Units/CrowdSimRng` ↔ 主干 `Engine/Randomization/RngStreamService`。参考对应物 `engine/noise.js` 的 mulberry32。两者算法不同（RngStream 是 xorshift32，CrowdSimRng 是 mulberry32）、输出转换不同（RngStream 的 NextFloat01 是 24 位整数 ÷ (2²⁴−1)，CrowdSimRng 是 u32 ÷ 2³² 直进 Fix64 原始值——二进分数，精确）；盐流合同也不同：部署按指令加盐（`CrowdDeployment` 用 worldSeed × spawnSeq 组合派生每条指令自己的流），RngStreamService 是先声明后取用的命名流注册表。S4 部署对拍要求 12020 个单位位置原始值逐位一致，换流必破。
-- `Units/CrowdSimCommands` + `CrowdCommandQueue` ↔ 主干 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录；日志 = 完整输入，回放 = 新会话 + 同一日志。它记录的是仿真输入指令，不是引擎权威帧，两者不是同一类东西的两种实现。
+- `Units/CrowdSimCommands` + `CrowdCommandQueue` ↔ 主干 `Persistence/ReplayRecorder`。参考对应物 `engine/core/commands.js` 的 CommandQueue。指令队列是内核输入面：tick 边界执行、submit 现场记日志、schedule 与存量按 tick 归并、迟到指令按实际执行 tick 记录；载荷在入队边界一次解析为 struct（`CrowdSimCommand.Parse`），JsonNode 不进队列/日志/回放；日志 = 完整输入，回放 = 新会话 + 同一日志。它记录的是仿真输入指令，不是引擎权威帧，两者不是同一类东西的两种实现。
 - `Nav/NavFunnel` ↔ 主干 `Navigation/NavMesh/Bake/FunnelAlgorithm`。参考对应物 `engine/navquery.js` 的漏斗。判等语义是硬分界：NavFunnel 全 Fix64 精确等（`ax == rx`，与参考实现的 JS 数值严格等一致），主干版是 float32 Vector2 + 1e-6 容差近似等；漏斗折线是领队路径的直接输入，退化 portal 处顶点差一位，后续 600 tick 轨迹全变。
 - `Movement/CrowdSpatialHash` ↔ 主干 `Spatial/SpatialHashGrid` 与空间划分全家桶（`ISpatialQueryService` 等）。参考对应物 `engine/core/spatialHash.js`。它不只是查询结构：环预计算、逐单位 itemRing、邻接槽位表、唤醒岛、stride 行错峰共同决定**接触枚举顺序**，而枚举顺序在双预算（maxNeighbors/maxScan）截断下直接决定解出的接触子集（L13 实证：格几何差一点都不行）。主干空间结构的语义是"就近查询"，不保证任何遍历序，换用即破逐位。
 
@@ -71,13 +71,13 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 ### 指令日志能否由 ReplayRecorder 承载：不能
 
-边缘接入评估的结论：记录面留在 `CrowdCommandQueue`，内核语义不变。阻塞理由：
+边缘接入评估的结论：记录面留在 `CrowdCommandQueue`，内核语义不变。指令载荷 struct 化（类型/玩家/坐标/形状/选项在边界一次成形）后逐条复核过：第 2、3 条原样成立，第 1 条换了论据、结论不变。阻塞理由：
 
-1. 帧载荷装不下。`AuthoritativeAction` =（ActionId 字符串，Vector3 float32，三个布尔），帧内 ActionId 按字典序唯一、浮点必须有限；JSON 指令的字符串字段（type / shape）、嵌套数组（face[2]）、同 tick 内的提交顺序都没有无损落点。任何编码器都是新的有损适配层，压在逐位对拍的输入上。
-2. 检查点生产者不存在。`ReplayRecorder.SetCheckpoint` 要求 `WorldSaveSnapshot`（engine.World 二进制 + ModSetHash / RegistryFingerprint 头），只能由 `WorldSnapshotService.Capture(GameEngine, boundary)` 产出；对拍与回放会话是一次性 `ArchWorld.Create()`（无 GameEngine，无 save participant 注册表）。
+1. 帧合同装不下，与指令侧表示无关——struct 化前装不下 JSON 指令，struct 化后也装不下 struct 指令。`AuthoritativeAction` =（ActionId 字符串，Vector3 float32，三个布尔），且帧内 ActionId 按字典序严格唯一、浮点必须有限：同 tick 多条指令的提交顺序（归并语义是"同 tick 先到先执行"）没有落点；变长载荷（poly 顶点）与任意字符串（type / shape / template）同样没有无损落点。把序列化指令塞进 ActionId 是新的有损适配层，压在逐位对拍的输入上。
+2. 检查点生产者不存在（struct 化不涉及）。`ReplayRecorder.SetCheckpoint` 要求 `WorldSaveSnapshot`（engine.World 二进制 + ModSetHash / RegistryFingerprint 头），只能由 `WorldSnapshotService.Capture(GameEngine, boundary)` 产出；对拍与回放会话是一次性 `ArchWorld.Create()`（无 GameEngine，无 save participant 注册表）。
 3. 播放端同样要 `GameEngine` + `WorldRestoreService`（`ReplayPlayer.PlayFromCheckpoint`）；crowd 回放契约"新会话 + 同一日志"已由 `CrowdSimulationRuntime.RunReplay` 与 `S4DeployTruthTests`（同一记录回放两次校验码相同）覆盖，换播放端不增加能力，只增加依赖。
 
-重开条件：指令载荷进入引擎权威帧合同（字符串 / 嵌套 / 顺序可无损表达），且 crowd 会话具备检查点的生产与消费管线。
+重开条件：引擎权威帧合同能无损表达指令流（同 tick 顺序、变长载荷、任意字符串），且 crowd 会话具备检查点的生产与消费管线。
 
 ## 配置门禁（S0 的核心交付）
 

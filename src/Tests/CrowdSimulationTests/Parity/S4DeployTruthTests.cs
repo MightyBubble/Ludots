@@ -34,7 +34,7 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), (JsonNode)e["cmd"]!.DeepClone())).ToArray();
+        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
 
         session.Commands.Schedule(session, script);
         for (int t = 0; t < frames.Length; t++)
@@ -77,7 +77,7 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), (JsonNode)e["cmd"]!.DeepClone())).ToArray();
+        var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
 
         session.Commands.Schedule(session, script);
         var first = new List<string>();
