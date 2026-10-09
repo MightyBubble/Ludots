@@ -216,9 +216,11 @@ public static class CrowdBeliefSync
         if (bucket != null) bucket.Add(entry);
         else b.SlotOfKey[key] = new List<CrowdBeliefState.Entry> { entry };
         b.Entries[slot] = entry;
+        var registerOrder = new List<int>(bel.Keys);
+        registerOrder.Sort(); // 实体 id 唯一,键即决胜键
         sim.Beliefs!.Register(
             slot,
-            bel.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.TplIndex, kv.Value.Fp)).ToList(),
+            registerOrder.Select(id => (id, bel[id].TplIndex, bel[id].Fp)).ToList(),
             fog.Unexplored(v));
         return slot;
     }
@@ -241,7 +243,13 @@ public static class CrowdBeliefSync
             if (!tiles.Contains(t)) return false; // 只会前进(忘记走 forget 命令,不走这条)
         }
 
-        var delta = tiles.Where(t => !e.Tiles!.Contains(t)).OrderBy(t => t).ToList();
+        var delta = new List<int>();
+        foreach (int t in tiles)
+        {
+            if (!e.Tiles!.Contains(t)) delta.Add(t);
+        }
+
+        delta.Sort(); // tile 集合成员唯一
         var bucket = b.SlotOfKey[e.Key];
         bucket.Remove(e);
         if (bucket.Count == 0) b.SlotOfKey.Remove(e.Key);

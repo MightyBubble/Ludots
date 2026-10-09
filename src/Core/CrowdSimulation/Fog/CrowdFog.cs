@@ -530,7 +530,9 @@ public sealed class CrowdFog
         }
 
         var dropped = new List<int>();
-        foreach (int id in ids.OrderBy(v => v))
+        var ordered = new List<int>(ids);
+        ordered.Sort(); // 集合成员唯一,键即决胜键
+        foreach (int id in ordered)
         {
             if (!Belief[g].ContainsKey(id)) continue;
             if (!_cellsOf.TryGetValue(id, out var idCells) || !idCells.All(member.Contains)) continue;
@@ -563,7 +565,9 @@ public sealed class CrowdFog
             }
         }
 
-        foreach (int id in Belief[from].Keys.OrderBy(v => v).ToArray())
+        var merged = new List<int>(Belief[from].Keys);
+        merged.Sort(); // 键唯一,排序即全序
+        foreach (int id in merged)
         {
             if (Belief[to].ContainsKey(id)) continue;
             Belief[to][id] = Belief[from][id];

@@ -259,7 +259,9 @@ public sealed class CrowdBeliefNavs
             }
         }
 
-        return s.OrderBy(v => v).ToList();
+        var res = new List<int>(s);
+        res.Sort(); // 集合成员唯一,键即决胜键
+        return res;
     }
 
     /// <summary>变体现在可能与真相上下文不同的 tile 掩码(C²;分歧矩形外扩净空半径,
