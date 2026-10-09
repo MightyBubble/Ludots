@@ -85,8 +85,8 @@ namespace EntityCommandPanelMod
             });
 
             var activations = new EntityCommandPanelSlotActivations(engine, MaxPendingActivations, MaxPendingActivationMembers);
-            var slotActionIds = EntityCommandPanelSlotActionConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
-            var gasSource = new GasEntityCommandPanelSource(engine, activations, slotActionIds);
+            var slotConfig = EntityCommandPanelSlotActionConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            var gasSource = new GasEntityCommandPanelSource(engine, activations, slotConfig);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new System.InvalidOperationException("EntityCollectionStore must be registered before EntityCommandPanelMod installs.");
             var aggregationProfiles = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
