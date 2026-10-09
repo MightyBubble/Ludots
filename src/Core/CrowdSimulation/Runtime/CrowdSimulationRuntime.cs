@@ -25,6 +25,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
@@ -163,7 +164,11 @@ public sealed class CrowdSimulationRuntime
         if (!_systemsInstalled)
         {
             _systemsInstalled = true;
-            engine.RegisterSystem(new CrowdSimulationSessionTickSystem(this), SystemGroup.Cleanup);
+            // 会话步进是 PostMovement 组的移动生产者,必须排在 SpatialPartitionUpdateSystem 之前:
+            // 分区同步按 PreviousWorldPositionCm != WorldPositionCm 判定本 tick 是否移动,步进晚于
+            // 同步会让该判定恒为 false,成员格冻结在出生位置。
+            engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
+                new CrowdSimulationSessionTickSystem(this), SystemGroup.PostMovement);
         }
 
         // 体型档案:配置显式声明来源(crowd 会话的半径级只属于它自己的档案集);

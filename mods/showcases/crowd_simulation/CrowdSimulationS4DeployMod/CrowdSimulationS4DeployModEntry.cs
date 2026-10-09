@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using CrowdSimulationS4DeployMod.Runtime;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
@@ -49,7 +50,19 @@ public sealed class CrowdSimulationS4DeployModEntry : IMod
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS4DeployMod 需要 ScreenOverlayBuffer。");
 
-            engine.RegisterSystem(new S4DeployDemoInteractionSystem(_runtime), SystemGroup.PostMovement);
+            // 现场指令要在本 tick 的会话步进前落地:会话已激活时锚点插到会话步进系统之前;
+            // 会话未激活(启动图非 crowd 图)时步进系统不存在,组尾注册即可——那种局面下
+            // 指令只会被丢弃,顺序不影响行为。
+            var interaction = new S4DeployDemoInteractionSystem(_runtime);
+            if (engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out _))
+            {
+                engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(interaction, SystemGroup.PostMovement);
+            }
+            else
+            {
+                engine.RegisterSystem(interaction, SystemGroup.PostMovement);
+            }
+
             engine.RegisterPresentationSystem(new S4DeployDemoPresentationSystem(
                 _runtime, routeVisuals, overlay, input, rays,
                 () => engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) ? hm : null,
