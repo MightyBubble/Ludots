@@ -445,6 +445,7 @@ namespace Ludots.Raylib.Render
             // CreateChunkMesh 据此把单边差分换成跨界的中心差分(仅边界顶点,内部顶点路径不变)
             _chunkNormalHeightSampler = source as IContinuousHeightmap;
             ContinuousHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
+            _oceanVoidFillAtSampleCeiling = profile.OceanVoidFillAtSampleCeiling;
             if (_controlMapEnabled)
             {
                 WorldAabbCm bounds = source.Bounds;
@@ -568,6 +569,7 @@ namespace Ludots.Raylib.Render
 
             EnsureInitialized();
             _chunkNormalHeightSampler = source as IContinuousHeightmap;
+            _oceanVoidFillAtSampleCeiling = source.RenderProfile.OceanVoidFillAtSampleCeiling;
             float windowHalfCm = ResolveWindowHalfCm(source, in camera);
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
@@ -1284,6 +1286,7 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
+            float? oceanVoidSentinelCm = ResolveOceanVoidSentinelCm(_oceanVoidFillAtSampleCeiling, in chunk);
             float displayHeightScale = _displayHeightScale;
             for (int y = 0; y < rows; y++)
             {
@@ -1305,7 +1308,7 @@ namespace Ludots.Raylib.Render
                     if (absoluteSeaCm is float seaCm)
                     {
                         heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
-                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, absolutePeakSpanCm);
+                        displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, oceanVoidSentinelCm);
                     }
                     else
                     {
@@ -1322,7 +1325,7 @@ namespace Ludots.Raylib.Render
                         stepYCm,
                         displayHeightScale,
                         absoluteSeaCm,
-                        absolutePeakSpanCm,
+                        oceanVoidSentinelCm,
                         _chunkNormalHeightSampler);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     if (absoluteSeaCm is float)
@@ -1432,7 +1435,7 @@ namespace Ludots.Raylib.Render
             return relative;
         }
 
-        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float? oceanVoidSentinelCm)
         {
             // Below-sea bathymetry flattens onto the sea plane so continental scale does not dig ocean pits.
             if (heightCm <= seaLevelCm)
@@ -1440,11 +1443,10 @@ namespace Ludots.Raylib.Render
                 return seaLevelCm;
             }
 
-            // Void/ocean fills in continental assets use values at the raw sample ceiling; tint and
-            // geometry both treat those as open water. Authored relief that merely exceeds the tint
-            // peak span keeps its real elevation — flattening it would desync terrain presentation
-            // from grounding, which samples this same heightmap.
-            if (IsOvershootSentinel(heightCm))
+            // Void/ocean fills at the raw sample ceiling are a per-asset contract (profile-declared):
+            // exporter-derived uint16 assets spend the whole raw range on authored relief, so their
+            // ceiling values are real peaks and must keep elevation.
+            if (oceanVoidSentinelCm is float sentinelCm && heightCm >= sentinelCm)
             {
                 return seaLevelCm;
             }
@@ -1453,14 +1455,25 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// Raw UInt16 heightmap storage tops out at <see cref="ushort.MaxValue"/> before sample scaling,
-        /// so continental void/ocean fills land within a few percent of that ceiling. Everything below
-        /// it is authored relief.
+        /// Void-fill sentinel threshold in decoded cm: the raw ceiling fraction rescaled through the
+        /// asset's own sample scale. Null when the map does not declare ocean void fills, or when the
+        /// layout has no raw ceiling semantics (int16 centimeter storage).
         /// </summary>
-        private static bool IsOvershootSentinel(float heightCm)
+        internal static float? ResolveOceanVoidSentinelCm(bool oceanVoidFillDeclared, in ContinuousHeightmapRenderChunk chunk)
         {
+            if (!oceanVoidFillDeclared)
+            {
+                return null;
+            }
+
+            if (chunk.StorageLayout != ContinuousHeightmapStorageLayout.RowMajorUInt16Scaled &&
+                chunk.StorageLayout != ContinuousHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled)
+            {
+                return null;
+            }
+
             const float SentinelFractionOfSampleCeiling = 0.88f;
-            return heightCm >= ushort.MaxValue * SentinelFractionOfSampleCeiling;
+            return chunk.SampleScale.Decode((ushort)MathF.Ceiling(ushort.MaxValue * SentinelFractionOfSampleCeiling));
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -1516,7 +1529,7 @@ namespace Ludots.Raylib.Render
             float stepYCm,
             float displayHeightScale,
             float? absoluteSeaCm,
-            float absolutePeakSpanCm,
+            float? oceanVoidSentinelCm,
             IContinuousHeightmap? worldSampler)
         {
             int left = Math.Max(0, x - 1);
@@ -1556,10 +1569,10 @@ namespace Ludots.Raylib.Render
 
             if (absoluteSeaCm is float seaCm)
             {
-                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, absolutePeakSpanCm);
-                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, absolutePeakSpanCm);
-                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, absolutePeakSpanCm);
-                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, absolutePeakSpanCm);
+                hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, oceanVoidSentinelCm);
+                hRight = ResolveAbsoluteDisplayHeightCm(hRight, seaCm, oceanVoidSentinelCm);
+                hTop = ResolveAbsoluteDisplayHeightCm(hTop, seaCm, oceanVoidSentinelCm);
+                hBottom = ResolveAbsoluteDisplayHeightCm(hBottom, seaCm, oceanVoidSentinelCm);
             }
 
             float scale = MathF.Max(ContinuousHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
@@ -1573,6 +1586,7 @@ namespace Ludots.Raylib.Render
         }
 
         private IContinuousHeightmap? _chunkNormalHeightSampler;
+        private bool _oceanVoidFillAtSampleCeiling;
 
         private void ClearChunkGpuCache()
         {
@@ -1634,9 +1648,10 @@ namespace Ludots.Raylib.Render
             IContinuousHeightmap heightSampleSource,
             int overviewVertexLimit)
         {
-            int stepChunks = ResolveOverviewStepChunks(source.ChunkColumns, source.ChunkRows, overviewVertexLimit);
-            int columns = ResolveOverviewAxisPointCount(source.ChunkColumns, stepChunks);
-            int rows = ResolveOverviewAxisPointCount(source.ChunkRows, stepChunks);
+            // 分辨率与 chunk 栅格解耦:花满 OverviewVertexLimit 的预算,而不是每 chunk 一顶点
+            // (16km 图 33×33=500m/格;预算 65536 → 255²≈62.5m/格,轮廓保住)。
+            int columns = ResolveOverviewAxisPointCount(overviewVertexLimit);
+            int rows = columns;
             int vertexCount = checked(columns * rows);
             if (vertexCount > ushort.MaxValue)
             {
@@ -1664,6 +1679,17 @@ namespace Ludots.Raylib.Render
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             float displayHeightScale = _displayHeightScale;
+            float? oceanVoidSentinelCm = null;
+            // 细节法线步长 = 源采样步长(与近景 chunk 同频带);取不到块则退到 overview 间距/32
+            float detailStepXCm = stepXCm / 32f;
+            float detailStepZCm = stepZCm / 32f;
+            if (source.TryGetChunk(0, 0, out ContinuousHeightmapRenderChunk latticeChunk))
+            {
+                oceanVoidSentinelCm = ResolveOceanVoidSentinelCm(source.RenderProfile.OceanVoidFillAtSampleCeiling, in latticeChunk);
+                detailStepXCm = MathF.Max(1f, latticeChunk.SampleStepXCm);
+                detailStepZCm = MathF.Max(1f, latticeChunk.SampleStepYCm);
+            }
+
             float minHeightCm = float.PositiveInfinity;
             float maxHeightCm = float.NegativeInfinity;
             var heights = new float[vertexCount];
@@ -1681,7 +1707,7 @@ namespace Ludots.Raylib.Render
                     }
 
                     float displayHeightCm = absoluteSeaCm is float seaForDisplay
-                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, absolutePeakSpanCm)
+                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, oceanVoidSentinelCm)
                         : heightCm;
                     heights[vertex] = heightCm;
                     displayHeights[vertex] = displayHeightCm;
@@ -1706,16 +1732,40 @@ namespace Ludots.Raylib.Render
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             for (int y = 0; y < rows; y++)
             {
+                float worldYCm = bounds.Top + (y * stepZCm);
                 for (int x = 0; x < columns; x++)
                 {
                     int vertex = (y * columns) + x;
+                    float worldXCm = bounds.Left + (x * stepXCm);
                     float heightCm = heights[vertex];
-                    float hL = displayHeights[(y * columns) + Math.Max(0, x - 1)];
-                    float hR = displayHeights[(y * columns) + Math.Min(columns - 1, x + 1)];
-                    float hT = displayHeights[(Math.Max(0, y - 1) * columns) + x];
-                    float hB = displayHeights[(Math.Min(rows - 1, y + 1) * columns) + x];
-                    float dx = MathF.Max(1f, stepXCm);
-                    float dz = MathF.Max(1f, stepZCm);
+                    // LOD 几何 + 细节法线(主流做法):粗网格只定轮廓,法线/明暗在源采样步长上
+                    // 对连续场中心差分取真坡向——粗网格自身差分会把一切细部斜率抹成 0(远景糊)。
+                    float hL = displayHeights[vertex];
+                    float hR = hL;
+                    float hT = hL;
+                    float hB = hL;
+                    if (heightSampleSource.TrySampleHeightCm(worldXCm - detailStepXCm, worldYCm, out float sampledL))
+                    {
+                        hL = absoluteSeaCm is float seaL ? ResolveAbsoluteDisplayHeightCm(sampledL, seaL, oceanVoidSentinelCm) : sampledL;
+                    }
+
+                    if (heightSampleSource.TrySampleHeightCm(worldXCm + detailStepXCm, worldYCm, out float sampledR))
+                    {
+                        hR = absoluteSeaCm is float seaR ? ResolveAbsoluteDisplayHeightCm(sampledR, seaR, oceanVoidSentinelCm) : sampledR;
+                    }
+
+                    if (heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm - detailStepZCm, out float sampledT))
+                    {
+                        hT = absoluteSeaCm is float seaT ? ResolveAbsoluteDisplayHeightCm(sampledT, seaT, oceanVoidSentinelCm) : sampledT;
+                    }
+
+                    if (heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm + detailStepZCm, out float sampledB))
+                    {
+                        hB = absoluteSeaCm is float seaB ? ResolveAbsoluteDisplayHeightCm(sampledB, seaB, oceanVoidSentinelCm) : sampledB;
+                    }
+
+                    float dx = MathF.Max(1f, detailStepXCm * 2f);
+                    float dz = MathF.Max(1f, detailStepZCm * 2f);
                     Vector3 normal = Vector3.Normalize(
                         new Vector3(-(hR - hL) * displayHeightScale / dx, 1f, -(hB - hT) * displayHeightScale / dz));
                     if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
@@ -2076,27 +2126,19 @@ namespace Ludots.Raylib.Render
             textureWidth = Math.Clamp((int)MathF.Round(longEdge * aspect), 1, OverviewTextureMaxLongEdgePixels);
         }
 
-        internal static int ResolveOverviewStepChunks(int chunkColumns, int chunkRows, int maxVertices)
+        /// <summary>overview 网格每轴点数:预算开平方(ushort 索引上限内),与 chunk 栅格无关。
+        /// 预算 65536 → 255²(16km 图 ≈62.5m/格);最小预算也保 2×2。</summary>
+        internal static int ResolveOverviewAxisPointCount(int vertexLimit)
         {
-            if (chunkColumns <= 0) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
-            if (chunkRows <= 0) throw new ArgumentOutOfRangeException(nameof(chunkRows));
+            if (vertexLimit < 4) throw new ArgumentOutOfRangeException(nameof(vertexLimit));
 
-            int vertexLimit = Math.Clamp(maxVertices, 4, ushort.MaxValue);
-            int step = 1;
-            while (checked(ResolveOverviewAxisPointCount(chunkColumns, step) * ResolveOverviewAxisPointCount(chunkRows, step)) > vertexLimit)
+            int axis = (int)MathF.Floor(MathF.Sqrt(Math.Clamp(vertexLimit, 4, ushort.MaxValue)));
+            while (axis > 2 && checked(axis * axis) > ushort.MaxValue)
             {
-                step++;
+                axis--;
             }
 
-            return step;
-        }
-
-        internal static int ResolveOverviewAxisPointCount(int chunkCount, int stepChunks)
-        {
-            if (chunkCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkCount));
-            if (stepChunks <= 0) throw new ArgumentOutOfRangeException(nameof(stepChunks));
-
-            return ((chunkCount + stepChunks - 1) / stepChunks) + 1;
+            return axis;
         }
 
         internal static float ResolveEffectiveSeaLevelCm(ContinuousHeightmapRenderProfile renderProfile, float minHeightCm)

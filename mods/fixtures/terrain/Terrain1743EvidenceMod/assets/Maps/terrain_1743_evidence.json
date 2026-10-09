@@ -1,0 +1,76 @@
+{
+  "Id": "terrain_1743_evidence",
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/crowd_simulation_s1337.height",
+    "RenderProfile": {
+      "WaterEnabled": false,
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536,
+      "DisableDistanceFog": true,
+      "DisplayHeightScale": 1,
+      "SeaLevelCm": 41718,
+      "AbsoluteColorPeakSpanCm": 98282
+    }
+  },
+  "DefaultCamera": {
+    "VirtualCameraId": "Terrain1743.Evidence",
+    "TargetXCm": 1577300,
+    "TargetYCm": 1393500,
+    "Yaw": 45,
+    "Pitch": 55,
+    "DistanceCm": 60000,
+    "FovYDeg": 50
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 1600000,
+      "HeightCm": 1600000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terrain1743-local-player"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terrain1743-local-player"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": {
+          "Value": "Terrain1743LocalPlayer"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1577300,
+            "Y": 1393500
+          }
+        }
+      },
+      "InstanceId": "terrain1743-local-player"
+    }
+  ],
+  "Tags": [
+    "fixture",
+    "terrain",
+    "issue-1743"
+  ]
+}
