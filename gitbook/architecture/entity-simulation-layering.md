@@ -76,8 +76,8 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 
 - Formation anchor 是 selectable、health、outline 等业务/表现锚点，不是 navigation actor，也没有 `OrderBuffer`；
 - Formation member 才是普通 MassNavigation agent 和 order actor；
-- Command Router 在 `CommandIntentProfile -> CastDispatch` 后调用 showcase-owned `FormationCommandActorExpander`；
-- expander 按稳定 slot 顺序把 anchor 展开为 members，随后通过 clustered atomic batch 提交通用 `massNavigationMove`；
+- showcase-owned `FormationCommandMembersSystem` 把命令源里的 anchor 按稳定 slot 顺序换成 members，写进 mod 自己的 `formation.command.members` 集合；
+- 右键下令图读这个集合，用 `SubmitCommandIntent` 按 `actorOrder` 布局提交通用 `massNavigationMove`，经 `CommandIntentProfile -> CastDispatch` 一次原子入队；
 - GAS 把 member active order 投影为 `MovePlanExecutionIntent(CommandGroup)`，MassNavigation 返回 typed result，GAS 完成或取消 order；
 - 不存在 Core Formation、Formation 专用 order、Q/E 旋转 consumer 或逐成员私有执行管线。
 

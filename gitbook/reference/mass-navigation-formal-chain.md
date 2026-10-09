@@ -25,10 +25,11 @@
 ```mermaid
 flowchart TD
     Source["EntityCollectionStore: collection.command.source"]
+    Expand["FormationCommandMembersSystem: formation.command.members"]
+    Graph["graph.formation.command_commit: SubmitCommandIntent"]
     Intent["CommandIntentProfile"]
     Dispatch["CastDispatch"]
-    Expand["FormationCommandActorExpander"]
-    Queue["OrderQueue clustered atomic batch"]
+    Queue["OrderQueue shared atomic batch"]
     Buffer["member OrderBuffer"]
     Projection["MovePlanOrderProjectionSystem"]
     TypedIntent["MovePlanExecutionIntent: CommandGroup"]
@@ -36,7 +37,7 @@ flowchart TD
     Result["MovePlanExecutionResult"]
     Lifecycle["MovePlanOrderLifecycleSystem"]
 
-    Source --> Intent --> Dispatch --> Expand --> Queue --> Buffer --> Projection
+    Source --> Expand --> Graph --> Intent --> Dispatch --> Queue --> Buffer --> Projection
     Projection --> TypedIntent --> Mass --> Result --> Lifecycle
     Lifecycle -->|Arrived| Complete["GAS completes order"]
     Lifecycle -->|Failed| Cancel["GAS cancels order and removes continuations"]
@@ -48,14 +49,14 @@ flowchart TD
 
 Formation anchor 进入 `collection.command.source`，但不接收 order，也不进入 MassNavigation。
 
-`FormationCommandActorExpander` 在 CastDispatch 之后：
+`FormationCommandMembersSystem` 在 InputCollection 阶段每帧：
 
-1. 读取 showcase-owned `FormationAnchorState`。
-2. 按 `FormationIndex + SlotIndex` 查找 live members。
-3. 排除 `SuspendedTag` 成员。
-4. 校验 anchor 声明 slot 数、每源容量和总展开容量。
-5. 按稳定 slot 顺序输出成员 actor。
-6. Command Router 通过 `TryEnqueueClusteredBatch` 一次提交。
+1. 读取本地玩家的 `collection.command.source`。
+2. 对 anchor 读取 showcase-owned `FormationAnchorState`，按 `FormationIndex + SlotIndex` 查找 live members，排除 `SuspendedTag` 成员；不是 anchor 的单位代表它自己。
+3. 校验 anchor 声明 slot 数、每方阵容量和总容量，超了直接报错。
+4. 按稳定 slot 顺序写进 `formation.command.members`，内容没变就不重写。下令图读到的是上一帧的选择结果，选择和右键落在同一帧才会差一帧。
+
+右键下令图读这个集合，`SubmitCommandIntent` 按 `actorOrder` 布局给每个成员一个落点，dispatch profile `dispatch.all_together` 让整批通过 `TryEnqueueSharedBatch` 一次提交，所有成员同属一个 command group。
 
 任一 actor 无效、重复、缺少 `OrderBuffer`、被规则阻塞或容量不足时，整个 admission batch 不激活任何成员。
 
@@ -132,7 +133,7 @@ route 游标的推进圈如果盖不住 settle 落点，就成死锁：当前 wa
 ## 证据
 
 - GAS lifecycle：`src/Tests/GasTests/MovePlanOrderLifecycleTests.cs`
-- Formation expansion：`src/Tests/PresentationTests/FormationCommandActorExpanderTests.cs`
+- Formation 成员换算：`src/Tests/PresentationTests/FormationMemberResolverTests.cs`、`src/Tests/PresentationTests/FormationCommandMembersSystemTests.cs`
 - Typed Mass consumer：`src/Tests/PresentationTests/MassNavigationMovePlanExecutionTests.cs`
 - Anchor/member lifecycle：`src/Tests/PresentationTests/FormationCapabilityLifecycleTests.cs`
 - 代理索引对裸组件 Add 稳定：`src/Tests/PresentationTests/MassNavigation/MassNavigationAuthoredAgentBindingIncrementalTests.cs`

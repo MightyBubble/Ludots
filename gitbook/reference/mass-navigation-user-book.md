@@ -27,11 +27,12 @@
 | --- | --- |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` | 方阵、成员模板、slot 布局、初始位置、轮廓与障碍展示 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` | anchor、soldier、overlay 的 entity template |
-| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/input_order_mappings.json` | 右键 command 到 `massNavigationMove` 的映射和多方阵目标布局 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/interaction_context_profiles.json` | 框选与右键下令的按键、触发的图 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/GAS/graphs/graph.formation.command_commit.json` | 右键下令图：读成员集合，按 `actorOrder` 布局提交 `massNavigationMove` |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/command_intent_profiles.json` | CommandIntent route |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 成员 agent profile、solver、route 和容量 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Runtime/FormationCapabilityShowcaseRuntime.cs` | 场景生成与 showcase 生命周期 |
-| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Systems/FormationCommandActorExpander.cs` | anchor 到 member actor 的集群展开 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Systems/FormationCommandMembersSystem.cs` | 把命令源里的 anchor 换成 members，维护 `formation.command.members` 集合 |
 
 不要复制 `OrderQueue`、`OrderBuffer`、Command Router、spawn queue、MassNavigation runtime 或 presenter runtime。
 
@@ -61,10 +62,11 @@ Member 是执行对象：
 ```text
 玩家右键
   -> collection.command.source 中的 anchor
+  -> FormationCommandMembersSystem 维护的 formation.command.members
+  -> graph.formation.command_commit（SubmitCommandIntent，actorOrder 布局）
   -> CommandIntentProfile
   -> CastDispatch
-  -> FormationCommandActorExpander
-  -> 原子 clustered OrderQueue batch
+  -> 原子 shared OrderQueue batch
   -> 每个 member 的 OrderBuffer
   -> GAS projection
   -> typed MovePlan command group

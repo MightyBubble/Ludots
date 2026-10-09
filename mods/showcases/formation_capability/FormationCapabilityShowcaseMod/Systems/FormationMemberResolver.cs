@@ -1,11 +1,14 @@
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Input.Interaction;
 using FormationCapabilityShowcaseMod.Runtime;
 
 namespace FormationCapabilityShowcaseMod.Systems;
 
-internal sealed class FormationCommandActorExpander : ICommandActorExpander
+/// <summary>
+/// A selected formation anchor stands for its live soldiers in slot order; any other selected
+/// entity stands for itself.
+/// </summary>
+internal sealed class FormationMemberResolver
 {
     private static readonly QueryDescription MembersQuery = new QueryDescription()
         .WithAll<FormationMemberState>()
@@ -13,10 +16,7 @@ internal sealed class FormationCommandActorExpander : ICommandActorExpander
 
     private readonly World _world;
 
-    public FormationCommandActorExpander(
-        World world,
-        int maxMembersPerFormation,
-        int maxExpandedActorCount)
+    public FormationMemberResolver(World world, int maxMembersPerFormation)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
         if (maxMembersPerFormation <= 0)
@@ -24,19 +24,12 @@ internal sealed class FormationCommandActorExpander : ICommandActorExpander
             throw new ArgumentOutOfRangeException(nameof(maxMembersPerFormation));
         }
 
-        MaxExpandedActorsPerSource = maxMembersPerFormation;
-        if (maxExpandedActorCount < maxMembersPerFormation)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxExpandedActorCount));
-        }
-
-        MaxExpandedActorCount = maxExpandedActorCount;
+        MaxMembersPerFormation = maxMembersPerFormation;
     }
 
-    public int MaxExpandedActorsPerSource { get; }
-    public int MaxExpandedActorCount { get; }
+    public int MaxMembersPerFormation { get; }
 
-    public int Expand(Entity source, Span<Entity> destination)
+    public int Resolve(Entity source, Span<Entity> destination)
     {
         if (!_world.IsAlive(source) || !_world.TryGet(source, out FormationAnchorState anchor))
         {
@@ -44,19 +37,20 @@ internal sealed class FormationCommandActorExpander : ICommandActorExpander
             return 1;
         }
 
-        destination.Fill(Entity.Null);
-        if (anchor.SlotCount <= 0 || anchor.SlotCount > MaxExpandedActorsPerSource)
+        if (anchor.SlotCount <= 0 || anchor.SlotCount > MaxMembersPerFormation)
         {
             throw new InvalidOperationException(
-                $"Formation {anchor.FormationIndex} declares {anchor.SlotCount} slots, outside command expansion capacity {MaxExpandedActorsPerSource}.");
+                $"Formation {anchor.FormationIndex} declares {anchor.SlotCount} slots, outside member capacity {MaxMembersPerFormation}.");
         }
 
         if (destination.Length < anchor.SlotCount)
         {
             throw new InvalidOperationException(
-                $"Formation {anchor.FormationIndex} requires {anchor.SlotCount} command slots, but destination capacity is {destination.Length}.");
+                $"Formation {anchor.FormationIndex} requires {anchor.SlotCount} member slots, but destination capacity is {destination.Length}.");
         }
 
+        Span<Entity> slots = destination.Slice(0, anchor.SlotCount);
+        slots.Fill(Entity.Null);
         int resolved = 0;
         foreach (ref var chunk in _world.Query(in MembersQuery))
         {
@@ -76,34 +70,28 @@ internal sealed class FormationCommandActorExpander : ICommandActorExpander
                         $"Formation {anchor.FormationIndex} member slot {slotIndex} exceeds the anchor-declared slot count {anchor.SlotCount}.");
                 }
 
-                if (destination[slotIndex] != Entity.Null)
+                if (slots[slotIndex] != Entity.Null)
                 {
                     throw new InvalidOperationException(
                         $"Formation {anchor.FormationIndex} has duplicate live member slot {slotIndex}.");
                 }
 
-                destination[slotIndex] = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                slots[slotIndex] = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                 resolved++;
             }
         }
 
-        if (resolved <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Formation {anchor.FormationIndex} has no live command members.");
-        }
-
         int written = 0;
-        for (int slotIndex = 0; slotIndex < destination.Length; slotIndex++)
+        for (int slotIndex = 0; slotIndex < slots.Length; slotIndex++)
         {
-            Entity member = destination[slotIndex];
+            Entity member = slots[slotIndex];
             if (member != Entity.Null)
             {
-                destination[written++] = member;
+                slots[written++] = member;
             }
         }
 
-        destination.Slice(written).Fill(Entity.Null);
-        return written;
+        slots.Slice(written).Fill(Entity.Null);
+        return resolved;
     }
 }

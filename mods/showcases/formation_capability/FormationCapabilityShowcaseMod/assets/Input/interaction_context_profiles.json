@@ -5,11 +5,15 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command"
       ],
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.formation.command_commit"
         }
       ]
     }
