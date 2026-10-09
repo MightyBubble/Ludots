@@ -41,7 +41,7 @@ public sealed class CrowdSimUnits
     public const int SlotBits = 18, SlotMask = (1 << SlotBits) - 1, GenMask = (1 << 14) - 1;
 
     private readonly ArchWorld _world;
-    private readonly CrowdSimPresentationWiring? _presentation;
+    private readonly CrowdSimPresentationWiring _presentation;
     private readonly List<Entity> _dense = new();
     private readonly List<int> _slotOfDense = new();
     private readonly int[] _sparse;
@@ -51,11 +51,11 @@ public sealed class CrowdSimUnits
     private readonly Dictionary<string, EntityTemplate> _templateCache = new(StringComparer.Ordinal);
     private EntityBuilder? _builder;
 
-    public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring? presentation = null)
+    public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
         if (capacity > SlotMask + 1) throw new ArgumentOutOfRangeException(nameof(capacity), "单位容量超过句柄槽位上限。");
         _world = world ?? throw new ArgumentNullException(nameof(world));
-        _presentation = presentation;
+        _presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         Capacity = capacity;
         _sparse = new int[capacity];
         _gen = new ushort[capacity];
@@ -75,42 +75,23 @@ public sealed class CrowdSimUnits
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).ResolvedPersonalRadiusCm;
 
     /// <summary>生成一个单位;满容量返回 -1(D54:失败不留痕迹)。
-    /// 有呈现接线时实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),
-    /// 再由钩子补齐逐实例组件;无接线(无头对拍/回放,没有模板资产)保持最小组件集。
-    /// 两条路径的组件值与稠密序/句柄分配逐位一致。</summary>
+    /// 实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),再由钩子
+    /// 补齐逐实例组件——单位创建只有这一条生产路径,引擎与无头装配同一管线。</summary>
     public int Add(in CrowdUnitSpawnRequest unit)
     {
         if (_dense.Count >= Capacity) return -1;
         int slot = _freeSlots[--_freeTop];
         int dense = _dense.Count;
         _sparse[slot] = dense;
-        Entity entity = _presentation != null ? AddViaTemplate(in unit, slot) : AddHeadless(in unit, slot);
+        Entity entity = AddViaTemplate(in unit, slot);
         _dense.Add(entity);
         _slotOfDense.Add(slot);
         return dense;
     }
 
-    private Entity AddHeadless(in CrowdUnitSpawnRequest unit, int slot)
-    {
-        return _world.Create(
-            new CrowdSimulationAgent
-            {
-                ProfileId = unit.ProfileId,
-                RadiusClassCm = (int)unit.RadiusCm.ToInt(),
-                SpeedCmPerSecond = unit.SpeedCmPerSecond,
-                RadiusCm = unit.RadiusCm,
-                PersonalRadiusCm = unit.PersonalRadiusCm,
-                PushPriority = unit.PushPriority,
-            },
-            new CrowdSimulationUnitState { Slot = slot, GroupId = unit.GroupId, State = 0, Mode = 0, Level = 0, Order = 0 },
-            new CrowdSimulationKinematics(),
-            new WorldPositionCm { Value = new Fix64Vec2(unit.XCm, unit.YCm) },
-            new PlayerOwner { PlayerId = unit.PlayerId });
-    }
-
     private Entity AddViaTemplate(in CrowdUnitSpawnRequest unit, int slot)
     {
-        var wiring = _presentation!;
+        var wiring = _presentation;
         (string templateId, int templateKeyId) = wiring.TemplatesByUnitTypeRadius[unit.UnitType][unit.RadiusClass];
         ResolveTemplate(templateId);
         _builder ??= new EntityBuilder(_world, _templateCache);
@@ -161,7 +142,7 @@ public sealed class CrowdSimUnits
     private void SetRadiusBlackboard(Entity entity, in CrowdUnitSpawnRequest unit)
     {
         float radiusMeters = (float)unit.RadiusCm.ToDouble() / 100f;
-        int keyId = _presentation!.RadiusMetersBlackboardKeyId;
+        int keyId = _presentation.RadiusMetersBlackboardKeyId;
         if (_world.Has<BlackboardFloatBuffer>(entity))
         {
             ref var buffer = ref _world.Get<BlackboardFloatBuffer>(entity);
@@ -184,7 +165,7 @@ public sealed class CrowdSimUnits
     private void ResolveTemplate(string templateId)
     {
         if (_templateCache.ContainsKey(templateId)) return;
-        var template = _presentation!.TemplateRegistry.Get(templateId)
+        var template = _presentation.TemplateRegistry.Get(templateId)
             ?? throw new InvalidOperationException(
                 $"CrowdSimulation 单位模板 \"{templateId}\" 不存在(应由 Mod 的 Entities/templates.json 提供)。");
         _templateCache[templateId] = template;
@@ -194,11 +175,15 @@ public sealed class CrowdSimUnits
     public void Clear()
     {
         // 先摘选中集合再毁实体:集合成员是实体引用,销毁后留着只会指到死实体。
-        _presentation?.Collections.Replace(
-            _presentation.SelectionOwner,
-            _presentation.SelectedCollectionKeyId,
-            SelectionMirror.Descriptor,
-            ReadOnlySpan<Entity>.Empty);
+        // 空选中属主(回放派生接线)跳过镜像——活集合仓不可被回放触碰。
+        if (_presentation.SelectionOwner != Entity.Null)
+        {
+            _presentation.Collections.Replace(
+                _presentation.SelectionOwner,
+                _presentation.SelectedCollectionKeyId,
+                SelectionMirror.Descriptor,
+                ReadOnlySpan<Entity>.Empty);
+        }
         for (int i = 0; i < _dense.Count; i++)
         {
             _world.Destroy(_dense[i]);

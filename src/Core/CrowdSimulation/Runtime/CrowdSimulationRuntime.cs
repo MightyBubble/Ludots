@@ -260,59 +260,10 @@ public sealed class CrowdSimulationRuntime
             new BlackboardFloatBuffer());
 
         // 单位模板映射:unitTypes[].templates 按(兵种 × 半径级)声明,模板自身声明 profile;
-        // 在此预解析成 id 表并做闭包校验(模板存在、profile 的移动类型与半径级一致)。
+        // 在此预解析成 id 表并做闭包校验(与无头装配共用 CrowdSimPresentationWiring 同一口径)。
         var templateRegistry = engine.MapLoader.TemplateRegistry;
-        var unitTypeTemplates = new (string TemplateId, int TemplateKeyId)[runtimeConfig.UnitTypes.Count][];
-        for (int t = 0; t < runtimeConfig.UnitTypes.Count; t++)
-        {
-            var unitType = runtimeConfig.UnitTypes[t];
-            if (unitType.TemplatesByRadiusCm == null || unitType.TemplatesByRadiusCm.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id} 未声明 templates(半径级厘米 → 模板 id);单位生成管线按(兵种 × 半径级)实例化模板。");
-            }
-
-            var row = new (string TemplateId, int TemplateKeyId)[radiusClasses.Count];
-            for (int r = 0; r < radiusClasses.Count; r++)
-            {
-                int radiusCm = radiusClasses[r];
-                if (!unitType.TemplatesByRadiusCm.TryGetValue(radiusCm, out string? templateId))
-                {
-                    throw new InvalidOperationException(
-                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates 缺半径级 {radiusCm} 的模板声明。");
-                }
-
-                var template = templateRegistry.Get(templateId)
-                    ?? throw new InvalidOperationException(
-                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates[{radiusCm}] 引用未知实体模板 \"{templateId}\"。");
-                string? profileId = template.Components.TryGetValue("CrowdSimulationAgent", out var agentNode)
-                    ? agentNode?["profileId"]?.GetValue<string>()
-                    : null;
-                if (string.IsNullOrWhiteSpace(profileId) || !agentProfiles.TryGet(profileId, out var profile))
-                {
-                    throw new InvalidOperationException(
-                        $"Entities/templates.json: 模板 \"{templateId}\" 的 CrowdSimulationAgent 缺有效 profileId(需存在于 Navigation/agent_profiles.json)。");
-                }
-
-                int agentTypeLayer = runtimeConfig.AgentTypes[unitType.AgentTypeIndex].Layer;
-                if (profile.Layer != agentTypeLayer || (int)profile.RadiusCm != radiusCm)
-                {
-                    throw new InvalidOperationException(
-                        $"{CrowdSimulationConfigPath}: unitTypes.{unitType.Id}.templates[{radiusCm}] 的模板 \"{templateId}\" 声明 profile \"{profileId}\"(layer {profile.Layer}, 半径 {profile.RadiusCm}),与本兵种(layer {agentTypeLayer})半径级 {radiusCm} 不一致。");
-                }
-
-                int templateKeyId = templateKeys.GetId(templateId);
-                if (templateKeyId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"CrowdSimulation 单位模板键 '{templateId}' 未注册(应由 CrowdSimulationMod 的 Entities/templates.json 提供)。");
-                }
-
-                row[r] = (templateId, templateKeyId);
-            }
-
-            unitTypeTemplates[t] = row;
-        }
+        var unitTypeTemplates = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
+            runtimeConfig, templateRegistry, templateKeys, agentProfiles, CrowdSimulationConfigPath);
 
         var wiring = new CrowdSimPresentationWiring
         {
@@ -459,7 +410,19 @@ public sealed class CrowdSimulationRuntime
             .Select(e => new CrowdCommand(e.Tick, e.Cmd))
             .ToArray();
         int ticks = session.TickCount;
-        var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius);
+        // 回放派生接线:共享模板数据,稳定 id 全新分配(回放世界用后即弃),选中属主置空——
+        // 选中镜像与集合仓写入都按空属主跳过,活呈现状态零触碰。
+        var replayWiring = new CrowdSimPresentationWiring
+        {
+            StableIds = new PresentationStableIdAllocator(),
+            TemplateRegistry = session.Presentation.TemplateRegistry,
+            TemplatesByUnitTypeRadius = session.Presentation.TemplatesByUnitTypeRadius,
+            RadiusMetersBlackboardKeyId = session.Presentation.RadiusMetersBlackboardKeyId,
+            SelectionOwner = Entity.Null,
+            SelectedCollectionKeyId = session.Presentation.SelectedCollectionKeyId,
+            Collections = session.Presentation.Collections,
+        };
+        var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius, replayWiring);
         // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
         // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
         // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。

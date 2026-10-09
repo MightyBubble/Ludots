@@ -16,11 +16,11 @@ public static class SelectionMirror
     public static readonly EntityCollectionDescriptor Descriptor = EntityCollectionDescriptor.Create(
         CollectionKey, EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.Display);
 
-    /// <summary>把当前入选单位整体替换进选中集合(指令执行末尾调用;无接线时直接返回)。</summary>
+    /// <summary>把当前入选单位整体替换进选中集合(指令执行末尾调用;空选中属主的派生接线——回放——直接返回)。</summary>
     public static void Sync(CrowdSimSession sim)
     {
         var wiring = sim.Presentation;
-        if (wiring == null || wiring.SelectionOwner == Entity.Null) return;
+        if (wiring.SelectionOwner == Entity.Null) return;
         int selected = sim.SelectedCount;
         if (selected <= 0)
         {

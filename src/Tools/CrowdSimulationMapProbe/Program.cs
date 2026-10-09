@@ -343,7 +343,8 @@ public static class Program
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 
-        var session = new CrowdSimSession(runtime, Arch.Core.World.Create(), navs, navByLayerRadius);
+        var probeWorld = Arch.Core.World.Create();
+        var session = new CrowdSimSession(runtime, probeWorld, navs, navByLayerRadius, BuildWiring(runtime, probeWorld, capabilityDir));
         // 复刻 spawn 的组分配(不生成),打印组清单与中心供对照
         var dbgRng = CrowdSimRng.Create((long)runtime.WorldSeed * 31 + 1L * 7919);
         int n0 = runtime.NavCellCount;
@@ -441,6 +442,36 @@ public static class Program
         ContinuousHeightmapAsset Height,
         CrowdSimulationMapSurface MapSurface,
         SurfaceGrid Grid);
+
+    /// <summary>单位创建单路径的无头装配:与引擎同一装载链(VFS 挂载能力 mod 资产 →
+    /// ConfigPipeline → MapLoader.LoadTemplates)取模板注册表与模板键;选中属主置空,不镜像。</summary>
+    private static CrowdSimPresentationWiring BuildWiring(
+        CrowdSimulationRuntimeConfig runtime, Arch.Core.World world, string capabilityDir)
+    {
+        var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+        vfs.Mount("Core", capabilityDir);
+        var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader: null!);
+        var mapLoader = new Ludots.Core.Systems.MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
+        mapLoader.LoadTemplates(Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline));
+        var collections = new Ludots.Core.EntityCollections.EntityCollectionStore(
+            new Ludots.Core.Registry.StringIntRegistry());
+        return new CrowdSimPresentationWiring
+        {
+            StableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+            TemplateRegistry = mapLoader.TemplateRegistry,
+            TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
+                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys,
+                new AgentProfileRegistry(JsonSerializer.Deserialize<List<AgentProfileConfig>>(
+                    File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
+                    StrictJsonOptions.CreateCamelCase())!),
+                "MapProbe 装配"),
+            RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
+                Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusM),
+            SelectionOwner = Arch.Core.Entity.Null,
+            SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
+            Collections = collections,
+        };
+    }
 
     private static SeedBundle Load(string seedDir, string capabilityDir)
     {

@@ -24,7 +24,7 @@ public sealed class CrowdSimSession
         ArchWorld world,
         IReadOnlyDictionary<int, NavContext> navs,
         IReadOnlyDictionary<(int Layer, int R), NavContext> navByLayerRadius,
-        CrowdSimPresentationWiring? presentation = null)
+        CrowdSimPresentationWiring presentation)
     {
         Config = config;
         World = world;
@@ -54,8 +54,8 @@ public sealed class CrowdSimSession
     public CrowdCommandQueue Commands { get; }
     /// <summary>指令簿(S5):移动指令聚合与虚拟领队。</summary>
     public CrowdOrderBook Orders { get; }
-    /// <summary>呈现/交互接线(null = 无头模式:不投影、不镜像选中集合)。</summary>
-    public CrowdSimPresentationWiring? Presentation { get; }
+    /// <summary>呈现/交互接线(空选中属主的派生接线 = 回放:不投影、不镜像选中集合)。</summary>
+    public CrowdSimPresentationWiring Presentation { get; }
     /// <summary>运动内核与规划器(S5;null = 纯部署会话,S4 形状)。</summary>
     public CrowdMovementKernel? Movement { get; private set; }
     public CrowdSimPlanner? Planner { get; private set; }

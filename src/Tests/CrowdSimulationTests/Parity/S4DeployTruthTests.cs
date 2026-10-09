@@ -5,14 +5,20 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Registry;
+using Ludots.Core.Systems;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
@@ -138,7 +144,7 @@ public class S4DeployTruthTests
         }
 
         var world = ArchWorld.Create();
-        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius);
+        var session = new CrowdSimSession(runtime, world, navs, navByLayerRadius, BuildWiring(runtime, world));
         // S7 结构动态化:仓(静态阻挡物入仓)+ 增量重烘源 + tile 缓存挂会话。
         // S4/S5 脚本没有结构指令,这些挂载不改变既有语义(Step 只在结构 op 时走新路径)。
         session.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtime, grid, mapSurface.Blockers);
@@ -156,6 +162,31 @@ public class S4DeployTruthTests
         session.RebakeSources = new CrowdRebakeSources(runtime, heights, deck, surface.JumpCandidates);
         session.NavTileCache = cache;
         return (runtime, session);
+    }
+
+    /// <summary>单位创建单路径的无头装配:模板注册表与模板键走引擎同一装载链
+    /// (VFS 挂载 CrowdSimulationMod 资产 → ConfigPipeline → MapLoader.LoadTemplates),
+    /// 单位实例化与真机同走 EntityBuilder.UseTemplate→Build;选中属主置空,不镜像。</summary>
+    private static CrowdSimPresentationWiring BuildWiring(CrowdSimulationRuntimeConfig runtime, ArchWorld world)
+    {
+        var vfs = new VirtualFileSystem();
+        vfs.Mount("Core", Path.Combine("assets", "crowdmod"));
+        var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+        var mapLoader = new MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
+        mapLoader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));
+        var collections = new EntityCollectionStore(new StringIntRegistry());
+        return new CrowdSimPresentationWiring
+        {
+            StableIds = new PresentationStableIdAllocator(),
+            TemplateRegistry = mapLoader.TemplateRegistry,
+            TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
+                runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
+            RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
+                Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusM),
+            SelectionOwner = Arch.Core.Entity.Null,
+            SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
+            Collections = collections,
+        };
     }
 
     private static string S1Dir(string seed) => Path.Combine("assets", "s1", seed);
