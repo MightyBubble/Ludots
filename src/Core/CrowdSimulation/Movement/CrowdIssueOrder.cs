@@ -56,6 +56,7 @@ public static class CrowdIssueOrder
 
         // 重组:每个 (层 × 半径级) 一个新组,挂同一条新指令;顺带算全体质心与包围盒
         var fresh = new Dictionary<int, CrowdNavGroupSet.Group>();
+        var freshInOrder = new List<CrowdNavGroupSet.Group>(); // 新组序=单位扫描首见序,决定 order.Groups 追加序(与参考端 Map 同)
         var lsum = new Dictionary<int, (Fix64 X, Fix64 Y, int N)>();
         Fix64 x0 = Fix64.MaxValue, y0 = Fix64.MaxValue, x1 = Fix64.MinValue, y1 = Fix64.MinValue;
         Fix64 sx = Fix64.Zero, sy = Fix64.Zero;
@@ -75,6 +76,7 @@ public static class CrowdIssueOrder
                 g = sim.Groups.Alloc(sim.Config.Relations.IndexByPlayerId[player], old.LayerIdx, old.RIdx, old.BodyNavId);
                 sim.AttachGroupNav(g);
                 fresh[gk] = g;
+                freshInOrder.Add(g);
             }
 
             if (g.PrevLeader == null && old.Leader is { Done: false }) g.PrevLeader = old.Leader;
@@ -107,7 +109,7 @@ public static class CrowdIssueOrder
         order.ClickCell = clickCell;
         order.DedupKey = key;
         Fix64 ccx = sx / n, ccy = sy / n;
-        foreach (var g in fresh.Values)
+        foreach (var g in freshInOrder)
         {
             // PRESERVE:各层块按(层质心 − 指令质心)平移目标
             Fix64 tx = wxCm, ty = wyCm;

@@ -112,6 +112,7 @@ public sealed class CrowdSimPlanner
             {
                 var g = session.Groups.Groups[link.GroupId]!;
                 var tally = new Dictionary<int, int>();
+                var compsInOrder = new List<int>(); // 计数并列取首见者:与参考端 Map 插入序同语义,不依赖字典枚举序
                 var units = session.Units;
                 for (int i = 0; i < units.Count; i++)
                 {
@@ -119,12 +120,14 @@ public sealed class CrowdSimPlanner
                     if (st.GroupId != g.Id) continue;
                     int cell = CellOfUnit(session, i, st);
                     int c = CompAtLevel(session, g, cell, st.Level);
+                    if (!tally.ContainsKey(c)) compsInOrder.Add(c);
                     tally[c] = tally.TryGetValue(c, out var cnt) ? cnt + 1 : 1;
                 }
 
                 int best = -1, bestN = 0;
-                foreach (var (c, cnt) in tally)
+                foreach (var c in compsInOrder)
                 {
+                    int cnt = tally[c];
                     if (c >= 0 && cnt > bestN) { best = c; bestN = cnt; }
                 }
 
@@ -192,6 +195,7 @@ public sealed class CrowdSimPlanner
         {
             var po = new PendingOrder { Order = o, Groups = new(), Leaders = new() };
             var byLayer = new Dictionary<int, List<int>>();
+            var layersInOrder = new List<int>(); // 层序=组声明首见序,决定领队块追加序(与参考端 Map 同)
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
@@ -205,12 +209,18 @@ public sealed class CrowdSimPlanner
                 int repCell = RepresentativeCell(session, mem);
                 int reqId = _service.Request(new PathQuery(g.NavId, repCell, g.Goal, 0), tick);
                 po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId, Version = session.ResolveNavContext(g.NavId).Version });
-                if (!byLayer.TryGetValue(g.LayerIdx, out var bucket)) byLayer[g.LayerIdx] = bucket = new List<int>();
+                if (!byLayer.TryGetValue(g.LayerIdx, out var bucket))
+                {
+                    byLayer[g.LayerIdx] = bucket = new List<int>();
+                    layersInOrder.Add(g.LayerIdx);
+                }
+
                 bucket.Add(g.Id);
             }
 
-            foreach (var (layerIdx, bucket) in byLayer)
+            foreach (int layerIdx in layersInOrder)
             {
+                var bucket = byLayer[layerIdx];
                 int strictestId = bucket[0];
                 foreach (int gid in bucket)
                 {
