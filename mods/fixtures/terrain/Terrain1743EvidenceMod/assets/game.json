@@ -1,0 +1,10 @@
+{
+  "startupMapId": "terrain_1743_evidence",
+  "windowTitle": "Ludots - Terrain 1743 Evidence",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

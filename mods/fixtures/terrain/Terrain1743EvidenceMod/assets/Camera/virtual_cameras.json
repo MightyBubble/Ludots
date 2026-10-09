@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Terrain1743.Evidence",
+    "displayName": "Terrain 1743 Evidence Fixed Orbit",
+    "priority": 10,
+    "rigKind": "Orbit",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 1577300, "y": 1393500 },
+    "distanceCm": 60000,
+    "pitch": 55,
+    "fovYDeg": 50,
+    "yaw": 45,
+    "targetHeightMode": "ContinuousHeightmap",
+    "targetHeightLayerIndex": 0,
+    "targetHeightOffsetCm": 0,
+    "minDistanceCm": 10000,
+    "maxDistanceCm": 4800000,
+    "minPitchDeg": 20,
+    "maxPitchDeg": 80,
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableGrabDrag": false,
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
+  }
+]
