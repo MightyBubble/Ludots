@@ -1639,7 +1639,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `SplineRibbonBuffer`, `LoadedChunksSource`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `CommandIntentBufferDrainSystem`, `AutoPathService`, `SplineRibbonBuffer`, `LoadedChunksSource`");
         return sb.ToString();
     }
 

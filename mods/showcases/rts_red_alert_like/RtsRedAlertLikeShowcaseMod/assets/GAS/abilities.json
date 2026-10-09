@@ -7,9 +7,6 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "input": {
-      "castModeOverride": "TargetFirst"
-    },
     "presentation": {
       "displayName": "Hold",
       "iconGlyph": "H",
@@ -34,9 +31,6 @@
         { "kind": "TagSignal", "tick": 120, "tag": "State.Rts.RedAlert.Ready.PowerPlant" },
         { "kind": "End", "tick": 120 }
       ]
-    },
-    "input": {
-      "castModeOverride": "TargetFirst"
     },
     "blockTags": {
       "blockedAny": [
@@ -89,9 +83,6 @@
         { "kind": "TagSignal", "tick": 150, "tag": "State.Rts.RedAlert.Ready.Refinery" },
         { "kind": "End", "tick": 150 }
       ]
-    },
-    "input": {
-      "castModeOverride": "TargetFirst"
     },
     "blockTags": {
       "blockedAny": [
@@ -147,9 +138,6 @@
         { "kind": "End", "tick": 180 }
       ]
     },
-    "input": {
-      "castModeOverride": "TargetFirst"
-    },
     "blockTags": {
       "blockedAny": [
         "State.Rts.RedAlert.Constructing"
@@ -200,9 +188,6 @@
         { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.RedAlert.TrainRhino", "dispatchTarget": "Source" },
         { "kind": "End", "tick": 105 }
       ]
-    },
-    "input": {
-      "castModeOverride": "TargetFirst"
     },
     "blockTags": {
       "blockedAny": ["State.Rts.RedAlert.Constructing"]

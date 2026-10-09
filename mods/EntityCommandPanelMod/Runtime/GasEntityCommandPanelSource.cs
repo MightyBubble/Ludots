@@ -445,12 +445,10 @@ namespace EntityCommandPanelMod.Runtime
                         displayLabel = ResolveFallbackLabel(effective.AbilityId, effective.TemplateEntityId);
                     }
 
-                    string abilityInteractionModeKey = string.Empty;
                     if (presentation != null &&
                         presentation.ModeHintOverrides.Count > 0)
                     {
-                        abilityInteractionModeKey = ResolveActiveModeHintKey();
-                        if (presentation.ModeHintOverrides.TryGetValue(abilityInteractionModeKey, out string? overrideHint) &&
+                        if (presentation.ModeHintOverrides.TryGetValue(ResolveActiveModeHintKey(), out string? overrideHint) &&
                             !string.IsNullOrWhiteSpace(overrideHint))
                         {
                             detailLabel = overrideHint;
@@ -465,12 +463,7 @@ namespace EntityCommandPanelMod.Runtime
                         }
                         else
                         {
-                            if (string.IsNullOrEmpty(abilityInteractionModeKey))
-                            {
-                                abilityInteractionModeKey = ResolveActiveModeHintKey();
-                            }
-
-                            detailLabel = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
+                            detailLabel = BuildDefaultDetailLabel(actionId);
                         }
                     }
                 }
@@ -1350,22 +1343,10 @@ namespace EntityCommandPanelMod.Runtime
             return "(empty)";
         }
 
-        private static string BuildDefaultDetailLabel(string actionId, string interactionModeKey)
+        private static string BuildDefaultDetailLabel(string actionId)
         {
             string actionLabel = ResolveActionLabel(actionId);
-            string modeLabel = ResolveInteractionModeLabel(interactionModeKey);
-
-            if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(modeLabel))
-            {
-                return $"{actionLabel} · {modeLabel}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(actionLabel))
-            {
-                return actionLabel;
-            }
-
-            return string.IsNullOrWhiteSpace(modeLabel) ? "Ready" : modeLabel;
+            return string.IsNullOrWhiteSpace(actionLabel) ? "Ready" : actionLabel;
         }
 
         private static string BuildEmptyDetailLabel(string actionId)
@@ -1374,20 +1355,6 @@ namespace EntityCommandPanelMod.Runtime
             return string.IsNullOrWhiteSpace(actionLabel)
                 ? "No ability assigned"
                 : $"{actionLabel} · No ability assigned";
-        }
-
-        private static string ResolveInteractionModeLabel(string interactionModeKey)
-        {
-            return interactionModeKey switch
-            {
-                nameof(CastModeType.TargetFirst) => "Target First",
-                nameof(CastModeType.SmartCast) => "Smart Cast",
-                nameof(CastModeType.AimCast) => "Aim Then Confirm",
-                nameof(CastModeType.SmartCastWithIndicator) => "Release To Cast",
-                nameof(CastModeType.PressReleaseAimCast) => "Release Then Confirm",
-                nameof(CastModeType.ContextScored) => "Context Scored",
-                _ => string.Empty
-            };
         }
 
         private static string ResolveActionLabel(string actionId)

@@ -57,56 +57,8 @@ namespace CoreInputMod.Triggers
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));
-            engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
-
-            RegisterAutoLocalOrderSource(engine);
-
-_ctx.Log("[CoreInputMod] SkillBar, AbilityAimPresentation registered");
-
-InstallDeclaredLocalOrderSources(engine);
+            _ctx.Log("[CoreInputMod] SkillBar registered");
             return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Standard local order sources are config-declared: every loaded mod shipping
-        /// assets/Input/local_order_source.json gets LocalOrderSourceSystem installed against its
-        /// own input_order_mappings.json, replacing per-mod wrapper systems. Local order sources
-        /// exist only where local presentation exists; authoritative servers skip them.
-        /// </summary>
-        private void InstallDeclaredLocalOrderSources(GameEngine engine)
-        {
-            if (engine.ModLoader?.LoadedModIds == null ||
-                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
-            {
-                return;
-            }
-
-            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
-                ?? throw new InvalidOperationException("Declared local order sources require OrderQueue.");
-            IReadOnlyList<string> modIds = engine.ModLoader.LoadedModIds;
-            for (int i = 0; i < modIds.Count; i++)
-            {
-                string modId = modIds[i];
-                string uri = $"{modId}:assets/Input/local_order_source.json";
-                if (!_ctx.VFS.TryResolveFullPath(uri, out string? fullPath) || !File.Exists(fullPath))
-                {
-                    continue;
-                }
-
-                LocalOrderSourceConfig config;
-                using (var stream = File.OpenRead(fullPath))
-                {
-                    config = LocalOrderSourceConfig.LoadFromStream(stream);
-                }
-
-                var group = string.Equals(config.SystemGroup, "LocalInput", StringComparison.Ordinal)
-                    ? SystemGroup.LocalInput
-                    : SystemGroup.InputCollection;
-                engine.RegisterSystem(
-                    new LocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, config, modId),
-                    group);
-                _ctx.Log($"[CoreInputMod] Installed declared local order source for {modId} ({config.SystemGroup}).");
-            }
         }
 
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
@@ -122,59 +74,5 @@ InstallDeclaredLocalOrderSources(engine);
             owner = local;
             return true;
         }
-
-        /// <summary>
-        /// Slice-2 auto assembly: exactly one loaded mod may ship the local order mapping
-        /// config; the shipping mod is resolved here (load-time, fail-fast on ambiguity) and
-        /// the shared config-installed order source replaces every per-mod installer.
-        /// </summary>
-        private void RegisterAutoLocalOrderSource(GameEngine engine)
-        {
-            string? sourceModId = null;
-            var loadedModIds = engine.ModLoader?.LoadedModIds;
-            if (loadedModIds != null)
-            {
-                for (int i = 0; i < loadedModIds.Count; i++)
-                {
-                    string modId = loadedModIds[i];
-                    string uri = $"{modId}:assets/Input/input_order_mappings.json";
-                    if (_ctx.VFS.TryResolveFullPath(uri, out string? path) && System.IO.File.Exists(path))
-                    {
-                        if (sourceModId != null)
-                        {
-                            throw new InvalidOperationException(
-                                $"[CoreInputMod] Both '{sourceModId}' and '{modId}' ship assets/Input/input_order_mappings.json; " +
-                                "exactly one gameplay mod may own the local order mapping per game set.");
-                        }
-
-                        sourceModId = modId;
-                    }
-                }
-            }
-
-            if (sourceModId == null)
-            {
-                _ctx.Log("[CoreInputMod] No loaded mod ships input_order_mappings.json; auto local order source stays uninstalled.");
-                return;
-            }
-
-            // A mod that ships local_order_source.json gets its mapping installed by the declared
-            // path below; auto-installing it too mounts a second mapping on the same actions and
-            // every press submits twice (fireball double mana cost).
-            string declaredUri = $"{sourceModId}:assets/Input/local_order_source.json";
-            if (_ctx.VFS.TryResolveFullPath(declaredUri, out string? declaredPath) && System.IO.File.Exists(declaredPath))
-            {
-                _ctx.Log($"[CoreInputMod] '{sourceModId}' declares its own local order source; auto install skipped.");
-                return;
-            }
-
-            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
-                ?? throw new InvalidOperationException("[CoreInputMod] Auto local order source requires OrderQueue.");
-            var autoOrderSource = new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId);
-            engine.SetService(AutoInstalledLocalOrderSourceSystem.ServiceKey, autoOrderSource);
-            engine.RegisterSystem(autoOrderSource, SystemGroup.InputCollection);
-            _ctx.Log($"[CoreInputMod] Auto local order source installed from '{sourceModId}'.");
-        }
-
     }
 }
