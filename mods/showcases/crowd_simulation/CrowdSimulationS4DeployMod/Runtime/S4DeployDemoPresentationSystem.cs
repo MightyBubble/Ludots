@@ -162,14 +162,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             previewShown = true;
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
             previewValid = CanPlace(store, _demo.Template, px, py);
-            AddRectOutline(PreviewOutline, FootprintMeters(_demo.Template, px, py), csM * 0.25f, previewValid ? PlaceGreen : PlaceRed);
+            // 足迹/拆除轮廓线宽 = 0.5 格长(31m):细线角标在丘陵远景下实测可视性不足,加粗一档
+            AddRectOutline(PreviewOutline, FootprintMeters(_demo.Template, px, py), csM * 0.5f, previewValid ? PlaceGreen : PlaceRed);
             int hoverId = store.EntityAt(Fix64.FromInt(px), Fix64.FromInt(py));
             if (hoverId >= 0)
             {
                 var fp = store.FootprintOf(hoverId).Bbox();
                 AddRectOutline(RemoveOutline, (
                     (double)fp.MinX.ToInt() / 100, (double)fp.MinY.ToInt() / 100,
-                    (double)fp.MaxX.ToInt() / 100, (double)fp.MaxY.ToInt() / 100), csM * 0.25f, RemoveOrange);
+                    (double)fp.MaxX.ToInt() / 100, (double)fp.MaxY.ToInt() / 100), csM * 0.5f, RemoveOrange);
             }
         }
 
@@ -264,7 +265,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         {
             var id = new RouteVisualId(200 + shown);
             float ox = tile % perRow * tileM, oy = tile / perRow * tileM;
-            AddTileOutline(id, ox, oy, tileM, csM, csM * 0.3f, color);
+            // 黄线宽 = 0.6 格长(37.5m):细线随地形起伏时实测可视性不足,加粗一档
+            AddTileOutline(id, ox, oy, tileM, csM, csM * 0.6f, color);
             shown++;
         }
     }
