@@ -38,8 +38,8 @@ public sealed class S7FogTruthTests
     /// 该带防的是整组不收束/卡墙(数百米量级),取 5000。</summary>
     private const double FinalBandCm = 5000.0;
     private const int FinalTicks = 30;
-    /// <summary>位置分层门 p50(厘米)。</summary>
-    private const double P50BandCm = 25.0;
+    /// <summary>位置分层门 p50(厘米):实测 0.08(固有误差档),与 S5/S7 同带。</summary>
+    private const double P50BandCm = 0.5;
     /// <summary>mode 双容忍:重规划落帧的槽位视线骑线翻转(与 S7 同源)。</summary>
     private const double MaxModeMismatchRate = 0.0015;
     private const double AlignedDeltaCm = 1.0;

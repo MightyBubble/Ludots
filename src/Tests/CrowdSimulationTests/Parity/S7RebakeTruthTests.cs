@@ -14,8 +14,8 @@ namespace CrowdSimulationTests.Parity;
 /// <summary>
 /// S7 结构动态化对拍(脚本:部署 → 行军 → 建筑挡路 → 拆除 → 寿命路障到期 → 道路仅代价):
 /// 逐 tick 真值沿用 S5 口径——位置分层门(p50 + max 带宽 + 末态收束)+ contacts 双容忍线
-/// (0.05% + ±2 骑线;L24 复核未收紧到 S5 的 ±1——实测唯一不一致样本幅度即 ±2,
-/// 4267 个位置对齐样本中的 1 个,判为同 tick 两邻居各翻一次的骑线叠合,收紧即假门);状态机拆两档:state / level / order 逐位(结构字段,
+/// (0.05% + ±2 骑线;L24 复核未收紧到 S5 的 ±1——实测唯一不一致样本 36989 个位置对齐样本
+/// 中的 1 个,幅度 ≤2,判为同 tick 两邻居各翻一次的骑线叠合,收紧即假门);状态机拆两档:state / level / order 逐位(结构字段,
 /// 零容忍),mode 走双容忍(0.15% + 仅 mode 单字段翻,见下)。
 /// 行为不变量门(L22):位置带 150m 拦不住"绕错路"级分歧,补五条行为门——
 /// ① 每单位终态(state/level/order)逐位;② 首达 tick 分布直方图(从未到达计独立桶)两侧
@@ -25,10 +25,10 @@ namespace CrowdSimulationTests.Parity;
 /// 栅格,两侧 Blocked 逐格一致由 ops 报告的结构组件表硬门保证);④ 终态 Unreachable 的
 /// 单位集合(不可达集合)逐位一致;⑤ 重规划次数由 ops 报告 orders 字段的逐字段硬门覆盖
 /// (见下,不另设门)。位置带降为结构性兜底:只拦整组卡墙/飞图级分歧。
-/// mode 容忍的定位依据(2026-10-08,墙面重规划场景,360 tick × 120 单位):
+/// mode 容忍的定位依据(墙面重规划场景,360 tick × 120 单位):
 /// 重规划落帧时阵型槽位从已漂移位置重排(领队路径与成员位置两侧一致,槽位差 ≤0.2m),
 /// 单位的槽位视线判定(mode = LOS + 射程 + D59 路线比)在这些骑线上翻转——
-/// 实测 26/43200 = 0.060%,全部为 mode 单字段翻(state/level/order 全程逐位一致);
+/// 实测 13/43200 = 0.030%,全部为 mode 单字段翻(state/level/order 全程逐位一致);
 /// 与 S5 首个分歧(tick 11 马达停车线骑线)同源:双算术体系在离散判定点翻转离散事件。
 /// 每次结构 op 的重烘焙报告逐字段硬门(执行 tick / 类别 / 报告 tick / tiles / contexts /
 /// costOnly / hits / misses / orders / refreshes / evicted / stuck / 受影响 tile 并集升序)。
@@ -39,17 +39,19 @@ namespace CrowdSimulationTests.Parity;
 public sealed class S7RebakeTruthTests
 {
     /// <summary>逐 tick 轨迹位置带宽(厘米):L22 后仅作结构性兜底——只拦整组卡墙/飞图级
-    /// 分歧,路线级分歧由行为门拦。实测 max 7470.8cm、p99.9 4698cm、末 30 tick 1530.7cm
-    /// (墙面重规划后 mode 骑线翻的级联——不同单位跟槽位或流场,路径分叉,量级 = 米级绕行差),
-    /// 带值取实测 2 倍。</summary>
+    /// 分歧,路线级分歧由行为门拦。实测 max 2407.2cm、p99.9 1701.3cm、末 30 tick 1258.8cm
+    /// (重规划落帧的槽位视线骑线翻——少数单位跟槽位或流场,路径分叉,量级 = 米级绕行差),
+    /// 带值维持结构性兜底档不收紧。</summary>
     private const double MaxTrajectoryBandCm = 15000.0;
-    /// <summary>末态收束带(厘米):实测末 30 tick max 1530.7cm,取 2 倍。</summary>
+    /// <summary>末态收束带(厘米):实测末 30 tick max 1258.8cm,带值维持结构性兜底档不收紧。</summary>
     private const double FinalBandCm = 3000.0;
     private const int FinalTicks = 30;
-    /// <summary>分层门(L24)p50(厘米):实测 8.34,留 3 倍余量(位置分叉是重规划级联的
-    /// 离散事件,过半样本仍在固有误差档附近,p99 以上才进绕行差量级)。</summary>
-    private const double P50BandCm = 25.0;
-    /// <summary>mode 双容忍:不一致率上限(实测 0.060%,留 2.5 倍余量)。</summary>
+    /// <summary>分层门(L24)p50(厘米):实测 0.069,与 S5(0.068)同固有误差档,同带 0.5。
+    /// 放置/重烘当帧的墙触推离两侧必须同值——开放格缓存按版本失效是其中的隐含合同
+    /// (CrowdWalls.OpenCellCache:重烘对 Walk 原地腐蚀,失效只认引用会读到旧开放表,
+    /// 放置当帧马达跳过亚格推出,p50 抬到 8cm 档)。</summary>
+    private const double P50BandCm = 0.5;
+    /// <summary>mode 双容忍:不一致率上限(实测 0.030%,留 5 倍余量)。</summary>
     private const double MaxModeMismatchRate = 0.0015;
     /// <summary>位置对齐判定(厘米):|Δ| ≤ 此值的样本视为"同输入",contacts 在其上走逐位硬门。</summary>
     private const double AlignedDeltaCm = 1.0;

@@ -17,7 +17,7 @@ public static class CrowdWalls
     {
         private sealed class Entry
         {
-            
+            public int Version = -1;
             public byte[]? Walk;
             public byte[]? UpWalk; // 桥面层以 UpPass 为 walk 口径
             public byte[]? Grid;
@@ -34,11 +34,13 @@ public static class CrowdWalls
                 _byNavId[nav.Id] = e;
             }
 
-            if (!ReferenceEquals(e.Walk, nav.Walk) || !ReferenceEquals(e.UpWalk, nav.UpPass))
+            if (e.Version != nav.Version || !ReferenceEquals(e.Walk, nav.Walk) || !ReferenceEquals(e.UpWalk, nav.UpPass))
             {
-                // S5 无重烘焙:上下文不变则缓存有效;引用变了(S7 局部重烘焙)整表作废重填。
+                // 重烘对 Walk 是原地腐蚀(引用不变),失效必须看 NavContext.Version——与参考端
+                // openCells 的版本失效同款;只认引用会让放置当帧马达读到旧开放表。
                 e.Grid ??= new byte[2 * n2];
                 Array.Clear(e.Grid);
+                e.Version = nav.Version;
                 e.Walk = nav.Walk;
                 e.UpWalk = nav.UpPass;
             }
