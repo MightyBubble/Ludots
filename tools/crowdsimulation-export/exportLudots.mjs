@@ -792,6 +792,8 @@ function canonComp(comp, n2) {
     // 认知变体导航的内容一致性由轨迹门(单位按认知改道)与结构 op 报告背书。
     {
       globalThis.__S4_FIX64_SPAWN__ = true;
+      // L31 归一补丁:活迷雾块的 LOS/格化按 Fix64 网格语义逐 op 求值(与 C# 定点侧同一棵树)
+      globalThis.__L31_FIX64_LOS__ = true;
       // 迷雾开启:S7 块置位的冻结门在块尾不回收,这里显式关掉(本块的口径就是活迷雾)
       globalThis.__S7_TRUTH_NAV__ = false;
       const { Simulation } = await import('../src/engine/simulation.js');
@@ -947,6 +949,7 @@ function canonComp(comp, n2) {
     // 淘汰次序(注册序 = JS Map 插入序)错一步,重建命中的槽号就分叉——digest 逐位即门。
     {
       globalThis.__S4_FIX64_SPAWN__ = true;
+      globalThis.__L31_FIX64_LOS__ = true; // L31:与 S7-b 同口径
       globalThis.__S7_TRUTH_NAV__ = false;
       const { Simulation } = await import('../src/engine/simulation.js');
       const { createNavHost } = await import('../src/engine/planning/pathJobs.js');

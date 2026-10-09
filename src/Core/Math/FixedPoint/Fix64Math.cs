@@ -24,6 +24,16 @@ namespace Ludots.Core.Mathematics.FixedPoint
         }
 
         /// <summary>
+        /// 精确平方根:整数位法对 raw 逐位求 floor(sqrt),与 Sqrt 的多项式近似不同,
+        /// 结果可被任意整数域实现(含 BigInt)逐位复现——跨引擎逐位合同选这一支。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Fix64 SqrtPrecise(Fix64 value)
+        {
+            return Fix64.FromRaw(Fixed64.SqrtPrecise(value.RawValue));
+        }
+
+        /// <summary>
         /// 快速平方根（精度略低但更快）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

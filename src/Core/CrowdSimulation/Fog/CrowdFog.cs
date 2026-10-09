@@ -54,7 +54,8 @@ public sealed class CrowdFog
     private readonly Dictionary<int, HashSet<int>> _idx = new();
     private readonly Dictionary<int, List<int>> _cellsOf = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
-    private double[]? _hAvg, _hMax; // LOS:fog 格均高 / 最高高(米)
+    private Fix64[]? _hAvg, _hMax;  // LOS:fog 格均高 / 最高高(米,Fix64)
+    private readonly Fix64 _eyeM;   // 眼高(米)= EyeCm / 100
     private byte[]? _opaque;
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
@@ -69,6 +70,7 @@ public sealed class CrowdFog
         FcsCm = config.NavCellSizeCm * K;
         Los = fc.LineOfSight;
         EyeCm = fc.EyeCm;
+        _eyeM = Fix64.FromInt(EyeCm) / Fix64.FromInt(100);
         T = config.Hpa.ClusterSize;
         C = N / T;
         SetPeriod(config.FixedHz, fc.RateHz.ToDouble());
@@ -156,26 +158,29 @@ public sealed class CrowdFog
         int Find(int i) => root[i] == i ? i : root[i] = Find(root[i]);
     }
 
-    /// <summary>LOS 高度表(米):开启视线遮挡时按需注入;未注入而 LOS 开 = 调用方装配缺口。</summary>
+    /// <summary>LOS 高度表(米,Fix64):开启视线遮挡时按需注入;未注入而 LOS 开 = 调用方装配缺口。
+    /// 逐格 cm→米一次 DivPrecise、格内累加(网格和精确)、均值一次除法——与参考端
+    /// __L31_FIX64_LOS__ 补丁的逐 op 求值树同构。</summary>
     public void EnsureHeights(NavHeightField heights)
     {
         if (_hAvg != null) return;
-        _hAvg = new double[F * F];
-        _hMax = new double[F * F];
-        var cnt = new double[F * F];
+        _hAvg = new Fix64[F * F];
+        _hMax = new Fix64[F * F];
+        var cnt = new int[F * F];
+        Fix64 cmPerM = Fix64.FromInt(100);
         for (int y = 0; y < N; y++)
         {
             for (int x = 0; x < N; x++)
             {
                 int c = y / K * F + x / K;
-                double h = heights.HeightsCm[y * N + x].ToDouble() / 100.0;
+                Fix64 h = heights.HeightsCm[y * N + x] / cmPerM;
                 _hAvg[c] += h;
                 cnt[c]++;
                 if (h > _hMax[c]) _hMax[c] = h;
             }
         }
 
-        for (int c = 0; c < F * F; c++) _hAvg[c] /= cnt[c];
+        for (int c = 0; c < F * F; c++) _hAvg[c] /= Fix64.FromInt(cnt[c]);
     }
 
     /// <summary>当前逻辑频率下的刷新周期(tick)= max(1, round(tickRate / rateHz))。</summary>
@@ -195,8 +200,9 @@ public sealed class CrowdFog
     {
         var (a, b, c, d) = fp.Bbox();
         var cells = new List<int>();
-        int x0 = Math.Max(0, (int)(a.ToDouble() / FcsCm)), y0 = Math.Max(0, (int)(b.ToDouble() / FcsCm));
-        int x1 = Math.Min(F - 1, (int)(c.ToDouble() / FcsCm)), y1 = Math.Min(F - 1, (int)(d.ToDouble() / FcsCm));
+        Fix64 fcs = Fix64.FromInt(FcsCm);
+        int x0 = Math.Max(0, (int)(a / fcs).ToLong()), y0 = Math.Max(0, (int)(b / fcs).ToLong());
+        int x1 = Math.Min(F - 1, (int)(c / fcs).ToLong()), y1 = Math.Min(F - 1, (int)(d / fcs).ToLong());
         for (int y = y0; y <= y1; y++)
         {
             for (int x = x0; x <= x1; x++)
@@ -302,20 +308,21 @@ public sealed class CrowdFog
         _opaqueDirty = false;
     }
 
-    /// <summary>视线(半格步进采样):严格中间格不得不透明、不得高出眼—目标高度线;端点不挡。
-    /// 双精度域——LOS 开启不是对拍口径(真值场景 LOS 关),C# 侧确定性即可。</summary>
+    /// <summary>视线(半格步进采样,Fix64):严格中间格不得不透明、不得高出眼—目标高度线;
+    /// 端点不挡。逐 op 与参考端 __L31_FIX64_LOS__ 补丁同一棵求值树(除法精确商向零截断、
+    /// 乘法精确积向下取整)。</summary>
     private bool Sight(int cx, int cy, int tx, int ty)
     {
         int dx = tx - cx, dy = ty - cy;
         int n = Math.Max(Math.Abs(dx), Math.Abs(dy)) * 2;
         if (n <= 2) return true;
         int v = cy * F + cx, t = ty * F + tx;
-        double eye = _hAvg![v] + EyeCm / 100.0;
-        double rise = _hAvg[t] - eye;
+        Fix64 eye = _hAvg![v] + _eyeM;
+        Fix64 rise = _hAvg[t] - eye;
         for (int s = 1; s < n; s++)
         {
-            double f = (double)s / n;
-            int c = (int)(cy + 0.5 + dy * f) * F + (int)(cx + 0.5 + dx * f);
+            Fix64 f = Fix64.FromInt(s) / Fix64.FromInt(n);
+            int c = (int)((Fix64.FromInt(cy) + Fix64.HalfValue + dy * f).ToLong() * F + (Fix64.FromInt(cx) + Fix64.HalfValue + dx * f).ToLong());
             if (c == v || c == t) continue;
             if (_opaque![c] != 0 || _hMax![c] > eye + rise * f) return false;
         }

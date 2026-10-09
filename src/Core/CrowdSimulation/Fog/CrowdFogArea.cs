@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
 
@@ -96,22 +97,27 @@ public sealed record CrowdFogShape
     }
 }
 
-/// <summary>形状 → fog 格(fog/area.js areaCells 移植):rect 保守覆盖(触到的每一格);
+/// <summary>形状 → fog 格(fog/area.js areaCells 移植,Fix64):rect 保守覆盖(触到的每一格);
 /// circle / poly 按格心在内(行中心线上的半宽 / 偶奇扫描线);比一格还小的形状仍覆盖锚点格
 /// (circle 心 / poly 首顶点)——点击大小的形状不是静默空操作。格升序去重 + 格包围盒。
-/// 双精度运算与参考端同一 IEEE 序列(厘米域与米域只差统一线性缩放,商与取整逐位同)。</summary>
+/// 逐 op 与参考端 __L31_FIX64_LOS__ 补丁同一棵求值树:形状数字经 FromDouble(向零截断)
+/// 入网格,除法精确商向零截断,乘法精确积向下取整,圆半宽开方走 SqrtPrecise(整数位法,
+/// 可被参考端 BigInt 逐位复现)。命令在 tick 内执行,tick 内一律定点。</summary>
 public static class CrowdFogArea
 {
     public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fcsCm, CrowdFogShape shape)
     {
-        int ClampC(double v) => Math.Max(0, Math.Min(f - 1, (int)Math.Floor(v / fcsCm)));
+        Fix64 cs = Fix64.FromInt(fcsCm);
+        int ClampC(Fix64 v) => Math.Max(0, Math.Min(f - 1, Fix64.Floor(v / cs).ToInt()));
         var cells = new List<int>();
         (int X0, int Y0, int X1, int Y1) box;
 
         if (shape.Rect is { } rect)
         {
-            double ax = Math.Min(rect[0], rect[2]), bx = Math.Max(rect[0], rect[2]);
-            double ay = Math.Min(rect[1], rect[3]), by = Math.Max(rect[1], rect[3]);
+            Fix64 ax = Fix64.Min(Fix64.FromDouble(rect[0]), Fix64.FromDouble(rect[2]));
+            Fix64 bx = Fix64.Max(Fix64.FromDouble(rect[0]), Fix64.FromDouble(rect[2]));
+            Fix64 ay = Fix64.Min(Fix64.FromDouble(rect[1]), Fix64.FromDouble(rect[3]));
+            Fix64 by = Fix64.Max(Fix64.FromDouble(rect[1]), Fix64.FromDouble(rect[3]));
             box = (ClampC(ax), ClampC(ay), ClampC(bx), ClampC(by));
             for (int y = box.Y0; y <= box.Y1; y++)
             {
@@ -121,50 +127,57 @@ public static class CrowdFogArea
             return (cells.ToArray(), box);
         }
 
-        double[] xs = new double[64];
-        double[] anchor;
-        double bx0, by0, bx1, by1;
-        double[][]? pts = null;
+        var xs = new Fix64[64];
+        Fix64[] anchor;
+        Fix64 bx0, by0, bx1, by1;
+        Fix64[][]? pts = null;
         if (shape.Circle is { } c)
         {
-            anchor = new[] { c[0], c[1] };
-            bx0 = c[0] - c[2]; by0 = c[1] - c[2]; bx1 = c[0] + c[2]; by1 = c[1] + c[2];
+            Fix64 c0 = Fix64.FromDouble(c[0]), c1 = Fix64.FromDouble(c[1]), r = Fix64.FromDouble(c[2]);
+            anchor = new[] { c0, c1 };
+            bx0 = c0 - r; by0 = c1 - r; bx1 = c0 + r; by1 = c1 + r;
         }
         else
         {
-            pts = shape.Poly!;
+            pts = new Fix64[shape.Poly!.Length][];
+            for (int i = 0; i < pts.Length; i++)
+            {
+                pts[i] = new[] { Fix64.FromDouble(shape.Poly[i][0]), Fix64.FromDouble(shape.Poly[i][1]) };
+            }
+
             anchor = pts[0];
-            bx0 = by0 = double.MaxValue;
-            bx1 = by1 = double.MinValue;
+            bx0 = by0 = Fix64.MaxValue;
+            bx1 = by1 = Fix64.MinValue;
             foreach (var p in pts)
             {
-                bx0 = Math.Min(bx0, p[0]); by0 = Math.Min(by0, p[1]);
-                bx1 = Math.Max(bx1, p[0]); by1 = Math.Max(by1, p[1]);
+                bx0 = Fix64.Min(bx0, p[0]); by0 = Fix64.Min(by0, p[1]);
+                bx1 = Fix64.Max(bx1, p[0]); by1 = Fix64.Max(by1, p[1]);
             }
         }
 
         int fy0 = ClampC(by0), fy1 = ClampC(by1);
         for (int fy = fy0; fy <= fy1; fy++)
         {
-            double py = (fy + 0.5) * fcsCm;
+            Fix64 py = (Fix64.FromInt(fy) + Fix64.HalfValue) * cs;
             int nx = 0;
             if (pts == null)
             {
-                double r = shape.Circle![2];
-                double d = r * r - (py - shape.Circle[1]) * (py - shape.Circle[1]);
-                if (d >= 0)
+                Fix64 c0 = Fix64.FromDouble(shape.Circle![0]), c1 = Fix64.FromDouble(shape.Circle[1]);
+                Fix64 r = Fix64.FromDouble(shape.Circle[2]);
+                Fix64 d = r * r - (py - c1) * (py - c1);
+                if (d >= Fix64.Zero)
                 {
-                    double h = Math.Sqrt(d);
+                    Fix64 h = Fix64Math.SqrtPrecise(d);
                     if (nx + 2 > xs.Length) Array.Resize(ref xs, nx + 2);
-                    xs[nx++] = shape.Circle[0] - h;
-                    xs[nx++] = shape.Circle[0] + h;
+                    xs[nx++] = c0 - h;
+                    xs[nx++] = c0 + h;
                 }
             }
             else
             {
                 for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
                 {
-                    double yi = pts[i][1], yj = pts[j][1];
+                    Fix64 yi = pts[i][1], yj = pts[j][1];
                     if ((yi > py) != (yj > py))
                     {
                         if (nx == xs.Length) Array.Resize(ref xs, nx * 2);
@@ -177,8 +190,8 @@ public static class CrowdFogArea
 
             for (int k = 0; k + 1 < nx; k += 2)
             {
-                int a = Math.Max(0, (int)Math.Ceiling(xs[k] / fcsCm - 0.5));
-                int b = Math.Min(f - 1, (int)Math.Floor(xs[k + 1] / fcsCm - 0.5));
+                int a = Math.Max(0, Fix64.Ceiling(xs[k] / cs - Fix64.HalfValue).ToInt());
+                int b = Math.Min(f - 1, Fix64.Floor(xs[k + 1] / cs - Fix64.HalfValue).ToInt());
                 for (int fx = a; fx <= b; fx++) cells.Add(fy * f + fx);
             }
         }
