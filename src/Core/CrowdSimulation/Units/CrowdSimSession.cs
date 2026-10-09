@@ -172,14 +172,19 @@ public sealed class CrowdSimSession
     /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → tickCount+1 → 流场刷新排队 → 校验码。
-    /// 停摆时返回 null(调用方下一帧重试同一 tick;回放对停摆逐帧同构)。
+    /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
+    /// checksum 仅在 true 时有效——tick 路径零字符串分配。
     /// </summary>
-    public string? Step()
+    public bool Step(out ulong checksum)
     {
         Commands.Flush(this, CrowdSimCommands.Exec);
         if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
-        if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies)) return null;
+        if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
+        {
+            checksum = 0;
+            return false;
+        }
         if (Movement != null)
         {
             if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
@@ -205,19 +210,19 @@ public sealed class CrowdSimSession
 
         TickCount++;
         Planner?.ProcessRefreshes(TickCount);
-        return CrowdSimChecksum.Compute(this);
+        checksum = CrowdSimChecksum.ComputeValue(this);
+        return true;
     }
 
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>
-    public void Advance(int ticks, List<string>? checksums = null)
+    public void Advance(int ticks, List<ulong>? checksums = null)
     {
         int guard = ticks * 64 + 64;
         int ran = 0;
         while (ran < ticks)
         {
             if (guard-- <= 0) throw new InvalidOperationException("会话推进停摆过长:路径服务答复未到。");
-            string? h = Step();
-            if (h == null) continue;
+            if (!Step(out var h)) continue;
             ran++;
             checksums?.Add(h);
         }

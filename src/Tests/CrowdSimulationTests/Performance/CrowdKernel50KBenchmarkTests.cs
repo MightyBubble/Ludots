@@ -52,9 +52,9 @@ public sealed class CrowdKernel50KBenchmarkTests
         {
             if (guard-- <= 0) throw new InvalidOperationException("基准推进停摆过长。");
             watch.Restart();
-            string? hash = session.Step();
+            bool advanced = session.Step(out _);
             watch.Stop();
-            if (hash == null) continue;
+            if (!advanced) continue;
             if (ran >= WarmupTicks) elapsed[ran - WarmupTicks] = watch.Elapsed.TotalMilliseconds;
             ran++;
         }
@@ -68,7 +68,7 @@ public sealed class CrowdKernel50KBenchmarkTests
         double p95 = elapsed[(int)(MeasuredTicks * 0.95)];
         double max = elapsed[^1];
 
-        string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-kernel-50k-tick"));
+        string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-kernel-50k-tick"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "trace.jsonl"),
             $"{{\"units\":{Units},\"ticks\":{MeasuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4}}}\n");

@@ -41,7 +41,7 @@ public sealed class CrowdCommandQueueGateTests
 
         Assert.That(session.Commands.Log, Is.Empty, "坏指令不得进日志");
         Assert.That(session.Commands.PendingCount, Is.EqualTo(0), "坏指令不得进队列");
-        Assert.That(session.Step(), Is.Not.Null, "拒收后会话照常推进");
+        Assert.That(session.Step(out _), Is.True, "拒收后会话照常推进");
     }
 
     [Test]
@@ -90,7 +90,7 @@ public sealed class CrowdCommandQueueGateTests
 
         Assert.That(session.Commands.Log, Is.Empty, "坏指令不得进日志");
         Assert.That(session.Commands.PendingCount, Is.EqualTo(0), "坏指令不得进队列");
-        Assert.That(session.Step(), Is.Not.Null, "拒收后会话照常推进");
+        Assert.That(session.Step(out _), Is.True, "拒收后会话照常推进");
     }
 
     /// <summary>迷雾区域指令的 area 需且仅需一种形状——零形状/双形状入队即拒,
@@ -168,7 +168,7 @@ public sealed class CrowdCommandQueueGateTests
 
         Assert.That(session.Commands.Log, Is.Empty, "坏指令不得进日志");
         Assert.That(session.Commands.PendingCount, Is.EqualTo(0), "坏指令不得进队列");
-        Assert.That(session.Step(), Is.Not.Null, "拒收后会话照常推进");
+        Assert.That(session.Step(out _), Is.True, "拒收后会话照常推进");
 
         WithFogSession(fogSession =>
         {

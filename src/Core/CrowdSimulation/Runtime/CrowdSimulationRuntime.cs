@@ -71,7 +71,10 @@ public sealed class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    private readonly List<(int Tick, string Hash)> _hashes = new(4096);
+    // 校验码历史(回放对拍用):定长环形,零逐 tick 分配
+    private readonly int[] _hashTicks = new int[4096];
+    private readonly ulong[] _hashValues = new ulong[4096];
+    private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
     private int _autoReplayAtTick = -1;
     private bool _autoReplayDone;
@@ -327,7 +330,8 @@ public sealed class CrowdSimulationRuntime
         _autoReplayDone = false;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
-        _hashes.Clear();
+        _hashCount = 0;
+        _hashHead = 0;
 
         engine.SetService(CoreServiceKeys.CrowdSimulationSession, _session);
         engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, this);
@@ -352,7 +356,8 @@ public sealed class CrowdSimulationRuntime
         _sessionEntity = Entity.Null;
         _session = null;
         _activeMapId = null;
-        _hashes.Clear();
+        _hashCount = 0;
+        _hashHead = 0;
         _pendingScript.Clear();
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
@@ -366,8 +371,7 @@ public sealed class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
-        string? hash = session.Step();
-        if (hash == null)
+        if (!session.Step(out var hash))
         {
             if (!_stallLogged)
             {
@@ -380,8 +384,19 @@ public sealed class CrowdSimulationRuntime
         }
 
         _stallLogged = false;
-        if (_hashes.Count >= 4096) _hashes.RemoveAt(0);
-        _hashes.Add((session.TickCount, hash));
+        if (_hashCount == _hashTicks.Length)
+        {
+            _hashTicks[_hashHead] = session.TickCount;
+            _hashValues[_hashHead] = hash;
+            _hashHead = (_hashHead + 1) % _hashTicks.Length;
+        }
+        else
+        {
+            int w = (_hashHead + _hashCount) % _hashTicks.Length;
+            _hashTicks[w] = session.TickCount;
+            _hashValues[w] = hash;
+            _hashCount++;
+        }
         if (!_autoReplayDone && _autoReplayAtTick >= 0 && session.TickCount >= _autoReplayAtTick)
         {
             _autoReplayDone = true;
@@ -394,7 +409,7 @@ public sealed class CrowdSimulationRuntime
         {
             string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={hash}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={Units.CrowdSimChecksum.Format(hash)}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
         }
 
         WriteStats(session);
@@ -463,27 +478,29 @@ public sealed class CrowdSimulationRuntime
             replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
             replay.Commands.Schedule(replay, entries);
-            var replayHashes = new List<string>(ticks);
+            var replayHashes = new List<ulong>(ticks);
             replay.Advance(ticks, replayHashes);
             CompareReplay(ticks, replayHashes);
             return;
         }
 
         replay.Commands.Schedule(replay, entries);
-        var replayHashes2 = new List<string>(ticks);
+        var replayHashes2 = new List<ulong>(ticks);
         replay.Advance(ticks, replayHashes2);
         CompareReplay(ticks, replayHashes2);
     }
 
-    private void CompareReplay(int ticks, List<string> replayHashes)
+    private void CompareReplay(int ticks, List<ulong> replayHashes)
     {
         ReplayDivergenceTick = -1;
-        for (int i = 0; i < Math.Min(_hashes.Count, replayHashes.Count); i++)
+        int common = Math.Min(_hashCount, replayHashes.Count);
+        for (int i = 0; i < common; i++)
         {
-            if (_hashes[i].Hash != replayHashes[i]) { ReplayDivergenceTick = _hashes[i].Tick; break; }
+            int w = (_hashHead + i) % _hashTicks.Length;
+            if (_hashValues[w] != replayHashes[i]) { ReplayDivergenceTick = _hashTicks[w]; break; }
         }
 
-        if (ReplayDivergenceTick < 0 && _hashes.Count != replayHashes.Count) ReplayDivergenceTick = -2;
+        if (ReplayDivergenceTick < 0 && _hashCount != replayHashes.Count) ReplayDivergenceTick = -2;
         ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
     }
 

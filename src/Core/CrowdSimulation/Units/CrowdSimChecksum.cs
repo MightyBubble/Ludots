@@ -16,7 +16,7 @@ public static class CrowdSimChecksum
 {
     private const uint Offset = 2166136261u, Prime = 16777619u;
 
-    public static string Compute(CrowdSimSession sim)
+    public static ulong ComputeValue(CrowdSimSession sim)
     {
         var units = sim.Units;
         int n = units.Count;
@@ -85,8 +85,11 @@ public static class CrowdSimChecksum
 
         h = Mix(h, (uint)(movement?.Phase ?? 0));
 
-        return h.ToString("x8");
+        return h;
     }
+
+    /// <summary>展示/对拍边界格式(真值帧列是 8 位十六进制);tick 路径不再产字符串。</summary>
+    public static string Format(ulong checksum) => checksum.ToString("x8");
 
     private static Fix64Vec2 Position(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
         movement != null ? movement.Positions[dense]

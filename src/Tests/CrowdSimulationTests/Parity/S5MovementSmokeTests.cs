@@ -63,7 +63,7 @@ public sealed class S5MovementSmokeTests
         double goalXCm = (goalCell % n + 0.5) * session.Config.NavCellSizeCm;
         double goalYCm = (goalCell / n + 0.5) * session.Config.NavCellSizeCm;
 
-        var hashes = new List<string>();
+        var hashes = new List<ulong>();
         session.Advance(295, hashes);
         Assert.That(hashes, Has.Count.EqualTo(295), "295 tick 必须全部推进(停摆 = 路径服务卡死)");
 
@@ -97,7 +97,7 @@ public sealed class S5MovementSmokeTests
             new(10, CrowdSimCommand.Parse(new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" })),
         };
         session.Commands.Schedule(session, script);
-        var live = new List<string>();
+        var live = new List<ulong>();
         session.Advance(200, live);
 
         var (runtime2, replay) = S4DeployTruthTests.BuildSession("s1337");
@@ -105,7 +105,7 @@ public sealed class S5MovementSmokeTests
         replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, service2));
         replay.BlockOnDueReplies = true;
         replay.Commands.Schedule(replay, script);
-        var reHashes = new List<string>();
+        var reHashes = new List<ulong>();
         replay.Advance(200, reHashes);
 
         Assert.That(reHashes, Is.EqualTo(live), "移动脚本的回放必须与首次运行逐帧一致");

@@ -45,8 +45,8 @@ public class S4DeployTruthTests
         session.Commands.Schedule(session, script);
         for (int t = 0; t < frames.Length; t++)
         {
-            string hash = session.Step();
-            Assert.That(hash, Is.EqualTo(frames[t]), $"{seed} 第 {t + 1} 帧校验码不一致");
+            Assert.That(session.Step(out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
+            Assert.That(CrowdSimChecksum.Format(hash), Is.EqualTo(frames[t]), $"{seed} 第 {t + 1} 帧校验码不一致");
         }
 
         // 单位转储逐条比对
@@ -86,17 +86,17 @@ public class S4DeployTruthTests
         var script = truth["script"]!.AsArray().Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!))).ToArray();
 
         session.Commands.Schedule(session, script);
-        var first = new List<string>();
+        var first = new List<ulong>();
         session.Advance(frames.Length, first);
 
         // 同一份记录回放:全新会话(参考实现的回放也是新仿真,句柄代从 0 起)
         var (_, session2) = BuildSession(seed);
         session2.Commands.Schedule(session2, script);
-        var second = new List<string>();
+        var second = new List<ulong>();
         session2.Advance(frames.Length, second);
 
         Assert.That(second, Is.EqualTo(first).AsCollection, $"{seed} 回放与首跑校验码不一致");
-        Assert.That(second, Is.EqualTo(frames).AsCollection, $"{seed} 回放与沙盒校验码不一致");
+        Assert.That(second.Select(CrowdSimChecksum.Format), Is.EqualTo(frames).AsCollection, $"{seed} 回放与沙盒校验码不一致");
     }
 
     private static long CanonRaw(double meters) => (long)(meters * 100 * 4294967296.0);
