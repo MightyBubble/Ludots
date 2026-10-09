@@ -23,6 +23,9 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
         .WithAll<MassNavigationHotspotMarker, WorldPositionCm>()
         .WithNone<PresentationDestroyPending, SuspendedTag>();
 
+    private const long FnvOffsetBasis = 1469598103934665603L;
+    private const long FnvPrime = 1099511628211L;
+
     private readonly GameEngine _engine;
     private readonly List<MassNavigationObstacleSnapshot> _blockerObstacles = new();
     private readonly CommandBuffer _commandBuffer = new();
@@ -55,7 +58,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
             _lastSignature = 0L;
         }
 
-        MassNavigationEnvironmentSignature environment = ComputeSignature();
+        MassNavigationEnvironmentSignature environment = ComputeSignature(_engine.World);
         if (environment.Hash == _lastSignature &&
             simulation.AgentState.BlockerCount == environment.BlockerCount &&
             simulation.AgentState.WorldMarkerCount == environment.MarkerCount)
@@ -78,12 +81,17 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
         MassNavigationIds.PublishPreparedWhenBindingComplete(_engine, simulation);
     }
 
-    private MassNavigationEnvironmentSignature ComputeSignature()
+    /// <summary>
+    /// 每个实体单独算指纹再求和：chunk 迁移、实体增删带来的遍历顺序变化不会改变签名，
+    /// 只有障碍/标记集合或其几何真的变了才触发重绑。计数口径与 RegisterBlocker 一致，按实体计。
+    /// </summary>
+    internal static MassNavigationEnvironmentSignature ComputeSignature(World world)
     {
-        long hash = 1469598103934665603L;
+        long blockerSetHash = 0L;
+        long markerSetHash = 0L;
         int blockerCount = 0;
         int markerCount = 0;
-        foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
+        foreach (ref var chunk in world.Query(in BlockersQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
             Span<MassNavigationFlowObstacleProjection> blockers = chunk.GetSpan<MassNavigationFlowObstacleProjection>();
@@ -93,13 +101,15 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 MassNavigationFlowObstacleProjection blocker = blockers[index];
                 WorldPositionCm position = positions[index];
-                blockerCount += blocker.PieceCount;
+                blockerCount++;
+                long hash = FnvOffsetBasis;
                 hash = Mix(hash, entity.Id);
+                hash = Mix(hash, entity.Version);
                 hash = Mix(hash, blocker.PieceCount);
                 hash = Mix(hash, blocker.ShapeSignature);
                 hash = Mix(hash, blocker.PoseSignature);
-                hash = Mix(hash, position.Value.X.GetHashCode());
-                hash = Mix(hash, position.Value.Y.GetHashCode());
+                hash = Mix(hash, position.Value.X.RawValue);
+                hash = Mix(hash, position.Value.Y.RawValue);
                 for (int pieceIndex = 0; pieceIndex < blocker.PieceCount; pieceIndex++)
                 {
                     hash = Mix(hash, (int)blocker.GetShape(pieceIndex));
@@ -107,10 +117,12 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                     hash = Mix(hash, blocker.GetOffsetYCm(pieceIndex));
                     hash = Mix(hash, blocker.GetRadiusCm(pieceIndex));
                 }
+
+                blockerSetHash = unchecked(blockerSetHash + hash);
             }
         }
 
-        foreach (ref var chunk in _engine.World.Query(in MarkersQuery))
+        foreach (ref var chunk in world.Query(in MarkersQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
             Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
@@ -119,13 +131,17 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 WorldPositionCm position = positions[index];
                 markerCount++;
+                long hash = FnvOffsetBasis;
                 hash = Mix(hash, entity.Id);
-                hash = Mix(hash, position.Value.X.GetHashCode());
-                hash = Mix(hash, position.Value.Y.GetHashCode());
+                hash = Mix(hash, entity.Version);
+                hash = Mix(hash, position.Value.X.RawValue);
+                hash = Mix(hash, position.Value.Y.RawValue);
+                markerSetHash = unchecked(markerSetHash + hash);
             }
         }
 
-        return new MassNavigationEnvironmentSignature(hash, blockerCount, markerCount);
+        long signature = Mix(Mix(FnvOffsetBasis, blockerSetHash), markerSetHash);
+        return new MassNavigationEnvironmentSignature(signature, blockerCount, markerCount);
     }
 
     private void BindBlockers(MassNavigationSimulationRuntime simulation)
@@ -199,15 +215,15 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
         }
     }
 
-    private static long Mix(long hash, int value)
+    private static long Mix(long hash, long value)
     {
         unchecked
         {
             hash ^= value;
-            hash *= 1099511628211L;
+            hash *= FnvPrime;
             return hash;
         }
     }
 
-    private readonly record struct MassNavigationEnvironmentSignature(long Hash, int BlockerCount, int MarkerCount);
+    internal readonly record struct MassNavigationEnvironmentSignature(long Hash, int BlockerCount, int MarkerCount);
 }
