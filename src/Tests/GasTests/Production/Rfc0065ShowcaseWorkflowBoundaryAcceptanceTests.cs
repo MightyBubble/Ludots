@@ -21,6 +21,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using Ludots.Tests;
 using NUnit.Framework;
 
@@ -120,8 +121,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered), Is.True);
             Assert.That(hovered, Is.EqualTo(vanguard));
 
-            Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null,
-                "The declared local order source must create the production InputOrderMappingSystem.");
+            Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Null,
+                "Pointer commands route through the battle context's trigger graph; no legacy input order mapping may exist.");
 
             Vector2 targetWorldCm = new(2080f, 1080f);
             DispatchVariantEvidence[] dispatchVariants = AssertDispatchVariants(dispatch, actors, engine.World, targetWorldCm);
@@ -365,9 +366,8 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SubmitPointerCommandWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm)
         {
-            AuthoritativeGroundPointerOverride groundOverride = engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
-                ?? throw new InvalidOperationException("AuthoritativeGroundPointerOverride service is missing.");
-            groundOverride.Set("Command", worldCm);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)new ScreenIsWorldCmRayProvider());
+            backend.MousePosition = worldCm;
             backend.SetButton("<Mouse>/RightButton", true);
             Tick(engine, 4);
             backend.SetButton("<Mouse>/RightButton", false);
@@ -748,27 +748,6 @@ namespace Ludots.Tests.GAS.Production
                 builder.Append(lastGround);
             }
 
-            if (engine.TryGetService(CoreServiceKeys.ActiveInputOrderMapping, out InputOrderMappingSystem mapping))
-            {
-                builder.Append(" mappingCommandAction=");
-                builder.Append(mapping.CommandActionId);
-                builder.Append(" aiming=");
-                builder.Append(mapping.IsAiming.ToString(CultureInfo.InvariantCulture));
-                builder.Append(" lastActivation=");
-                builder.Append(mapping.LastActivationResult.State);
-                builder.Append("/");
-                builder.Append(mapping.LastActivationResult.Rejection);
-                if (mapping.GetMapping("Command") is InputOrderMapping commandMapping)
-                {
-                    builder.Append(" commandMapping=");
-                    builder.Append(commandMapping.Trigger);
-                    builder.Append("/");
-                    builder.Append(commandMapping.OrderTypeKey);
-                    builder.Append("/");
-                    builder.Append(commandMapping.TargetType);
-                }
-            }
-
             if (engine.TryGetService(CoreServiceKeys.OrderQueue, out OrderQueue orderQueue))
             {
                 builder.Append(" orderQueue=");
@@ -990,7 +969,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Scenario Card");
             sb.AppendLine("- Player goal: issue a ground pointer command with three command-source actors active.");
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
-            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `LocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
+            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> battle context trigger `graph.interaction.move` -> `SubmitCommandIntent` -> `CommandIntentBufferDrainSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
             sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.");
             sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
@@ -1138,7 +1117,7 @@ namespace Ludots.Tests.GAS.Production
                 "    C --> D[\"Publish collection.command.source for 3 actors\"]",
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",
                 "    E --> F[\"InputRuntimeSystem writes authoritative snapshot + ground override\"]",
-                "    F --> G[\"LocalOrderSourceSystem updates production mapping\"]",
+                "    F --> G[\"Battle context trigger graph.interaction.move submits the command intent\"]",
                 "    G --> H[\"CommandIntentArbiter.ResolveActiveCommandIntent\"]",
                 "    H --> I[\"CommandIntentProfileRegistry.RouteGroup -> moveTo\"]",
                 "    I --> J[\"CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together\"]",
@@ -1195,7 +1174,8 @@ namespace Ludots.Tests.GAS.Production
 
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => _buttons.Contains(devicePath);
-            public Vector2 GetMousePosition() => Vector2.Zero;
+            public Vector2 MousePosition { get; set; }
+            public Vector2 GetMousePosition() => MousePosition;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
@@ -1212,6 +1192,13 @@ namespace Ludots.Tests.GAS.Production
                     _buttons.Remove(path);
                 }
             }
+        }
+
+        /// <summary>Casts a vertical ray so a screen point in pixels lands on the same world point in centimetres.</summary>
+        private sealed class ScreenIsWorldCmRayProvider : IScreenRayProvider
+        {
+            public ScreenRay GetRay(Vector2 screenPosition) =>
+                new(new Vector3(screenPosition.X / 100f, 50f, screenPosition.Y / 100f), new Vector3(0f, -1f, 0f));
         }
 
         private readonly record struct DispatchVariantEvidence(

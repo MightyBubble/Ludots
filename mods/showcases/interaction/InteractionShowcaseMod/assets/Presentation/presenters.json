@@ -586,5 +586,819 @@
         }
       }
     ]
+  },
+  {
+    "id": "interaction_showcase.aim.arcweaver_e",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 7.6
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 1.6
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.arcweaver_r",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "source": "constant",
+        "constantValue": 2.8
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.arcweaver_rune",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 7.8
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 1.9
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.vanguard_e",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "source": "constant",
+        "constantValue": 3.6
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "source": "constant",
+        "constantValue": 84
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Cone",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.vanguard_r",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "source": "constant",
+        "constantValue": 3.2
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "source": "constant",
+        "constantValue": 1.4
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.vanguard_rune",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 5.2
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 2.6
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.commander_e",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 7.2
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 1.8
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.commander_rune",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 8.2
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 2.4
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.36
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.74
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.85
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.04
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.74,
+            1.0,
+            0.22
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
+  },
+  {
+    "id": "interaction_showcase.aim.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.arcweaver_e"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.arcweaver_e"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.arcweaver_r"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_r",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.arcweaver_r"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_r",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.arcweaver_rune"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.arcweaver_rune"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.arcweaver_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.vanguard_e"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.vanguard_e"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.vanguard_r"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_r",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.vanguard_r"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_r",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.vanguard_rune"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.vanguard_rune"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.vanguard_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.commander_e"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.commander_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.commander_e"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.commander_e",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "interaction_showcase.aim.commander_rune"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "interaction_showcase.aim.commander_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "interaction_showcase.aim.commander_rune"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "interaction_showcase.aim.commander_rune",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
   }
 ]

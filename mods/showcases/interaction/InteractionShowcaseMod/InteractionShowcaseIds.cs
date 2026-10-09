@@ -61,15 +61,6 @@ namespace InteractionShowcaseMod
                 || string.Equals(mapId, StressMapId, System.StringComparison.OrdinalIgnoreCase);
         }
 
-        public static bool IsShowcaseMode(string? modeId)
-        {
-            return string.Equals(modeId, WowModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, LolModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, Sc2ModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, IndicatorModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, ActionModeId, System.StringComparison.OrdinalIgnoreCase);
-        }
-
         public static string DescribeMap(string? mapId)
         {
             return mapId switch

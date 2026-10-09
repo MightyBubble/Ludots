@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
@@ -1389,27 +1390,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("authoritativeInput=<missing>");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"targetType={actionMapping.TargetType}");
-                    details.Add($"actorCollection={actionMapping.ActorCollectionKey}");
-                    details.Add($"targetCollection={actionMapping.TargetCollectionKey}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-                else
-                {
-                    details.Add("mapping=<missing>");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
             bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
                               uiCapturedObj is bool captured &&
                               captured;
@@ -1469,12 +1449,14 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
-            {
-                Ludots.Core.Input.Orders.CastModeType.SmartCast => "Interaction.Mode.LoL",
-                _ => string.Empty
-            };
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)!;
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)!;
+            return runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId("interaction.context.interaction.smart_cast"))
+                ? "Interaction.Mode.LoL"
+                : string.Empty;
         }
+
         private static void CaptureSnapshot(
             GameEngine engine,
             UIRoot uiRoot,

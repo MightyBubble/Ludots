@@ -42,7 +42,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -88,7 +89,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -136,7 +138,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -183,7 +186,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -326,6 +330,7 @@
   },
   {
     "id": "interaction_stress_anchor_red",
+    "initialInteractionContext": "interaction.context.interaction.battle",
     "components": {
       "Name": {
         "Value": "StressRedAnchor"

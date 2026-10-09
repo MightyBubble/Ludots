@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
@@ -196,14 +197,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(Vector2.Distance(arcweaverAfterDash, arcweaverBeforeDash), Is.GreaterThan(120f));
 
             float skirmisherAHealthBeforeVector = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 runeOrigin = ReadPosition(engine.World, "Arcweaver");
             Vector2 runeEndpoint = ReadPosition(engine.World, "EnemySkirmisherA");
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
             string runeBurstAfterChord = BuildInputActionDiagnostics(engine, "RuneBurst");
             string arcweaverAfterChord = BuildAbilityDiagnostics(engine, "Arcweaver");
-            LeftClickWorld(engine, backend, runeOrigin, frameTimesMs);
-            string runeBurstAfterOrigin = BuildInputActionDiagnostics(engine, "RuneBurst");
-            string arcweaverAfterOrigin = BuildAbilityDiagnostics(engine, "Arcweaver");
             LeftClickWorld(engine, backend, runeEndpoint, frameTimesMs);
             string runeBurstAfterEndpoint = BuildInputActionDiagnostics(engine, "RuneBurst");
             string arcweaverAfterEndpoint = BuildAbilityDiagnostics(engine, "Arcweaver");
@@ -212,7 +209,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 skirmisherAHealthAfterVector,
                 Is.LessThan(skirmisherAHealthBeforeVector),
-                $"{runeBurstAfterChord} || {arcweaverAfterChord} || {runeBurstAfterOrigin} || {arcweaverAfterOrigin} || {runeBurstAfterEndpoint} || {arcweaverAfterEndpoint} || selected={string.Join(",", GetSelectedNames(engine))}");
+                $"{runeBurstAfterChord} || {arcweaverAfterChord} || {runeBurstAfterEndpoint} || {arcweaverAfterEndpoint} || selected={string.Join(",", GetSelectedNames(engine))}");
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "arcweaver_movement_toggle_vector");
             timeline.Add("[T+005] Arcweaver demoed point blink, toggle stance, double-tap dash, and vector rune burst");
 
@@ -440,7 +437,6 @@ namespace Ludots.Tests.GAS.Production
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -503,11 +499,9 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 12, frameTimesMs);
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -564,11 +558,9 @@ namespace Ludots.Tests.GAS.Production
             ExecuteArcweaverBlinkDashPrelude(engine, backend, frameTimesMs);
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -647,7 +639,6 @@ namespace Ludots.Tests.GAS.Production
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -686,11 +677,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetSelectionCount(engine), Is.EqualTo(1), $"selected={string.Join(",", GetSelectedNames(engine))}");
 
             float healthBefore = ReadHealth(engine.World, "EnemySkirmisherA");
-            Vector2 origin = ReadPosition(engine.World, "Arcweaver");
             Vector2 endpoint = ReadPosition(engine.World, "EnemySkirmisherA");
 
             PressChord(engine, backend, "<Keyboard>/x", "<Keyboard>/c", frameTimesMs);
-            LeftClickWorld(engine, backend, origin, frameTimesMs);
             LeftClickWorld(engine, backend, endpoint, frameTimesMs);
             Tick(engine, 6, frameTimesMs);
 
@@ -1245,17 +1234,29 @@ namespace Ludots.Tests.GAS.Production
                 string.Join(" | ", diagnostics));
         }
 
+        private static readonly (string ModeId, string ContextId)[] ModeContexts =
+        {
+            (WowModeId, "interaction.context.interaction.target_first"),
+            (LolModeId, "interaction.context.interaction.smart_cast"),
+            (Sc2ModeId, "interaction.context.interaction.aim_cast"),
+            (IndicatorModeId, "interaction.context.interaction.indicator_cast"),
+            (ActionModeId, "interaction.context.interaction.context_scored"),
+        };
+
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)!;
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)!;
+            for (int i = 0; i < ModeContexts.Length; i++)
             {
-                Ludots.Core.Input.Orders.CastModeType.TargetFirst => WowModeId,
-                Ludots.Core.Input.Orders.CastModeType.SmartCast => LolModeId,
-                Ludots.Core.Input.Orders.CastModeType.AimCast => Sc2ModeId,
-                Ludots.Core.Input.Orders.CastModeType.SmartCastWithIndicator => IndicatorModeId,
-                Ludots.Core.Input.Orders.CastModeType.ContextScored => ActionModeId,
-                _ => LolModeId
-            };
+                if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(ModeContexts[i].ContextId)))
+                {
+                    return ModeContexts[i].ModeId;
+                }
+            }
+
+            return "<none>";
         }
 
         private static string BuildAbilityDiagnostics(GameEngine engine, string actorName)
@@ -1371,28 +1372,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("authoritativeInput=<missing>");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                details.Add($"activation={mapping.LastActivationResult.State}");
-                details.Add($"activationOrderId={mapping.LastActivationResult.OrderId}");
-                details.Add($"activationRejection={mapping.LastActivationResult.Rejection}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"TargetType={actionMapping.TargetType}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-                else
-                {
-                    details.Add("mapping=<missing>");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
             bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
                               uiCapturedObj is bool captured &&
                               captured;
@@ -1441,11 +1420,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"dragActive={drag.Active}");
                 details.Add($"dragStart=({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})");
                 details.Add($"dragCurrent=({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})");
-            }
-
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingAiming={mapping.IsAiming}");
             }
 
             return string.Join(" | ", details);
@@ -1958,7 +1932,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, interaction contexts + TriggerGraph cast graphs, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 
