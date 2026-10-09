@@ -99,7 +99,7 @@ public sealed class CrowdStructuresStore
         return -1;
     }
 
-    /// <summary>实体 id 的放置序视图(F-2 索引与认知初始注入按此序遍历)。</summary>
+    /// <summary>实体 id 的放置序视图(索引与认知初始注入按此序遍历)。</summary>
     public IReadOnlyList<int> EntityIds => _ids;
 
     public bool TryGetFootprint(int id, out CrowdStructureFootprint fp)

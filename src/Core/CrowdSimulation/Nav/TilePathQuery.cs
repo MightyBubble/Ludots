@@ -6,7 +6,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// TILE 寻址的 NavMesh 查询(tileQuery.js findTilePath 移植,RT-16 LY-3 / BV-3):
+/// TILE 寻址的 NavMesh 查询(tileQuery.js findTilePath 移植):
 /// 多边形 A* + 漏斗,直接跑在某上下文的 tile 条目上,不经过拼装全局网格:
 ///   poly 引用 = (tile × 2 + 层) × T² + 局部多边形号(层 0 地面 · 1 桥面)
 ///   同层同 tile → 条目内部邻接;同层邻 tile → 两边界的重叠缝合(带记忆化)

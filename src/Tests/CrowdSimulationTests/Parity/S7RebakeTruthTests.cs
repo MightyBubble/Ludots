@@ -14,10 +14,10 @@ namespace CrowdSimulationTests.Parity;
 /// <summary>
 /// S7 结构动态化对拍(脚本:部署 → 行军 → 建筑挡路 → 拆除 → 寿命路障到期 → 道路仅代价):
 /// 逐 tick 真值沿用 S5 口径——位置分层门(p50 + max 带宽 + 末态收束)+ contacts 双容忍线
-/// (0.05% + ±2 骑线;L24 复核未收紧到 S5 的 ±1——实测唯一不一致样本 36989 个位置对齐样本
+/// (0.05% + ±2 骑线;未收紧到 S5 的 ±1——实测唯一不一致样本 36989 个位置对齐样本
 /// 中的 1 个,幅度 ≤2,判为同 tick 两邻居各翻一次的骑线叠合,收紧即假门);状态机拆两档:state / level / order 逐位(结构字段,
 /// 零容忍),mode 走双容忍(0.15% + 仅 mode 单字段翻,见下)。
-/// 行为不变量门(L22):位置带 150m 拦不住"绕错路"级分歧,补五条行为门——
+/// 行为不变量门:位置带 150m 拦不住"绕错路"级分歧,补五条行为门——
 /// ① 每单位终态(state/level/order)逐位;② 首达 tick 分布直方图(从未到达计独立桶)两侧
 /// 相同;③ 阻挡格停留数为零(逐 tick 检查两侧单位位置不在阻挡格;放置 op 当帧末态豁免——
 /// 挤离在重烘阶段 1 = 放置后下一 tick 执行,evicted/stuck 已被 ops 报告硬门钉住;跳跃中
@@ -27,7 +27,7 @@ namespace CrowdSimulationTests.Parity;
 /// (见下,不另设门)。位置带降为结构性兜底:只拦整组卡墙/飞图级分歧。
 /// mode 容忍的定位依据(墙面重规划场景,360 tick × 120 单位):
 /// 重规划落帧时阵型槽位从已漂移位置重排(领队路径与成员位置两侧一致,槽位差 ≤0.2m),
-/// 单位的槽位视线判定(mode = LOS + 射程 + D59 路线比)在这些骑线上翻转——
+/// 单位的槽位视线判定(mode = LOS + 射程 + 路线比)在这些骑线上翻转——
 /// 实测 13/43200 = 0.030%,全部为 mode 单字段翻(state/level/order 全程逐位一致);
 /// 与 S5 首个分歧(tick 11 马达停车线骑线)同源:双算术体系在离散判定点翻转离散事件。
 /// 每次结构 op 的重烘焙报告逐字段硬门(执行 tick / 类别 / 报告 tick / tiles / contexts /
@@ -38,7 +38,7 @@ namespace CrowdSimulationTests.Parity;
 /// </summary>
 public sealed class S7RebakeTruthTests
 {
-    /// <summary>逐 tick 轨迹位置带宽(厘米):L22 后仅作结构性兜底——只拦整组卡墙/飞图级
+    /// <summary>逐 tick 轨迹位置带宽(厘米):行为门落地后仅作结构性兜底——只拦整组卡墙/飞图级
     /// 分歧,路线级分歧由行为门拦。实测 max 2407.2cm、p99.9 1701.3cm、末 30 tick 1258.8cm
     /// (重规划落帧的槽位视线骑线翻——少数单位跟槽位或流场,路径分叉,量级 = 米级绕行差),
     /// 带值维持结构性兜底档不收紧。</summary>
@@ -46,7 +46,7 @@ public sealed class S7RebakeTruthTests
     /// <summary>末态收束带(厘米):实测末 30 tick max 1258.8cm,带值维持结构性兜底档不收紧。</summary>
     private const double FinalBandCm = 3000.0;
     private const int FinalTicks = 30;
-    /// <summary>分层门(L24)p50(厘米):实测 0.069,与 S5(0.068)同固有误差档,同带 0.5。
+    /// <summary>分层门 p50(厘米):实测 0.069,与 S5(0.068)同固有误差档,同带 0.5。
     /// 放置/重烘当帧的墙触推离两侧必须同值——开放格缓存按版本失效是其中的隐含合同
     /// (CrowdWalls.OpenCellCache:重烘对 Walk 原地腐蚀,失效只认引用会读到旧开放表,
     /// 放置当帧马达跳过亚格推出,p50 抬到 8cm 档)。</summary>
@@ -79,7 +79,7 @@ public sealed class S7RebakeTruthTests
         var reports = new List<CrowdRebakeReport>();
         session.RebakeReported += reports.Add;
 
-        // L22-③ 阻挡格停留门的豁免集:放置 op 落格当帧,仓内单位要等下一 tick 的重烘
+        // 阻挡格停留门的豁免集:放置 op 落格当帧,仓内单位要等下一 tick 的重烘
         // 阶段 1 才被挤离(evicted/stuck 由 ops 报告硬门钉住)
         var placeExecTicks = script
             .Where(c => c.Cmd.Kind == CrowdSimCommandKind.PlaceStructure)
@@ -94,7 +94,7 @@ public sealed class S7RebakeTruthTests
 
         double maxDeltaCm = 0, finalMaxDeltaCm = 0;
         var deltas = new List<double>();
-        // L22 行为门记账:终态取每句柄最后一次出现;首达 tick = 首次进 Arrived(可再唤醒,
+        // 行为门记账:终态取每句柄最后一次出现;首达 tick = 首次进 Arrived(可再唤醒,
         // 到达语义只记首次)
         var myFinal = new Dictionary<uint, (byte State, byte Level, uint Order)>();
         var truthFinal = new Dictionary<uint, (byte State, byte Level, uint Order)>();
@@ -172,7 +172,7 @@ public sealed class S7RebakeTruthTests
                 truthFinal[handle] = (tState, tLevel, tOrder);
                 if (tState == (byte)CrowdUnitState.Arrived) truthArrived.TryAdd(handle, t);
 
-                // L22-③ 阻挡格停留:放置当帧豁免(见 placeExecTicks);跳跃中单位离网直线
+                // 阻挡格停留:放置当帧豁免(见 placeExecTicks);跳跃中单位离网直线
                 // 可越阻挡、上层 Level≠0 走桥面语义,不查地面阻挡格;参考端位置查同一份栅格
                 // (两侧 Blocked 逐格一致由 ops 报告的结构组件表硬门保证)
                 if (!placeExecTicks.Contains(t))
@@ -238,7 +238,7 @@ public sealed class S7RebakeTruthTests
             Assert.That(r.CostOnly, Is.EqualTo(costOnly), What("仅代价上下文数"));
             Assert.That(r.Hits, Is.EqualTo(hits), What("tile 缓存命中"));
             Assert.That(r.Misses, Is.EqualTo(misses), What("tile 缓存未命中"));
-            Assert.That(r.Orders, Is.EqualTo(orders), What("重规划指令数")); // L22-⑤ 重规划次数:本行即门
+            Assert.That(r.Orders, Is.EqualTo(orders), What("重规划指令数")); // 重规划次数:本行即门
             Assert.That(r.Refreshes, Is.EqualTo(refreshes), What("流场刷新队列长"));
             Assert.That(r.Evicted, Is.EqualTo(evicted), What("挤离单位数"));
             Assert.That(r.Stuck, Is.EqualTo(stuck), What("无处安放数"));
@@ -252,7 +252,7 @@ public sealed class S7RebakeTruthTests
         double modeRate = (double)modeMismatches / Math.Max(1, contactSamples);
         double alignedRate = (double)contactMismatches / Math.Max(1, alignedContactSamples);
 
-        // ── L22 行为门(数据全部来自 s7-rebake.bin 逐 tick 记录与运行侧同构记账) ──
+        // ── 行为门(数据全部来自 s7-rebake.bin 逐 tick 记录与运行侧同构记账) ──
         // ① 每单位终态(state/level/order)逐位
         var finalMismatches = new List<string>();
         foreach (uint h in myFinal.Keys.Concat(truthFinal.Keys).Distinct())

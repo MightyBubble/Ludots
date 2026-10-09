@@ -16,7 +16,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// </summary>
 public static class CrowdIntents
 {
-    /// <summary>允许的路线/直线绕行比上限(D59:去槽位的路线不能比直线长太多,否则走流场)。</summary>
+    /// <summary>允许的路线/直线绕行比上限(去槽位的路线不能比直线长太多,否则走流场)。</summary>
     private static readonly Fix64 RouteRatio = Fix64.FromFloat(1.5f);
 
     public static void Compute(CrowdMovementKernel k, Fix64 dt)
@@ -95,7 +95,7 @@ public static class CrowdIntents
             int cx = CellCoord(px, cs), cy = CellCoord(py, cs);
             int cell = cy * navN + cx;
 
-            // LY-5 层切换:双层可走的桥头格上,取到终点路线更短的那层;等长(跨层边 0 代价)
+            // 层切换:双层可走的桥头格上,取到终点路线更短的那层;等长(跨层边 0 代价)
             // 时按路点打破平局——场会把本层格指向另一层同格。
             if (nav.Portal[cell] != 0 && nav.Passable[cell] != 0 && nav.UpPass[cell] != 0)
             {
@@ -110,7 +110,7 @@ public static class CrowdIntents
             int lv = state.Level;
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
 
-            // D32:到达优先于跳跃——已在目标可达范围内的单位不起跳
+            // 到达优先于跳跃——已在目标可达范围内的单位不起跳
             if (lv == 0 && flow.Lk != null && flow.Lk[cell] >= 0 &&
                 !(CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveCells))
             {
@@ -149,7 +149,7 @@ public static class CrowdIntents
                     && NavGridSteps.LineOfSight(pass, navN, cell, sc);
                 if (vis)
                 {
-                    // D59 第二判据:去槽位的流场路线不能比直线长太多(场外 = ∞ 时只看 LOS,D60 转向接管)
+                    // 第二判据:去槽位的流场路线不能比直线长太多(场外 = ∞ 时只看 LOS,转向接管)
                     Fix64 ra = CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, px, py, cell, 0);
                     Fix64 rb = CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, tx, ty, sc, 0);
                     if (ra < CrowdFlowSample.Unreachable / 4 && rb < CrowdFlowSample.Unreachable / 4 &&
@@ -208,7 +208,7 @@ public static class CrowdIntents
                     }
 
                     k.OnStray?.Invoke(g.Id, cell);
-                    // D60:走廊外保持朝领队速度,等走廊扩展落地
+                    // 走廊外保持朝领队速度,等走廊扩展落地
                     Fix64 lx = leader.X - px, ly = leader.Y - py;
                     Fix64 ld = CrowdFix.Hypot(lx, ly);
                     if (ld > Fix64.FromFloat(1e-6f))
@@ -297,7 +297,7 @@ public static class CrowdIntents
 
     private static Fix64 Square(Fix64 v) => v * v;
 
-    /// <summary>D44:落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
+    /// <summary>落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
     private static bool TryStartJump(
         Arch.Core.World world, Arch.Core.Entity entity,
         ref CrowdSimulationUnitState state, ref CrowdSimulationKinematics kin,

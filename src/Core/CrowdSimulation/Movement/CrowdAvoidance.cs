@@ -13,7 +13,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// rigid 模式优先级失效,休息单位对移动单位不可动、同状态对半;同导航组且都在移动:
 /// 对称对半,不查关系表。跳跃(JUMP)单位腾空:半径记 0,不收推也不推人。
 /// 两个预算保证最坏 O(n) 而不偏袒谁被看见:maxNeighbors 只数重叠对,maxScan 数所有
-/// 读到的候选(含跳过的,D07);查询范围 = 单位自己的哈希环。
+/// 读到的候选(含跳过的);查询范围 = 单位自己的哈希环。
 /// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;整片可达邻域
 /// 全睡的占格是静态岛——不收推不耗算,任何醒着的单位在触及范围内即唤醒整格。
 /// 降频:stride &gt; 1 时本调用只解 cy % stride == phase 的行,其余保留上次向量。
@@ -138,8 +138,8 @@ public static class CrowdAvoidance
                     for (int q = hash2.NeighborStart[pos]; q < end && scanned < k.MaxScan && contacts < k.MaxNeighbors; q++)
                     {
                         Fix64 rq = gr[q];
-                        scanned++; // D07:读到的候选都计入 maxScan,含跳过的
-                        if (q == kk || rq == Fix64.Zero || gl[q] != li) continue; // LY-6:只同层相碰
+                        scanned++; // 读到的候选都计入 maxScan,含跳过的
+                        if (q == kk || rq == Fix64.Zero || gl[q] != li) continue; // 只同层相碰
                         Fix64 dx = xi - gx[q], dy = yi - gy[q];
                         Fix64 rs = ri + rq;
                         Fix64 d2 = dx * dx + dy * dy;

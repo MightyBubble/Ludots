@@ -31,7 +31,7 @@ public sealed class CrowdBeliefState
     public long[] LastCommit { get; init; } = null!;
     public long LastTruth { get; set; } = -1;
     public bool LastTerrain { get; set; }
-    /// <summary>D50 并组:玩家集变了的组,成员必须换导航。</summary>
+    /// <summary>并组:玩家集变了的组,成员必须换导航。</summary>
     public HashSet<int>? Force { get; set; }
     /// <summary>本 tick 原位揭示的组 → 脏 tile 并集。</summary>
     public Dictionary<int, HashSet<int>>? Revealed { get; set; }
@@ -69,7 +69,7 @@ public static class CrowdBeliefSync
         b.Force = null;
         for (int v = 0; v < fog.G; v++)
         {
-            // D50:被并掉的组没有玩家——停在真相槽,不占变体
+            // 被并掉的组没有玩家——停在真相槽,不占变体
             if (fog.Empty(v))
             {
                 if (b.Slot[v] != 0)
@@ -155,7 +155,7 @@ public static class CrowdBeliefSync
             }
         }
 
-        pl.RelinkLeaders(touched); // F-3:领队踩新导航,不踩已弃变体
+        pl.RelinkLeaders(touched); // 领队踩新导航,不踩已弃变体
         RetireSlots(sim);
         b.Switches++;
         var orders2 = pl.Retarget(moved2);
@@ -246,7 +246,7 @@ public static class CrowdBeliefSync
         return true;
     }
 
-    /// <summary>F-4:没人用的槽休眠(变体保留);超过 slotCacheCapacity 或变体数超
+    /// <summary>没人用的槽休眠(变体保留);超过 slotCacheCapacity 或变体数超
     /// variantCapacity 时最旧先 drop;在用的槽永不 drop。</summary>
     private static void RetireSlots(CrowdSimSession sim)
     {

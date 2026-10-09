@@ -309,7 +309,7 @@ public sealed class PathQueryService : IDisposable
         }
         else
         {
-            // 链接层 / 无走廊:领队折线从流场路点链描出(D33)
+            // 链接层 / 无走廊:领队折线从流场路点链描出
             var fp = CorridorQuery.FlowPoints(flow, q.StartCell);
             points = fp?.Points;
             layers = fp?.Layers;

@@ -46,11 +46,11 @@ public sealed class CrowdFog
     public readonly int EyeCm;
     public int Period;
 
-    /// <summary>D50 在途遮蔽:{组, 格集, until tick},按指令序。</summary>
+    /// <summary>在途遮蔽:{组, 格集, until tick},按指令序。</summary>
     private List<(int G, int[] Cells, int Until)> _obscured = new();
     public readonly ushort[] ObsN;  // 每组每格的活跃遮蔽条目数
 
-    // F-2 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)
+    // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)
     private readonly Dictionary<int, HashSet<int>> _idx = new();
     private readonly Dictionary<int, List<int>> _cellsOf = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
@@ -138,7 +138,7 @@ public sealed class CrowdFog
 
         _disc = disc.ToArray();
 
-        // 初始认知:地图实体全员已知 + F-2 索引
+        // 初始认知:地图实体全员已知 + 索引
         foreach (int id in store.EntityIds)
         {
             var fp = store.FootprintOf(id);
@@ -256,7 +256,7 @@ public sealed class CrowdFog
             int g = GroupOf[indexByPlayer[owner.PlayerId]];
             if (g % Period != slot) continue;
             var p = sim.World.Get<Components.WorldPositionCm>(entity).Value;
-            // D37:双向夹紧(负坐标会写进上一组的切片)
+            // 双向夹紧(负坐标会写进上一组的切片)
             int fx = Math.Max(0, Math.Min(F - 1, (int)(p.X / Fix64.FromInt(FcsCm)).ToLong()));
             int fy = Math.Max(0, Math.Min(F - 1, (int)(p.Y / Fix64.FromInt(FcsCm)).ToLong()));
             Occ[g * f2 + fy * F + fx] = 1;
@@ -330,7 +330,7 @@ public sealed class CrowdFog
         return true;
     }
 
-    /// <summary>fog 格 (x, y) 首次探索 → 它覆盖的每个导航 tile 都进组的地形知识(D12:一格可跨多 tile)。</summary>
+    /// <summary>fog 格 (x, y) 首次探索 → 它覆盖的每个导航 tile 都进组的地形知识(一格可跨多 tile)。</summary>
     private void Explore(int g, int x, int y)
     {
         int Tile(int v) => Math.Min(C - 1, v / T);
@@ -369,7 +369,7 @@ public sealed class CrowdFog
     }
 
     /// <summary>真相对认知(在组看见的地方):新实体入信,消失的出信。
-    /// F-2:只读可见格索引到的实体(bbox 触可见格 ⇔ 足迹被看见)。</summary>
+    /// 只读可见格索引到的实体(bbox 触可见格 ⇔ 足迹被看见)。</summary>
     private void Reconcile(int g)
     {
         int f2 = F * F, o = g * f2;
@@ -422,7 +422,7 @@ public sealed class CrowdFog
         }
     }
 
-    // ── D50 面命令(引擎原语;调用方 sim.exec)。形状 = CrowdFogArea 解析结果。 ──
+    // ── 面命令(引擎原语;调用方 sim.exec)。形状 = CrowdFogArea 解析结果。 ──
     // 命令只改迷雾数据;认知同步在下一 tick 的管线里拾起(beliefSync)。
 
     /// <summary>如同组刚看过该区域:explored + 真相对账(不点 visible)。</summary>

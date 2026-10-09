@@ -60,7 +60,7 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.laneSpread", config.Movement.LaneSpread, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
-        // 关系种类上限 256(D36:P×P Uint8 矩阵的编号域)。
+        // 关系种类上限 256(P×P Uint8 矩阵的编号域)。
         if (config.Relations.Kinds.Count < 1 || config.Relations.Kinds.Count > 256)
         {
             throw Invalid("relations.kinds", $"需要 1~256 项（当前 {config.Relations.Kinds.Count} 项）");

@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
 
-/// <summary>D50 面命令的区域形状(fog/area.js shapeOf 移植):恰一形状,字段校验。</summary>
+/// <summary>面命令的区域形状(fog/area.js shapeOf 移植):恰一形状,字段校验。</summary>
 public sealed record CrowdFogShape
 {
     /// <summary>rect [x0, y0, x1, y1](厘米)。</summary>

@@ -44,7 +44,7 @@ public class CrowdSimulationConfigTests
 
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
         Assert.That(runtime.Formation.MagicBoxMaxSpreadCm, Is.EqualTo(Fix64.FromInt(250000)));
-        // 领队继承阈值与参考实现内联字面量同值(D61 反转 -0.5 / D62 同向 0.94)。
+        // 领队继承阈值与参考实现内联字面量同值(反转 -0.5 / 同向 0.94)。
         Assert.That(runtime.Formation.HeadingInheritDot, Is.EqualTo(Fix64.FromDouble(0.94)));
         Assert.That(runtime.Formation.MirrorFlipDot, Is.EqualTo(Fix64.FromDouble(-0.5)));
         Assert.That(runtime.Deploy.Bases[0].XCm, Is.EqualTo(480000));
@@ -332,7 +332,7 @@ public class CrowdSimulationConfigTests
     [Test]
     public void Relations_NonPermutationPlayerIds_AreRejected()
     {
-        // L16:关系矩阵按玩家号直查(IndexByPlayerId 长度 P+1),玩家号必须恰为 1..P 的排列;
+        // 关系矩阵按玩家号直查(IndexByPlayerId 长度 P+1),玩家号必须恰为 1..P 的排列;
         // 跳号/重复/0/超界全部进图即拒。
         foreach (var (ids, expected) in new[]
                  {

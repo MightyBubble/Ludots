@@ -100,7 +100,7 @@ public sealed class CrowdMovementKernel
         if (Contacts.Length < unitCapacity) Contacts = new ushort[unitCapacity];
     }
 
-    /// <summary>D54:新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>
+    /// <summary>新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>
     public void ClearPush(int dense)
     {
         if (dense < Separation.Length) Separation[dense] = Fix64Vec2.Zero;
@@ -165,7 +165,7 @@ public sealed class CrowdMovementKernel
         var mv = cfg.Movement;
         var av = cfg.Avoidance;
         // 哈希几何按最大个人(避让)半径:参考端 reach = max(personal),格距 = 2×reach/rings;
-        // 两值定点精确传入,不许整数截断(L13)
+        // 两值定点精确传入,不许整数截断
         Fix64 maxRadiusCm = Fix64.Zero;
         foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);
         Fix64 hashCellCm = Fix64.Max(Fix64.OneValue, maxRadiusCm * 2 / Fix64.FromInt(Math.Max(1, av.HashRings)));

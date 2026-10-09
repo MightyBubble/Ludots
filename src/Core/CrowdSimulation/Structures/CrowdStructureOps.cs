@@ -278,7 +278,7 @@ public static class CrowdStructureOps
 
     /// <summary>站在刚变不可走地面上的单位挤到最近可走格中心(evictBlocked 移植):
     /// 只有变更矩形外扩最大重烘 reach(2 × 腐蚀半径)内的单位需要检查;跳跃中单位查落点、
-    /// 改落点与全长,不查脚下。无处可放计入 stuck(D44)。</summary>
+    /// 改落点与全长,不查脚下。无处可放计入 stuck。</summary>
     public static int EvictBlocked(CrowdSimSession sim, (int X0, int Y0, int X1, int Y1) rect)
     {
         var kernel = sim.Movement;

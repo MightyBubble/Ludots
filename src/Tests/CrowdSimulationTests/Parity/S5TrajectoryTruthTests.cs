@@ -13,20 +13,20 @@ namespace CrowdSimulationTests.Parity;
 /// <summary>
 /// S5 轨迹对拍(带宽口径——浮点派生量的家规,与 S3-c 同族):
 /// 状态机字段(state/mode/level/order)逐 tick 逐单位逐位一致;
-/// 位置逐 tick 逐单位分层门(L24)——p50/p99/p99.9 三档 + 沿航向有符号均值(系统性偏置
+/// 位置逐 tick 逐单位分层门——p50/p99/p99.9 三档 + 沿航向有符号均值(系统性偏置
 /// 探测:全体单位同向漂移时 max 抓不到、均值抓得到;航向基 = 参考端逐 tick 位移,静止单位
 /// 无航向不进均值)+ max 带宽与末 30 tick 收束带(max/末态只拦卡墙/飞图级结构分歧)。
-/// 带值校准(2026-10-08 F01 整改复测 + 2026-10-09 L24 分层复测,S5-b 避让开启口径,
+/// 带值校准(S5-b 避让开启口径,
 /// 600 tick × 241 单位,seed 1337):p50=0.07cm、p99=17.3cm、p99.9=35.1cm、max=136.1cm、
-/// 末 30 tick max=35.1cm;状态机全程零不一致。位置尾差定性(F01 三轮整改 L18 修订,
-/// L21 记档再修订):首个分歧点 tick 11 单位 163 的马达中间量逐语句对照 + 逐接触对照
+/// 末 30 tick max=35.1cm;状态机全程零不一致。位置尾差定性:
+/// 首个分歧点 tick 11 单位 163 的马达中间量逐语句对照 + 逐接触对照
 /// 证明——接触集/公式/分支逐句同构,输入差来自参考端 f32 状态存储(位置量化格 2^-10m;
 /// 生成位置全精度,首次马达步即落格),经马达 spd≈687.5 因子放大翻转停车线(rest-stop)
 /// 分支;去量化实验(参考端全部 f32 缓冲→f64、删显式 fround)未覆盖全部 f32 路径
 /// (restX/Y、slot、blend、stall、jump*、motor.js 显式 fround),不收敛不构成"非 f32
 /// 来源"的反证;Fix64 每运算舍入约 2^-32 cm,比观测差小约 10 个数量级,排除为主因——
 /// 残余来源记档为参考端 f32 存储(2026-10-09 甲方裁决:行为对拍口径)。
-/// 接触计数硬门(L19):不一致 10/144234 样本(0.007%,全部 ±1 骑线),容忍线 0.05% + 幅度
+/// 接触计数硬门:不一致 10/144234 样本(0.007%,全部 ±1 骑线),容忍线 0.05% + 幅度
 /// ±1;失败断言输出全量不一致清单。系统性分歧(接触集大面积错)会同时击穿两条。
 /// </summary>
 public sealed class S5TrajectoryTruthTests
@@ -36,13 +36,13 @@ public sealed class S5TrajectoryTruthTests
     /// <summary>末态收束带(厘米):实测末 30 tick max 35.1cm,留约 2.9 倍余量。</summary>
     private const double FinalBandCm = 100.0;
     private const int FinalTicks = 30;
-    /// <summary>分层门(L24)p50(厘米):换数学固有误差 ≈ f32 格 0.1cm 档,实测 0.068,留约 7 倍。</summary>
+    /// <summary>分层门 p50(厘米):换数学固有误差 ≈ f32 格 0.1cm 档,实测 0.068,留约 7 倍。</summary>
     private const double P50BandCm = 0.5;
-    /// <summary>分层门(L24)p99(厘米):实测 17.3,留约 2.9 倍。</summary>
+    /// <summary>分层门 p99(厘米):实测 17.3,留约 2.9 倍。</summary>
     private const double P99BandCm = 50.0;
-    /// <summary>分层门(L24)p99.9(厘米):实测 35.1,留约 2.9 倍。</summary>
+    /// <summary>分层门 p99.9(厘米):实测 35.1,留约 2.9 倍。</summary>
     private const double P999BandCm = 100.0;
-    /// <summary>沿航向有符号均值门(厘米,L24):全体单位同向系统性漂移的探测门,实测值见输出行。</summary>
+    /// <summary>沿航向有符号均值门(厘米):全体单位同向系统性漂移的探测门,实测值见输出行。</summary>
     private const double HeadingMeanBandCm = 0.1;
 
     [Test]
@@ -67,7 +67,7 @@ public sealed class S5TrajectoryTruthTests
 
         double maxDeltaCm = 0, finalMaxDeltaCm = 0;
         var deltas = new List<double>();
-        // L24 沿航向有符号投影的累计:航向基 = 参考端逐 tick 位移,静止单位(位移 < 1e-6cm)无航向不进均值
+        // 沿航向有符号投影的累计:航向基 = 参考端逐 tick 位移,静止单位(位移 < 1e-6cm)无航向不进均值
         var lastTruth = new Dictionary<uint, (double X, double Y)>();
         double headingProjSum = 0;
         int headingSamples = 0;
@@ -99,7 +99,7 @@ public sealed class S5TrajectoryTruthTests
                 int tContacts = BitConverter.ToUInt16(bin, cursor); cursor += 2;
 
                 var entity = session.Units.EntityAt(i);
-                // L12-④ 硬门:接触计数整数可比,不依赖位置带宽。两侧算术体系(Fix64 与参考端
+                // 硬门:接触计数整数可比,不依赖位置带宽。两侧算术体系(Fix64 与参考端
                 // f32/f64 混合)在"马达停车线/接触边界"的不连续点上有 1e-4 量级骑线翻转(首个:
                 // tick 15),实测翻转率 0.007%、幅度全部 ±1;系统性求解分歧会同时击穿两条容忍线。
                 int contactDelta = Math.Abs(session.Movement!.Contacts[i] - tContacts);
@@ -107,7 +107,7 @@ public sealed class S5TrajectoryTruthTests
                 {
                     contactMismatches++;
                     contactMaxDelta = Math.Max(contactMaxDelta, contactDelta);
-                    // L19:全量清单(不只首个),失败断言整体列出
+                    // 全量清单(不只首个),失败断言整体列出
                     contactSamples_.Add($"tick {t} 单位 {i}: 我 {session.Movement.Contacts[i]} vs 参考 {tContacts}");
                 }
                 uint myHandle = session.Units.HandleAt(i);
@@ -143,7 +143,7 @@ public sealed class S5TrajectoryTruthTests
         double p999 = deltas[(int)(deltas.Count * 0.999)];
         double p99 = deltas[(int)(deltas.Count * 0.99)];
         double p50 = deltas[deltas.Count / 2];
-        // L19:接触计数容忍线的证据链(F01 三轮整改 L18,L21 记档修订)——残余差定性为参考端
+        // 接触计数容忍线的证据链——残余差定性为参考端
         // f32 状态存储(逐接触对照:同集合同公式,dx/dy 差 = f32 量化格 2^-10m;去量化实验未
         // 覆盖全部 f32 路径,不构成反证;Fix64 每运算舍入 2^-32 cm 比观测差小约 10 个数量级、
         // 排除为主因),经马达 spd 因子放大翻转停车线等离散分支;逐位相等在现数值系下不可达,

@@ -80,7 +80,7 @@ public sealed class CrowdSimSession
     public CrowdRebakeJob? RebakeJob { get; set; }
     /// <summary>最近一次已完结的结构变更报告(遥测 / 对拍)。</summary>
     public CrowdRebakeReport? LastRebakeReport { get; set; }
-    /// <summary>最近一次挤离中无处安放的单位数(D44 计数,进重烘报告)。</summary>
+    /// <summary>最近一次挤离中无处安放的单位数(计数,进重烘报告)。</summary>
     public int EvictStuck { get; set; }
     /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(DB-03;对拍免谈,验收必跑)。</summary>
     public bool VerifyIncrementalNav { get; set; }

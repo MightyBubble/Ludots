@@ -242,7 +242,7 @@ public sealed class CrowdBeliefNavs
         return res;
     }
 
-    /// <summary>分歧 tile 集(D50 认知视图 / 摘要用)。</summary>
+    /// <summary>分歧 tile 集(认知视图 / 摘要用)。</summary>
     public List<int> DivergentTiles(int slot)
     {
         var b = SlotOf(slot);

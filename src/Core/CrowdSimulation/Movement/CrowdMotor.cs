@@ -82,10 +82,10 @@ public static class CrowdMotor
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
             byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 甲板层没有独立亚格 walk 网格:甲板面无亚格障碍,以 UpPass 为口径(与 S2 数据面对齐)
             Fix64 px = pos.X, py = pos.Y;
-            // L13 记档:格归属保留 Fix64 除法(单次有理下取整,对真值格号偏差 ≤1 ulp)。
+            // 格归属保留 Fix64 除法(单次有理下取整,对真值格号偏差 ≤1 ulp)。
             // 参考端是 x*inv(预存 f64 倒数);曾试改 Fix64 乘法同形,inv 本身下取整 + 乘积再
             // 下取整的双重取整反而更偏离参考——S5 实测 p50 0.07cm → 17.3cm(2026-10-09),已回退。
-            // 格边界上与参考的 1 ulp 差属双数值系残余(与 L18 同源),不可在此框架内消除。
+            // 格边界上与参考的 1 ulp 差属双数值系残余,不可在此框架内消除。
             int cx = (int)(px / cs).ToLong(), cy = (int)(py / cs).ToLong();
             Fix64 spd = ProfileSpeed(session, entity);
             Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cy * navN + cx];

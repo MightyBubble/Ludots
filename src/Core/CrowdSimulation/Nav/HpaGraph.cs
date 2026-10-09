@@ -39,7 +39,7 @@ public sealed class HpaGraph
     public required HpaClusterBlock[] Blocks { get; set; }
     /// <summary>跳跃链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
     public required Dictionary<int, List<(int To, Fix64 Cost)>> LinkOut { get; set; }
-    /// <summary>跳跃链接端点按簇的归属表(D23 增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
+    /// <summary>跳跃链接端点按簇的归属表(增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
     public Dictionary<int, List<int>>? LinkClusters { get; set; }
     public required int NodeCount { get; set; }
     public required int EdgeCount { get; set; }
@@ -179,7 +179,7 @@ public sealed class HpaGraph
         foreach (int cl in south) Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
         foreach (int cl in own) aff.Add(cl);
         var lk = LinksByCluster(links, nav.CellCount, ClusterSize, c);
-        // D23:重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
+        // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
         var oldLk = LinkClusters ?? new Dictionary<int, List<int>>();
         foreach (int cl in oldLk.Keys) aff.Add(cl);
         foreach (int cl in lk.Keys) aff.Add(cl);

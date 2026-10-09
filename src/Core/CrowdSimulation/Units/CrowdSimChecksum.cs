@@ -36,7 +36,7 @@ public static class CrowdSimChecksum
         }
 
         // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序)
-        // L02 重钉:每个定点字段按原始 int64 低 32 → 高 32 两词混入(与导出端 mixI64 同形);
+        // 每个定点字段按原始 int64 低 32 → 高 32 两词混入(与导出端 mixI64 同形);
         // 旧口径只混低 32 词,随 S6 校验码混法变更一并作废。
         for (int k = 0; k < 6; k++)
         {
@@ -56,7 +56,7 @@ public static class CrowdSimChecksum
         for (int i = 0; i < n; i++) h = Mix(h, sim.World.Get<CrowdSimulationUnitState>(units.EntityAt(i)).Mode);
         for (int i = 0; i < n; i++) h = Mix(h, sim.World.Get<CrowdSimulationUnitState>(units.EntityAt(i)).Level);
 
-        // 避让隐藏状态(L14):分离两轴 + calm 逐单位(mixI64 双词)+ 相位一词——影响下 tick 行为
+        // 避让隐藏状态:分离两轴 + calm 逐单位(mixI64 双词)+ 相位一词——影响下 tick 行为
         // 的状态必须进校验码,否则快照恢复分歧延迟显形且无法定位到避让子系统。
         // 无运动栈(部署会话)时恒零,与导出端词数对齐。
         var movement = sim.Movement;

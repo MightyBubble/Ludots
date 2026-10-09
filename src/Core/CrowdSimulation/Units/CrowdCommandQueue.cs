@@ -63,7 +63,7 @@ public sealed class CrowdCommandQueue
         _head = 0;
     }
 
-    /// <summary>执行全部到点指令(D29:已过期的立即执行,日志记实际执行 tick 与 lateFrom)。</summary>
+    /// <summary>执行全部到点指令(已过期的立即执行,日志记实际执行 tick 与 lateFrom)。</summary>
     public void Flush(CrowdSimSession sim, Func<CrowdSimSession, CrowdSimCommand, object?> exec)
     {
         while (_head < _queue.Count && _queue[_head].Tick <= sim.TickCount)

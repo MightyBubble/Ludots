@@ -24,7 +24,7 @@ public static class CrowdDeployment
         int n = cfg.NavCellCount;
         var cellSize = Fix64.FromInt(cfg.NavCellSizeCm);
 
-        // D31:单位先清——后续任何异常都不会留下指着已清组的活单位
+        // 单位先清——后续任何异常都不会留下指着已清组的活单位
         sim.Units.Clear();
         sim.Groups.Reset();
         sim.SetSelectedCount(0);
@@ -79,7 +79,7 @@ public static class CrowdDeployment
         {
             int p = k % playerCount;
             var list = perPlayer[p];
-            if (list.Count == 0) { skipped++; continue; } // D35:该玩家没有可用的 类型×半径 组合
+            if (list.Count == 0) { skipped++; continue; } // 该玩家没有可用的 类型×半径 组合
             var g = list[(int)(rng.Next() * list.Count)];
             var cs = centers[g.Id];
             int c = cs[(int)(rng.Next() * cs.Count)];
@@ -143,7 +143,7 @@ public static class CrowdDeployment
         return made;
     }
 
-    // t = 单位模板下标;其移动类型必须是组的导航层(D54:满容量只影响计数,不留半生成状态)
+    // t = 单位模板下标;其移动类型必须是组的导航层(满容量只影响计数,不留半生成状态)
     private static int AddUnit(CrowdSimSession sim, int cell, CrowdSimRng rng, CrowdNavGroupSet.Group g, int t, Fix64 cellSize)
     {
         var cfg = sim.Config;
@@ -166,7 +166,7 @@ public static class CrowdDeployment
             profile.PushPriority);
         int dense = sim.Units.Add(in unit);
         if (dense < 0) return dense;
-        // D54:槽位复用不带陈旧推挤;新单位 calm=0,首次求解前必醒
+        // 槽位复用不带陈旧推挤;新单位 calm=0,首次求解前必醒
         sim.Movement?.ClearPush(dense);
         g.Count++;
         return dense;

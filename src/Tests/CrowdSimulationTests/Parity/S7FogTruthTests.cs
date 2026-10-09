@@ -23,7 +23,7 @@ namespace CrowdSimulationTests.Parity;
 /// 认知变体导航的内容一致性由本门背书:槽位分配/切换/揭示/淘汰全部逐位,变体烘焙的分歧
 /// 矩形由槽字段(实体集+tile 集)唯一决定。
 /// 实测校准(2026-10-09,360 tick × 120 单位):digest 全程逐位;ops(place@5/remove@90)全字段;
-/// 轨迹 p50=0.08/p99=0.45cm(行军段双数值系固有误差档);到达判定骑线(L18 族)使末段停车
+/// 轨迹 p50=0.08/p99=0.45cm(行军段双数值系固有误差档);到达判定骑线(族)使末段停车
 /// 晚 1–9 tick——状态翻转 99 处全部为 Moving↔Arrived 到达对(非到达翻转 0,零容忍),末态带
 /// 5000(实测 3491,该带防整组不收束);contacts 对齐门 0.5% + ±3(实测 0.147%,幅度直方
 /// [±1:57,±2:3,±3:3]——到达簇内多邻同时骑线;系统性求解分歧会同时击穿率与幅度线)。
@@ -33,7 +33,7 @@ public sealed class S7FogTruthTests
     /// <summary>位置带宽(厘米):实测见输出行,按约 3 倍余量定值(迷雾场景的绕行差与 S7 同源:
     /// 重规划落帧的级联;未知建筑在发现前不参与认知规划——放件即真值重烘反应,与认知无关)。</summary>
     private const double MaxTrajectoryBandCm = 15000.0;
-    /// <summary>末态收束带(厘米):到达判定骑线(L18 族)使停车比参考端晚 1–9 tick,实测末 30 tick
+    /// <summary>末态收束带(厘米):到达判定骑线(族)使停车比参考端晚 1–9 tick,实测末 30 tick
     /// max 3491.5(到达对翻转 99 处全为 Moving→Arrived 晚翻;非到达翻转 0、digest 逐位、ops 全字段)。
     /// 该带防的是整组不收束/卡墙(数百米量级),取 5000。</summary>
     private const double FinalBandCm = 5000.0;
@@ -228,7 +228,7 @@ public sealed class S7FogTruthTests
             Assert.That(r.CostOnly, Is.EqualTo(costOnly), What("仅代价上下文数"));
             Assert.That(r.Hits, Is.EqualTo(hits), What("tile 缓存命中"));
             Assert.That(r.Misses, Is.EqualTo(misses), What("tile 缓存未命中"));
-            Assert.That(r.Orders, Is.EqualTo(orders), What("重规划指令数")); // L22-⑤ 同族:重规划计数在硬门内
+            Assert.That(r.Orders, Is.EqualTo(orders), What("重规划指令数")); // 同族:重规划计数在硬门内
             Assert.That(r.Refreshes, Is.EqualTo(refreshes), What("流场刷新队列长"));
             Assert.That(r.Evicted, Is.EqualTo(evicted), What("挤离单位数"));
             Assert.That(r.Stuck, Is.EqualTo(stuck), What("无处安放数"));

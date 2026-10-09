@@ -142,7 +142,7 @@ public static class CrowdSimCommands
         }
     }
 
-    /// <summary>D50 迷雾/知识面命令(sim/playerCommands.js fogCmd 移植):主体 = 玩家(实体域
+    /// <summary>迷雾/知识面命令(sim/playerCommands.js fogCmd 移植):主体 = 玩家(实体域
     /// 语法糖)→ 其视野组,组内玩家同享。area = rect/circle/poly 恰一(米→厘米在脚本边界换算)。
     /// 命令只改迷雾数据;认知同步在下一 tick 管线拾起(fogShare 的 force 除外——并组当场标记)。</summary>
     private static object? FogCmd(CrowdSimSession sim, CrowdSimCommand cmd)

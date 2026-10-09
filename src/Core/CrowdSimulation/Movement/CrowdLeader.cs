@@ -55,11 +55,11 @@ public sealed class CrowdLeader
     public Fix64 Hy { get; private set; }
     public int Seg { get; private set; }
     public bool Done { get; private set; }
-    /// <summary>反转后原地掉头(D61):行序镜像,旧前排不必穿过队伍再到前面。</summary>
+    /// <summary>反转后原地掉头:行序镜像,旧前排不必穿过队伍再到前面。</summary>
     public bool Mirror { get; private set; }
     public IReadOnlyList<Fix64Vec2> Path => _path;
 
-    /// <summary>D62:起点覆写到当前质心(请求时刻的起点格只作 8 邻域参照)。</summary>
+    /// <summary>起点覆写到当前质心(请求时刻的起点格只作 8 邻域参照)。</summary>
     public void SetStart(Fix64 xCm, Fix64 yCm)
     {
         _path[0] = new Fix64Vec2(xCm, yCm);
@@ -68,7 +68,7 @@ public sealed class CrowdLeader
     }
 
     /// <summary>
-    /// 继承上一任领队(D61/D62):方向点积 &lt; mirrorFlipDot 的反转令 mirror 翻转并继承;
+    /// 继承上一任领队(反转/同向):方向点积 &lt; mirrorFlipDot 的反转令 mirror 翻转并继承;
     /// 近似同向(点积 &gt; headingInheritDot)且非固定朝向时继承旧朝向,避免整队绕领队自拧。
     /// </summary>
     public void InheritFrom(CrowdLeader prev, Fix64 mirrorFlipDot, Fix64 headingInheritDot)

@@ -95,7 +95,7 @@ public static class HpaQuery
         for (int i = 0; i < sb.Cells.Length; i++)
         {
             int c = sb.Cells[i];
-            if (c >= n2) continue; // D06:桥面节点不会被纯地面的起点 Dijkstra 到达
+            if (c >= n2) continue; // 桥面节点不会被纯地面的起点 Dijkstra 到达
             var d = s.StartDist[NavGridSteps.LocalIndex(c, n, cs)];
             if (d >= inf) continue;
             g[c] = d; parent[c] = -1;
@@ -123,7 +123,7 @@ public static class HpaQuery
             if (!closed.Add(u)) continue;
             expanded++;
             gu = g[u];
-            // 键 ≥ N² 是桥面节点(LY-4):终点在地面,它们永远不会结束搜索
+            // 键 ≥ N² 是桥面节点:终点在地面,它们永远不会结束搜索
             int cl = NavGridSteps.ClusterOf(u % n2, n, cs, cc);
             var b = blocks[cl];
             int i = b.Index[u];

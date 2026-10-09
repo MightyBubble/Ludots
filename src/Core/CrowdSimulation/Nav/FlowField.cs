@@ -5,7 +5,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// 流场(flowfield.js 移植,LY-5 双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
+/// 流场(flowfield.js 移植,双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
 /// + 每格 8 向下降指针 + 拉直路点(按 Dijkstra 弹出序处理,父先子后 → 任意角绷紧路径)。
 /// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 地面,1 桥面);两层仅在双层可走的
 /// 桥头格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。

@@ -9,7 +9,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// 移动下令(issueOrder.js 移植,Fix64 厘米域):选中单位(无选中 = 全体本方)按
 /// (移动类型 × 半径级) 重组进新组、挂同一条新指令;magic box 定落点模式;
 /// PRESERVE 时各层块按(层质心 − 指令质心)平移目标。
-/// D57:同玩家同成员同目标同参数的重复指令 = 空操作(仍进日志,回放逐位一致)。
+/// 同玩家同成员同目标同参数的重复指令 = 空操作(仍进日志,回放逐位一致)。
 /// </summary>
 public static class CrowdIssueOrder
 {
@@ -23,7 +23,7 @@ public static class CrowdIssueOrder
         int clickCell = CrowdDeployment.CellAt(wxCm, wyCm, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
         string key = $"{shapeId}|{auto}|{(face.HasValue ? $"{face.Value.X.RawValue},{face.Value.Y.RawValue}" : "-")}|{widthCm.RawValue}";
 
-        // D57:同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
+        // 同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
         CrowdOrder? same = null;
         int m = 0;
         bool broken = false;

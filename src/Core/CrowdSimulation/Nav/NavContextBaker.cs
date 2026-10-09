@@ -277,7 +277,7 @@ public static class NavContextBaker
     }
 
     /// <summary>
-    /// 桥面可达性(LY-4 移植:上层标号接在地面连通域之后顺排):桥面区域(UpArea)按格升序首见
+    /// 桥面可达性(移植:上层标号接在地面连通域之后顺排):桥面区域(UpArea)按格升序首见
     /// 分配编号(确定性);桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向互通边。可达图 = 跳跃链接边 + 互通边。
     /// </summary>
     internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(

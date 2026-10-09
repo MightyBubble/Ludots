@@ -9,7 +9,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// 走廊查询(pathJobs.js corridorTo / deckExit / flowPoints 移植):
 /// 无跳跃链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
 /// (链接是抽象边,NavMesh 上没有);NavMesh 失败也回落 HPA*。命中的 cluster 标进走廊掩码。
-/// 桥面起点(LY-3 D08):先沿桥面 BFS 到最近的桥头 portal,再从那里查地面图,
+/// 桥面起点:先沿桥面 BFS 到最近的桥头 portal,再从那里查地面图,
 /// 途经的桥面 cluster 并入走廊。
 /// </summary>
 public static class CorridorQuery

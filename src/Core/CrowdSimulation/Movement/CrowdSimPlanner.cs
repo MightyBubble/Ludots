@@ -12,7 +12,7 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// <summary>
 /// 指令规划器(planner.js 的 S5 子集移植):指令 → 逐组(目标格/可达替代/成员/出发簇)→
 /// 路径服务请求(固定生效帧)→ 答复落帧时建领队 + 排阵型槽位 + 挂流场。
-/// 重烘焙 / 迷雾认知 / 走廊扩展属于 S7/S5-b,不在此层。领队路径无答复(D33)= 全组不可达。
+/// 重烘焙 / 迷雾认知 / 走廊扩展属于 S7/S5-b,不在此层。领队路径无答复= 全组不可达。
 /// </summary>
 public sealed class CrowdSimPlanner
 {
@@ -51,7 +51,7 @@ public sealed class CrowdSimPlanner
         public required int NavId { get; init; }
         public required int Goal { get; init; }
         public required int RequestId { get; init; }
-        /// <summary>请求时的导航版本:答复落帧时版本变了 = 陈旧答复,按 F-5 裁决。</summary>
+        /// <summary>请求时的导航版本:答复落帧时版本变了 = 陈旧答复,按 裁决。</summary>
         public required int Version { get; init; }
     }
 
@@ -105,7 +105,7 @@ public sealed class CrowdSimPlanner
             }
         }
 
-        // 目标不可达 → 换最近的可达格(F-09):按组员多数所在连通域判定
+        // 目标不可达 → 换最近的可达格:按组员多数所在连通域判定
         foreach (var o in orders)
         {
             foreach (var link in o.Groups)
@@ -344,7 +344,7 @@ public sealed class CrowdSimPlanner
         if (rk > 0) _pendingRefreshes.RemoveRange(0, rk);
         if (stale.Count > 0)
         {
-            // F-5:在途期间导航变了(重烘)的规划已按答复应用,现在按现行导航裁决:
+            // 在途期间导航变了(重烘)的规划已按答复应用,现在按现行导航裁决:
             // 目标被挡或无场 → 重规划;否则刷新流场(它来自旧导航)
             var orders = AfterStalePlan(stale);
             if (orders.Count > 0) Plan(orders, tick);
@@ -446,7 +446,7 @@ public sealed class CrowdSimPlanner
             var strictest = session.Groups.Groups[pl.StrictestGroupId]!;
             if (!leaderResult.Reachable || leaderResult.Points == null)
             {
-                // D33:路径服务无路 → 桶内成员全部不可达,组放弃(清场清目标)
+                // 路径服务无路 → 桶内成员全部不可达,组放弃(清场清目标)
                 foreach (int gid in bucket)
                 {
                     var g = session.Groups.Groups[gid]!;
@@ -475,7 +475,7 @@ public sealed class CrowdSimPlanner
                 ToVec2Path(leaderResult.Points, cellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
                 o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAhead * cs);
 
-            // D62:质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
+            // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;
             int cn = 0;
             foreach (int gid in bucket)
@@ -502,7 +502,7 @@ public sealed class CrowdSimPlanner
                 }
             }
 
-            // D61:反转继承 mirror;D62 同向继承朝向(近似同向才继,真转弯立刻按新朝向排槽)
+            // 反转继承 mirror;同向继承朝向(近似同向才继,真转弯立刻按新朝向排槽)
             if (pl.Prev is { } prev)
             {
                 leader.InheritFrom(prev, fc.MirrorFlipDot, fc.HeadingInheritDot);
@@ -514,7 +514,7 @@ public sealed class CrowdSimPlanner
             {
                 var g = session.Groups.Groups[gid]!;
                 g.Leader = leader;
-                g.LosAll = true; // D58:首个意图趟全员重查槽位视线
+                g.LosAll = true; // 首个意图趟全员重查槽位视线
                 foreach (int i in membersByGroup[gid])
                 {
                     mem.Add(i);
@@ -522,7 +522,7 @@ public sealed class CrowdSimPlanner
                     var st = session.World.Get<CrowdSimulationUnitState>(e);
                     if (st.State == (byte)CrowdUnitState.Arrived)
                     {
-                        st.State = (byte)CrowdUnitState.Moving; // D56:路径落地才离站
+                        st.State = (byte)CrowdUnitState.Moving; // 路径落地才离站
                         session.World.Set(e, st);
                     }
                 }
@@ -605,7 +605,7 @@ public sealed class CrowdSimPlanner
         var g = pr.Group;
         if (!_session.Groups.TryGet(pr.GroupId, out var live) || live != g || g.StateSeq != pr.Seq)
         {
-            return; // 被更新请求取代:静默丢弃(D20)
+            return; // 被更新请求取代:静默丢弃
         }
 
         var result = _service.AwaitDue(pr.RequestId);
@@ -663,7 +663,7 @@ public sealed class CrowdSimPlanner
         {
             if (g == null || g.Count == 0 || g.OrderId == 0) continue;
             if (!dirtyByNav.TryGetValue(g.NavId, out var tiles) || tiles.Count == 0) continue;
-            if (g.Planning) continue; // F-5:在途规划由落帧裁决处理
+            if (g.Planning) continue; // 在途规划由落帧裁决处理
             if (g.Goal < 0) continue;
             var nav = session.ResolveNavContext(g.NavId);
             if (nav.Passable[g.Goal] == 0)
@@ -693,7 +693,7 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    /// <summary>F-6:行进中成员(脚下格 / 跳跃落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
+    /// <summary>行进中成员(脚下格 / 跳跃落点格)的连通域不再可达目标 = 该组的路被切断。</summary>
     private HashSet<int> ReachLost(CrowdSimSession session, List<CrowdNavGroupSet.Group> hit)
     {
         var want = new HashSet<int>();
@@ -821,7 +821,7 @@ public sealed class CrowdSimPlanner
         });
     }
 
-    /// <summary>F-5 落帧裁决(afterStalePlan 移植):陈旧答复的组——无场或目标被挡 → 重规划;
+    /// <summary>落帧裁决(afterStalePlan 移植):陈旧答复的组——无场或目标被挡 → 重规划;
     /// 否则按现行导航刷新流场。返回需要重规划的指令。</summary>
     private List<CrowdOrder> AfterStalePlan(List<CrowdNavGroupSet.Group> stale)
     {
@@ -895,7 +895,7 @@ public sealed class CrowdSimPlanner
         foreach (var g in moved)
         {
             if (g.Count == 0 || g.OrderId == 0) continue;
-            if (g.Planning) continue; // F-5:在途规划由落帧裁决
+            if (g.Planning) continue; // 在途规划由落帧裁决
             if (g.Goal < 0) continue;
             var nav = session.ResolveNavContext(g.NavId);
             if (nav.Passable[g.Goal] == 0)
@@ -925,7 +925,7 @@ public sealed class CrowdSimPlanner
         return orders;
     }
 
-    /// <summary>F-3:受触指令的领队重挂到同指令仍由它带队、净空最严的组的当前导航——
+    /// <summary>受触指令的领队重挂到同指令仍由它带队、净空最严的组的当前导航——
     /// 领队不踩已弃变体。</summary>
     public void RelinkLeaders(HashSet<CrowdOrder> touched)
     {
@@ -945,7 +945,7 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    // D13:净空更大更严;同净空取更大下标(确定)
+    // 净空更大更严;同净空取更大下标(确定)
     private bool StricterNav(CrowdNavGroupSet.Group g, CrowdNavGroupSet.Group m)
     {
         int a = _session.ResolveNavContext(g.NavId).ClearanceCells;
@@ -972,7 +972,7 @@ public sealed class CrowdSimPlanner
         return CrowdDeployment.CellAt(p.X, p.Y, n, cs);
     }
 
-    /// <summary>离 target 最近且从 fromComp 可达的可走格(D34 环形外扩,平手取格号小者)。</summary>
+    /// <summary>离 target 最近且从 fromComp 可达的可走格(环形外扩,平手取格号小者)。</summary>
     private static int NearestReachable(NavContext nav, int fromComp, int target, int n)
     {
         if (fromComp < 0) return -1;

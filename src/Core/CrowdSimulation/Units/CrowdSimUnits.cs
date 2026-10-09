@@ -74,7 +74,7 @@ public sealed class CrowdSimUnits
     /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径(内核热路径读组件,不走字符串档案查表)。</summary>
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).ResolvedPersonalRadiusCm;
 
-    /// <summary>生成一个单位;满容量返回 -1(D54:失败不留痕迹)。
+    /// <summary>生成一个单位;满容量返回 -1(失败不留痕迹)。
     /// 实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),再由钩子
     /// 补齐逐实例组件——单位创建只有这一条生产路径,引擎与无头装配同一管线。</summary>
     public int Add(in CrowdUnitSpawnRequest unit)

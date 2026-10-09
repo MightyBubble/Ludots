@@ -55,7 +55,7 @@ public sealed class CrowdOrder
     public int ClickCell { get; set; } = -1;
     /// <summary>落点足印半径(格,规划器按编队宽度设置,到达判定的近邻域)。</summary>
     public int ReachCells { get; set; } = 1;
-    /// <summary>去重键(形状/自动/朝向/线宽);同玩家同成员同目标同键的重复指令直接复用(D57)。</summary>
+    /// <summary>去重键(形状/自动/朝向/线宽);同玩家同成员同目标同键的重复指令直接复用。</summary>
     public string DedupKey { get; set; } = string.Empty;
     public List<CrowdOrderGroupLink> Groups { get; } = new();
     public List<CrowdLeader> Leaders { get; } = new();
