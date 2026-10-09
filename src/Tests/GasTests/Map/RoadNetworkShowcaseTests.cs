@@ -171,6 +171,75 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadMoveOrderBindingSystem_ClickedRoadMoveFollow_PlansRouteFromActorWhenActivated()
+        {
+            using var world = World.Create();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore, new[]
+            {
+                (100, 0),
+                (200, 0),
+                (450, 150),
+            });
+            var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(77, 171);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderBuffer(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(100, 0));
+            Order clicked = CreateMoveOrder(actor, orderTypeId: 171, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Queued);
+            clicked.OrderId = 9001;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in clicked, priority: 100);
+
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, 171, plans, runtime, new MassNavigationRuntimeBinding());
+
+            bindSystem.Update(1f / 60f);
+
+            Assert.That(pathService.Requests.Count, Is.EqualTo(1));
+            Assert.That(pathService.Requests[0].Start.Xcm, Is.EqualTo(100), "The route starts where the unit stands when the order activates.");
+            Assert.That(pathService.Requests[0].Goal.Xcm, Is.EqualTo(450));
+            ref readonly Order active = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
+            Assert.That(active.OrderId, Is.EqualTo(9001));
+            Assert.That(active.OrderTypeId, Is.EqualTo(171));
+            Assert.That(active.SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+            Assert.That(active.Args.Spatial.PointCount, Is.EqualTo(3));
+            Assert.That(OrderWorldSpatialResolver.TryResolveExplicitMoveDestination(in active, out Vector3 destination), Is.True);
+            Assert.That(destination.X, Is.EqualTo(450f));
+            Assert.That(destination.Z, Is.EqualTo(150f));
+            Assert.That(plans.TryGetPlan(actor, 9001, out _), Is.True);
+        }
+
+        [Test]
+        public void RoadMoveOrderBindingSystem_ClickedRoadMoveFollow_PlanningFailureEndsOrderWithStatus()
+        {
+            using var world = World.Create();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId: 77);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(77, 171);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderBuffer(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            Order clicked = CreateMoveOrder(actor, orderTypeId: 171, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            clicked.OrderId = 9002;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in clicked, priority: 100);
+
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, 171, plans, runtime, new MassNavigationRuntimeBinding());
+
+            bindSystem.Update(1f / 60f);
+
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Contain("Road command rejected"));
+            Assert.That(plans.TryGetPlan(actor, 9002, out _), Is.False);
+        }
+
+        [Test]
         public void RoadMoveOrderExpander_TrySubmit_PlanningFailure_ReturnsRejectedValidation_NotQueueFull()
         {
             using var world = World.Create();
@@ -1601,7 +1670,7 @@ namespace Ludots.Tests.GAS
             var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             MassNavigationRuntimeBinding binding = CreateReadyRoadMassRuntimeBinding(simulation);
-            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var executionSystem = new RoadMoveExecutionSystem(world, binding);
             var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
@@ -1712,7 +1781,7 @@ namespace Ludots.Tests.GAS
             var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             var binding = new MassNavigationRuntimeBinding();
-            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var executionSystem = new RoadMoveExecutionSystem(world, binding);
             var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);

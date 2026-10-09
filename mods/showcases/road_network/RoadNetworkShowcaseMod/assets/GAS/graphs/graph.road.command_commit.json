@@ -1,0 +1,215 @@
+[
+  {
+    "id": "graph.road.command_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "Command",
+        "start": "pointer_x",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "count",
+        "op": "AggCount"
+      },
+      {
+        "id": "count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "has_members",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "members_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "ground_branch"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "true",
+        "to": "caster"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "count"
+      },
+      {
+        "from": "count",
+        "fromPort": "next",
+        "to": "count_f"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "has_members"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "next",
+        "to": "members_branch"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "true",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "count",
+        "fromPort": "value",
+        "to": "count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "b"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "value",
+        "to": "members_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -65,9 +65,6 @@ namespace RoadNetworkShowcaseMod.Triggers
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
             engine.RegisterSystem(
-                new RoadNetworkOrderPolicySystem(engine.World, engine.GlobalContext, orders),
-                SystemGroup.InputCollection);
-            engine.RegisterSystem(
                 new RoadNetworkAiAndCaptureSystem(engine.World, engine.GlobalContext, orders),
                 SystemGroup.InputCollection);
             engine.RegisterSystem(
@@ -80,7 +77,7 @@ namespace RoadNetworkShowcaseMod.Triggers
                 new RoadNetworkCameraModeSystem(engine.GlobalContext, _runtime),
                 SystemGroup.LocalInput);
             engine.RegisterSystem(
-                new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
+                new RoadMoveOrderBindingSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
                 SystemGroup.RuntimeEntityBinding);
             engine.RegisterSystem(
                 new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
