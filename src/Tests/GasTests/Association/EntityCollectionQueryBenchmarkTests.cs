@@ -155,7 +155,6 @@ namespace Ludots.Tests.GAS
                 Sort = EntityCommandPanelCollectionSortKind.OwnerCountThenSlotThenLabel
             });
 
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, CreateMappingSystem());
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
             var context = new EntityCommandPanelSourceContext(collectionOwner, CollectionSourceId, BenchmarkQueryId);
             var slots = new EntityCommandPanelSlotView[8];
@@ -244,38 +243,6 @@ namespace Ludots.Tests.GAS
             }
 
             return actor;
-        }
-
-        private static InputOrderMappingSystem CreateMappingSystem()
-        {
-            var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
-            {
-                InteractionMode = CastModeType.TargetFirst,
-                Mappings = new List<InputOrderMapping>
-                {
-                    CreateSkillMapping("SkillQ", 0),
-                    CreateSkillMapping("SkillW", 1),
-                    CreateSkillMapping("SkillE", 2),
-                    CreateSkillMapping("SkillR", 3)
-                }
-            });
-            mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.Queued);
-            return mapping;
-        }
-
-        private static InputOrderMapping CreateSkillMapping(string actionId, int slotIndex)
-        {
-            return new InputOrderMapping
-            {
-                ActionId = actionId,
-                Trigger = InputTriggerType.PressedThisFrame,
-                OrderTypeKey = "castAbility",
-                ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
-                RequireTarget = false,
-                TargetType = OrderTargetType.None,
-                IsSkillMapping = true
-            };
         }
 
         private static IEntityCommandPanelSource ResolveCollectionSource(GameEngine engine)

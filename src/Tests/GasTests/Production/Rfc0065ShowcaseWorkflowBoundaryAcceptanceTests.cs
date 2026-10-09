@@ -121,9 +121,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered), Is.True);
             Assert.That(hovered, Is.EqualTo(vanguard));
 
-            Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Null,
-                "Pointer commands route through the battle context's trigger graph; no legacy input order mapping may exist.");
-
             Vector2 targetWorldCm = new(2080f, 1080f);
             DispatchVariantEvidence[] dispatchVariants = AssertDispatchVariants(dispatch, actors, engine.World, targetWorldCm);
             SubmitPointerCommandWorld(engine, backend, targetWorldCm);

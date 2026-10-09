@@ -11,8 +11,7 @@ namespace Ludots.Tests.GAS
     /// <summary>
     /// RFC-0065 CTX-8 (§5.6, §6.2 P1/P2): ClientCastPreference scope chain — perSlot &gt; perFormSet
     /// &gt; perTemplate &gt; global resolution, mod locks overriding every player layer and refusing
-    /// player writes, JSON persistence roundtrip (following the InputOrderMappingSystem preference
-    /// file pattern), and load-time fail-fast on uninstalled cast commit ids. Profile/template names
+    /// player writes, JSON persistence roundtrip, and load-time fail-fast on uninstalled cast commit ids. Profile/template names
     /// are test data, never Core concepts.
     /// </summary>
     [TestFixture]

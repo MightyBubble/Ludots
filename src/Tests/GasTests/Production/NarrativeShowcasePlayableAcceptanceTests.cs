@@ -422,13 +422,8 @@ namespace Ludots.Tests.GAS.Production
                 () =>
                 {
                     Vector2 playerNow = ReadPosition(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName);
-                    string lastOrder = engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
-                        ? Convert.ToString(order) ?? "<null>"
-                        : "<missing>";
-                    string lastGround = engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
-                        ? Convert.ToString(ground) ?? "<null>"
-                        : "<missing>";
-                    return $"start=({playerStart.X:0.##},{playerStart.Y:0.##}) now=({playerNow.X:0.##},{playerNow.Y:0.##}) target=({targetPos.X:0.##},{targetPos.Y:0.##}) approachScreen=({approachScreen.X:0.##},{approachScreen.Y:0.##}) dist={Vector2.Distance(playerNow, targetPos):0.##} within={withinCm} selection={GetSelectedEntityName(engine)} mode={GetActiveModeId(engine)} lastOrder={lastOrder} lastGround={lastGround} {BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName)}";
+                    string drainRejection = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)?.LastRejectionReason ?? "<none>";
+                    return $"start=({playerStart.X:0.##},{playerStart.Y:0.##}) now=({playerNow.X:0.##},{playerNow.Y:0.##}) target=({targetPos.X:0.##},{targetPos.Y:0.##}) approachScreen=({approachScreen.X:0.##},{approachScreen.Y:0.##}) dist={Vector2.Distance(playerNow, targetPos):0.##} within={withinCm} selection={GetSelectedEntityName(engine)} mode={GetActiveModeId(engine)} drainRejection={drainRejection} {BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName)}";
                 });
         }
 
@@ -1209,15 +1204,7 @@ namespace Ludots.Tests.GAS.Production
                 BuildSelectionStateDiagnostics(engine)
             };
 
-            if (engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground))
-            {
-                details.Add($"lastGround={ground}");
-            }
-
-            if (engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastOrderDebugKey, out object? order))
-            {
-                details.Add($"lastOrder={order}");
-            }
+            details.Add($"drainRejection={engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)?.LastRejectionReason ?? "<none>"}");
 
             if (engine.World.IsAlive(beast))
             {

@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
     public sealed class ContextScoredResolverTests
     {
         [Test]
-        public void ContextScoredMode_ResolvesBestCandidateAndSubmitsConcreteCastOrder()
+        public void ContextScoredResolver_ResolvesBestCandidateSlotAndTarget()
         {
             using var world = World.Create();
 
@@ -102,47 +102,14 @@ namespace Ludots.Tests.GAS
                 AllowAllCandidates,
                 new GasGraphOpHandlerTable());
 
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
-            {
-                InteractionMode = CastModeType.ContextScored,
-                Mappings = new List<InputOrderMapping>
-                {
-                    new()
-                    {
-                        ActionId = "Attack",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireTarget = false,
-                        TargetType = OrderTargetType.Entity,
-                        IsSkillMapping = true,
-                    }
-                }
-            });
-
-            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetSolePossessedActor(actor, 1);
-            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
-            mapping.SetHoveredEntityProvider((out Entity entity) =>
-            {
-                entity = targetNormal;
-                return true;
-            });
-            mapping.SetContextScoredProvider(resolver.TryResolve);
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
-
-            input.InjectButtonPress("Attack");
-            input.Update(1f / 60f);
-            mapping.Update(0f);
-
-            Assert.That(orders.Count, Is.EqualTo(1));
-            Assert.That(orders[0].Args.I0, Is.EqualTo(2), "ContextScored should resolve to the finisher slot.");
-            Assert.That(orders[0].Target, Is.EqualTo(targetDowned));
+            Assert.That(resolver.IsContextGroupRoot(actor, 0), Is.True);
+            Assert.That(resolver.TryResolve(actor, rootSlotIndex: 0, hoveredEntity: targetNormal, out ContextScoredOrderResolution resolution), Is.True);
+            Assert.That(resolution.SlotIndex, Is.EqualTo(2), "ContextScored should resolve to the finisher slot.");
+            Assert.That(resolution.Target, Is.EqualTo(targetDowned));
         }
 
         [Test]
-        public void ContextScoredMode_TargetlessCandidate_EmitsCanonicalTargetlessOrder()
+        public void ContextScoredResolver_TargetlessCandidate_ResolvesWithoutTarget()
         {
             using var world = World.Create();
 
@@ -184,42 +151,12 @@ namespace Ludots.Tests.GAS
                 new StubGraphApi(world),
                 AllowAllCandidates,
                 new GasGraphOpHandlerTable());
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
-            {
-                InteractionMode = CastModeType.ContextScored,
-                Mappings = new List<InputOrderMapping>
-                {
-                    new()
-                    {
-                        ActionId = "Attack",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireTarget = false,
-                        TargetType = OrderTargetType.None,
-                        IsSkillMapping = true,
-                    },
-                },
-            });
-            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetSolePossessedActor(actor, 1);
-            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
-            mapping.SetContextScoredProvider(resolver.TryResolve);
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
-
-            input.InjectButtonPress("Attack");
-            input.Update(1f / 60f);
-            mapping.Update(0f);
-
-            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(resolver.TryResolve(actor, rootSlotIndex: 0, hoveredEntity: Entity.Null, out ContextScoredOrderResolution resolution), Is.True);
             Assert.Multiple(() =>
             {
-                Assert.That(orders[0].Args.I0, Is.EqualTo(1));
-                Assert.That(orders[0].Target, Is.EqualTo(Entity.Null));
-                Assert.That(orders[0].TargetContext, Is.EqualTo(Entity.Null));
-                Assert.That(orders[0].CommandSource, Is.EqualTo(Entity.Null));
-                Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(Ludots.Core.Gameplay.GAS.Orders.OrderSpatialKind.None));
+                Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+                Assert.That(resolution.Target, Is.EqualTo(Entity.Null));
+                Assert.That(resolution.HasTargetWorldCm, Is.False);
             });
         }
 
@@ -438,43 +375,9 @@ namespace Ludots.Tests.GAS
                 "the gate-denied candidate must never reach scoring; only the allowed one is evaluated.");
         }
 
-        private static InputConfigRoot CreateInputConfig()
-        {
-            return new InputConfigRoot
-            {
-                Actions = new List<InputActionDef>
-                {
-                    new() { Id = "Attack", Type = InputActionType.Button },
-                },
-                Contexts = new List<InputContextDef>
-                {
-                    new()
-                    {
-                        Id = "Gameplay",
-                        Priority = 1,
-                        Bindings = new List<InputBindingDef>
-                        {
-                            new() { ActionId = "Attack", Path = "<Keyboard>/a", Processors = new() },
-                        }
-                    }
-                }
-            };
-        }
-
         private static bool AllowAllCandidates(Entity viewer, Entity candidate)
         {
             return true;
-        }
-
-        private sealed class NullInputBackend : IInputBackend
-        {
-            public float GetAxis(string devicePath) => 0f;
-            public bool GetButton(string devicePath) => false;
-            public Vector2 GetMousePosition() => Vector2.Zero;
-            public float GetMouseWheel() => 0f;
-            public void EnableIME(bool enable) { }
-            public void SetIMECandidatePosition(int x, int y) { }
-            public string GetCharBuffer() => string.Empty;
         }
 
         private sealed class StubSpatialQueryService : ISpatialQueryService

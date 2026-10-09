@@ -590,13 +590,6 @@ namespace Ludots.Tests.GAS.Production
             int abilityId = AbilityIdRegistry.GetId("Ability.Champion.Ezreal.ArcaneShift");
             Assert.That(abilityId, Is.GreaterThan(0));
             Assert.That(abilities.TryGet(abilityId, out var ability), Is.True);
-            Assert.That(ability.HasInputBindingOverride, Is.True);
-            Assert.That(ability.InputBindingOverride.HasAutoTargetPolicy, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
-            Assert.That(ability.InputBindingOverride.AutoTargetRelation, Is.EqualTo("Hostile"));
-            Assert.That(ability.InputBindingOverride.HasAutoTargetRangeCm, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetRangeCm, Is.EqualTo(760));
-
             Assert.That(ability.ExecSpec.GetKind(1), Is.EqualTo(ExecItemKind.EffectSignal));
             Assert.That(
                 (ExecEffectDispatchTarget)ability.ExecSpec.GetPayloadA(1),
