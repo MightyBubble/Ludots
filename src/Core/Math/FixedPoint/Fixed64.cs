@@ -599,6 +599,27 @@ namespace FixPointCS
         }
 
         /// <summary>
+        /// 精确积:操作数按 32/16 位分段相乘,真积在 Q31.32 表示域内即逐位正确。
+        /// Mul 的分数部分积是 long 直乘,两侧分数 ≥ √0.5 时超 2^63 回绕(值差 1.0);
+        /// 跨引擎逐位合同(参考端 BigInt 同式)选这一支。域外回绕与 Mul 同,调用方守卫。
+        /// </summary>
+        public static long MulExact(long a, long b)
+        {
+            bool neg = (a < 0) ^ (b < 0);
+            long ua = a < 0 ? -a : a, ub = b < 0 ? -b : b;
+            long ah = ua >> 32, al = ua & 0xFFFFFFFFL;
+            long bh = ub >> 32, bl = ub & 0xFFFFFFFFL;
+            // |a|·|b| 的 raw = ah·bh·2^32 + ah·bl + al·bh + floor(al·bl / 2^32);
+            // al·bl 可到 2^64,低段再按 16 位分半求 floor(各中间量 < 2^34,long 内精确)
+            long alHi = al >> 16, alLo = al & 0xFFFFL, blHi = bl >> 16, blLo = bl & 0xFFFFL;
+            long mid = alHi * blLo + alLo * blHi;
+            long low = ((mid - ((mid >> 16) << 16)) << 16) + alLo * blLo;
+            long fracHi = alHi * blHi + (mid >> 16) + (low >= 1L << 32 ? 1 : 0);
+            long r = (ah * bh << 32) + ah * bl + al * bh + fracHi;
+            return neg ? -r : r;
+        }
+
+        /// <summary>
         /// Calculates the square root of the given number.
         /// </summary>
         public static long SqrtPrecise(long a)

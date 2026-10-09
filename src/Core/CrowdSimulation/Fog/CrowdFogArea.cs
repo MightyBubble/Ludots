@@ -97,28 +97,49 @@ public sealed record CrowdFogShape
     }
 }
 
-/// <summary>形状 → fog 格(fog/area.js areaCells 移植,Fix64):rect 保守覆盖(触到的每一格);
+/// <summary>形状 → fog 格(fog/area.js areaCells 移植):rect 保守覆盖(触到的每一格);
 /// circle / poly 按格心在内(行中心线上的半宽 / 偶奇扫描线);比一格还小的形状仍覆盖锚点格
 /// (circle 心 / poly 首顶点)——点击大小的形状不是静默空操作。格升序去重 + 格包围盒。
-/// 逐 op 与参考端 __L31_FIX64_LOS__ 补丁同一棵求值树:形状数字经 FromDouble(向零截断)
-/// 入网格,除法精确商向零截断,乘法精确积向下取整,圆半宽开方走 SqrtPrecise(整数位法,
-/// 可被参考端 BigInt 逐位复现)。命令在 tick 内执行,tick 内一律定点。</summary>
+/// 求值树与参考端 __L31_FIX64_LOS__ 补丁同一棵、逐 op 对齐:坐标以米入网(FromDouble
+/// 向零截断)后先除以格长归一到格单位(CrowdFix 先归一同手法)——平方与跨度积都落在
+/// ≤ 格数的量级,乘法走 MulExact(精确积)、除法精确商、开方 SqrtPrecise,两端逐位可复现。
+/// 厘米/米域直乘的溢出界只有 ~463 m(L51):千米级圆/多边形在旧树里静默回绕,现以
+/// ±46340 m 输入守卫显式抛错(与参考端同文案)。rect 无乘法,clampC 组合运算与旧树
+/// 逐 op 相同(米 → 归一商 → floor),既有 rect 真值逐字节不变。命令在 tick 内执行,
+/// tick 内一律定点。</summary>
 public static class CrowdFogArea
 {
+    /// <summary>米域输入守卫:circle 半径/圆心与 poly 顶点超出即拒——Q31.32 平方安全界,
+    /// 回绕不许静默发生(rect 无平方不设守卫,越图仍走 clamp)。</summary>
+    private const double MaxShapeMeters = 46340.0;
+
+    private static void RequireShapeMeters(double[] values)
+    {
+        foreach (double v in values)
+        {
+            if (!(Math.Abs(v) / 100.0 <= MaxShapeMeters)) // 载荷是厘米,守卫以米计
+            {
+                throw new InvalidOperationException(
+                    $"迷雾区域形状坐标超出 ±{MaxShapeMeters} 米平方安全界——拒绝静默回绕。");
+            }
+        }
+    }
+
     public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fcsCm, CrowdFogShape shape)
     {
-        Fix64 cs = Fix64.FromInt(fcsCm);
-        int ClampC(Fix64 v) => Math.Max(0, Math.Min(f - 1, Fix64.Floor(v / cs).ToInt()));
+        Fix64 cs = Fix64.FromDouble(fcsCm / 100.0);
+        int ClampCell(Fix64 v) => Math.Max(0, Math.Min(f - 1, Fix64.Floor(v).ToInt()));
+        Fix64 Cell(double cm) => Fix64.FromDouble(cm / 100.0) / cs;
         var cells = new List<int>();
         (int X0, int Y0, int X1, int Y1) box;
 
         if (shape.Rect is { } rect)
         {
-            Fix64 ax = Fix64.Min(Fix64.FromDouble(rect[0]), Fix64.FromDouble(rect[2]));
-            Fix64 bx = Fix64.Max(Fix64.FromDouble(rect[0]), Fix64.FromDouble(rect[2]));
-            Fix64 ay = Fix64.Min(Fix64.FromDouble(rect[1]), Fix64.FromDouble(rect[3]));
-            Fix64 by = Fix64.Max(Fix64.FromDouble(rect[1]), Fix64.FromDouble(rect[3]));
-            box = (ClampC(ax), ClampC(ay), ClampC(bx), ClampC(by));
+            Fix64 ax = Fix64.Min(Cell(rect[0]), Cell(rect[2]));
+            Fix64 bx = Fix64.Max(Cell(rect[0]), Cell(rect[2]));
+            Fix64 ay = Fix64.Min(Cell(rect[1]), Cell(rect[3]));
+            Fix64 by = Fix64.Max(Cell(rect[1]), Cell(rect[3]));
+            box = (ClampCell(ax), ClampCell(ay), ClampCell(bx), ClampCell(by));
             for (int y = box.Y0; y <= box.Y1; y++)
             {
                 for (int x = box.X0; x <= box.X1; x++) cells.Add(y * f + x);
@@ -131,18 +152,24 @@ public static class CrowdFogArea
         Fix64[] anchor;
         Fix64 bx0, by0, bx1, by1;
         Fix64[][]? pts = null;
+        Fix64 c0 = Fix64.Zero, c1 = Fix64.Zero, r = Fix64.Zero;
         if (shape.Circle is { } c)
         {
-            Fix64 c0 = Fix64.FromDouble(c[0]), c1 = Fix64.FromDouble(c[1]), r = Fix64.FromDouble(c[2]);
+            RequireShapeMeters(c);
+            c0 = Cell(c[0]);
+            c1 = Cell(c[1]);
+            r = Cell(c[2]);
             anchor = new[] { c0, c1 };
             bx0 = c0 - r; by0 = c1 - r; bx1 = c0 + r; by1 = c1 + r;
         }
         else
         {
-            pts = new Fix64[shape.Poly!.Length][];
+            var poly = shape.Poly!;
+            foreach (double[] p in poly) RequireShapeMeters(p);
+            pts = new Fix64[poly.Length][];
             for (int i = 0; i < pts.Length; i++)
             {
-                pts[i] = new[] { Fix64.FromDouble(shape.Poly[i][0]), Fix64.FromDouble(shape.Poly[i][1]) };
+                pts[i] = new[] { Cell(poly[i][0]), Cell(poly[i][1]) };
             }
 
             anchor = pts[0];
@@ -155,16 +182,14 @@ public static class CrowdFogArea
             }
         }
 
-        int fy0 = ClampC(by0), fy1 = ClampC(by1);
+        int fy0 = ClampCell(by0), fy1 = ClampCell(by1);
         for (int fy = fy0; fy <= fy1; fy++)
         {
-            Fix64 py = (Fix64.FromInt(fy) + Fix64.HalfValue) * cs;
+            Fix64 py = Fix64.FromInt(fy) + Fix64.HalfValue;
             int nx = 0;
             if (pts == null)
             {
-                Fix64 c0 = Fix64.FromDouble(shape.Circle![0]), c1 = Fix64.FromDouble(shape.Circle[1]);
-                Fix64 r = Fix64.FromDouble(shape.Circle[2]);
-                Fix64 d = r * r - (py - c1) * (py - c1);
+                Fix64 d = Fix64Math.MulExact(r, r) - Fix64Math.MulExact(py - c1, py - c1);
                 if (d >= Fix64.Zero)
                 {
                     Fix64 h = Fix64Math.SqrtPrecise(d);
@@ -181,7 +206,9 @@ public static class CrowdFogArea
                     if ((yi > py) != (yj > py))
                     {
                         if (nx == xs.Length) Array.Resize(ref xs, nx * 2);
-                        xs[nx++] = pts[i][0] + (py - yi) * (pts[j][0] - pts[i][0]) / (yj - yi);
+                        // 先除后乘(归一):t ∈ (0,1),跨度积回到小值域
+                        Fix64 t = (py - yi) / (yj - yi);
+                        xs[nx++] = pts[i][0] + Fix64Math.MulExact(t, pts[j][0] - pts[i][0]);
                     }
                 }
 
@@ -190,13 +217,13 @@ public static class CrowdFogArea
 
             for (int k = 0; k + 1 < nx; k += 2)
             {
-                int a = Math.Max(0, Fix64.Ceiling(xs[k] / cs - Fix64.HalfValue).ToInt());
-                int b = Math.Min(f - 1, Fix64.Floor(xs[k + 1] / cs - Fix64.HalfValue).ToInt());
+                int a = Math.Max(0, Fix64.Ceiling(xs[k] - Fix64.HalfValue).ToInt());
+                int b = Math.Min(f - 1, Fix64.Floor(xs[k + 1] - Fix64.HalfValue).ToInt());
                 for (int fx = a; fx <= b; fx++) cells.Add(fy * f + fx);
             }
         }
 
-        if (cells.Count == 0) cells.Add(ClampC(anchor[1]) * f + ClampC(anchor[0]));
+        if (cells.Count == 0) cells.Add(ClampCell(anchor[1]) * f + ClampCell(anchor[0]));
         cells.Sort();
         int x0 = f, y0 = f, x1 = -1, y1 = -1;
         int prev = -1;

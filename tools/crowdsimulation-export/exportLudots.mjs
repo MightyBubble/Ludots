@@ -1108,5 +1108,35 @@ function canonComp(comp, n2) {
       console.log(`[export] ${mapId} s7crecycle ticks=${TICKS2} units=${sim2.units.count} ops=${ops2.length} seq=${sim2.belief.seq} dormant=${sim2.belief.dormant.length}`);
     }
 
+    // ───────────────────── L51:迷雾面命令格化对拍(circle/poly,格单位归一树) ─────────────────────
+    // 直接调引擎 areaCells(__L31_FIX64_LOS__ 置位走定点树),形状以米给出;C# 侧
+    // CrowdFogAreaParityTests 以同参(米×100 回厘米)对拍逐格。千米级圆/多边形在旧厘米域
+    // 树里 r·r 静默回绕,本块即其两端逐格证据。F/fcs 与 Fog 构造同式派生(cellCells×导航格)。
+    {
+      globalThis.__L31_FIX64_LOS__ = true;
+      const { areaCells } = await import('../src/engine/fog/area.js');
+      const K = config.fog.cellCells;
+      const F = Math.ceil(world.N / K);
+      const fcsM = world.cellSize * K;
+      const cases = [
+        { name: 'rect1km', kind: 'rect', value: [9000, 9000, 10000, 10000] },
+        { name: 'circle600m', kind: 'circle', value: [8000, 8000, 600] },
+        { name: 'circle1000m', kind: 'circle', value: [4000, 11000, 1000] },
+        { name: 'poly800m', kind: 'poly', value: [[11600, 3600], [12400, 3600], [12400, 4400], [11600, 4400]] },
+        { name: 'poly2km', kind: 'poly', value: [[2000, 2000], [4000, 2200], [3800, 4000], [2600, 4200], [1900, 3200]] },
+      ];
+      const areaOut = {
+        mapId, seed,
+        note: 'L51 面积格化对拍:格单位归一树(米输入,守卫 ±46340 m),双端同棵求值树逐格硬门。rect1km 与 s7fog 的 reveal 同参,是 rect 路径的回归钉;circle/poly 为旧厘米域树 r·r 溢出界(~463 m)之外的首批两端证据。',
+        cellCells: K, F, fcsM, cases: [],
+      };
+      for (const c of cases) {
+        const r = areaCells(F, fcsM, { kind: c.kind, value: c.value });
+        areaOut.cases.push({ ...c, cells: [...r.cells], box: [...r.box] });
+      }
+      writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(areaOut, null, 2));
+      console.log(`[export] ${mapId} s7area cases=${areaOut.cases.length} F=${F} fcsM=${fcsM}`);
+    }
+
   }
 }
