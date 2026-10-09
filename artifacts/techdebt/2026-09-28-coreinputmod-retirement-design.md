@@ -1,6 +1,6 @@
 # CoreInputMod 退役设计
 
-状态：开发中。片 1–4 已完成，片 3c 的小地图键盘改为直接删除（`049f109553`），视角模式整套删除（#1730）。片 5 已迁 8 个 mod，剩 5 个；片 6–8 未做。剩下的事和顺序见附录 B。
+状态：开发中。片 1–5 已完成，片 3c 的小地图键盘改为直接删除（`049f109553`），视角模式整套删除（#1730），老下令映射两半和瞄准投影已删（#1744）；片 6–8 未做。剩下的事和顺序见附录 B。
 
 依据：`origin/cursor/tw-showcase-intent-members-de53` 分支（`ec16d97743`）和 main（`0cc88ce375`）的代码，以及 Case E 输入宪法（`mods/showcases/case_e_selection/CaseESelectionMod/docs/input-config-constitution.html`）。关系那一半见 `2026-09-28-relationship-graph-control-plane-design.md`，两份在"下令授权"处交叉。
 
@@ -465,14 +465,14 @@ TW 删了直接依赖后，还经 `CameraProfilesMod` 间接依赖，要等 3.8 
 
 ## 附录 B：剩余工作（按 main `3e0c0c9f38` 盘点）
 
-CoreInputMod 现在还剩五样：默认交互状态 `Default_Gameplay`（4 个动作，`LudotsCoreMod/game.json` 开机启用）、老下令映射（`LocalOrderSource*` 和自动安装器）、技能栏 `SkillBarOverlaySystem`、瞄准指示（投影系统 + 13 个 presenter）、持续瞄准 `AbilityExecAimSyncSystem`。Core 里还连着老下令映射的引擎一半（`src/Core/Input/Orders/`）、`MinimapInputConsumer` 和 `interactionActions`。
+CoreInputMod 盘点时还剩五样（老下令映射已在片 5 删掉）：默认交互状态 `Default_Gameplay`（4 个动作，`LudotsCoreMod/game.json` 开机启用）、老下令映射（`LocalOrderSource*` 和自动安装器）、技能栏 `SkillBarOverlaySystem`、瞄准指示（投影系统 + 13 个 presenter）、持续瞄准 `AbilityExecAimSyncSystem`。Core 里还连着老下令映射的引擎一半（`src/Core/Input/Orders/`）、`MinimapInputConsumer` 和 `interactionActions`。
 
 78 个 mod 依赖它：48 个自己不用它的任何东西，18 个只在 `game.json` 里写了 `Default_Gameplay`，12 个真在用（老下令映射 5 个，默认动作名、presenter 或 C# 类型 7 个）。前 66 个也经 `LudotsCoreMod/game.json` 拿着 `Default_Gameplay` 的左键框选和指针位置，所以删依赖照旧放到片 8。
 
 顺序：
 
-1. 片 5 收尾：路网、阵型改交互状态 + 下令图（不留改写下令的钩子）；浏览器 RTS、实体命令面板改面板按钮下令；英雄沙盒、交互展示照 MOBA 改；帧线多人验收驱动跟着改；然后删老下令映射两半，守卫 `Mods_Carry_NoPerModLocalOrderSourceInstallers` 改成断言一个都没有。
-2. 片 6：技能栏改面板配置；瞄准指示的 presenter 搬进一个只有配置、没有 C# 的能力 mod，删投影系统和持续瞄准；小地图指针交互改前台交互状态，删 `MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions`。
+1. ~~片 5 收尾~~（#1744 已做）：路网、阵型改交互状态 + 下令图；浏览器 RTS、实体命令面板改面板按钮下令；英雄沙盒、交互展示照 MOBA 改；帧线多人验收驱动跟着改；老下令映射两半删掉，瞄准投影 `AbilityAimPresentationProjectionSystem` 和 Core 的 `AbilityAimPresentationRuntime` 只服务映射，一起删；守卫 `Repository_Carries_NoLegacyInputOrderMappingOrLocalOrderSource` 断言这些名字在仓库里为零。技能 JSON 不再允许 `input` 块。
+2. 片 6：技能栏改面板配置；瞄准指示的 presenter 搬进一个只有配置、没有 C# 的能力 mod（RtsDemoMod 的 `core_input_preview_*` 和 CoreInputMod 的 `core_input.ability_aim.*` 现在没人挂），删持续瞄准；小地图指针交互改前台交互状态，删 `MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions`。
 3. 片 7：`collection.command.source` 换成各 mod 自己的集合。
 4. 片 8：删目录和 78 个依赖；`LudotsCoreMod/game.json` 去掉 `Default_Gameplay`，用到按键的 mod 自己声明交互状态；启动交互状态找不到时报错（现在 `PlayerInputHandler.PushContext` 碰到没定义的状态直接跳过）；加禁名守卫。
 
