@@ -26,6 +26,19 @@
         }
       },
       {
+        "tick": 60,
+        "cmd": {
+          "type": "reveal",
+          "player": 1,
+          "rect": [
+            1000000,
+            700000,
+            1150000,
+            850000
+          ]
+        }
+      },
+      {
         "tick": 90,
         "cmd": {
           "type": "order",
@@ -33,6 +46,20 @@
           "xCm": 400000,
           "yCm": 900000,
           "shape": "box"
+        }
+      },
+      {
+        "tick": 100,
+        "cmd": {
+          "type": "obscure",
+          "player": 1,
+          "rect": [
+            700000,
+            600000,
+            900000,
+            750000
+          ],
+          "ticks": 90
         }
       },
       {
@@ -54,55 +81,6 @@
         }
       },
       {
-        "tick": 180,
-        "cmd": {
-          "type": "placeStructure",
-          "template": "s7barrier",
-          "xCm": 521875,
-          "yCm": 571875,
-          "sizeCm": 7000
-        }
-      },
-      {
-        "tick": 210,
-        "cmd": {
-          "type": "placeStructure",
-          "template": "road",
-          "xCm": 496875,
-          "yCm": 565625,
-          "sizeCm": 3000,
-          "toXCm": 521875,
-          "toYCm": 565625
-        }
-      },
-      {
-        "tick": 60,
-        "cmd": {
-          "type": "reveal",
-          "player": 1,
-          "rect": [
-            1000000,
-            700000,
-            1150000,
-            850000
-          ]
-        }
-      },
-      {
-        "tick": 100,
-        "cmd": {
-          "type": "obscure",
-          "player": 1,
-          "rect": [
-            700000,
-            600000,
-            900000,
-            750000
-          ],
-          "ticks": 90
-        }
-      },
-      {
         "tick": 160,
         "cmd": {
           "type": "forget",
@@ -116,6 +94,16 @@
         }
       },
       {
+        "tick": 180,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "s7barrier",
+          "xCm": 521875,
+          "yCm": 571875,
+          "sizeCm": 7000
+        }
+      },
+      {
         "tick": 200,
         "cmd": {
           "type": "order",
@@ -124,6 +112,18 @@
           "yCm": 1200000,
           "shape": "box",
           "fogTerrain": true
+        }
+      },
+      {
+        "tick": 210,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "road",
+          "xCm": 496875,
+          "yCm": 565625,
+          "sizeCm": 3000,
+          "toXCm": 521875,
+          "toYCm": 565625
         }
       },
       {

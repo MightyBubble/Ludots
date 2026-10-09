@@ -226,7 +226,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _routeVisuals.AddPolyline(id, pts, thick, color);
     }
 
-    /// <summary>脏 tile 闪烁:报告 ReportTick 变化即起闪,FlashMs 内黄色轮廓线性淡出。</summary>
+    /// <summary>脏 tile 闪烁:报告 ReportTick 变化即起闪,FlashMs 内黄色轮廓线性淡出。
+    /// tile 轮廓按导航格逐格细分:路线渲染器只对折点采样地面高度,1km tile 的四角直边
+    /// 在丘陵地形会整段埋进山体(视野内又见不到角点),细分后贴地才可见。</summary>
     private void CurrentFlash(CrowdSimSession session, float csM)
     {
         var report = session.LastRebakeReport;
@@ -249,9 +251,22 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         {
             var id = new RouteVisualId(200 + shown);
             float ox = tile % perRow * tileM, oy = tile / perRow * tileM;
-            AddRectOutline(id, (ox, oy, ox + tileM, oy + tileM), csM * 0.3f, color);
+            AddTileOutline(id, ox, oy, tileM, csM, csM * 0.3f, color);
             shown++;
         }
+    }
+
+    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileM, float stepM, float thick, Vector4 color)
+    {
+        int seg = Math.Max(1, (int)Math.Ceiling(tileM / stepM));
+        var pts = new Vector2[seg * 4 + 1];
+        int p = 0;
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM * k / seg, oy);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM, oy + tileM * k / seg);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM - tileM * k / seg, oy + tileM);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox, oy + tileM - tileM * k / seg);
+        pts[p] = pts[0];
+        _routeVisuals.AddPolyline(id, pts, thick, color);
     }
 
     // NavMesh 多边形线框 + cluster 网格 + HPA 入口 + 跳跃链接(S3 演示同款,按(导航,重烘序)缓存)
