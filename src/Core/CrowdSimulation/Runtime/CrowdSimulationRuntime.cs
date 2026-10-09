@@ -81,6 +81,10 @@ public sealed class CrowdSimulationRuntime
     public int ReplayStatus { get; private set; }
     public int ReplayDivergenceTick { get; private set; } = -1;
 
+    /// <summary>停用本次激活的自动回放:现场指令(玩家交互)进入会话后,自动回放的对拍自证
+    /// 不再是"同输入重放"。只拦自动触发;RunReplay 与对拍语义本身不动。</summary>
+    public void SuppressAutoReplay() => _autoReplayDone = true;
+
     /// <summary>blackboard 键(呈现侧 ownerBlackboardFloat 绑定的数据契约)。</summary>
     public static class Keys
     {
