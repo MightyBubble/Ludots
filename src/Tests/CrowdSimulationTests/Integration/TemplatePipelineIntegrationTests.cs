@@ -32,9 +32,8 @@ public class TemplatePipelineIntegrationTests
             new CrowdCommand(0, CrowdSimCommand.Parse((JsonObject)JsonNode.Parse(
                 """{"type":"spawn","count":64}""")!)),
         });
-        string? hash = null;
         int guard = 0;
-        while (hash == null && guard++ < 16) hash = session.Step();
+        while (guard++ < 16 && !session.Step(out _)) { }
         Assert.That(session.Units.Count, Is.GreaterThan(0), "spawn 应已落地");
 
         // 模板键 → 模板 id 反查表(验证单位的键引用解析回真实模板)

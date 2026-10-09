@@ -15,9 +15,7 @@ public static class CrowdMotor
     public static void Integrate(CrowdMovementKernel k, Fix64 dt)
     {
         var session = k.Session;
-        var world = session.World;
-        var units = session.Units;
-        int n = units.Count;
+        int n = session.Units.Count;
         int navN = session.Config.NavCellCount;
         int cellSizeCm = session.Config.NavCellSizeCm;
         Fix64 cs = Fix64.FromInt(cellSizeCm);
@@ -37,15 +35,14 @@ public static class CrowdMotor
 
         for (int i = 0; i < n; i++)
         {
-            var entity = units.EntityAt(i);
-            var state = world.Get<CrowdSimulationUnitState>(entity);
-            var kin = world.Get<CrowdSimulationKinematics>(entity);
-            var pos = world.Get<WorldPositionCm>(entity).Value;
+            var state = k.States[i];
+            var kin = k.Kins[i];
+            var pos = k.Positions[i];
 
             if (state.State == (byte)CrowdUnitState.Jump)
             {
                 // 离网链接 travers:起点→落点直线,不吃墙面/避让
-                Fix64 sp = ProfileSpeed(k.Session, entity) * k.JumpSpeedRatio;
+                Fix64 sp = k.Speeds[i] * k.JumpSpeedRatio;
                 Fix64 L = kin.JumpLengthCm;
                 kin.JumpT += sp * dt;
                 Fix64 t = Fix64.Min(Fix64.OneValue, kin.JumpT / L);
@@ -60,9 +57,9 @@ public static class CrowdMotor
                     kin.Blend = Fix64.Zero;
                 }
 
-                world.Set(entity, new WorldPositionCm { Value = pos });
-                world.Set(entity, state);
-                world.Set(entity, kin);
+                k.Positions[i] = pos;
+                k.States[i] = state;
+                k.Kins[i] = kin;
                 continue;
             }
 
@@ -87,7 +84,7 @@ public static class CrowdMotor
             // 下取整的双重取整反而更偏离参考——S5 实测 p50 0.07cm → 17.3cm(2026-10-09),已回退。
             // 格边界上与参考的 1 ulp 差属双数值系残余,不可在此框架内消除。
             int cx = (int)(px / cs).ToLong(), cy = (int)(py / cs).ToLong();
-            Fix64 spd = ProfileSpeed(session, entity);
+            Fix64 spd = k.Speeds[i];
             Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cy * navN + cx];
             spd = spd / (costHere == Fix64.Zero ? Fix64.OneValue : costHere);
             Fix64 slow2 = spd * spd * stop2;
@@ -150,7 +147,7 @@ public static class CrowdMotor
             }
 
             // 精确盘面接触:先净空取整剩下的亚格被挡格,再阻挡盒(仅地面层)
-            Fix64 radiusCm = ProfileRadius(session, entity);
+            Fix64 radiusCm = k.Radii[i];
             if (nav != openNav)
             {
                 openNav = nav;
@@ -197,9 +194,9 @@ public static class CrowdMotor
                 kin.RestCm = pos;
             }
 
-            world.Set(entity, new WorldPositionCm { Value = pos });
-            world.Set(entity, state);
-            world.Set(entity, kin);
+            k.Positions[i] = pos;
+            k.States[i] = state;
+            k.Kins[i] = kin;
         }
     }
 
@@ -215,9 +212,4 @@ public static class CrowdMotor
         return true;
     }
 
-    private static Fix64 ProfileSpeed(CrowdSimSession session, Arch.Core.Entity entity) =>
-        session.World.Get<CrowdSimulationAgent>(entity).ResolvedSpeed;
-
-    private static Fix64 ProfileRadius(CrowdSimSession session, Arch.Core.Entity entity) =>
-        session.World.Get<CrowdSimulationAgent>(entity).ResolvedPersonalRadiusCm;
 }

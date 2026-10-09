@@ -50,7 +50,7 @@ public class S7RebakeSmokeTests
             rebakes++;
             dirtyTiles += r.Tiles;
         };
-        var first = new List<string>();
+        var first = new List<ulong>();
         session.Advance(240, first);
         Assert.That(rebakes, Is.GreaterThanOrEqualTo(5), $"重烘报告次数 {rebakes}:建筑放置/拆除 + 路障放置/到期 + 道路");
         Assert.That(dirtyTiles, Is.GreaterThan(0), $"重烘焙到的脏 tile 累计 {dirtyTiles}:足迹必须真实盖住格心");
@@ -65,7 +65,7 @@ public class S7RebakeSmokeTests
         session2.BlockOnDueReplies = true;
         session2.TruthNavFrozen = true; // F02:回放侧同款冻结
         session2.Commands.Schedule(session2, script);
-        var second = new List<string>();
+        var second = new List<ulong>();
         session2.Advance(240, second);
         Assert.That(second, Is.EqualTo(first).AsCollection, "同脚本回放校验码不一致(结构 op 管线非确定)");
     }

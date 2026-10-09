@@ -32,7 +32,7 @@ public sealed class S5EngineStallProbe
         var sw = Stopwatch.StartNew();
         while (ran < 300 && sw.Elapsed < TimeSpan.FromSeconds(30))
         {
-            if (session.Step() != null) ran++;
+            if (session.Step(out _)) ran++;
             else { stalls++; Thread.Sleep(2); }
         }
 

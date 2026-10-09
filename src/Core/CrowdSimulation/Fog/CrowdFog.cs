@@ -53,6 +53,10 @@ public sealed class CrowdFog
     // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)
     private readonly Dictionary<int, HashSet<int>> _idx = new();
     private readonly Dictionary<int, List<int>> _cellsOf = new();
+    // 逐 tick 复用暂存(对账/遗忘/遮蔽到期;调用序不嵌套,清空即借出)
+    private readonly HashSet<int> _reconcileDone = new();
+    private readonly List<int> _reconcileForget = new();
+    private readonly List<(int G, int[] Cells, int Until)> _obscureKeep = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
     private Fix64[]? _hAvg, _hMax;  // LOS:fog 格均高 / 最高高(米,Fix64)
     private readonly Fix64 _eyeM;   // 眼高(米)= EyeCm / 100
@@ -374,8 +378,10 @@ public sealed class CrowdFog
     private void Reconcile(int g)
     {
         int f2 = F * F, o = g * f2;
-        var done = new HashSet<int>();
-        var forget = new List<int>();
+        var done = _reconcileDone;
+        var forget = _reconcileForget;
+        done.Clear();
+        forget.Clear();
         for (int c = 0; c < f2; c++)
         {
             if (Visible[o + c] != 0) ReconcileCell(g, c, done, forget);
@@ -430,8 +436,10 @@ public sealed class CrowdFog
     public void RevealArea(int g, int[] cells)
     {
         int o = g * F * F;
-        var done = new HashSet<int>();
-        var forget = new List<int>();
+        var done = _reconcileDone;
+        var forget = _reconcileForget;
+        done.Clear();
+        forget.Clear();
         foreach (int c in cells)
         {
             if (Explored[o + c] == 0)
@@ -461,7 +469,8 @@ public sealed class CrowdFog
 
     private void ExpireObscured(int tick)
     {
-        var keep = new List<(int, int[], int)>();
+        var keep = _obscureKeep;
+        keep.Clear();
         foreach (var e in _obscured)
         {
             if (e.Item3 > tick)
@@ -474,7 +483,9 @@ public sealed class CrowdFog
             foreach (int c in e.Item2) ObsN[o + c]--;
         }
 
-        _obscured = keep;
+        // 借出暂存不换本体:keep 若直接成为 _obscured,下次到期的 Clear 会清掉在途表
+        _obscured.Clear();
+        foreach (var e in keep) _obscured.Add(e);
     }
 
     /// <summary>组失去对该区域的所知:explored 位、不再被任何 explored fog 格覆盖的 tile、
@@ -519,7 +530,9 @@ public sealed class CrowdFog
         }
 
         var dropped = new List<int>();
-        foreach (int id in ids.OrderBy(v => v))
+        var ordered = new List<int>(ids);
+        ordered.Sort(); // 集合成员唯一,键即决胜键
+        foreach (int id in ordered)
         {
             if (!Belief[g].ContainsKey(id)) continue;
             if (!_cellsOf.TryGetValue(id, out var idCells) || !idCells.All(member.Contains)) continue;
@@ -552,7 +565,9 @@ public sealed class CrowdFog
             }
         }
 
-        foreach (int id in Belief[from].Keys.OrderBy(v => v).ToArray())
+        var merged = new List<int>(Belief[from].Keys);
+        merged.Sort(); // 键唯一,排序即全序
+        foreach (int id in merged)
         {
             if (Belief[to].ContainsKey(id)) continue;
             Belief[to][id] = Belief[from][id];

@@ -38,6 +38,14 @@ public sealed class CrowdBeliefState
     public int Seq { get; set; }
     public int Switches { get; set; }
 
+    // 同步暂存(切换帧/原位揭示帧复用;调用序不嵌套)
+    public readonly HashSet<int> ChangedGroups = new();
+    public readonly List<CrowdNavGroupSet.Group> RevealedMoved = new();
+    public readonly HashSet<CrowdNavGroupSet.Group> RevealedStale = new();
+    public readonly List<CrowdNavGroupSet.Group> RetargetMoved = new();
+    public readonly HashSet<CrowdOrder> RetargetTouched = new();
+    public readonly HashSet<int> RevealFlat = new();
+
     public static CrowdBeliefState Create(int g) => new()
     {
         G = g,
@@ -63,7 +71,8 @@ public static class CrowdBeliefSync
         b.LastTruth = fog.TruthRev;
         b.LastTerrain = fog.Terrain;
         int every = sim.Config.Fog.RevealTicks, tick = sim.TickCount;
-        HashSet<int>? changed = null;
+        var changed = b.ChangedGroups;
+        changed.Clear();
         b.Revealed = null;
         var force = b.Force;
         b.Force = null;
@@ -87,7 +96,6 @@ public static class CrowdBeliefSync
                 b.LastEnt[v] = fog.EntRev[v];
                 b.LastCommit[v] = tick;
                 b.Slot[v] = SlotFor(sim, v);
-                changed ??= new HashSet<int>();
                 changed.Add(v);
                 continue;
             }
@@ -104,7 +112,6 @@ public static class CrowdBeliefSync
             if (slot != b.Slot[v])
             {
                 b.Slot[v] = slot;
-                changed ??= new HashSet<int>();
                 changed.Add(v);
             }
         }
@@ -112,13 +119,15 @@ public static class CrowdBeliefSync
         if (b.Revealed != null)
         {
             // 原位揭示:nav 对象不动;只有流场踩到真变 tile 的组反应(刷新,不重规划)
-            var moved = new List<CrowdNavGroupSet.Group>();
-            var stale = new HashSet<CrowdNavGroupSet.Group>();
+            var moved = b.RevealedMoved;
+            var stale = b.RevealedStale;
+            moved.Clear();
+            stale.Clear();
             foreach (var g in sim.Groups.Groups)
             {
                 if (g == null) continue;
                 int v = fog.GroupOf[g.Player];
-                if (!b.Revealed.TryGetValue(v, out var d) || g.Flow == null || (changed != null && changed.Contains(v))) continue;
+                if (!b.Revealed.TryGetValue(v, out var d) || g.Flow == null || changed.Contains(v)) continue;
                 bool hit = false;
                 foreach (int t in d)
                 {
@@ -140,9 +149,11 @@ public static class CrowdBeliefSync
             if (orders.Count > 0) pl.Plan(orders, sim.TickCount);
         }
 
-        if (changed == null) return;
-        var moved2 = new List<CrowdNavGroupSet.Group>();
-        var touched = new HashSet<CrowdOrder>();
+        if (changed.Count == 0) return;
+        var moved2 = b.RetargetMoved;
+        var touched = b.RetargetTouched;
+        moved2.Clear();
+        touched.Clear();
         foreach (var g in sim.Groups.Groups)
         {
             if (g == null || !changed.Contains(fog.GroupOf[g.Player])) continue;
@@ -205,9 +216,11 @@ public static class CrowdBeliefSync
         if (bucket != null) bucket.Add(entry);
         else b.SlotOfKey[key] = new List<CrowdBeliefState.Entry> { entry };
         b.Entries[slot] = entry;
+        var registerOrder = new List<int>(bel.Keys);
+        registerOrder.Sort(); // 实体 id 唯一,键即决胜键
         sim.Beliefs!.Register(
             slot,
-            bel.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value.TplIndex, kv.Value.Fp)).ToList(),
+            registerOrder.Select(id => (id, bel[id].TplIndex, bel[id].Fp)).ToList(),
             fog.Unexplored(v));
         return slot;
     }
@@ -230,7 +243,13 @@ public static class CrowdBeliefSync
             if (!tiles.Contains(t)) return false; // 只会前进(忘记走 forget 命令,不走这条)
         }
 
-        var delta = tiles.Where(t => !e.Tiles!.Contains(t)).OrderBy(t => t).ToList();
+        var delta = new List<int>();
+        foreach (int t in tiles)
+        {
+            if (!e.Tiles!.Contains(t)) delta.Add(t);
+        }
+
+        delta.Sort(); // tile 集合成员唯一
         var bucket = b.SlotOfKey[e.Key];
         bucket.Remove(e);
         if (bucket.Count == 0) b.SlotOfKey.Remove(e.Key);
@@ -239,10 +258,11 @@ public static class CrowdBeliefSync
         if (b.SlotOfKey.TryGetValue(key, out var nb)) nb.Add(e);
         else b.SlotOfKey[key] = new List<CrowdBeliefState.Entry> { e };
         var dirty = sim.Planner!.RevealBelief(prev, delta);
-        b.Revealed ??= new Dictionary<int, HashSet<int>>();
-        var flat = new HashSet<int>();
+        // 池化暂存只做并集中转:Revealed 的条目各组独占(两组同 tick 揭示不能别名同一集)
+        var flat = b.RevealFlat;
+        flat.Clear();
         foreach (var list in dirty.Values) flat.UnionWith(list);
-        b.Revealed[v] = flat;
+        (b.Revealed ??= new Dictionary<int, HashSet<int>>())[v] = new HashSet<int>(flat);
         return true;
     }
 

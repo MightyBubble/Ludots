@@ -20,6 +20,8 @@ public sealed class CrowdSimPlanner
     private readonly CrowdSimSession _session;
     private readonly PathQueryService _service;
     private readonly List<PendingPlan> _pending = new();
+    // ApplyDue 的在途过期组暂存(逐 tick 复用,零分配)
+    private readonly List<CrowdNavGroupSet.Group> _staleScratch = new();
     private readonly List<PendingRefresh> _pendingRefreshes = new();
     /// <summary>待刷新流场的组队列(S7 队伍反应;每 tick 预算 maxRefreshesPerTick)。</summary>
     private readonly List<CrowdNavGroupSet.Group> _refreshQueue = new();
@@ -330,7 +332,9 @@ public sealed class CrowdSimPlanner
             while (rk < _pendingRefreshes.Count && _pendingRefreshes[rk].DueTick <= tick) rk++;
         }
 
-        var stale = new List<CrowdNavGroupSet.Group>();
+        // 成员复用:每 tick 必经路径,不逐次 new(AfterStalePlan 只读遍历)
+        var stale = _staleScratch;
+        stale.Clear();
         for (int i = 0; i < k; i++)
         {
             ApplyPlan(_pending[i], stale);

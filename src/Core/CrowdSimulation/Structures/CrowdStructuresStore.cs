@@ -208,8 +208,12 @@ public sealed class CrowdStructuresStore
     }
 
     /// <summary>tick 时刻到期的实体(id 升序)。</summary>
+    private static readonly List<int> NoDueExpiries = new();
+
     public List<int> DueExpiries(int tick)
     {
+        // 寿命到期逐 tick 轮询:无寿命实体时走共享空表,不逐 tick new(调用方只遍历不改)
+        if (_lifetime.Count == 0) return NoDueExpiries;
         var due = new List<int>();
         foreach (int id in _ids) // _ids 放置序 = id 升序(id 只增,删除保序);有序容器
         {

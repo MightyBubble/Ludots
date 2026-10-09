@@ -71,7 +71,10 @@ public sealed class CrowdSimulationRuntime
     private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
-    private readonly List<(int Tick, string Hash)> _hashes = new(4096);
+    // 校验码历史(回放对拍用):定长环形,零逐 tick 分配
+    private readonly int[] _hashTicks = new int[4096];
+    private readonly ulong[] _hashValues = new ulong[4096];
+    private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
     private int _autoReplayAtTick = -1;
     private bool _autoReplayDone;
@@ -79,6 +82,9 @@ public sealed class CrowdSimulationRuntime
     public CrowdSimSession? Session => _session;
     public Entity SessionEntity => _sessionEntity;
     /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见黑板)。</summary>
+    /// <summary>人群遥测(类型化计数/采样;看板与调试面板只读)。</summary>
+    public CrowdSimulationTelemetry Telemetry { get; } = new();
+
     public int ReplayStatus { get; private set; }
     public int ReplayDivergenceTick { get; private set; } = -1;
 
@@ -102,6 +108,21 @@ public sealed class CrowdSimulationRuntime
         public const string SessionFogBeliefEntities = "crowd_simulation.session.fog.belief_entities";
         public const string SessionFogGhosts = "crowd_simulation.session.fog.ghosts";
         public const string SessionFogTerrainOptimistic = "crowd_simulation.session.fog.terrain_optimistic";
+    }
+
+    /// <summary>统计键注册一次、缓存整型 id——逐 tick 写入不再做字符串哈希查表。</summary>
+    private static class StatKeyIds
+    {
+        public static readonly int Tick = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionTick);
+        public static readonly int Units = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionUnits);
+        public static readonly int Selected = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionSelected);
+        public static readonly int ReplayStatus = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionReplayStatus);
+        public static readonly int ReplayDivergenceTick = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionReplayDivergenceTick);
+        public static readonly int FogVisible = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogVisibleCells);
+        public static readonly int FogExplored = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogExploredCells);
+        public static readonly int FogBelief = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogBeliefEntities);
+        public static readonly int FogGhosts = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogGhosts);
+        public static readonly int FogTerrain = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(Keys.SessionFogTerrainOptimistic);
     }
 
     /// <summary>迷雾观察口径(F02 演示):-1 = 全知 debug 视图(现状默认,玩家视角迷雾用键切换,
@@ -327,7 +348,8 @@ public sealed class CrowdSimulationRuntime
         _autoReplayDone = false;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
-        _hashes.Clear();
+        _hashCount = 0;
+        _hashHead = 0;
 
         engine.SetService(CoreServiceKeys.CrowdSimulationSession, _session);
         engine.SetService(CoreServiceKeys.CrowdSimulationRuntime, this);
@@ -352,7 +374,8 @@ public sealed class CrowdSimulationRuntime
         _sessionEntity = Entity.Null;
         _session = null;
         _activeMapId = null;
-        _hashes.Clear();
+        _hashCount = 0;
+        _hashHead = 0;
         _pendingScript.Clear();
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
@@ -366,8 +389,8 @@ public sealed class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
-        string? hash = session.Step();
-        if (hash == null)
+        long t0 = _tickWatch.ElapsedTicks;
+        if (!session.Step(out var hash))
         {
             if (!_stallLogged)
             {
@@ -376,12 +399,27 @@ public sealed class CrowdSimulationRuntime
                     $"CrowdSimulation stalled at tick {session.TickCount}: waiting for path reply (planner pending={session.Planner?.PendingCount ?? -1}, serviceFault={_pathService?.Faulted}).");
             }
 
+            Telemetry.BeginFrame(session.Units.Count, 0, stalled: true,
+                (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
             return;
         }
 
+        Telemetry.BeginFrame(session.Units.Count, 0, stalled: false,
+            (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
         _stallLogged = false;
-        if (_hashes.Count >= 4096) _hashes.RemoveAt(0);
-        _hashes.Add((session.TickCount, hash));
+        if (_hashCount == _hashTicks.Length)
+        {
+            _hashTicks[_hashHead] = session.TickCount;
+            _hashValues[_hashHead] = hash;
+            _hashHead = (_hashHead + 1) % _hashTicks.Length;
+        }
+        else
+        {
+            int w = (_hashHead + _hashCount) % _hashTicks.Length;
+            _hashTicks[w] = session.TickCount;
+            _hashValues[w] = hash;
+            _hashCount++;
+        }
         if (!_autoReplayDone && _autoReplayAtTick >= 0 && session.TickCount >= _autoReplayAtTick)
         {
             _autoReplayDone = true;
@@ -394,7 +432,7 @@ public sealed class CrowdSimulationRuntime
         {
             string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={hash}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCount}, hash={Units.CrowdSimChecksum.Format(hash)}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
         }
 
         WriteStats(session);
@@ -463,27 +501,29 @@ public sealed class CrowdSimulationRuntime
             replay.SetStaticBlockers(session.Structures == null ? session.Blockers : null);
             replay.BlockOnDueReplies = true;
             replay.Commands.Schedule(replay, entries);
-            var replayHashes = new List<string>(ticks);
+            var replayHashes = new List<ulong>(ticks);
             replay.Advance(ticks, replayHashes);
             CompareReplay(ticks, replayHashes);
             return;
         }
 
         replay.Commands.Schedule(replay, entries);
-        var replayHashes2 = new List<string>(ticks);
+        var replayHashes2 = new List<ulong>(ticks);
         replay.Advance(ticks, replayHashes2);
         CompareReplay(ticks, replayHashes2);
     }
 
-    private void CompareReplay(int ticks, List<string> replayHashes)
+    private void CompareReplay(int ticks, List<ulong> replayHashes)
     {
         ReplayDivergenceTick = -1;
-        for (int i = 0; i < Math.Min(_hashes.Count, replayHashes.Count); i++)
+        int common = Math.Min(_hashCount, replayHashes.Count);
+        for (int i = 0; i < common; i++)
         {
-            if (_hashes[i].Hash != replayHashes[i]) { ReplayDivergenceTick = _hashes[i].Tick; break; }
+            int w = (_hashHead + i) % _hashTicks.Length;
+            if (_hashValues[w] != replayHashes[i]) { ReplayDivergenceTick = _hashTicks[w]; break; }
         }
 
-        if (ReplayDivergenceTick < 0 && _hashes.Count != replayHashes.Count) ReplayDivergenceTick = -2;
+        if (ReplayDivergenceTick < 0 && _hashCount != replayHashes.Count) ReplayDivergenceTick = -2;
         ReplayStatus = ReplayDivergenceTick == -1 ? 1 : 2;
     }
 
@@ -492,11 +532,11 @@ public sealed class CrowdSimulationRuntime
         var world = session.World;
         if (!world.IsAlive(_sessionEntity)) return;
         ref var blackboard = ref world.Get<BlackboardFloatBuffer>(_sessionEntity);
-        blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionTick), session.TickCount);
-        blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionUnits), session.Units.Count);
-        blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionSelected), session.SelectedCount);
-        blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionReplayStatus), ReplayStatus);
-        blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionReplayDivergenceTick), ReplayDivergenceTick);
+        blackboard.Set(StatKeyIds.Tick, session.TickCount);
+        blackboard.Set(StatKeyIds.Units, session.Units.Count);
+        blackboard.Set(StatKeyIds.Selected, session.SelectedCount);
+        blackboard.Set(StatKeyIds.ReplayStatus, ReplayStatus);
+        blackboard.Set(StatKeyIds.ReplayDivergenceTick, ReplayDivergenceTick);
         // F02 迷雾 HUD 计数:玩家 1 的视野组(无迷雾会话不写,呈现层回退缺省)
         if (session.Fog is { } fog && session.Config.Relations.IndexByPlayerId[1] is { } pIdx)
         {
@@ -515,11 +555,11 @@ public sealed class CrowdSimulationRuntime
                 if (!session.Structures!.TryGetFootprint(id, out _)) ghosts++;
             }
 
-            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogVisibleCells), visible);
-            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogExploredCells), explored);
-            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogBeliefEntities), fog.Belief[g].Count);
-            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogGhosts), ghosts);
-            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogTerrainOptimistic), fog.Terrain ? 1 : 0);
+            blackboard.Set(StatKeyIds.FogVisible, visible);
+            blackboard.Set(StatKeyIds.FogExplored, explored);
+            blackboard.Set(StatKeyIds.FogBelief, fog.Belief[g].Count);
+            blackboard.Set(StatKeyIds.FogGhosts, ghosts);
+            blackboard.Set(StatKeyIds.FogTerrain, fog.Terrain ? 1 : 0);
         }
     }
 
