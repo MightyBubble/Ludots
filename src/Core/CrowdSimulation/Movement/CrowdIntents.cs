@@ -22,10 +22,8 @@ public static class CrowdIntents
     public static void Compute(CrowdMovementKernel k, Fix64 dt)
     {
         var session = k.Session;
-        var world = session.World;
-        var units = session.Units;
         var groups = session.Groups;
-        int n = units.Count;
+        int n = session.Units.Count;
         int navN = session.Config.NavCellCount;
         Fix64 cs = Fix64.FromInt(session.Config.NavCellSizeCm);
         Fix64 worldSizeCm = cs * navN;
@@ -41,9 +39,8 @@ public static class CrowdIntents
         for (int i = 0; i < n; i++)
         {
             k.Intent[i] = Fix64Vec2.Zero;
-            var entity = units.EntityAt(i);
-            var state = world.Get<CrowdSimulationUnitState>(entity);
-            var kin = world.Get<CrowdSimulationKinematics>(entity);
+            var state = k.States[i];
+            var kin = k.Kins[i];
 
             // 静态岛在 resting 锚点上睡着(参考 intent 同款门):calm 且零速的到达单位不做任何决策;
             // 不 calm 的到达单位仍走位移唤醒测试——被推离休息锚点足够远才醒。
@@ -52,12 +49,12 @@ public static class CrowdIntents
                 if (kin.Velocity.X == Fix64.Zero && kin.Velocity.Y == Fix64.Zero)
                 {
                     if (k.Calm[i] != 0) continue;
-                    var pos0 = world.Get<WorldPositionCm>(entity).Value;
+                    var pos0 = k.Positions[i];
                     Fix64 ox = kin.RestCm.X - pos0.X, oy = kin.RestCm.Y - pos0.Y;
                     if (ox * ox + oy * oy > wake2)
                     {
                         state.State = (byte)CrowdUnitState.Moving;
-                        world.Set(entity, state);
+                        k.States[i] = state;
                     }
                     else
                     {
@@ -86,11 +83,11 @@ public static class CrowdIntents
 
             var flow = g.Flow;
             var leader = g.Leader!;
-            var nav = session.ResolveNavContext(g.NavId); // F02:规划句柄走认知槽解析
-            var order = OrderOf(session, g.OrderId);
+            var nav = k.MemoNav(state.GroupId, g); // F02:规划句柄走认知槽解析(组级备忘)
+            var order = k.MemoOrder(state.GroupId, g);
             bool converge = order?.Mode == CrowdOrderMode.Converge;
 
-            var pos = world.Get<WorldPositionCm>(entity).Value;
+            var pos = k.Positions[i];
             Fix64 px = pos.X, py = pos.Y;
             int cx = CellCoord(px, cs), cy = CellCoord(py, cs);
             int cell = cy * navN + cx;
@@ -114,15 +111,15 @@ public static class CrowdIntents
             if (lv == 0 && flow.Lk != null && flow.Lk[cell] >= 0 &&
                 !(CrowdFlowSample.RouteLength(flow, navN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveCells))
             {
-                if (TryStartJump(world, entity, ref state, ref kin, flow.Links!, flow.Lk[cell], nav, navN, session.Config.NavCellSizeCm))
+                if (TryStartJump(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, navN, session.Config.NavCellSizeCm, pos))
                 {
-                    world.Set(entity, state);
-                    world.Set(entity, kin);
+                    k.States[i] = state;
+                    k.Kins[i] = kin;
                     continue;
                 }
             }
 
-            Fix64 spd = world.Get<CrowdSimulationAgent>(entity).ResolvedSpeed;
+            Fix64 spd = k.Speeds[i];
             Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cell];
             spd = spd / (costHere == Fix64.Zero ? Fix64.OneValue : costHere);
 
@@ -140,7 +137,7 @@ public static class CrowdIntents
             {
                 state.Mode = 0;
             }
-            else if (g.LosAll || (int)(units.HandleAt(i) + (uint)k.Tick) % every == 0)
+            else if (g.LosAll || (int)(session.Units.HandleAt(i) + (uint)k.Tick) % every == 0)
             {
                 Fix64 sightIn = Fix64.Max(k.SlotSightCells, Fix64.FromInt(order?.ReachCells ?? 1));
                 Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresis : sightIn;
@@ -202,8 +199,8 @@ public static class CrowdIntents
                     if (!nav.CanReach(CompAt(nav, cell, lv), g.GoalComp))
                     {
                         state.State = (byte)CrowdUnitState.Unreachable;
-                        world.Set(entity, state);
-                        world.Set(entity, kin);
+                        k.States[i] = state;
+                        k.Kins[i] = kin;
                         continue;
                     }
 
@@ -256,7 +253,7 @@ public static class CrowdIntents
             }
 
             if (!arrived && near && (leader.Done || converge) &&
-                CrowdContact.TouchesRestingPeer(k.Hash, session, i, k.MaxScan))
+                CrowdContact.TouchesRestingPeer(k.Hash, k, i, k.MaxScan))
             {
                 arrived = true;
             }
@@ -268,8 +265,8 @@ public static class CrowdIntents
                 kin.RestCm = new Fix64Vec2(px, py);
             }
 
-            world.Set(entity, state);
-            world.Set(entity, kin);
+            k.States[i] = state;
+            k.Kins[i] = kin;
             k.Intent[i] = new Fix64Vec2(dvx, dvy);
         }
 
@@ -277,18 +274,6 @@ public static class CrowdIntents
         {
             if (groups.Groups[gi] is { } gg) gg.LosAll = false;
         }
-    }
-
-    private static CrowdOrder? OrderOf(CrowdSimSession session, int orderId)
-    {
-        if (orderId <= 0) return null;
-        var list = session.Orders.List;
-        for (int i = 0; i < list.Count; i++)
-        {
-            if (list[i].Id == orderId) return list[i];
-        }
-
-        return null;
     }
 
     private static int CompAt(NavContext nav, int cell, int lv) => nav.CompAt(cell, lv);
@@ -299,14 +284,10 @@ public static class CrowdIntents
 
     /// <summary>落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
     private static bool TryStartJump(
-        Arch.Core.World world, Arch.Core.Entity entity,
         ref CrowdSimulationUnitState state, ref CrowdSimulationKinematics kin,
-        NavLinkSet links, int linkIndex, NavContext nav, int n, int cellSizeCm)
+        NavLinkSet links, int linkIndex, NavContext nav, int n, int cellSizeCm, Fix64Vec2 pos)
     {
-        Fix64 px = kin.RestCm.X, py = kin.RestCm.Y;
-        var pos = world.Get<WorldPositionCm>(entity).Value;
-        px = pos.X;
-        py = pos.Y;
+        Fix64 px = pos.X, py = pos.Y;
         int a = links.From[linkIndex], b = links.To[linkIndex];
         Fix64 cs = Fix64.FromInt(cellSizeCm);
         Fix64 tx = (Fix64.FromInt(b % n) + Fix64.HalfValue) * cs + px - (Fix64.FromInt(a % n) + Fix64.HalfValue) * cs;

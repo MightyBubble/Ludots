@@ -183,6 +183,7 @@ public sealed class CrowdSimSession
         if (Movement != null)
         {
             if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
+            Movement.GatherUnits();
             for (int s = 0; s < SubSteps; s++)
             {
                 // 子步序与参考 tick() 一致:哈希重建 → 分离求解(+相位前移) → 领队 → 意图 → 马达
@@ -190,6 +191,8 @@ public sealed class CrowdSimSession
                 Movement.SolveSeparation();
                 Movement.Step(SubStepDt);
             }
+
+            Movement.ScatterUnits();
         }
 
         // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;

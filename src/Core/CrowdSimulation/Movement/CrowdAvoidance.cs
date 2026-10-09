@@ -33,8 +33,6 @@ public static class CrowdAvoidance
     public static void Solve(CrowdMovementKernel k)
     {
         var session = k.Session;
-        var world = session.World;
-        var units = session.Units;
         var hash = k.Hash;
         var relations = session.Config.Relations;
         int P = relations.PlayerCount;
@@ -47,7 +45,7 @@ public static class CrowdAvoidance
         Fix64 cellCm = hash2.CellSize;
         Fix64 reach = hash2.Reach;
         Fix64 keep = Fix64.OneValue - k.Smoothing;
-        k.EnsureAvoidanceCapacity(units.Capacity);
+        k.EnsureAvoidanceCapacity(session.Units.Capacity);
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
         var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
         var calm = k.Calm; var awake = k.Awake;
@@ -61,21 +59,19 @@ public static class CrowdAvoidance
             for (int kk = kStart; kk < kEnd; kk++)
             {
                 int j = hash2.Items[kk];
-                var entity = units.EntityAt(j);
-                var state = world.Get<CrowdSimulationUnitState>(entity);
+                var state = k.States[j];
                 bool moving = state.State == (byte)CrowdUnitState.Moving;
                 bool jump = state.State == (byte)CrowdUnitState.Jump;
-                var pos = world.Get<WorldPositionCm>(entity).Value;
-                var kin = world.Get<CrowdSimulationKinematics>(entity);
-                var agent = world.Get<CrowdSimulationAgent>(entity);
+                var pos = k.Positions[j];
+                var kin = k.Kins[j];
                 gx[kk] = pos.X;
                 gy[kk] = pos.Y;
-                gr[kk] = jump ? Fix64.Zero : agent.ResolvedPersonalRadiusCm;
-                gp[kk] = (byte)playerIndex[world.Get<PlayerOwner>(entity).PlayerId]; // 玩家表序下标(参考端 gp 同口径)
+                gr[kk] = jump ? Fix64.Zero : k.Radii[j];
+                gp[kk] = (byte)k.PlayerIdx[j]; // 玩家表序下标(参考端 gp 同口径)
                 gl[kk] = state.Level;
                 gg[kk] = state.GroupId;
                 gm[kk] = moving ? (byte)1 : (byte)0;
-                ge[kk] = agent.ResolvedPushPriority + (moving ? k.MovingBonus : Fix64.Zero);
+                ge[kk] = k.PushPriorities[j] + (moving ? k.MovingBonus : Fix64.Zero);
                 if (moving || jump || calm[j] == 0 || kin.Velocity.X != Fix64.Zero || kin.Velocity.Y != Fix64.Zero) aw = 1;
             }
 

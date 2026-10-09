@@ -210,6 +210,25 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **L12-④ 接触计数硬门**：真值 bin 每单位追加 u16 接触计数(每 tick 清零、求解行累加、跳过行保持 0,两端同构逐位可比;体积 +289 KB)。实测 600 tick × 241 单位不一致 10/144234 样本(0.007%,全部 ±1 骑线翻转),硬门取双容忍线:不一致样本 ≤ 0.05% 且单样本幅度 ≤ ±1——系统性求解分歧(接触集大面积错)会同时击穿两条。
 - **L14 避让隐藏状态进校验码**：校验码追加分离两轴 + calm 逐单位(mixI64 双词)与相位一词(逐 tick),导出端 canonChecksum 同步(部署会话无运动栈,新字段恒零,词数对齐——注意块序在整型字段之后,与 C# 同序);S4 真值三种子重钉,150 帧逐字全等。**回放口径写明:回放从 tick 0 起新会话**(`CrowdSimSession.Reset` 后逐帧重演,快照恢复不走中间态)。**Stride 写明:只在会话创建时按 rateHz 推导一次,Ludots 端不支持参考端 setRates 的运行时调频。**
 
+## 热路径数据面：gather → SoA → scatter（内核改造，本次）
+
+对拍行序 = 单位稠密序（`CrowdSimUnits._dense` 是 append-only 创建序，真值 bin 的行序），
+而 ECS chunk 遍历按原型分桶（人群单位有头less/模板两条生成道 = 两个原型），不保稠密序——
+热路径不能直接换成 chunk 迭代。取而代之的形状：**每 tick 一次 gather（组件 → 内核 SoA，
+含 `CrowdSimulationAgent` 的解析值——managed 组件不进子步热环）→ 子步（哈希重建 / 避让 /
+领队 / 意图 / 马达）全走 SoA → tick 末一次 scatter（SoA → 组件）**。World 解析从每单位每
+子步约 16 次降到每 tick 9 次（6 读 3 写）；意图层的指令簿线性扫与认知槽字典解析改组级
+备忘（指令簿与槽切换只在 tick 边界变，gather 时失效）。校验码在 tick 末从 SoA 读
+（scatter 后同值）；无运动栈的纯部署会话保留组件直读路径，两条路径值等价。
+语义不变式：结构 op / 指令都发生在 gather 之前的 tick 边界，子步间没有任何组件读者，
+scatter 写回的即子步终值——对拍逐位不变由 S1–S7 全部真值测试钉住。
+
+50k 单位 tick 基准（自造场景：种子 1337、spawnAt 50000、远点行军、200 tick 稳态窗、
+逐 tick 墙钟、Debug 构建、同机同窗前后对照，`CrowdKernel50KBenchmarkTests` 落
+`artifacts/benchmarks/crowd-kernel-50k-tick/`）：改造前平均 333.1 / P50 332.8 /
+P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / 最大 319.6 ms
+（约 −30%）。计时窗不含生成与下令；数字允许机器噪声，前后对照需同机同窗。
+
 ## S7-a 交付：结构动态化内核——建造/拆除/寿命 + 脏 tile 增量重烘 + HPA 增量 + 队伍反应（本次）
 
 - **结构仓**（`Structures/CrowdStructuresStore.cs` + `CrowdStructureFootprint.cs`,对照 `structures/store.js` + `footprint.js` 逐 op）：足迹三形(rect 半边长 / disc 半径 / path 带端点条带,厘米域 Fix64,`CrowdFix.Hypot`,path 端点 ε=1e-4 cm 容差)、bbox、格矩形、格心 covers;仓 = 纯组件表(模板 / 足迹 / NavArea / blocker / 寿命),id 单调递增按 id 序遍历保证确定性;**地图静态阻挡物以实体身份入仓**(与参考 mapGen 同形,动态 op 与其共用一套栅格重标);`rasterRect` 按变更格矩形重标区域(优先级高者胜、同级后放置者胜)与阻挡(逐轴覆盖份额乘积 ≥ blockCoverage,与 `SurfaceGrid.Build` 同式);blocker 集变化即整体重建碰撞 CSR(注册格矩形外扩 reach);逐点查询取最上层实体;寿命到期队列按绝对 tick(`placeTick + ceil(lifetimeSec/(timeScale/fixedHz))`——**按参考端原始 double 公式换算,不走 Fix64**:Fix64 的 simDt 下取整会把 4s@simDt=1/3 的恰好整除商推成 13,首个分歧即此)。

@@ -28,6 +28,29 @@ public sealed class CrowdMovementKernel
     /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
+
+    // ── tick 级 SoA 舞台:对拍行序 = 稠密序(单位稠密表是 append-only 的创建序),而 chunk
+    // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、
+    // 子步全走 SoA、一次 scatter(SoA→组件)。World 解析从每单位每子步 ~16 次降到每 tick 9 次。
+    public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
+    public CrowdSimulation.Units.CrowdSimulationKinematics[] Kins = Array.Empty<CrowdSimulation.Units.CrowdSimulationKinematics>();
+    /// <summary>位置(厘米);gather 后由马达子步持续更新,scatter 落回组件。</summary>
+    public Fix64Vec2[] Positions = Array.Empty<Fix64Vec2>();
+    /// <summary>个人半径(厘米,Agent 解析值一次收拢——managed 组件不进子步热环)。</summary>
+    public Fix64[] Radii = Array.Empty<Fix64>();
+    /// <summary>巡航速度(厘米/秒,Agent 解析值)。</summary>
+    public Fix64[] Speeds = Array.Empty<Fix64>();
+    /// <summary>推挤优先级(Agent 解析值,不含移动加成——加成依赖子步间的状态,避让层现算)。</summary>
+    public Fix64[] PushPriorities = Array.Empty<Fix64>();
+    /// <summary>玩家表序下标(PlayerOwner → Relations.IndexByPlayerId 一次收拢)。</summary>
+    public int[] PlayerIdx = Array.Empty<int>();
+
+    // 意图层逐子步的组级备忘:指令簿线性扫与认知槽字典解析只在 tick 边界变,gather 时失效。
+    internal Movement.CrowdOrder?[] OrderMemo = Array.Empty<Movement.CrowdOrder?>();
+    internal Nav.NavContext?[] NavMemo = Array.Empty<Nav.NavContext?>();
+    internal byte[] OrderStamp = Array.Empty<byte>();
+    internal byte[] NavStamp = Array.Empty<byte>();
+    internal byte GroupMemoEpoch;
     public CrowdWalls.OpenCellCache OpenCache { get; init; } = new();
     /// <summary>流场采样的本帧暂存(方向写出)。</summary>
     public int Tick;
@@ -80,9 +103,100 @@ public sealed class CrowdMovementKernel
     {
         if (Intent.Length < unitCapacity) Intent = new Fix64Vec2[unitCapacity];
         if (Separation.Length < unitCapacity) Separation = new Fix64Vec2[unitCapacity];
-        if (_positions.Length < unitCapacity) _positions = new Fix64Vec2[unitCapacity];
-        if (_radii.Length < unitCapacity) _radii = new Fix64[unitCapacity];
+        if (Positions.Length < unitCapacity) Positions = new Fix64Vec2[unitCapacity];
+        if (Radii.Length < unitCapacity) Radii = new Fix64[unitCapacity];
+        if (States.Length < unitCapacity) States = new CrowdSimulation.Units.CrowdSimulationUnitState[unitCapacity];
+        if (Kins.Length < unitCapacity) Kins = new CrowdSimulation.Units.CrowdSimulationKinematics[unitCapacity];
+        if (Speeds.Length < unitCapacity) Speeds = new Fix64[unitCapacity];
+        if (PushPriorities.Length < unitCapacity) PushPriorities = new Fix64[unitCapacity];
+        if (PlayerIdx.Length < unitCapacity) PlayerIdx = new int[unitCapacity];
         EnsureAvoidanceCapacity(unitCapacity);
+    }
+
+    /// <summary>tick 首:组件 → SoA 一次收拢(稠密序;含 Agent 解析值与玩家表序)。组级备忘失效。</summary>
+    public void GatherUnits()
+    {
+        var session = Session;
+        var units = session.Units;
+        var world = session.World;
+        int n = units.Count;
+        EnsureCapacity(units.Capacity);
+        var playerIndex = session.Config.Relations.IndexByPlayerId;
+        var states = States; var kins = Kins; var positions = Positions; var radii = Radii;
+        var speeds = Speeds; var push = PushPriorities; var playerIdx = PlayerIdx;
+        for (int i = 0; i < n; i++)
+        {
+            var e = units.EntityAt(i);
+            states[i] = world.Get<CrowdSimulation.Units.CrowdSimulationUnitState>(e);
+            kins[i] = world.Get<CrowdSimulation.Units.CrowdSimulationKinematics>(e);
+            positions[i] = world.Get<Ludots.Core.Components.WorldPositionCm>(e).Value;
+            var agent = world.Get<CrowdSimulationAgent>(e);
+            speeds[i] = agent.ResolvedSpeed;
+            radii[i] = agent.ResolvedPersonalRadiusCm;
+            push[i] = agent.ResolvedPushPriority;
+            playerIdx[i] = playerIndex[world.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(e).PlayerId];
+        }
+
+        int gm = session.Groups.Groups.Count;
+        if (OrderMemo.Length < gm)
+        {
+            OrderMemo = new Movement.CrowdOrder?[gm];
+            NavMemo = new Nav.NavContext?[gm];
+            OrderStamp = new byte[gm];
+            NavStamp = new byte[gm];
+        }
+        else if (GroupMemoEpoch == byte.MaxValue)
+        {
+            Array.Clear(OrderStamp, 0, gm);
+            Array.Clear(NavStamp, 0, gm);
+            GroupMemoEpoch = 0;
+        }
+
+        GroupMemoEpoch++;
+    }
+
+    /// <summary>tick 末:SoA → 组件落回(值语义等价——scatter 写回的即子步终值)。</summary>
+    public void ScatterUnits()
+    {
+        var units = Session.Units;
+        var world = Session.World;
+        int n = units.Count;
+        for (int i = 0; i < n; i++)
+        {
+            var e = units.EntityAt(i);
+            world.Set(e, new Ludots.Core.Components.WorldPositionCm { Value = Positions[i] });
+            world.Set(e, States[i]);
+            world.Set(e, Kins[i]);
+        }
+    }
+
+    /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>
+    internal Movement.CrowdOrder? MemoOrder(int gid, CrowdNavGroupSet.Group g)
+    {
+        if (OrderStamp[gid] == GroupMemoEpoch) return OrderMemo[gid];
+        Movement.CrowdOrder? o = null;
+        if (g.OrderId != 0)
+        {
+            var list = Session.Orders.List;
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Id == g.OrderId) { o = list[i]; break; }
+            }
+        }
+
+        OrderMemo[gid] = o;
+        OrderStamp[gid] = GroupMemoEpoch;
+        return o;
+    }
+
+    /// <summary>组级备忘:组的认知槽导航(槽切换只在 tick 边界变)。</summary>
+    internal Nav.NavContext MemoNav(int gid, CrowdNavGroupSet.Group g)
+    {
+        if (NavStamp[gid] == GroupMemoEpoch) return NavMemo[gid]!;
+        var v = Session.ResolveNavContext(g.NavId);
+        NavMemo[gid] = v;
+        NavStamp[gid] = GroupMemoEpoch;
+        return v;
     }
 
     /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>
@@ -114,23 +228,11 @@ public sealed class CrowdMovementKernel
         if (Stride > 1) Phase = (Phase + 1) % Stride;
     }
 
-    private Fix64Vec2[] _positions = Array.Empty<Fix64Vec2>();
-    private Fix64[] _radii = Array.Empty<Fix64>();
-
-    /// <summary>每子步重建空间哈希(位置/半径从组件收拢;无移动快路径在哈希内部)。</summary>
+    /// <summary>每子步重建空间哈希(位置/半径取 SoA——gather 已收拢,子步间由马达保持最新;
+    /// 无移动快路径在哈希内部)。</summary>
     public void RebuildHash()
     {
-        var session = Session;
-        int n = session.Units.Count;
-        EnsureCapacity(session.Units.Capacity);
-        for (int i = 0; i < n; i++)
-        {
-            var entity = session.Units.EntityAt(i);
-            _positions[i] = session.World.Get<Components.WorldPositionCm>(entity).Value;
-            _radii[i] = session.Units.PersonalRadiusCmAt(i);
-        }
-
-        Hash.Build(_positions, _radii, n);
+        Hash.Build(Positions, Radii, Session.Units.Count);
     }
 
     /// <summary>一个子步:领队 → 意图 → 马达(避让在 S6 才会插到领队之前)。</summary>
