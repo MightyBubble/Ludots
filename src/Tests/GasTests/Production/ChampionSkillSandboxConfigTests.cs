@@ -70,6 +70,10 @@ namespace Ludots.Tests.GAS.Production
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
         private const string RosterKeyChannel = "ChampionSkillSandbox.Collection.ActiveKey";
+        private const string BattleContextId = "interaction.context.champion.battle";
+        private const string SmartCastContextId = "interaction.context.champion.smart_cast";
+        private const string IndicatorContextId = "interaction.context.champion.indicator_cast";
+        private const string PressReleaseContextId = "interaction.context.champion.press_release_cast";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
@@ -274,14 +278,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ezrealSlots[3].DetailLabel, Is.EqualTo("Global projectile fired by direction"));
             Assert.That(ezrealSlots[3].StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), Is.True);
 
-            var mapping = WaitForActiveInputOrderMapping(engine);
-            var ezrealRMapping = mapping.GetMapping("SkillR");
-            Assert.That(ezrealRMapping, Is.Not.Null);
-            Assert.That(ezrealRMapping!.TargetType, Is.EqualTo(OrderTargetType.Direction));
-            Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
-            Assert.That(ezrealRMapping.CursorTargetRelation, Is.EqualTo("Hostile"));
-            Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
-
             var garenSlots = new EntityCommandPanelSlotView[8];
             int garenCount = source.CopySlots(FindEntityByName(engine.World, "Garen Courage"), 0, garenSlots);
             Assert.That(garenCount, Is.EqualTo(4));
@@ -314,9 +310,9 @@ namespace Ludots.Tests.GAS.Production
 
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var mapping = WaitForActiveInputOrderMapping(engine);
             Assert.That(toolbar.IsVisible, Is.True);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCast));
+            Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True);
+            Assert.That(IsInteractionContextActive(engine, SmartCastContextId), Is.True);
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -349,7 +345,8 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCastWithIndicator));
+            Assert.That(IsInteractionContextActive(engine, IndicatorContextId), Is.True);
+            Assert.That(IsInteractionContextActive(engine, SmartCastContextId), Is.False);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -360,7 +357,8 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.PressReleaseAimCast));
+            Assert.That(IsInteractionContextActive(engine, PressReleaseContextId), Is.True);
+            Assert.That(IsInteractionContextActive(engine, IndicatorContextId), Is.False);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
@@ -387,10 +385,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(buttons[8].Active, Is.True);
             Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
 
-            InputOrderMapping? command = mapping.GetMapping("Command");
-            Assert.That(command, Is.Not.Null);
-            Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
-            Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
+            Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True, "Battle context binds Command for right-click move.");
 
             Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
@@ -1071,20 +1066,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0), "Sandbox map should load without trigger errors.");
         }
 
-        private static InputOrderMappingSystem WaitForActiveInputOrderMapping(GameEngine engine, int maxFrames = 24)
+        private static bool IsInteractionContextActive(GameEngine engine, string contextId)
         {
-            for (int i = 0; i < maxFrames; i++)
-            {
-                var mapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-                if (mapping != null)
-                {
-                    return mapping;
-                }
-
-                Tick(engine, 1);
-            }
-
-            throw new InvalidOperationException("Active input order mapping missing.");
+            var runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("InteractionContextInstances missing.");
+            var profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+            return profiles.ProfileIdRegistry.TryGetId(contextId, out int profileId) &&
+                   runtime.IsActive(ClientLocalSeatAccess.RequireSolePossessedRep(engine), profileId);
         }
 
         private static void Tick(GameEngine engine, int frames)

@@ -16,7 +16,6 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
@@ -61,37 +60,8 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: false);
-        }
-
-        internal static void PollCastModeSwitch(GameEngine engine)
-        {
-            // The Controls context is startup-pushed and never popped; without a map guard its
-            // F1-F3 bindings would fire this poll on any co-loaded map and hijack the camera.
-            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not Ludots.Core.Input.Runtime.IInputActionReader input)
-            {
-                return;
-            }
-
-            if (input.PressedThisFrame(ChampionSkillSandboxIds.SmartCastActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.IndicatorActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.IndicatorModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.PressReleaseActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.PressReleaseModeId);
-            }
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -107,7 +77,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 return Task.CompletedTask;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncFocusPanel(engine);
             return Task.CompletedTask;
@@ -136,7 +105,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: true);
             ConsumeResetCameraRequest(engine);
@@ -526,14 +494,6 @@ namespace ChampionSkillSandboxMod.Runtime
             TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("ChampionSkillSandbox requires engine TagOps.");
             tagOps.AddTag(engine.World, entity, tagId);
-        }
-
-        private void EnsureMode(GameEngine engine)
-        {
-            if (!ChampionSkillSandboxIds.IsSandboxMode(ChampionSkillCastModes.GetActive(engine)))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
         }
 
         private static void ConsumeResetCameraRequest(GameEngine engine)

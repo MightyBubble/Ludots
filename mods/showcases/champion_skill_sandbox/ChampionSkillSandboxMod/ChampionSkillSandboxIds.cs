@@ -14,9 +14,6 @@ namespace ChampionSkillSandboxMod
         public const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
         public const string TacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
 
-        public const string SmartCastActionId = "CastModeSmart";
-        public const string IndicatorActionId = "CastModeIndicator";
-        public const string PressReleaseActionId = "CastModePressRelease";
         public const string ResetCameraActionId = "ResetCamera";
         public const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         public const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";

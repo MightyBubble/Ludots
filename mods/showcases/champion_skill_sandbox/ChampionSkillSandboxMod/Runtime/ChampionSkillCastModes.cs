@@ -1,94 +1,95 @@
 using System;
+using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Scripting;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
     /// <summary>
-    /// Sandbox cast-mode switching over the engine's active input order mapping: the mode id
-    /// (toolbar/keyboard vocabulary) maps to the mapping's interaction mode. Transitional home
-    /// until the sandbox's order-mapping migration replaces the mapping system with graphs.
+    /// Toolbar side of cast-mode switching: each sandbox mode is an interaction context mounted
+    /// under the battle context on the possessed rep. Keyboard switching runs the same swap in
+    /// the mode contexts' trigger graphs.
     /// </summary>
     internal static class ChampionSkillCastModes
     {
+        private const string BattleContextId = "interaction.context.champion.battle";
+
+        private static readonly (string ModeId, string ContextId)[] Modes =
+        {
+            (ChampionSkillSandboxIds.SmartCastModeId, "interaction.context.champion.smart_cast"),
+            (ChampionSkillSandboxIds.IndicatorModeId, "interaction.context.champion.indicator_cast"),
+            (ChampionSkillSandboxIds.PressReleaseModeId, "interaction.context.champion.press_release_cast"),
+        };
+
         public static bool TrySetActive(GameEngine engine, string? modeId)
         {
-            if (!TryGetCastModeType(modeId, out var castMode))
+            string? targetContextId = ResolveContextId(modeId);
+            if (targetContextId == null)
             {
                 return false;
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mapping)
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox cast modes require InteractionContextInstances.");
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox cast modes require InteractionContextProfileRegistry.");
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+
+            for (int i = 0; i < Modes.Length; i++)
             {
-                mapping.SetInteractionMode(castMode);
+                string contextId = Modes[i].ContextId;
+                if (!runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(contextId)))
+                {
+                    continue;
+                }
+
+                if (string.Equals(contextId, targetContextId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                runtime.Deactivate(rep, ConfigKeyRegistry.Register(contextId));
             }
 
-            // All sandbox cast modes share the sandbox tactical camera; switching re-asserts it.
-            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
-            {
-                Id = ChampionSkillSandboxIds.TacticalCameraId,
-                ResetRuntimeState = true,
-                ReplaceActiveStack = true
-            });
-
+            runtime.Activate(rep, ConfigKeyRegistry.Register(targetContextId), ConfigKeyRegistry.Register(BattleContextId));
             return true;
         }
 
-        /// <summary>
-        /// Current sandbox mode id, or null when no mapping is installed or the installed cast
-        /// mode is foreign (another showcase's value) — the caller treats null as "reset to the
-        /// sandbox default" instead of trusting a coincidental enum match.
-        /// </summary>
+        /// <summary>Active sandbox mode id, or null when the battle context carries no mode context.</summary>
         public static string? GetActive(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mapping &&
-                TryGetModeId(mapping.InteractionMode, out string? modeId))
+            InteractionContextInstanceRuntime? runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances);
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (runtime == null || profiles == null || !ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
             {
-                return modeId;
+                return null;
+            }
+
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(Modes[i].ContextId)))
+                {
+                    return Modes[i].ModeId;
+                }
             }
 
             return null;
         }
 
-        public static bool TryGetCastModeType(string? modeId, out CastModeType castMode)
+        private static string? ResolveContextId(string? modeId)
         {
-            switch (modeId)
+            for (int i = 0; i < Modes.Length; i++)
             {
-                case ChampionSkillSandboxIds.SmartCastModeId:
-                    castMode = CastModeType.SmartCast;
-                    return true;
-                case ChampionSkillSandboxIds.IndicatorModeId:
-                    castMode = CastModeType.SmartCastWithIndicator;
-                    return true;
-                case ChampionSkillSandboxIds.PressReleaseModeId:
-                    castMode = CastModeType.PressReleaseAimCast;
-                    return true;
-                default:
-                    castMode = default;
-                    return false;
+                if (string.Equals(Modes[i].ModeId, modeId, StringComparison.Ordinal))
+                {
+                    return Modes[i].ContextId;
+                }
             }
-        }
 
-        private static bool TryGetModeId(CastModeType castMode, out string? modeId)
-        {
-            switch (castMode)
-            {
-                case CastModeType.SmartCast:
-                    modeId = ChampionSkillSandboxIds.SmartCastModeId;
-                    return true;
-                case CastModeType.SmartCastWithIndicator:
-                    modeId = ChampionSkillSandboxIds.IndicatorModeId;
-                    return true;
-                case CastModeType.PressReleaseAimCast:
-                    modeId = ChampionSkillSandboxIds.PressReleaseModeId;
-                    return true;
-                default:
-                    modeId = null;
-                    return false;
-            }
+            return null;
         }
     }
 }

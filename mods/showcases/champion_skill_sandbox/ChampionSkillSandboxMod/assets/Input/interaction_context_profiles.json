@@ -5,7 +5,11 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command",
+        "Stop",
+        "QueueModifier",
+        "SkillR.Release"
       ],
       "triggers": [
         {
@@ -13,7 +17,164 @@
         },
         {
           "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.champion.move"
+        },
+        {
+          "trigger": "graph.champion.stop"
+        },
+        {
+          "trigger": "graph.champion.held_channel_end"
         }
+      ],
+      "onActivated": [
+        "graph.champion.enter_smart_cast"
+      ]
+    },
+    {
+      "id": "interaction.context.champion.smart_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR",
+        "CastModeIndicator",
+        "CastModePressRelease"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.champion.smart_cast_q"
+        },
+        {
+          "trigger": "graph.champion.smart_cast_w"
+        },
+        {
+          "trigger": "graph.champion.smart_cast_e"
+        },
+        {
+          "trigger": "graph.champion.smart_cast_r"
+        },
+        {
+          "trigger": "graph.champion.smart_cast_to_indicator_cast"
+        },
+        {
+          "trigger": "graph.champion.smart_cast_to_press_release_cast"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.champion.indicator_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR",
+        "CastModeSmart",
+        "CastModePressRelease"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.champion.indicator_cast_q"
+        },
+        {
+          "trigger": "graph.champion.indicator_cast_w"
+        },
+        {
+          "trigger": "graph.champion.indicator_cast_e"
+        },
+        {
+          "trigger": "graph.champion.indicator_cast_r"
+        },
+        {
+          "trigger": "graph.champion.indicator_cast_to_smart_cast"
+        },
+        {
+          "trigger": "graph.champion.indicator_cast_to_press_release_cast"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.champion.press_release_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR",
+        "CastModeSmart",
+        "CastModeIndicator"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.champion.press_release_cast_q"
+        },
+        {
+          "trigger": "graph.champion.press_release_cast_w"
+        },
+        {
+          "trigger": "graph.champion.press_release_cast_e"
+        },
+        {
+          "trigger": "graph.champion.press_release_cast_r"
+        },
+        {
+          "trigger": "graph.champion.press_release_cast_to_smart_cast"
+        },
+        {
+          "trigger": "graph.champion.press_release_cast_to_indicator_cast"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.champion.aiming_hold",
+      "foreground": true,
+      "bindings": [
+        "SkillQ.Release",
+        "SkillW.Release",
+        "SkillE.Release",
+        "SkillR.Release"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.champion.aim_release_q"
+        },
+        {
+          "trigger": "graph.champion.aim_release_w"
+        },
+        {
+          "trigger": "graph.champion.aim_release_e"
+        },
+        {
+          "trigger": "graph.champion.aim_release_r"
+        },
+        {
+          "trigger": "graph.champion.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.champion.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.champion.aiming_click",
+      "foreground": true,
+      "bindings": [
+        "Champion.AimConfirm",
+        "Champion.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.champion.aim_confirm"
+        },
+        {
+          "trigger": "graph.champion.aim_cancel"
+        },
+        {
+          "trigger": "graph.champion.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.champion.aim_clear"
       ]
     }
   ]

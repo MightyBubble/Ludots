@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
-using CoreInputMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -23,7 +22,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
@@ -57,6 +55,9 @@ namespace Ludots.Tests.GAS.Production
         private const string MapId = "champion_skill_sandbox";
         private const string StressMapId = "champion_skill_stress";
         private const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
+        private const string SmartCastContextId = "interaction.context.champion.smart_cast";
+        private const string IndicatorContextId = "interaction.context.champion.indicator_cast";
+        private const string PressReleaseContextId = "interaction.context.champion.press_release_cast";
         private const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
         private const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
@@ -243,6 +244,12 @@ namespace Ludots.Tests.GAS.Production
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineIndicatorLines,
+                maxFrames: 8,
+                describeFailure: () => $"{BuildOverlayDiagnostics(overlays)} | aimCaster={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "champion_skill_sandbox.aim.caster")} | aimHover={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "champion_skill_sandbox.aim.hover")}");
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineIndicatorLines),
@@ -1871,12 +1878,24 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            InteractionContextInstanceRuntime contexts = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("InteractionContextInstances missing.");
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (contexts.IsActive(rep, profiles.ProfileIdRegistry.GetId(IndicatorContextId)))
             {
-                CastModeType.SmartCastWithIndicator => IndicatorModeId,
-                CastModeType.PressReleaseAimCast => PressReleaseModeId,
-                _ => SmartCastModeId,
-            };
+                return IndicatorModeId;
+            }
+
+            if (contexts.IsActive(rep, profiles.ProfileIdRegistry.GetId(PressReleaseContextId)))
+            {
+                return PressReleaseModeId;
+            }
+
+            return contexts.IsActive(rep, profiles.ProfileIdRegistry.GetId(SmartCastContextId))
+                ? SmartCastModeId
+                : "<none>";
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
@@ -2567,23 +2586,28 @@ Assert.Fail(
                 details.Add($"groundOverride={groundOverride.HasOverride}");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"TargetType={actionMapping.TargetType}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
+            details.Add($"interactionContexts=[{DescribeActiveInteractionContexts(engine)}]");
             details.Add($"activeMode={GetActiveModeId(engine)}");
             return string.Join(" | ", details);
+        }
+
+        private static string DescribeActiveInteractionContexts(GameEngine engine)
+        {
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (profiles == null || !ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            {
+                return "<unavailable>";
+            }
+
+            Span<int> ids = stackalloc int[16];
+            int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(engine.World, rep, ids);
+            var names = new List<string>(count);
+            for (int i = 0; i < count; i++)
+            {
+                names.Add(profiles.ProfileIdRegistry.GetName(ids[i]) ?? ids[i].ToString());
+            }
+
+            return string.Join(",", names);
         }
 
         private static string DescribeActiveInputContexts(PlayerInputHandler input)
@@ -2637,25 +2661,9 @@ Assert.Fail(
         private static string BuildChampionMovementDiagnostics(GameEngine engine, string actorName, Vector2 targetScreen)
         {
             Vector2 actorPosition = ReadPosition(engine.World, actorName);
-            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
-                ? lastGroundObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
-                ? lastOrderObj?.ToString() ?? "<null>"
-                : "<missing>";
             string pressFrame = engine.GlobalContext.TryGetValue(RightClickPressDiagnosticsKey, out var pressFrameObj)
                 ? pressFrameObj?.ToString() ?? "<null>"
                 : "<missing>";
-            string localOrderSource = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LocalOrderSource", out var localOrderSourceObj)
-                ? localOrderSourceObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string activationResult = "<none>";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mappingSystem)
-            {
-                var last = mappingSystem.LastActivationResult;
-                activationResult = $"{last.State} actor={last.Actor.Id}:{last.Actor.Version} rejection={last.Rejection}";
-            }
             string seatState;
             try
             {
@@ -2679,14 +2687,10 @@ Assert.Fail(
                 $"actorPos=({actorPosition.X:0.##},{actorPosition.Y:0.##})",
                 $"targetScreen=({targetScreen.X:0.##},{targetScreen.Y:0.##})",
                 BuildInputActionDiagnostics(engine, "Command"),
-                $"activation={activationResult}",
                 $"seat={seatState}",
                 $"rightClickPressFrame={pressFrame}",
-                $"localOrderSource={localOrderSource}",
                 BuildAbilityDiagnostics(engine, actorName),
-                BuildSelectionStateDiagnostics(engine),
-                $"lastGround={lastGround}",
-                $"lastOrder={lastOrder}");
+                BuildSelectionStateDiagnostics(engine));
         }
 
         private static string BuildStressSelectionDiagnostics(GameEngine engine, Entity localPlayer, OrderQueue orderQueue)
@@ -3024,19 +3028,13 @@ Assert.Fail(
                 {
                     WorldCmInt2 worldCm = position.ToWorldCmInt2();
                     projectileSamples.Add(
-                        $"id:{entity.Id}/pos:({worldCm.X},{worldCm.Y})/range:{projectile.Range}/targetPoint:{projectile.HasTargetPoint}/direction:{projectile.HasDirection}/hit:{projectile.HitEffectTemplateId}");
+                        $"id:{entity.Id}/pos:({worldCm.X},{worldCm.Y})/range:{projectile.Range}/targetPoint:{projectile.HasTargetPoint}/direction:{projectile.HasDirection}/hit:{projectile.HitEffectTemplateId}/target:{(world.IsAlive(projectile.Target) && world.TryGet(projectile.Target, out Name targetName) ? targetName.Value : projectile.Target.Id.ToString())}/mode:{projectile.TravelMode}");
                 }
             });
 
             bool hasLockoutTag = EntityHasTag(world, actorName, lockoutTagName);
             int orderQueueCount = engine.GetService(CoreServiceKeys.OrderQueue)?.Count ?? -1;
-            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
-                ? lastGroundObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
-                ? lastOrderObj?.ToString() ?? "<null>"
-                : "<missing>";
-            return $"{label}=lockoutTag:{hasLockoutTag},orderQueue:{orderQueueCount},lastGround:{lastGround},lastOrder:{lastOrder},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
+            return $"{label}=lockoutTag:{hasLockoutTag},orderQueue:{orderQueueCount},projectiles:{projectileCount},withTargetPoint:{projectileWithTargetPointCount},withDirection:{projectileWithDirectionCount},withHitTemplate:{projectileHitTemplateCount},samples:[{string.Join(";", projectileSamples)}]";
         }
 
         private static string FindRepoRoot()

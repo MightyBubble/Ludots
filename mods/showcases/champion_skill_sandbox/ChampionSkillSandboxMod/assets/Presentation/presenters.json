@@ -720,11 +720,11 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ability.aim.hover"
+          "key": "champion_skill_sandbox.aim.hover"
         },
         "command": {
           "kind": "CreatePresenter",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "definitionId": "champion_skill_sandbox.aim_target_indicator",
           "scopeSource": "EventPayloadA",
           "ownerSource": "EventSource"
         },
@@ -735,11 +735,38 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ability.aim.hover"
+          "key": "champion_skill_sandbox.aim.hover"
         },
         "command": {
           "kind": "DestroyScopedPresenter",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "definitionId": "champion_skill_sandbox.aim_target_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "champion_skill_sandbox.aim.caster"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "champion_skill_sandbox.aim_line",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "champion_skill_sandbox.aim.caster"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "champion_skill_sandbox.aim_line",
           "scopeSource": "EventPayloadA",
           "ownerSource": "EventSource"
         }
@@ -4788,5 +4815,157 @@
         }
       }
     ]
+  },
+  {
+    "id": "champion_skill_sandbox.aim_target_indicator",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "source": "constant",
+        "constantValue": 0.9
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.32
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.06
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1.32,
+            1.32,
+            1.32
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.32,
+            0.24,
+            0.24
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.07,
+        0
+      ]
+    }
+  },
+  {
+    "id": "champion_skill_sandbox.aim_line",
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.length",
+        "source": "constant",
+        "constantValue": 9
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "source": "constant",
+        "constantValue": 0.9
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "champion_skill_sandbox.aim_rotation_deg"
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.76
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.025
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.76,
+            0.52,
+            0.24
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   }
 ]

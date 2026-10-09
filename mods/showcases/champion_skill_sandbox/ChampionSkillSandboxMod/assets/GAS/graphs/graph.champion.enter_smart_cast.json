@@ -1,0 +1,59 @@
+[
+  {
+    "id": "graph.champion.enter_smart_cast",
+    "kind": "Script",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "enter",
+        "op": "ActivateContext",
+        "context": "interaction.context.champion.smart_cast",
+        "parentContext": "interaction.context.champion.battle"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "enter"
+      },
+      {
+        "from": "enter",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "enter",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

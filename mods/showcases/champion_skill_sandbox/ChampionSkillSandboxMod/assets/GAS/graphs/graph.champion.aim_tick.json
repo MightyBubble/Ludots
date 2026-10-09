@@ -1,0 +1,365 @@
+[
+  {
+    "id": "graph.champion.aim_tick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_pointermoved",
+        "action": "PointerMoved",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "rotation",
+        "op": "PointToDirection"
+      },
+      {
+        "id": "write_rotation",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "champion_skill_sandbox.aim_rotation_deg"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "half",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "min_x",
+        "op": "SubFloat"
+      },
+      {
+        "id": "min_y",
+        "op": "SubFloat"
+      },
+      {
+        "id": "max_x",
+        "op": "AddFloat"
+      },
+      {
+        "id": "max_y",
+        "op": "AddFloat"
+      },
+      {
+        "id": "region",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "hover_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_hover",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.hover"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "sel"
+      },
+      {
+        "from": "sel",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "champ"
+      },
+      {
+        "from": "champ",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "ground_branch"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "true",
+        "to": "rotation"
+      },
+      {
+        "from": "rotation",
+        "fromPort": "next",
+        "to": "write_rotation"
+      },
+      {
+        "from": "write_rotation",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "ground_branch",
+        "fromPort": "false",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "hostile",
+        "fromPort": "next",
+        "to": "half"
+      },
+      {
+        "from": "half",
+        "fromPort": "next",
+        "to": "min_x"
+      },
+      {
+        "from": "min_x",
+        "fromPort": "next",
+        "to": "min_y"
+      },
+      {
+        "from": "min_y",
+        "fromPort": "next",
+        "to": "max_x"
+      },
+      {
+        "from": "max_x",
+        "fromPort": "next",
+        "to": "max_y"
+      },
+      {
+        "from": "max_y",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "hover_op"
+      },
+      {
+        "from": "hover_op",
+        "fromPort": "next",
+        "to": "write_hover"
+      },
+      {
+        "from": "write_hover",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "sel",
+        "toPort": "source"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "champ",
+        "toPort": "value"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "champ",
+        "fromPort": "value",
+        "to": "rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "champ",
+        "fromPort": "value",
+        "to": "write_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "rotation",
+        "fromPort": "value",
+        "to": "write_rotation",
+        "toPort": "value"
+      },
+      {
+        "from": "champ",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "min_x",
+        "toPort": "a"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "min_x",
+        "toPort": "b"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "min_y",
+        "toPort": "a"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "min_y",
+        "toPort": "b"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "max_x",
+        "toPort": "a"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "max_x",
+        "toPort": "b"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "max_y",
+        "toPort": "a"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "max_y",
+        "toPort": "b"
+      },
+      {
+        "from": "min_x",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "min_y",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "max_x",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "c"
+      },
+      {
+        "from": "max_y",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "max"
+      },
+      {
+        "from": "hover_op",
+        "fromPort": "value",
+        "to": "write_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]
