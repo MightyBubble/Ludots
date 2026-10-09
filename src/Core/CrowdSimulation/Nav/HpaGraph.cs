@@ -56,8 +56,9 @@ public sealed class HpaGraph
     private Fix64[] _localW = Array.Empty<Fix64>();
     private byte[] _localWant = Array.Empty<byte>();
 
-    /// <summary>认知变体克隆(F02):外层容器全拷(增量重烘只做条目替换),内层数组与簇块
-    /// 共享引用——重烘改写的是变体自有的外层槽位;查询暂存全新。</summary>
+    /// <summary>认知变体克隆(F02):外层容器全拷;内层数组/簇块/LinkOut 的 List 与真相(及
+    /// 其他同源变体)共用,禁止原地写——写了就击穿全体共享者。一切改写只能整体替换变体自有的
+    /// 外层槽位(增量重烘的全部写入点均如此);查询暂存全新。</summary>
     public HpaGraph CloneForVariant()
     {
         return new HpaGraph
