@@ -16,15 +16,19 @@ namespace CrowdSimulationTests.Parity;
 /// 真值槽,拆除留残影再开槽——每轮两槽,休眠槽超 slotCacheCapacity 后最旧先淘汰;重建命中
 /// 已淘汰的认知集必须开新槽(容量回收复用)。淘汰次序 = 注册序(参考端 b.entry 是 JS Map
 /// 插入序,槽号单调不复用 ⇒ 插入序即槽号升序)——次序错一步,重建命中的槽号与槽账就分叉,
-/// 由迷雾 digest 的逐位硬门(每组槽号 + 全局 seq/entry/dormant)钉住。单位全程停出生点,
-/// 状态机与 contacts 走零容忍口径;结构 op 报告逐字段硬门(S7 同族)。
+/// 由迷雾 digest 的逐位硬门(每组槽号 + 全局 seq/entry/dormant)钉住。单位全程停驻出生点,
+/// 无运动放大源,停驻面走零容忍口径:状态机逐位、contacts 逐位、位置逐样本硬门——
+/// 实测(2026-10-09,200 tick × 8 单位):contacts 0/1600 不一致、max 0.0242cm、
+/// p50 0.0215cm(残差 = 参考端 f32 状态存储的量化差,5km 量级 eps≈0.057cm);
+/// 位置与 p50 带按 ~3 倍余量取 0.06cm。
+/// 结构 op 报告逐字段硬门(S7 同族)。
 /// </summary>
 public sealed class S7FogRecycleTruthTests
 {
-    private const double MaxTrajectoryBandCm = 15000.0;
-    private const double FinalBandCm = 5000.0;
-    private const int FinalTicks = 30;
-    private const double AlignedDeltaCm = 1.0;
+    /// <summary>停驻位置零容忍带(厘米):实测 max 0.0242(参考端 f32 存储量化差),~3 倍余量。
+    /// 逐样本硬门——无百分比例外,超带即红。</summary>
+    private const double ParkBandCm = 0.06;
+    private const double P50BandCm = 0.06;
 
     [Test]
     public void S7FogRecycle_MatchesWebTruth()
@@ -55,6 +59,7 @@ public sealed class S7FogRecycleTruthTests
         Assert.That(groups, Is.EqualTo(fog.G), "视野组数与真值不一致");
 
         double maxDeltaCm = 0;
+        var deltas = new List<double>();
         int structuralMismatches = 0, modeMismatches = 0, contactMismatches = 0, contactMaxDelta = 0, contactSamples = 0, alignedContactSamples = 0;
         string? firstMismatch = null, firstDigestMismatch = null;
         for (int t = 0; t < ticks; t++)
@@ -82,20 +87,19 @@ public sealed class S7FogRecycleTruthTests
                 Assert.That(session.Units.HandleAt(i), Is.EqualTo(handle), $"tick {t} 单位 {i} 句柄错位");
                 var pos = session.World.Get<Ludots.Core.Components.WorldPositionCm>(entity).Value;
                 double d = Math.Max(Math.Abs(pos.X.ToDouble() - txCm), Math.Abs(pos.Y.ToDouble() - tyCm));
+                deltas.Add(d);
                 if (d > maxDeltaCm) maxDeltaCm = d;
 
-                if (d <= AlignedDeltaCm)
+                // 停驻零容忍:contacts 逐位(不限"对齐样本"——停驻面全部样本即同输入)
+                int contactDelta = Math.Abs(session.Movement!.Contacts[i] - tContacts);
+                if (contactDelta > 0)
                 {
-                    int contactDelta = Math.Abs(session.Movement!.Contacts[i] - tContacts);
-                    if (contactDelta > 0)
-                    {
-                        contactMismatches++;
-                        contactMaxDelta = Math.Max(contactMaxDelta, contactDelta);
-                        firstMismatch ??= $"tick {t} 单位 {i}: contacts 我 {session.Movement.Contacts[i]} vs 参考 {tContacts}";
-                    }
-
-                    alignedContactSamples++;
+                    contactMismatches++;
+                    contactMaxDelta = Math.Max(contactMaxDelta, contactDelta);
+                    firstMismatch ??= $"tick {t} 单位 {i}: contacts 我 {session.Movement.Contacts[i]} vs 参考 {tContacts}";
                 }
+
+                alignedContactSamples++;
 
                 contactSamples++;
                 var st = session.World.Get<CrowdSimulationUnitState>(entity);
@@ -197,13 +201,17 @@ public sealed class S7FogRecycleTruthTests
 
         Assert.That(oc, Is.EqualTo(opsBin.Length), "s7crecycle-ops.bin 末尾有多余字节");
 
+        deltas.Sort();
+        double p50 = deltas[deltas.Count / 2];
         TestContext.Out.WriteLine(
-            $"S7-c 认知槽回收:max偏差 {maxDeltaCm:F2}cm;状态机逐位 {structuralMismatches} 处不一致;" +
-            $"contacts 对齐 {contactMismatches}/{alignedContactSamples};digest 全程逐位一致;报告 {reports.Count} 笔全字段一致;" +
+            $"S7-c 认知槽回收:max偏差 {maxDeltaCm:F4}cm p50 {p50:F4}cm;状态机逐位 {structuralMismatches} 处不一致;" +
+            $"contacts 逐位 {contactMismatches}/{alignedContactSamples}(最大幅度 {contactMaxDelta});digest 全程逐位一致;报告 {reports.Count} 笔全字段一致;" +
             $"槽账终态 seq={belief.Seq} switches={belief.Switches} entry={belief.Entries.Count} dormant={belief.DormantList.Count}");
         Assert.That(structuralMismatches, Is.EqualTo(0), $"状态机逐位不一致(单位全程停驻,零容忍):{firstMismatch}");
-        Assert.That(contactMaxDelta, Is.LessThanOrEqualTo(3), $"接触计数幅度 {contactMaxDelta} 超上限(首个:{firstMismatch})");
-        Assert.That(maxDeltaCm, Is.LessThanOrEqualTo(MaxTrajectoryBandCm), "轨迹位置最大偏差超带宽(结构性兜底门)");
+        Assert.That(contactMismatches, Is.EqualTo(0), $"contacts 逐位零容忍(停驻面全样本):{firstMismatch}");
+        Assert.That(maxDeltaCm, Is.LessThanOrEqualTo(ParkBandCm),
+            $"停驻位置逐样本硬门:max {maxDeltaCm:F4}cm 超 {ParkBandCm}cm(实测基线 0.02,超带即停驻被扰动)");
+        Assert.That(p50, Is.LessThanOrEqualTo(P50BandCm), $"停驻位置 p50 {p50:F4}cm 超 {P50BandCm}cm(实测基线 0.01)");
     }
 
     private static string? Mismatch(params (string Name, int Mine, int Truth)[] fields)
