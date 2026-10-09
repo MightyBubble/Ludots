@@ -1,0 +1,166 @@
+[
+  {
+    "id": "graph.rts.panel_activate_slot",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_panel_slot",
+        "event": "EntityCommandPanel.ActivateSlot",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Panel.Slot"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "entity_command_panel.activation.members"
+      },
+      {
+        "id": "count",
+        "op": "AggCount"
+      },
+      {
+        "id": "count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "has_members",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "members_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "count"
+      },
+      {
+        "from": "count",
+        "fromPort": "next",
+        "to": "count_f"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "has_members"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "next",
+        "to": "members_branch"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "members_branch",
+        "fromPort": "true",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "count",
+        "fromPort": "value",
+        "to": "count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "b"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "value",
+        "to": "members_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

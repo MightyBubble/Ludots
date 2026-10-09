@@ -103,13 +103,13 @@ internal sealed class UxPrototypeEntityCommandPanelSource : IEntityCommandPanelS
         return count;
     }
 
-    public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
+    public EntityCommandPanelActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
     {
         if (groupIndex != 0 || !_state.TryActivateEntityCommand(_engine, target, slotIndex))
         {
-            return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedValidation);
+            return EntityCommandPanelActivationResult.Rejected(target, EntityCommandPanelActivationRejection.BlockedByRule);
         }
 
-        return InputOrderActivationResult.Submitted(target, orderId: 0, Entity.Null);
+        return EntityCommandPanelActivationResult.Accepted(target);
     }
 }

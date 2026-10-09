@@ -1020,23 +1020,17 @@ namespace EntityCommandPanelMod.UI
             Span<EntityCommandPanelStatusView> statuses,
             int queueItemCount,
             Span<EntityCommandPanelQueueItemView> queueItems,
-            in InputOrderActivationResult lastActivationResult,
+            in EntityCommandPanelActivationResult lastActivationResult,
             in RtsHudTheme theme)
         {
             string footerText;
-            if (lastActivationResult.State == InputOrderActivationState.Rejected)
+            if (lastActivationResult.State == EntityCommandPanelActivationState.Rejected)
             {
                 footerText = $"Command failed: {lastActivationResult.Rejection}";
             }
-            else if (lastActivationResult.State == InputOrderActivationState.EnteredAiming)
+            else if (lastActivationResult.State == EntityCommandPanelActivationState.Accepted)
             {
-                footerText = "Choose target";
-            }
-            else if (lastActivationResult.State == InputOrderActivationState.Submitted)
-            {
-                footerText = lastActivationResult.OrderId > 0
-                    ? $"Order {lastActivationResult.OrderId} submitted"
-                    : "Order submitted";
+                footerText = "Command sent";
             }
             else if (statusCount > 0)
             {
@@ -1362,7 +1356,7 @@ namespace EntityCommandPanelMod.UI
             int groupIndex,
             int slotIndex)
         {
-            InputOrderActivationResult result = EntityCommandPanelSourceDispatch.ActivateSlot(
+            EntityCommandPanelActivationResult result = EntityCommandPanelSourceDispatch.ActivateSlot(
                 source,
                 in sourceContext,
                 groupIndex,
@@ -1713,7 +1707,8 @@ namespace EntityCommandPanelMod.UI
                 nameof(CastModeType.AimCast) => "RTS",
                 nameof(CastModeType.PressReleaseAimCast) => "PR",
                 nameof(CastModeType.ContextScored) => "CTX",
-                _ => "TF"
+                nameof(CastModeType.TargetFirst) => "TF",
+                _ => "—"
             };
         }
 
@@ -1728,14 +1723,9 @@ namespace EntityCommandPanelMod.UI
             return _engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
         }
 
-        private string ResolveInteractionModeKey()
+        private static string ResolveInteractionModeKey()
         {
-            if (_engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                return mapping.InteractionMode.ToString();
-            }
-
-            return nameof(CastModeType.TargetFirst);
+            return string.Empty;
         }
 
         private string ResolveShowcaseThemeId()

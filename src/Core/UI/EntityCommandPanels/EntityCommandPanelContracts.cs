@@ -1,7 +1,5 @@
 using System;
 using Arch.Core;
-using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Orders;
 
 namespace Ludots.Core.UI.EntityCommandPanels
 {
@@ -311,14 +309,49 @@ namespace Ludots.Core.UI.EntityCommandPanels
         int CopyQueueItems(in EntityCommandPanelSourceContext context, Span<EntityCommandPanelQueueItemView> destination);
     }
 
+    public enum EntityCommandPanelActivationState : byte
+    {
+        None = 0,
+        Accepted = 1,
+        Rejected = 2
+    }
+
+    public enum EntityCommandPanelActivationRejection : byte
+    {
+        None = 0,
+        InvalidActor = 1,
+        EmptySlot = 2,
+        BlockedByRule = 3,
+        NotActionable = 4,
+        NoHandler = 5,
+        QueueFull = 6
+    }
+
+    /// <summary>
+    /// Accepted means the activation was handed to the game (a panel source handled it, or the
+    /// slot event was queued for the active interaction context); whether an order results is
+    /// decided by the game's graph, not by the panel.
+    /// </summary>
+    public readonly record struct EntityCommandPanelActivationResult(
+        EntityCommandPanelActivationState State,
+        Entity Actor,
+        EntityCommandPanelActivationRejection Rejection)
+    {
+        public static EntityCommandPanelActivationResult Accepted(Entity actor) =>
+            new(EntityCommandPanelActivationState.Accepted, actor, EntityCommandPanelActivationRejection.None);
+
+        public static EntityCommandPanelActivationResult Rejected(Entity actor, EntityCommandPanelActivationRejection rejection) =>
+            new(EntityCommandPanelActivationState.Rejected, actor, rejection);
+    }
+
     public interface IEntityCommandPanelActionSource
     {
-        InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex);
+        EntityCommandPanelActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex);
     }
 
     public interface IEntityCommandPanelContextActionSource : IEntityCommandPanelActionSource
     {
-        InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
+        EntityCommandPanelActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
     }
 
     /// <summary>
@@ -435,7 +468,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             return source is IEntityCommandPanelActionSource or IEntityCommandPanelContextActionSource;
         }
 
-        public static InputOrderActivationResult ActivateSlot(
+        public static EntityCommandPanelActivationResult ActivateSlot(
             IEntityCommandPanelSource source,
             in EntityCommandPanelSourceContext context,
             int groupIndex,
@@ -451,9 +484,9 @@ namespace Ludots.Core.UI.EntityCommandPanels
                 return actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
             }
 
-            return InputOrderActivationResult.Rejected(
+            return EntityCommandPanelActivationResult.Rejected(
                 context.TargetEntity,
-                OrderSubmitResult.RejectedByRule);
+                EntityCommandPanelActivationRejection.NotActionable);
         }
 
         public static bool TryCopyAggregationMembers(

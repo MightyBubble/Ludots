@@ -1,0 +1,14 @@
+[
+  {
+    "id": "EntityCommandPanel.ActivateSlot",
+    "description": "实体命令面板上点了一个技能格。slot 是格子的槽位索引；动手的单位在点击者身上的 entity_command_panel.activation.members 集合里。由当前交互状态里挂的图决定是立刻施放还是进入瞄准。",
+    "scope": "map",
+    "params": [
+      {
+        "name": "slot",
+        "type": "int",
+        "key": "Panel.Slot"
+      }
+    ]
+  }
+]

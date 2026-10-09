@@ -381,11 +381,6 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             messages.Add(commands.Message);
         }
 
-        if (TryBuildAimingMessage(commands, out string aimingMessage))
-        {
-            messages.Add(aimingMessage);
-        }
-
         return new BrowserRtsProductionDiagnosticsView(
             reason,
             _lastCommand,
@@ -395,43 +390,6 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             entities.Length,
             0,
             messages.ToArray());
-    }
-
-    private bool TryBuildAimingMessage(BrowserRtsProductionCommandPanelView commands, out string message)
-    {
-        message = string.Empty;
-        InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-        if (mapping is not { IsAiming: true })
-        {
-            return false;
-        }
-
-        string label = ResolveAimingCommandLabel(commands, mapping.AimingActionId);
-        message = label.Length > 0
-            ? $"Placement armed: {label}. Terrain confirmation pending."
-            : "Placement armed. Terrain confirmation pending.";
-        return true;
-    }
-
-    private static string ResolveAimingCommandLabel(BrowserRtsProductionCommandPanelView commands, string actionId)
-    {
-        if (string.IsNullOrWhiteSpace(actionId))
-        {
-            return string.Empty;
-        }
-
-        foreach (BrowserRtsProductionCommandGroupView group in commands.Groups)
-        {
-            foreach (BrowserRtsProductionCommandSlotView slot in group.Slots)
-            {
-                if (string.Equals(slot.ActionId, actionId, StringComparison.Ordinal))
-                {
-                    return slot.Label;
-                }
-            }
-        }
-
-        return actionId;
     }
 
     private WebUiCommandResult SelectEntity(WebUiCommandRequest request)
@@ -501,17 +459,12 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return WebUiCommandResult.Fail("ability_not_actionable", "This command slot has no gameplay execution exposed by GAS.");
         }
 
-        if (!TryBindActiveInputMapping(target))
-        {
-            return WebUiCommandResult.Fail("input_mapping_missing", "ActiveInputOrderMapping is not ready for the selected command target.");
-        }
-
-        InputOrderActivationResult activation = EntityCommandPanelSourceDispatch.ActivateSlot(
+        EntityCommandPanelActivationResult activation = EntityCommandPanelSourceDispatch.ActivateSlot(
             source,
             in context,
             groupIndex,
             slotIndex);
-        if (activation.State == InputOrderActivationState.Rejected)
+        if (activation.State == EntityCommandPanelActivationState.Rejected)
         {
             return WebUiCommandResult.Fail(
                 MapActivationRejectionCode(activation.Rejection),
@@ -521,28 +474,30 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return WebUiCommandResult.Ok();
     }
 
-    private static string MapActivationRejectionCode(OrderSubmitResult rejection)
+    private static string MapActivationRejectionCode(EntityCommandPanelActivationRejection rejection)
     {
         return rejection switch
         {
-            OrderSubmitResult.RejectedQueueFull => "ability_queue_full",
-            OrderSubmitResult.RejectedInvalidActor => "ability_invalid_actor",
-            OrderSubmitResult.RejectedInvalidOrderType => "ability_invalid_order_type",
-            OrderSubmitResult.RejectedByRule => "ability_rejected_by_rule",
-            OrderSubmitResult.RejectedValidation => "ability_validation_failed",
+            EntityCommandPanelActivationRejection.InvalidActor => "ability_invalid_actor",
+            EntityCommandPanelActivationRejection.EmptySlot => "ability_empty_slot",
+            EntityCommandPanelActivationRejection.BlockedByRule => "ability_rejected_by_rule",
+            EntityCommandPanelActivationRejection.NotActionable => "ability_not_actionable",
+            EntityCommandPanelActivationRejection.NoHandler => "ability_no_handler",
+            EntityCommandPanelActivationRejection.QueueFull => "ability_queue_full",
             _ => "ability_activation_failed",
         };
     }
 
-    private static string MapActivationRejectionMessage(OrderSubmitResult rejection)
+    private static string MapActivationRejectionMessage(EntityCommandPanelActivationRejection rejection)
     {
         return rejection switch
         {
-            OrderSubmitResult.RejectedQueueFull => "The order queue is full; this ability activation was rejected.",
-            OrderSubmitResult.RejectedInvalidActor => "The selected actor is not authorized for this ability activation.",
-            OrderSubmitResult.RejectedInvalidOrderType => "No mapped action is available for this command-panel slot.",
-            OrderSubmitResult.RejectedByRule => "A gameplay rule rejected this ability activation.",
-            OrderSubmitResult.RejectedValidation => "Ability activation failed validation before submission.",
+            EntityCommandPanelActivationRejection.InvalidActor => "The selected actor cannot activate this command-panel slot.",
+            EntityCommandPanelActivationRejection.EmptySlot => "This command-panel slot has no ability.",
+            EntityCommandPanelActivationRejection.BlockedByRule => "A gameplay rule blocks this ability activation.",
+            EntityCommandPanelActivationRejection.NotActionable => "This command-panel slot cannot be activated.",
+            EntityCommandPanelActivationRejection.NoHandler => "The active interaction context does not handle command-panel slot activations.",
+            EntityCommandPanelActivationRejection.QueueFull => "Too many command-panel activations are pending this frame.",
             _ => "The shared GAS command-panel source rejected this ability activation.",
         };
     }
@@ -681,18 +636,6 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             "Browser RTS command source",
             "Selected through the browser data plane.");
         collections.Replace(owner, descriptor, next, owner);
-        return true;
-    }
-
-    private bool TryBindActiveInputMapping(Entity target)
-    {
-        InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-        if (mapping == null || !TryGetSolePossessedPlayerId(out int playerId) || !CanSolePossessedCommand(target))
-        {
-            return false;
-        }
-
-        mapping.SetSolePossessedActor(target, playerId);
         return true;
     }
 

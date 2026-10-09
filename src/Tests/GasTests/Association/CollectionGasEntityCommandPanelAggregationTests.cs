@@ -135,20 +135,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ActivateSlot_SubmitsEveryGroupMemberSlot()
+        public void ActivateSlot_QueuesOneActivationPerMemberSlot()
         {
             using var engine = CreateEngineWithCommandPanelMod();
             var fixture = SelectionFixture.Create(engine);
-
-            var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
-            mapping.SetActorProvider((out Entity actor) =>
-            {
-                actor = fixture.CollectionOwner;
-                return true;
-            });
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
+            EntityCommandPanelActivationProbe probe = EntityCommandPanelActivationProbe.Attach(engine, fixture.CollectionOwner);
 
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
             var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
@@ -156,120 +147,34 @@ namespace Ludots.Tests.GAS
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
             Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId), "displayed cell 1 is the charge family group.");
 
-            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+            EntityCommandPanelActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+            probe.Dispatch();
 
-            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(activated.State, Is.EqualTo(EntityCommandPanelActivationState.Accepted));
             Assert.That(activated.Actor, Is.EqualTo(fixture.Elite));
-            Assert.That(activated.OrderId, Is.GreaterThan(0));
-            Assert.That(submitted.Count, Is.EqualTo(3));
-            Assert.That(submitted[0].Args.I0, Is.EqualTo(2),
+            Assert.That(probe.Fired.Count, Is.EqualTo(2), "the charge family spans two owner slot indices.");
+            Assert.That(probe.Fired[0].Slot, Is.EqualTo(2),
                 "activation starts from the representative member (elite marine, charge cannon on slot 2).");
-            Assert.That(submitted[0].Actor, Is.EqualTo(fixture.Elite));
-            Assert.That(submitted[1].Args.I0, Is.EqualTo(1));
-            Assert.That(submitted[1].Actor, Is.EqualTo(fixture.Tank1));
-            Assert.That(submitted[2].Args.I0, Is.EqualTo(1));
-            Assert.That(submitted[2].Actor, Is.EqualTo(fixture.Tank2));
+            Assert.That(probe.Fired[0].Members, Is.EqualTo(new[] { fixture.Elite }));
+            Assert.That(probe.Fired[1].Slot, Is.EqualTo(1));
+            Assert.That(probe.Fired[1].Members, Is.EqualTo(new[] { fixture.Tank1, fixture.Tank2 }));
         }
 
         [Test]
-        public void ActivateSlot_MultiMemberSmartCast_SubmitsEveryMember()
+        public void ActivateSlot_WithoutHandlingInteractionContext_RejectsWithNoHandler()
         {
             using var engine = CreateEngineWithCommandPanelMod();
             var fixture = SelectionFixture.Create(engine);
-
-            var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.SmartCast);
-            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
-            mapping.SetActorProvider((out Entity actor) =>
-            {
-                actor = fixture.CollectionOwner;
-                return true;
-            });
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
 
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
             var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
             var slots = new EntityCommandPanelSlotView[8];
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
-            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
 
-            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+            EntityCommandPanelActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
 
-            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
-            Assert.That(submitted.Count, Is.EqualTo(3));
-            Assert.That(mapping.IsAiming, Is.False);
-        }
-
-        [Test]
-        public void ActivateSlot_MemberFailureReturnsTypedRejectionWithoutDroppingOtherMembers()
-        {
-            using var engine = CreateEngineWithCommandPanelMod();
-            var fixture = SelectionFixture.Create(engine);
-
-            var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
-            mapping.SetActorProvider((out Entity actor) =>
-            {
-                actor = fixture.CollectionOwner;
-                return true;
-            });
-            mapping.SetOrderSubmitHandler((in Order order) =>
-            {
-                submitted.Add(order);
-                return order.Actor == fixture.Tank1
-                    ? OrderSubmitResult.RejectedQueueFull
-                    : OrderSubmitResult.Queued;
-            });
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
-
-            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
-            var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
-            var slots = new EntityCommandPanelSlotView[8];
-            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
-            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
-
-            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
-
-            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Rejected));
-            Assert.That(activated.Actor, Is.EqualTo(fixture.Tank1));
-            Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
-            Assert.That(activated.OrderId, Is.GreaterThan(0));
-            Assert.That(submitted.Count, Is.EqualTo(3),
-                "one member failing must not silently collapse the aggregate command back to the representative unit.");
-        }
-
-        [Test]
-        public void ActivateSlot_MultiMemberAiming_ReturnsTypedRejectionWithoutOpeningSingleActorAiming()
-        {
-            using var engine = CreateEngineWithCommandPanelMod();
-            var fixture = SelectionFixture.Create(engine);
-
-            var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.AimCast);
-            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
-            mapping.SetActorProvider((out Entity actor) =>
-            {
-                actor = fixture.CollectionOwner;
-                return true;
-            });
-            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
-
-            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
-            var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
-            var slots = new EntityCommandPanelSlotView[8];
-            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
-            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
-
-            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
-
-            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Rejected));
-            Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
-            Assert.That(submitted.Count, Is.Zero);
-            Assert.That(mapping.IsAiming, Is.False);
-            Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
-            Assert.That(mapping.LastActivationResult.Actor, Is.EqualTo(activated.Actor));
-            Assert.That(mapping.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
+            Assert.That(activated.State, Is.EqualTo(EntityCommandPanelActivationState.Rejected));
+            Assert.That(activated.Rejection, Is.EqualTo(EntityCommandPanelActivationRejection.NoHandler));
         }
 
         [Test]
@@ -519,42 +424,6 @@ namespace Ludots.Tests.GAS
             {
                 throw ex.InnerException;
             }
-        }
-
-        private static InputOrderMappingSystem CreateMappingSystem(
-            List<Order> submitted,
-            CastModeType interactionMode = CastModeType.TargetFirst)
-        {
-            var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
-            {
-                InteractionMode = interactionMode,
-                Mappings = new List<InputOrderMapping>
-                {
-                    CreateSkillMapping("SkillQ", 0),
-                    CreateSkillMapping("SkillW", 1),
-                    CreateSkillMapping("SkillE", 2)
-                }
-            });
-            mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetActivationActorValidator((actor, _) => actor != Entity.Null);
-            int nextOrderId = 1;
-            mapping.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
-            mapping.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
-            return mapping;
-        }
-
-        private static InputOrderMapping CreateSkillMapping(string actionId, int slotIndex)
-        {
-            return new InputOrderMapping
-            {
-                ActionId = actionId,
-                Trigger = InputTriggerType.PressedThisFrame,
-                OrderTypeKey = "castAbility",
-                ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
-                RequireTarget = false,
-                TargetType = OrderTargetType.None,
-                IsSkillMapping = true
-            };
         }
 
         private static string FindRepoRoot()
