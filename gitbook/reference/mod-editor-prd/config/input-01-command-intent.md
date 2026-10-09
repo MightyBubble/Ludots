@@ -68,4 +68,4 @@
 
 - 根默认档案：`assets/Input/command_intent_profiles.json`（intent.command.default）
 
-**相关文档**：[input-01 PRD](../prd/input-01-command-intent.md) · [ord-06 配置说明](ord-06-input-mappings.md) · [input-05 配置说明](input-05-filters-and-schemes.md)
+**相关文档**：[input-01 PRD](../prd/input-01-command-intent.md) · [input-03 配置说明](input-03-interaction-context.md) · [input-05 配置说明](input-05-filters-and-schemes.md)

@@ -127,14 +127,15 @@ Slot 只用于初始成员布局和稳定展开顺序。移动后的 command-gro
 
 ## 多方阵目标
 
-当玩家同时选择多个 anchor，`groupMoveTargetLayout` 为每个 command source 计算不同中心目标，避免多个方阵重叠到同一点。
+当玩家同时选择多个 anchor，`graph.formation.command_commit` 的 `SubmitCommandIntent` 节点按 `actorOrder` 布局分配目标，避免多个方阵重叠到同一点。
 
 ```json
-"groupMoveTargetLayout": {
-  "mode": "Grid",
-  "assignment": "ActorOrder",
-  "spacingCm": 1800,
-  "orderTypeKeys": [ "massNavigationMove" ]
+{
+  "id": "submit",
+  "op": "SubmitCommandIntent",
+  "queue": "onQueueModifier",
+  "layout": "actorOrder",
+  "layoutSpacingCm": 1800
 }
 ```
 

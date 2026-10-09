@@ -72,7 +72,7 @@ Graph 不是第六个框，而是**贯穿 Effect、Ability、AI 的可编程面*
 ```
 target_dispatch_presets → clock → attribute_constraints → graphs → preset_types → order_types
 → effects → abilities → ability_form_sets → tag_rules → func_lib → action_lib
-→ context_groups → attribute_bindings      （+ AI/*.json、Input/input_order_mappings；此链是引用许可序）
+→ context_groups → attribute_bindings      （+ AI/*.json；此链是引用许可序）
 ```
 
 跨 mod 合并：同名文件按 `config_catalog.json` 声明的策略合并，主力是"同 id 深合并"——后加载的 mod 赢，但只赢它写到的字段；`__delete:true` 可删条目。详见 `cfg-05`。
@@ -263,7 +263,6 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | `fx-01-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | **已写** |
 | `gr-op-05-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | **已写** |
 | `ord-05-input-protocol.md` | 输入协议 | 响应链等待状态与回答节点、三种 Gate 的等待与改写目标 | P1 | **已写** |
-| `ord-06-input-mappings.md` | 输入映射 | input_order_mappings.json、argsTemplate、路由候选、用户覆写 | P1 | **已写** |
 | `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | **已写** |
 | `input-02-cast-dispatch.md` | 施法派发档案 | cast_dispatch_profiles.json、目标收集与派发策略 | P2 | **已写** |
 | `input-03-interaction-context.md` | 交互上下文档案 | interaction_context_profiles.json、交互模式与上下文 | P2 | **已写** |

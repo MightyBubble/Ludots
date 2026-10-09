@@ -10,7 +10,7 @@
 | O4 | 中 | 提交结果到失败原因的映射对"接受态"输入抛异常，调用方须先排除——接口把合同藏在调用约定里 | src/Core/Gameplay/GAS/Orders/OrderAdmissionResults.cs:50-66（:62-63 抛） | 接受态返回显式哨兵或拆分接口（ord-03 spec 任务） | 待立项 |
 | O5 | 低 | 黑板四缓冲操作面不对称：Float 仅 TryGet/Set 无 Remove，其余三种可移除——清理路径对 Float 只能覆盖 | src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs（无 Remove） | Float 补齐移除接口（ord-04 spec 任务） | 待立项 |
 | O6 | 低 | `Cast.AbilityId`（113）死键：定义注册但核心无读取方——内置键表里的暗桩 | src/Core/Gameplay/GAS/Orders/OrderBlackboardKeys.cs:26-87 | 接通消费方或从内置表移除（ord-04 spec 任务） | 待立项 |
-| O7 | 高 | 输入映射文件全部由 mod 携带且缺失时仅日志跳过：新 mod"按键无效却无错误"，排障成本高 | 根 assets/Input 无 input_order_mappings.json；InputOrderMappingLoader 缺文件日志跳过 | mod 清单声明携带则缺失 fail-fast，未声明静默（ord-06 spec 任务） | 待立项 |
+| O7 | — | 输入映射文件缺失时仅日志跳过 | 输入映射已删，按键到下令改由各 mod 的交互状态和下令图声明 | — | 已失效 |
 | O8 | 高 | 施法派发 cycle 的推进入口生产零调用（仅测试）：`one_by_one` 档案退化为永远第一位演员——配置承诺与运行事实背离 | src/Core/Input/Interaction/CastDispatchProfileRegistry.cs:163-176 | 订单接受回执处按 advanceOn 推进轮转游标（input-02 spec 任务） | 待立项 |
 | O9 | 高 | 根默认输入的关键动作（Hotkey1-9、PrimaryClick 等）只绑在 Physics2D_Playground，Default_Gameplay 未绑——默认玩法上下文不可触发，依赖 mod 补充 | assets/Input/default_input.json 两上下文绑定对照 | 补根绑定或"玩法上下文必绑清单"校验（input-05 spec 任务） | 待立项 |
 

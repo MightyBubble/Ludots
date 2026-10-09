@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "fc1a940db",
+    "head": "459faf9edf",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -8843,9 +8843,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按鼠标位移增量更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8905,9 +8905,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按右摇杆偏移量持续更新视角或准星朝向"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8988,9 +8988,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把最近合法敌人记为软锁辅助目标"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-143",
@@ -9108,9 +9108,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "硬锁目标切换到下一合法敌人"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-118",
@@ -9239,9 +9239,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "按准星重算落点合法性"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-148",
@@ -9373,9 +9373,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "退出瞄准且不扣资源、不进冷却"
         }
       ],
-      "ludots": "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-116",
@@ -10688,9 +10688,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "对自身施加该技能增益并进冷却"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-095",
@@ -10774,9 +10774,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "以自身为圆心结算范围伤害"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-128",
@@ -10842,9 +10842,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "沿面朝瞬移到合法落点"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-104",
@@ -10949,9 +10949,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "切回原形态并还原技能组"
         }
       ],
-      "ludots": "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
+      "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-067",
@@ -11119,7 +11119,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把点中敌人记为技能目标并释放"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11210,7 +11210,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "准星已有合法目标则跳过指示器直接放"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11339,7 +11339,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "判定友军合法并结算治疗"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11459,7 +11459,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "凑齐两目标后结算技能连接"
         }
       ],
-      "ludots": "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+      "ludots": "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
       "todos": [
         "双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"
       ],
@@ -11610,7 +11610,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把点击地面记为落点并结算技能"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11706,7 +11706,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "在松手位置确认释放"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11813,7 +11813,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "确认放置并开始建造或落地"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],
@@ -11895,7 +11895,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把小地图点击映射为大地图落点"
         }
       ],
-      "ludots": "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+      "ludots": "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
       "todos": [
         "InputCastSpec（套索/多边形）RFC 有、代码未落地"
       ],

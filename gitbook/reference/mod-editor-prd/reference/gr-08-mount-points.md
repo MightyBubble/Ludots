@@ -17,7 +17,7 @@
 | BT 叶 | Script | BehaviorTreeWorld.cs:443 |
 | HFSM | Script | GraphProgramHfsmHost.cs:121 |
 
-次要挂点现状：关卡脚本（LevelScriptPrograms.cs:22-50，步数预算 64、禁挂起）、进度校验（ProgressionRequirementEvaluator.cs:387）、表现规则（PresenterRuleSystem.cs:334,760——条件 Validation、参数 Score）、瞄准预览（AbilityAimPresentationRuntime.cs:389-393）、Query 物化（GraphReturnWriter.cs:49）。
+次要挂点现状：关卡脚本（LevelScriptPrograms.cs:22-50，步数预算 64、禁挂起）、进度校验（ProgressionRequirementEvaluator.cs:387）、表现规则（PresenterRuleSystem.cs:334,760——条件 Validation、参数 Score）、Query 物化（GraphReturnWriter.cs:49）。
 
 ## 2. 代码锚点
 

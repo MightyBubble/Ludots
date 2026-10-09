@@ -25,9 +25,9 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"],
     ),
     "aim": (
-        "瞄准：InputOrderMappingSystem + CastModeType（AimCast 等）；"
-        "瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
-        ["RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"],
+        "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；"
+        "指针地面点 ScreenPointToGround。",
+        ["瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"],
     ),
     "attack": (
         "普攻/射击：经 OrderQueue / AbilityExec；RTS 右键攻击走 attackTarget intent。",
@@ -38,15 +38,15 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["磁吸辅助、翻滚中转向等属手感策略，需模组/配置声明，非全家桶默认开"],
     ),
     "instant-skill": (
-        "无目标技：InputOrderMapping → castAbility Order；自身/脚下类目标在 mapping 与 ability 配置。",
-        ["技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile"],
+        "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
+        ["施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"],
     ),
     "unit-skill": (
-        "点单位技：HoveredEntity / 点选目标 → castAbility；智能施法走 SmartCast 模式。",
+        "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
         ["双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导"],
     ),
     "ground-skill": (
-        "点地技：OrderTargetType.Position；小地图点地有 MinimapInputConsumer（偏展示）。",
+        "点地技：施法图 ScreenPointToGround 取地面点后 SubmitCast；小地图点地有 MinimapInputConsumer（偏展示）。",
         ["InputCastSpec（套索/多边形）RFC 有、代码未落地"],
     ),
     "direction-skill": (

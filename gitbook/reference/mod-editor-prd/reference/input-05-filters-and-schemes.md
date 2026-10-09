@@ -23,4 +23,4 @@
 | 属性绑定系统 | src/Core/Input/Systems/InputActionAttributeBindingSystem.cs |
 | 根资产 | assets/Input/ 下四文件 |
 
-**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [ord-06 reference](ord-06-input-mappings.md)
+**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [input-03 reference](input-03-interaction-context.md)
