@@ -77,7 +77,7 @@
   <div>
     <span class="badge">锚点 Pivot</span><span class="badge">摇臂 Arm</span><span class="badge">镜体 Lens</span><span class="badge">瞄准层 AimLayer</span><span class="badge">探测 Probe</span>
   </div>
-  <p>右下角"镜体视口"就是这台 rig 渲染出的玩家画面；绿色圆环 = 摇臂 Yaw 轨道。命名只用引擎自己的字段语言，Shoulder/Boom/Socket 这类外来词不进词表。</p>
+  <p>右下角"镜体视口"就是这台 rig 渲染出的玩家画面；绿色圆环 = 摇臂 Yaw 轨道。WASD 移动角色（相机相对），Tab 锁定红方实体，勾选指针捕获后鼠标直接 look。命名只用引擎自己的字段语言，Shoulder/Boom/Socket 这类外来词不进词表。</p>
 
   <details>
     <summary>① 锚点层（跟随的根）</summary>
@@ -136,7 +136,7 @@
 <div class="panel" id="ctrl">
   <div class="sec">
     <div class="secname">演示开关</div>
-    <div class="toggle"><input type="checkbox" id="walk" checked><label for="walk">角色行走（20Hz sim 步进驱动）</label></div>
+    <div class="toggle"><input type="checkbox" id="walk"><label for="walk">自动巡走（默认关：用 WASD 自己开车）</label></div>
     <div class="toggle"><input type="checkbox" id="ghost" checked><label for="ghost">显示 sim 真值幽灵球</label></div>
     <div class="toggle"><input type="checkbox" id="lag" checked><label for="lag">摇臂阻尼（arm lag，关闭 = 相机直跟 sim，可见修复前抖动）</label></div>
     <div class="toggle"><input type="checkbox" id="orbitRing" checked><label for="orbitRing">显示 Yaw 轨道环</label></div>
@@ -190,9 +190,19 @@
   </div>
 
   <div class="sec">
+    <div class="secname">锁定镜头风格</div>
+    <div class="row"><label>风格</label><select id="lockStyle">
+      <option value="hard">硬锁定 —— 摇臂绕轴 + 注视加权（黑魂/高达VS）</option>
+      <option value="soft">软锁定 —— 摇臂不动，只把注视拉向目标（Arkham/DMC 式）</option>
+    </select></div>
+    <p style="color:var(--dim);margin:4px 0 0">锁定中 Tab 解除；超距（14m）自动断锁。软锁定下摇臂 yaw 完全留给玩家。</p>
+  </div>
+
+  <div class="sec">
     <div class="secname">指针捕获（look 模式）</div>
     <div class="toggle"><input type="checkbox" id="capture"><label for="capture">look 相机活跃时捕获并隐藏光标（出窗不断流）</label></div>
-    <p style="color:var(--dim);margin:4px 0 0">点击画面获取焦点后生效；ESC 或取消勾选即释放。</p>
+    <div class="row"><label>look 灵敏度</label><input type="range" id="sens" min="0.05" max="0.5" step="0.01" value="0.2"><output id="sensV">0.20</output></div>
+    <p style="color:var(--dim);margin:4px 0 0">勾选后：鼠标直接转动这套 rig（DragRotate，非反向），WASD 相机相对移动；ESC 释放回观察模式。</p>
   </div>
 </div>
 
@@ -202,10 +212,11 @@
   <div id="pipNote">黄十字 = 屏幕中心共点轴（瞄准层约束）</div>
 </div>
 
-<div id="hud">拖拽 = 环绕观察这套 rig · 滚轮 = 缩放 · 右侧面板调 rig 参数</div>
+<div id="hud">WASD 移动角色 · Tab 锁定/解除 · 拖拽 = 环绕观察 · 滚轮 = 缩放 · 勾选指针捕获后鼠标接管镜头</div>
 <div class="lbl" id="lbPivot" style="color:var(--pivot)">锚点 Pivot<br><span style="color:var(--dim)">TargetCm + TargetHeightCm</span></div>
 <div class="lbl" id="lbArm" style="color:var(--arm)">摇臂 Arm（Yaw/Pitch/DistanceCm）</div>
 <div class="lbl" id="lbLens" style="color:var(--lens)">镜体 Lens（FovYDeg + RigCameraOffsetCm）</div>
+<div class="lbl" id="lbLock" style="color:var(--aim)"></div>
 
 <script src="./three.min.js"></script>
 <script src="./OrbitControls.js"></script>
@@ -257,6 +268,29 @@ scene.add(hero);
 const ghost = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12),
   new THREE.MeshBasicMaterial({ color: 0xbfc9d8, transparent: true, opacity: 0.35 }));
 scene.add(ghost);
+
+// —— 锁定目标实体（演示用静态敌人）+ 锁定标记 ——
+const enemy = new THREE.Group();
+const enemyBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 8, 20),
+  new THREE.MeshStandardMaterial({ color: 0xb8434e }));
+enemyBody.position.y = 0.75;
+const enemyHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 16),
+  new THREE.MeshStandardMaterial({ color: 0xf0d8d8 }));
+enemyHead.position.y = 1.45;
+enemy.add(enemyBody, enemyHead);
+enemy.position.set(0, 0, -5.5);
+scene.add(enemy);
+const lockMarker = new THREE.Mesh(new THREE.OctahedronGeometry(0.14),
+  new THREE.MeshBasicMaterial({ color: 0xffb14d }));
+lockMarker.visible = false;
+lockMarker.layers.set(VIZ);
+scene.add(lockMarker);
+const lockLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0xffb14d, transparent: true, opacity: 0.4 }));
+lockLine.visible = false;
+lockLine.layers.set(VIZ);
+scene.add(lockLine);
 
 // —— rig 可视对象 ——
 const pivotDot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12),
@@ -333,11 +367,12 @@ const raycaster = new THREE.Raycaster();
 
 // —— 状态 ——
 const S = {
-  walk: true, ghost: true, lag: true, probe: false, aim: false, faceOn: true,
+  walk: false, ghost: true, lag: true, probe: false, aim: false, faceOn: true,
   yaw: 200, pitch: 18, dist: 5, lagSpd: 10, aimW: 0, aimFov: 35, aimOff: 0.3,
   pivR: 0, pivU: 0, pivF: 0,
   bands: true,
   bandInterp: 'linear',
+  sens: 0.2, lock: false, lockStyle: 'hard',
   bandDefs: [
     { pitch: 12, dist: 5.5, right: 0.55 },
     { pitch: 30, dist: 4.6, right: 0.4 },
@@ -373,6 +408,8 @@ $('bands').addEventListener('change', e => {
   document.getElementById('rowDist').classList.toggle('disabled', S.bands);
   document.getElementById('rowPivR').classList.toggle('disabled', S.bands);
 });
+bind('sens', e => { S.sens = +e.value; $('sensV').value = (+e.value).toFixed(2); });
+bind('lockStyle', e => S.lockStyle = e.value);
 $('walk').addEventListener('change', e => S.walk = e.target.checked);
 $('ghost').addEventListener('change', e => { S.ghost = e.target.checked; ghost.visible = S.ghost; });
 $('lag').addEventListener('change', e => S.lag = e.target.checked);
@@ -406,15 +443,66 @@ renderer.domElement.addEventListener('click', e => {
     renderer.domElement.requestPointerLock?.();
 });
 
+// —— 真实控制：WASD 相机相对移动（sim 20Hz 采样）+ Tab 锁定 + 指针锁定期间鼠标直接 look ——
+const keys = new Set();
+addEventListener('keydown', e =>
+{
+  if (e.code === 'Tab')
+  {
+    e.preventDefault();
+    toggleLock();
+    return;
+  }
+  keys.add(e.code);
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+const kd = c => (keys.has(c) ? 1 : 0);
+
+const LOCK_RANGE_IN = 9, LOCK_RANGE_OUT = 14;
+function toggleLock()
+{
+  if (S.lock)
+  {
+    S.lock = false;
+    return;
+  }
+  const dx = enemy.position.x - S.simPos.x, dz = enemy.position.z - S.simPos.y;
+  if (Math.hypot(dx, dz) <= LOCK_RANGE_IN) S.lock = true;
+}
+
+// DragRotate 语义（与引擎一致，非反向）：鼠标上推看上方；鼠标右移视野右移
+addEventListener('mousemove', e =>
+{
+  if (document.pointerLockElement !== renderer.domElement) return;
+  S.yaw = ((S.yaw - e.movementX * S.sens) % 360 + 360) % 360;
+  S.pitch = THREE.MathUtils.clamp(S.pitch - e.movementY * S.sens, 5, 85);
+  $('yaw').value = S.yaw; $('yawV').value = Math.round(S.yaw);
+  $('pitch').value = S.pitch; $('pitchV').value = Math.round(S.pitch);
+});
+
 // —— sim 时钟（20Hz）：TargetCm 按 50ms 步进 ——
 const FDT = 1 / 20, SPEED = 1.6, PATH = 3.5; // m/s、半程
 function simStep()
 {
   S.simPrev.copy(S.simPos);
-  if (!S.walk) return;
-  S.simPos.x += S.dir * SPEED * FDT;
-  if (S.simPos.x > PATH) { S.simPos.x = PATH; S.dir = -1; }
-  if (S.simPos.x < -PATH) { S.simPos.x = -PATH; S.dir = 1; }
+  if (S.walk)
+  {
+    S.simPos.x += S.dir * SPEED * FDT;
+    if (S.simPos.x > PATH) { S.simPos.x = PATH; S.dir = -1; }
+    if (S.simPos.x < -PATH) { S.simPos.x = -PATH; S.dir = 1; }
+    return;
+  }
+  const ix = kd('KeyD') - kd('KeyA'), iz = kd('KeyW') - kd('KeyS');
+  if (!ix && !iz) return;
+  // 相机相对合成（与引擎 OrbitCameraDirectionUtil.MoveInputToDirection 同构）：rig yaw 定前后左右
+  const yaw = THREE.MathUtils.degToRad(S.yaw);
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw);   // 视线水平前向
+  const rx = -fz, rz = fx;                          // 屏幕右向
+  const mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
+  const len = Math.hypot(mx, mz);
+  S.simPos.x = THREE.MathUtils.clamp(S.simPos.x + mx / len * SPEED * FDT, -12, 12);
+  S.simPos.y = THREE.MathUtils.clamp(S.simPos.y + mz / len * SPEED * FDT, -12, 12);
 }
 
 // —— 摇臂解算：锚点 → 末端（世界系，纯 yaw/pitch/dist） ——
@@ -489,6 +577,7 @@ let simAcc = 0;
 const smoothed = new THREE.Vector3(0, 2.7, 4.7);
 const clock = new THREE.Clock();
 const lookTarget = new THREE.Vector3();
+const _eHead = new THREE.Vector3();
 
 function frame()
 {
@@ -505,18 +594,41 @@ function frame()
   const vx = THREE.MathUtils.lerp(S.simPrev.x, S.simPos.x, alpha);
   const vy = THREE.MathUtils.lerp(S.simPrev.y, S.simPos.y, alpha);
   hero.position.set(vx, 0, vy);
-  if (S.walk)
   {
-    const target = S.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
-    let d = target - S.heading;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
-    S.heading += d * Math.min(1, dt * 5);
+    let target = null;
+    if (S.walk) target = S.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    else
+    {
+      const ix = kd('KeyD') - kd('KeyA'), iz = kd('KeyW') - kd('KeyS');
+      if (ix || iz)
+      {
+        const yaw = THREE.MathUtils.degToRad(S.yaw);
+        target = Math.atan2(-Math.sin(yaw) * iz + Math.cos(yaw) * ix,
+                            -Math.cos(yaw) * iz - Math.sin(yaw) * ix);
+      }
+      else if (S.lock)
+        target = Math.atan2(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    }
+    if (target !== null)
+    {
+      let d = target - S.heading;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      S.heading += d * Math.min(1, dt * 5);
+    }
     hero.rotation.y = S.heading;
   }
 
-  // 面向采信（演示）：角色调头后摇臂 Yaw 缓慢绕到其背后（背后方向 = 朝向 + 180°）
-  if (S.faceOn)
+  // 硬锁定：摇臂绕到"玩家-敌人"轴反侧（优先级高于 facingMode）；软锁定不抢 yaw，只偏注视
+  if (S.lock && S.lockStyle === 'hard')
+  {
+    const yawT = ((THREE.MathUtils.radToDeg(Math.atan2(
+      S.simPos.x - enemy.position.x, S.simPos.y - enemy.position.z)) % 360) + 360) % 360;
+    let delta = ((yawT - S.yaw + 540) % 360) - 180;
+    S.yaw = (S.yaw + delta * Math.min(1, dt * 2.5) + 360) % 360;
+    $('yaw').value = S.yaw; $('yawV').value = Math.round(S.yaw);
+  }
+  else if (S.faceOn)
   {
     const target = ((THREE.MathUtils.radToDeg(S.heading) + 180) % 360 + 360) % 360;
     let delta = ((target - S.yaw + 540) % 360) - 180;
@@ -530,8 +642,14 @@ function frame()
   // 阻尼关闭时解算直跟 sim 真值——复刻修复前"插值被清零、相机 20Hz 裸步进"的观感
   const bl = S.bands ? bandBlend(S.pitch) : null;
   const effPitch = S.pitch;
-  const effDist = bl ? bl.dist : S.dist;
+  let effDist = bl ? bl.dist : S.dist;
   const effRight = bl ? bl.right : S.pivR;
+  // 锁定：距离补偿拉远，把目标框进来（高达VS 式双实体取景）
+  if (S.lock)
+  {
+    const sep = Math.hypot(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    effDist = Math.max(effDist, 2.8 + sep * 0.5);
+  }
   $('distV').value = effDist.toFixed(1);
   $('pivRV').value = effRight.toFixed(2);
   const targetPos = new THREE.Vector3(S.lag ? vx : S.simPos.x, 1.2, S.lag ? vy : S.simPos.y);
@@ -579,6 +697,13 @@ function frame()
   lensPos.addScaledVector(right0, aimK * S.aimOff);
   lensGroup.position.copy(lensPos);
   lookTarget.copy(pivotPos);
+  if (S.lock)
+  {
+    // 黑魂式加权注视：注视点从锚点向敌人偏移（锚点仍绕玩家），角色让出画面中心
+    const k = 0.38;
+    _eHead.set(enemy.position.x, 1.2, enemy.position.z);
+    lookTarget.lerp(_eHead, k);
+  }
   lensGroup.lookAt(lookTarget);
   const tanH = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
   frustum.scale.set(tanH, tanH, 1.6);
@@ -615,6 +740,33 @@ function frame()
   }
 
   placeLabels();
+
+  // 锁定可视化、超距断锁与 Tab 提示
+  {
+    const sep = Math.hypot(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    if (S.lock && sep > LOCK_RANGE_OUT) S.lock = false;
+    lockMarker.visible = S.lock;
+    lockLine.visible = S.lock;
+    if (S.lock)
+    {
+      lockMarker.position.set(enemy.position.x, 2.0 + Math.sin(performance.now() / 500) * 0.06, enemy.position.z);
+      lockMarker.rotation.y = performance.now() / 600;
+      const lp = lockLine.geometry.attributes.position;
+      lp.setXYZ(0, pivotPos.x, pivotPos.y, pivotPos.z);
+      lp.setXYZ(1, enemy.position.x, 1.2, enemy.position.z);
+      lp.needsUpdate = true;
+    }
+    const lbLock = $('lbLock');
+    const show = S.lock || sep <= LOCK_RANGE_IN;
+    lbLock.style.display = show ? 'block' : 'none';
+    if (show)
+    {
+      lbLock.textContent = S.lock ? 'Tab 解除锁定' : 'Tab 锁定目标';
+      _v.set(enemy.position.x, 2.15, enemy.position.z).project(viewCam);
+      lbLock.style.left = ((_v.x * 0.5 + 0.5) * innerWidth) + 'px';
+      lbLock.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + 'px';
+    }
+  }
 
   // 主视图全屏，再叠加右下镜体视口（scissor 裁剪）
   const w = innerWidth, h = innerHeight;
