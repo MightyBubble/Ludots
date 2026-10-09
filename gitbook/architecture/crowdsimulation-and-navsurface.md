@@ -210,6 +210,22 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **L12-④ 接触计数硬门**：真值 bin 每单位追加 u16 接触计数(每 tick 清零、求解行累加、跳过行保持 0,两端同构逐位可比;体积 +289 KB)。实测 600 tick × 241 单位不一致 10/144234 样本(0.007%,全部 ±1 骑线翻转),硬门取双容忍线:不一致样本 ≤ 0.05% 且单样本幅度 ≤ ±1——系统性求解分歧(接触集大面积错)会同时击穿两条。
 - **L14 避让隐藏状态进校验码**：校验码追加分离两轴 + calm 逐单位(mixI64 双词)与相位一词(逐 tick),导出端 canonChecksum 同步(部署会话无运动栈,新字段恒零,词数对齐——注意块序在整型字段之后,与 C# 同序);S4 真值三种子重钉,150 帧逐字全等。**回放口径写明:回放从 tick 0 起新会话**(`CrowdSimSession.Reset` 后逐帧重演,快照恢复不走中间态)。**Stride 写明:只在会话创建时按 rateHz 推导一次,Ludots 端不支持参考端 setRates 的运行时调频。**
 
+## 结构变更约定（L35 对齐 ecs_soa §5）
+
+引擎合同（`docs/architecture/ecs_soa.md` §5）：结构变更（Create/Destroy/Add/Remove）禁入查询热环，
+要么记入 Arch `CommandBuffer` 在阶段尾 Playback，要么走 `RuntimeEntitySpawnQueue`/
+`RuntimeEntityLifecycleQueue` 由 EffectProcessing 组的系统物化。人群侧的落点：
+
+- **spawn**：单位生成在 tick 边界的指令冲刷点（`CrowdSimulationSessionTickSystem` → `Step()`
+  首行 Flush）同步执行——这是已记档的对拍豁免（单位必须在指令 tick 内就位，真值行序 = 稠密
+  创建序）。生成不发生在任何查询环内,与 §5 的「禁入热环」一致;模板道 `EntityBuilder.UseTemplate
+  → Build` 一次成形,仿真参数在模板组件与生成后钩子里落齐,不在 Create 之后逐组件 Add。
+- **kill**：当前内核没有 kill 指令（参考端 killAt 未移植,缺口清单在案）。未来引入时的合同:
+  tick 边界指令点入队 + 呈现生命周期两帧销毁（有 `PresentationStableId` 的走
+  `PresentationEntityLifecycle.RequestDestroy`）,稠密销毁记 CommandBuffer 一次 Playback。
+- **Clear/重部署**：当前 `CrowdSimUnits.Clear()` 对模板道单位直接 `World.Destroy`,不经过
+  呈现生命周期——已记为已知缺口,与呈现接线改造同轨补齐（呈现实体两帧销毁后再重建稠密表）。
+
 ## 热路径数据面：gather → SoA → scatter（内核改造，本次）
 
 对拍行序 = 单位稠密序（`CrowdSimUnits._dense` 是 append-only 创建序，真值 bin 的行序），
