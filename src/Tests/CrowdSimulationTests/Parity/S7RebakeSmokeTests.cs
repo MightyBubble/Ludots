@@ -22,9 +22,10 @@ public class S7RebakeSmokeTests
     public void PlaceRemoveExpire_KeepsIncrementalNavConsistent()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30));
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
+        session.TruthNavFrozen = true; // F02:S7 冒烟走 S7 真值同款冻结口径(结构 op 会岔认知)
         session.VerifyIncrementalNav = true;
 
         // 脚本(与 S7 真值同构同尺寸:格距 62.5m,足迹中心落在格心):部署 → 行军 →
@@ -59,9 +60,10 @@ public class S7RebakeSmokeTests
 
         // 回放:同一脚本、全新会话,校验码逐位一致
         var (runtime2, session2) = S4DeployTruthTests.BuildSession("s1337");
-        using var service2 = new PathQueryService(session2.Navs, runtime2, 1, TimeSpan.FromSeconds(30));
+        using var service2 = new PathQueryService(session2.Navs, runtime2, 1, TimeSpan.FromSeconds(30), session2.ResolveNavContext);
         session2.EnableMovement(CrowdMovementKernel.Create(session2), new CrowdSimPlanner(session2, service2));
         session2.BlockOnDueReplies = true;
+        session2.TruthNavFrozen = true; // F02:回放侧同款冻结
         session2.Commands.Schedule(session2, script);
         var second = new List<string>();
         session2.Advance(240, second);

@@ -141,6 +141,7 @@ public static class CrowdSimulationConfigValidator
         Rule("fog.revealTicks", config.Fog.RevealTicks, intRequired: true, min: 1);
         Rule("fog.slotCacheCapacity", config.Fog.SlotCacheCapacity, intRequired: true, min: 0, max: 256);
         Rule("fog.variantCapacity", config.Fog.VariantCapacity, intRequired: true, min: 1);
+        Rule("fog.eyeCm", config.Fog.EyeCm, intRequired: true, min: 0);
         Rule("sim.maxUnits", config.Sim.MaxUnits, intRequired: true, min: 1, max: 200000);
         Rule("sim.timeScale", config.Sim.TimeScale, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);

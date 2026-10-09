@@ -63,6 +63,7 @@ public static class CrowdDeployment
 
                     if (cs.Count == 0) continue;
                     var g = sim.Groups.Alloc(p, l, r, nav.Id);
+                    sim.AttachGroupNav(g); // F02:规划句柄挂玩家视野组当前槽(马达句柄恒真相)
                     centers[g.Id] = cs;
                     typeOf[g.Id] = t;
                     list.Add(g);
@@ -112,6 +113,7 @@ public static class CrowdDeployment
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.SpawnSeq * SaltSpawnAt);
         // player 为 Ludots 玩家号(1..P);组内索引 0 基(与批量部署同一编号序)
         var g = sim.Groups.Alloc(player - 1, l, rIdx, nav.Id);
+        sim.AttachGroupNav(g); // F02:规划句柄挂玩家视野组当前槽(马达句柄恒真相)
         int comp = nav.Comp[c0];
         var profile = ProfileOf(cfg, l, rIdx);
         var spread = Fix64.Max(Fix64.OneValue,

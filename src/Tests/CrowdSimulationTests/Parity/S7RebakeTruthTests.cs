@@ -60,9 +60,10 @@ public sealed class S7RebakeTruthTests
     public void S7_Rebake_MatchesWebTruth()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30));
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
+        session.TruthNavFrozen = true; // F02:S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");

@@ -42,6 +42,21 @@ public sealed class CrowdSimulationRuntime
 
     private CrowdSimSession? _session;
     private Entity _sessionEntity;
+
+    /// <summary>地图桥入认知仓(F02):桥模板按 id 查配置表(缺失 = 配置没有 bridge 模板,
+    /// 无桥地图自然为空表)。</summary>
+    private static void InstallMapBridges(
+        Structures.CrowdStructuresStore store,
+        Config.CrowdSimulationRuntimeConfig config,
+        IReadOnlyList<BridgeDeckRecord>? bridges)
+    {
+        if (bridges == null || bridges.Count == 0) return;
+        int tpl = store.TemplateIndexOf("bridge");
+        if (tpl < 0) return;
+        var spans = new List<CrowdSimulationBridgeSpan>(bridges.Count);
+        foreach (var b in bridges) spans.Add(b.Span);
+        store.InstallMapBridges(tpl, spans);
+    }
     private string? _activeMapId;
     private bool _systemsInstalled;
     private PresenterEntityRuntime? _presenterRuntime;
@@ -52,6 +67,7 @@ public sealed class CrowdSimulationRuntime
     private CrowdSimulation.World.NavHeightField? _heights;
     private CrowdSimulation.Nav.DeckSurface? _deck;
     private IReadOnlyList<CrowdSimulation.World.BlockerFootprint>? _mapSurfaceBlockers;
+    private IReadOnlyList<CrowdSimulation.World.BridgeDeckRecord>? _mapSurfaceBridges;
     private bool _stallLogged;
     private readonly System.Diagnostics.Stopwatch _tickWatch = System.Diagnostics.Stopwatch.StartNew();
     private readonly List<(int Tick, string Hash)> _hashes = new(4096);
@@ -74,7 +90,19 @@ public sealed class CrowdSimulationRuntime
         public const string SessionSelected = "crowd_simulation.session.selected";
         public const string SessionReplayStatus = "crowd_simulation.session.replay_status";
         public const string SessionReplayDivergenceTick = "crowd_simulation.session.replay_divergence_tick";
+        // F02 迷雾 HUD(观察玩家 = 玩家 1 的视野组):可见/已探索 fog 格数、认知实体数、
+        // 残影数(认知有真相无)、乐观迷雾开关。渲染底座(W2)经迷雾查询面画图。
+        public const string SessionFogVisibleCells = "crowd_simulation.session.fog.visible_cells";
+        public const string SessionFogExploredCells = "crowd_simulation.session.fog.explored_cells";
+        public const string SessionFogBeliefEntities = "crowd_simulation.session.fog.belief_entities";
+        public const string SessionFogGhosts = "crowd_simulation.session.fog.ghosts";
+        public const string SessionFogTerrainOptimistic = "crowd_simulation.session.fog.terrain_optimistic";
     }
+
+    /// <summary>迷雾观察口径(F02 演示):-1 = 全知 debug 视图(现状默认,玩家视角迷雾用键切换,
+    /// S7 spec 要求两种观察范围并存);≥ 0 = 只看该视野组。渲染底座(W2)读它决定画哪份
+    /// View(),HUD 计数恒按玩家 1 的视野组。</summary>
+    public int FogViewGroup { get; set; } = -1;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
@@ -168,6 +196,7 @@ public sealed class CrowdSimulationRuntime
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
+        _mapSurfaceBridges = mapSurface.Bridges;
         var heights = NavHeightField.FromHeightmap(
             ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
             runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
@@ -291,6 +320,7 @@ public sealed class CrowdSimulationRuntime
         // S7 结构动态化:仓(静态阻挡物入仓,动态建造/拆除共用一套重标)+ 增量重烘源 + tile 缓存。
         // 阻挡盒索引取仓的 CSR(reach 生长,参考同形;S5 对拍会话不装阻挡盒,不受影响)。
         var structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(runtimeConfig, grid, mapSurface.Blockers);
+        InstallMapBridges(structures, runtimeConfig, mapSurface.Bridges); // F02:桥入认知仓(id 与导出端参考序同构)
         _session.Structures = structures;
         _session.RebakeSources = new Ludots.Core.CrowdSimulation.Nav.CrowdRebakeSources(
             runtimeConfig, heights, deck, surface.JumpCandidates);
@@ -302,7 +332,7 @@ public sealed class CrowdSimulationRuntime
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
         // (有结构仓时 Blockers 跟随仓的活 CSR,这里的静态索引不生效)
         _pathService?.Dispose();
-        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, TimeSpan.FromSeconds(5));
+        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, TimeSpan.FromSeconds(5), _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.EnableMovement(kernel, planner);
@@ -446,6 +476,7 @@ public sealed class CrowdSimulationRuntime
             replay.ReplaceNavs(replayNavs);
             replay.Structures = Ludots.Core.CrowdSimulation.Structures.CrowdStructuresStore.Build(
                 session.Config, _surfaceGrid, _mapSurfaceBlockers);
+            InstallMapBridges(replay.Structures, session.Config, _mapSurfaceBridges); // F02:回放仓同构补桥
             replay.RebakeSources = new CrowdSimulation.Nav.CrowdRebakeSources(
                 session.Config, _heights, _deck, _jumpCandidates ?? Array.Empty<CrowdSimulation.World.NavSurfaceJumpCandidate>());
             replay.NavTileCache = replayCache;
@@ -454,7 +485,7 @@ public sealed class CrowdSimulationRuntime
         if (session.Movement != null)
         {
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
-                replay.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5));
+                replay.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5), replay.ResolveNavContext);
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));
@@ -495,6 +526,30 @@ public sealed class CrowdSimulationRuntime
         blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionSelected), session.SelectedCount);
         blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionReplayStatus), ReplayStatus);
         blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionReplayDivergenceTick), ReplayDivergenceTick);
+        // F02 迷雾 HUD 计数:玩家 1 的视野组(无迷雾会话不写,呈现层回退缺省)
+        if (session.Fog is { } fog && session.Config.Relations.IndexByPlayerId[1] is { } pIdx)
+        {
+            int g = fog.GroupOf[pIdx];
+            int f2 = fog.F * fog.F, o = g * f2;
+            int visible = 0, explored = 0;
+            for (int c = o; c < o + f2; c++)
+            {
+                if (fog.Visible[c] != 0) visible++;
+                if (fog.Explored[c] != 0) explored++;
+            }
+
+            int ghosts = 0;
+            foreach (int id in fog.Belief[g].Keys)
+            {
+                if (!session.Structures!.TryGetFootprint(id, out _)) ghosts++;
+            }
+
+            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogVisibleCells), visible);
+            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogExploredCells), explored);
+            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogBeliefEntities), fog.Belief[g].Count);
+            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogGhosts), ghosts);
+            blackboard.Set(ConfigKeyRegistry.Register(Keys.SessionFogTerrainOptimistic), fog.Terrain ? 1 : 0);
+        }
     }
 
     private static string RequireHeightAssetPath(MapConfig mapConfig, MapId mapId)

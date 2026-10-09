@@ -18,7 +18,7 @@ public sealed class S5MovementSmokeTests
     public void Order_MovesUnitsTowardTarget()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10));
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
 
@@ -87,7 +87,7 @@ public sealed class S5MovementSmokeTests
     public void Order_Replay_BitIdentical()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10));
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(10), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
 
@@ -101,7 +101,7 @@ public sealed class S5MovementSmokeTests
         session.Advance(200, live);
 
         var (runtime2, replay) = S4DeployTruthTests.BuildSession("s1337");
-        using var service2 = new PathQueryService(replay.Navs, runtime2, 1, TimeSpan.FromSeconds(10));
+        using var service2 = new PathQueryService(replay.Navs, runtime2, 1, TimeSpan.FromSeconds(10), replay.ResolveNavContext);
         replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, service2));
         replay.BlockOnDueReplies = true;
         replay.Commands.Schedule(replay, script.Select(c => new CrowdCommand(c.Tick, (JsonNode)c.Payload.DeepClone())).ToArray());

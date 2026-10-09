@@ -189,6 +189,10 @@ public sealed class CrowdSimulationConfig
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
         public required int VariantCapacity { get; init; }
+        /// <summary>视线遮挡(lineOfSight 同名):建筑与更高地形挡视线;运行时 fogSight 命令可切。</summary>
+        public required bool LineOfSight { get; init; }
+        /// <summary>观察者眼高(参考端 eyeMeters,厘米域)。</summary>
+        public required int EyeCm { get; init; }
     }
 
     public sealed class FormationSection
@@ -282,6 +286,8 @@ public sealed class CrowdSimulationConfig
     public sealed class RelationsKindEntry
     {
         public required string Push { get; init; }
+        /// <summary>该关系是否共享视野(shareVision):双向都真 → 两玩家成一个视野组(迷雾与认知共享)。</summary>
+        public required bool ShareVision { get; init; }
     }
 
     public sealed class RelationsOverrideEntry

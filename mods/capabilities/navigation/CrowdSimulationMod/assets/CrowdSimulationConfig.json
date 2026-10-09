@@ -277,7 +277,9 @@
     "visionCm": 80000,
     "revealTicks": 30,
     "slotCacheCapacity": 8,
-    "variantCapacity": 64
+    "variantCapacity": 64,
+    "lineOfSight": false,
+    "eyeCm": 1000
   },
   "formation": {
     "spacingScale": 1.1,
@@ -466,13 +468,16 @@
   "relations": {
     "kinds": {
       "self": {
-        "push": "priority"
+        "push": "priority",
+        "shareVision": true
       },
       "ally": {
-        "push": "priority"
+        "push": "priority",
+        "shareVision": true
       },
       "enemy": {
-        "push": "rigid"
+        "push": "rigid",
+        "shareVision": false
       }
     },
     "self": "self",

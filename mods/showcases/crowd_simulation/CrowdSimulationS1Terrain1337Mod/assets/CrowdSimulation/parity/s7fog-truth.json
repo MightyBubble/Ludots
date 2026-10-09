@@ -1,0 +1,133 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "note": "S7-b 迷雾/认知(F02):迷雾开启口径(不置 __S7_TRUTH_NAV__,与 S7 块并存)。单位记录与 S5/S7 同构(位置带宽 + 状态机逐位 + contacts 双容忍);迷雾 digest 每组每 tick(visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev)+ 全局槽账(seq/switches/entry/dormant/beliefCount),整数集合态逐位硬门。s7fog-ops.bin 为结构 op 报告(place@5 挡路改道、remove@90 残影语义),逐字段硬门。脚本含 reveal/obscure/forget/fogShare 与 order 的 fogTerrain 开关(乐观迷雾)。C# 侧 CrowdFog/CrowdBeliefState 字段一一对应。",
+  "ticks": 360,
+  "G": 2,
+  "script": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "count": 120,
+        "unitType": 0,
+        "rIdx": 0
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "xCm": 1200000,
+        "yCm": 800000,
+        "shape": "box"
+      }
+    },
+    {
+      "tick": 5,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 584375,
+        "yCm": 584375,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 90,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 584375,
+        "yCm": 584375
+      }
+    },
+    {
+      "tick": 120,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "shape": "box"
+      }
+    },
+    {
+      "tick": 150,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          900000,
+          900000,
+          1000000,
+          1000000
+        ]
+      }
+    },
+    {
+      "tick": 170,
+      "cmd": {
+        "type": "obscure",
+        "player": 1,
+        "rect": [
+          700000,
+          600000,
+          800000,
+          700000
+        ],
+        "ticks": 30
+      }
+    },
+    {
+      "tick": 200,
+      "cmd": {
+        "type": "forget",
+        "player": 1,
+        "rect": [
+          1000000,
+          1000000,
+          1100000,
+          1100000
+        ]
+      }
+    },
+    {
+      "tick": 230,
+      "cmd": {
+        "type": "fogShare",
+        "player": 1,
+        "with": 2
+      }
+    },
+    {
+      "tick": 260,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "xCm": 1300000,
+        "yCm": 500000,
+        "shape": "box",
+        "fogTerrain": true
+      }
+    },
+    {
+      "tick": 330,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "shape": "box",
+        "fogTerrain": false
+      }
+    }
+  ],
+  "opExecTicks": [
+    5,
+    90
+  ]
+}

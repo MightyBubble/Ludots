@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
@@ -95,7 +96,47 @@ public sealed class CrowdSimSession
     {
         Movement = kernel;
         Planner = planner;
+        // 迷雾/认知随运动内核装配(F02):参考端 Fog 在仿真构造期常驻;C# 只在运动会话里启用,
+        // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
+        if (Structures != null)
+        {
+            Fog = new CrowdFog(Config, Config.Relations, Structures);
+            if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
+            Beliefs = new CrowdBeliefNavs(this);
+            Belief = CrowdBeliefState.Create(Fog.G);
+        }
     }
+
+    /// <summary>迷雾状态(F02;null = 无头部署会话/未启用运动)。马达永远走真相,规划经认知槽。</summary>
+    public CrowdFog? Fog { get; private set; }
+    /// <summary>认知变体导航注册表(F02)。</summary>
+    public CrowdBeliefNavs? Beliefs { get; private set; }
+    /// <summary>认知槽记账(F02)。</summary>
+    public CrowdBeliefState? Belief { get; private set; }
+    /// <summary>truth 冻结口径(同参考端 __S7_TRUTH_NAV__ 导出补丁):跳过迷雾更新与认知同步,
+    /// 组停在真相槽——旧真值(S5/S7)在迷雾内核落地后原样全等的保证;新场景不置。</summary>
+    public bool TruthNavFrozen { get; set; }
+
+    /// <summary>nav 号解析(&lt; Stride = 真相字典;否则认知注册表取/懒建变体)。
+    /// 变体构建经路径服务的导航互斥锁串行(Monitor 同线程可重入,worker 侧安全)。</summary>
+    public NavContext ResolveNavContext(int navId)
+    {
+        if (navId < CrowdBeliefNavs.BeliefStride) return Navs[navId];
+        var beliefs = Beliefs ?? throw new InvalidOperationException($"变体 nav {navId}:会话没有认知注册表(迷雾未启用)。");
+        return Planner!.Service.RunExclusive(() => beliefs.Get(navId));
+    }
+
+    /// <summary>组的规划句柄解析(参考 navFor):玩家视野组当前槽的变体号(0 = 真相号)。</summary>
+    public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
+    {
+        int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
+        if (Fog == null || Belief == null || TruthNavFrozen) return truth;
+        int slot = Belief.Slot[Fog.GroupOf[playerIndex]];
+        return slot == 0 ? truth : slot * CrowdBeliefNavs.BeliefStride + truth;
+    }
+
+    /// <summary>组的规划句柄挂到其玩家视野组当前槽(生成时与槽切换时;马达句柄 BodyNavId 恒真相)。</summary>
+    public void AttachGroupNav(CrowdNavGroupSet.Group g) => g.NavId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
     public IReadOnlyDictionary<int, NavContext> Navs { get; private set; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
     public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
@@ -149,6 +190,14 @@ public sealed class CrowdSimSession
                 Movement.SolveSeparation();
                 Movement.Step(SubStepDt);
             }
+        }
+
+        // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;
+        // truth 冻结口径跳过两者,等价参考端 __S7_TRUTH_NAV__ 导出补丁)
+        if (Fog != null && !TruthNavFrozen)
+        {
+            Fog.Update(TickCount, this);
+            CrowdBeliefSync.Sync(this);
         }
 
         TickCount++;

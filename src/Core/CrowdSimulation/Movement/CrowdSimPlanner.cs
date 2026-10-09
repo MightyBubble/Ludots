@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
@@ -95,8 +96,8 @@ public sealed class CrowdSimPlanner
             foreach (var link in o.Groups)
             {
                 var g = session.Groups.Groups[link.GroupId]!;
-                g.Goal = CrowdDeployment.NearestPassable(session.Navs[g.NavId], link.GoalCell);
-                g.GoalComp = g.Goal >= 0 ? session.Navs[g.NavId].Comp[g.Goal] : -2;
+                g.Goal = CrowdDeployment.NearestPassable(session.ResolveNavContext(g.NavId), link.GoalCell);
+                g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
                 g.Flow = null;
                 g.Leader = null;
                 g.Planning = true;
@@ -127,9 +128,9 @@ public sealed class CrowdSimPlanner
                     if (c >= 0 && cnt > bestN) { best = c; bestN = cnt; }
                 }
 
-                if (best < 0 || (g.Goal >= 0 && session.Navs[g.NavId].CanReach(best, g.GoalComp))) continue;
-                g.Goal = NearestReachable(session.Navs[g.NavId], best, link.GoalCell, n);
-                g.GoalComp = g.Goal >= 0 ? session.Navs[g.NavId].Comp[g.Goal] : -2;
+                if (best < 0 || (g.Goal >= 0 && session.ResolveNavContext(g.NavId).CanReach(best, g.GoalComp))) continue;
+                g.Goal = NearestReachable(session.ResolveNavContext(g.NavId), best, link.GoalCell, n);
+                g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
                 link.GoalCell = g.Goal;
             }
         }
@@ -163,7 +164,7 @@ public sealed class CrowdSimPlanner
             }
 
             int cell = CellOfUnit(session, i, st);
-            if (g.Goal < 0 || !session.Navs[g.NavId].CanReach(CompAtLevel(session, g, cell, st.Level), g.GoalComp))
+            if (g.Goal < 0 || !session.ResolveNavContext(g.NavId).CanReach(CompAtLevel(session, g, cell, st.Level), g.GoalComp))
             {
                 if (!jumping)
                 {
@@ -180,7 +181,7 @@ public sealed class CrowdSimPlanner
                 st.State = (byte)CrowdUnitState.Moving;
             }
 
-            st.Order = (uint)FindOrderIdOf(session, g.Id);
+            st.Order = (uint)g.OrderId; // 组的指令字段是唯一真相(扫指令簿会被回收组号的陈旧链接命中)
             session.World.Set(entity, st);
             mem.Add(i);
         }
@@ -203,7 +204,7 @@ public sealed class CrowdSimPlanner
 
                 int repCell = RepresentativeCell(session, mem);
                 int reqId = _service.Request(new PathQuery(g.NavId, repCell, g.Goal, 0), tick);
-                po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId, Version = session.Navs[g.NavId].Version });
+                po.Groups.Add(new PendingGroup { GroupId = g.Id, PlanSeq = ++_seq, NavId = g.NavId, Goal = g.Goal, RequestId = reqId, Version = session.ResolveNavContext(g.NavId).Version });
                 if (!byLayer.TryGetValue(g.LayerIdx, out var bucket)) byLayer[g.LayerIdx] = bucket = new List<int>();
                 bucket.Add(g.Id);
             }
@@ -213,8 +214,8 @@ public sealed class CrowdSimPlanner
                 int strictestId = bucket[0];
                 foreach (int gid in bucket)
                 {
-                    if (session.Navs[session.Groups.Groups[gid]!.NavId].ClearanceCells >
-                        session.Navs[session.Groups.Groups[strictestId]!.NavId].ClearanceCells)
+                    if (session.ResolveNavContext(session.Groups.Groups[gid]!.NavId).ClearanceCells >
+                        session.ResolveNavContext(session.Groups.Groups[strictestId]!.NavId).ClearanceCells)
                     {
                         strictestId = gid;
                     }
@@ -234,7 +235,7 @@ public sealed class CrowdSimPlanner
                     }
                 }
 
-                var nav = session.Navs[strictest.NavId];
+                var nav = session.ResolveNavContext(strictest.NavId);
                 int lc = CrowdDeployment.NearestPassable(nav,
                     CrowdDeployment.CellAt(sx / cnt, sy / cnt, n, cfg.NavCellSizeCm));
                 if (lc < 0 || !nav.CanReach(nav.Comp[lc], strictest.GoalComp)) lc = RepresentativeCell(session, membersByGroup[strictestId]);
@@ -371,7 +372,7 @@ public sealed class CrowdSimPlanner
                 }
 
                 // 陈旧答复(请求后导航重烘过):场先挂上(刷新落地前组用它),组进裁决清单
-                var nav = _session.Navs[g.NavId];
+                var nav = _session.ResolveNavContext(g.NavId);
                 if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
                 g.Flow = result.Flow;
                 g.Planning = false;
@@ -461,7 +462,7 @@ public sealed class CrowdSimPlanner
             }
 
             var leader = new CrowdLeader(
-                ToVec2Path(leaderResult.Points, cellSizeCm), strictest.LayerIdx, session.Navs[strictest.NavId],
+                ToVec2Path(leaderResult.Points, cellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
                 o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAhead * cs);
 
             // D62:质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
@@ -483,7 +484,7 @@ public sealed class CrowdSimPlanner
                 cx /= cn;
                 cy /= cn;
                 int c = CrowdDeployment.CellAt(cx, cy, cfg.NavCellCount, cellSizeCm);
-                if (c >= 0 && strictestPassable(session.Navs[strictest.NavId], c) &&
+                if (c >= 0 && strictestPassable(session.ResolveNavContext(strictest.NavId), c) &&
                     Math.Abs(c % cfg.NavCellCount - pl.StartCell % cfg.NavCellCount) <= 1 &&
                     Math.Abs(c / cfg.NavCellCount - pl.StartCell / cfg.NavCellCount) <= 1)
                 {
@@ -598,7 +599,7 @@ public sealed class CrowdSimPlanner
         }
 
         var result = _service.AwaitDue(pr.RequestId);
-        var nav = _session.Navs[g.NavId];
+        var nav = _session.ResolveNavContext(g.NavId);
         if (g.NavId != pr.NavId || nav.Version != pr.Version)
         {
             // 答复基于旧导航:丢弃并重新排队刷新(参考 applyExtend 的重排队语义)
@@ -654,7 +655,7 @@ public sealed class CrowdSimPlanner
             if (!dirtyByNav.TryGetValue(g.NavId, out var tiles) || tiles.Count == 0) continue;
             if (g.Planning) continue; // F-5:在途规划由落帧裁决处理
             if (g.Goal < 0) continue;
-            var nav = session.Navs[g.NavId];
+            var nav = session.ResolveNavContext(g.NavId);
             if (nav.Passable[g.Goal] == 0)
             {
                 AddOrder(session, orders, orderSet, g);
@@ -676,7 +677,7 @@ public sealed class CrowdSimPlanner
         var lost = ReachLost(session, hit);
         foreach (var g in hit)
         {
-            var nav = session.Navs[g.NavId];
+            var nav = session.ResolveNavContext(g.NavId);
             if (lost.Contains(g.Id) || LeaderPathBlocked(g.Leader, nav, session)) AddOrder(session, orders, orderSet, g);
             else RefreshFlow(g);
         }
@@ -697,7 +698,7 @@ public sealed class CrowdSimPlanner
             if (!want.Contains(st.GroupId) || lost.Contains(st.GroupId)) continue;
             if (st.State != (byte)CrowdUnitState.Moving && st.State != (byte)CrowdUnitState.Jump) continue;
             if (!session.Groups.TryGet(st.GroupId, out var g)) continue;
-            var nav = session.Navs[g.NavId];
+            var nav = session.ResolveNavContext(g.NavId);
             int cell = CellOfUnit(session, i, st);
             int c = nav.CompAt(cell, st.Level);
             if (c < 0) continue;
@@ -750,7 +751,7 @@ public sealed class CrowdSimPlanner
     {
         var f = g.Flow!;
         int n = session.Config.NavCellCount, n2 = n * n;
-        var nav = session.Navs[g.NavId];
+        var nav = session.ResolveNavContext(g.NavId);
         int s = nav.Hpa!.ClusterSize, c = nav.Hpa.ClustersPerSide;
         if (!reach.TryGetValue(g.Id, out var r)) return false;
         foreach (int t in tiles)
@@ -793,7 +794,7 @@ public sealed class CrowdSimPlanner
 
     private void SubmitRefresh(CrowdNavGroupSet.Group g, int tick)
     {
-        var nav = _session.Navs[g.NavId];
+        var nav = _session.ResolveNavContext(g.NavId);
         // 同走廊:掩码用组现流场的走廊(未填 padding),服务侧按 padMask ∪ 原掩码建场
         var req = new PathQuery(g.NavId, 0, g.Goal, 0) { CorridorMask = g.Flow!.Mask };
         int id = _service.Request(req, tick);
@@ -820,13 +821,13 @@ public sealed class CrowdSimPlanner
         foreach (var g in stale)
         {
             if (!_session.Groups.TryGet(g.Id, out var live) || live != g || g.OrderId == 0 || g.Planning || g.Goal < 0) continue;
-            if (g.Flow == null || _session.Navs[g.NavId].Passable[g.Goal] == 0)
+            if (g.Flow == null || _session.ResolveNavContext(g.NavId).Passable[g.Goal] == 0)
             {
                 AddOrder(_session, orders, orderSet, g);
                 continue;
             }
 
-            g.GoalComp = _session.Navs[g.NavId].Comp[g.Goal];
+            g.GoalComp = _session.ResolveNavContext(g.NavId).Comp[g.Goal];
             hit.Add(g);
         }
 
@@ -845,20 +846,6 @@ public sealed class CrowdSimPlanner
         }
     }
 
-    private static int FindOrderIdOf(CrowdSimSession session, int groupId)
-    {
-        var list = session.Orders.List;
-        for (int i = 0; i < list.Count; i++)
-        {
-            for (int k = 0; k < list[i].Groups.Count; k++)
-            {
-                if (list[i].Groups[k].GroupId == groupId) return list[i].Id;
-            }
-        }
-
-        return 0;
-    }
-
     /// <summary>组代表出发格:取一个地面成员格(近质心),无地面成员时取任意成员的格。</summary>
     private int RepresentativeCell(CrowdSimSession session, List<int> members)
     {
@@ -875,7 +862,91 @@ public sealed class CrowdSimPlanner
     }
 
     private static int CompAtLevel(CrowdSimSession session, CrowdNavGroupSet.Group g, int cell, int level) =>
-        session.Navs[g.NavId].CompAt(cell, level);
+        session.ResolveNavContext(g.NavId).CompAt(cell, level);
+
+    /// <summary>认知槽变更后的组重定向(retarget 移植,F02):moved 组——目标被挡 → 重规划;
+    /// 行进中 → ReachLost / 领队线被挡裁决;驻扎组 → 流场不属于新导航才刷新(真相流场经
+    /// sharesFlow 判定可复用——不是纯优化,刷新计数是对拍面)。stale = 原位揭示踩到真变
+    /// tile 的组(只刷新,不重规划)。返回需重规划的指令。</summary>
+    public List<CrowdOrder> Retarget(IReadOnlyList<CrowdNavGroupSet.Group> moved, HashSet<CrowdNavGroupSet.Group>? stale = null)
+    {
+        var session = _session;
+        var units = session.Units;
+        var underway = new HashSet<int>();
+        for (int i = 0; i < units.Count; i++)
+        {
+            var st = session.World.Get<CrowdSimulationUnitState>(units.EntityAt(i));
+            if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(st.GroupId);
+        }
+
+        var orders = new List<CrowdOrder>();
+        var orderSet = new HashSet<int>();
+        var hit = new List<CrowdNavGroupSet.Group>();
+        foreach (var g in moved)
+        {
+            if (g.Count == 0 || g.OrderId == 0) continue;
+            if (g.Planning) continue; // F-5:在途规划由落帧裁决
+            if (g.Goal < 0) continue;
+            var nav = session.ResolveNavContext(g.NavId);
+            if (nav.Passable[g.Goal] == 0)
+            {
+                AddOrder(session, orders, orderSet, g);
+                continue;
+            }
+
+            g.GoalComp = nav.Comp[g.Goal]; // 连通域随认知重烘重标号
+            if (g.Flow == null) continue;
+            if (!underway.Contains(g.Id))
+            {
+                // 驻扎组:场必须还属于新导航(自有,或 sharesFlow 判定可复用的真相场),
+                // 否则被唤醒/推挤的成员会踩旧认知——只刷新,不重规划
+                var f = g.Flow;
+                bool own = f.NavId == g.NavId;
+                bool shared = !own && f.NavId == g.NavId % CrowdBeliefNavs.BeliefStride &&
+                    _session.Beliefs != null && _session.Beliefs.SharesFlow(g.NavId, f.Mask!);
+                if (stale?.Contains(g) == true || (!own && !shared)) RefreshFlow(g);
+                continue;
+            }
+
+            hit.Add(g);
+        }
+
+        React(session, hit, orders, orderSet);
+        return orders;
+    }
+
+    /// <summary>F-3:受触指令的领队重挂到同指令仍由它带队、净空最严的组的当前导航——
+    /// 领队不踩已弃变体。</summary>
+    public void RelinkLeaders(HashSet<CrowdOrder> touched)
+    {
+        foreach (var o in touched)
+        {
+            foreach (var leader in o.Leaders)
+            {
+                CrowdNavGroupSet.Group? m = null;
+                foreach (var link in o.Groups)
+                {
+                    if (!_session.Groups.TryGet(link.GroupId, out var g) || g.Leader != leader) continue;
+                    if (m == null || StricterNav(g, m)) m = g;
+                }
+
+                if (m != null) leader.Nav = _session.ResolveNavContext(m.NavId);
+            }
+        }
+    }
+
+    // D13:净空更大更严;同净空取更大下标(确定)
+    private bool StricterNav(CrowdNavGroupSet.Group g, CrowdNavGroupSet.Group m)
+    {
+        int a = _session.ResolveNavContext(g.NavId).ClearanceCells;
+        int b = _session.ResolveNavContext(m.NavId).ClearanceCells;
+        return a > b || (a == b && g.RIdx > m.RIdx);
+    }
+
+    /// <summary>原位揭示(revealBelief 移植):槽的已建变体只重烘被揭 tile。C# 流场挂在组上
+    /// (无全局流场缓存),踩脏的组由调用方的 stale 集合刷新——参考端的 flowCache 清理无对应动作。</summary>
+    public Dictionary<int, List<int>> RevealBelief(int slot, List<int> tiles) =>
+        _session.Beliefs!.Reveal(slot, tiles);
 
     private static int CellOfUnit(CrowdSimSession session, int dense, CrowdSimulationUnitState st)
     {

@@ -55,6 +55,9 @@ public sealed class NavContext
 
     /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
     public int Version { get; set; }
+    /// <summary>最近一次增量重烘里内容真变的 tile(缓存命中同条目的除外;F02 认知原位揭示
+    /// 的脏集口径,与参考端 nav.changedTiles 同义)。null = 未重烘过。</summary>
+    public List<int>? ChangedTiles { get; set; }
     /// <summary>最近一次增量重烘的类别(0 = 无变化,1 = 仅代价,2 = 可走位翻转)。</summary>
     public byte LastRebake { get; set; }
 

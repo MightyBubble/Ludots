@@ -124,8 +124,8 @@ for (const e of entityList(structures)) {
   if (tpl.blocker) blockers.push({ xCm: cm(e.fp.x), yCm: cm(e.fp.y), sizeCm: cm(e.fp.hx * 2) });
   else if (tpl.layered) bridges.push({ x0Cm: cm(e.fp.x0), y0Cm: cm(e.fp.y0), x1Cm: cm(e.fp.x1), y1Cm: cm(e.fp.y1), widthCm: cm(e.fp.w) });
 }
-blockers.sort((a, b) => a.xCm - b.xCm || a.yCm - b.yCm || a.sizeCm - b.sizeCm);
-bridges.sort((a, b) => a.x0Cm - b.x0Cm || a.y0Cm - b.y0Cm || a.x1Cm - b.x1Cm || a.y1Cm - b.y1Cm);
+// 实体按参考端 id 序(entityList 迭代序)写出,不排序——C# 结构仓的实体 id 按加载序分配,
+// 迷雾认知的逐 id 语义(残影/遗忘/共享)要求两端 id 同构(F02)。
 
 const entities = [
   { InstanceId: 'team_1', Template: 'crowd_simulation_team' },
@@ -780,6 +780,163 @@ function canonComp(comp, n2) {
         ticks: TICKS, script, opExecTicks, frames,
       }, null, 2));
       console.log(`[export] ${mapId} s7 ticks=${TICKS} units=${sim.units.count} ops=${ops.length} rebakes=${sim.stats.rebakes}`);
+    }
+
+    // ───────────────────────────── S7-b:迷雾 / 视野组 / 认知变体真相(F02) ─────────────────────────────
+    // 迷雾开启口径:不置 __S7_TRUTH_NAV__(与 S7 块互斥并存,既有真值不重导)。
+    // 脚本 = 部署 → 行军(视盘推进/探索提交)→ 路上放未知建筑(发现前不绕、发现后改道)→
+    // 拆除(残影)→ 折返再见地面(残影消失)→ reveal/obscure/forget → fogShare 并组 →
+    // order 的 fogTerrain 开关对照(乐观迷雾)。逐 tick 记录:单位(与 S5/S7 同构)+
+    // 迷雾 digest(每组 visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev 计数器,
+    // 全局 seq/switches/槽账)——迷雾状态是整数/集合态,digest 逐位硬门,无带宽口径。
+    // 认知变体导航的内容一致性由轨迹门(单位按认知改道)与结构 op 报告背书。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      // 迷雾开启:S7 块置位的冻结门在块尾不回收,这里显式关掉(本块的口径就是活迷雾)
+      globalThis.__S7_TRUTH_NAV__ = false;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic } = await import('../src/engine/workers/bake.js');
+      const { TileCache } = await import('../src/engine/navtile/tileCache');
+      const { hpaScratch } = await import('../src/engine/hpa');
+      const { meshScratch } = await import('../src/engine/navtile/assemble');
+      // 全新基线:不复用前块的共享 structures/navs(S7 块的道路实体与重烘会泄漏进来,
+      // 与 C# 新会话的干净基线不同构)——重跑结构生成 + 全新 tile 缓存 + 全新上下文烘焙
+      const { generateStructures: regenStructures } = await import('../src/engine/structures/mapGen.js');
+      const freshStructures = regenStructures(world, config, reach);
+      const freshCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      const navList = [];
+      {
+        const seen = new Set();
+        for (let a = 0; a < config.agentTypes.length; a++) for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+          const c = clearanceOf(config, r), id = navIdOf(a, c);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          navList.push(buildNavContext(worldQ, config, a, c, freshStructures, freshCache));
+        }
+      }
+      const baked = { world: worldQ, worldCached: true, structures: freshStructures, navs: navList, tileCache: freshCache, ms: 0 };
+      // 无头深拷贝(全新烘焙的 navmesh/meshBuf 齐备;守卫式剥 scratch,克隆后按需重建)
+      const stripClone = () => {
+        const saved = navList.map((n) => [n.hpa.scratch, n.meshBuf && n.meshBuf.scratch, n.navmesh && n.navmesh.scratch]);
+        for (const n of navList) { n.hpa.scratch = null; if (n.meshBuf) n.meshBuf.scratch = null; if (n.navmesh) n.navmesh.scratch = null; }
+        try { return structuredClone(packStatic(baked)); } finally {
+          navList.forEach((n, k) => { n.hpa.scratch = saved[k][0]; if (n.meshBuf) n.meshBuf.scratch = saved[k][1]; if (n.navmesh) n.navmesh.scratch = saved[k][2]; });
+        }
+      };
+      const payload = stripClone();
+      const copyCache = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      for (const [k, e] of payload.tiles) copyCache.map.set(k, e);
+      Object.assign(copyCache, payload.tileStats);
+      for (const e of copyCache.map.values()) copyCache.uid = Math.max(copyCache.uid, e.uid + 1);
+      for (const nav of payload.navs) {
+        nav.hpa.scratch = hpaScratch(nav.hpa.S);
+        if (nav.meshBuf) nav.meshBuf.scratch = null;
+        if (nav.navmesh) nav.navmesh.scratch = meshScratch(nav.meshBuf, nav.navmesh.count);
+      }
+      const copy = { world: payload.world, worldCached: true, structures: payload.structures, navs: payload.navs, tileCache: copyCache, ms: 0 };
+      const host = createNavHost(config, copy.world, copy.structures, copy.navs, copy.tileCache);
+      const sim = new Simulation(sources, baked, new LocalPathService(host));
+      sim.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+      console.log(`[export] s7fog groups G=${sim.fog.G} groupOf=[${sim.fog.groupOf}] F=${sim.fog.F} period=${sim.fog.period}`);
+
+      const script = [
+        { tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 120, unitType: 0, rIdx: 0 } },
+        { tick: 2, cmd: { type: 'order', player: 1, xCm: 1200000, yCm: 800000, shape: 'box' } },
+        { tick: 5, cmd: { type: 'placeStructure', template: 'building', xCm: 584375, yCm: 584375, sizeCm: 14000 } },
+        { tick: 90, cmd: { type: 'removeStructureAt', xCm: 584375, yCm: 584375 } },
+        { tick: 120, cmd: { type: 'order', player: 1, xCm: 480000, yCm: 560000, shape: 'box' } },
+        { tick: 150, cmd: { type: 'reveal', player: 1, rect: [900000, 900000, 1000000, 1000000] } },
+        { tick: 170, cmd: { type: 'obscure', player: 1, rect: [700000, 600000, 800000, 700000], ticks: 30 } },
+        { tick: 200, cmd: { type: 'forget', player: 1, rect: [1000000, 1000000, 1100000, 1100000] } },
+        { tick: 230, cmd: { type: 'fogShare', player: 1, with: 2 } },
+        { tick: 260, cmd: { type: 'order', player: 1, xCm: 1300000, yCm: 500000, shape: 'box', fogTerrain: true } },
+        { tick: 330, cmd: { type: 'order', player: 1, xCm: 480000, yCm: 560000, shape: 'box', fogTerrain: false } },
+      ];
+      const webScript = script.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'order') return { tick: e.tick, cmd: { type: 'order', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, opts: { shape: c.shape, ...(c.fogTerrain !== undefined ? { fogTerrain: c.fogTerrain } : {}) } } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100 } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        if (c.type === 'reveal') return { tick: e.tick, cmd: { type: 'reveal', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        if (c.type === 'obscure') return { tick: e.tick, cmd: { type: 'obscure', player: c.player - 1, rect: c.rect.map((v) => v / 100), ticks: c.ticks } };
+        if (c.type === 'forget') return { tick: e.tick, cmd: { type: 'forget', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        if (c.type === 'fogShare') return { tick: e.tick, cmd: { type: 'fogShare', player: c.player - 1, with: c.with - 1 } };
+        return e;
+      });
+      sim.commands.schedule(webScript);
+
+      const TICKS = 360;
+      const G = sim.fog.G;
+      const w = new BW();
+      w.bytes(Buffer.from('LS7F', 'ascii'));
+      w.i32(TICKS);
+      w.i32(G);
+      const ops = [];
+      let seenRebakes = 0;
+      let seenSwitches = 0;
+      for (let t = 0; t < TICKS; t++) {
+        sim.sepCtx.unitContacts.fill(0);
+        sim.advance(1);
+        const u = sim.units, n = u.count;
+        w.i32(n);
+        for (let i = 0; i < n; i++) {
+          w.u32(u.id[i]);
+          w.f64(u.x[i] * 100); w.f64(u.y[i] * 100);
+          w.u8(u.state[i]); w.u8(u.mode[i]); w.u8(u.level[i]);
+          w.u32(u.order[i]);
+          w.u16(sim.sepCtx.unitContacts[i]);
+        }
+        // 迷雾 digest:整数/集合态,逐位门
+        const fog = sim.fog, F2 = fog.F * fog.F;
+        for (let g = 0; g < G; g++) {
+          let vis = 0, exp = 0;
+          for (let c = g * F2; c < (g + 1) * F2; c++) { if (fog.visible[c]) vis++; if (fog.explored[c]) exp++; }
+          w.i32(vis); w.i32(exp);
+          w.i32(fog.belief[g].size);
+          w.i32(fog.tiles[g].size);
+          w.u32(fog.beliefKey(g));
+          w.i32(sim.belief.slot[g]);
+          w.i32(fog.entRev[g]); w.i32(fog.rev[g]);
+        }
+        w.i32(sim.belief.seq); w.i32(sim.belief.switches);
+        w.i32(sim.belief.entry.size); w.i32(sim.belief.dormant.length);
+        w.i32(fog.beliefCount());
+        // 结构 op 报告采样(与 S7 块同款)
+        if (sim.rebakeJob === null && sim.stats.rebakes > seenRebakes) {
+          seenRebakes = sim.stats.rebakes;
+          ops.push({ reportTick: sim.tickCount, r: sim.stats.rebake, union: [...sim.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+        if (sim.belief.switches > seenSwitches) seenSwitches = sim.belief.switches;
+      }
+      const opList = script.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      const opExecTicks = opList.map((o) => o.tick);
+      if (ops.length !== opExecTicks.length) throw new Error(`S7-b 重烘报告数 ${ops.length} ≠ 预期 ${opExecTicks.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7fog.bin'), w.build());
+      const wo = new BW();
+      wo.bytes(Buffer.from('LS7O', 'ascii'));
+      wo.i32(ops.length);
+      ops.forEach((op, i) => {
+        wo.i32(opExecTicks[i]);
+        wo.u8(opList[i].kind);
+        wo.i32(op.reportTick);
+        wo.i32(op.r.tiles); wo.i32(op.r.contexts); wo.i32(op.r.costOnly);
+        wo.i32(op.r.hits); wo.i32(op.r.misses);
+        wo.i32(op.r.orders); wo.i32(op.r.refreshes);
+        wo.i32(op.r.evicted); wo.i32(op.r.stuck);
+        wo.i32(op.union.length);
+        for (const tile of op.union) wo.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7fog-ops.bin'), wo.build());
+      writeFileSync(join(outRoot, 'parity', 's7fog-truth.json'), JSON.stringify({
+        mapId, seed,
+        note: 'S7-b 迷雾/认知(F02):迷雾开启口径(不置 __S7_TRUTH_NAV__,与 S7 块并存)。单位记录与 S5/S7 同构(位置带宽 + 状态机逐位 + contacts 双容忍);迷雾 digest 每组每 tick(visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev)+ 全局槽账(seq/switches/entry/dormant/beliefCount),整数集合态逐位硬门。s7fog-ops.bin 为结构 op 报告(place@5 挡路改道、remove@90 残影语义),逐字段硬门。脚本含 reveal/obscure/forget/fogShare 与 order 的 fogTerrain 开关(乐观迷雾)。C# 侧 CrowdFog/CrowdBeliefState 字段一一对应。',
+        ticks: TICKS, G, script, opExecTicks,
+      }, null, 2));
+      console.log(`[export] ${mapId} s7fog ticks=${TICKS} units=${sim.units.count} ops=${ops.length} switches=${seenSwitches} beliefCount=${sim.fog.beliefCount()}`);
     }
 
   }

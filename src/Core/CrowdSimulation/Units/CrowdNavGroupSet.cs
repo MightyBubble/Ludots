@@ -15,7 +15,11 @@ public sealed class CrowdNavGroupSet
         public required int Player { get; init; }
         public required int LayerIdx { get; init; }
         public required int RIdx { get; init; }
-        public required int NavId { get; init; }
+        /// <summary>当前规划句柄(F02 双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
+        /// 意图/领队/规划读它;马达物理读 BodyNavId(永远真相)。</summary>
+        public int NavId { get; set; }
+        /// <summary>真相句柄(F02 双句柄之"身体"):生成时定,不再变。</summary>
+        public required int BodyNavId { get; init; }
         public int Count { get; set; }
         /// <summary>所属指令 id(0 = 无指令);组不复制指令数据。</summary>
         public int OrderId { get; set; }
@@ -60,7 +64,7 @@ public sealed class CrowdNavGroupSet
     {
         int id = _free.Count > 0 ? _free.Pop() : _groups.Count;
         if (id >= MaxGroups) throw new System.InvalidOperationException($"导航组上限 {MaxGroups}  exceeded。");
-        var g = new Group { Id = id, Player = player, LayerIdx = layerIdx, RIdx = rIdx, NavId = navId, Count = 0 };
+        var g = new Group { Id = id, Player = player, LayerIdx = layerIdx, RIdx = rIdx, NavId = navId, BodyNavId = navId, Count = 0 };
         if (id == _groups.Count) _groups.Add(g);
         else _groups[id] = g;
         return g;

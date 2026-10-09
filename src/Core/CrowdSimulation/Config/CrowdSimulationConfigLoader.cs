@@ -359,6 +359,8 @@ public sealed class CrowdSimulationConfigLoader
                 RevealTicks = config.Fog.RevealTicks,
                 SlotCacheCapacity = config.Fog.SlotCacheCapacity,
                 VariantCapacity = config.Fog.VariantCapacity,
+                LineOfSight = config.Fog.LineOfSight,
+                EyeCm = config.Fog.EyeCm,
             },
             Formation = new RuntimeFormationSection
             {
@@ -511,6 +513,7 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         var kindPush = new CrowdSimulationPushMode[kinds.Count];
+        var kindShareVision = new bool[kinds.Count];
         foreach (var (name, entry) in kinds)
         {
             if (entry.Push is not ("priority" or "rigid"))
@@ -520,6 +523,7 @@ public sealed class CrowdSimulationConfigLoader
             }
 
             kindPush[kindIndexByName[name]] = ParsePushMode(entry.Push);
+            kindShareVision[kindIndexByName[name]] = entry.ShareVision;
         }
 
         int P = map.Players.Count;
@@ -537,6 +541,7 @@ public sealed class CrowdSimulationConfigLoader
             : config.Relations.Default;
 
         var matrix = new CrowdSimulationPushMode[P * P];
+        var shareVision = new bool[P * P];
         for (int a = 0; a < P; a++)
         {
             for (int b = 0; b < P; b++)
@@ -549,6 +554,7 @@ public sealed class CrowdSimulationConfigLoader
                 }
 
                 matrix[a * P + b] = kindPush[kindIndex];
+                shareVision[a * P + b] = kindShareVision[kindIndex];
             }
         }
 
@@ -567,6 +573,7 @@ public sealed class CrowdSimulationConfigLoader
             }
 
             matrix[a * P + b] = matrix[b * P + a] = kindPush[kindIndex];
+            shareVision[a * P + b] = shareVision[b * P + a] = kindShareVision[kindIndex];
         }
 
         var indexByPlayerId = new int[P + 1];
@@ -575,7 +582,7 @@ public sealed class CrowdSimulationConfigLoader
             indexByPlayerId[playerId] = index;
         }
 
-        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix, IndexByPlayerId = indexByPlayerId };
+        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix, ShareVisionByPair = shareVision, IndexByPlayerId = indexByPlayerId };
     }
 
     /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>

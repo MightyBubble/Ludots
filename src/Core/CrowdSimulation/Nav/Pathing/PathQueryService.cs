@@ -45,6 +45,8 @@ public sealed class PathServiceFaultException : InvalidOperationException
 public sealed class PathQueryService : IDisposable
 {
     private readonly IReadOnlyDictionary<int, NavContext> _navs;
+    /// <summary>认知变体号(≥ BeliefStride)的解析器(F02);null = 纯真相会话(S3 形状)。</summary>
+    private readonly Func<int, NavContext>? _variantResolver;
     private readonly CrowdSimulationRuntimeConfig _config;
     private readonly int _latencyTicks;
     private readonly TimeSpan _planTimeout;
@@ -86,9 +88,11 @@ public sealed class PathQueryService : IDisposable
         IReadOnlyDictionary<int, NavContext> navs,
         CrowdSimulationRuntimeConfig config,
         int workerThreads,
-        TimeSpan planTimeout)
+        TimeSpan planTimeout,
+        Func<int, NavContext>? variantResolver = null)
     {
         _navs = navs;
+        _variantResolver = variantResolver;
         _config = config;
         _latencyTicks = config.Planning.LatencyTicks;
         _planTimeout = planTimeout;
@@ -267,7 +271,10 @@ public sealed class PathQueryService : IDisposable
 
     private PathResult Compute(PathQuery q, FlowPool pool, CorridorQuery.Scratch scratch)
     {
-        var nav = _navs[q.NavContextId];
+        // F02:变体号经会话的解析器(持有 _navGate 的线程内调用,Monitor 可重入)
+        var nav = q.NavContextId < Fog.CrowdBeliefNavs.BeliefStride
+            ? _navs[q.NavContextId]
+            : _variantResolver!(q.NavContextId);
         int n = nav.CellCount;
         int cs = nav.Hpa!.ClusterSize, cc = nav.Hpa.ClustersPerSide;
         if (q.CorridorMask != null)

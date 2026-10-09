@@ -48,6 +48,18 @@ public readonly struct CrowdStructureFootprint
         _ => (Fix64.Min(X0, X1) - W / 2, Fix64.Min(Y0, Y1) - W / 2, Fix64.Max(X0, X1) + W / 2, Fix64.Max(Y0, Y1) + W / 2),
     };
 
+    /// <summary>地图桥实体的仓内足迹(F02):span 即导出端从参考仓读出的 path 足迹
+    /// (两岸各延长 portalCells-1 格后取整厘米),直接落形不做二次几何。</summary>
+    public static CrowdStructureFootprint Bridge(CrowdSimulationBridgeSpan span) => new()
+    {
+        Shape = CrowdStructureShape.Path,
+        X0 = Fix64.FromInt(span.X0Cm),
+        Y0 = Fix64.FromInt(span.Y0Cm),
+        X1 = Fix64.FromInt(span.X1Cm),
+        Y1 = Fix64.FromInt(span.Y1Cm),
+        W = Fix64.FromInt(span.WidthCm),
+    };
+
     /// <summary>点是否在足迹内(path 的端上点带 ε 容差,抗浮点骑线)。</summary>
     public bool Covers(Fix64 px, Fix64 py)
     {

@@ -157,6 +157,10 @@ public sealed class RuntimeFogSection
     public required int RevealTicks { get; init; }
     public required int SlotCacheCapacity { get; init; }
     public required int VariantCapacity { get; init; }
+    /// <summary>视线遮挡开关(迷雾格间建筑/高地挡视线的初始态;fogSight 命令运行时可切)。</summary>
+    public required bool LineOfSight { get; init; }
+    /// <summary>观察者眼高(厘米)。</summary>
+    public required int EyeCm { get; init; }
 }
 
 public sealed class RuntimeFormationSection
@@ -240,6 +244,9 @@ public sealed class RuntimeRelations
 {
     public required int PlayerCount { get; init; }
     public required CrowdSimulationPushMode[] PushModeByPair { get; init; }
+    /// <summary>ShareVisionByPair[a * P + b] = 玩家下标 a 对 b 的关系是否共享视野;
+    /// 迷雾视野组的并查集只在双向都真时连边(与参考端 kindOf 双查同构)。</summary>
+    public required bool[] ShareVisionByPair { get; init; }
     /// <summary>长度 = P + 1(下标 0 弃用);IndexByPlayerId[ playerId ] = 表序下标,
     /// 仅对 1..P 的玩家号有定义(装载门禁拒绝表外 id)。</summary>
     public required int[] IndexByPlayerId { get; init; }

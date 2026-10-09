@@ -86,6 +86,7 @@ public static class CrowdStructureOps
         var fp = CrowdStructureFootprint.Make(template, xCm, yCm, sizeCm, toXCm, toYCm);
         int expire = store.ExpireTickOf(template, sim.TickCount);
         var (id, rect) = store.PlaceEntity(tpl, fp, expire);
+        sim.Fog?.OnTruth(id); // F02:真相实体出现 → 索引/key/truthRev/不透明位
         return StructureChanged(sim, rect, CrowdRebakeReport.KindPlace, fp);
     }
 
@@ -102,6 +103,7 @@ public static class CrowdStructureOps
         var store = RequireStore(sim);
         var removed = store.RemoveEntity(id);
         if (removed == null) return null;
+        sim.Fog?.OnTruth(id); // F02:真相实体消失 → 残影语义由认知侧自己维持
         return StructureChanged(sim, removed.Value.Rect, CrowdRebakeReport.KindRemove, removed.Value.Fp);
     }
 
@@ -157,7 +159,10 @@ public static class CrowdStructureOps
 
             return results;
         });
-        // F02 挂点:参考端在此做认知变体 detach/settle(syncBeliefs)——迷雾未移植,留空
+        // F02:真相重烘完 → 认知分歧重推导(参考端 truthChanged 同点)。参考端的
+        // detach/settle(变体在真相重烘前私享 tile)不需要——C# 变体是全拷贝(裁定 ①),
+        // 真相重烘写不到变体自有的数组。
+        sim.Beliefs?.TruthChanged();
         int contexts = 0, costOnly = 0;
         foreach (var r in dirty)
         {
@@ -262,7 +267,7 @@ public static class CrowdStructureOps
             var entity = units.EntityAt(i);
             var state = sim.World.Get<CrowdSimulationUnitState>(entity);
             int clearance = 1;
-            if (sim.Groups.TryGet(state.GroupId, out var g)) clearance = sim.Navs[g.NavId].ClearanceCells;
+            if (sim.Groups.TryGet(state.GroupId, out var g)) clearance = sim.Navs[g.BodyNavId].ClearanceCells;
             Fix64 pad = Fix64.FromInt(clearance * cs) + units.PersonalRadiusCmAt(i) + rMax;
             var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
             Fix64 dx = pos.X < ax ? ax - pos.X : pos.X > bx ? pos.X - bx : Fix64.Zero;
@@ -298,7 +303,7 @@ public static class CrowdStructureOps
             var py = jumping ? kin.JumpToCm.Y : sim.World.Get<Components.WorldPositionCm>(entity).Value.Y;
             if (px < ax || px >= bx || py < ay || py >= by) continue;
             if (!sim.Groups.TryGet(state.GroupId, out var g)) continue;
-            var nav = sim.Navs[g.NavId];
+            var nav = sim.Navs[g.BodyNavId];
             int cell = CrowdDeployment.CellAt(px, py, n, cs);
             if (state.Level != 0)
             {

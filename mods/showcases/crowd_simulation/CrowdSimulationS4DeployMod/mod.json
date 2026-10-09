@@ -1,7 +1,7 @@
 {
   "name": "CrowdSimulationS4DeployMod",
   "version": "0.2.0",
-  "description": "CrowdSimulation S4 部署演示(种子 1337,纯数据无代码):进入地图自动按规范脚本部署 12000 单位(形状×玩家色),框选/点名生成经由指令流执行,到点自动回放并对拍校验码。",
+  "description": "CrowdSimulation S4 部署演示(种子 1337,纯数据无代码):进入地图自动按规范脚本部署 12000 单位(形状×玩家色),框选/点名生成经由指令流执行,到点自动回放并对拍校验码。F02 起脚本含迷雾命令(reveal/obscure/forget/fogTerrain),单位按认知改道;HUD 黑板键暴露可见/探索/认知/残影计数,迷雾渲染底座由 W2 经查询面绘制。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

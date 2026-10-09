@@ -56,6 +56,41 @@ public sealed class HpaGraph
     private Fix64[] _localW = Array.Empty<Fix64>();
     private byte[] _localWant = Array.Empty<byte>();
 
+    /// <summary>认知变体克隆(F02):外层容器全拷(增量重烘只做条目替换),内层数组与簇块
+    /// 共享引用——重烘改写的是变体自有的外层槽位;查询暂存全新。</summary>
+    public HpaGraph CloneForVariant()
+    {
+        return new HpaGraph
+        {
+            ClusterSize = ClusterSize,
+            ClustersPerSide = ClustersPerSide,
+            CellCount2 = CellCount2,
+            MaxEntranceWidth = MaxEntranceWidth,
+            BorderE = (int[][])BorderE.Clone(),
+            BorderS = (int[][])BorderS.Clone(),
+            UpE = (int[][])UpE.Clone(),
+            UpECost = (Fix64[][])UpECost.Clone(),
+            UpS = (int[][])UpS.Clone(),
+            UpSCost = (Fix64[][])UpSCost.Clone(),
+            Cells = (int[][])Cells.Clone(),
+            Intra = (int[][])Intra.Clone(),
+            IntraDist = (Fix64[][])IntraDist.Clone(),
+            CrossLayer = (int[][])CrossLayer.Clone(),
+            Blocks = (HpaClusterBlock[])Blocks.Clone(),
+            LinkOut = new Dictionary<int, List<(int, Fix64)>>(LinkOut),
+            LinkClusters = LinkClusters == null ? null : new Dictionary<int, List<int>>(LinkClusters),
+            NodeCount = NodeCount,
+            EdgeCount = EdgeCount,
+            Heap = new NavMinHeap(512),
+            _dist = new Fix64[_dist.Length],
+            _startDist = new Fix64[_startDist.Length],
+            _goalDist = new Fix64[_goalDist.Length],
+            _localNb = new int[_localNb.Length == 0 ? ClusterSize * ClusterSize * 8 : _localNb.Length],
+            _localW = new Fix64[_localW.Length == 0 ? ClusterSize * ClusterSize * 8 : _localW.Length],
+            _localWant = new byte[_localWant.Length == 0 ? ClusterSize * ClusterSize : _localWant.Length],
+        };
+    }
+
     public static HpaGraph Build(NavContext nav, CrowdSimulationRuntimeConfig config)
     {
         int n = nav.CellCount, s = config.Hpa.ClusterSize, c = n / s, cc = c * c;

@@ -77,7 +77,7 @@ public static class CrowdMotor
                 continue;
             }
 
-            var nav = session.Navs[session.Groups.Groups[state.GroupId]!.NavId];
+            var nav = session.Navs[session.Groups.Groups[state.GroupId]!.BodyNavId]; // F02 双句柄:马达物理走真相
             int lv = state.Level;
             byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
             byte[] walk = lv != 0 ? nav.UpPass : nav.Walk; // 甲板层没有独立亚格 walk 网格:甲板面无亚格障碍,以 UpPass 为口径(与 S2 数据面对齐)

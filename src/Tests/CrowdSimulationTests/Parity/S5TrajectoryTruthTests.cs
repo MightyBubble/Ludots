@@ -49,9 +49,10 @@ public sealed class S5TrajectoryTruthTests
     public void S5_Trajectory_MatchesWebBaseline()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30));
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
+        session.TruthNavFrozen = true; // F02:旧真值在迷雾冻结口径下录制(参考端 S5 导出虽未置门,冻结与活雾在此场景行为等价——认知集恒真相)
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;

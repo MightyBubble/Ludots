@@ -181,8 +181,7 @@ public class S1SurfaceTruthTests
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
         var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
-        blockers.Sort((a, b) => a.XCm != b.XCm ? a.XCm - b.XCm : a.YCm != b.YCm ? a.YCm - b.YCm : a.HalfSizeCm - b.HalfSizeCm);
-        bridges.Sort((a, b) => a.X0Cm != b.X0Cm ? a.X0Cm - b.X0Cm : a.Y0Cm != b.Y0Cm ? a.Y0Cm - b.Y0Cm : a.X1Cm != b.X1Cm ? a.X1Cm - b.X1Cm : a.Y1Cm - b.Y1Cm);
+        // 地图实体按导出端参考 id 序加载,不排序(F02 认知的逐 id 语义要求两端 id 同构)
         return (blockers, bridges);
     }
 

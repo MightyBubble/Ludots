@@ -1,6 +1,6 @@
 # CrowdSimulation 与 NavSurface：导航体系重构
 
-> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）、S4-a（ECS 单位部署 + 规范校验码 + 指令记录回放内核）、S4-b（部署演示纯数据化：单位经 presenter 管线进画面,自动部署 + 自动回放对拍）、S5-a（移动内核与阵型：虚拟领队 / 意图 / 马达 / 槽位 / 规划器,轨迹对拍）、S5-b（最小避让：非对称分离 / 关系推挤矩阵 / calm 休眠,L02 校验码运动字段重钉）已交付。拖线摆阵演示与走廊扩展、S6 剩余（态度模式推挤 / 阻挡盒推挤）见文末路线。
+> 状态：S0（配置门禁）、S1（地形与障碍物）、S2（逐体型可走区域与跳跃链接）、S3-a（tile 烘焙链与 tile 缓存）、S3-b（全局拼装 + HPA* 抽象图,拓扑逐位对拍）、S3-c（走廊查询 + 流场 + 固定生效帧路径服务）、S4-a（ECS 单位部署 + 规范校验码 + 指令记录回放内核）、S4-b（部署演示纯数据化：单位经 presenter 管线进画面,自动部署 + 自动回放对拍）、S5-a（移动内核与阵型：虚拟领队 / 意图 / 马达 / 槽位 / 规划器,轨迹对拍）、S5-b（最小避让：非对称分离 / 关系推挤矩阵 / calm 休眠,L02 校验码运动字段重钉）、S7-a（结构动态化：建造/拆除/寿命 + 脏 tile 增量重烘 + HPA 增量 + 队伍反应）、S7-b（迷雾/视野组/认知变体:视野组并查集、周期 slot 迷雾、认知槽变体导航、原位揭示、D50 面命令,digest 逐位对拍）已交付。拖线摆阵演示与走廊扩展、S6 剩余（态度模式推挤 / 阻挡盒推挤）见文末路线。
 
 ## 这是什么
 
@@ -207,6 +207,16 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **L15 处置**:本单未触及单位删除路径(evict 是传送不是删除,无 kill 指令移植),swap-remove 不搬推挤状态的问题**仍挂起**,留待涉及单位删除的单。
 - **F03-b 待办**:演示 mod 的结构放置交互与呈现(本单只交付内核与真值链);动态分层(桥)的上层增量烘焙;参考端 stray 走廊扩展(Ludots 侧 OnStray 仍空挂)。
 
+## S7-b 交付：迷雾 / 视野组 / 认知变体内核(F02,本次)
+
+- **视野组与迷雾状态机**(`Fog/CrowdFog.cs`,对照 `fog/fog.js` 逐 op):shareVision 关系双向成立的玩家并成组(union-find,根取小索引);粗格(F = ceil(N / cellCells),s1337 上 F=64、格距 250m)上 visible 按 fog.rateHz 重建(组 round-robin 摊周期、单位只在本组槽位 tick 盖章,D37 双向夹紧)、explored 粘滞;belief = 实体 id → 末次所见快照(初始地图实体全员已知、见即知、拆除留残影直到地面再见);key = 认知实体集的交换 XOR 哈希(CrowdFog.Mix,JS Math.imul = C# unchecked 同位);BV-6 计数器(entRev/rev/truthRev)做精确变更检测,哈希碰撞藏不住变更。D50 面命令 reveal / obscure / forget / fogShare(并组,拆组不支持同参考端)+ fogSight(LOS 开关);order 的 fogTerrain 选项切乐观迷雾(未探索 tile 按可通行假设)。形状解析与格化(`CrowdFogArea`,area.js 移植):rect 保守覆盖 / circle·poly 格心在内,锚点兜底,双精度同 IEEE 序列。
+- **认知变体导航**(`Fog/CrowdBeliefNavs.cs`,对照 beliefNav.js):变体 nav 号 = 槽号 × 65536 + 真 nav 号;belief 字段 = 结构仓形状的认知快照(`CrowdStructuresStore.BuildBeliefField`:**地形源起底 + believed 组件重标**——不能从真相活栅格起底,单侧已知实体的痕迹要靠重标擦掉);变体 = 全拷贝克隆(NavContext 逐格数组全拷、tile 条目经 NavTileCache 内容键共享、HPA 外层容器拷内层共享,裁定 2026-10-09:行为逐位优先,COW 缓行,真机实测后再评)只对分歧矩形(单侧实体 + 未探索 tile 行段)增量重烘;原位揭示(Reveal)只重烘被揭 tile,真变 tile 集与参考端 nav.changedTiles 同口径(NavContext.ChangedTiles);乐观层 fieldFor:未探索 tile 上未被实体覆写的格取 assumedArea(slopeFree 优先、代价最小);sharesFlow 判定移植(不是纯优化——settled 组保不保留旧流场影响刷新计数,是对拍面);detach/settle 全拷贝下天然成立(真相重烘写不到变体自有数组),显式免操作记档。
+- **认知同步**(`Fog/CrowdBeliefSync.cs`,对照 beliefSync.js):每 tick 运动后、tick 计数前;槽 0 = 真相(认知集 == 真值集),同认知集的组共享槽(key 桶预筛 + 集合相等确认);BV-6 计数器跳过、探索按 fog.revealTicks 批提交、原位揭示不开新槽;槽切换 → 组换规划句柄 + 领队重挂(F-3)+ 闲置槽休眠、超容量逐旧淘汰(F-4/BV-7)。**双句柄**:Group.NavId = 当前规划句柄(真相号或变体号,槽切换重挂;生成与重下令时挂当前槽),Group.BodyNavId = 真相句柄不变——**意图/领队/规划读 NavId,马达物理/挤离读 BodyNavId**(规划信认知、碰撞信真相)。路径服务的变体号经会话解析器(`ResolveNavContext`),worker 在导航互斥域内解析(Monitor 同线程可重入);认知注册表全部变更经同一互斥域串行。
+- **结构仓补桥(F02 对齐)**:地图桥实体以实体身份进认知仓(`InstallMapBridges`:span 即导出端从参考仓读出的 path 足迹,不进地面栅格/碰撞——桥面层仍由 UpperLayerBake 独立烘焙,S1–S7 地面口径零接触);导出器地图实体的写出序改为参考 id 序(不排序),两端实体 id 逐位同构——认知的逐 id 语义(残影/遗忘/共享)以此为前提。
+- **修复的潜伏缺陷(迷雾暴露)**:① 结构仓 RemoveEntity 从不清 _ids(死 id 留表);② CrowdIssueOrder 重组用玩家号当表序下标(SpawnAt 传的是 id-1);③ 规划器打单位指令标扫指令簿,回收组号的陈旧链接会命中(改为组的 OrderId 字段,同参考端 g.order.id);④ S1 测试镜像了导出器旧的实体排序(两端同步去排序)。
+- **对拍(导出器 S7-b 块 + `S7FogTruthTests`,360 tick × 120 单位,种子 1337,迷雾开启口径——不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)**:脚本 = 部署 → 行军 → 未知建筑(t5 放置初始视盘外,t24 发现,发现前后认知槽 1→0)→ 拆除残影(t90 slot2,t96 再见遗忘)→ reveal/obscure/forget → fogShare 并组(t230)→ fogTerrain 开关对照(t260/t330)。**迷雾 digest 逐位硬门**(s7fog.bin 每组每 tick visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev + 全局槽账 seq/switches/entry/dormant/beliefCount——整数集合态无带宽;认知变体的内容一致性由槽字段唯一决定 + 结构 op 报告逐字段 + 轨迹背书)。实测:digest 全程逐位、ops 2 笔全字段、轨迹 p50=0.08/p99=0.45cm;到达判定骑线(L18 族)使末段停车晚 1–9 tick——状态翻转 99 处全为 Moving↔Arrived 到达对(非到达翻转零容忍),末态带 5000(实测 3491);contacts 对齐门 0.5% + ±3(实测 0.147%,直方 [±1:57,±2:3,±3:3],到达簇多邻骑线)。**truth 冻结口径**:会话属性 TruthNavFrozen(同参考端 __S7_TRUTH_NAV__ 导出补丁语义)——S5/S7 既有测试置位,旧真值原样全等(已验逐字节);S4 纯部署会话不建迷雾。
+- **真机**:S4Deploy 演示脚本追加迷雾命令(reveal/obscure/forget/fogTerrain 对照,12000 单位按认知改道,autoReplay 回放对称);HUD 黑板键(crowd_simulation.session.fog.*)暴露玩家 1 视野组的可见/探索/认知/残影计数与乐观开关;FogViewGroup 口径(-1 = 全知 debug 视图默认,键切玩家视角,S7 spec 两观察范围并存)与 View(g) 查询面交给迷雾渲染底座(W2)绘制——本单不做渲染。
+- **范围边界记档**:LOS 开启(fogSight)的 sight 采样为 C# 双精度域,不是对拍口径(真值场景 LOS 关);sharesFlow 的跨槽流场共享统计(beliefFlowShares)不移植(判定已移植,统计无对拍面);认知槽的 sleep 在全拷贝变体下为显式免操作(容量由淘汰保证)。
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。

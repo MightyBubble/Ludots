@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.World;
@@ -86,6 +87,7 @@ public static class CrowdNavRebake
 
             FinishPassable(nav, sources, store, dirty, grown, same);
             tiles = dirty;
+            nav.ChangedTiles = dirty.Where(x => !same.Contains(x)).ToList();
             nav.LastRebake = KindPassable;
         }
         else
@@ -95,11 +97,13 @@ public static class CrowdNavRebake
             if (kind == KindNone && !meshChanged)
             {
                 nav.LastRebake = KindNone;
+                nav.ChangedTiles = new List<int>();
                 return new List<int>();
             }
 
             nav.Hpa!.Update(nav, nav.Links, dirty, same: null);
             tiles = dirty;
+            nav.ChangedTiles = dirty;
             nav.LastRebake = KindCost;
         }
 

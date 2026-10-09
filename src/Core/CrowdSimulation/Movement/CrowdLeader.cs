@@ -42,7 +42,7 @@ public sealed class CrowdLeader
     }
 
     public int LayerIdx { get; }
-    public NavContext Nav { get; }
+    public NavContext Nav { get; internal set; }
     public bool Fixed { get; }
     public Fix64Vec2? Face { get; }
     public Fix64 X { get; private set; }

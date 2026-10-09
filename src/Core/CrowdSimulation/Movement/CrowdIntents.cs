@@ -86,7 +86,7 @@ public static class CrowdIntents
 
             var flow = g.Flow;
             var leader = g.Leader!;
-            var nav = session.Navs[g.NavId];
+            var nav = session.ResolveNavContext(g.NavId); // F02:规划句柄走认知槽解析
             var order = OrderOf(session, g.OrderId);
             bool converge = order?.Mode == CrowdOrderMode.Converge;
 

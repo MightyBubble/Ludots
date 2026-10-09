@@ -21,9 +21,11 @@ public sealed class CrowdStructuresStore
     public Fix64 ReachCm { get; }
 
     /// <summary>导航区域栅格 = 地形源,被 NavArea 组件按优先级覆盖(高者胜,同级后放置者胜)。</summary>
-    public byte[] Area { get; }
+    public byte[] Area { get; private set; }
     /// <summary>阻挡栅格:被 blocker 足迹覆盖率 ≥ blockCoverage 的格。</summary>
     public byte[] Blocked { get; }
+    /// <summary>地形源区域(F02 乐观层的覆写判据:area == terrainArea 的格才可被假设区域覆写)。</summary>
+    public byte[] TerrainArea => _terrainArea;
     private readonly byte[] _terrainArea;
 
     private readonly CrowdSimulationRuntimeConfig _config;
@@ -97,6 +99,69 @@ public sealed class CrowdStructuresStore
         return -1;
     }
 
+    /// <summary>实体 id 的放置序视图(F-2 索引与认知初始注入按此序遍历)。</summary>
+    public IReadOnlyList<int> EntityIds => _ids;
+
+    public bool TryGetFootprint(int id, out CrowdStructureFootprint fp)
+    {
+        if (_footprint.TryGetValue(id, out fp!)) return true;
+        fp = default;
+        return false;
+    }
+
+    public bool TryGetTemplate(int id, out int tplIndex) => _tpl.TryGetValue(id, out tplIndex!);
+
+    /// <summary>认知字段快照(beliefNav.js register 的 belief field,F02):地形源起底 + believed
+    /// 组件表带原 id 入仓,再逐实体足迹格矩形重标。起底必须是地形源而非真相活栅格——
+    /// 真相里只有单侧知道的实体(新放建筑)已落在活栅格上,认知侧要靠"地形+believed 重标"
+    /// 把它擦掉(参考端从真相栅格起底 + 分歧矩形复位,两者等价:分歧外的格只被共同实体覆盖)。
+    /// 不跑寿命;碰撞索引重建一次(马达永不读认知仓,只为仓的自洽)。</summary>
+    public static CrowdStructuresStore BuildBeliefField(
+        CrowdSimulationRuntimeConfig config,
+        SurfaceGrid terrain,
+        IReadOnlyList<(int Id, int TplIndex, CrowdStructureFootprint Fp)> entities)
+    {
+        var store = new CrowdStructuresStore(config, terrain);
+        store.Area = (byte[])store._terrainArea.Clone();
+        Array.Clear(store.Blocked);
+        var sorted = entities.OrderBy(e => e.Id).ToArray();
+        foreach (var (id, tplIndex, fp) in sorted)
+        {
+            var tpl = config.Structures.Templates[tplIndex];
+            store._ids.Add(id);
+            store._tpl[id] = tplIndex;
+            store._footprint[id] = fp;
+            if (tpl.AreaIndex is { } area) store._navArea[id] = (area, tpl.Priority);
+            if (tpl.Blocker) store._blocker.Add(id);
+            if (id >= store._nextId) store._nextId = id + 1;
+        }
+
+        foreach (var (_, _, fp) in sorted)
+        {
+            store.RasterRect(fp.CellRectOf(store.CellSizeCm, store.CellCount));
+        }
+
+        store.RebuildColliders();
+        return store;
+    }
+
+    /// <summary>乐观层换区域面(F02 fieldFor:assumedArea 覆写后的视图;belief 仓私有,整体换数组)。</summary>
+    public void ReplaceArea(byte[] area) => Area = area;
+
+    /// <summary>地图桥实体入仓(F02):桥以实体身份进认知(可见/残影语义),但不进地面
+    /// 栅格与碰撞——桥面层由 UpperLayerBake 独立烘焙(与 S1–S7 的地面口径零接触)。id 按装载序
+    /// 续在阻挡物之后,与导出端"参考 id 序写出"的地图实体序同构。</summary>
+    public void InstallMapBridges(int tplIndex, IReadOnlyList<CrowdSimulationBridgeSpan> spans)
+    {
+        foreach (var span in spans)
+        {
+            int id = _nextId++;
+            _ids.Add(id);
+            _tpl[id] = tplIndex;
+            _footprint[id] = CrowdStructureFootprint.Bridge(span);
+        }
+    }
+
     /// <summary>放置实体(组件自模板)并重标足迹格矩形;返回 (id, 格矩形)。</summary>
     public (int Id, (int X0, int Y0, int X1, int Y1) Rect) PlaceEntity(int tplIndex, CrowdStructureFootprint fp, int expireTick)
     {
@@ -122,6 +187,7 @@ public sealed class CrowdStructuresStore
     {
         if (!_footprint.TryGetValue(id, out var fp)) return null;
         bool wasBlocker = _blocker.Remove(id);
+        _ids.Remove(id);
         _tpl.Remove(id);
         _footprint.Remove(id);
         _navArea.Remove(id);
