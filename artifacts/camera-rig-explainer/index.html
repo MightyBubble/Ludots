@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Ludots 相机 Rig 讲解器（锚点 · 摇臂 · 镜体）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722e6; --line:#2a3348;
+    --tx:#dbe4f0; --dim:#8ea0b8;
+    --pivot:#ff5d5d; --arm:#5dd66b; --lens:#5db8ff;
+    --aim:#ffb14d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--tx);
+    font-family:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+  .panel{position:fixed;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;backdrop-filter:blur(6px);font-size:12.5px;line-height:1.55}
+  #legend{left:14px;top:14px;width:312px;max-height:calc(100vh - 28px);overflow:auto}
+  #ctrl{right:14px;top:14px;width:300px;max-height:calc(100vh - 250px);overflow:auto}
+  #legend h1{font-size:15px;margin:0 0 6px}
+  #legend p{margin:4px 0;color:var(--dim)}
+  #legend .kv{margin:2px 0}
+  #legend code{background:#1b2333;border:1px solid var(--line);border-radius:4px;
+    padding:0 4px;font-size:11.5px;color:#cde3ff}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .row{display:flex;align-items:center;gap:8px;margin:7px 0}
+  .row label{flex:0 0 112px;color:var(--dim);font-size:12px}
+  .row output{flex:0 0 56px;text-align:right;color:#cde3ff;font-variant-numeric:tabular-nums}
+  input[type=range]{flex:1;accent-color:#5db8ff}
+  .toggle{display:flex;align-items:center;gap:8px;margin:7px 0}
+  .toggle label{color:var(--dim);font-size:12px}
+  .bandrow{display:grid;grid-template-columns:30px 1fr 1fr 1fr;gap:4px;align-items:center;
+    font-size:11px;color:var(--dim);margin:4px 0}
+  .bandrow input[type=range]{accent-color:#5dd66b}
+  .bandhead{color:#6b7d95;font-size:10.5px;letter-spacing:.5px}
+  .bandname{text-align:center}
+  .disabled{opacity:.35;pointer-events:none}
+  select{background:#1b2333;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:3px 6px;flex:1;font-size:12px}
+  .sec{border-top:1px solid var(--line);margin:10px -14px;padding:8px 14px 0}
+  .secname{font-size:12px;color:#a9c4e8;letter-spacing:1px;margin-bottom:4px}
+  .badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;margin:1px 3px 1px 0;
+    border:1px solid var(--line);background:#161d2c;color:#bcd0ea}
+  details{margin-top:8px}
+  details>summary{cursor:pointer;list-style:none;color:#a9c4e8;font-size:12.5px;letter-spacing:1px;
+    padding:3px 0;user-select:none}
+  details>summary::before{content:"▸ ";color:var(--dim)}
+  details[open]>summary::before{content:"▾ "}
+  details>summary:hover{color:var(--tx)}
+  details .sec{border-top:none;margin:0 -14px;padding:2px 14px 6px}
+  .lbl{position:fixed;transform:translate(-50%,-130%);pointer-events:none;font-size:11.5px;
+    padding:2px 7px;border-radius:6px;background:#0e1420d9;border:1px solid var(--line);
+    white-space:nowrap;z-index:5;text-align:center}
+  #hud{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--dim)}
+  #pipWrap{position:fixed;right:14px;bottom:14px;width:352px;z-index:6}
+  #pipTitle{font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);
+    border-bottom:none;border-radius:8px 8px 0 0;padding:4px 10px;display:flex;justify-content:space-between}
+  #pipFrame{position:relative;height:198px;border:1px solid var(--line);border-radius:0 0 8px 8px;
+    overflow:hidden;background:transparent}
+  #pipCross{position:absolute;left:50%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);
+    pointer-events:none;opacity:.85}
+  #pipCross::before,#pipCross::after{content:"";position:absolute;background:#ffd23e}
+  #pipCross::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-.5px)}
+  #pipCross::after{top:50%;left:0;height:1px;width:100%;transform:translateY(-.5px)}
+  #pipNote{font-size:11px;color:#6b7d95;margin-top:4px;text-align:right}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="panel" id="legend">
+  <h1>相机 Rig：锚点 · 摇臂 · 镜体</h1>
+  <div>
+    <span class="badge">锚点 Pivot</span><span class="badge">摇臂 Arm</span><span class="badge">镜体 Lens</span><span class="badge">瞄准层 AimLayer</span><span class="badge">探测 Probe</span>
+  </div>
+  <p>右下角"镜体视口"就是这台 rig 渲染出的玩家画面；绿色圆环 = 摇臂 Yaw 轨道。WASD 移动角色（相机相对），Tab 锁定红方实体，勾选指针捕获后鼠标直接 look。命名只用引擎自己的字段语言，Shoulder/Boom/Socket 这类外来词不进词表。</p>
+
+  <details>
+    <summary>① 锚点层（跟随的根）</summary>
+    <div class="sec">
+      <div class="kv"><span class="dot" style="background:var(--pivot)"></span>红色球 = 锚点（枢轴）；灰白小球 = 跟随点，红灰连线 = 枢轴偏移</div>
+      <div class="kv">字段：<code>TargetCm</code> + <code>TargetHeightCm</code> + <code>RigPivotOffsetCm</code>（枢轴偏移，右侧面板可拖三轴）</div>
+      <p>谁写它：sim tick 里跟随目标（读实体 <code>WorldPositionCm</code>）。20Hz 步进，渲染帧做 Previous→Current 插值。枢轴偏移在<b>视线本地基</b>（右/世界up/视线前向）里解析，属热端：轨道环和注视点跟着一起平移（对应瞄准层的"冷端"镜体偏移）。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>② 摇臂层（这条大梁）</summary>
+    <div class="sec">
+      <div class="kv"><span class="dot" style="background:var(--arm)"></span>绿线 = 摇臂；绿环 = Yaw 轨道（当前 Pitch/Distance 下的扫描圆）</div>
+      <div class="kv">字段：<code>Yaw</code> / <code>Pitch</code> / <code>DistanceCm</code>（带上下限）</div>
+      <p>挂在摇臂上的行为积木：<code>DragRotate</code>（拖转）、<code>Zoom</code>、<code>Grounding</code>（贴地）。摇臂的"阻尼"（arm lag）= 渲染帧连续积分的指数趋近——<b>不挂在 20Hz tick 上</b>，这正是抖动修复的核心约束。</p>
+      <div class="kv">· 面向采信 <code>facingMode: followTarget</code>：角色调头时摇臂绕到背后（拖拽期间让位给玩家）</div>
+      <div class="kv">· 俯仰分层：距离与越肩偏移按俯仰分档混合（淡环 = 各档轨道）——同款思路：Cinemachine FreeLook 三环 rig、Lyra 按俯仰查偏移曲线</div>
+      <div class="kv">· 指针捕获：look 模式时隐藏+锁定光标（出窗不断流），随 seat 的活动上下文走</div>
+    </div>
+  </details>
+
+  <details>
+    <summary>③ 镜体层（出画面的眼睛）</summary>
+    <div class="sec">
+      <div class="kv"><span class="dot" style="background:var(--lens)"></span>蓝框锥体 = 镜体视锥，开口朝注视点；右下小窗 = 它拍到的画面</div>
+      <div class="kv">字段：<code>FovYDeg</code> + <code>RigCameraOffsetCm</code>（镜体偏移，不参与摇臂阻尼——"冷端"）</div>
+      <p>取代外来词的那两个：<b>枢轴偏移</b>（热端，吃阻尼）、<b>镜体偏移</b>（冷端，最后叠加）——刻度一冷一热是刻意设计。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>④ 瞄准层 AimLayer（开镜）</summary>
+    <div class="sec">
+      <div class="kv"><span class="dot" style="background:var(--aim)"></span>橙色 = 瞄准权重驱动的参数差，不是第二台相机</div>
+      <p>一层 = 一组 {<code>FovYDeg</code> 收窄，<b>镜体横移</b>，灵敏度系数}。硬约束：权重混合前后，屏幕中心必须指向同一世界点（视口里的黄色十字就是这根共点轴）。多档位（肩射→机瞄→镜瞄）= 这张表的行数组。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>⑤ 探测 Probe（防穿）</summary>
+    <div class="sec">
+      <div class="kv"><span class="dot" style="background:#c58aff"></span>紫色 = 沿摇臂的探测球，被挡则把镜体拉近</div>
+      <p>参数形状：探测半径 + 距离上限 + 进/出<b>不对称</b>阻尼（撞进去快、弹回来慢是手感关键）。勾选后角色往 +X 走、相机贴墙那一段能看到拉近。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>⑥ 时钟模型（为什么会抖、怎么治）</summary>
+    <div class="sec">
+      <p>sim 20Hz 写 <code>TargetCm</code>（灰白幽灵球 = sim 真值，按 50ms 跳）；渲染帧用 <code>α = 累积器/固定步长</code> 在 Previous→Current 之间插值（实心角色 = 插值结果）。修复前：宿主每渲染帧把 Previous 覆写回 Current → 插值被清零 → 相机 20Hz 裸步进（走路剧烈抖）。修复后：插值对只在 sim tick 内推进。</p>
+    </div>
+  </details>
+</div>
+
+<div class="panel" id="ctrl">
+  <div class="sec">
+    <div class="secname">演示开关</div>
+    <div class="toggle"><input type="checkbox" id="walk"><label for="walk">自动巡走（默认关：用 WASD 自己开车）</label></div>
+    <div class="toggle"><input type="checkbox" id="ghost" checked><label for="ghost">显示 sim 真值幽灵球</label></div>
+    <div class="toggle"><input type="checkbox" id="lag" checked><label for="lag">摇臂阻尼（arm lag，关闭 = 相机直跟 sim，可见修复前抖动）</label></div>
+    <div class="toggle"><input type="checkbox" id="orbitRing" checked><label for="orbitRing">显示 Yaw 轨道环</label></div>
+    <div class="toggle"><input type="checkbox" id="probe"><label for="probe">探测 Probe（把相机从墙里拉出来）</label></div>
+    <div class="toggle"><input type="checkbox" id="aim"><label for="aim">瞄准层（开镜：FOV 收窄 + 镜体横移）</label></div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">锚点 Pivot（枢轴偏移）</div>
+    <div class="row" id="rowPivR"><label>偏移·右（m）</label><input type="range" id="pivR" min="-0.8" max="0.8" step="0.05" value="0"><output id="pivRV">0.00</output></div>
+    <div class="row"><label>偏移·上（m）</label><input type="range" id="pivU" min="-0.5" max="1" step="0.05" value="0"><output id="pivUV">0.00</output></div>
+    <div class="row"><label>偏移·前（m）</label><input type="range" id="pivF" min="-1" max="1" step="0.05" value="0"><output id="pivFV">0.00</output></div>
+    <p style="color:var(--dim);margin:4px 0 0">基 = 视线右/世界up/视线前向。热端：轨道环与注视点一起平移（对比瞄准层的冷端镜体偏移）。</p>
+  </div>
+
+  <div class="sec">
+    <div class="secname">摇臂 Arm</div>
+    <div class="row" id="rowYaw"><label>Yaw（度）</label><input type="range" id="yaw" min="0" max="360" step="1" value="200"><output id="yawV">200</output></div>
+    <div class="row"><label>Pitch（度）</label><input type="range" id="pitch" min="5" max="85" step="1" value="18"><output id="pitchV">18</output></div>
+    <div class="row" id="rowDist"><label>Distance（m）</label><input type="range" id="dist" min="2" max="12" step="0.1" value="5"><output id="distV">5.0</output></div>
+    <div class="row" id="rowLag"><label>摇臂阻尼速度</label><input type="range" id="lagSpd" min="2" max="30" step="0.5" value="10"><output id="lagSpdV">10</output></div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">俯仰分层（AAA 式按俯仰变参）</div>
+    <div class="toggle"><input type="checkbox" id="bands" checked><label for="bands">启用：距离与越肩偏移按俯仰键控混合</label></div>
+    <div class="row"><label>键间取值</label><select id="bandInterp">
+      <option value="linear">linear —— 线性过渡（FreeLook 档间）</option>
+      <option value="smoothstep">smoothstep —— 平滑缓动（曲线感）</option>
+      <option value="constant">constant —— 阶梯切换（档位感）</option>
+    </select></div>
+    <div id="bandTable">
+      <div class="bandrow bandhead"><span>档</span><span>俯仰°</span><span>距离m</span><span>右偏m</span></div>
+      <div class="bandrow"><span class="bandname">低</span><input type="range" id="b0p" min="0" max="85" step="1" value="12"><input type="range" id="b0d" min="2" max="12" step="0.1" value="5.5"><input type="range" id="b0r" min="-0.8" max="0.8" step="0.05" value="0.55"></div>
+      <div class="bandrow"><span class="bandname">中</span><input type="range" id="b1p" min="0" max="85" step="1" value="30"><input type="range" id="b1d" min="2" max="12" step="0.1" value="4.6"><input type="range" id="b1r" min="-0.8" max="0.8" step="0.05" value="0.4"></div>
+      <div class="bandrow"><span class="bandname">高</span><input type="range" id="b2p" min="0" max="85" step="1" value="55"><input type="range" id="b2d" min="2" max="12" step="0.1" value="3.6"><input type="range" id="b2r" min="-0.8" max="0.8" step="0.05" value="0.25"></div>
+      <p style="color:var(--dim);margin:6px 0 0">Pitch 滑杆仍是当前俯仰；Distance / 偏移·右 由相邻档按键间取值策略混合（输出框实时显示）。淡环 = 各档轨道，亮环 = 当前混合。同一张键控表的三种取值策略 = 分档过渡 / 曲线感 / 档位切换。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">瞄准层 AimLayer</div>
+    <div class="row"><label>瞄准权重</label><input type="range" id="aimW" min="0" max="1" step="0.01" value="0"><output id="aimWV">0.00</output></div>
+    <div class="row"><label>镜瞄 FOV</label><input type="range" id="aimFov" min="20" max="55" step="1" value="35"><output id="aimFovV">35</output></div>
+    <div class="row"><label>镜体横移（m）</label><input type="range" id="aimOff" min="0" max="0.6" step="0.02" value="0.3"><output id="aimOffV">0.30</output></div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">面向采信 facingMode</div>
+    <div class="toggle"><input type="checkbox" id="faceOn" checked><label for="faceOn">followTarget：角色调头时摇臂绕到背后（拖拽期间自动让位）</label></div>
+  </div>
+
+  <div class="sec">
+    <div class="secname">锁定镜头风格</div>
+    <div class="row"><label>风格</label><select id="lockStyle">
+      <option value="hard">硬锁定 —— 摇臂绕轴 + 注视加权（黑魂/高达VS）</option>
+      <option value="soft">软锁定 —— 摇臂不动，只把注视拉向目标（Arkham/DMC 式）</option>
+    </select></div>
+    <p style="color:var(--dim);margin:4px 0 0">锁定中 Tab 解除；超距（14m）自动断锁。软锁定下摇臂 yaw 完全留给玩家。</p>
+  </div>
+
+  <div class="sec">
+    <div class="secname">指针捕获（look 模式）</div>
+    <div class="toggle"><input type="checkbox" id="capture"><label for="capture">look 相机活跃时捕获并隐藏光标（出窗不断流）</label></div>
+    <div class="row"><label>look 灵敏度</label><input type="range" id="sens" min="0.05" max="0.5" step="0.01" value="0.2"><output id="sensV">0.20</output></div>
+    <p style="color:var(--dim);margin:4px 0 0">勾选后：鼠标直接转动这套 rig（DragRotate，非反向），WASD 相机相对移动；ESC 释放回观察模式。</p>
+  </div>
+</div>
+
+<div id="pipWrap">
+  <div id="pipTitle"><span>镜体视口（玩家看到的画面）</span><span id="pipFov"></span></div>
+  <div id="pipFrame"><div id="pipCross"></div></div>
+  <div id="pipNote">黄十字 = 屏幕中心共点轴（瞄准层约束）</div>
+</div>
+
+<div id="hud">WASD 移动角色 · Tab 锁定/解除 · 拖拽 = 环绕观察 · 滚轮 = 缩放 · 勾选指针捕获后鼠标接管镜头</div>
+<div class="lbl" id="lbPivot" style="color:var(--pivot)">锚点 Pivot<br><span style="color:var(--dim)">TargetCm + TargetHeightCm</span></div>
+<div class="lbl" id="lbArm" style="color:var(--arm)">摇臂 Arm（Yaw/Pitch/DistanceCm）</div>
+<div class="lbl" id="lbLens" style="color:var(--lens)">镜体 Lens（FovYDeg + RigCameraOffsetCm）</div>
+<div class="lbl" id="lbLock" style="color:var(--aim)"></div>
+
+<script src="./three.min.js"></script>
+<script src="./OrbitControls.js"></script>
+<script>
+
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e14);
+const viewCam = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.05, 200);
+viewCam.position.set(8.5, 5.2, 10.5);
+const controls = new THREE.OrbitControls(viewCam, renderer.domElement);
+controls.target.set(0, 1.2, 0);
+controls.enableDamping = true;
+
+// 镜体视口相机：位置/朝向/FOV 每帧对齐 rig 解算结果
+const PIP_W = 352, PIP_H = 198;
+const rigCam = new THREE.PerspectiveCamera(60, PIP_W / PIP_H, 0.05, 200);
+
+scene.add(new THREE.GridHelper(40, 80, 0x2a3348, 0x18202e));
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(5, 9, 4); scene.add(key);
+
+// rig 讲解辅助物单独一层：只给观察相机看，镜体视口里不出现视锥线框自己
+const VIZ = 1;
+viewCam.layers.enable(VIZ);
+
+// —— 角色占位：胶囊 + 头 + 鼻尖（鼻尖用来读朝向）——
+const hero = new THREE.Group();
+const heroMat = new THREE.MeshStandardMaterial({ color: 0x3f8fd6 });
+const bodyMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 8, 20), heroMat);
+bodyMesh.position.y = 0.75;
+const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 16),
+  new THREE.MeshStandardMaterial({ color: 0xe8f0ff }));
+headMesh.position.y = 1.45;
+const noseMesh = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 12),
+  new THREE.MeshStandardMaterial({ color: 0xffd23e }));
+noseMesh.rotation.x = Math.PI / 2;
+noseMesh.position.set(0, 1.45, 0.26);
+hero.add(bodyMesh, headMesh, noseMesh);
+scene.add(hero);
+// 角色模型面朝 +Z；heading=0 时也面朝 +Z
+
+// sim 真值幽灵球（20Hz 步进的可视化）
+const ghost = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12),
+  new THREE.MeshBasicMaterial({ color: 0xbfc9d8, transparent: true, opacity: 0.35 }));
+scene.add(ghost);
+
+// —— 锁定目标实体（演示用静态敌人）+ 锁定标记 ——
+const enemy = new THREE.Group();
+const enemyBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 8, 20),
+  new THREE.MeshStandardMaterial({ color: 0xb8434e }));
+enemyBody.position.y = 0.75;
+const enemyHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 16),
+  new THREE.MeshStandardMaterial({ color: 0xf0d8d8 }));
+enemyHead.position.y = 1.45;
+enemy.add(enemyBody, enemyHead);
+enemy.position.set(0, 0, -5.5);
+scene.add(enemy);
+const lockMarker = new THREE.Mesh(new THREE.OctahedronGeometry(0.14),
+  new THREE.MeshBasicMaterial({ color: 0xffb14d }));
+lockMarker.visible = false;
+lockMarker.layers.set(VIZ);
+scene.add(lockMarker);
+const lockLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0xffb14d, transparent: true, opacity: 0.4 }));
+lockLine.visible = false;
+lockLine.layers.set(VIZ);
+scene.add(lockLine);
+
+// —— rig 可视对象 ——
+const pivotDot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0xff5d5d }));
+pivotDot.layers.set(VIZ);
+scene.add(pivotDot);
+
+// 跟随点（TargetCm + TargetHeightCm，未加枢轴偏移）与偏移连线
+const targetDot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8),
+  new THREE.MeshBasicMaterial({ color: 0xbfc9d8 }));
+targetDot.layers.set(VIZ);
+scene.add(targetDot);
+const pivotLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0xff5d5d, transparent: true, opacity: 0.5 }));
+pivotLine.layers.set(VIZ);
+scene.add(pivotLine);
+
+const armMat = new THREE.LineBasicMaterial({ color: 0x5dd66b });
+const armGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+const armLine = new THREE.Line(armGeo, armMat);
+armLine.layers.set(VIZ);
+scene.add(armLine);
+
+// Yaw 轨道环：锚点正上方、半径 = cos(pitch)*dist 的水平圆
+// 亮环 = 当前混合轨道；俯仰分层开启时另画各档淡环
+function makeRing(opacity)
+{
+  const pts = [];
+  for (let i = 0; i < ringSegs; i++)
+  {
+    const a = (i / ringSegs) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.sin(a), 0, Math.cos(a)));
+  }
+  const ring = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x5dd66b, transparent: true, opacity }));
+  ring.layers.set(VIZ);
+  scene.add(ring);
+  return ring;
+}
+const ringSegs = 96;
+const orbitRing = makeRing(0.35);
+const bandRings = [makeRing(0.14), makeRing(0.14), makeRing(0.14)];
+
+// 镜体：小盒 + 视锥。几何建在 +Z 上（Object3D.lookAt 让 +Z 朝向目标），单位锥随 FOV/远端缩放
+const lensGroup = new THREE.Group();
+const lensBody = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.3),
+  new THREE.MeshStandardMaterial({ color: 0x2b6fb8, emissive: 0x123a66 }));
+lensGroup.add(lensBody);
+const frustum = new THREE.Group();
+{
+  const ax = 16 / 9;
+  const c = [new THREE.Vector3(-ax, -1, 1), new THREE.Vector3(ax, -1, 1),
+             new THREE.Vector3(ax, 1, 1), new THREE.Vector3(-ax, 1, 1)];
+  const pts = [];
+  for (const p of c) pts.push(new THREE.Vector3(0, 0, 0), p);
+  for (let i = 0; i < 4; i++) pts.push(c[i], c[(i + 1) % 4]);
+  frustum.add(new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x5db8ff, transparent: true, opacity: 0.6 })));
+}
+lensGroup.add(frustum);
+lensGroup.traverse(o => o.layers.set(VIZ));
+scene.add(lensGroup);
+
+// 墙（探测演示：立在 -X 端，角色往 +X 走时相机贴墙）
+const wall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.4, 7),
+  new THREE.MeshStandardMaterial({ color: 0x223047, transparent: true, opacity: 0.85 }));
+wall.position.set(-4.6, 1.2, 0);
+wall.visible = false;
+scene.add(wall);
+const raycaster = new THREE.Raycaster();
+
+// —— 状态 ——
+const S = {
+  walk: false, ghost: true, lag: true, probe: false, aim: false, faceOn: true,
+  yaw: 200, pitch: 18, dist: 5, lagSpd: 10, aimW: 0, aimFov: 35, aimOff: 0.3,
+  pivR: 0, pivU: 0, pivF: 0,
+  bands: true,
+  bandInterp: 'linear',
+  sens: 0.2, lock: false, lockStyle: 'hard',
+  bandDefs: [
+    { pitch: 12, dist: 5.5, right: 0.55 },
+    { pitch: 30, dist: 4.6, right: 0.4 },
+    { pitch: 55, dist: 3.6, right: 0.25 },
+  ],
+  simPos: new THREE.Vector2(0, 0), simPrev: new THREE.Vector2(0, 0), dir: 1,
+  heading: Math.PI / 2,
+};
+
+// —— 控件绑定 ——
+const $ = id => document.getElementById(id);
+const bind = (id, fn) => { const el = $(id); el.addEventListener('input', () => fn(el)); fn(el); };
+bind('yaw',   e => { S.yaw = +e.value;   $('yawV').value = e.value; });
+bind('pitch', e => { S.pitch = +e.value; $('pitchV').value = e.value; });
+bind('dist',  e => { S.dist = +e.value;  $('distV').value = (+e.value).toFixed(1); });
+bind('lagSpd',e => { S.lagSpd = +e.value;$('lagSpdV').value = e.value; });
+bind('aimW',  e => { S.aimW = +e.value;  $('aimWV').value = (+e.value).toFixed(2); });
+bind('aimFov',e => { S.aimFov = +e.value;$('aimFovV').value = e.value; });
+bind('aimOff',e => { S.aimOff = +e.value;$('aimOffV').value = (+e.value).toFixed(2); });
+bind('pivR', e => { S.pivR = +e.value; $('pivRV').value = (+e.value).toFixed(2); });
+bind('bandInterp', e => S.bandInterp = e.value);
+bind('pivU', e => { S.pivU = +e.value; $('pivUV').value = (+e.value).toFixed(2); });
+bind('pivF', e => { S.pivF = +e.value; $('pivFV').value = (+e.value).toFixed(2); });
+for (let i = 0; i < 3; i++)
+{
+  const ids = [['b0p','b0d','b0r'], ['b1p','b1d','b1r'], ['b2p','b2d','b2r']][i];
+  bind(ids[0], e => S.bandDefs[i].pitch = +e.value);
+  bind(ids[1], e => S.bandDefs[i].dist = +e.value);
+  bind(ids[2], e => S.bandDefs[i].right = +e.value);
+}
+$('bands').addEventListener('change', e => {
+  S.bands = e.target.checked;
+  document.getElementById('rowDist').classList.toggle('disabled', S.bands);
+  document.getElementById('rowPivR').classList.toggle('disabled', S.bands);
+});
+bind('sens', e => { S.sens = +e.value; $('sensV').value = (+e.value).toFixed(2); });
+bind('lockStyle', e => S.lockStyle = e.value);
+$('walk').addEventListener('change', e => S.walk = e.target.checked);
+$('ghost').addEventListener('change', e => { S.ghost = e.target.checked; ghost.visible = S.ghost; });
+$('lag').addEventListener('change', e => S.lag = e.target.checked);
+$('orbitRing').addEventListener('change', e => orbitRing.visible = e.target.checked);
+$('probe').addEventListener('change', e => { S.probe = e.target.checked; wall.visible = S.probe; });
+$('aim').addEventListener('change', e => S.aim = e.target.checked);
+$('faceOn').addEventListener('change', e => S.faceOn = e.target.checked);
+// 指针捕获与观察者拖拽环绕互斥：锁定期间鼠标流归 look 演示，
+// OrbitControls 若继续响应 pointerdown，其 setPointerCapture 会抛 InvalidStateError。
+const syncCaptureUi = locked => {
+  controls.enabled = !locked;
+  const box = $('capture');
+  if (box.checked !== locked) box.checked = locked;
+};
+document.addEventListener('pointerlockchange', () =>
+  syncCaptureUi(document.pointerLockElement === renderer.domElement));
+document.addEventListener('pointerlockerror', () => syncCaptureUi(false));
+$('capture').addEventListener('change', e => {
+  if (e.target.checked)
+    renderer.domElement.requestPointerLock?.();
+  else if (document.pointerLockElement)
+    document.exitPointerLock?.();
+});
+// 拖拽环绕松手也会派发 click，位移超阈值的不算"点击聚焦"
+let focusDownPt = null;
+renderer.domElement.addEventListener('pointerdown', e => { focusDownPt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('click', e => {
+  if (!$('capture').checked) return;
+  if (focusDownPt && Math.hypot(e.clientX - focusDownPt[0], e.clientY - focusDownPt[1]) > 4) return;
+  if (document.pointerLockElement !== renderer.domElement)
+    renderer.domElement.requestPointerLock?.();
+});
+
+// —— 真实控制：WASD 相机相对移动（sim 20Hz 采样）+ Tab 锁定 + 指针锁定期间鼠标直接 look ——
+const keys = new Set();
+addEventListener('keydown', e =>
+{
+  if (e.code === 'Tab')
+  {
+    e.preventDefault();
+    toggleLock();
+    return;
+  }
+  keys.add(e.code);
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+const kd = c => (keys.has(c) ? 1 : 0);
+
+const LOCK_RANGE_IN = 9, LOCK_RANGE_OUT = 14;
+function toggleLock()
+{
+  if (S.lock)
+  {
+    S.lock = false;
+    return;
+  }
+  const dx = enemy.position.x - S.simPos.x, dz = enemy.position.z - S.simPos.y;
+  if (Math.hypot(dx, dz) <= LOCK_RANGE_IN) S.lock = true;
+}
+
+// DragRotate 语义（与引擎一致，非反向）：鼠标上推看上方；鼠标右移视野右移
+addEventListener('mousemove', e =>
+{
+  if (document.pointerLockElement !== renderer.domElement) return;
+  S.yaw = ((S.yaw - e.movementX * S.sens) % 360 + 360) % 360;
+  S.pitch = THREE.MathUtils.clamp(S.pitch - e.movementY * S.sens, 5, 85);
+  $('yaw').value = S.yaw; $('yawV').value = Math.round(S.yaw);
+  $('pitch').value = S.pitch; $('pitchV').value = Math.round(S.pitch);
+});
+
+// —— sim 时钟（20Hz）：TargetCm 按 50ms 步进 ——
+const FDT = 1 / 20, SPEED = 1.6, PATH = 3.5; // m/s、半程
+function simStep()
+{
+  S.simPrev.copy(S.simPos);
+  if (S.walk)
+  {
+    S.simPos.x += S.dir * SPEED * FDT;
+    if (S.simPos.x > PATH) { S.simPos.x = PATH; S.dir = -1; }
+    if (S.simPos.x < -PATH) { S.simPos.x = -PATH; S.dir = 1; }
+    return;
+  }
+  const ix = kd('KeyD') - kd('KeyA'), iz = kd('KeyW') - kd('KeyS');
+  if (!ix && !iz) return;
+  // 相机相对合成（与引擎 OrbitCameraDirectionUtil.MoveInputToDirection 同构）：rig yaw 定前后左右
+  const yaw = THREE.MathUtils.degToRad(S.yaw);
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw);   // 视线水平前向
+  const rx = -fz, rz = fx;                          // 屏幕右向
+  const mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
+  const len = Math.hypot(mx, mz);
+  S.simPos.x = THREE.MathUtils.clamp(S.simPos.x + mx / len * SPEED * FDT, -12, 12);
+  S.simPos.y = THREE.MathUtils.clamp(S.simPos.y + mz / len * SPEED * FDT, -12, 12);
+}
+
+// —— 摇臂解算：锚点 → 末端（世界系，纯 yaw/pitch/dist） ——
+function armEndOf(anchor, yawDeg, pitchDeg, dist)
+{
+  const yaw = THREE.MathUtils.degToRad(yawDeg), pitch = THREE.MathUtils.degToRad(pitchDeg);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  return new THREE.Vector3(
+    anchor.x + (cp * Math.sin(yaw)) * dist,
+    anchor.y + sp * dist,
+    anchor.z + (cp * Math.cos(yaw)) * dist);
+}
+
+// —— 键控表求值：一张升序键表 + 一种键间取值策略 ——
+// linear = FreeLook 档间线性；smoothstep = 曲线缓动（Lyra 曲线感）；
+// constant = 阶梯（取不高于采样点的档，机瞄/镜瞄那种档位切换）
+function bandBlend(pitchDeg)
+{
+  const b = S.bandDefs;
+  let lo = b[0], hi = b[0], t = 0;
+  if (pitchDeg >= b[b.length - 1].pitch)
+  {
+    lo = hi = b[b.length - 1];
+  }
+  else if (pitchDeg > b[0].pitch)
+  {
+    for (let i = 0; i < b.length - 1; i++)
+    {
+      if (pitchDeg >= b[i].pitch && pitchDeg <= b[i + 1].pitch)
+      {
+        lo = b[i]; hi = b[i + 1];
+        t = (pitchDeg - lo.pitch) / (hi.pitch - lo.pitch);
+        break;
+      }
+    }
+  }
+  if (S.bandInterp === 'constant') return { dist: lo.dist, right: lo.right };
+  if (S.bandInterp === 'smoothstep') t = t * t * (3 - 2 * t);
+  return {
+    dist: THREE.MathUtils.lerp(lo.dist, hi.dist, t),
+    right: THREE.MathUtils.lerp(lo.right, hi.right, t),
+  };
+}
+
+// —— 标签投影（被面板盖住时隐藏）——
+const labels = [
+  { el: $('lbPivot'), get: () => pivotDot.position },
+  { el: $('lbArm'),   get: () => armLine.geometry.attributes.position, mid: true },
+  { el: $('lbLens'), get: () => lensGroup.position },
+];
+const _v = new THREE.Vector3();
+function placeLabels()
+{
+  const hides = [ $('legend'), $('ctrl'), $('pipWrap') ].map(p => p.getBoundingClientRect());
+  for (const l of labels)
+  {
+    if (l.mid)
+    {
+      const p = l.get();
+      _v.set((p.getX(0)+p.getX(1))/2, (p.getY(0)+p.getY(1))/2, (p.getZ(0)+p.getZ(1))/2);
+    } else _v.copy(l.get());
+    _v.project(viewCam);
+    const x = (_v.x * 0.5 + 0.5) * innerWidth, y = (-_v.y * 0.5 + 0.5) * innerHeight;
+    const covered = hides.some(r => x > r.left && x < r.right && y > r.top && y < r.bottom);
+    l.el.style.display = (_v.z < 1 && !covered) ? 'block' : 'none';
+    if (!covered) { l.el.style.left = x + 'px'; l.el.style.top = y + 'px'; }
+  }
+}
+
+// —— 渲染帧循环 ——
+let simAcc = 0;
+const smoothed = new THREE.Vector3(0, 2.7, 4.7);
+const clock = new THREE.Clock();
+const lookTarget = new THREE.Vector3();
+const _eHead = new THREE.Vector3();
+
+function frame()
+{
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.1);
+
+  // sim 20Hz：本帧先消化 tick，再取插值系数（与引擎 GameEngine.Tick 同构）
+  simAcc += dt;
+  while (simAcc >= FDT) { simStep(); simAcc -= FDT; }
+  const alpha = Math.min(simAcc / FDT, 1);
+
+  // 角色：sim 真值步进（幽灵球），渲染插值（实心）；朝向按行进方向缓动
+  ghost.position.set(S.simPos.x, 0.35, S.simPos.y);
+  const vx = THREE.MathUtils.lerp(S.simPrev.x, S.simPos.x, alpha);
+  const vy = THREE.MathUtils.lerp(S.simPrev.y, S.simPos.y, alpha);
+  hero.position.set(vx, 0, vy);
+  {
+    let target = null;
+    if (S.walk) target = S.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    else
+    {
+      const ix = kd('KeyD') - kd('KeyA'), iz = kd('KeyW') - kd('KeyS');
+      if (ix || iz)
+      {
+        const yaw = THREE.MathUtils.degToRad(S.yaw);
+        target = Math.atan2(-Math.sin(yaw) * iz + Math.cos(yaw) * ix,
+                            -Math.cos(yaw) * iz - Math.sin(yaw) * ix);
+      }
+      else if (S.lock)
+        target = Math.atan2(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    }
+    if (target !== null)
+    {
+      let d = target - S.heading;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      S.heading += d * Math.min(1, dt * 5);
+    }
+    hero.rotation.y = S.heading;
+  }
+
+  // 硬锁定：摇臂绕到"玩家-敌人"轴反侧（优先级高于 facingMode）；软锁定不抢 yaw，只偏注视
+  if (S.lock && S.lockStyle === 'hard')
+  {
+    const yawT = ((THREE.MathUtils.radToDeg(Math.atan2(
+      S.simPos.x - enemy.position.x, S.simPos.y - enemy.position.z)) % 360) + 360) % 360;
+    let delta = ((yawT - S.yaw + 540) % 360) - 180;
+    S.yaw = (S.yaw + delta * Math.min(1, dt * 2.5) + 360) % 360;
+    $('yaw').value = S.yaw; $('yawV').value = Math.round(S.yaw);
+  }
+  else if (S.faceOn)
+  {
+    const target = ((THREE.MathUtils.radToDeg(S.heading) + 180) % 360 + 360) % 360;
+    let delta = ((target - S.yaw + 540) % 360) - 180;
+    S.yaw = (S.yaw + delta * Math.min(1, dt * 1.2) + 360) % 360;
+    $('yaw').value = S.yaw; $('yawV').value = Math.round(S.yaw);
+  }
+  const effYaw = S.yaw;
+
+  // 锚点链（对齐引擎 StateToRenderState 的顺序）：跟随点 → 视线基 → 枢轴偏移 → 摇臂解算。
+  // 基 = 视线右/世界up/视线水平前向（ResolveCameraLocalOffsetMeters 同款）；
+  // 阻尼关闭时解算直跟 sim 真值——复刻修复前"插值被清零、相机 20Hz 裸步进"的观感
+  const bl = S.bands ? bandBlend(S.pitch) : null;
+  const effPitch = S.pitch;
+  let effDist = bl ? bl.dist : S.dist;
+  const effRight = bl ? bl.right : S.pivR;
+  // 锁定：距离补偿拉远，把目标框进来（高达VS 式双实体取景）
+  if (S.lock)
+  {
+    const sep = Math.hypot(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    effDist = Math.max(effDist, 2.8 + sep * 0.5);
+  }
+  $('distV').value = effDist.toFixed(1);
+  $('pivRV').value = effRight.toFixed(2);
+  const targetPos = new THREE.Vector3(S.lag ? vx : S.simPos.x, 1.2, S.lag ? vy : S.simPos.y);
+  const fwd0 = targetPos.clone().sub(armEndOf(targetPos, effYaw, effPitch, effDist));
+  fwd0.y = 0;
+  if (fwd0.lengthSq() > 1e-6) fwd0.normalize(); else fwd0.set(0, 0, 1);
+  const right0 = new THREE.Vector3().crossVectors(fwd0, new THREE.Vector3(0, 1, 0));
+  const pivotPos = targetPos.clone()
+    .addScaledVector(right0, effRight)
+    .addScaledVector(new THREE.Vector3(0, 1, 0), S.pivU)
+    .addScaledVector(fwd0, S.pivF);
+  const hasPivotOff = Math.abs(S.pivR) + Math.abs(S.pivU) + Math.abs(S.pivF) > 1e-4;
+  targetDot.visible = pivotLine.visible = hasPivotOff;
+  targetDot.position.copy(targetPos);
+  pivotDot.position.copy(pivotPos);
+  const offPos = pivotLine.geometry.attributes.position;
+  offPos.setXYZ(0, targetPos.x, targetPos.y, targetPos.z);
+  offPos.setXYZ(1, pivotPos.x, pivotPos.y, pivotPos.z);
+  offPos.needsUpdate = true;
+  const rawEnd = armEndOf(pivotPos, effYaw, effPitch, effDist);
+
+  // 摇臂阻尼（arm lag）：按渲染 dt 连续积分的指数趋近；关闭 = 直跟 sim（修复前观感）
+  if (S.lag)
+  {
+    const t = 1 - Math.exp(-S.lagSpd * dt);
+    smoothed.lerp(rawEnd, t);
+  } else smoothed.copy(rawEnd);
+  const armEnd = smoothed.clone();
+
+  // 探测：锚点→镜体线段被墙挡则拉近
+  let lensPos = armEnd.clone();
+  if (S.probe)
+  {
+    const toCam = armEnd.clone().sub(pivotPos);
+    const len = toCam.length();
+    raycaster.set(pivotPos, toCam.clone().normalize());
+    raycaster.near = 0; raycaster.far = len;
+    const hit = raycaster.intersectObject(wall, false)[0];
+    if (hit) lensPos = pivotPos.clone().addScaledVector(toCam.normalize(), Math.max(hit.distance - 0.25, 0.4));
+  }
+
+  // 镜体：FOV 混合 + 冷端横移（瞄准层）；注视点 = 锚点本身，横移不改变共点轴
+  const aimK = S.aim ? S.aimW : 0;
+  const fov = THREE.MathUtils.lerp(60, S.aimFov, aimK);
+  lensPos.addScaledVector(right0, aimK * S.aimOff);
+  lensGroup.position.copy(lensPos);
+  lookTarget.copy(pivotPos);
+  if (S.lock)
+  {
+    // 黑魂式加权注视：注视点从锚点向敌人偏移（锚点仍绕玩家），角色让出画面中心
+    const k = 0.38;
+    _eHead.set(enemy.position.x, 1.2, enemy.position.z);
+    lookTarget.lerp(_eHead, k);
+  }
+  lensGroup.lookAt(lookTarget);
+  const tanH = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+  frustum.scale.set(tanH, tanH, 1.6);
+
+  // 视口相机对齐 rig：位置/注视点/FOV 同步，右下小窗即玩家画面
+  rigCam.fov = fov;
+  rigCam.position.copy(lensPos);
+  rigCam.lookAt(lookTarget);
+  rigCam.updateProjectionMatrix();
+
+  // 摇臂线段 + Yaw 轨道环（都挂在偏移后的锚点上；分层开启时另画各档淡环）
+  const pos = armLine.geometry.attributes.position;
+  pos.setXYZ(0, pivotPos.x, pivotPos.y, pivotPos.z);
+  pos.setXYZ(1, lensPos.x, lensPos.y, lensPos.z);
+  pos.needsUpdate = true;
+  {
+    const place = (ring, pitchDeg, distM, rightM) =>
+    {
+      const p = THREE.MathUtils.degToRad(pitchDeg);
+      const c = targetPos.clone()
+        .addScaledVector(right0, rightM)
+        .addScaledVector(new THREE.Vector3(0, 1, 0), S.pivU)
+        .addScaledVector(fwd0, S.pivF);
+      ring.position.set(c.x, c.y + Math.sin(p) * distM, c.z);
+      ring.scale.setScalar(Math.max(Math.cos(p) * distM, 0.01));
+    };
+    place(orbitRing, effPitch, effDist, effRight);
+    for (let i = 0; i < 3; i++)
+    {
+      bandRings[i].visible = S.bands && orbitRing.visible;
+      if (bandRings[i].visible)
+        place(bandRings[i], S.bandDefs[i].pitch, S.bandDefs[i].dist, S.bandDefs[i].right);
+    }
+  }
+
+  placeLabels();
+
+  // 锁定可视化、超距断锁与 Tab 提示
+  {
+    const sep = Math.hypot(enemy.position.x - S.simPos.x, enemy.position.z - S.simPos.y);
+    if (S.lock && sep > LOCK_RANGE_OUT) S.lock = false;
+    lockMarker.visible = S.lock;
+    lockLine.visible = S.lock;
+    if (S.lock)
+    {
+      lockMarker.position.set(enemy.position.x, 2.0 + Math.sin(performance.now() / 500) * 0.06, enemy.position.z);
+      lockMarker.rotation.y = performance.now() / 600;
+      const lp = lockLine.geometry.attributes.position;
+      lp.setXYZ(0, pivotPos.x, pivotPos.y, pivotPos.z);
+      lp.setXYZ(1, enemy.position.x, 1.2, enemy.position.z);
+      lp.needsUpdate = true;
+    }
+    const lbLock = $('lbLock');
+    const show = S.lock || sep <= LOCK_RANGE_IN;
+    lbLock.style.display = show ? 'block' : 'none';
+    if (show)
+    {
+      lbLock.textContent = S.lock ? 'Tab 解除锁定' : 'Tab 锁定目标';
+      _v.set(enemy.position.x, 2.15, enemy.position.z).project(viewCam);
+      lbLock.style.left = ((_v.x * 0.5 + 0.5) * innerWidth) + 'px';
+      lbLock.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + 'px';
+    }
+  }
+
+  // 主视图全屏，再叠加右下镜体视口（scissor 裁剪）
+  const w = innerWidth, h = innerHeight;
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, w, h);
+  renderer.render(scene, viewCam);
+  const rect = $('pipFrame').getBoundingClientRect();
+  const px = rect.left, py = h - rect.bottom;
+  renderer.setScissorTest(true);
+  renderer.setScissor(px, py, PIP_W, PIP_H);
+  renderer.setViewport(px, py, PIP_W, PIP_H);
+  renderer.render(scene, rigCam);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, w, h);
+  $('pipFov').textContent = 'FOV ' + fov.toFixed(0) + '°';
+}
+
+addEventListener('resize', () => {
+  viewCam.aspect = innerWidth / innerHeight;
+  viewCam.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+frame();
+</script>
+</body>
+</html>
