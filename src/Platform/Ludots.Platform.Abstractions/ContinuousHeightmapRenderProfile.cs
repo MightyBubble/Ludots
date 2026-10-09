@@ -42,6 +42,14 @@ namespace Ludots.Platform.Abstractions
         public bool DisableDistanceFog { get; set; }
 
         /// <summary>
+        /// When true, this map's height asset fills void/ocean with values at the raw sample ceiling
+        /// (hand-authored continental assets). Display flattens those samples onto the sea plane.
+        /// Exporter-derived uint16 assets derive their scale from real min/max and spend the whole
+        /// raw range on authored relief — they must leave this off so ceiling-value peaks stay real.
+        /// </summary>
+        public bool OceanVoidFillAtSampleCeiling { get; set; }
+
+        /// <summary>
         /// When the camera footprint exceeds detail radius times this multiplier,
         /// adapters must draw the overview mesh instead of the near-chunk window.
         /// </summary>
@@ -65,6 +73,7 @@ namespace Ludots.Platform.Abstractions
                 ColorContrast = ColorContrast,
                 AbsoluteColorPeakSpanCm = AbsoluteColorPeakSpanCm,
                 DisableDistanceFog = DisableDistanceFog,
+                OceanVoidFillAtSampleCeiling = OceanVoidFillAtSampleCeiling,
                 OverviewSwitchChunkSpans = OverviewSwitchChunkSpans,
                 OverviewVertexLimit = OverviewVertexLimit,
             };

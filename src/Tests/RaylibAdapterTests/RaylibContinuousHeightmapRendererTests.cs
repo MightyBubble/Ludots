@@ -81,36 +81,41 @@ public sealed class RaylibContinuousHeightmapRendererTests
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: 59_563f,
                 seaLevelCm: 0f,
-                absolutePeakSpanCm: 5_000f),
+                oceanVoidSentinelCm: 57_671f),
             Is.EqualTo(0f));
+        Assert.That(
+            RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
+                heightCm: 59_563f,
+                seaLevelCm: 0f,
+                oceanVoidSentinelCm: null),
+            Is.EqualTo(59_563f),
+            "Undeclared assets keep ceiling-range values — exporter-derived scaled assets spend the raw range on authored relief.");
         Assert.That(
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: 2_132f,
                 seaLevelCm: 0f,
-                absolutePeakSpanCm: 5_000f),
+                oceanVoidSentinelCm: 57_671f),
             Is.EqualTo(2_132f));
         Assert.That(
             RaylibContinuousHeightmapRenderer.ResolveAbsoluteDisplayHeightCm(
                 heightCm: -6_000f,
                 seaLevelCm: 0f,
-                absolutePeakSpanCm: 5_000f),
+                oceanVoidSentinelCm: 57_671f),
             Is.EqualTo(0f),
             "Authored bathymetry below sea must flatten under absolute display so continental scale does not dig ocean pits.");
     }
 
     [Test]
-    public void ResolveOverviewStepChunks_KeepsLargeMapOverviewUnderRaylibVertexLimit()
+    public void ResolveOverviewAxisPointCount_SpendsVertexBudgetIndependentlyOfChunkLattice()
     {
-        int step = RaylibContinuousHeightmapRenderer.ResolveOverviewStepChunks(
-            chunkColumns: 1024,
-            chunkRows: 1024,
-            maxVertices: 60_000);
+        // 65536 预算 → 255²(ushort 索引上限内最大),不再被 chunk 栅格钉在每 chunk 一顶点
+        int axis = RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(65_536);
+        Assert.That(axis, Is.EqualTo(255));
+        Assert.That(axis * axis, Is.LessThanOrEqualTo(ushort.MaxValue));
 
-        int columns = RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
-        int rows = RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(1024, step);
-
-        Assert.That(columns * rows, Is.LessThanOrEqualTo(60_000));
-        Assert.That(columns * rows, Is.LessThanOrEqualTo(ushort.MaxValue));
+        // 小预算照样开方;下限 2×2
+        Assert.That(RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(1_024), Is.EqualTo(32));
+        Assert.That(RaylibContinuousHeightmapRenderer.ResolveOverviewAxisPointCount(4), Is.EqualTo(2));
     }
 
     [Test]
@@ -291,13 +296,13 @@ public sealed class RaylibContinuousHeightmapRendererTests
             in leftChunk, x: 2, y: 0,
             worldXCm: 200f, worldYCm: 50f,
             stepXCm: 100f, stepYCm: 100f,
-            displayHeightScale: 1f, absoluteSeaCm: null, absolutePeakSpanCm: 3600f,
+            displayHeightScale: 1f, absoluteSeaCm: null, oceanVoidSentinelCm: null,
             worldSampler: sampler);
         System.Numerics.Vector3 unifiedNormal = RaylibContinuousHeightmapRenderer.ComputeNormal(
             in unified, x: 2, y: 0,
             worldXCm: 200f, worldYCm: 50f,
             stepXCm: 100f, stepYCm: 100f,
-            displayHeightScale: 1f, absoluteSeaCm: null, absolutePeakSpanCm: 3600f,
+            displayHeightScale: 1f, absoluteSeaCm: null, oceanVoidSentinelCm: null,
             worldSampler: null);
 
         Assert.That(withSampler.X, Is.EqualTo(unifiedNormal.X).Within(1e-4f));
@@ -308,7 +313,7 @@ public sealed class RaylibContinuousHeightmapRendererTests
             in rightChunk, x: 0, y: 0,
             worldXCm: 200f, worldYCm: 50f,
             stepXCm: 100f, stepYCm: 100f,
-            displayHeightScale: 1f, absoluteSeaCm: null, absolutePeakSpanCm: 3600f,
+            displayHeightScale: 1f, absoluteSeaCm: null, oceanVoidSentinelCm: null,
             worldSampler: sampler);
         Assert.That(rightWithSampler.X, Is.EqualTo(withSampler.X).Within(1e-4f));
 
@@ -317,7 +322,7 @@ public sealed class RaylibContinuousHeightmapRendererTests
             in leftChunk, x: 2, y: 0,
             worldXCm: 200f, worldYCm: 50f,
             stepXCm: 100f, stepYCm: 100f,
-            displayHeightScale: 1f, absoluteSeaCm: null, absolutePeakSpanCm: 3600f,
+            displayHeightScale: 1f, absoluteSeaCm: null, oceanVoidSentinelCm: null,
             worldSampler: null);
         Assert.That(clamped.X, Is.Not.EqualTo(unifiedNormal.X).Within(1e-3f));
     }
