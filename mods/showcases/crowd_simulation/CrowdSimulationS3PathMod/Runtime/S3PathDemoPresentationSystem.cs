@@ -28,18 +28,22 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId RouteGoal = new(3);
     private static readonly RouteVisualId RouteHover = new(4);
 
+    // 指针域走后端原值(起终点/位置);键盘键走动作层(assets/Input/default_input.json
+    // 声明,Default_Gameplay 上下文绑定),演示不解释设备路径。
     private const string MouseLeft = "<Mouse>/LeftButton";
     private const string MouseRight = "<Mouse>/RightButton";
-    private const string KeyContext = "<Keyboard>/q";
-    private const string KeyThreads = "<Keyboard>/t";
-    private const string KeySlow = "<Keyboard>/g";
-    private const string KeyView = "<Keyboard>/v";
-    private const int HudZoneBottomPx = 110; // HUD 面板区的点击不算世界点选
+    private const string ActionCycleContext = "CrowdSimulation.S3.CycleContext";
+    private const string ActionToggleThreads = "CrowdSimulation.S3.ToggleThreads";
+    private const string ActionToggleSlow = "CrowdSimulation.S3.ToggleSlow";
+    private const string ActionCycleView = "CrowdSimulation.S3.CycleView";
+    // HUD 面板矩形(窗口像素,绘制与世界点选排除共用同一份——点在面板上不算世界点选)
+    private const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 118;
 
     private readonly S3PathDemoRuntime _runtime;
     private readonly RouteVisualBuffer _routeVisuals;
     private readonly ScreenOverlayBuffer _overlay;
     private readonly IInputBackend _input;
+    private readonly PlayerInputHandler _actions;
     private readonly IScreenRayProvider _rays;
     private readonly Func<IContinuousHeightmap?> _heightmapSource;
 
@@ -53,6 +57,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         RouteVisualBuffer routeVisuals,
         ScreenOverlayBuffer overlay,
         IInputBackend input,
+        PlayerInputHandler actions,
         IScreenRayProvider rays,
         Func<IContinuousHeightmap?> heightmapSource)
     {
@@ -60,6 +65,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         _routeVisuals = routeVisuals;
         _overlay = overlay;
         _input = input;
+        _actions = actions;
         _rays = rays;
         _heightmapSource = heightmapSource;
     }
@@ -77,13 +83,17 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
 
         // ── 输入边沿 → 运行时队列 ─────────────────────────────
         bool left = _input.GetButton(MouseLeft), right = _input.GetButton(MouseRight);
-        bool keyContext = _input.GetButton(KeyContext), keyThreads = _input.GetButton(KeyThreads), keySlow = _input.GetButton(KeySlow);
-        bool keyView = _input.GetButton(KeyView);
+        bool keyContext = _actions.IsDown(ActionCycleContext);
+        bool keyThreads = _actions.IsDown(ActionToggleThreads);
+        bool keySlow = _actions.IsDown(ActionToggleSlow);
+        bool keyView = _actions.IsDown(ActionCycleView);
         Vector2 mouse = _input.GetMousePosition();
         int hoveredCell = -1;
         // 高度图服务是地图加载后才注册的(GameStart 时还没有),必须逐帧取
         var heightmap = _heightmapSource();
-        if (heightmap != null && mouse.Y >= HudZoneBottomPx)
+        bool overHudPanel = mouse.X >= HudPanelX && mouse.X <= HudPanelX + HudPanelW &&
+                            mouse.Y >= HudPanelY && mouse.Y <= HudPanelY + HudPanelH;
+        if (heightmap != null && !overHudPanel)
         {
             var ray = _rays.GetRay(mouse);
             if (heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
@@ -245,7 +255,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
 
     private static void DrawCaption(ScreenOverlayBuffer overlay, string title, string detail, string keys)
     {
-        overlay.AddRect(16, 16, 1568, 118, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        overlay.AddRect(HudPanelX, HudPanelY, HudPanelW, HudPanelH, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         overlay.AddText(32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         overlay.AddText(32, 56, detail, 18, new Vector4(1f, 1f, 1f, 1f));
         overlay.AddText(32, 84, keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));

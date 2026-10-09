@@ -36,20 +36,24 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId WireframeId = new(100);
     private static readonly RouteVisualId FlashBase = new(200);
 
+    // 指针域走后端原值(放置键/位置);键盘键走动作层(assets/Input/default_input.json
+    // 声明,Default_Gameplay 上下文绑定),演示不解释设备路径。
     private const string MouseLeft = "<Mouse>/LeftButton";
-    private const string KeyView = "<Keyboard>/v";
-    private const string KeyBuild = "<Keyboard>/b";
-    private const string KeyRemove = "<Keyboard>/x";
-    private const string KeyTemplate1 = "<Keyboard>/1";
-    private const string KeyTemplate2 = "<Keyboard>/2";
-    private const string KeyTemplate3 = "<Keyboard>/3";
-    private const int HudZoneTopPx = 170; // HUD 面板区的点击不算世界点选
+    private const string ActionCycleView = "CrowdSimulation.S4.CycleView";
+    private const string ActionToggleBuild = "CrowdSimulation.S4.ToggleBuild";
+    private const string ActionRemoveStructure = "CrowdSimulation.S4.RemoveStructure";
+    private const string ActionTemplate1 = "CrowdSimulation.S4.Template1";
+    private const string ActionTemplate2 = "CrowdSimulation.S4.Template2";
+    private const string ActionTemplate3 = "CrowdSimulation.S4.Template3";
+    // HUD 面板矩形(窗口像素,绘制与世界点选排除共用同一份——点在面板上不算世界点选)
+    private const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 148;
     private const long FlashMs = 2500; // 脏 tile 闪烁时长(呈现口径,与仿真无关)
 
     private readonly S4DeployDemoRuntime _demo;
     private readonly RouteVisualBuffer _routeVisuals;
     private readonly ScreenOverlayBuffer _overlay;
     private readonly IInputBackend _input;
+    private readonly PlayerInputHandler _actions;
     private readonly IScreenRayProvider _rays;
     private readonly Func<IContinuousHeightmap?> _heightmapSource;
     private readonly Func<CrowdSimulationRuntime?> _runtimeSource;
@@ -68,6 +72,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         RouteVisualBuffer routeVisuals,
         ScreenOverlayBuffer overlay,
         IInputBackend input,
+        PlayerInputHandler actions,
         IScreenRayProvider rays,
         Func<IContinuousHeightmap?> heightmapSource,
         Func<CrowdSimulationRuntime?> runtimeSource,
@@ -77,6 +82,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _routeVisuals = routeVisuals;
         _overlay = overlay;
         _input = input;
+        _actions = actions;
         _rays = rays;
         _heightmapSource = heightmapSource;
         _runtimeSource = runtimeSource;
@@ -95,8 +101,10 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
         // ── 输入边沿 → 演示队列(呈现线程只入队,仿真 tick 消费) ─────────────────
         bool left = _input.GetButton(MouseLeft);
-        bool keyView = _input.GetButton(KeyView), keyBuild = _input.GetButton(KeyBuild), keyRemove = _input.GetButton(KeyRemove);
-        bool t1 = _input.GetButton(KeyTemplate1), t2 = _input.GetButton(KeyTemplate2), t3 = _input.GetButton(KeyTemplate3);
+        bool keyView = _actions.IsDown(ActionCycleView);
+        bool keyBuild = _actions.IsDown(ActionToggleBuild);
+        bool keyRemove = _actions.IsDown(ActionRemoveStructure);
+        bool t1 = _actions.IsDown(ActionTemplate1), t2 = _actions.IsDown(ActionTemplate2), t3 = _actions.IsDown(ActionTemplate3);
         var mouse = _input.GetMousePosition();
         var ground = PickGround(mouse);
 
@@ -172,10 +180,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         DrawHud(session, runtime, (previewShown, previewValid));
     }
 
-    /// <summary>屏幕坐标 → 地面世界厘米(HUD 面板区不算;高度图服务地图加载后才注册,逐帧取)。</summary>
+    /// <summary>屏幕坐标 → 地面世界厘米(HUD 面板矩形内的点击不算;高度图服务地图加载后才注册,逐帧取)。</summary>
     private (double X, double Y)? PickGround(Vector2 mouse)
     {
-        if (mouse.Y < HudZoneTopPx) return null;
+        if (mouse.X >= HudPanelX && mouse.X <= HudPanelX + HudPanelW &&
+            mouse.Y >= HudPanelY && mouse.Y <= HudPanelY + HudPanelH)
+        {
+            return null;
+        }
+
         var heightmap = _heightmapSource();
         if (heightmap == null) return null;
         var ray = _rays.GetRay(mouse);
@@ -408,7 +421,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             : "观察模式";
         string keys =
             $"V 视图 {S4DeployDemoRuntime.ViewModeLabels[_demo.ViewMode]} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{_demo.TemplateIndex + 1}] · 建造模式下左键放置 · {templateLine}";
-        _overlay.AddRect(16, 16, 1568, 148, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        _overlay.AddRect(HudPanelX, HudPanelY, HudPanelW, HudPanelH, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         _overlay.AddText(32, 24, "CrowdSimulation S4 · 部署演示(种子 1337,脚本行军 + 交互建造)", 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         _overlay.AddText(32, 54, status, 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 78, $"最近重烘:{rebake}", 18, new Vector4(1f, 1f, 1f, 1f));

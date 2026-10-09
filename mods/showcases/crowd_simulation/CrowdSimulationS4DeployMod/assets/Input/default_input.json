@@ -1,0 +1,23 @@
+{
+  "actions": [
+    { "id": "CrowdSimulation.S4.CycleView", "name": "CrowdSimulation_S4_CycleView", "type": "Button" },
+    { "id": "CrowdSimulation.S4.ToggleBuild", "name": "CrowdSimulation_S4_ToggleBuild", "type": "Button" },
+    { "id": "CrowdSimulation.S4.RemoveStructure", "name": "CrowdSimulation_S4_RemoveStructure", "type": "Button" },
+    { "id": "CrowdSimulation.S4.Template1", "name": "CrowdSimulation_S4_Template1", "type": "Button" },
+    { "id": "CrowdSimulation.S4.Template2", "name": "CrowdSimulation_S4_Template2", "type": "Button" },
+    { "id": "CrowdSimulation.S4.Template3", "name": "CrowdSimulation_S4_Template3", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "bindings": [
+        { "actionId": "CrowdSimulation.S4.CycleView", "path": "<Keyboard>/v" },
+        { "actionId": "CrowdSimulation.S4.ToggleBuild", "path": "<Keyboard>/b" },
+        { "actionId": "CrowdSimulation.S4.RemoveStructure", "path": "<Keyboard>/x" },
+        { "actionId": "CrowdSimulation.S4.Template1", "path": "<Keyboard>/1" },
+        { "actionId": "CrowdSimulation.S4.Template2", "path": "<Keyboard>/2" },
+        { "actionId": "CrowdSimulation.S4.Template3", "path": "<Keyboard>/3" }
+      ]
+    }
+  ]
+}

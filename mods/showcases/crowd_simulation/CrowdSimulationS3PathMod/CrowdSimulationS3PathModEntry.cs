@@ -48,12 +48,14 @@ public sealed class CrowdSimulationS3PathModEntry : IMod
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 InputBackend。");
             var rays = engine.GetService(CoreServiceKeys.ScreenRayProvider)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenRayProvider。");
+            var actions = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 InputHandler(动作层)。");
 
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS3PathMod 需要 ScreenOverlayBuffer。");
             engine.RegisterSystem(new S3PathDemoSimulationSystem(_runtime), SystemGroup.PostMovement);
             engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(
-                _runtime, routeVisuals, overlay, input, rays,
+                _runtime, routeVisuals, overlay, input, actions, rays,
                 () => engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) ? hm : null));
             return Task.CompletedTask;
         });

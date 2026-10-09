@@ -45,6 +45,8 @@ public sealed class CrowdSimulationS4DeployModEntry : IMod
 
             var input = engine.GetService(CoreServiceKeys.InputBackend)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS4DeployMod 需要 InputBackend。");
+            var actions = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new System.InvalidOperationException("CrowdSimulationS4DeployMod 需要 InputHandler(动作层)。");
             var rays = engine.GetService(CoreServiceKeys.ScreenRayProvider)
                 ?? throw new System.InvalidOperationException("CrowdSimulationS4DeployMod 需要 ScreenRayProvider。");
             ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
@@ -64,7 +66,7 @@ public sealed class CrowdSimulationS4DeployModEntry : IMod
             }
 
             engine.RegisterPresentationSystem(new S4DeployDemoPresentationSystem(
-                _runtime, routeVisuals, overlay, input, rays,
+                _runtime, routeVisuals, overlay, input, actions, rays,
                 () => engine.TryGetService(CoreServiceKeys.ContinuousHeightmap, out IContinuousHeightmap? hm) ? hm : null,
                 () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var r) ? r : null,
                 () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var s) ? s : null));

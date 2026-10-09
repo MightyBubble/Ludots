@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "CrowdSimulation.S3.CycleContext", "name": "CrowdSimulation_S3_CycleContext", "type": "Button" },
+    { "id": "CrowdSimulation.S3.ToggleThreads", "name": "CrowdSimulation_S3_ToggleThreads", "type": "Button" },
+    { "id": "CrowdSimulation.S3.ToggleSlow", "name": "CrowdSimulation_S3_ToggleSlow", "type": "Button" },
+    { "id": "CrowdSimulation.S3.CycleView", "name": "CrowdSimulation_S3_CycleView", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "bindings": [
+        { "actionId": "CrowdSimulation.S3.CycleContext", "path": "<Keyboard>/q" },
+        { "actionId": "CrowdSimulation.S3.ToggleThreads", "path": "<Keyboard>/t" },
+        { "actionId": "CrowdSimulation.S3.ToggleSlow", "path": "<Keyboard>/g" },
+        { "actionId": "CrowdSimulation.S3.CycleView", "path": "<Keyboard>/v" }
+      ]
+    }
+  ]
+}
