@@ -79,6 +79,24 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 重开条件：引擎权威帧合同能无损表达指令流（同 tick 顺序、变长载荷、任意字符串），且 crowd 会话具备检查点的生产与消费管线。
 
+## 运行时合同：并存权属、存档、停摆
+
+三条边界先写死，后续阶段在此之上做增量，不重开。
+
+### 并存权属
+
+- **一图一求解器互斥已在活路径**：配置门禁与实体模板合同都拒绝同一地图同时声明 MassNavigation 与 CrowdSimulation 求解器；这不是待办，是装载即拒的现行规则。
+- **crowd 会话对自己单位的位置写权**：单位位置、运动学、仿真身份组件由会话步进独占写入，引擎侧系统（分区同步、呈现投影）只读。会话步进系统注册在 PostMovement 组、排在 `SpatialPartitionUpdateSystem` 之前——分区按 `PreviousWorldPositionCm != WorldPositionCm` 判移动，步进晚于同步会让成员格冻结。其他组件域（GAS 效果、交互上下文）不写 crowd 会话状态。
+- **GAS 下令链接入归 S8/TR-07**：现行指令从会话命令队列进入（submit 现场指令 / schedule 脚本），交互层（S4 演示）只在呈现线程入队、tick 边界消费；把它改接到 GAS 施法链（CommandIntent → OrderFanout → 会话指令）是 S8 的活，不在本层加过渡桥。
+
+### 存档
+
+不支持中途快照。存档 = 指令日志（`CrowdCommandQueue` 的 sources + log），恢复 = 新会话从 tick 0 回放同一日志——回放逐位一致由每 tick 规范校验码背书（`RunReplay`、S4 真值测试）。引擎世界快照（`WorldSaveSnapshot`）承载不了指令流（同 tick 顺序、变长载荷、任意字符串没有无损落点），也不被 crowd 消费。中途快照（长对局断点续跑）S8 之后按真实需求评估，评估前一律按"回放即恢复"。
+
+### 停摆
+
+固定生效帧是唯一口径：路径答复没按生效帧回来，本 tick 会话停摆（不推进、不降级、不用部分结果），下一 tick 重试；规划器风暴期（12000 单位重规划）表现为 tick 变慢而不是行为分叉。这是跨线程确定性的诚实代价——答复到达时刻依赖线程时序，把"晚到的答复"解释成任何确定行为都会破坏回放逐位。不引入 dt=0 空步或切片推进；50k 单位的帧预算问题归 S8 性能门禁处理，不在语义层打补丁。
+
 ## 配置门禁（S0 的核心交付）
 
 加载在进入地图时进行，错误消息写明文件、字段路径与规则，例如：
@@ -162,6 +180,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一簇 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——crowd 会话的档案来源改由 `agents.profilesUri` 显式声明,默认才回退全局注册表;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
+- **选中链的目标形态（S8 前记档）**：终态 = rep entity 挂交互上下文声明 `activeCollectionKey`、选中落在玩家本地集合、下令命令自带成员清单（不再从选中集合反查），`select` 指令随之退出指令日志——选中是本机 UI 态,不是仿真输入。当前实现是 select 指令 + 会话实体自声明键（`selected` 集合,SelectionMirror 镜像）,与输入配置宪法的自声明键口径一致,已合规;换轨在 S8 正式下令链接入时一并做。
 
 ## S5-a 交付：移动内核与阵型（本次）
 
