@@ -199,7 +199,7 @@ public sealed class CrowdStructuresStore
     public int EntityAt(Fix64 x, Fix64 y)
     {
         int best = -1;
-        foreach (int id in _ids)
+        foreach (int id in _ids) // _ids 是放置序 List(有序容器):同点多次覆盖取后写 = 最新实体
         {
             if (_footprint.TryGetValue(id, out var fp) && fp.Covers(x, y)) best = id;
         }
@@ -211,7 +211,7 @@ public sealed class CrowdStructuresStore
     public List<int> DueExpiries(int tick)
     {
         var due = new List<int>();
-        foreach (int id in _ids)
+        foreach (int id in _ids) // _ids 放置序 = id 升序(id 只增,删除保序);有序容器
         {
             if (_lifetime.TryGetValue(id, out int expire) && expire <= tick) due.Add(id);
         }
@@ -276,10 +276,12 @@ public sealed class CrowdStructuresStore
             }
         }
 
-        foreach (var kv in _navArea)
+        // 顺序相关:同优先级实体重叠时后写胜——按放置序(_ids)遍历,与参考端 Map 插入序
+        // 同语义;_navArea 有删除,字典枚举序在删除后会乱,不能直接枚举。
+        foreach (int id in _ids)
         {
-            int id = kv.Key;
-            var (areaIdx, priority) = kv.Value;
+            if (!_navArea.TryGetValue(id, out var navArea)) continue;
+            var (areaIdx, priority) = navArea;
             var fp = _footprint[id];
             var (a, b, c, d) = fp.CellRectOf(CellSizeCm, n);
             for (int y = Math.Max(b, rect.Y0); y < Math.Min(d, rect.Y1); y++)
@@ -298,7 +300,7 @@ public sealed class CrowdStructuresStore
             }
         }
 
-        foreach (int id in _ids)
+        foreach (int id in _ids) // 顺序无关:阻挡写 1 幂等;_ids 放置序(有序容器)
         {
             if (!_blocker.Contains(id)) continue;
             var fp = _footprint[id];
@@ -332,7 +334,7 @@ public sealed class CrowdStructuresStore
     public void RebuildColliders()
     {
         var boxes = new List<(Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)>();
-        foreach (int id in _ids)
+        foreach (int id in _ids) // 顺序无关:盒序进 CSR 后查询与序无关;_ids 放置序(有序容器)
         {
             if (!_blocker.Contains(id)) continue;
             var f = _footprint[id];

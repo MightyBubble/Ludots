@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -417,7 +418,7 @@ public sealed class CrowdSimPlanner
 
         Fix64 area = Fix64.Zero;
         int total = 0;
-        foreach (var (gid, _) in live)
+        foreach (int gid in live.Keys.OrderBy(v => v)) // 顺序无关:Fix64 精确加法/计数,交换律成立;升序显式化
         {
             if (!membersByGroup.TryGetValue(gid, out var mem)) continue;
             foreach (var i in mem)
@@ -929,7 +930,8 @@ public sealed class CrowdSimPlanner
     /// 领队不踩已弃变体。</summary>
     public void RelinkLeaders(HashSet<CrowdOrder> touched)
     {
-        foreach (var o in touched)
+        // 顺序无关:各指令的组/领队互斥、同净空取更大下标已确定;按指令 id 升序显式化
+        foreach (var o in touched.OrderBy(o => o.Id))
         {
             foreach (var leader in o.Leaders)
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -144,7 +145,10 @@ public sealed class HpaGraph
         var rebake = new HashSet<int>(tiles);
         var east = new HashSet<int>();
         var south = new HashSet<int>();
-        foreach (int t in tiles)
+        // 遍历序合同:本方法对无序集合(HashSet/字典键)的枚举一律按簇号升序显式化——
+        // 各枚举只做集合并集或逐簇独立读写(Rescan 只加集,BakeCluster/BuildBlock 逐簇
+        // 写自有槽位),结果与序无关,升序仅为把序写成合同不依赖运行时枚举序。
+        foreach (int t in tiles) // tiles 是调用方 List(CrowdNavRebake.TilesOf),有序容器
         {
             int cx = t % c, cy = t / c;
             east.Add(t);
@@ -175,15 +179,15 @@ public sealed class HpaGraph
             }
         }
 
-        foreach (int cl in east) Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
-        foreach (int cl in south) Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
-        foreach (int cl in own) aff.Add(cl);
+        foreach (int cl in east.OrderBy(v => v)) Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
+        foreach (int cl in south.OrderBy(v => v)) Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
+        foreach (int cl in own.OrderBy(v => v)) aff.Add(cl);
         var lk = LinksByCluster(links, nav.CellCount, ClusterSize, c);
         // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
         var oldLk = LinkClusters ?? new Dictionary<int, List<int>>();
-        foreach (int cl in oldLk.Keys) aff.Add(cl);
-        foreach (int cl in lk.Keys) aff.Add(cl);
-        foreach (int cl in oldLk.Keys)
+        foreach (int cl in oldLk.Keys.OrderBy(v => v)) aff.Add(cl);
+        foreach (int cl in lk.Keys.OrderBy(v => v)) aff.Add(cl);
+        foreach (int cl in oldLk.Keys.OrderBy(v => v))
         {
             oldLk.TryGetValue(cl, out var a);
             lk.TryGetValue(cl, out var b);
@@ -191,8 +195,8 @@ public sealed class HpaGraph
         }
 
         LinkClusters = lk;
-        foreach (int cl in rebake) BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
-        foreach (int cl in aff) Blocks[cl] = BuildBlock(this, nav, cl);
+        foreach (int cl in rebake.OrderBy(v => v)) BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
+        foreach (int cl in aff.OrderBy(v => v)) Blocks[cl] = BuildBlock(this, nav, cl);
         FinishGraph(this, links);
     }
 
