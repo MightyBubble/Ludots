@@ -2722,7 +2722,8 @@
       "name": "crowd_simulation_s4_deploy_1337",
       "target": {
         "type": "path",
-        "value": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod"
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod",
+        "projectPath": "CrowdSimulationS4DeployMod.csproj"
       }
     }
   ],

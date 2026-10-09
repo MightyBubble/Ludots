@@ -205,7 +205,8 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **踩过的坑(已固化)**:① 碰撞索引必须跟随仓的活 CSR——放置重建出**新实例**,会话持旧实例则墙内单位永推不出(首个真分歧,tick 31 单位 92 差 43m,`Blockers` 已改为派生属性);② worker 复用的 tile 多边形代价备忘键须钉**条目引用**((navId, tile) 键在重烘换条目后越界,worker 故障);③ 寿命 tick 整数契约走参考端 f64 公式(见上);④ 刷新队列长在阶段 1 末快照(阶段 2 读实时值已被每 tick 预算排空,参考端同点)。
 - **真机**：S4Deploy 冒烟脚本追加建造/拆除/寿命/道路四 op(12000 单位):5 笔重烘报告全字段落日志(含到期拆除与 costOnly=4 的仅代价重烘,缓存命中计数与挤离计数在案);**autoReplay 回放无分歧(status=1, divergenceTick=-1)**——回放会话用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存(共享活会话已被 op 改写的导航上下文必然分歧,首个分歧恰在首个规划落地 tick 43,已实测并修复);截图 `raylib-s1337-s7rebake-kernel.png`。
 - **L15 处置**:本单未触及单位删除路径(evict 是传送不是删除,无 kill 指令移植),swap-remove 不搬推挤状态的问题**仍挂起**,留待涉及单位删除的单。
-- **F03-b 待办**:演示 mod 的结构放置交互与呈现(本单只交付内核与真值链);动态分层(桥)的上层增量烘焙;参考端 stray 走廊扩展(Ludots 侧 OnStray 仍空挂)。
+- **F03-b 演示交互(已交付)**:S4 演示 mod 从纯数据升级为代码 mod(`CrowdSimulationS4DeployMod`,入口 + 交互运行时 + 呈现系统 + 视图投影器),会话本体仍由 `CrowdSimulationRuntime` 按地图聚焦激活——交互层只挂呈现,不复制装载链。**HUD**(ScreenOverlayBuffer,数据全部读内核现成状态):tick / 单位总数与状态分布(闲/行/达/不可达/跳跃)/ 最近一笔重烘报告(exec→report tick、类别、脏 tile、缓存命中、重规划、挤离、stuck)/ 回放结论 / 按键提示。**V 巡回分层视图**(S3 同一通道):路线 = 主力组(成员最多的带流场组)流场贴花 + 目标标记(GlobalFieldVisualProjectorRegistry)、可走区域遮罩、NavMesh+HPA 线框(路线通道,按(导航,重烘序)缓存——重烘换 tile 后自动重建);**重烘脏 tile 闪烁**(最近报告的受影响 tile 并集轮廓,2.5s 线性淡出,路线通道)。**B 建造 / X 拆除 / 1-2-3 切模板**(building/s7barrier/road,尺寸与演示脚本同值;道路自光标向 +X):足迹红绿预览(光标处无既有结构且包围格无阻挡 = 绿,只读结构仓现成数据)、指令走正式指令流(placeStructure/removeStructureAt,呈现线程只入队、仿真 tick 在 PostMovement 组消费——先于 Cleanup 组的会话步进,回放同构);世界落点 = InputBackend + ScreenRayProvider + 高度图射线。**交互与自动回放**:首条现场指令进入会话即调 `CrowdSimulationRuntime.SuppressAutoReplay()`(只拦自动触发,RunReplay/对拍语义不动),HUD 显示"回放已停用(交互模式)";无交互时原行为不变(实测自动回放 status=1)。真机截图 `raylib-s1337-s7demo-{hud,build,rebake}.png`(建造/重烘两帧经 AgentBridge 合成输入与按帧截图编排,`scripts/acceptance/run-crowdsim-s4-f03b-shots.sh`)。
+- **F03-b 待办**:动态分层(桥)的上层增量烘焙;参考端 stray 走廊扩展(Ludots 侧 OnStray 仍空挂)。
 
 ## 当前缺口（诚实清单）
 
