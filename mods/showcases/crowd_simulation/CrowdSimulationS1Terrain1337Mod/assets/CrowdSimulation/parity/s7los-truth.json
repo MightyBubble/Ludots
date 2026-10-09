@@ -1,0 +1,59 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "F": 64,
+  "eyeM": 10,
+  "note": "L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。",
+  "from": [
+    10,
+    10
+  ],
+  "to": [
+    16,
+    10
+  ],
+  "hAvgTRaw": 171798691840,
+  "cases": [
+    {
+      "name": "biteThreshold",
+      "hMaxRaw": {
+        "651": 64424509439
+      },
+      "opaque": 0,
+      "expect": false,
+      "got": false
+    },
+    {
+      "name": "thresholdExact",
+      "hMaxRaw": {
+        "651": 64424509440
+      },
+      "opaque": 0,
+      "expect": false,
+      "got": false
+    },
+    {
+      "name": "belowBothTrees",
+      "hMaxRaw": {
+        "651": 62277025792
+      },
+      "opaque": 0,
+      "expect": true,
+      "got": true
+    },
+    {
+      "name": "clearLos",
+      "hMaxRaw": {},
+      "opaque": 0,
+      "expect": true,
+      "got": true
+    },
+    {
+      "name": "opaqueMidBlocks",
+      "hMaxRaw": {},
+      "opaque": 653,
+      "expect": false,
+      "got": false
+    }
+  ]
+}

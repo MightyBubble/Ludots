@@ -8,10 +8,12 @@ using Ludots.Core.CrowdSimulation.Fog;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// 迷雾面命令格化对拍(L51):circle/poly 形状两端(沙盒正本导出器 areaCells 定点树 ↔
+/// 迷雾面命令格化对拍(L51/L52):circle/poly 形状两端(沙盒正本导出器 areaCells 定点树 ↔
 /// C# CrowdFogArea.AreaCells)逐格逐包围盒硬门。千米级圆/多边形在旧厘米域树里 r·r 静默
 /// 回绕(Q31.32 厘米域平方溢出界 ~463 m),本门是格单位归一树的首批两端证据;rect1km 与
-/// s7fog 的 reveal 同参,钉 rect 路径回归。真值 s7area-truth.json 由正本导出器生成。
+/// s7fog 的 reveal 同参,钉 rect 路径回归;biteCirclePyth(300-400-500 勾股对齐)与
+/// bitePolyGridEdge(顶点恰落格边界)是构造性咬合用例——双精度树各自给出不同格集,
+/// 撤掉定点必红(红测已证:回退双精度实现本测试类 3 项全红)。
 /// 负向:形状坐标/半径超 ±46340 m 抛合同异常,不许静默回绕。
 /// </summary>
 public sealed class CrowdFogAreaParityTests

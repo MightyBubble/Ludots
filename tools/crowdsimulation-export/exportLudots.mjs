@@ -1124,6 +1124,11 @@ function canonComp(comp, n2) {
         { name: 'circle1000m', kind: 'circle', value: [4000, 11000, 1000] },
         { name: 'poly800m', kind: 'poly', value: [[11600, 3600], [12400, 3600], [12400, 4400], [11600, 4400]] },
         { name: 'poly2km', kind: 'poly', value: [[2000, 2000], [4000, 2200], [3800, 4000], [2600, 4200], [1900, 3200]] },
+        // 构造性咬合(撤掉定点树必红):勾股圆 300-400-500——圆心/半径使 s 行 dy=300m、
+        // h=400m 恰落格界,双精度树 14 格 vs 定点树 13 格;顶点恰落格边界的四边形——
+        // 边界 ceil/floor 在两树间翻转。参数经双树分叉探针搜索选定。
+        { name: 'biteCirclePyth', kind: 'circle', value: [4225, 2075, 500] },
+        { name: 'bitePolyGridEdge', kind: 'poly', value: [[6000, 3000], [8000, 4000], [7500, 4600], [6500, 4800]] },
       ];
       const areaOut = {
         mapId, seed,
@@ -1136,6 +1141,49 @@ function canonComp(comp, n2) {
       }
       writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(areaOut, null, 2));
       console.log(`[export] ${mapId} s7area cases=${areaOut.cases.length} F=${F} fcsM=${fcsM}`);
+    }
+
+    // ───────────────────── L52:LOS 高度线恰等阈值咬合(工程化高度表直调 sight) ─────────────────────
+    // 真实例上整体替换高度/不透明表后走真实 sight 路径(定点树)。样线 (10,10)→(16,10),
+    // n=12,眼高 10m、hAvg[t]=40m → rise=30;s=2 采样格 11、f=1/6:定点积 4.999999998136679,
+    // 双精度积 4.9999999999999999——V=15−2^−32 落在窗口内 → 双精度可见、定点阻挡,
+    // 撤掉定点必红;V=15 恰等阈值钉严格大于语义(两端皆阻挡)。
+    {
+      globalThis.__L31_FIX64_LOS__ = true;
+      const { Fog } = await import('../src/engine/fog/fog.js');
+      // sight 只读高度/不透明表;relations 以 kindOf 桩走完构造(视野分组本块不消费),
+      // structures 用顶层正本实例(构造期收桥足迹)。
+      const fogObj = new Fog(config, world, { kindOf: () => 0 }, structures);
+      const G32 = 4294967296;
+      const mkRaw = (raw) => Number(BigInt(raw)) / G32;
+      const from = [10, 10], to = [16, 10];
+      const rowY = 10, flat = (col) => rowY * 64 + col; // 采样行 = 10(dy=0)
+      const v0 = from[1] * 64 + from[0], t0 = to[1] * 64 + to[0];
+      const hAvgTRaw = 40 * G32;
+      const cases3 = [
+        { name: 'biteThreshold', hMaxRaw: { [flat(11)]: 15 * G32 - 1 }, expect: false },
+        { name: 'thresholdExact', hMaxRaw: { [flat(11)]: 15 * G32 }, expect: false },
+        { name: 'belowBothTrees', hMaxRaw: { [flat(11)]: 14 * G32 + G32 / 2 }, expect: true },
+        { name: 'clearLos', hMaxRaw: {}, expect: true },
+        { name: 'opaqueMidBlocks', hMaxRaw: {}, opaque: flat(13), expect: false },
+      ];
+      const losOut = {
+        mapId, seed, F: fogObj.F, eyeM: fogObj.eye,
+        note: 'L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。',
+        from, to, hAvgTRaw, cases: [],
+      };
+      for (const c of cases3) {
+        const hAvg = new Float64Array(64 * 64), hMax = new Float64Array(64 * 64), opaque = new Uint8Array(64 * 64);
+        hAvg[t0] = mkRaw(hAvgTRaw);
+        for (const [k, raw] of Object.entries(c.hMaxRaw)) hMax[+k] = mkRaw(raw);
+        if (c.opaque !== undefined) opaque[c.opaque] = 1;
+        Object.assign(fogObj, { hAvg, hMax, opaque, los: true });
+        const got = fogObj.sight(from[0], from[1], to[0], to[1]);
+        losOut.cases.push({ name: c.name, hMaxRaw: c.hMaxRaw, opaque: c.opaque ?? 0, expect: c.expect, got });
+        if (got !== c.expect) throw new Error(`L52 LOS case ${c.name}: got ${got} ≠ 预期 ${c.expect}`);
+      }
+      writeFileSync(join(outRoot, 'parity', 's7los-truth.json'), JSON.stringify(losOut, null, 2));
+      console.log(`[export] ${mapId} s7los cases=${losOut.cases.length}`);
     }
 
   }

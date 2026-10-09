@@ -310,7 +310,8 @@ public sealed class CrowdFog
 
     /// <summary>视线(半格步进采样,Fix64):严格中间格不得不透明、不得高出眼—目标高度线;
     /// 端点不挡。逐 op 与参考端 __L31_FIX64_LOS__ 补丁同一棵求值树(除法精确商向零截断、
-    /// 乘法精确积向下取整)。</summary>
+    /// 乘法精确积向下取整)。rise·f 走 MulExact——rise 是高度差带任意分数,operator* 的
+    /// 分数部分积在两侧分数 ≥ √0.5 时回绕;dy·f 的 dy 恒整数,直乘本就精确。</summary>
     private bool Sight(int cx, int cy, int tx, int ty)
     {
         int dx = tx - cx, dy = ty - cy;
@@ -324,7 +325,7 @@ public sealed class CrowdFog
             Fix64 f = Fix64.FromInt(s) / Fix64.FromInt(n);
             int c = (int)((Fix64.FromInt(cy) + Fix64.HalfValue + dy * f).ToLong() * F + (Fix64.FromInt(cx) + Fix64.HalfValue + dx * f).ToLong());
             if (c == v || c == t) continue;
-            if (_opaque![c] != 0 || _hMax![c] > eye + rise * f) return false;
+            if (_opaque![c] != 0 || _hMax![c] > eye + Fix64Math.MulExact(rise, f)) return false;
         }
 
         return true;
