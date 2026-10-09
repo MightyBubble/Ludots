@@ -162,7 +162,6 @@ const mapJson = {
     RenderProfile: {
       OverviewSwitchChunkSpans: 2.5,
       OverviewVertexLimit: 65536,
-      ChunkLodErrorPx: 240,
       DisableDistanceFog: true,
       DisplayHeightScale: 1.0,
       SeaLevelCm: seaLevelCm,

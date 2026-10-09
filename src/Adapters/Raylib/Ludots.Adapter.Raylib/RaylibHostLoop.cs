@@ -59,6 +59,7 @@ namespace Ludots.Adapter.Raylib
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
+        private const uint FlagWindowHidden = 0x80;
         private const float HostShadowTexelWorld = 0.08f;
         private static readonly float HostShadowSceneRadiusMeters =
             ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SHADOW_SCENE_RADIUS", 48f);
@@ -225,6 +226,12 @@ namespace Ludots.Adapter.Raylib
                 if (windowResizable)
                 {
                     Rl.SetConfigFlags(FlagWindowResizable);
+                }
+
+                // 取证运行可在无桌面干扰下跑完(共享机器上前台窗口会被抢焦点/误关)
+                if (ReadEnvBoolOrDefault("LUDOTS_RAYLIB_WINDOW_HIDDEN", defaultValue: false))
+                {
+                    Rl.SetConfigFlags(FlagWindowHidden);
                 }
 
                 Rl.InitWindow(screenWidth, screenHeight, title);

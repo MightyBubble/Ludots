@@ -1,0 +1,78 @@
+{
+  "Id": "terrain_lod_culling_acceptance",
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/terrain_lod_culling.height",
+    "RenderProfile": {
+      "WaterEnabled": false,
+      "SeaLevelCm": 0,
+      "AbsoluteColorPeakSpanCm": 22000,
+      "DisplayHeightScale": 1,
+      "DisableDistanceFog": true,
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536
+    }
+  },
+  "Tags": [
+    "fixture",
+    "terrain",
+    "lod",
+    "culling",
+    "Raylib.DebugGuides:Off"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "TerrainLod.Script",
+    "TargetXCm": 204800,
+    "TargetYCm": 204800,
+    "Yaw": 40,
+    "Pitch": 46,
+    "DistanceCm": 5200,
+    "FovYDeg": 48
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 409600,
+      "HeightCm": 409600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terrain-lod-local-player"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "terrain-lod-local-player"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": {
+          "Value": "TerrainLodLocalPlayer"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 204800,
+            "Y": 204800
+          }
+        }
+      },
+      "InstanceId": "terrain-lod-local-player"
+    }
+  ]
+}

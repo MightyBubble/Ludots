@@ -1,0 +1,28 @@
+[
+  {
+    "id": "TerrainLod.Script",
+    "displayName": "Terrain LOD Acceptance Scripted Orbit",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 5200,
+    "pitch": 46,
+    "fovYDeg": 48,
+    "yaw": 40,
+    "targetHeightMode": "ContinuousHeightmap",
+    "targetHeightLayerIndex": 0,
+    "targetHeightOffsetCm": 0,
+    "minDistanceCm": 1000,
+    "maxDistanceCm": 2000000,
+    "minPitchDeg": 15,
+    "maxPitchDeg": 85,
+    "panMode": "Keyboard",
+    "panCmPerSecond": 400000,
+    "rotateMode": "Both",
+    "rotateRequiresHold": true,
+    "rotateDegPerPixel": 0.28,
+    "enableZoom": true,
+    "zoomCmPerWheel": 10000,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]

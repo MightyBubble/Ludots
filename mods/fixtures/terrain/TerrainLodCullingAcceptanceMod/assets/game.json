@@ -1,0 +1,10 @@
+{
+  "startupMapId": "terrain_lod_culling_acceptance",
+  "windowTitle": "Ludots - Terrain LOD/Culling Acceptance",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

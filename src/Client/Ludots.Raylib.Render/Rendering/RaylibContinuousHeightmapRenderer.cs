@@ -428,6 +428,9 @@ namespace Ludots.Raylib.Render
             }
 
             EnsureInitialized();
+            // B3: chunk 边界法线需要跨界采样邻 chunk 高度;渲染源同时实现连续高度图时记下,
+            // CreateChunkMesh 据此把单边差分换成跨界的中心差分(仅边界顶点,内部顶点路径不变)
+            _chunkNormalHeightSampler = source as IContinuousHeightmap;
             ContinuousHeightmapRenderProfile profile = source.RenderProfile.NormalizeAndValidate();
             if (_controlMapEnabled)
             {
@@ -487,7 +490,14 @@ namespace Ludots.Raylib.Render
                 ApplyNavWalkabilityUniforms();
                 DrawnChunkCountLastFrame = 1;
                 TerrainVertexCountLastFrame = _overviewMesh.vertexCount;
-                EvictUnusedChunks(240);
+                // D1: overview 驻留期间钉住缓存 chunk(刷新帧龄)——否则 240 帧后全量逐出,
+                // 回切首帧批量 Dispose+次帧全窗重建(实测连续两帧 200ms+)。窗口平移时的
+                // 常规驱逐在 chunk 路径照常进行,钉住只发生在 overview 驻留期间。
+                foreach (long key in _chunks.Keys)
+                {
+                    CollectionsMarshal.GetValueRefOrNullRef(_chunks, key).LastUsedFrame = _frameIndex;
+                }
+
                 return;
             }
 
@@ -499,6 +509,11 @@ namespace Ludots.Raylib.Render
             int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + windowHalfCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
 
+            // D2: 窗口与朝向无关的方形窗口在斜视角下大量绘制/构建屏幕外 chunk;
+            // 逐 chunk 对当帧视锥做 AABB 剔除(已建块用紧 Y 界,未建块用垂直棱柱保守判定)
+            Span<Vector4> frustumPlanes = stackalloc Vector4[6];
+            ExtractFrustumPlanes(in camera, aspect, frustumPlanes);
+
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
@@ -506,6 +521,11 @@ namespace Ludots.Raylib.Render
                     if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
                     {
                         MissingChunkCountLastFrame++;
+                        continue;
+                    }
+
+                    if (IsChunkOutsideFrustum(in chunk, frustumPlanes))
+                    {
                         continue;
                     }
 
@@ -534,6 +554,7 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
 
             EnsureInitialized();
+            _chunkNormalHeightSampler = source as IContinuousHeightmap;
             float windowHalfCm = ResolveWindowHalfCm(source, in camera);
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + windowHalfCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
@@ -1274,11 +1295,14 @@ namespace Ludots.Raylib.Render
                         in chunk,
                         sourceX,
                         sourceY,
+                        worldXCm,
+                        worldYCm,
                         stepXCm,
                         stepYCm,
                         displayHeightScale,
                         absoluteSeaCm,
-                        absolutePeakSpanCm);
+                        absolutePeakSpanCm,
+                        _chunkNormalHeightSampler);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
                     if (absoluteSeaCm is float)
                     {
@@ -1461,15 +1485,18 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        private static Vector3 ComputeNormal(
+        internal static Vector3 ComputeNormal(
             in ContinuousHeightmapRenderChunk chunk,
             int x,
             int y,
+            float worldXCm,
+            float worldYCm,
             float stepXCm,
             float stepYCm,
             float displayHeightScale,
             float? absoluteSeaCm,
-            float absolutePeakSpanCm)
+            float absolutePeakSpanCm,
+            IContinuousHeightmap? worldSampler)
         {
             int left = Math.Max(0, x - 1);
             int right = Math.Min(chunk.SampleColumns - 1, x + 1);
@@ -1479,6 +1506,33 @@ namespace Ludots.Raylib.Render
             chunk.TryReadHeightCm(right, y, out float hRight);
             chunk.TryReadHeightCm(x, top, out float hTop);
             chunk.TryReadHeightCm(x, bottom, out float hBottom);
+            int spanStepsX = right - left;
+            int spanStepsY = bottom - top;
+            // B3: chunk 边界的单边差分与邻 chunk 在共享列上的单边差分不一致,形成逐 chunk 着色接缝。
+            // 渲染源同时是连续高度图时,越界邻居改取真实跨界格高(地图边缘采样失败则维持单边回退)
+            if (worldSampler != null)
+            {
+                if (left >= x)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm - stepXCm, worldYCm, out float hWorld)) { hLeft = hWorld; spanStepsX++; }
+                }
+
+                if (right <= x)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm + stepXCm, worldYCm, out float hWorld)) { hRight = hWorld; spanStepsX++; }
+                }
+
+                if (top >= y)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm, worldYCm - stepYCm, out float hWorld)) { hTop = hWorld; spanStepsY++; }
+                }
+
+                if (bottom <= y)
+                {
+                    if (worldSampler.TrySampleHeightCm(worldXCm, worldYCm + stepYCm, out float hWorld)) { hBottom = hWorld; spanStepsY++; }
+                }
+            }
+
             if (absoluteSeaCm is float seaCm)
             {
                 hLeft = ResolveAbsoluteDisplayHeightCm(hLeft, seaCm, absolutePeakSpanCm);
@@ -1488,14 +1542,16 @@ namespace Ludots.Raylib.Render
             }
 
             float scale = MathF.Max(ContinuousHeightmapRenderProfile.MinDisplayHeightScale, displayHeightScale);
-            float dx = MathF.Max(1f, (right - left) * stepXCm);
-            float dz = MathF.Max(1f, (bottom - top) * stepYCm);
+            float dx = MathF.Max(1f, spanStepsX * stepXCm);
+            float dz = MathF.Max(1f, spanStepsY * stepYCm);
             Vector3 normal = Vector3.Normalize(
                 new Vector3(-(hRight - hLeft) * scale / dx, 1f, -(hBottom - hTop) * scale / dz));
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
         }
+
+        private IContinuousHeightmap? _chunkNormalHeightSampler;
 
         private void ClearChunkGpuCache()
         {
@@ -1836,6 +1892,124 @@ namespace Ludots.Raylib.Render
             float halfWidthMeters = halfHeightMeters * MathF.Max(0.001f, aspect);
             float radiusMeters = MathF.Sqrt((halfWidthMeters * halfWidthMeters) + (halfHeightMeters * halfHeightMeters));
             return radiusMeters * 100f;
+        }
+
+        /// <summary>未建 chunk 的保守剔除高度范围(米):顶/底平面对垂直棱柱永不拒绝,等效 XZ 投影剔除。</summary>
+        private const float VerticalPrismExtentMeters = 1e7f;
+
+        private bool IsChunkOutsideFrustum(in ContinuousHeightmapRenderChunk chunk, ReadOnlySpan<Vector4> planes)
+        {
+            float minX = chunk.Bounds.Left * 0.01f;
+            float maxX = chunk.Bounds.Right * 0.01f;
+            float minZ = chunk.Bounds.Top * 0.01f;
+            float maxZ = chunk.Bounds.Bottom * 0.01f;
+            float minY;
+            float maxY;
+            if (_chunks.TryGetValue(PackChunkKey(chunk.ChunkX, chunk.ChunkY), out ChunkGpu cached))
+            {
+                minY = cached.MinY;
+                maxY = cached.MaxY;
+            }
+            else
+            {
+                minY = -VerticalPrismExtentMeters;
+                maxY = VerticalPrismExtentMeters;
+            }
+
+            return IsAabbOutsideFrustum(planes, minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        /// <summary>
+        /// 从相机提取 6 视锥平面(行向量 Gribb–Hartmann:平面 = view·proj 的行组合)。
+        /// 近/远面只影响剔除距离界,取宽容值;平面未归一化,只用于符号测试。
+        /// </summary>
+        internal static void ExtractFrustumPlanes(in Camera3D camera, float aspect, Span<Vector4> planes)
+        {
+            if (planes.Length < 6)
+            {
+                throw new ArgumentException("Frustum plane span requires at least 6 elements.", nameof(planes));
+            }
+
+            float clampedAspect = MathF.Max(0.001f, aspect);
+            float fovyRad = Math.Clamp(camera.fovy * (MathF.PI / 180f), 0.001f, MathF.PI - 0.001f);
+            const float NearMeters = 1f;
+            const float FarMeters = 1e7f;
+            Vector3 forward = Vector3.Normalize(camera.target - camera.position);
+            Vector3 up = camera.up;
+            if (!float.IsFinite(up.X) || up == Vector3.Zero)
+            {
+                up = Vector3.UnitY;
+            }
+
+            Vector3 right = Vector3.Normalize(Vector3.Cross(up, forward));
+            if (!float.IsFinite(right.X) || right == Vector3.Zero)
+            {
+                // 视线与 up 平行(正俯仰 90°):退化为无剔除——平面全零,IsAabbOutsideFrustum 永假
+                planes.Clear();
+                return;
+            }
+
+            Vector3 trueUp = Vector3.Cross(forward, right);
+
+            // 行向量 view(RH,看向 -Z):基向量按列放置,平移在底行
+            var view = Matrix4x4.Identity;
+            view.M11 = right.X; view.M21 = right.Y; view.M31 = right.Z;
+            view.M12 = trueUp.X; view.M22 = trueUp.Y; view.M32 = trueUp.Z;
+            view.M13 = -forward.X; view.M23 = -forward.Y; view.M33 = -forward.Z;
+            view.M41 = -Vector3.Dot(right, camera.position);
+            view.M42 = -Vector3.Dot(trueUp, camera.position);
+            view.M43 = Vector3.Dot(forward, camera.position);
+
+            float yScale = 1f / MathF.Tan(fovyRad * 0.5f);
+            float xScale = yScale / clampedAspect;
+            var projection = Matrix4x4.Identity;
+            projection.M11 = xScale;
+            projection.M22 = yScale;
+            projection.M33 = FarMeters / (NearMeters - FarMeters);
+            projection.M34 = -1f;
+            projection.M43 = (NearMeters * FarMeters) / (NearMeters - FarMeters);
+
+            Matrix4x4 vp = view * projection;
+            // 行向量约定(clip = p·M):平面取 VP 的列组合(Gribb–Hartmann)
+            Vector4 col1 = new(vp.M11, vp.M21, vp.M31, vp.M41);
+            Vector4 col2 = new(vp.M12, vp.M22, vp.M32, vp.M42);
+            Vector4 col3 = new(vp.M13, vp.M23, vp.M33, vp.M43);
+            Vector4 col4 = new(vp.M14, vp.M24, vp.M34, vp.M44);
+            planes[0] = col4 + col1; // left
+            planes[1] = col4 - col1; // right
+            planes[2] = col4 + col2; // bottom
+            planes[3] = col4 - col2; // top
+            planes[4] = col4 + col3; // near
+            planes[5] = col4 - col3; // far
+        }
+
+        internal static bool IsAabbOutsideFrustum(
+            ReadOnlySpan<Vector4> planes,
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ)
+        {
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector4 plane = planes[i];
+                if (plane == Vector4.Zero)
+                {
+                    continue;
+                }
+
+                float px = plane.X >= 0f ? maxX : minX;
+                float py = plane.Y >= 0f ? maxY : minY;
+                float pz = plane.Z >= 0f ? maxZ : minZ;
+                if ((plane.X * px) + (plane.Y * py) + (plane.Z * pz) + plane.W < 0f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // LOD 退回比例(滞回):进入 overview 后,footprint 低于阈值 × 该比例才退回 chunk
