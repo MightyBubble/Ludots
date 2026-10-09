@@ -205,7 +205,7 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate bool ContextScoredResolutionProvider(
         Entity actor,
-        InputOrderMapping mapping,
+        int rootSlotIndex,
         Entity hoveredEntity,
         out ContextScoredOrderResolution resolution);
 
@@ -1326,7 +1326,8 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = RequireOrderTypeId(mapping);
 
             Entity actor = ResolvePrimaryActor(mapping);
-            if (!_contextScoredProvider!(actor, mapping, hoveredEntity, out var resolution))
+            if (mapping.ArgsTemplate.I0 is not int rootSlotIndex ||
+                !_contextScoredProvider!(actor, rootSlotIndex, hoveredEntity, out var resolution))
             {
                 return false;
             }

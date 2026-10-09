@@ -73,7 +73,15 @@ namespace Ludots.Core.Input.Orders
             _graphHandlers = graphHandlers ?? throw new ArgumentNullException(nameof(graphHandlers));
         }
 
-        public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
+        /// <summary>True when the actor's slot holds the root ability of a registered context group.</summary>
+        public bool IsContextGroupRoot(Entity actor, int slotIndex)
+        {
+            return _world.IsAlive(actor) &&
+                   _world.Has<AbilityStateBuffer>(actor) &&
+                   TryResolveContextGroup(actor, slotIndex, out _);
+        }
+
+        public bool TryResolve(Entity actor, int rootSlotIndex, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
         {
             resolution = default;
 
@@ -82,12 +90,6 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            if (mapping.ArgsTemplate.I0 is null)
-            {
-                return false;
-            }
-
-            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
             if (!TryResolveContextGroup(actor, rootSlotIndex, out var group))
             {
                 return false;

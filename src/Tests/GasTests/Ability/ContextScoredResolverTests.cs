@@ -280,7 +280,7 @@ namespace Ludots.Tests.GAS
 
             bool resolved = resolver.TryResolve(
                 actor,
-                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                rootSlotIndex: 0,
                 target,
                 out var resolution);
 
@@ -358,7 +358,7 @@ namespace Ludots.Tests.GAS
 
             bool resolved = resolver.TryResolve(
                 actor,
-                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                rootSlotIndex: 0,
                 default,
                 out var resolution);
 
@@ -429,7 +429,7 @@ namespace Ludots.Tests.GAS
 
             bool resolved = resolver.TryResolve(
                 actor,
-                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                rootSlotIndex: 0,
                 default,
                 out var resolution);
 
