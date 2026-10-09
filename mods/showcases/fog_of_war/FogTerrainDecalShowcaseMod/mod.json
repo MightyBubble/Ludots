@@ -1,0 +1,18 @@
+{
+  "name": "FogTerrainDecalShowcaseMod",
+  "version": "1.0.0",
+  "description": "迷雾三态贴地渲染演示：一个视野源沿既定路径移动，不可见=黑/已探索=暗化/可见=清晰随地形起伏整张贴花，软边缘双线性过渡；数据由演示写入器手工填充 FogField（渲染底座消费层，内核视野组 F02 落地后由真实视野数据接管）。",
+  "main": "bin/net9.0/FogTerrainDecalShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "fog_of_war",
+    "terrain",
+    "decal",
+    "raylib"
+  ]
+}

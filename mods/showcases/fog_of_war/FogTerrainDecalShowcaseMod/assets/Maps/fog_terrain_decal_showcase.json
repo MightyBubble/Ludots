@@ -1,0 +1,76 @@
+{
+  "Id": "fog_terrain_decal_showcase",
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/fog_terrain_decal.height",
+    "RenderProfile": {
+      "WaterEnabled": false,
+      "SeaLevelCm": 0,
+      "AbsoluteColorPeakSpanCm": 22000,
+      "DisplayHeightScale": 1,
+      "DisableDistanceFog": true,
+      "OverviewSwitchChunkSpans": 2.5,
+      "OverviewVertexLimit": 65536
+    }
+  },
+  "Tags": [
+    "showcase",
+    "fog_of_war",
+    "Raylib.DebugGuides:Off"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "FogTerrainDecal.Camera.Frame",
+    "TargetXCm": 204800,
+    "TargetYCm": 204800,
+    "Yaw": 35,
+    "Pitch": 55,
+    "DistanceCm": 140000,
+    "FovYDeg": 48
+  },
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "fog-terrain-local-player"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "fog-terrain-local-player"
+    }
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 409600,
+      "HeightCm": 409600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": {
+          "Value": "FogTerrainObserver"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 204800,
+            "Y": 204800
+          }
+        }
+      },
+      "InstanceId": "fog-terrain-local-player"
+    }
+  ]
+}

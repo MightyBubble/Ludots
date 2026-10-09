@@ -1,0 +1,10 @@
+{
+  "startupMapId": "fog_terrain_decal_showcase",
+  "windowTitle": "Ludots - Fog Terrain Decal Showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

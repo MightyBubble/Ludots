@@ -21,6 +21,8 @@ namespace Ludots.Raylib.Render
         private const int OverviewTextureScreenScale = 2;
         private const Rl.MaterialMapIndex NavWalkabilityMaterialSlot = Rl.MaterialMapIndex.MATERIAL_MAP_HEIGHT;
         private const Rl.ShaderLocationIndex NavWalkabilityShaderSlot = Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT;
+        /// <summary>贴花槽位默认混合强度(流场/可走层的软化值;迷雾等全强度贴花按调用方声明)。</summary>
+        public const float DefaultNavWalkabilityBlendStrength = 0.35f;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
@@ -54,6 +56,7 @@ namespace Ludots.Raylib.Render
         private int _locUseNavWalkability = -1;
         private int _locNavWalkabilityBounds = -1;
         private int _locNavWalkabilityMap = -1;
+        private int _locNavWalkabilityBlend = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private IContinuousHeightmap? _stampHeightSampleSource;
@@ -69,6 +72,7 @@ namespace Ludots.Raylib.Render
         private Vector4 _controlBoundsMeters;
         private Vector4 _navWalkabilityBoundsCm;
         private string? _navWalkabilityTextureUri;
+        private float _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -357,6 +361,7 @@ namespace Ludots.Raylib.Render
             _navWalkabilityEnabled = false;
             _navWalkabilityBoundsCm = default;
             _navWalkabilityTextureUri = null;
+            _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
             if (_initialized)
             {
                 _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
@@ -365,16 +370,22 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// 绑定外部持有的叠加纹理(场渲染管线的帧更新纹理,如 Flow 方向场)到地形贴花槽位:
+        /// 绑定外部持有的叠加纹理(场渲染管线的帧更新纹理,如 Flow 方向场、战争迷雾三态层)到地形贴花槽位:
         /// 与 SetNavWalkabilityOverlay 同一着色器契约,但纹理所有权在外部——本类不加载、
-        /// 不卸载,内容更新由持有方原地重传,绑定一次即持续生效。
+        /// 不卸载,内容更新由持有方原地重传,绑定一次即持续生效。blendStrength 声明该贴花的
+        /// 混合强度(流场/可走层 0.35 软化;迷雾等"不可见=黑"语义取 1.0)。
         /// </summary>
-        public void SetNavWalkabilityOverlayExternal(Texture2D texture, Vector4 boundsCm)
+        public void SetNavWalkabilityOverlayExternal(Texture2D texture, Vector4 boundsCm, float blendStrength = DefaultNavWalkabilityBlendStrength)
         {
             if (texture.id == 0) throw new ArgumentException("外部叠加纹理必须已加载。", nameof(texture));
             if (boundsCm.Z - boundsCm.X <= 0f || boundsCm.W - boundsCm.Y <= 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(boundsCm), boundsCm, "外部叠加 bounds 必须有正跨度。");
+            }
+
+            if (!float.IsFinite(blendStrength) || blendStrength < 0f || blendStrength > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(blendStrength), blendStrength, "外部叠加混合强度必须在 [0,1]。");
             }
 
             // 若之前持有的是自有纹理(URI 路径),先卸;外部纹理永不卸载
@@ -386,6 +397,7 @@ namespace Ludots.Raylib.Render
             _navWalkabilityTexture = texture;
             _navWalkabilityTextureUri = null;
             _navWalkabilityBoundsCm = boundsCm;
+            _navWalkabilityBlendStrength = blendStrength;
             _navWalkabilityEnabled = true;
             ApplyNavWalkabilityMaterialMap();
             ApplyNavWalkabilityUniforms();
@@ -398,6 +410,7 @@ namespace Ludots.Raylib.Render
             _navWalkabilityTexture = default;
             _navWalkabilityEnabled = false;
             _navWalkabilityBoundsCm = default;
+            _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
             if (_initialized)
             {
                 _terrainMaterial.maps[(int)NavWalkabilityMaterialSlot].texture = default;
@@ -681,6 +694,7 @@ namespace Ludots.Raylib.Render
             _locUseNavWalkability = Rl.GetShaderLocation(_terrainShader, "uUseNavWalkability");
             _locNavWalkabilityBounds = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBounds");
             _locNavWalkabilityMap = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityMap");
+            _locNavWalkabilityBlend = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBlend");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
@@ -694,13 +708,14 @@ namespace Ludots.Raylib.Render
                 _locUseNavWalkability < 0 ||
                 _locNavWalkabilityBounds < 0 ||
                 _locNavWalkabilityMap < 0 ||
+                _locNavWalkabilityBlend < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/uNavWalkabilityBlend/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
@@ -857,6 +872,7 @@ namespace Ludots.Raylib.Render
 
             int useNavWalkability = _navWalkabilityEnabled ? 1 : 0;
             Vector4 bounds = _navWalkabilityBoundsCm;
+            float blendStrength = _navWalkabilityBlendStrength;
             Rl.SetShaderValue(
                 _terrainShader,
                 _locUseNavWalkability,
@@ -867,6 +883,11 @@ namespace Ludots.Raylib.Render
                 _locNavWalkabilityBounds,
                 &bounds,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityBlend,
+                &blendStrength,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
         private void ApplyNavWalkabilityMaterialMap()

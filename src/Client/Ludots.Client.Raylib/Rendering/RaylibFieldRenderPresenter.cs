@@ -79,6 +79,12 @@ namespace Ludots.Client.Raylib.Rendering
         /// </summary>
         public bool DrawFlowKind { get; set; } = true;
 
+        /// <summary>
+        /// Fog 场是否由本渲染器直接绘制(false = 宿主把迷雾三态纹理改道到地形贴花槽位,
+        /// 随地形起伏整张贴花;本渲染器仍负责纹理暂存与上传)。
+        /// </summary>
+        public bool DrawFogKind { get; set; } = true;
+
         /// <summary>取某场记录已上传的纹理(贴花槽位用;纹理内容随后续帧原地更新)。</summary>
         public bool TryGetStagedTexture(GlobalFieldVisualId id, out Texture2D texture)
         {
@@ -255,6 +261,8 @@ namespace Ludots.Client.Raylib.Rendering
                     : DiscreteOwnershipDrapeMaxCellSizeCm;
                 bool drapeCapable = state.Id.Kind is GlobalFieldVisualKind.DiscreteOwnership or GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable;
                 bool kindSuppressed = state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable && !DrawFlowKind;
+                kindSuppressed = kindSuppressed ||
+                    (state.Id.Kind == GlobalFieldVisualKind.Fog && !DrawFogKind);
                 if (!kindSuppressed &&
                     drapeCapable &&
                     HeightSampleSource is IContinuousHeightmap heightSampleSource &&
@@ -736,31 +744,33 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
         {
+            // 市面主流三态战争迷雾合同:不可见=黑(高不透明)、已探索不可见=暗化(中不透明黑)、
+            // 可见=清晰(全透明);Denied 是数据模型多出的遮蔽态,渲染保留暗红提示不丢信息。
             switch (visibility)
             {
                 case FogVisibilityVisible:
-                    r = 72;
-                    g = 214;
-                    b = 255;
-                    a = 90;
+                    r = 0;
+                    g = 0;
+                    b = 0;
+                    a = 0;
                     return;
                 case FogVisibilityExplored:
-                    r = 32;
-                    g = 58;
-                    b = 92;
-                    a = 150;
+                    r = 0;
+                    g = 0;
+                    b = 0;
+                    a = 148;
                     return;
                 case FogVisibilityDenied:
-                    r = 224;
-                    g = 34;
-                    b = 82;
-                    a = 178;
+                    r = 64;
+                    g = 8;
+                    b = 16;
+                    a = 214;
                     return;
                 case FogVisibilityUnseen:
                     r = 0;
                     g = 0;
                     b = 0;
-                    a = 190;
+                    a = 232;
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(visibility), visibility, "Unsupported fog visibility.");
@@ -822,8 +832,9 @@ namespace Ludots.Client.Raylib.Rendering
             Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
             state.Texture = RaylibNativeResources.LoadTextureFromImage(image);
             Rl.UnloadImage(image);
-            // Flow 方向场 / Walkable 可走区域层走地形贴花槽,双线性过滤把格粒度抹成连续渐变(迷雾/权属保留最近邻的硬边)
-            Rl.SetTextureFilter(state.Texture, state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable
+            // Flow 方向场 / Walkable 可走区域层 / Fog 迷雾三态层走地形贴花槽或软边缘平面,
+            // 双线性过滤把格粒度抹成连续渐变(权属保留最近邻的硬边)
+            Rl.SetTextureFilter(state.Texture, state.Id.Kind is GlobalFieldVisualKind.Flow or GlobalFieldVisualKind.Walkable or GlobalFieldVisualKind.Fog
                 ? Rl.TextureFilter.TEXTURE_FILTER_BILINEAR
                 : Rl.TextureFilter.TEXTURE_FILTER_POINT);
             state.TextureLoaded = true;

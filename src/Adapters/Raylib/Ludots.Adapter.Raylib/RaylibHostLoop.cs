@@ -1106,34 +1106,51 @@ namespace Ludots.Adapter.Raylib
 
                             if (drawFieldOverlays && globalFieldVisualBuffer != null)
                             {
-                                // Flow / Walkable 场:有连续高度图渲染器时改走地形贴花槽位(整张贴花,非小方块);
-                                // 本渲染器只负责纹理暂存上传,绘制由地形着色器完成
-                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? flowDecal = null;
+                                // Flow / Walkable / Fog 场:有连续高度图渲染器时改走地形贴花槽位(整张贴花,非小方块);
+                                // 本渲染器只负责纹理暂存上传,绘制由地形着色器完成。
+                                // 槽位唯一:Flow/Walkable 优先,无流场时迷雾三态层占用(混合强度 1.0)
+                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? decalField = null;
+                                Ludots.Core.Presentation.Rendering.GlobalFieldVisualDescriptor? fogDecal = null;
                                 foreach (var fieldRecord in globalFieldVisualBuffer.GetRecords())
                                 {
-                                    if (fieldRecord.IsActive && fieldRecord.Descriptor.Id.Kind is Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Flow or Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Walkable)
+                                    if (!fieldRecord.IsActive)
                                     {
-                                        flowDecal = fieldRecord.Descriptor;
+                                        continue;
+                                    }
+
+                                    if (fieldRecord.Descriptor.Id.Kind is Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Flow or Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Walkable)
+                                    {
+                                        decalField = fieldRecord.Descriptor;
                                         break;
                                     }
+
+                                    fogDecal ??= fieldRecord.Descriptor.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog
+                                        ? fieldRecord.Descriptor
+                                        : null;
                                 }
 
-                                fieldRenderPresenter.DrawFlowKind = flowDecal == null;
+                                decalField ??= fogDecal;
+                                bool fogOwnsDecal = decalField is { } bound && bound.Id.Kind == Ludots.Core.Presentation.Rendering.GlobalFieldVisualKind.Fog;
+
+                                fieldRenderPresenter.DrawFlowKind = decalField == null;
+                                fieldRenderPresenter.DrawFogKind = !fogOwnsDecal;
                                 long fieldRenderStart = Stopwatch.GetTimestamp();
                                 fieldRenderPresenter.Draw(globalFieldVisualBuffer);
-                                if (flowDecal is { } flowDescriptor &&
-                                    fieldRenderPresenter.TryGetStagedTexture(flowDescriptor.Id, out Texture2D flowTexture))
+                                if (decalField is { } decalDescriptor &&
+                                    fieldRenderPresenter.TryGetStagedTexture(decalDescriptor.Id, out Texture2D decalTexture))
                                 {
-                                    var bounds = flowDescriptor.BoundsCells;
-                                    float cs = flowDescriptor.CellSizeCm;
+                                    var bounds = decalDescriptor.BoundsCells;
+                                    float cs = decalDescriptor.CellSizeCm;
+                                    // 迷雾/流场都要求全缩放可见(overview 网格下保留贴花)
                                     continuousHeightmapRenderer.NavWalkabilityOverlayVisibleInOverview = true;
                                     continuousHeightmapRenderer.SetNavWalkabilityOverlayExternal(
-                                        flowTexture,
+                                        decalTexture,
                                         new System.Numerics.Vector4(
                                             bounds.X * cs,
                                             bounds.Y * cs,
                                             (bounds.X + bounds.Width) * cs,
-                                            (bounds.Y + bounds.Height) * cs));
+                                            (bounds.Y + bounds.Height) * cs),
+                                        fogOwnsDecal ? 1f : Ludots.Raylib.Render.RaylibContinuousHeightmapRenderer.DefaultNavWalkabilityBlendStrength);
                                 }
                                 else
                                 {

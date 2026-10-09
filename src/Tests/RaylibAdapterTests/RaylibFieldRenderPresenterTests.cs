@@ -58,6 +58,33 @@ public sealed class RaylibFieldRenderPresenterTests
     }
 
     [Test]
+    public void ResolveFogColor_MatchesMarketThreeStateFogContract()
+    {
+        // 不可见=黑、已探索不可见=暗化、可见=清晰;Denied 保留暗红遮蔽提示
+        Color visible = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Visible);
+        Color explored = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Explored);
+        Color unseen = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Unseen);
+        Color denied = RaylibFieldRenderPresenter.ResolveFogColor((byte)CellVisibility.Denied);
+
+        Assert.That(visible.a, Is.EqualTo(0), "可见=清晰(全透明)。");
+        Assert.That(explored.r | explored.g | explored.b, Is.EqualTo(0), "已探索暗化取黑。");
+        Assert.That(unseen.r | unseen.g | unseen.b, Is.EqualTo(0), "不可见取黑。");
+        Assert.That(unseen.a, Is.GreaterThan(200), "不可见接近不透明。");
+        Assert.That(explored.a, Is.InRange(100, 200), "已探索暗化为中等不透明。");
+        Assert.That(denied.r, Is.GreaterThan(denied.g), "遮蔽态保留暗红提示。");
+        Assert.That(denied.r, Is.LessThan(120), "遮蔽态不抢可见性语义。");
+    }
+
+    [Test]
+    public void FieldPresenter_FogKindDrawDefaultsOn_AndCanBeSuppressedForTerrainDecal()
+    {
+        var presenter = new RaylibFieldRenderPresenter();
+        Assert.That(presenter.DrawFogKind, Is.True, "无地形贴花槽位时迷雾由本渲染器平面绘制。");
+        presenter.DrawFogKind = false;
+        Assert.That(presenter.DrawFogKind, Is.False, "宿主改道地形贴花槽位后可压制平面绘制。");
+    }
+
+    [Test]
     public void BuildTexturePlan_StagesDiscreteOwnershipBytePaletteWithoutFogFallback()
     {
         var buffer = new GlobalFieldVisualBuffer(2, 8, 2);
