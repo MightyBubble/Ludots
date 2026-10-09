@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -22,20 +23,48 @@ public static class CrowdSimCommands
         }
     }
 
-    /// <summary>入队校验(L23):坏指令在进日志/队列之前拒绝——拖到 Exec 时刻才抛,坏指令已入
-    /// 日志再停摆,live 与回放不对称(D29 同型)。覆盖带玩家号的指令面;缺字段/未知 type 的
-    /// 结构性坏指令仍由 Exec 防御层拦(不入队路径的合同不变)。</summary>
+    /// <summary>入队校验:坏指令在进日志/队列之前拒绝——拖到 Exec 时刻才抛,坏指令已入
+    /// 日志再停摆,live 与回放不对称。三面:玩家号表外(1..P);迷雾面指令与 order.fogTerrain
+    /// 在迷雾未启用(会话无 Fog)的会话上;迷雾区域指令的 area 需且仅需一种形状。
+    /// player/with 的 JSON 值需为整数——GetValue 的转换异常不是指令合同异常。
+    /// 坐标/形状数值级的结构性校验仍由 Exec 防御层拦(不入队路径的合同不变)。</summary>
     public static void Validate(CrowdSimSession sim, JsonNode cmd)
     {
         string? type = cmd["type"]?.GetValue<string>();
+        if (type is "fogSight" or "reveal" or "obscure" or "forget" or "fogShare") RequireFog(sim, type);
         if (type is not ("spawnAt" or "select" or "selectAll" or "order" or "reveal" or "obscure" or "forget" or "fogShare")) return;
         var player = cmd["player"] ?? throw new System.InvalidOperationException($"指令 {type} 缺少 player 字段。");
-        RequirePlayer(sim, player.GetValue<int>());
+        RequirePlayer(sim, RequireInt(player, type, "player"));
         if (type == "fogShare")
         {
             var with = cmd["with"] ?? throw new System.InvalidOperationException("fogShare 指令缺少 with 字段。");
-            RequirePlayer(sim, with.GetValue<int>());
+            RequirePlayer(sim, RequireInt(with, type, "with"));
         }
+        else if (type is "reveal" or "obscure" or "forget")
+        {
+            Fog.CrowdFogShape.RequireExactlyOne(type, cmd);
+        }
+
+        if (type == "order" && cmd["fogTerrain"] is { }) RequireFog(sim, type);
+    }
+
+    /// <summary>迷雾启用门:迷雾面指令在无 Fog 会话(纯部署/未启用运动)上入队即拒,
+    /// 与 Exec 防御层同报错口径。</summary>
+    private static void RequireFog(CrowdSimSession sim, string type)
+    {
+        _ = sim.Fog ?? throw new System.InvalidOperationException($"{type}: 迷雾未启用(会话没有运动内核)。");
+    }
+
+    /// <summary>整数字段门:player/with 的 JSON 值不是整数(字符串/小数/数组/布尔)即拒;
+    /// 只认 JSON 整数 token——CLR 字符串值经数值转换放行是 BCL 行为,不是本合同。</summary>
+    private static int RequireInt(JsonNode node, string type, string field)
+    {
+        if (node is JsonValue v && v.TryGetValue<int>(out int value) && v.GetValueKind() == JsonValueKind.Number)
+        {
+            return value;
+        }
+
+        throw new System.InvalidOperationException($"指令 {type} 的 {field} 字段需为整数。");
     }
 
     public static object? Exec(CrowdSimSession sim, JsonNode cmd)

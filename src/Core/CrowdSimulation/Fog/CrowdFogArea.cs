@@ -14,12 +14,14 @@ public sealed record CrowdFogShape
     /// <summary>poly ≥ 3 个 [x, y] 顶点(厘米)。</summary>
     public double[][]? Poly { get; init; }
 
-    /// <summary>从指令 JSON 解析恰一形状(与参考端 shapeOf 同报错口径)。</summary>
-    public static CrowdFogShape Parse(string type, JsonNode cmd)
+    private static readonly string[] ShapeNames = { "rect", "circle", "poly" };
+
+    /// <summary>恰一形状门:area 多给少给都拒——与 Parse 同口径同报错,入队校验与解析共用,
+    /// 形状名集合只有这一份。</summary>
+    public static void RequireExactlyOne(string type, JsonNode cmd)
     {
-        var names = new[] { "rect", "circle", "poly" };
         int given = 0;
-        foreach (var n in names)
+        foreach (var n in ShapeNames)
         {
             if (cmd[n] != null) given++;
         }
@@ -28,7 +30,12 @@ public sealed record CrowdFogShape
         {
             throw new InvalidOperationException($"{type}: 需且仅需给出 rect / circle / poly 之一");
         }
+    }
 
+    /// <summary>从指令 JSON 解析恰一形状(与参考端 shapeOf 同报错口径)。</summary>
+    public static CrowdFogShape Parse(string type, JsonNode cmd)
+    {
+        RequireExactlyOne(type, cmd);
         bool Fin(JsonNode? v) => v is JsonValue jv && jv.TryGetValue<double>(out _);
 
         if (cmd["rect"] is { } r)
