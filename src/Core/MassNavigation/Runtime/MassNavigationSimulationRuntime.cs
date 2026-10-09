@@ -130,6 +130,9 @@ public sealed class MassNavigationSimulationRuntime
     private int _flowWorkAreaRevision;
     private string _flowWorkAreaReason = "initial contact";
     private string _solverWindowDriver = "initial nav area";
+    private World? _poseWorld;
+    private readonly int[] _coverageAgentIndices;
+    private int _coverageAgentCount;
     private readonly string _activeHotZoneId;
     private readonly string _activeHotZoneLabel;
     private readonly int _activeHotZoneCenterXCm;
@@ -286,6 +289,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         AgentState = new MassNavigationAgentState(membershipCapacity);
+        _coverageAgentIndices = new int[membershipCapacity];
         _authoredBindingSeenEntities = new HashSet<Entity>(membershipCapacity);
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
@@ -592,6 +596,8 @@ public sealed class MassNavigationSimulationRuntime
     public void ResetRuntimeState(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
+        _poseWorld = world;
+        _coverageAgentCount = 0;
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
         MarkAuthoredRuntimeBindingChanged();
@@ -606,6 +612,8 @@ public sealed class MassNavigationSimulationRuntime
     public void ClearAuthoredRuntimeBindings(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
+        _poseWorld = world;
+        _coverageAgentCount = 0;
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
@@ -731,8 +739,14 @@ public sealed class MassNavigationSimulationRuntime
                 orderMembers,
                 orderMembers.Length > 0 ? "order members" : "order");
             ValidateStreamingWindowCapacity(ResolveStreamingFocus());
-            MoveSolverWindow(ResolveSolverFocusForWorkArea(), orderMembers.Length > 0 ? "order members" : "order");
+            MoveSolverWindow(
+                ResolveOrderSolverCenter(orderMembers),
+                orderMembers.Length > 0 ? "order members" : "order");
             UpdateStreamingWindow(ResolveStreamingFocus());
+            if (orderMembers.Length > 0)
+            {
+                RememberCoverageMembers(orderMembers);
+            }
         }
         catch
         {
@@ -877,6 +891,8 @@ public sealed class MassNavigationSimulationRuntime
 
     public void SyncAgentEntitiesNow(World world)
     {
+        ArgumentNullException.ThrowIfNull(world);
+        _poseWorld = world;
         MassNavigationFlow.SyncEntities(world, AgentState);
     }
 
@@ -1055,6 +1071,7 @@ public sealed class MassNavigationSimulationRuntime
         bool controllable)
     {
         ArgumentNullException.ThrowIfNull(world);
+        _poseWorld = world;
         MassNavigationAgent agent = ValidateSpawnedAgentBinding(
             world,
             entity,
@@ -1389,12 +1406,23 @@ public sealed class MassNavigationSimulationRuntime
 
         float previousOriginX = MassNavigationFlow.WorldOriginXCm;
         float previousOriginY = MassNavigationFlow.WorldOriginYcm;
+        bool publishPoses = _poseWorld != null && AgentState.HasBoundAgents(MassNavigationFlow.UnitCount);
+        if (publishPoses)
+        {
+            MassNavigationFlow.EnsureWorldPoseComponents(_poseWorld!, AgentState);
+        }
+
         _simWindowCenterXCm = nextCenterX;
         _simWindowCenterYCm = nextCenterY;
         float nextOriginX = SolverWindowMinXCm;
         float nextOriginY = SolverWindowMinYCm;
         MassNavigationFlow.ShiftLocalFrame(nextOriginX - previousOriginX, nextOriginY - previousOriginY);
         MassNavigationFlow.SetWorldOrigin(nextOriginX, nextOriginY);
+        if (publishPoses)
+        {
+            MassNavigationFlow.PublishShiftedWorldPoses(_poseWorld!, AgentState);
+        }
+
         MassNavigationFlow.RequestFlowRebuild();
         Telemetry.MarkSolverWindowMoved();
         _solverWindowDriver = reason;
@@ -1523,11 +1551,211 @@ public sealed class MassNavigationSimulationRuntime
         centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, height);
     }
 
-    private System.Numerics.Vector2 ResolveSolverFocusForWorkArea()
+    private System.Numerics.Vector2 ResolveOrderSolverCenter(ReadOnlySpan<Entity> orderMembers)
     {
-        return _hasCommandFocus && _commandFocusTicksRemaining > 0
+        System.Numerics.Vector2 desired = _hasCommandFocus && _commandFocusTicksRemaining > 0
             ? new System.Numerics.Vector2(_lastCommandFocusXCm, _lastCommandFocusYCm)
             : new System.Numerics.Vector2(_flowWorkAreaCenterXCm, _flowWorkAreaCenterYCm);
+        if (!TryCollectMemberWorldBounds(orderMembers, out float minX, out float maxX, out float minY, out float maxY))
+        {
+            return desired;
+        }
+
+        // 落点可以远在窗外。窗口是这批人的活动范围，人还在里面时不能把窗口甩到落点上。
+        if (MembersFitCurrentPlayArea(minX, maxX, minY, maxY))
+        {
+            return new System.Numerics.Vector2(_simWindowCenterXCm, _simWindowCenterYCm);
+        }
+
+        return ResolveMinimumCoverageCenter(minX, maxX, minY, maxY);
+    }
+
+    internal void MaintainOrderCoverageWindow()
+    {
+        if (_coverageAgentCount <= 0)
+        {
+            return;
+        }
+
+        CompactCoverageMembers();
+        if (!TryCollectCoverageWorldBounds(out float minX, out float maxX, out float minY, out float maxY))
+        {
+            return;
+        }
+
+        if (MembersFitCurrentPlayArea(minX, maxX, minY, maxY))
+        {
+            return;
+        }
+
+        MoveSolverWindow(ResolveMinimumCoverageCenter(minX, maxX, minY, maxY), "order members");
+    }
+
+    private void RememberCoverageMembers(ReadOnlySpan<Entity> orderMembers)
+    {
+        int count = 0;
+        for (int i = 0; i < orderMembers.Length; i++)
+        {
+            if (!AgentState.TryGetControllableIndex(orderMembers[i], out int unitIndex) ||
+                (uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
+            {
+                continue;
+            }
+
+            if (count >= _coverageAgentIndices.Length)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation order coverage requires more than configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_coverageAgentIndices.Length} members.");
+            }
+
+            _coverageAgentIndices[count++] = unitIndex;
+        }
+
+        _coverageAgentCount = count;
+    }
+
+    private void CompactCoverageMembers()
+    {
+        float playMinX = MassNavigationFlow.PlayAreaMinXCm;
+        float playMaxX = MassNavigationFlow.PlayAreaMaxXCm;
+        float playMinY = MassNavigationFlow.PlayAreaMinYCm;
+        float playMaxY = MassNavigationFlow.PlayAreaMaxYCm;
+        float spanX = playMaxX - playMinX;
+        float spanY = playMaxY - playMinY;
+        int count = 0;
+        for (int i = 0; i < _coverageAgentCount; i++)
+        {
+            int unitIndex = _coverageAgentIndices[i];
+            if ((uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
+            {
+                continue;
+            }
+
+            float localX = MassNavigationFlow.GetPositionX(unitIndex);
+            float localY = MassNavigationFlow.GetPositionY(unitIndex);
+            bool adjacent =
+                localX >= playMinX - spanX &&
+                localX <= playMaxX + spanX &&
+                localY >= playMinY - spanY &&
+                localY <= playMaxY + spanY;
+            if (!adjacent)
+            {
+                continue;
+            }
+
+            _coverageAgentIndices[count++] = unitIndex;
+        }
+
+        _coverageAgentCount = count;
+    }
+
+    private bool TryCollectCoverageWorldBounds(out float minX, out float maxX, out float minY, out float maxY)
+    {
+        minX = float.PositiveInfinity;
+        maxX = float.NegativeInfinity;
+        minY = float.PositiveInfinity;
+        maxY = float.NegativeInfinity;
+        for (int i = 0; i < _coverageAgentCount; i++)
+        {
+            int unitIndex = _coverageAgentIndices[i];
+            IncludePoint(
+                ref minX,
+                ref maxX,
+                ref minY,
+                ref maxY,
+                ToWorldXCm(MassNavigationFlow.GetPositionX(unitIndex)),
+                ToWorldYCm(MassNavigationFlow.GetPositionY(unitIndex)));
+        }
+
+        return _coverageAgentCount > 0 && minX <= maxX && minY <= maxY;
+    }
+
+    private bool TryCollectMemberWorldBounds(
+        ReadOnlySpan<Entity> orderMembers,
+        out float minX,
+        out float maxX,
+        out float minY,
+        out float maxY)
+    {
+        minX = float.PositiveInfinity;
+        maxX = float.NegativeInfinity;
+        minY = float.PositiveInfinity;
+        maxY = float.NegativeInfinity;
+        bool any = false;
+        for (int i = 0; i < orderMembers.Length; i++)
+        {
+            if (!AgentState.TryGetControllableIndex(orderMembers[i], out int unitIndex) ||
+                (uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
+            {
+                continue;
+            }
+
+            any = true;
+            IncludePoint(
+                ref minX,
+                ref maxX,
+                ref minY,
+                ref maxY,
+                ToWorldXCm(MassNavigationFlow.GetPositionX(unitIndex)),
+                ToWorldYCm(MassNavigationFlow.GetPositionY(unitIndex)));
+        }
+
+        return any;
+    }
+
+    private bool MembersFitCurrentPlayArea(float minX, float maxX, float minY, float maxY)
+    {
+        float originX = SolverWindowMinXCm;
+        float originY = SolverWindowMinYCm;
+        return minX >= originX + MassNavigationFlow.PlayAreaMinXCm - 0.5f &&
+            maxX <= originX + MassNavigationFlow.PlayAreaMaxXCm + 0.5f &&
+            minY >= originY + MassNavigationFlow.PlayAreaMinYCm - 0.5f &&
+            maxY <= originY + MassNavigationFlow.PlayAreaMaxYCm + 0.5f;
+    }
+
+    private System.Numerics.Vector2 ResolveMinimumCoverageCenter(float minX, float maxX, float minY, float maxY)
+    {
+        float halfWidth = _simWindowWidthCm * 0.5f;
+        float halfHeight = _simWindowHeightCm * 0.5f;
+        float playMinX = MassNavigationFlow.PlayAreaMinXCm;
+        float playMaxX = MassNavigationFlow.PlayAreaMaxXCm;
+        float playMinY = MassNavigationFlow.PlayAreaMinYCm;
+        float playMaxY = MassNavigationFlow.PlayAreaMaxYCm;
+        float spanX = maxX - minX;
+        float spanY = maxY - minY;
+        float playSpanX = playMaxX - playMinX;
+        float playSpanY = playMaxY - playMinY;
+        if (spanX > playSpanX || spanY > playSpanY)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation solver window cannot cover order members spanning {spanX:0.###}x{spanY:0.###} cm; play area is {playSpanX:0.###}x{playSpanY:0.###} cm.");
+        }
+
+        float centerMinX = maxX - playMaxX + halfWidth;
+        float centerMaxX = minX - playMinX + halfWidth;
+        float centerMinY = maxY - playMaxY + halfHeight;
+        float centerMaxY = minY - playMinY + halfHeight;
+        if (centerMinX > centerMaxX || centerMinY > centerMaxY)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation solver window cannot cover order members spanning {spanX:0.###}x{spanY:0.###} cm; play area is {playSpanX:0.###}x{playSpanY:0.###} cm.");
+        }
+
+        float centerX = Math.Clamp(_simWindowCenterXCm, centerMinX, centerMaxX);
+        float centerY = Math.Clamp(_simWindowCenterYCm, centerMinY, centerMaxY);
+        ClampSolverWindowCenter(ref centerX, ref centerY);
+        float originX = centerX - halfWidth;
+        float originY = centerY - halfHeight;
+        if (minX < originX + playMinX - 0.5f ||
+            maxX > originX + playMaxX + 0.5f ||
+            minY < originY + playMinY - 0.5f ||
+            maxY > originY + playMaxY + 0.5f)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation solver window cannot keep order members inside the play area without leaving the board.");
+        }
+
+        return new System.Numerics.Vector2(centerX, centerY);
     }
 
     private System.Numerics.Vector2 ResolveStreamingFocus()
