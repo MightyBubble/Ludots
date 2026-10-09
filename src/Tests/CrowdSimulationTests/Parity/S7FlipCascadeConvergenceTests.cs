@@ -98,12 +98,13 @@ public sealed class S7FlipCascadeConvergenceTests
         string? firstStructural = null;
         for (int t = 0; t < ticks; t++)
         {
-            string? hash = session.Step();
-            int guard = 0;
-            while (hash == null)
+            if (!session.Step(out _))
             {
-                if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
-                hash = session.Step();
+                int guard = 0;
+                while (!session.Step(out _))
+                {
+                    if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摄未恢复。");
+                }
             }
 
             int truthCount = BitConverter.ToInt32(bin, cursor); cursor += 4;
