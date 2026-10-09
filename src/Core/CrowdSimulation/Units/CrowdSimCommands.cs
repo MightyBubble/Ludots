@@ -56,6 +56,9 @@ public static class CrowdSimCommands
 
     public static object? Exec(CrowdSimSession sim, CrowdSimCommand cmd)
     {
+        // 每条指令前收尾未完的重烘 job(参考端 exec 同点):指令看到的结构变更必须完整生效,
+        // 只在结构 op 前收尾会让紧随的非结构指令与参考端的报告 tick 错位一拍。
+        if (sim.RebakeJob != null) Structures.CrowdStructureOps.FinishRebake(sim);
         switch (cmd.Kind)
         {
             case CrowdSimCommandKind.Spawn:

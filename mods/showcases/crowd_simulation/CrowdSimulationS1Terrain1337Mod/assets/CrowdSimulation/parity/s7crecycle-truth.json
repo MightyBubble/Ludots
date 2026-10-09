@@ -1,0 +1,1463 @@
+{
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "note": "S7-c 认知槽回收复用:迷雾开启口径。11 轮放置→发现→拆除(残影)→再见地面 + 重建 S1/S2/S3;休眠槽超 slotCacheCapacity(8) 触发最旧淘汰,重建命中已淘汰认知集 = 容量回收复用。digest(槽号/槽账)逐位硬门——淘汰次序(注册序)是隐含合同。",
+  "ticks": 200,
+  "G": 2,
+  "script": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "count": 8,
+        "unitType": 0,
+        "rIdx": 0
+      }
+    },
+    {
+      "tick": 10,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1000000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 13,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1400000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 16,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          987500,
+          900000,
+          1012500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 17,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1387500,
+          950000,
+          1412500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 18,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1387500,
+          950000,
+          1412500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 18,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          987500,
+          900000,
+          1012500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 21,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1000000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 24,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1400000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 27,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          987500,
+          900000,
+          1012500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 27,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1387500,
+          950000,
+          1412500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 27,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          987500,
+          900000,
+          1012500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 27,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1387500,
+          950000,
+          1412500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 28,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1025000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 31,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1425000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 34,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1012500,
+          900000,
+          1037500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 35,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1412500,
+          950000,
+          1437500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 36,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1412500,
+          950000,
+          1437500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 36,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1012500,
+          900000,
+          1037500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 39,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1025000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 42,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1425000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 45,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1012500,
+          900000,
+          1037500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 45,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1412500,
+          950000,
+          1437500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 45,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1012500,
+          900000,
+          1037500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 45,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1412500,
+          950000,
+          1437500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 46,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1050000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 49,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1450000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 52,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1037500,
+          900000,
+          1062500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 53,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1437500,
+          950000,
+          1462500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 54,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1437500,
+          950000,
+          1462500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 54,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1037500,
+          900000,
+          1062500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 57,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1050000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 60,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1450000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 63,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1037500,
+          900000,
+          1062500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 63,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1437500,
+          950000,
+          1462500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 63,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1037500,
+          900000,
+          1062500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 63,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1437500,
+          950000,
+          1462500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 64,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1075000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 67,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1475000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 70,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1062500,
+          900000,
+          1087500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 71,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1462500,
+          950000,
+          1487500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 72,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1462500,
+          950000,
+          1487500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 72,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1062500,
+          900000,
+          1087500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 75,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1075000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 78,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1475000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 81,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1062500,
+          900000,
+          1087500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 81,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1462500,
+          950000,
+          1487500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 81,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1062500,
+          900000,
+          1087500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 81,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1462500,
+          950000,
+          1487500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 82,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1100000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 85,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1500000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 88,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 89,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 90,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 90,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 93,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1100000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 96,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1500000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 99,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 99,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 99,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 99,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 100,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1125000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 103,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1525000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 106,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 107,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 108,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 108,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 111,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1125000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 114,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1525000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 117,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 117,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 117,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 117,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 118,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1150000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 121,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1550000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 124,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1137500,
+          900000,
+          1162500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 125,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1537500,
+          950000,
+          1562500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 126,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1537500,
+          950000,
+          1562500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 126,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1137500,
+          900000,
+          1162500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 129,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1150000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 132,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1550000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 135,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1137500,
+          900000,
+          1162500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 135,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1537500,
+          950000,
+          1562500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 135,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1137500,
+          900000,
+          1162500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 135,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1537500,
+          950000,
+          1562500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 136,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1175000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 139,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1575000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 142,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1162500,
+          900000,
+          1187500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 143,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1562500,
+          950000,
+          1587500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 144,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1562500,
+          950000,
+          1587500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 144,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1162500,
+          900000,
+          1187500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 147,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1175000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 150,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1575000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 153,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1162500,
+          900000,
+          1187500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 153,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1562500,
+          950000,
+          1587500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 153,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1162500,
+          900000,
+          1187500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 153,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1562500,
+          950000,
+          1587500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 160,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1100000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 163,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1500000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 166,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 167,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 168,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 168,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 171,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1100000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 174,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1500000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 177,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 177,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 177,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1087500,
+          900000,
+          1112500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 177,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1487500,
+          950000,
+          1512500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 178,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1125000,
+        "yCm": 912500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 181,
+      "cmd": {
+        "type": "placeStructure",
+        "template": "building",
+        "xCm": 1525000,
+        "yCm": 962500,
+        "sizeCm": 14000
+      }
+    },
+    {
+      "tick": 184,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 185,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 186,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 186,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 189,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1125000,
+        "yCm": 912500
+      }
+    },
+    {
+      "tick": 192,
+      "cmd": {
+        "type": "removeStructureAt",
+        "xCm": 1525000,
+        "yCm": 962500
+      }
+    },
+    {
+      "tick": 195,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 195,
+      "cmd": {
+        "type": "reveal",
+        "player": 1,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    },
+    {
+      "tick": 195,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1112500,
+          900000,
+          1137500,
+          925000
+        ]
+      }
+    },
+    {
+      "tick": 195,
+      "cmd": {
+        "type": "reveal",
+        "player": 2,
+        "rect": [
+          1512500,
+          950000,
+          1537500,
+          975000
+        ]
+      }
+    }
+  ],
+  "opExecTicks": [
+    10,
+    13,
+    21,
+    24,
+    28,
+    31,
+    39,
+    42,
+    46,
+    49,
+    57,
+    60,
+    64,
+    67,
+    75,
+    78,
+    82,
+    85,
+    93,
+    96,
+    100,
+    103,
+    111,
+    114,
+    118,
+    121,
+    129,
+    132,
+    136,
+    139,
+    147,
+    150,
+    160,
+    163,
+    171,
+    174,
+    178,
+    181,
+    189,
+    192
+  ]
+}

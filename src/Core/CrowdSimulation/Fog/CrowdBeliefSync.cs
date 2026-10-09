@@ -253,8 +253,12 @@ public static class CrowdBeliefSync
         var b = sim.Belief!;
         var fc = sim.Config.Fog;
         var used = new HashSet<int>(b.Slot);
-        b.DormantList.RemoveAll(e => used.Contains(e.Slot) && !e.Dormant ? SetAwake(e) : false);
-        foreach (var e in b.Entries.Values)
+        // 唤醒 = 在用即出表(参考端 filter 无条件移除在用项);表内条目恒为休眠标志位,
+        // 加 "!Dormant" 守卫会让在用槽永远唤不醒——休眠表虚涨,淘汰会误杀在用槽。
+        b.DormantList.RemoveAll(e => used.Contains(e.Slot) ? SetAwake(e) : false);
+        // 淘汰次序 = 注册序:参考端 b.entry 是 JS Map(插入序),槽号单调递增不复用,
+        // 插入序即槽号升序——Dictionary 删键后复用槽位会打乱枚举序,必须显式按槽号排。
+        foreach (var e in b.Entries.Values.OrderBy(e => e.Slot))
         {
             if (used.Contains(e.Slot) || e.Dormant) continue;
             e.Dormant = true;

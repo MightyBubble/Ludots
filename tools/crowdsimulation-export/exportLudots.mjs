@@ -939,5 +939,171 @@ function canonComp(comp, n2) {
       console.log(`[export] ${mapId} s7fog ticks=${TICKS} units=${sim.units.count} ops=${ops.length} switches=${seenSwitches} beliefCount=${sim.fog.beliefCount()}`);
     }
 
+    // ───────────────────── S7-c:认知槽回收复用(建造→拆除→再建造) ─────────────────────
+    // 迷雾开启口径(与 S7-b 同):逐 tick 记单位 + 迷雾 digest + 结构 op 报告。脚本 =
+    // 11 轮「放置(未知)→ reveal 发现 → 拆除(残影)→ 再 reveal 见地面(残影消)」——每轮发现
+    // 造一个新认知槽、回到基线复用原槽;11 轮后休眠槽超 slotCacheCapacity,最旧先淘汰;
+    // 再建造 S1/S2/S3 命中已淘汰的认知集 → 开新槽(容量回收复用)。槽号/槽账在 digest 里,
+    // 淘汰次序(注册序 = JS Map 插入序)错一步,重建命中的槽号就分叉——digest 逐位即门。
+    {
+      globalThis.__S4_FIX64_SPAWN__ = true;
+      globalThis.__S7_TRUTH_NAV__ = false;
+      const { Simulation } = await import('../src/engine/simulation.js');
+      const { createNavHost } = await import('../src/engine/planning/pathJobs.js');
+      const { LocalPathService } = await import('../src/engine/planning/localPathService.js');
+      const { packStatic } = await import('../src/engine/workers/bake.js');
+      const { TileCache } = await import('../src/engine/navtile/tileCache');
+      const { hpaScratch } = await import('../src/engine/hpa');
+      const { meshScratch } = await import('../src/engine/navtile/assemble');
+      const { generateStructures: regenStructures2 } = await import('../src/engine/structures/mapGen.js');
+      const freshStructures2 = regenStructures2(world, config, reach);
+      const freshCache2 = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      const navList2 = [];
+      {
+        const seen = new Set();
+        for (let a = 0; a < config.agentTypes.length; a++) for (let r = 0; r < config.agents.radiusClasses.length; r++) {
+          const c = clearanceOf(config, r), id = navIdOf(a, c);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          navList2.push(buildNavContext(worldQ, config, a, c, freshStructures2, freshCache2));
+        }
+      }
+      const baked2 = { world: worldQ, worldCached: true, structures: freshStructures2, navs: navList2, tileCache: freshCache2, ms: 0 };
+      const stripClone2 = () => {
+        const saved = navList2.map((n) => [n.hpa.scratch, n.meshBuf && n.meshBuf.scratch, n.navmesh && n.navmesh.scratch]);
+        for (const n of navList2) { n.hpa.scratch = null; if (n.meshBuf) n.meshBuf.scratch = null; if (n.navmesh) n.navmesh.scratch = null; }
+        try { return structuredClone(packStatic(baked2)); } finally {
+          navList2.forEach((n, k) => { n.hpa.scratch = saved[k][0]; if (n.meshBuf) n.meshBuf.scratch = saved[k][1]; if (n.navmesh) n.navmesh.scratch = saved[k][2]; });
+        }
+      };
+      const payload2 = stripClone2();
+      const copyCache2 = new TileCache(config.navtile.cacheCapacity, config.hpa.clusterSize, config.navmesh);
+      for (const [k, e] of payload2.tiles) copyCache2.map.set(k, e);
+      Object.assign(copyCache2, payload2.tileStats);
+      for (const e of copyCache2.map.values()) copyCache2.uid = Math.max(copyCache2.uid, e.uid + 1);
+      for (const nav of payload2.navs) {
+        nav.hpa.scratch = hpaScratch(nav.hpa.S);
+        if (nav.meshBuf) nav.meshBuf.scratch = null;
+        if (nav.navmesh) nav.navmesh.scratch = meshScratch(nav.meshBuf, nav.navmesh.count);
+      }
+      const copy2 = { world: payload2.world, worldCached: true, structures: payload2.structures, navs: payload2.navs, tileCache: copyCache2, ms: 0 };
+      const host2 = createNavHost(config, copy2.world, copy2.structures, copy2.navs, copy2.tileCache);
+      const sim2 = new Simulation(sources, baked2, new LocalPathService(host2));
+      sim2.sepCtx.unitContacts = new Uint16Array(config.sim.maxUnits);
+
+      // 双列建筑(A 列 y=9125m,B 列 y=9625m,各 8 个,x = 10000m + 250m·k,间距一个 fog 格,
+      // 足迹互不相触;reveal 矩形 = 建筑所在的整一个 fog 格)。单位 8 个停出生点。
+      // 每轮 6 拍:双放 → p1 见 A / p2 见 B(两视野组各持一个私有槽)→ 交叉见(两私有槽
+      // 同一 retire 内休眠——追加序在此暴露)→ 双拆(共享残影槽)→ 双清地面。槽号单调,
+      // 超容淘汰从表头吃;被淘汰过的认知集在重建段再命中,槽号即指纹。
+      const rectOf = (x, y) => [x - 12500, y * 100 - 12500, x + 12500, y * 100 + 12500];
+      const centersA = [], centersB = [];
+      for (let k = 0; k < 8; k++) {
+        centersA.push({ x: 1000000 + 25000 * k, y: 912500 });
+        centersB.push({ x: 1400000 + 25000 * k, y: 962500 });
+      }
+      const script2 = [{ tick: 0, cmd: { type: 'spawnAt', player: 1, xCm: 480000, yCm: 560000, count: 8, unitType: 0, rIdx: 0 } }];
+      const cycle = (base, k) => {
+        const a = centersA[k], b = centersB[k];
+        // 结构指令间距 ≥3 tick:前一 job 要在其完成 tick 末被采样,才会不被下一条结构
+        // 指令的强制收尾覆盖(采样读的是"最后一份报告")。reveal 无此约束。
+        script2.push({ tick: base, cmd: { type: 'placeStructure', template: 'building', xCm: a.x, yCm: a.y, sizeCm: 14000 } });
+        script2.push({ tick: base + 3, cmd: { type: 'placeStructure', template: 'building', xCm: b.x, yCm: b.y, sizeCm: 14000 } });
+        script2.push({ tick: base + 6, cmd: { type: 'reveal', player: 1, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 7, cmd: { type: 'reveal', player: 2, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 8, cmd: { type: 'reveal', player: 1, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 8, cmd: { type: 'reveal', player: 2, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 11, cmd: { type: 'removeStructureAt', xCm: a.x, yCm: a.y } });
+        script2.push({ tick: base + 14, cmd: { type: 'removeStructureAt', xCm: b.x, yCm: b.y } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 1, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 1, rect: rectOf(b.x, 9625) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 2, rect: rectOf(a.x, 9125) } });
+        script2.push({ tick: base + 17, cmd: { type: 'reveal', player: 2, rect: rectOf(b.x, 9625) } });
+      };
+      for (let k = 0; k < 8; k++) cycle(10 + 18 * k, k);
+      // 重建段:再走第 4/5 轮(那两轮的私有槽对是淘汰序反转的候选命中点)
+      cycle(160, 4); cycle(178, 5);
+      const webScript2 = script2.map((e) => {
+        const c = { ...e.cmd };
+        if (c.type === 'spawnAt') return { tick: e.tick, cmd: { type: 'spawnAt', player: c.player - 1, x: c.xCm / 100, y: c.yCm / 100, count: c.count, unitType: c.unitType, rIdx: c.rIdx } };
+        if (c.type === 'placeStructure') return { tick: e.tick, cmd: { type: 'place', template: c.template, x: c.xCm / 100, y: c.yCm / 100, size: c.sizeCm / 100 } };
+        if (c.type === 'removeStructureAt') return { tick: e.tick, cmd: { type: 'remove', x: c.xCm / 100, y: c.yCm / 100 } };
+        if (c.type === 'reveal') return { tick: e.tick, cmd: { type: 'reveal', player: c.player - 1, rect: c.rect.map((v) => v / 100) } };
+        return e;
+      });
+      sim2.commands.schedule(webScript2);
+
+      const TICKS2 = 200;
+      const G2 = sim2.fog.G;
+      const w2 = new BW();
+      w2.bytes(Buffer.from('LS7C', 'ascii'));
+      w2.i32(TICKS2);
+      w2.i32(G2);
+      const ops2 = [];
+      let seenRebakes2 = 0;
+      let lastSlot = -1, lastSeq = -1, lastDormant = -1;
+      for (let t = 0; t < TICKS2; t++) {
+        sim2.sepCtx.unitContacts.fill(0);
+        sim2.advance(1);
+        const u = sim2.units, n = u.count;
+        w2.i32(n);
+        for (let i = 0; i < n; i++) {
+          w2.u32(u.id[i]);
+          w2.f64(u.x[i] * 100); w2.f64(u.y[i] * 100);
+          w2.u8(u.state[i]); w2.u8(u.mode[i]); w2.u8(u.level[i]);
+          w2.u32(u.order[i]);
+          w2.u16(sim2.sepCtx.unitContacts[i]);
+        }
+        const fog = sim2.fog, F2 = fog.F * fog.F;
+        for (let g = 0; g < G2; g++) {
+          let vis = 0, exp = 0;
+          for (let c = g * F2; c < (g + 1) * F2; c++) { if (fog.visible[c]) vis++; if (fog.explored[c]) exp++; }
+          w2.i32(vis); w2.i32(exp);
+          w2.i32(fog.belief[g].size);
+          w2.i32(fog.tiles[g].size);
+          w2.u32(fog.beliefKey(g));
+          w2.i32(sim2.belief.slot[g]);
+          w2.i32(fog.entRev[g]); w2.i32(fog.rev[g]);
+        }
+        w2.i32(sim2.belief.seq); w2.i32(sim2.belief.switches);
+        w2.i32(sim2.belief.entry.size); w2.i32(sim2.belief.dormant.length);
+        w2.i32(fog.beliefCount());
+        if (sim2.rebakeJob === null && sim2.stats.rebakes > seenRebakes2) {
+          seenRebakes2 = sim2.stats.rebakes;
+          ops2.push({ reportTick: sim2.tickCount, r: sim2.stats.rebake, union: [...sim2.stats.dirtyTiles].sort((a, b) => a - b) });
+        }
+        if (sim2.belief.seq !== lastSeq || sim2.belief.dormant.length !== lastDormant || sim2.belief.slot[0] !== lastSlot) {
+          console.log(`[export] s7c t=${t} slot0=${sim2.belief.slot[0]} seq=${sim2.belief.seq} entry=${sim2.belief.entry.size} dormant=${sim2.belief.dormant.length}`);
+          lastSlot = sim2.belief.slot[0]; lastSeq = sim2.belief.seq; lastDormant = sim2.belief.dormant.length;
+        }
+      }
+      const opList2 = script2.filter((e) => e.cmd.type === 'placeStructure' || e.cmd.type === 'removeStructureAt')
+        .map((e) => ({ tick: e.tick, kind: e.cmd.type === 'placeStructure' ? 1 : 2 }));
+      const opExecTicks2 = opList2.map((o) => o.tick);
+      if (ops2.length !== opExecTicks2.length) throw new Error(`S7-c 重烘报告数 ${ops2.length} ≠ 预期 ${opExecTicks2.length}`);
+      writeFileSync(join(outRoot, 'parity', 's7crecycle.bin'), w2.build());
+      const wo2 = new BW();
+      wo2.bytes(Buffer.from('LS7O', 'ascii'));
+      wo2.i32(ops2.length);
+      ops2.forEach((op, i) => {
+        wo2.i32(opExecTicks2[i]);
+        wo2.u8(opList2[i].kind);
+        wo2.i32(op.reportTick);
+        wo2.i32(op.r.tiles); wo2.i32(op.r.contexts); wo2.i32(op.r.costOnly);
+        wo2.i32(op.r.hits); wo2.i32(op.r.misses);
+        wo2.i32(op.r.orders); wo2.i32(op.r.refreshes);
+        wo2.i32(op.r.evicted); wo2.i32(op.r.stuck);
+        wo2.i32(op.union.length);
+        for (const tile of op.union) wo2.i32(tile);
+      });
+      writeFileSync(join(outRoot, 'parity', 's7crecycle-ops.bin'), wo2.build());
+      writeFileSync(join(outRoot, 'parity', 's7crecycle-truth.json'), JSON.stringify({
+        mapId, seed,
+        note: 'S7-c 认知槽回收复用:迷雾开启口径。11 轮放置→发现→拆除(残影)→再见地面 + 重建 S1/S2/S3;休眠槽超 slotCacheCapacity(8) 触发最旧淘汰,重建命中已淘汰认知集 = 容量回收复用。digest(槽号/槽账)逐位硬门——淘汰次序(注册序)是隐含合同。',
+        ticks: TICKS2, G: G2, script: script2, opExecTicks: opExecTicks2,
+      }, null, 2));
+      console.log(`[export] ${mapId} s7crecycle ticks=${TICKS2} units=${sim2.units.count} ops=${ops2.length} seq=${sim2.belief.seq} dormant=${sim2.belief.dormant.length}`);
+    }
+
   }
 }
