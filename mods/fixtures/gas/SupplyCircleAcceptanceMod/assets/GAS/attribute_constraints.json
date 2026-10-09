@@ -1,0 +1,7 @@
+{
+  "Supply.IsPerson": { "min": 0, "max": 1 },
+  "Supply.Faction": { "min": 0, "max": 3 },
+  "Supply.Cover.Wei": { "min": 0, "max": 1 },
+  "Supply.Cover.Shu": { "min": 0, "max": 1 },
+  "Supply.Cover.Wu": { "min": 0, "max": 1 }
+}
