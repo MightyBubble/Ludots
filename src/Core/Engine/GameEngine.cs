@@ -2321,7 +2321,8 @@ namespace Ludots.Core.Engine
                 customEventCatalog.Schemas,
                 () => MapSessions,
                 graphReturnWriter,
-                gasGraphApi);
+                gasGraphApi,
+                interactionContextInstances);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
             // Bind the change-point Deactivated slot runner — DeactivateContext op
