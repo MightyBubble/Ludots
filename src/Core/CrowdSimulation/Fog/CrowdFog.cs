@@ -313,9 +313,8 @@ public sealed class CrowdFog
     }
 
     /// <summary>视线(半格步进采样,Fix64):严格中间格不得不透明、不得高出眼—目标高度线;
-    /// 端点不挡。逐 op 与参考端 __L31_FIX64_LOS__ 补丁同一棵求值树(除法精确商向零截断、
-    /// 乘法精确积向下取整)。rise·f 走 MulExact——rise 是高度差带任意分数,operator* 的
-    /// 分数部分积在两侧分数 ≥ √0.5 时回绕;dy·f 的 dy 恒整数,直乘本就精确。</summary>
+    /// 端点不挡。除法取精确商向零截断,乘法取精确积向零截断。rise·f 走 MulExact——rise 可为负,
+    /// operator* 对负数向下取整,余量非 0 时与向零截断差 1 个最小单位;dy·f 的 dy 恒整数,直乘本就精确。</summary>
     private bool Sight(int cx, int cy, int tx, int ty)
     {
         int dx = tx - cx, dy = ty - cy;
