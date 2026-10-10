@@ -16,7 +16,7 @@ Case E 和 TW 已经证明这些事可以不写 C#：按键绑到交互状态，
 - 每个 showcase 自己带交互状态、图、面板、presenter 配置，和 TW 一样。
 - 引擎只补 Case E 零件里确实缺的几个节点（见 3.9），不补"通用输入系统"。
 
-玩家能感到的变化：交互展示、MOBA 两个 mod 挂的"选中指示器"现在从来不出现，退役后改成 presenter 订阅选中集合，真的会出现；Tab 切目标、技能栏在每个 showcase 里的键位和样式由配置决定，不再是全局默认；移动路线预览这次去掉。
+玩家能感到的变化：交互展示、MOBA 两个 mod 挂的"选中指示器"现在从来不出现，退役后改成 presenter 订阅选中集合，真的会出现；Tab 切目标在每个 showcase 里的键位由配置决定，不再是全局默认；屏幕下方那排全局槽位号没了，要技能栏的 showcase 自己写面板；移动路线预览这次去掉。
 
 ## 2. 结构
 
@@ -33,7 +33,7 @@ CoreInputMod 每一块的去向：
 | 老下令映射（`LocalOrderSource*`、`AutoInstalledLocalOrderSourceSystem`、Core 的 `InputOrderMappingSystem` 和 `input_order_mappings.json`） | 按键直接翻成下令 | 12 个 mod 改成交互状态 + 下令图 + `SubmitCommandIntent` / `SubmitCast` | 有现成做法 |
 | 集合名 `collection.command.source` | 写死的"选中单位"集合 | 改成各 mod 选中图自己写的集合，和 Case E 的 `selected` 一样 | 有现成做法 |
 | 小地图焦点 | C# 注册，焦点固定取 `collection.command.source` | 小地图配置里写看哪个集合 | 有现成做法 |
-| 技能栏 `SkillBarOverlaySystem` | 画当前单位的技能槽 | 面板 + 图（`QueryCollectAbilitySlots`），照 TW 的 `tw.panel.*` | 零件都在 |
+| 技能栏 `SkillBarOverlaySystem` | 给所有游戏在屏幕下方画一排槽位号 | 直接删，不做替代；要技能栏的游戏自己写面板（3.5） | 已删 |
 | Tab 切目标 `TabTargetCycleSystem` | 按 Tab 轮流选附近敌人 | 交互状态绑 Tab + 边沿图，结果写集合 | 零件基本都在，排序要核实 |
 | 瞄准预览 `AbilityAimPresentationProjectionSystem` | 瞄准时画范围圈 | 删；指示器由 presenter 读实体参数画（3.7） | 零件都在，缺各 mod 的配置 |
 | 持续瞄准 `AbilityExecAimSyncSystem` | 引导技能期间跟着鼠标改落点 | 删；指针经交互状态写进实体参数，技能效果图自己读（3.7） | 零件都在 |
@@ -92,7 +92,7 @@ CoreInputMod 每一块的去向：
 
 ### 3.5 技能栏
 
-照 TW 的面板做法：面板模板写在 `Panels/panel_templates.json`，开局图 `CreatePanel`，数值图用 `QueryCollectAbilitySlots` 读当前单位的技能槽写进面板。键位文字写在面板模板里。视角模式里的"技能栏开 / 关"改成 `ShowPanel` / `HidePanel`。
+直接删，不做替代。它只画槽位号和键位字，不显示图标和冷却，五个 showcase 还专门写代码把它关掉。引擎不带默认技能栏：哪个游戏要技能栏，照 TW 的面板做法自己写——面板模板写在 `Panels/panel_templates.json`，开局图 `CreatePanel`，数值图用 `QueryCollectAbilitySlots` 读当前单位的技能槽。守卫 `Engine_CarriesNoDefaultSkillBarOverlay` 禁止这几个名字回来。
 
 ### 3.6 Tab 切目标
 
@@ -269,7 +269,7 @@ presenter 按 tab_target 集合画目标环
 
 没有公共默认按键。LudotsCoreMod 和引擎里都不放按键；哪个 showcase 用到响应连锁、小地图、框选下令，就在它自己的 `default_input.json` 和交互状态里声明。别的 mod 自己的按键不受影响，也就没有撞键问题。
 
-**删依赖。** CoreInputMod 开局给每个依赖它的 mod 装技能栏（默认开着，只有显式关掉才不画）、Tab 切目标、视角模式、小地图焦点，还通过 `Default_Gameplay` 给了框选、下令这些键。只要这些还在，删依赖就会让玩家看到的东西变少，所以删依赖不单独做，放到片 8 和 CoreInputMod 目录一起删。
+**删依赖。** CoreInputMod 开局给每个依赖它的 mod 装 Tab 切目标、视角模式、小地图焦点，还通过 `Default_Gameplay` 给了框选、下令这些键。只要这些还在，删依赖就会让玩家看到的东西变少，所以删依赖不单独做，放到片 8 和 CoreInputMod 目录一起删。
 
 ## 4. 场景
 
@@ -278,7 +278,6 @@ presenter 按 tab_target 集合画目标环
 | RTS 右键下令 | 框选几个兵，右键地面，这几个兵走过去；右键敌人，这几个兵去打 | 交互状态 + 下令图 `SubmitCommandIntent` |
 | MOBA 放技能 | 按 Q，智能施法直接放；非智能施法出现范围圈，左键确认放出，右键取消 | 技能按下图读 `InteractionPref`，瞄准交互状态 + presenter |
 | Tab 切目标 | 按 Tab，离我最近的敌人头上出现目标环；再按跳到下一个；Shift+Tab 往回跳 | tab 图写 `tab_target`，presenter 画环 |
-| 技能栏 | 选中英雄后屏幕下方出现他的技能格子，冷却中的变灰 | 面板 + `QueryCollectAbilitySlots` |
 | 切视角 | 按键从战术视角切到跟随视角，镜头跟到我的英雄身上，施法方式和技能栏跟着模式变 | 视角交互状态的 `onActivated` 图 |
 | 选中指示器 | MOBA 里选中英雄，脚下出现选中环（现在不出现） | presenter 订阅选中集合 |
 | TCG 响应窗 | 按 E 结束回合，敌方法师朝你放火球，牌桌停下来问你：空格让过、N 无效、1 发动反击 | 模板上的陷阱监听；提示事件图激活"要不要接招"状态，按键图调 `SubmitResponseChainOrder` |
@@ -356,14 +355,6 @@ Feature: Tab 切目标
     Given 我附近没有敌人
     When 我按 Tab
     Then 什么都不出现
-
-Feature: 技能栏
-
-  Scenario: 选中英雄显示技能格子
-    When 我选中英雄
-    Then 屏幕下方出现他的 4 个技能格子，写着 Q W E R
-    When 我放了 Q
-    Then Q 格子变灰，冷却结束后恢复
 
 Feature: 切视角
 
@@ -472,7 +463,7 @@ CoreInputMod 盘点时还剩五样（老下令映射已在片 5 删掉）：默�
 顺序：
 
 1. ~~片 5 收尾~~（#1744 已做）：路网、阵型改交互状态 + 下令图；浏览器 RTS、实体命令面板改面板按钮下令；英雄沙盒、交互展示照 MOBA 改；帧线多人验收驱动跟着改；老下令映射两半删掉，瞄准投影 `AbilityAimPresentationProjectionSystem` 和 Core 的 `AbilityAimPresentationRuntime` 只服务映射，一起删；守卫 `Repository_Carries_NoLegacyInputOrderMappingOrLocalOrderSource` 断言这些名字在仓库里为零。技能 JSON 不再允许 `input` 块。
-2. 片 6：技能栏改面板配置；瞄准指示的 presenter 搬进一个只有配置、没有 C# 的能力 mod（RtsDemoMod 的 `core_input_preview_*` 和 CoreInputMod 的 `core_input.ability_aim.*` 现在没人挂），删持续瞄准；小地图指针交互改前台交互状态，删 `MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions`。
+2. 片 6：~~技能栏~~（已删，不做替代）；瞄准指示的 presenter 搬进一个只有配置、没有 C# 的能力 mod（RtsDemoMod 的 `core_input_preview_*` 和 CoreInputMod 的 `core_input.ability_aim.*` 现在没人挂），删持续瞄准；小地图指针交互改前台交互状态，删 `MinimapInputConsumer`、`PointerInputCaptured`、`interactionActions`。
 3. 片 7：`collection.command.source` 换成各 mod 自己的集合。
 4. 片 8：删目录和 78 个依赖；`LudotsCoreMod/game.json` 去掉 `Default_Gameplay`，用到按键的 mod 自己声明交互状态；启动交互状态找不到时报错（现在 `PlayerInputHandler.PushContext` 碰到没定义的状态直接跳过）；加禁名守卫。
 
