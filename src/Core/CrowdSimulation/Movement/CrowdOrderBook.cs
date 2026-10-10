@@ -56,10 +56,59 @@ public sealed class CrowdOrder
     /// <summary>落点足印半径(格,规划器按编队宽度设置,到达判定的近邻域)。</summary>
     public int ReachCells { get; set; } = 1;
     /// <summary>去重键(形状/自动/朝向/线宽);同玩家同成员同目标同键的重复指令直接复用。</summary>
-    public string DedupKey { get; set; } = string.Empty;
+    public CrowdOrderDedupKey DedupKey { get; set; }
     public List<CrowdOrderGroupLink> Groups { get; } = new();
     public List<CrowdLeader> Leaders { get; } = new();
     public bool Done => Groups.Count == 0;
+}
+
+public readonly struct CrowdOrderDedupKey : IEquatable<CrowdOrderDedupKey>
+{
+    public string ShapeId { get; }
+    public bool AutoHasValue { get; }
+    public bool Auto { get; }
+    public bool HasFace { get; }
+    public long FaceXRaw { get; }
+    public long FaceYRaw { get; }
+    public long WidthRaw { get; }
+
+    public CrowdOrderDedupKey(string shapeId, bool autoHasValue, bool auto, bool hasFace, long faceXRaw, long faceYRaw, long widthRaw)
+    {
+        ShapeId = shapeId;
+        AutoHasValue = autoHasValue;
+        Auto = auto;
+        HasFace = hasFace;
+        FaceXRaw = faceXRaw;
+        FaceYRaw = faceYRaw;
+        WidthRaw = widthRaw;
+    }
+
+    public static CrowdOrderDedupKey Create(string shapeId, bool? auto, Fix64Vec2? face, Fix64 width) =>
+        new(
+            shapeId,
+            auto.HasValue,
+            auto.GetValueOrDefault(),
+            face.HasValue,
+            face.HasValue ? face.Value.X.RawValue : 0L,
+            face.HasValue ? face.Value.Y.RawValue : 0L,
+            width.RawValue);
+
+    public bool Equals(CrowdOrderDedupKey other) =>
+        ShapeId == other.ShapeId &&
+        AutoHasValue == other.AutoHasValue &&
+        Auto == other.Auto &&
+        HasFace == other.HasFace &&
+        FaceXRaw == other.FaceXRaw &&
+        FaceYRaw == other.FaceYRaw &&
+        WidthRaw == other.WidthRaw;
+
+    public override bool Equals(object? obj) => obj is CrowdOrderDedupKey other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(ShapeId, AutoHasValue, Auto, HasFace, FaceXRaw, FaceYRaw, WidthRaw);
+
+    public static bool operator ==(CrowdOrderDedupKey left, CrowdOrderDedupKey right) => left.Equals(right);
+
+    public static bool operator !=(CrowdOrderDedupKey left, CrowdOrderDedupKey right) => !left.Equals(right);
 }
 
 /// <summary>指令↔组反向链接(组注册表的组 id + 该组在此指令下的目标格)。</summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation.Nav.Recast;
 
 namespace Ludots.Core.CrowdSimulation.Nav;
 
@@ -23,6 +24,7 @@ public sealed class NavTileCache
     private readonly Dictionary<string, LinkedListNode<(string Key, NavTileEntry Entry)>> _map = new(StringComparer.Ordinal);
     private readonly LinkedList<(string Key, NavTileEntry Entry)> _lru = new();
     private readonly ushort[] _win;
+    private readonly PolygonBakeScratch _bakeScratch = new();
     private int _uid;
 
     public int Hits { get; private set; }
@@ -75,7 +77,7 @@ public sealed class NavTileCache
         Misses++;
         Bakes++;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var entry = NavTileBaker.Bake(_win, t, _minRegionArea, _maxSimplificationError, _maxEdgeLen, _maxVertsPerPoly);
+        var entry = NavTileBaker.Bake(_win, t, _minRegionArea, _maxSimplificationError, _maxEdgeLen, _maxVertsPerPoly, _bakeScratch);
         BakeMs += sw.Elapsed.TotalMilliseconds;
         entry.Uid = _uid++;
         var newNode = _lru.AddLast((key, entry));

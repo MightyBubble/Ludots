@@ -7,6 +7,29 @@ using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Structures;
 
+/// <summary>认知实体按 id 升序,id 相同时保输入序。</summary>
+internal readonly struct BeliefRank : IComparable<BeliefRank>
+{
+    public readonly int Id;
+    public readonly int Seq;
+    public readonly int TplIndex;
+    public readonly CrowdStructureFootprint Fp;
+
+    public BeliefRank(int id, int seq, int tplIndex, CrowdStructureFootprint fp)
+    {
+        Id = id;
+        Seq = seq;
+        TplIndex = tplIndex;
+        Fp = fp;
+    }
+
+    public int CompareTo(BeliefRank other)
+    {
+        int c = Id.CompareTo(other.Id);
+        return c != 0 ? c : Seq.CompareTo(other.Seq);
+    }
+}
+
 /// <summary>结构实体仓(参考 structures/store.js 移植):组件表(模板 / 足迹 / 区域覆盖 /
 /// 阻挡 / 寿命)为纯数据,id 单调递增,按 id 序遍历保证确定性;区域栅格与阻挡栅格是
 /// 组件的派生态,按变更格矩形重标。地图静态阻挡物以实体身份进仓(与参考 mapGen 同形),
@@ -116,17 +139,29 @@ public sealed class CrowdStructuresStore
     /// 真相里只有单侧知道的实体(新放建筑)已落在活栅格上,认知侧要靠"地形+believed 重标"
     /// 把它擦掉(参考端从真相栅格起底 + 分歧矩形复位,两者等价:分歧外的格只被共同实体覆盖)。
     /// 不跑寿命;碰撞索引重建一次(马达永不读认知仓,只为仓的自洽)。</summary>
-    public static CrowdStructuresStore BuildBeliefField(
+    internal static CrowdStructuresStore BuildBeliefField(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid terrain,
-        IReadOnlyList<(int Id, int TplIndex, CrowdStructureFootprint Fp)> entities)
+        IReadOnlyList<(int Id, int TplIndex, CrowdStructureFootprint Fp)> entities,
+        ref BeliefRank[] ranks)
     {
         var store = new CrowdStructuresStore(config, terrain);
         store.Area = (byte[])store._terrainArea.Clone();
         Array.Clear(store.Blocked);
-        var sorted = entities.OrderBy(e => e.Id).ToArray();
-        foreach (var (id, tplIndex, fp) in sorted)
+        int n = entities.Count;
+        StableOrder.Ensure(ref ranks, n);
+        for (int i = 0; i < n; i++)
         {
+            var row = entities[i];
+            ranks[i] = new BeliefRank(row.Id, i, row.TplIndex, row.Fp);
+        }
+
+        if (n > 1) Array.Sort(ranks, 0, n);
+        for (int i = 0; i < n; i++)
+        {
+            int id = ranks[i].Id;
+            int tplIndex = ranks[i].TplIndex;
+            var fp = ranks[i].Fp;
             var tpl = config.Structures.Templates[tplIndex];
             store._ids.Add(id);
             store._tpl[id] = tplIndex;
@@ -136,9 +171,9 @@ public sealed class CrowdStructuresStore
             if (id >= store._nextId) store._nextId = id + 1;
         }
 
-        foreach (var (_, _, fp) in sorted)
+        for (int i = 0; i < n; i++)
         {
-            store.RasterRect(fp.CellRectOf(store.CellSizeCm, store.CellCount));
+            store.RasterRect(ranks[i].Fp.CellRectOf(store.CellSizeCm, store.CellCount));
         }
 
         store.RebuildColliders();

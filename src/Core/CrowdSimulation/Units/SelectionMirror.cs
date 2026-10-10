@@ -29,7 +29,8 @@ public static class SelectionMirror
             return;
         }
 
-        var members = new List<Entity>(selected);
+        var members = sim.SelectionMembers;
+        members.Clear();
         for (int i = 0; i < sim.Units.Count && members.Count < selected; i++)
         {
             var entity = sim.Units.EntityAt(i);

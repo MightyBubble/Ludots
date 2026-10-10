@@ -139,7 +139,7 @@ public class S4DeployTruthTests
 
         foreach (var profile in runtime.Profiles)
         {
-            int rIdx = radiusClasses.IndexOf((int)profile.RadiusCm.ToInt());
+            int rIdx = CrowdDeployment.IndexOfRadiusClass(radiusClasses, (int)profile.RadiusCm.ToInt());
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 

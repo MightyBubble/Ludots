@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
 
 namespace Ludots.Core.CrowdSimulation.Fog;
@@ -45,6 +46,9 @@ public sealed class CrowdBeliefState
     public readonly List<CrowdNavGroupSet.Group> RetargetMoved = new();
     public readonly HashSet<CrowdOrder> RetargetTouched = new();
     public readonly HashSet<int> RevealFlat = new();
+    internal readonly List<(int Id, int TplIndex, CrowdStructureFootprint Fp)> RegisterRows = new();
+    internal StableInt[] RetireRank = Array.Empty<StableInt>();
+    internal Entry[] RetireEntries = Array.Empty<Entry>();
 
     public static CrowdBeliefState Create(int g) => new()
     {
@@ -218,10 +222,16 @@ public static class CrowdBeliefSync
         b.Entries[slot] = entry;
         var registerOrder = new List<int>(bel.Keys);
         registerOrder.Sort(); // 实体 id 唯一,键即决胜键
-        sim.Beliefs!.Register(
-            slot,
-            registerOrder.Select(id => (id, bel[id].TplIndex, bel[id].Fp)).ToList(),
-            fog.Unexplored(v));
+        var rows = b.RegisterRows;
+        rows.Clear();
+        for (int i = 0; i < registerOrder.Count; i++)
+        {
+            int id = registerOrder[i];
+            var info = bel[id];
+            rows.Add((id, info.TplIndex, info.Fp));
+        }
+
+        sim.Beliefs!.Register(slot, rows, fog.Unexplored(v));
         return slot;
     }
 
@@ -276,10 +286,23 @@ public static class CrowdBeliefSync
         // 唤醒 = 在用即出表(参考端 filter 无条件移除在用项);表内条目恒为休眠标志位,
         // 加 "!Dormant" 守卫会让在用槽永远唤不醒——休眠表虚涨,淘汰会误杀在用槽。
         b.DormantList.RemoveAll(e => used.Contains(e.Slot) ? SetAwake(e) : false);
-        // 淘汰次序 = 注册序:参考端 b.entry 是 JS Map(插入序),槽号单调递增不复用,
-        // 插入序即槽号升序——Dictionary 删键后复用槽位会打乱枚举序,必须显式按槽号排。
-        foreach (var e in b.Entries.Values.OrderBy(e => e.Slot))
+        // 淘汰次序 = 注册序:槽号单调递增不复用,插入序即槽号升序。
+        // 字典删键后复用槽位会打乱枚举序,按槽号排,槽号相同时保本次枚举序。
+        int retireCount = b.Entries.Count;
+        StableOrder.Ensure(ref b.RetireRank, retireCount);
+        StableOrder.Ensure(ref b.RetireEntries, retireCount);
+        int retireWrite = 0;
+        foreach (var entry in b.Entries.Values)
         {
+            b.RetireEntries[retireWrite] = entry;
+            b.RetireRank[retireWrite] = new StableInt(entry.Slot, retireWrite);
+            retireWrite++;
+        }
+
+        StableOrder.Sort(b.RetireRank, retireCount);
+        for (int retireIndex = 0; retireIndex < retireCount; retireIndex++)
+        {
+            var e = b.RetireEntries[b.RetireRank[retireIndex].Seq];
             if (used.Contains(e.Slot) || e.Dormant) continue;
             e.Dormant = true;
             b.DormantList.Add(e);

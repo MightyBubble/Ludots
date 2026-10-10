@@ -21,7 +21,7 @@ public static class CrowdIssueOrder
         var units = sim.Units;
         bool useSel = sim.SelectedCount > 0;
         int clickCell = CrowdDeployment.CellAt(wxCm, wyCm, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
-        string key = $"{shapeId}|{auto}|{(face.HasValue ? $"{face.Value.X.RawValue},{face.Value.Y.RawValue}" : "-")}|{widthCm.RawValue}";
+        var key = CrowdOrderDedupKey.Create(shapeId, auto, face, widthCm);
 
         // 同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
         CrowdOrder? same = null;
@@ -55,9 +55,12 @@ public static class CrowdIssueOrder
         }
 
         // 重组:每个 (层 × 半径级) 一个新组,挂同一条新指令;顺带算全体质心与包围盒
-        var fresh = new Dictionary<int, CrowdNavGroupSet.Group>();
-        var freshInOrder = new List<CrowdNavGroupSet.Group>(); // 新组序=单位扫描首见序,决定 order.Groups 追加序(与参考端 Map 同)
-        var lsum = new Dictionary<int, (Fix64 X, Fix64 Y, int N)>();
+        var fresh = sim.IssueGroups;
+        fresh.Clear();
+        var freshInOrder = sim.IssueGroupOrder; // 新组序=单位扫描首见序,决定 order.Groups 追加序
+        freshInOrder.Clear();
+        var lsum = sim.IssueLayerSums;
+        lsum.Clear();
         Fix64 x0 = Fix64.MaxValue, y0 = Fix64.MaxValue, x1 = Fix64.MinValue, y1 = Fix64.MinValue;
         Fix64 sx = Fix64.Zero, sy = Fix64.Zero;
         int n = 0;
@@ -124,7 +127,8 @@ public static class CrowdIssueOrder
             g.OrderId = order.Id;
         }
 
-        sim.Planner?.Plan(new[] { order }, sim.TickCount);
+        sim.IssueBatch[0] = order;
+        sim.Planner?.Plan(sim.IssueBatch, sim.TickCount);
         return mode;
     }
 
