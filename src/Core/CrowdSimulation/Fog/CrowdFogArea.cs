@@ -104,8 +104,7 @@ public sealed record CrowdFogShape
 /// 向零截断)后先除以格长归一到格单位(CrowdFix 先归一同手法)——平方与跨度积都落在
 /// ≤ 格数的量级,乘法走 MulExact(精确积)、除法精确商、开方 SqrtPrecise,两端逐位可复现。
 /// 厘米/米域直乘的溢出界只有 ~463 m(L51):千米级圆/多边形在旧树里静默回绕,现以
-/// ±46340 m 输入守卫显式抛错(与参考端同文案)。rect 无乘法,clampC 组合运算与旧树
-/// 逐 op 相同(米 → 归一商 → floor),既有 rect 真值逐字节不变。命令在 tick 内执行,
+/// ±46340 m 输入守卫显式抛错(与参考端同文案)。rect 无乘法:米入网后除以格长再 floor。命令在 tick 内执行,
 /// tick 内一律定点。</summary>
 public static class CrowdFogArea
 {
