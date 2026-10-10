@@ -99,14 +99,14 @@ public sealed class CrowdBeliefNavs
     /// 槽内没有该号时返回 false,不进入 <see cref="Build"/>
     /// (呈现侧禁止在仿真之外克隆变体、改 tile 缓存)。
     /// </summary>
-    public bool TryGetMaterialized(int id, out NavContext nav)
+    internal bool TryGetMaterialized(int id, out NavContext nav)
     {
         if (id < BeliefStride)
             throw new ArgumentOutOfRangeException(nameof(id), id, "真相号不走认知注册表。");
         NavContext? found = null;
         bool hit = _sim.Planner!.Service.RunExclusive(() =>
         {
-            if (!_slots.TryGetValue(id / BeliefStride, out var slot)) return false;
+            var slot = SlotOf(id / BeliefStride);
             if (!slot.Navs.TryGetValue(id, out var value)) return false;
             found = value;
             return true;
