@@ -72,7 +72,6 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
         GameEngine engine = context.Get(CoreServiceKeys.Engine)
             ?? throw new InvalidOperationException("GameEngine service is missing from ScriptContext.");
 
-        InstallInputSurfacePolicy(engine);
 
         if (!TryGetBrowserRuntime(context, out IBrowserRuntime runtime))
         {
@@ -98,13 +97,6 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
             UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(browserContent)));
 
         await _surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
-    }
-
-    private void InstallInputSurfacePolicy(GameEngine engine)
-    {
-        engine.RegisterSystem(
-            new BrowserRtsInputSurfacePolicySystem(engine.GlobalContext),
-            SystemGroup.InputCollection);
     }
 
     private void SetupDataPlane(GameEngine engine, IBrowserSurface surface)

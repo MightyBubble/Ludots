@@ -635,6 +635,36 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void Engine_CarriesNoDefaultSkillBarOverlay()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] forbidden = { "SkillBarOverlay", "SkillBarEnabledKey", "SkillBarKeyLabelsKey", "skillBarVisible" };
+            var hits = new List<string>();
+            foreach (string root in new[] { Path.Combine(repoRoot, "src"), Path.Combine(repoRoot, "mods"), Path.Combine(repoRoot, "assets") })
+            {
+                foreach (string file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+                {
+                    string normalized = file.Replace('\\', '/');
+                    string ext = Path.GetExtension(file);
+                    if (normalized.Contains("/bin/") ||
+                        normalized.Contains("/obj/") ||
+                        normalized.EndsWith("/ArchitectureGuardTests.cs", StringComparison.Ordinal) ||
+                        (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(hits, Is.Empty,
+                "The engine draws no default skill bar; a game that wants one declares its own panel:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPresenters()
         {
             var repoRoot = FindRepoRoot();

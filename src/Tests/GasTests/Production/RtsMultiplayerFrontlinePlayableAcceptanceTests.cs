@@ -1093,7 +1093,6 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(commandUi.GetProperty("cameraFocusFovYDeg").GetInt32(), Is.EqualTo(46));
             Assert.That(commandUi.GetProperty("cameraFocusTowardDefaultTargetCm").GetInt32(), Is.EqualTo(1800));
             Assert.That(commandUi.GetProperty("toolbarVisible").GetBoolean(), Is.False);
-            Assert.That(commandUi.GetProperty("skillBarVisible").GetBoolean(), Is.False);
             Assert.That(commandUi.GetProperty("orderMonitor").GetProperty("visible").GetBoolean(), Is.False);
         });
 

@@ -9,7 +9,7 @@ namespace CoreInputMod
         public void OnLoad(IModContext context)
         {
             context.Log("[CoreInputMod] Loaded - generic command-source and GAS input");
-            context.OnEvent(GameEvents.GameStart, new InstallCoreInputOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.GameStart, new InstallCoreInputOnGameStartTrigger().ExecuteAsync);
         }
 
         public void OnUnload() { }

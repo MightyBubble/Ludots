@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.Systems;
 using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
@@ -38,7 +37,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private readonly AggregationProfileToolbarProvider _aggregationToolbar = new();
         private IEntityCommandPanelToolbarProvider? _previousToolbarProvider;
         private bool _toolbarInstalled;
-        private bool _showcaseHudSuppressed;
         private int _autoProfileTimelineFrame;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -89,7 +87,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private void EnableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
-            SuppressNonEssentialHud(engine);
             CloseInteractionEntityInfoPanels(context);
             ClosePinnedPanels(context);
             _autoProfileTimelineFrame = 0;
@@ -110,7 +107,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private void DisableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
-            RestoreSuppressedHud(engine);
             ClearProfileProjectionCollections(engine);
             UninstallAggregationProfileToolbar(engine);
             ClosePinnedPanels(context);
@@ -139,28 +135,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             Execute(context, new CloseEntityCommandPanelCommand(FormsAlias));
             Execute(context, new CloseEntityCommandPanelCommand(FocusAlias));
             Execute(context, new CloseEntityCommandPanelCommand(AggregationAlias));
-        }
-
-        private void SuppressNonEssentialHud(GameEngine engine)
-        {
-            if (_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
-            _showcaseHudSuppressed = true;
-        }
-
-        private void RestoreSuppressedHud(GameEngine engine)
-        {
-            if (!_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
-            _showcaseHudSuppressed = false;
         }
 
         private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)

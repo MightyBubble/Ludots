@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.Systems;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using InteractionShowcaseMod.Input;
@@ -33,7 +32,6 @@ namespace InteractionShowcaseMod.Runtime
 
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
-        private bool _showcaseHudSuppressed;
         private int _visibleUatFrame;
         private Entity[] _blinkActorsScratch = new Entity[8];
         private Entity[] _blinkSelectedScratch = new Entity[8];
@@ -61,7 +59,6 @@ namespace InteractionShowcaseMod.Runtime
             {
                 _visibleUatFrame = 0;
                 ActivateInputContext(input);
-                SuppressNonEssentialHud(engine);
                 List<PossessedShowcaseRep> possessedReps = RequireShowcasePossessedReps(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!, possessedReps);
                 EnsureShowcaseCommandSourceView(engine, possessedReps);
@@ -79,7 +76,6 @@ namespace InteractionShowcaseMod.Runtime
             else
             {
                 CloseEntityInfoPanels(context);
-                RestoreSuppressedHud(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -102,7 +98,6 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             CloseEntityInfoPanels(context);
-            RestoreSuppressedHud(engine);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
             return Task.CompletedTask;
@@ -651,28 +646,6 @@ namespace InteractionShowcaseMod.Runtime
             return engine.GlobalContext.TryGetValue(InteractionShowcaseIds.SuppressUiPanelKey, out var suppressObj) &&
                    suppressObj is bool suppress &&
                    suppress;
-        }
-
-        private void SuppressNonEssentialHud(GameEngine engine)
-        {
-            if (_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
-            _showcaseHudSuppressed = true;
-        }
-
-        private void RestoreSuppressedHud(GameEngine engine)
-        {
-            if (!_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
-            _showcaseHudSuppressed = false;
         }
 
         private static void EnsureShowcaseInputSchema(PlayerInputHandler input)
