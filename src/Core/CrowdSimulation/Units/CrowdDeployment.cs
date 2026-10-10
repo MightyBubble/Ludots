@@ -186,11 +186,16 @@ public static class CrowdDeployment
     }
 
     /// <summary>全体半径级(升序去重的 radiusCm 表;与参考实现 radiusClasses 的顺序对应)。</summary>
-    public static List<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg)
+    public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
+
+    public static int IndexOfRadiusClass(IReadOnlyList<int> radiusClasses, int radiusCm)
     {
-        var set = new SortedSet<int>();
-        foreach (var p in cfg.Profiles) set.Add((int)p.RadiusCm.ToInt());
-        return new List<int>(set);
+        for (int i = 0; i < radiusClasses.Count; i++)
+        {
+            if (radiusClasses[i] == radiusCm) return i;
+        }
+
+        throw new InvalidOperationException($"半径级表缺半径 {radiusCm}。");
     }
 
     public static int CellAt(Fix64 wx, Fix64 wy, int n, int cellSizeCm)

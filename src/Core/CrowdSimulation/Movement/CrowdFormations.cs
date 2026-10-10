@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Units;
@@ -36,7 +35,13 @@ public static class CrowdFormations
         var world = session.World;
         var units = session.Units;
         Fix64 ks = spacingScale * shape.Spacing;
-        var d = new Fix64[n];
+        StableOrder.Ensure(ref session.FormationDiameter, n);
+        StableOrder.Ensure(ref session.FormationForward, n);
+        StableOrder.Ensure(ref session.FormationLateral, n);
+        StableOrder.Ensure(ref session.FormationRanks, n);
+        StableOrder.Ensure(ref session.FormationOrder, n);
+        StableOrder.Ensure(ref session.FormationRows, n);
+        var d = session.FormationDiameter;
         Fix64 area = Fix64.Zero;
         for (int k = 0; k < n; k++)
         {
@@ -57,8 +62,8 @@ public static class CrowdFormations
         cx /= n;
         cy /= n;
         Fix64 rx = -fy, ry = fx;
-        var f = new Fix64[n];
-        var s = new Fix64[n];
+        var f = session.FormationForward;
+        var s = session.FormationLateral;
         for (int k = 0; k < n; k++)
         {
             var p = world.Get<Components.WorldPositionCm>(units.EntityAt(members[k])).Value;
@@ -67,13 +72,9 @@ public static class CrowdFormations
             s[k] = dx * rx + dy * ry;
         }
 
-        // 行分配排序:主键 d(mirror 反向),决胜 f 降序;JS sort 稳定,平局保输入(下标)序,
-        // Array.Sort 不稳定——大行(≥16 元素 introsort)会打乱参考端的平局序(TR-03)
-        var order = (mirror
-                ? Enumerable.Range(0, n).OrderByDescending(k => d[k])
-                : Enumerable.Range(0, n).OrderBy(k => d[k]))
-            .ThenByDescending(k => f[k])
-            .ToArray();
+        // 行分配:主键直径(mirror 时大者在前),决胜前向投影降序,再平局保成员下标。
+        var order = session.FormationOrder;
+        RankMembers(mirror, d, f, n, session.FormationRanks, order);
         int k0 = 0;
         Fix64 maxW = Fix64.Zero, back = Fix64.Zero, prevDepth = Fix64.Zero;
         for (int r = 0; k0 < n; r++)
@@ -90,11 +91,13 @@ public static class CrowdFormations
             }
 
             if (r != 0) back += (prevDepth + depth) / 2;
-            // 行内横向排序:单键 s;平局保上一处排序的产出序(不是下标序),同依赖稳定排序
-            var row = order[k0..(k0 + m)].OrderBy(k => s[k]).ToArray();
+            // 行内横向:单键侧向投影;平局保行分配产出序,不是成员下标。
+            var row = session.FormationRows;
+            RankRow(s, order, k0, m, row);
             Fix64 acc = -rw / 2;
-            foreach (int k in row)
+            for (int ri = 0; ri < m; ri++)
             {
+                int k = row[ri].Member;
                 var kin = world.Get<CrowdSimulationKinematics>(units.EntityAt(members[k]));
                 kin.SlotOffsetCm = new Fix64Vec2(acc + d[k] / 2, back);
                 world.Set(units.EntityAt(members[k]), kin);
@@ -123,6 +126,69 @@ public static class CrowdFormations
         }
 
         return maxW;
+    }
+
+    internal readonly struct FormationRank : IComparable<FormationRank>
+    {
+        public readonly long Diameter;
+        public readonly long Forward;
+        public readonly int Member;
+        public readonly bool Mirror;
+
+        public FormationRank(long diameter, long forward, int member, bool mirror)
+        {
+            Diameter = diameter;
+            Forward = forward;
+            Member = member;
+            Mirror = mirror;
+        }
+
+        public int CompareTo(FormationRank other)
+        {
+            int c = Mirror ? other.Diameter.CompareTo(Diameter) : Diameter.CompareTo(other.Diameter);
+            if (c != 0) return c;
+            c = other.Forward.CompareTo(Forward);
+            if (c != 0) return c;
+            return Member.CompareTo(other.Member);
+        }
+    }
+
+    internal readonly struct RowRank : IComparable<RowRank>
+    {
+        public readonly long Lateral;
+        public readonly int Prior;
+        public readonly int Member;
+
+        public RowRank(long lateral, int prior, int member)
+        {
+            Lateral = lateral;
+            Prior = prior;
+            Member = member;
+        }
+
+        public int CompareTo(RowRank other)
+        {
+            int c = Lateral.CompareTo(other.Lateral);
+            return c != 0 ? c : Prior.CompareTo(other.Prior);
+        }
+    }
+
+    internal static void RankMembers(bool mirror, Fix64[] diameter, Fix64[] forward, int count, FormationRank[] ranks, int[] order)
+    {
+        for (int k = 0; k < count; k++) ranks[k] = new FormationRank(diameter[k].RawValue, forward[k].RawValue, k, mirror);
+        Array.Sort(ranks, 0, count);
+        for (int k = 0; k < count; k++) order[k] = ranks[k].Member;
+    }
+
+    internal static void RankRow(Fix64[] lateral, int[] incoming, int offset, int count, RowRank[] ranks)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            int member = incoming[offset + i];
+            ranks[i] = new RowRank(lateral[member].RawValue, i, member);
+        }
+
+        Array.Sort(ranks, 0, count);
     }
 
     /// <summary>magic-box 保持相对位置:槽位 = 当前相对成员质心的偏移(领队系);返回展开半径(厘米)。</summary>

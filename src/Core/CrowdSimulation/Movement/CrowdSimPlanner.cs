@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
@@ -25,6 +24,9 @@ public sealed class CrowdSimPlanner
     private readonly List<PendingRefresh> _pendingRefreshes = new();
     /// <summary>待刷新流场的组队列(S7 队伍反应;每 tick 预算 maxRefreshesPerTick)。</summary>
     private readonly List<CrowdNavGroupSet.Group> _refreshQueue = new();
+    private StableInt[] _liveRank = Array.Empty<StableInt>();
+    private StableInt[] _touchRank = Array.Empty<StableInt>();
+    private CrowdOrder[] _touchOrders = Array.Empty<CrowdOrder>();
     private int _seq;
     private bool _loggedFirstPlan;
     private bool _loggedFirstApply;
@@ -422,8 +424,20 @@ public sealed class CrowdSimPlanner
 
         Fix64 area = Fix64.Zero;
         int total = 0;
-        foreach (int gid in live.Keys.OrderBy(v => v)) // 顺序无关:Fix64 精确加法/计数,交换律成立;升序显式化
+        // 顺序无关:Fix64 精确加法/计数,交换律成立。升序只是把遍历序写成合同。
+        int liveCount = live.Count;
+        StableOrder.Ensure(ref _liveRank, liveCount);
+        int liveWrite = 0;
+        foreach (int gid in live.Keys)
         {
+            _liveRank[liveWrite] = new StableInt(gid, liveWrite);
+            liveWrite++;
+        }
+
+        StableOrder.Sort(_liveRank, liveCount);
+        for (int liveIndex = 0; liveIndex < liveCount; liveIndex++)
+        {
+            int gid = _liveRank[liveIndex].Key;
             if (!membersByGroup.TryGetValue(gid, out var mem)) continue;
             foreach (var i in mem)
             {
@@ -935,8 +949,21 @@ public sealed class CrowdSimPlanner
     public void RelinkLeaders(HashSet<CrowdOrder> touched)
     {
         // 顺序无关:各指令的组/领队互斥、同净空取更大下标已确定;按指令 id 升序显式化
-        foreach (var o in touched.OrderBy(o => o.Id))
+        int touchCount = touched.Count;
+        StableOrder.Ensure(ref _touchRank, touchCount);
+        StableOrder.Ensure(ref _touchOrders, touchCount);
+        int touchWrite = 0;
+        foreach (var order in touched)
         {
+            _touchOrders[touchWrite] = order;
+            _touchRank[touchWrite] = new StableInt(order.Id, touchWrite);
+            touchWrite++;
+        }
+
+        StableOrder.Sort(_touchRank, touchCount);
+        for (int touchIndex = 0; touchIndex < touchCount; touchIndex++)
+        {
+            var o = _touchOrders[_touchRank[touchIndex].Seq];
             foreach (var leader in o.Leaders)
             {
                 CrowdNavGroupSet.Group? m = null;

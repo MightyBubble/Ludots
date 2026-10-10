@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -24,6 +23,9 @@ public sealed class CrowdBeliefNavs
 
     private readonly CrowdSimSession _sim;
     private readonly Dictionary<int, Slot> _slots = new();
+    private readonly HashSet<int> _revealGone = new();
+    private readonly List<(int X0, int Y0, int X1, int Y1)> _revealRects = new();
+    private BeliefRank[] _beliefRanks = Array.Empty<BeliefRank>();
 
     public int Epoch { get; private set; }
 
@@ -56,7 +58,7 @@ public sealed class CrowdBeliefNavs
     {
         _sim.Planner!.Service.RunExclusive(() =>
         {
-            var field = CrowdStructuresStore.BuildBeliefField(_sim.Config, _sim.Structures!.SnapshotSurface(), entities);
+            var field = CrowdStructuresStore.BuildBeliefField(_sim.Config, _sim.Structures!.SnapshotSurface(), entities, ref _beliefRanks);
             _slots[slot] = new Slot
             {
                 Field = field,
@@ -117,18 +119,34 @@ public sealed class CrowdBeliefNavs
         return _sim.Planner!.Service.RunExclusive(() =>
         {
             var b = SlotOf(slot);
-            var gone = new HashSet<int>(tiles);
+            _revealGone.Clear();
+            for (int i = 0; i < tiles.Count; i++) _revealGone.Add(tiles[i]);
             if (b.Unknown != null)
             {
-                b.Unknown = b.Unknown.Where(t => !gone.Contains(t)).ToList();
-                if (b.Unknown.Count == 0) b.Unknown = null;
+                var unknown = b.Unknown;
+                int write = 0;
+                for (int i = 0; i < unknown.Count; i++)
+                {
+                    if (!_revealGone.Contains(unknown[i])) unknown[write++] = unknown[i];
+                }
+
+                if (write == 0) b.Unknown = null;
+                else if (write != unknown.Count) unknown.RemoveRange(write, unknown.Count - write);
             }
 
-            int n = b.Field.CellCount, t = _sim.Config.Hpa.ClusterSize;
-            var rects = tiles.Select(tile => (tile % (n / t) * t, tile / (n / t) * t, tile % (n / t) * t + t, tile / (n / t) * t + t)).ToList();
+            int n = b.Field.CellCount, t = _sim.Config.Hpa.ClusterSize, side = n / t;
+            _revealRects.Clear();
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                int tile = tiles[i];
+                int x = tile % side * t;
+                int y = tile / side * t;
+                _revealRects.Add((x, y, x + t, y + t));
+            }
+
             foreach (var layer in b.Layers.Values)
             {
-                foreach (var (x0, y0, x1, _) in rects)
+                foreach (var (x0, y0, x1, _) in _revealRects)
                 {
                     for (int y = y0; y < y0 + t; y++)
                     {
@@ -142,7 +160,7 @@ public sealed class CrowdBeliefNavs
             foreach (var (id, v) in b.Navs)
             {
                 var field = FieldFor(b, v.LayerIndex);
-                foreach (var r in rects)
+                foreach (var r in _revealRects)
                 {
                     CrowdNavRebake.RebakeNav(v, _sim.RebakeSources!, field, r, _sim.NavTileCache!);
                 }
@@ -195,7 +213,7 @@ public sealed class CrowdBeliefNavs
             }
         }
 
-        var layer = CrowdStructuresStore.BuildBeliefField(_sim.Config, b.Field.SnapshotSurface(), EntitiesOf(b.Field));
+        var layer = CrowdStructuresStore.BuildBeliefField(_sim.Config, b.Field.SnapshotSurface(), EntitiesOf(b.Field), ref _beliefRanks);
         layer.ReplaceArea(area);
         b.Layers[layerIdx] = layer;
         return layer;
@@ -320,6 +338,13 @@ public sealed class CrowdBeliefNavs
         return true;
     }
 
+    private static Dictionary<int, HashSet<int>> CopySets(Dictionary<int, HashSet<int>> source)
+    {
+        var copy = new Dictionary<int, HashSet<int>>(source.Count);
+        foreach (var kv in source) copy[kv.Key] = new HashSet<int>(kv.Value);
+        return copy;
+    }
+
     /// <summary>全拷贝变体克隆:逐格数组全拷;tile 条目 / 桥面 tile 信息 / HPA 内层数组共享
     /// (增量重烘只替换条目);链接集换自有 CompOut;可达备忘全新。</summary>
     private static NavContext CloneNav(NavContext t, int id)
@@ -339,7 +364,7 @@ public sealed class CrowdBeliefNavs
                 OutList = t.Links.OutList,
                 InStart = t.Links.InStart,
                 InList = t.Links.InList,
-                CompOut = t.Links.CompOut.ToDictionary(kv => kv.Key, kv => new HashSet<int>(kv.Value)),
+                CompOut = CopySets(t.Links.CompOut),
             };
         }
 
@@ -366,9 +391,7 @@ public sealed class CrowdBeliefNavs
             Hpa = t.Hpa?.CloneForVariant(),
             UpComp = t.UpComp == null ? null : (int[])t.UpComp.Clone(),
             CompCountTotal = t.CompCountTotal,
-            ReachOut = t.ReachOut == null
-                ? null
-                : t.ReachOut.ToDictionary(kv => kv.Key, kv => new HashSet<int>(kv.Value)),
+            ReachOut = t.ReachOut == null ? null : CopySets(t.ReachOut),
         };
     }
 

@@ -51,6 +51,9 @@ public sealed class CrowdSimulationRuntimeConfig
     public required RuntimeStructuresSection Structures { get; init; }
     public required RuntimeDeploySection Deploy { get; init; }
     public required RuntimeTelemetrySection Telemetry { get; init; }
+
+    /// <summary>半径厘米升序去重表。</summary>
+    public required IReadOnlyList<int> RadiusClasses { get; init; }
 }
 
 public enum CrowdSimulationPushMode

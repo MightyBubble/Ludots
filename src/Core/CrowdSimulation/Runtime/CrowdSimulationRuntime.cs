@@ -254,7 +254,7 @@ public sealed class CrowdSimulationRuntime
 
         foreach (var profile in runtimeConfig.Profiles)
         {
-            int rIdx = radiusClasses.IndexOf((int)profile.RadiusCm.ToInt());
+            int rIdx = CrowdDeployment.IndexOfRadiusClass(radiusClasses, (int)profile.RadiusCm.ToInt());
             navByLayerRadius[(profile.AgentTypeIndex, rIdx)] = navs[profile.NavContextId];
         }
 
