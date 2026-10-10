@@ -31,6 +31,8 @@ public sealed class CrowdFog
     public readonly int G;          // 视野组数
     public readonly int T, C;       // tile 边长(导航格)/ tile 网格边长
     public readonly byte[] Visible, Explored, Occ;   // G×F²
+    /// <summary>每组派生计数:可见格、已探索格、残影(认知有、真相无足迹)。与格子/认知同步增减,不进校验码。</summary>
+    public readonly int[] VisibleCount, ExploredCount, GhostCount;
     public readonly uint[] Version, Key, TileKey, Seen, Gone;
     /// <summary>BV-6 精确变更计数(参考端 Float64 计数器):认知实体集变 / 实体集或 tile 集变。</summary>
     public readonly long[] EntRev, Rev;
@@ -108,6 +110,9 @@ public sealed class CrowdFog
         Visible = new byte[G * f2];
         Explored = new byte[G * f2];
         Occ = new byte[G * f2];
+        VisibleCount = new int[G];
+        ExploredCount = new int[G];
+        GhostCount = new int[G];
         Version = new uint[G];
         Key = new uint[G];
         TileKey = new uint[G];
@@ -196,8 +201,21 @@ public sealed class CrowdFog
         TruthKey ^= Mix(id);
         TruthRev++;
         _opaqueDirty = true;
-        if (Store.TryGetFootprint(id, out var fp)) IndexAdd(id, fp);
-        else if (!Belief.Any(b => b.ContainsKey(id))) IndexDel(id);
+        if (Store.TryGetFootprint(id, out var fp))
+        {
+            IndexAdd(id, fp);
+            return;
+        }
+
+        bool believed = false;
+        for (int g = 0; g < G; g++)
+        {
+            if (!Belief[g].ContainsKey(id)) continue;
+            believed = true;
+            GhostCount[g]++;
+        }
+
+        if (!believed) IndexDel(id);
     }
 
     private void IndexAdd(int id, CrowdStructureFootprint fp)
@@ -275,6 +293,7 @@ public sealed class CrowdFog
         Array.Clear(Visible, o, f2);
         if (Los && _opaqueDirty) BuildOpaque();
         bool hide = _obscured.Count > 0;
+        int visible = 0;
         for (int c = 0; c < f2; c++)
         {
             if (Occ[o + c] == 0) continue;
@@ -284,16 +303,24 @@ public sealed class CrowdFog
                 int x = cx + _disc[k], y = cy + _disc[k + 1];
                 if (x >= 0 && y >= 0 && x < F && y < F && (!Los || Sight(cx, cy, x, y)) && !(hide && ObsN[o + y * F + x] > 0))
                 {
-                    Visible[o + y * F + x] = 1;
-                    if (Explored[o + y * F + x] == 0)
+                    int cell = o + y * F + x;
+                    if (Visible[cell] == 0)
                     {
-                        Explored[o + y * F + x] = 1;
+                        Visible[cell] = 1;
+                        visible++;
+                    }
+
+                    if (Explored[cell] == 0)
+                    {
+                        Explored[cell] = 1;
+                        ExploredCount[g]++;
                         Explore(g, x, y);
                     }
                 }
             }
         }
 
+        VisibleCount[g] = visible;
         Reconcile(g);
         Version[g]++;
         Refreshes++;
@@ -410,6 +437,7 @@ public sealed class CrowdFog
                 Key[g] ^= Mix(id);
                 Gone[g]++;
                 forget.Add(id);
+                GhostCount[g]--;
             }
             else
             {
@@ -445,6 +473,7 @@ public sealed class CrowdFog
             if (Explored[o + c] == 0)
             {
                 Explored[o + c] = 1;
+                ExploredCount[g]++;
                 Explore(g, c % F, c / F);
             }
 
@@ -462,8 +491,14 @@ public sealed class CrowdFog
         _obscured.Add((g, cells, until));
         foreach (int c in cells)
         {
-            Visible[o + c] = 0;
-            ObsN[o + c]++;
+            int cell = o + c;
+            if (Visible[cell] != 0)
+            {
+                Visible[cell] = 0;
+                VisibleCount[g]--;
+            }
+
+            ObsN[cell]++;
         }
     }
 
@@ -497,7 +532,13 @@ public sealed class CrowdFog
         var ids = new HashSet<int>();
         foreach (int c in cells)
         {
-            Explored[o + c] = 0;
+            int cell = o + c;
+            if (Explored[cell] != 0)
+            {
+                Explored[cell] = 0;
+                ExploredCount[g]--;
+            }
+
             if (_idx.TryGetValue(c, out var s)) ids.UnionWith(s);
         }
 
@@ -537,6 +578,7 @@ public sealed class CrowdFog
             if (!Belief[g].ContainsKey(id)) continue;
             if (!_cellsOf.TryGetValue(id, out var idCells) || !idCells.All(member.Contains)) continue;
             Belief[g].Remove(id);
+            if (!Store.TryGetFootprint(id, out _)) GhostCount[g]--;
             Key[g] ^= Mix(id);
             EntRev[g]++;
             Rev[g]++;
@@ -557,10 +599,16 @@ public sealed class CrowdFog
         int f2 = F * F, ot = to * f2, of = from * f2;
         for (int c = 0; c < f2; c++)
         {
-            if (Visible[of + c] != 0) Visible[ot + c] = 1;
+            if (Visible[of + c] != 0 && Visible[ot + c] == 0)
+            {
+                Visible[ot + c] = 1;
+                VisibleCount[to]++;
+            }
+
             if (Explored[of + c] != 0 && Explored[ot + c] == 0)
             {
                 Explored[ot + c] = 1;
+                ExploredCount[to]++;
                 Explore(to, c % F, c / F);
             }
         }
@@ -571,6 +619,7 @@ public sealed class CrowdFog
         {
             if (Belief[to].ContainsKey(id)) continue;
             Belief[to][id] = Belief[from][id];
+            if (!Store.TryGetFootprint(id, out _)) GhostCount[to]++;
             Key[to] ^= Mix(id);
             EntRev[to]++;
             Rev[to]++;
@@ -590,7 +639,12 @@ public sealed class CrowdFog
             {
                 ObsN[of + c]--;
                 ObsN[ot + c]++;
-                Visible[ot + c] = 0;
+                int cell = ot + c;
+                if (Visible[cell] != 0)
+                {
+                    Visible[cell] = 0;
+                    VisibleCount[to]--;
+                }
             }
 
             _obscured[i] = (to, e.Item2, e.Item3);
