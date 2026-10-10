@@ -541,24 +541,10 @@ public sealed class CrowdSimulationRuntime
         if (session.Fog is { } fog && session.Config.Relations.IndexByPlayerId[1] is { } pIdx)
         {
             int g = fog.GroupOf[pIdx];
-            int f2 = fog.F * fog.F, o = g * f2;
-            int visible = 0, explored = 0;
-            for (int c = o; c < o + f2; c++)
-            {
-                if (fog.Visible[c] != 0) visible++;
-                if (fog.Explored[c] != 0) explored++;
-            }
-
-            int ghosts = 0;
-            foreach (int id in fog.Belief[g].Keys)
-            {
-                if (!session.Structures!.TryGetFootprint(id, out _)) ghosts++;
-            }
-
-            blackboard.Set(StatKeyIds.FogVisible, visible);
-            blackboard.Set(StatKeyIds.FogExplored, explored);
+            blackboard.Set(StatKeyIds.FogVisible, fog.VisibleCount[g]);
+            blackboard.Set(StatKeyIds.FogExplored, fog.ExploredCount[g]);
             blackboard.Set(StatKeyIds.FogBelief, fog.Belief[g].Count);
-            blackboard.Set(StatKeyIds.FogGhosts, ghosts);
+            blackboard.Set(StatKeyIds.FogGhosts, fog.GhostCount[g]);
             blackboard.Set(StatKeyIds.FogTerrain, fog.Terrain ? 1 : 0);
         }
     }
