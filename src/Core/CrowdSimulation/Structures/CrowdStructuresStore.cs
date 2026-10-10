@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.World;
@@ -37,6 +38,7 @@ public sealed class CrowdStructuresStore
     private readonly Dictionary<int, (int AreaIndex, int Priority)> _navArea = new();
     private readonly HashSet<int> _blocker = new();
     private readonly Dictionary<int, int> _lifetime = new();
+    private readonly List<int> _dueExpiryIds = new();
     private int _nextId = 1;
 
     /// <summary>阻挡盒 + 逐格 CSR(cellStart/cellItems);blocker 集变化即整体重建(参考 rebuildColliders)。</summary>
@@ -207,20 +209,17 @@ public sealed class CrowdStructuresStore
         return best;
     }
 
-    /// <summary>tick 时刻到期的实体(id 升序)。</summary>
-    private static readonly List<int> NoDueExpiries = new();
-
-    public List<int> DueExpiries(int tick)
+    /// <summary>tick 时刻到期的实体(id 升序)。无寿命实体返回空跨度;有寿命时跨度指向本仓缓冲,下一次调用前读完。</summary>
+    public ReadOnlySpan<int> DueExpiries(int tick)
     {
-        // 寿命到期逐 tick 轮询:无寿命实体时走共享空表,不逐 tick new(调用方只遍历不改)
-        if (_lifetime.Count == 0) return NoDueExpiries;
-        var due = new List<int>();
+        if (_lifetime.Count == 0) return ReadOnlySpan<int>.Empty;
+        _dueExpiryIds.Clear();
         foreach (int id in _ids) // _ids 放置序 = id 升序(id 只增,删除保序);有序容器
         {
-            if (_lifetime.TryGetValue(id, out int expire) && expire <= tick) due.Add(id);
+            if (_lifetime.TryGetValue(id, out int expire) && expire <= tick) _dueExpiryIds.Add(id);
         }
 
-        return due;
+        return CollectionsMarshal.AsSpan(_dueExpiryIds);
     }
 
     public CrowdStructureFootprint FootprintOf(int id) => _footprint[id];
