@@ -9,7 +9,6 @@
 ```json
 { "id": "Ability.Rts.RedAlert.BuildPowerPlant",
   "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 120 } ] },
-  "input": { "castModeOverride": "TargetFirst" },
   "blockTags": { "blockedAny": [ "State.Rts.RedAlert.Constructing" ] },
   "presentation": { "displayName": "Build Power Plant", "iconGlyph": "PP", "accentColor": "#F97316", "hintText": "Queue construction; place after the build item is ready." } }
 ```
@@ -26,7 +25,6 @@
     "toggleSpec": { "toggleTag": "State.Example.On", "activeEffects": [], "deactivateExec": {} },
     "targeting": { "castRangeCm": 400, "impactEffect": "Effect.Example.Impact" },
     "presentation": { "displayName": "示例", "displayNameToken": "UI.ABILITY.EXAMPLE.NAME", "modeHints": { "SmartCastWithIndicator": "按住预览" } },
-    "input": { "trigger": "Press", "heldPolicy": "Cancel", "castModeOverride": "TargetFirst", "autoTargetPolicy": "None", "autoTargetRangeCm": 0 },
     "useRequirement": "Progression.Example.Unlocked", "showRequirement": "Progression.Example.Visible" } ]
 ```
 
@@ -39,7 +37,8 @@
 | `cooldown` / `blockTags` | 冷却数据契约（valueAttribute 须已注册 + tag 至少其一，ab-04）/ tag 激活门（ab-05） |
 | `categories` / `interactionContextProfile` | 纯分类（进 AbilityCategoryRegistry，运行时零玩法判定）/ 交互上下文档案 id（非空 Trim）；前置校验图 `activationPrecondition.validationGraph` 必填已注册 |
 | `toggleSpec` / `targeting` | 开关声明（toggleTag 必填、activeEffects ≤4，ab-08）/ 射程与命中（必填非负 + 已注册，ab-09） |
-| `presentation` / `input` | 表现九字段（全空=不声明，mode 键须已知）/ 输入覆盖五字段至少一项 |
+| `presentation` | 表现九字段（全空=不声明；`modeHints` 等的 mode 键是非空字符串，由面板配置的 `modeHintContexts` 选用） |
+| `input` | 已删除，写了启动报错：按键和施法方式由交互状态声明（input-03） |
 | `useRequirement` / `showRequirement` | 进度需求 id，须已注册；分别管"可用"与"可见" |
 
 ## 3. 文件结构

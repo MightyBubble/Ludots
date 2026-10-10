@@ -2273,6 +2273,14 @@ namespace Ludots.Core.Engine
                 orderQueue,
                 playerEntityLookup,
                 controlDomainQuery,
+                new Ludots.Core.Input.Orders.ContextScoredOrderResolver(
+                    World,
+                    contextGroups,
+                    graphProgramRegistry,
+                    SpatialQueries,
+                    gasGraphApi,
+                    commandIntentTargetGate.CanTarget,
+                    graphHandlers),
                 gasRuntimeCapacity.CommandIntentScratchCapacity,
                 eqsQueries: eqsQueryRegistry,
                 abilities: abilityDefinitions,
@@ -2313,7 +2321,8 @@ namespace Ludots.Core.Engine
                 customEventCatalog.Schemas,
                 () => MapSessions,
                 graphReturnWriter,
-                gasGraphApi);
+                gasGraphApi,
+                interactionContextInstances);
             _interactionContextTriggerGate = interactionContextTriggerGate;
             RegisterSystem(interactionContextTriggerGate, SystemGroup.InputCollection);
             // Bind the change-point Deactivated slot runner — DeactivateContext op

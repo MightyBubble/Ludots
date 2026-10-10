@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
@@ -421,13 +422,8 @@ namespace Ludots.Tests.GAS.Production
                 () =>
                 {
                     Vector2 playerNow = ReadPosition(engine.World, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName);
-                    string lastOrder = engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastOrderDebugKey, out object? order)
-                        ? Convert.ToString(order) ?? "<null>"
-                        : "<missing>";
-                    string lastGround = engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground)
-                        ? Convert.ToString(ground) ?? "<null>"
-                        : "<missing>";
-                    return $"start=({playerStart.X:0.##},{playerStart.Y:0.##}) now=({playerNow.X:0.##},{playerNow.Y:0.##}) target=({targetPos.X:0.##},{targetPos.Y:0.##}) approachScreen=({approachScreen.X:0.##},{approachScreen.Y:0.##}) dist={Vector2.Distance(playerNow, targetPos):0.##} within={withinCm} selection={GetSelectedEntityName(engine)} mode={GetActiveModeId(engine)} lastOrder={lastOrder} lastGround={lastGround} {BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName)}";
+                    string drainRejection = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)?.LastRejectionReason ?? "<none>";
+                    return $"start=({playerStart.X:0.##},{playerStart.Y:0.##}) now=({playerNow.X:0.##},{playerNow.Y:0.##}) target=({targetPos.X:0.##},{targetPos.Y:0.##}) approachScreen=({approachScreen.X:0.##},{approachScreen.Y:0.##}) dist={Vector2.Distance(playerNow, targetPos):0.##} within={withinCm} selection={GetSelectedEntityName(engine)} mode={GetActiveModeId(engine)} drainRejection={drainRejection} {BuildAbilityDiagnostics(engine, NarrativeShowcaseMod.NarrativeShowcaseIds.PlayerName)}";
                 });
         }
 
@@ -1208,15 +1204,7 @@ namespace Ludots.Tests.GAS.Production
                 BuildSelectionStateDiagnostics(engine)
             };
 
-            if (engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? ground))
-            {
-                details.Add($"lastGround={ground}");
-            }
-
-            if (engine.GlobalContext.TryGetValue(CoreInputMod.Systems.LocalOrderSourceHelper.LastOrderDebugKey, out object? order))
-            {
-                details.Add($"lastOrder={order}");
-            }
+            details.Add($"drainRejection={engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)?.LastRejectionReason ?? "<none>"}");
 
             if (engine.World.IsAlive(beast))
             {
@@ -1389,27 +1377,6 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("authoritativeInput=<missing>");
             }
 
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
-            {
-                details.Add($"mappingMode={mapping.InteractionMode}");
-                details.Add($"mappingAiming={mapping.IsAiming}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
-                {
-                    details.Add($"targetType={actionMapping.TargetType}");
-                    details.Add($"actorCollection={actionMapping.ActorCollectionKey}");
-                    details.Add($"targetCollection={actionMapping.TargetCollectionKey}");
-                    details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
-                }
-                else
-                {
-                    details.Add("mapping=<missing>");
-                }
-            }
-            else
-            {
-                details.Add("activeMapping=<missing>");
-            }
-
             bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
                               uiCapturedObj is bool captured &&
                               captured;
@@ -1469,12 +1436,14 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
-            {
-                Ludots.Core.Input.Orders.CastModeType.SmartCast => "Interaction.Mode.LoL",
-                _ => string.Empty
-            };
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)!;
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)!;
+            return runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId("interaction.context.interaction.smart_cast"))
+                ? "Interaction.Mode.LoL"
+                : string.Empty;
         }
+
         private static void CaptureSnapshot(
             GameEngine engine,
             UIRoot uiRoot,

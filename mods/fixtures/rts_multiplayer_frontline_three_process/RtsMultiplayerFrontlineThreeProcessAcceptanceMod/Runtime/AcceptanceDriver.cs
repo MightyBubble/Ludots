@@ -88,7 +88,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private IScreenProjector? _projector;
     private PresentationFrameReceiptBuffer? _presentationReceipts;
     private PresenterEntityRuntime? _performerRuntime;
-    private InputOrderMappingSystem? _inputOrderMapping;
+    private InteractionContextProfileRegistry? _contextProfiles;
     private int _infantryBodyTemplateId;
     private GestureState _gesture;
     private ClientStage _clientStage = ClientStage.Connecting;
@@ -235,7 +235,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void BindClientServices()
     {
-        if (_inputOrderMapping != null)
+        if (_contextProfiles != null)
         {
             return;
         }
@@ -274,8 +274,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 "Acceptance client cannot resolve the frontline infantry body performer definition.");
         }
-        InputOrderMappingSystem inputOrderMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)
-            ?? throw new InvalidOperationException("Acceptance client requires the active input-order mapping system.");
+        InteractionContextProfileRegistry contextProfiles = _engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+            ?? throw new InvalidOperationException("Acceptance client requires the interaction context profile registry.");
 
         _input = input;
         _bindings = bindings;
@@ -286,7 +286,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _projector = projector;
         _presentationReceipts = presentationReceipts;
         _performerRuntime = performerRuntime;
-        _inputOrderMapping = inputOrderMapping;
+        _contextProfiles = contextProfiles;
         _infantryBodyTemplateId = infantryBodyTemplateId;
 
         RequireInputAction(bindings.ConfirmActionId);
@@ -1424,7 +1424,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             throw new InvalidOperationException("The training input did not commit a network command batch.");
         }
-        if (_inputOrderMapping!.IsAiming)
+        if (IsForegroundContextActive())
         {
             throw new InvalidOperationException("Targetless infantry training incorrectly entered an aiming interaction.");
         }
@@ -1685,18 +1685,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmitResult != ReplicatedClientCommandSubmitResult.Submitted ||
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
-                    InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
-                    // InteractionContextStack 已随 #1306 路线④退役(投影吸收);命令失败诊断不再有栈可读。
-                    string stackInfo = "stack=retired(#1306)";
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +
                         $"revision={_commandPort.SubmissionRevision}, result={_commandPort.LastSubmitResult}, " +
                         $"sequence={_commandPort.LastSubmittedBatchSequence}, " +
-                        $"activation={activation.State}, orderId={activation.OrderId}, rejection={activation.Rejection}, " +
-                        $"aiming={_inputOrderMapping?.IsAiming}, {stackInfo}.");
+                        $"foregroundContext={IsForegroundContextActive()}.");
                 }
                 _pendingCommandSequence = _commandPort.LastSubmittedBatchSequence;
-                CaptureSubmittedAttackTarget();
             }
 
             if (_gesture.Screen.HasValue)
@@ -1721,42 +1716,20 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return true;
     }
 
-    private void CaptureSubmittedAttackTarget()
+    private bool IsForegroundContextActive()
     {
-        bool attacksInfantry = string.Equals(
-            _pendingCommandAction,
-            "AttackEnemyInfantry",
-            StringComparison.Ordinal);
-        bool attacksCore = string.Equals(
-            _pendingCommandAction,
-            "AttackEnemyCore",
-            StringComparison.Ordinal);
-        if (!attacksInfantry && !attacksCore)
+        Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+        Span<int> active = stackalloc int[16];
+        int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(_world, rep, active);
+        for (int i = 0; i < count; i++)
         {
-            return;
+            if (_contextProfiles!.IsForeground(active[i]))
+            {
+                return true;
+            }
         }
 
-        InputOrderActivationResult activation = _inputOrderMapping!.LastActivationResult;
-        Entity target = activation.Target;
-        int expectedEnemySideIndex = 1 - _localSideIndex;
-        if (activation.State != InputOrderActivationState.Submitted ||
-            target == Entity.Null ||
-            !_world.IsAlive(target) ||
-            (attacksInfantry
-                ? !_world.Has<FrontlineInfantry>(target)
-                : !_world.Has<FrontlineCore>(target)) ||
-            !_world.TryGet(target, out FrontlineParticipant participant) ||
-            participant.SideIndex != expectedEnemySideIndex)
-        {
-            throw new InvalidOperationException(
-                $"{_pendingCommandAction} did not submit one live opposing " +
-                $"{(attacksInfantry ? "infantry" : "core")} target through the active input mapping.");
-        }
-
-        _attackTarget = target;
-        _evidence.Gameplay.AttackTargetHandle = FormatHandle(target);
-        _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(target);
-        _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(target, _healthAttributeId);
+        return false;
     }
 
     private bool TryCompletePendingCommand()

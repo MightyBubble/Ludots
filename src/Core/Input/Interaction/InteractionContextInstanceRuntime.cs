@@ -187,7 +187,49 @@ namespace Ludots.Core.Input.Interaction
                     $"'{ProfileName(profileId)}'; base mounts belong to their own lifecycles.");
             }
 
-            CollectWithDescendants(instances, profileId, _removalScratch);
+            _removalScratch.Clear();
+            _removalScratch.Add(profileId);
+            RemoveWithDescendants(subject, ref instances);
+        }
+
+        /// <summary>
+        /// Releases derived instances whose parent is neither the base mount nor another active
+        /// instance (a foreign base writer replaced or removed the parent), together with their
+        /// descendants, exactly as <see cref="Deactivate"/> would. A child never outlives its parent.
+        /// </summary>
+        public void ReleaseOrphanedInstances(Entity subject)
+        {
+            if (!_world.IsAlive(subject) ||
+                !_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances) ||
+                instances.Count == 0)
+            {
+                return;
+            }
+
+            int baseContextId = _world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext)
+                ? baseContext.ContextId
+                : 0;
+            _removalScratch.Clear();
+            for (int i = 0; i < instances.Count; i++)
+            {
+                int parentId = instances[i].ParentContextId;
+                if (parentId != 0 && parentId != baseContextId && instances.IndexOf(parentId) < 0)
+                {
+                    _removalScratch.Add(instances[i].ContextId);
+                }
+            }
+
+            if (_removalScratch.Count == 0)
+            {
+                return;
+            }
+
+            RemoveWithDescendants(subject, ref instances);
+        }
+
+        private void RemoveWithDescendants(Entity subject, ref InteractionContextInstances instances)
+        {
+            CollectDescendants(instances, _removalScratch);
             // Snapshot into a reusable buffer (not ToArray): the Deactivated slots below run
             // user graph bodies that may re-enter this runtime (a nested Deactivate reuses the
             // shared removal scratch). Keeps Deactivate allocation-free.
@@ -221,13 +263,8 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private static void CollectWithDescendants(
-            in InteractionContextInstances instances,
-            int profileId,
-            List<int> removal)
+        private static void CollectDescendants(in InteractionContextInstances instances, List<int> removal)
         {
-            removal.Clear();
-            removal.Add(profileId);
             bool grew = true;
             while (grew)
             {

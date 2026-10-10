@@ -1,0 +1,109 @@
+[
+  {
+    "id": "graph.interaction.aim_confirm_r",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_interaction_aimconfirm",
+        "action": "Interaction.AimConfirm",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "close_aim",
+        "op": "DeactivateContext",
+        "context": "interaction.context.interaction.aiming_click_r"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "close_aim"
+      },
+      {
+        "from": "close_aim",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "close_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

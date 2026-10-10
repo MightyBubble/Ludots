@@ -164,14 +164,11 @@ namespace Ludots.Tests.GAS
         // ── Resolution chain: possessed rep, not the scheme ──
 
         [Test]
-        public void CommandIntentRouting_DefaultFrame_RoutesThroughSeededPlayerPref()
+        public void CommandIntentResolution_DefaultFrame_ReadsSeededPlayerPref()
         {
             using var world = World.Create();
             ChainHarness harness = ChainHarness.Create(world);
 
-            Order first = harness.SubmitPointerCommand();
-
-            Assert.That(first.OrderTypeId, Is.EqualTo(ChainHarness.MoveToOrderTypeId));
             Assert.That(
                 harness.Intents.ProfileIdRegistry.GetName(
                     CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref)),
@@ -179,58 +176,23 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CommandIntentRouting_SwitchingScheme_NeverChangesRoutingPreferences()
+        public void CommandIntentResolution_SwitchingScheme_NeverChangesRoutingPreferences()
         {
             using var world = World.Create();
             ChainHarness harness = ChainHarness.Create(world);
             harness.InstallSchemes();
 
-            Order before = harness.SubmitPointerCommand();
             int intentBefore = CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref);
             int dispatchBefore = harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0);
 
             Assert.That(harness.Schemes!.TrySwitch(harness.SchemeId("scheme.pref.alternate")), Is.True);
             Assert.That(harness.Schemes.ActiveSchemeId, Is.EqualTo(harness.SchemeId("scheme.pref.alternate")), "the switch really happened");
 
-            Order after = harness.SubmitPointerCommand();
-
             Assert.That(
                 CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref),
                 Is.EqualTo(intentBefore),
                 "the player's routing preference lives on the representative and survives scheme switches");
             Assert.That(harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0), Is.EqualTo(dispatchBefore));
-            Assert.That(after.OrderTypeId, Is.EqualTo(before.OrderTypeId));
-            Assert.That(after.Actor, Is.EqualTo(before.Actor));
-            Assert.That(after.PlayerId, Is.EqualTo(before.PlayerId));
-        }
-
-        [Test]
-        public void CommandIntentRouting_RepWithoutInteractionPref_FailsFastOnDefaultFrame()
-        {
-            using var world = World.Create();
-            ChainHarness harness = ChainHarness.Create(world, plantPref: false);
-
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => harness.SubmitPointerCommand())!;
-            Assert.That(error.Message, Does.Contain("InteractionPref"));
-            Assert.That(error.Message, Does.Contain("interaction_prefs.json"), "the error names the seed contract, not a fallback");
-            Assert.That(harness.Orders, Is.Empty);
-        }
-
-        [Test]
-        public void CommandIntentRouting_ActiveContextWithoutIntent_RejectsWithoutRequiringThePref()
-        {
-            using var world = World.Create();
-            ChainHarness harness = ChainHarness.Create(world, plantPref: false);
-            world.Add(harness.Rep, new InteractionContextInstance
-            {
-                ContextEntity = world.Create(),
-                CommandIntentProfileId = 0,
-                });
-
-            OrderSubmitResult result = harness.SubmitPointerCommandRaw();
-
-            Assert.That(result, Is.EqualTo(OrderSubmitResult.RejectedByRule), "an active context without explicit intent does not route (no bubbling)");
-            Assert.That(harness.Orders, Is.Empty);
         }
 
         // ── World-save round trip ──
@@ -330,123 +292,29 @@ namespace Ludots.Tests.GAS
 
             public CommandIntentProfileRegistry Intents = null!;
             public CastDispatchProfileRegistry Dispatch = null!;
-            public EntityCollectionStore Collections = null!;
-            public InputOrderMappingSystem System = null!;
             public ControlSchemeRuntime? Schemes;
-            public List<Order> Orders = null!;
             public InteractionPref Pref;
             public Entity Rep;
             private StringIntRegistry? _schemeIds;
 
-            public static ChainHarness Create(World world, bool plantPref = true)
+            public static ChainHarness Create(World world)
             {
                 var harness = new ChainHarness();
                 Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-                Entity actor = world.Create(new PlayerOwner { PlayerId = 1 });
                 harness.Rep = rep;
-
-                var input = new FrozenInputActionReader();
-                input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
-                var config = new InputOrderMappingConfig
-                {
-                    Mappings = new List<InputOrderMapping>
-                    {
-                        new()
-                        {
-                            ActionId = "Command",
-                            Trigger = InputTriggerType.PressedThisFrame,
-                            OrderTypeKey = "moveTo",
-                            RequireTarget = true,
-                            TargetType = OrderTargetType.Position,
-                            IsSkillMapping = false,
-                        }
-                    }
-                };
-
-                var system = new InputOrderMappingSystem(input, config);
-                system.CommandActionId = "Command";
-                system.SetSolePossessedActor(rep, 1);
-                system.SetOrderTypeKeyResolver(key => key == "moveTo" ? ChainHarness.MoveToOrderTypeId : 0);
-                system.SetGroundPositionProvider((out Vector3 groundPos) =>
-                {
-                    groundPos = new Vector3(100f, 0f, 200f);
-                    return true;
-                });
-                system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
-                {
-                    facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
-                    return false;
-                });
-                harness.Orders = new List<Order>();
-                system.SetOrderSubmitHandler((in Order order) =>
-                {
-                    harness.Orders.Add(order);
-                    return OrderSubmitResult.Queued;
-                });
-                harness.System = system;
 
                 CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
                 intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(IntentId)));
                 intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(AltIntentId)));
                 harness.Intents = intents.Intents;
-
-                var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var contextProfiles = new InteractionContextProfileRegistry(
-                    new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-                contextProfiles.Install(new InteractionContextProfilesConfig
-                {
-                    Profiles = new List<InteractionContextProfileDefinition>
-                    {
-                        new()
-                        {
-                            Id = InteractionContextIds.Default,
-                        },
-                    },
-                }, collectionKeys, new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal), intents.Intents.ProfileIdRegistry);
-
                 harness.Dispatch = NewDispatchRegistry();
 
-                if (plantPref)
-                {
-                    InteractionPref pref = default;
-                    pref.SetPlayerDefault(
-                        intents.Intents.ProfileIdRegistry.Register(IntentId),
-                        harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));
-                    world.Add(rep, pref);
-                    harness.Pref = pref;
-                    world.Add(rep, new InteractionContextInstance
-                    {
-                        ContextEntity = rep,
-                        CommandIntentProfileId = pref.DefaultCommandIntentId,
-                    });
-                }
-
-                var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
-                var descriptor = EntityCollectionDescriptor.Create(
-                    "collection.command.source",
-                    EntityCollectionSourceKind.Explicit,
-                    EntityCollectionRoleKind.CommandSource);
-                collections.Replace(rep, in descriptor, new[] { actor }, rep);
-                harness.Collections = collections;
-
-                system.SetCommandIntentRouting(
-                    world,
-                    contextProfiles,
-                    intents.Intents,
-                    harness.Dispatch,
-                    collections,
-                    "collection.command.source",
-                    intents.Abilities,
-                    (out Entity owner) =>
-                    {
-                        owner = rep;
-                        return true;
-                    },
-                    (int playerId, out Entity resolvedRep) =>
-                    {
-                        resolvedRep = rep;
-                        return playerId == 1;
-                    });
+                InteractionPref pref = default;
+                pref.SetPlayerDefault(
+                    intents.Intents.ProfileIdRegistry.Register(IntentId),
+                    harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));
+                world.Add(rep, pref);
+                harness.Pref = pref;
                 return harness;
             }
 
@@ -467,22 +335,6 @@ namespace Ludots.Tests.GAS
             }
 
             public int SchemeId(string name) => _schemeIds!.GetId(name);
-
-            public Order SubmitPointerCommand()
-            {
-                Orders.Clear();
-                System.Update(0f);
-                Assert.That(Orders, Has.Count.EqualTo(1), "the pointer command must route to exactly one order");
-                return Orders[0];
-            }
-
-            public OrderSubmitResult SubmitPointerCommandRaw()
-            {
-                Orders.Clear();
-                System.Update(0f);
-                Assert.That(Orders, Is.Empty);
-                return System.LastActivationResult.Rejection;
-            }
         }
     }
 }

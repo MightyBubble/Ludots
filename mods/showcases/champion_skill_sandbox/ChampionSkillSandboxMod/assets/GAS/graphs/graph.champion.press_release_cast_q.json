@@ -1,0 +1,440 @@
+[
+  {
+    "id": "graph.champion.press_release_cast_q",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillq",
+        "action": "SkillQ",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "remember_slot",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "champion_skill_sandbox.aim_slot"
+      },
+      {
+        "id": "view_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "view_idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "view_px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "view_py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "view_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "view_ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "view_rotation",
+        "op": "PointToDirection"
+      },
+      {
+        "id": "view_write_rotation",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "champion_skill_sandbox.aim_rotation_deg"
+      },
+      {
+        "id": "view_op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_write_caster",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.caster"
+      },
+      {
+        "id": "view_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "view_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "view_half",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "view_min_x",
+        "op": "SubFloat"
+      },
+      {
+        "id": "view_min_y",
+        "op": "SubFloat"
+      },
+      {
+        "id": "view_max_x",
+        "op": "AddFloat"
+      },
+      {
+        "id": "view_max_y",
+        "op": "AddFloat"
+      },
+      {
+        "id": "view_region",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "view_hover_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_write_hover",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.hover"
+      },
+      {
+        "id": "open_aim",
+        "op": "ActivateContext",
+        "context": "interaction.context.champion.aiming_click",
+        "parentContext": "interaction.context.champion.press_release_cast"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "remember_slot"
+      },
+      {
+        "from": "remember_slot",
+        "fromPort": "next",
+        "to": "view_sel"
+      },
+      {
+        "from": "view_sel",
+        "fromPort": "next",
+        "to": "view_idx0"
+      },
+      {
+        "from": "view_idx0",
+        "fromPort": "next",
+        "to": "view_champ"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "next",
+        "to": "view_px"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "next",
+        "to": "view_py"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "next",
+        "to": "view_ground"
+      },
+      {
+        "from": "view_ground",
+        "fromPort": "next",
+        "to": "view_ground_branch"
+      },
+      {
+        "from": "view_ground_branch",
+        "fromPort": "true",
+        "to": "view_rotation"
+      },
+      {
+        "from": "view_rotation",
+        "fromPort": "next",
+        "to": "view_write_rotation"
+      },
+      {
+        "from": "view_write_rotation",
+        "fromPort": "next",
+        "to": "view_op_replace"
+      },
+      {
+        "from": "view_op_replace",
+        "fromPort": "next",
+        "to": "view_write_caster"
+      },
+      {
+        "from": "view_write_caster",
+        "fromPort": "next",
+        "to": "view_all"
+      },
+      {
+        "from": "view_ground_branch",
+        "fromPort": "false",
+        "to": "view_all"
+      },
+      {
+        "from": "view_all",
+        "fromPort": "next",
+        "to": "view_hostile"
+      },
+      {
+        "from": "view_hostile",
+        "fromPort": "next",
+        "to": "view_half"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "next",
+        "to": "view_min_x"
+      },
+      {
+        "from": "view_min_x",
+        "fromPort": "next",
+        "to": "view_min_y"
+      },
+      {
+        "from": "view_min_y",
+        "fromPort": "next",
+        "to": "view_max_x"
+      },
+      {
+        "from": "view_max_x",
+        "fromPort": "next",
+        "to": "view_max_y"
+      },
+      {
+        "from": "view_max_y",
+        "fromPort": "next",
+        "to": "view_region"
+      },
+      {
+        "from": "view_region",
+        "fromPort": "next",
+        "to": "view_hover_op"
+      },
+      {
+        "from": "view_hover_op",
+        "fromPort": "next",
+        "to": "view_write_hover"
+      },
+      {
+        "from": "view_write_hover",
+        "fromPort": "next",
+        "to": "open_aim"
+      },
+      {
+        "from": "open_aim",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "remember_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "remember_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "view_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "view_idx0",
+        "fromPort": "value",
+        "to": "view_champ",
+        "toPort": "value"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "view_ground",
+        "fromPort": "value",
+        "to": "view_ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_write_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "view_rotation",
+        "fromPort": "value",
+        "to": "view_write_rotation",
+        "toPort": "value"
+      },
+      {
+        "from": "view_op_replace",
+        "fromPort": "value",
+        "to": "view_write_caster",
+        "toPort": "value"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_min_x",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_min_x",
+        "toPort": "b"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_min_y",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_min_y",
+        "toPort": "b"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_max_x",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_max_x",
+        "toPort": "b"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_max_y",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_max_y",
+        "toPort": "b"
+      },
+      {
+        "from": "view_min_x",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "a"
+      },
+      {
+        "from": "view_min_y",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "b"
+      },
+      {
+        "from": "view_max_x",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "c"
+      },
+      {
+        "from": "view_max_y",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "max"
+      },
+      {
+        "from": "view_hover_op",
+        "fromPort": "value",
+        "to": "view_write_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "open_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

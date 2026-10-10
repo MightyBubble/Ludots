@@ -298,10 +298,7 @@ namespace Ludots.Tests.GAS.Production
                 panelSource,
                 peasant,
                 panelSnapshots,
-                "001_peasant_build_palette",
-                previewSlotIndex: 0,
-                previewWorldCm: new Vector2(-1950f, -1150f));
-            Assert.That(peasantPanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_build_site"));
+                "001_peasant_build_palette");
 
             float peasantMineralsBeforeLumberMill = ReadAttribute(world, peasant, mineralsAttrId);
             float peasantLumberBeforeLumberMill = ReadAttribute(world, peasant, lumberAttrId);
@@ -486,11 +483,8 @@ namespace Ludots.Tests.GAS.Production
                 panelSource,
                 gateway,
                 panelSnapshots,
-                "004_warpgate_preview",
-                previewSlotIndex: 0,
-                previewWorldCm: new Vector2(300f, 2380f));
+                "004_warpgate_palette");
             Assert.That(warpgatePanel.Slots[0].DisplayLabel, Is.EqualTo("折跃狂热者"));
-            Assert.That(warpgatePanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_warp_site"));
 
             var zealotIdsBeforeWarp = SnapshotEntityIdsByName(world, "Zealot");
             CastAbilityAtWorldPoint(engine, gateway, slot: 0, new Vector2(300f, 2380f));
@@ -522,10 +516,7 @@ namespace Ludots.Tests.GAS.Production
                 panelSource,
                 drone,
                 panelSnapshots,
-                "005_drone_morph_preview",
-                previewSlotIndex: 0,
-                previewWorldCm: new Vector2(3250f, 2200f));
-            Assert.That(dronePanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_morph_site"));
+                "005_drone_morph_palette");
             CastAbilityAtWorldPoint(engine, drone, slot: 0, new Vector2(3250f, 2200f));
             TickUntil(engine, frameTimesMs, () => CountEntitiesByName(world, "Spawning Pool") == spawningPoolIdsBefore.Count + 1, maxFrames: 20, "Drone morph should spawn a Spawning Pool.");
             Entity spawningPool = FindNewestEntityByName(world, "Spawning Pool", spawningPoolIdsBefore);
@@ -1046,9 +1037,7 @@ namespace Ludots.Tests.GAS.Production
             IEntityCommandPanelSource source,
             Entity target,
             List<RtsPanelSnapshot> snapshots,
-            string step,
-            int previewSlotIndex = -1,
-            Vector2? previewWorldCm = null)
+            string step)
         {
             SelectEntity(engine, target);
 
@@ -1112,12 +1101,6 @@ namespace Ludots.Tests.GAS.Production
                     button.AccentColorHex));
             }
 
-            RtsPreviewSnapshot? preview = null;
-            if (previewSlotIndex >= 0 && previewWorldCm.HasValue)
-            {
-                preview = CapturePreviewSnapshot(engine, target, previewSlotIndex, previewWorldCm.Value);
-            }
-
             var snapshot = new RtsPanelSnapshot(
                 step,
                 ReadName(engine.World, target),
@@ -1125,8 +1108,7 @@ namespace Ludots.Tests.GAS.Production
                 toolbarSnapshots,
                 slotSnapshots,
                 statusSnapshots,
-                queueSnapshots,
-                preview);
+                queueSnapshots);
             snapshots.Add(snapshot);
             return snapshot;
         }
@@ -1153,124 +1135,6 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return false;
-        }
-
-        private static RtsPreviewSnapshot? CapturePreviewSnapshot(GameEngine engine, Entity actor, int slotIndex, Vector2 targetWorldCm)
-        {
-            var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
-                ?? throw new InvalidOperationException("AbilityDefinitionRegistry service is missing.");
-            var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
-                ?? throw new InvalidOperationException("EffectTemplateRegistry service is missing.");
-            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            var spatialQueries = engine.GetService(CoreServiceKeys.SpatialQueryService)
-                ?? throw new InvalidOperationException("SpatialQueryService service is missing.");
-            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
-                ?? throw new InvalidOperationException("GroundOverlayBuffer service is missing.");
-            var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
-                ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
-            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
-                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
-            var presentationEvents = engine.GetService(CoreServiceKeys.PresentationEventStream)
-                ?? throw new InvalidOperationException("PresentationEventStream service is missing.");
-
-            overlays.Clear();
-            presenters.Clear();
-            presentationEvents.Clear();
-
-            var aimApplier = engine.GetService(CoreServiceKeys.CollectionApplier)
-                ?? throw new InvalidOperationException("CollectionApplier service is missing.");
-            var aimKeys = engine.GetService(CoreServiceKeys.InputCollectionKeys)
-                ?? throw new InvalidOperationException("InputCollectionKeys service is missing.");
-            var runtime = new AbilityAimPresentationRuntime(
-                engine.World,
-                abilities,
-                effects,
-                collections,
-                aimApplier,
-                aimKeys.AbilityAimHoverKeyId,
-                aimKeys.AbilityAimAffectedKeyId,
-                spatialQueries,
-                presentationEvents,
-                engine.GetService(CoreServiceKeys.TeamRelationQuery)
-                    ?? throw new InvalidOperationException("TeamRelationQuery service is missing."),
-                engine.GameSession);
-            runtime.UpdateAiming(
-                actor,
-                new InputOrderMapping
-                {
-                    ActionId = $"PreviewSlot{slotIndex}",
-                    TargetType = OrderTargetType.Position,
-                    ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
-                },
-                new AbilityAimInputState(
-                    AbilityAimInputSlot.Target,
-                    hasCursorWorldCm: true,
-                    cursorWorldCm: new Vector3(targetWorldCm.X, 0f, targetWorldCm.Y),
-                    hasOriginWorldCm: false,
-                    originWorldCm: default,
-                    hoveredEntity: Entity.Null));
-            engine.Tick(DeltaTime);
-
-            string overlaySummary = string.Join(", ",
-                overlays.GetSpan().ToArray().GroupBy(item => item.Shape).Select(group => $"{group.Key}:{group.Count()}"));
-            if (collections.TryGetView(actor, "collection.ability.aim.affected", out var affected))
-            {
-                overlaySummary = string.IsNullOrWhiteSpace(overlaySummary)
-                    ? $"affected:{affected.Count}"
-                    : $"{overlaySummary}, affected:{affected.Count}";
-            }
-
-            RtsPreviewSnapshot? preview = null;
-            RtsPreviewSnapshot? genericPreview = null;
-            var presenterQuery = new QueryDescription().WithAll<PresenterState, PresenterWorldPosition>();
-            engine.World.Query(in presenterQuery, (Entity entity, ref PresenterState state, ref PresenterWorldPosition worldPos) =>
-            {
-                string presenterId = presenterDefinitions.GetName(state.DefId);
-                if (!IsRtsAimPreviewPresenter(presenterId) &&
-                    !string.Equals(presenterId, "core_input.ability_aim.preview", StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                var candidate = new RtsPreviewSnapshot(
-                    presenterId,
-                    worldPos.Value.X,
-                    worldPos.Value.Y,
-                    worldPos.Value.Z,
-                    0f,
-                    0f,
-                    0f,
-                    overlaySummary);
-                if (IsRtsAimPreviewPresenter(presenterId))
-                {
-                    preview = candidate;
-                    return;
-                }
-
-                genericPreview ??= candidate;
-            });
-            preview ??= genericPreview;
-
-            if (preview != null)
-            {
-                runtime.Clear(actor);
-                engine.Tick(DeltaTime);
-                overlays.Clear();
-                return preview;
-            }
-
-            runtime.Clear(actor);
-            engine.Tick(DeltaTime);
-            overlays.Clear();
-            return null;
-        }
-
-        private static bool IsRtsAimPreviewPresenter(string presenterId)
-        {
-            return string.Equals(presenterId, "core_input_preview_build_site", StringComparison.Ordinal) ||
-                   string.Equals(presenterId, "core_input_preview_warp_site", StringComparison.Ordinal) ||
-                   string.Equals(presenterId, "core_input_preview_morph_site", StringComparison.Ordinal);
         }
 
         private static void SelectEntity(GameEngine engine, Entity target)
@@ -1338,8 +1202,7 @@ namespace Ludots.Tests.GAS.Production
             int slotHeight = 160 + snapshot.Slots.Count * 28;
             int statusHeight = 140 + Math.Max(1, snapshot.Statuses.Count) * 28;
             int queueHeight = 140 + Math.Max(1, snapshot.QueueItems.Count) * 28;
-            int previewHeight = snapshot.Preview == null ? 120 : 184;
-            int height = Math.Max(920, 120 + Math.Max(toolbarHeight + slotHeight, statusHeight + queueHeight + previewHeight));
+            int height = Math.Max(920, 120 + Math.Max(toolbarHeight + slotHeight, statusHeight + queueHeight));
 
             var toolbarLines = snapshot.ToolbarButtons.Count == 0
                 ? new[] { "no quick-select buttons visible" }
@@ -1353,17 +1216,6 @@ namespace Ludots.Tests.GAS.Production
             var queueLines = snapshot.QueueItems.Count == 0
                 ? new[] { "queue empty" }
                 : snapshot.QueueItems.Select(item => $"{item.Stage} | {item.Label} | {item.Detail}").ToArray();
-            var preview = snapshot.Preview;
-            var previewLines = preview == null
-                ? new[] { "preview unavailable" }
-                : new[]
-                {
-                    $"presenter={preview.Value.PresenterId}",
-                    $"worldPos=({preview.Value.WorldX:0.##}, {preview.Value.WorldY:0.##}, {preview.Value.WorldZ:0.##})",
-                    $"scale=({preview.Value.ScaleX:0.##}, {preview.Value.ScaleY:0.##}, {preview.Value.ScaleZ:0.##})",
-                    $"overlays={preview.Value.OverlaySummary}"
-                };
-
             string svg = $$"""
 <svg xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}" viewBox="0 0 {{width}} {{height}}">
   <rect width="{{width}}" height="{{height}}" fill="#0b1017" />
@@ -1374,8 +1226,7 @@ namespace Ludots.Tests.GAS.Production
   {{RenderPanelSectionSvg("Command Slots", slotLines, 64, 170 + toolbarHeight, 690)}}
   {{RenderPanelSectionSvg("Statuses", statusLines, 790, 170, 746)}}
   {{RenderPanelSectionSvg("Order Queue", queueLines, 790, 170 + statusHeight, 746)}}
-  {{RenderPanelSectionSvg("Preview Ghost", previewLines, 790, 170 + statusHeight + queueHeight, 746)}}
-  <text x="64" y="{{height - 40}}" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider + AbilityAimPresentationRuntime presenter preview.</text>
+  <text x="64" y="{{height - 40}}" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider.</text>
 </svg>
 """;
             File.WriteAllText(path, svg, Encoding.UTF8);
@@ -1388,9 +1239,8 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < snapshots.Count; i++)
             {
                 RtsPanelSnapshot snapshot = snapshots[i];
-                string preview = snapshot.Preview == null ? "preview=none" : $"preview={snapshot.Preview.Value.PresenterId}";
                 lines.Add($"""  <text x="56" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
-                lines.Add($"""  <text x="460" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg($"focus={snapshot.FocusEntity} | slots={snapshot.Slots.Count} | statuses={snapshot.Statuses.Count} | queue={snapshot.QueueItems.Count} | {preview}")}</text>""");
+                lines.Add($"""  <text x="460" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg($"focus={snapshot.FocusEntity} | slots={snapshot.Slots.Count} | statuses={snapshot.Statuses.Count} | queue={snapshot.QueueItems.Count}")}</text>""");
                 y += 72;
             }
 
@@ -1492,8 +1342,7 @@ namespace Ludots.Tests.GAS.Production
             IReadOnlyList<RtsToolbarButtonSnapshot> ToolbarButtons,
             IReadOnlyList<RtsPanelSlotSnapshot> Slots,
             IReadOnlyList<RtsPanelStatusSnapshot> Statuses,
-            IReadOnlyList<RtsPanelQueueSnapshot> QueueItems,
-            RtsPreviewSnapshot? Preview);
+            IReadOnlyList<RtsPanelQueueSnapshot> QueueItems);
 
         private readonly record struct RtsToolbarButtonSnapshot(
             string ButtonId,
@@ -1520,15 +1369,5 @@ namespace Ludots.Tests.GAS.Production
             string Label,
             string Detail,
             string AccentColorHex);
-
-        private readonly record struct RtsPreviewSnapshot(
-            string PresenterId,
-            float WorldX,
-            float WorldY,
-            float WorldZ,
-            float ScaleX,
-            float ScaleY,
-            float ScaleZ,
-            string OverlaySummary);
     }
 }

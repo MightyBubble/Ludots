@@ -19,6 +19,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
@@ -899,7 +900,7 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
+                Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "CommandIntentBufferDrainSystem.cs")
             };
             string[] forbidden =
             {
@@ -1182,7 +1183,7 @@ namespace Ludots.Tests.Architecture.Governance
             Type[] types =
             {
                 typeof(SpatialBoundsUtility),
-                typeof(LocalOrderSourceHelper),
+                typeof(CommandIntentBufferDrainSystem),
                 typeof(AxisMoveOrderSystem),
                 typeof(AuthoritativeInputSnapshotSystem),
                 typeof(AuthoritativePointerButtonSnapshotSystem),
@@ -1198,7 +1199,7 @@ namespace Ludots.Tests.Architecture.Governance
             string[] files =
             {
                 Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "CommandIntentBufferDrainSystem.cs"),
             };
             for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
             {

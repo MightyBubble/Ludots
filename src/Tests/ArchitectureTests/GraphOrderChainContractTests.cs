@@ -7,51 +7,51 @@ using NUnit.Framework;
 namespace Ludots.Tests.Architecture
 {
     /// <summary>
-    /// Graph order chain migration guards (constitution §12, branch graph-order-migration):
-    /// local order mapping installs through exactly one config-driven composition root, the
-    /// graph order bridge (SubmitCommandIntent/SubmitCast → buffer → drain) references no
-    /// engine-reserved business collection key, and migrated showcases declare their active
-    /// collection per battle context instead of relying on any steady-state fallback.
+    /// Graph order chain guards (constitution §12): orders come only from interaction-context
+    /// trigger graphs through SubmitCommandIntent/SubmitCast → buffer → drain, and that bridge
+    /// references no engine-reserved business collection key.
     /// </summary>
     [TestFixture]
     public sealed class GraphOrderChainContractTests
     {
+        private static readonly string[] RetiredOrderSourceFileNames =
+        {
+            "LocalOrderSource",
+            "InputOrderMapping",
+            "input_order_mappings.json",
+            "local_order_source.json",
+        };
+
         [Test]
-        public void Mods_Carry_NoPerModLocalOrderSourceInstallers()
+        public void Repository_Carries_NoLegacyInputOrderMappingOrLocalOrderSource()
         {
             string repoRoot = FindRepoRoot();
-            string modsRoot = Path.Combine(repoRoot, "mods");
-            Assert.That(Directory.Exists(modsRoot), Is.True, "mods/ root missing");
-
             var offenders = new List<string>();
-            foreach (string file in Directory.EnumerateFiles(modsRoot, "*LocalOrderSourceSystem*.cs", SearchOption.AllDirectories))
+            foreach (string root in new[] { Path.Combine(repoRoot, "mods"), Path.Combine(repoRoot, "src"), Path.Combine(repoRoot, "assets") })
             {
-                string normalized = file.Replace('\\', '/');
-                if (normalized.Contains("/bin/") || normalized.Contains("/obj/"))
+                Assert.That(Directory.Exists(root), Is.True, $"{root} missing");
+                foreach (string file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
                 {
-                    continue;
-                }
+                    string normalized = file.Replace('\\', '/');
+                    if (normalized.Contains("/bin/") || normalized.Contains("/obj/"))
+                    {
+                        continue;
+                    }
 
-                // The single shared config-installed order source is the composition root's.
-                if (normalized.EndsWith("CoreInputMod/Systems/AutoInstalledLocalOrderSourceSystem.cs"))
-                {
-                    continue;
+                    string name = Path.GetFileName(normalized);
+                    for (int i = 0; i < RetiredOrderSourceFileNames.Length; i++)
+                    {
+                        if (name.Contains(RetiredOrderSourceFileNames[i], StringComparison.Ordinal))
+                        {
+                            offenders.Add(Path.GetRelativePath(repoRoot, normalized));
+                            break;
+                        }
+                    }
                 }
-
-                // Declared-path installer (per-mod local_order_source.json) is still inside the
-                // migration window: interaction/champion ship it for skillbar labels, and the
-                // auto-install replacement does not read those labels yet. Retirement of this
-                // file is slice-8 work together with the CoreInputMod dependency removal.
-                if (normalized.EndsWith("CoreInputMod/Systems/LocalOrderSourceSystem.cs"))
-                {
-                    continue;
-                }
-
-                offenders.Add(normalized);
             }
 
             Assert.That(offenders, Is.Empty,
-                "Per-mod local order source installers are retired (migration slice 2): the only installer is CoreInputMod's AutoInstalledLocalOrderSourceSystem. Offenders:\n" +
+                "Orders come from interaction-context trigger graphs; the input order mapping and local order source are retired. Offenders:\n" +
                 string.Join("\n", offenders));
         }
 

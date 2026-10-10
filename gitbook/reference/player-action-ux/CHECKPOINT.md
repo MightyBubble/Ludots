@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`fc1a940db`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`459faf9edf`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -88,7 +88,6 @@
 - FPS 开镜换弹等偏展示/模组，无统一枪械 UX 主链
 - InputCastSpec（套索/多边形）RFC 有、代码未落地
 - RA2/SC2 级完整矩阵靠数据填满，不是代码写死兵种表
-- RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles
 - Settings UI 未把偏好链完整接到玩家可点选项
 - TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）
 - TODO: MenuCommandStack（推入/弹出/目标阶段）
@@ -146,13 +145,14 @@
 - 双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导
 - 完美闪避窗口若要用引擎级 Prompt，需接 GasInputResponse，产品层未铺全
 - 宝宝 AI 自动技见 Utility Autocast，与玩家开关不是一条链
-- 技能主链仍大量依赖旧 CastModeType，未完全切到 CastCommitProfile
 - 按住连发与通道打断的统一手感表仍分散在各 ability
 - 控制组存取仅 InteractionShowcase，未进 Core 正式 API
 - 提升为 Core：编队存取与跨会话策略
+- 施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile
 - 无统一「连段编辑器」产品链，多在具体 showcase/模组
 - 点地走自己与 WASD 冲突仲裁需在 scheme/意图层写清；冲刺耐力属能力/属性
 - 玩法向轮盘/信号需接到 CommandIntent 或 UI→Order 桥，尚未标准菜谱
+- 瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles
 - 磁吸辅助、翻滚中转向等属手感策略，需模组/配置声明，非全家桶默认开
 - 缺统一动态 context 交互键（与二十三类同源缺口）
 - 钩索等品类手感在模组，不在 Core 通用动词里写死

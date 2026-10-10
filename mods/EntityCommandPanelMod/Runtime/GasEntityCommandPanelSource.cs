@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -9,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -20,15 +22,45 @@ namespace EntityCommandPanelMod.Runtime
         private readonly GameEngine _engine;
         private readonly Dictionary<int, string[]> _routeLabelCache = new();
         private readonly string[] _skillActionIds = new string[AbilityStateBuffer.CAPACITY];
+        private readonly EntityCommandPanelSlotActivations _activations;
+        private readonly string[] _modeHintContextIds;
+        private readonly string[] _modeHintKeys;
+        private readonly int[] _modeHintProfileIds;
+        private bool _modeHintProfileIdsResolved;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
         private readonly ProgressionRequirementEvaluator? _progressionRequirements;
         private readonly IClock? _clock;
 
-        public GasEntityCommandPanelSource(GameEngine engine)
+        public GasEntityCommandPanelSource(GameEngine engine, EntityCommandPanelSlotActivations activations, EntityCommandPanelSlotActionConfig slotConfig)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _activations = activations ?? throw new ArgumentNullException(nameof(activations));
+            ArgumentNullException.ThrowIfNull(slotConfig);
+            IReadOnlyList<string> slotActionIds = slotConfig.SlotActionIds;
+            if (slotActionIds.Count > _skillActionIds.Length)
+            {
+                throw new ArgumentException(
+                    $"Entity command panel declares {slotActionIds.Count} slot actions, more than the {_skillActionIds.Length} ability slots.",
+                    nameof(slotConfig));
+            }
+
+            for (int i = 0; i < _skillActionIds.Length; i++)
+            {
+                _skillActionIds[i] = i < slotActionIds.Count ? slotActionIds[i] : string.Empty;
+            }
+
+            int modeHintCount = slotConfig.ModeHintContextIds.Count;
+            _modeHintContextIds = new string[modeHintCount];
+            _modeHintKeys = new string[modeHintCount];
+            _modeHintProfileIds = new int[modeHintCount];
+            for (int i = 0; i < modeHintCount; i++)
+            {
+                _modeHintContextIds[i] = slotConfig.ModeHintContextIds[i];
+                _modeHintKeys[i] = slotConfig.ModeHintKeys[i];
+            }
+
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             _effectTemplates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
             _orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
@@ -120,21 +152,7 @@ namespace EntityCommandPanelMod.Runtime
                 revision = HashTagContainer(revision, in actorTags);
             }
 
-            InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            if (inputMapping != null)
-            {
-                revision = HashCombine(revision, (uint)inputMapping.InteractionMode);
-                inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, displayedSlots));
-                for (int slotIndex = 0; slotIndex < displayedSlots; slotIndex++)
-                {
-                    string actionId = _skillActionIds[slotIndex] ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(actionId))
-                    {
-                        revision = HashCombine(revision, (uint)actionId.GetHashCode(StringComparison.Ordinal));
-                    }
-                }
-            }
-
+            revision = HashCombine(revision, (uint)(ResolveActiveModeHintIndex() + 1));
             return true;
         }
 
@@ -275,8 +293,6 @@ namespace EntityCommandPanelMod.Runtime
             ref var grantedSlots = ref _engine.World.TryGetRef<GrantedSlotBuffer>(target, out bool hasGrantedSlots);
             bool hasActorTags = _engine.World.TryGet(target, out GameplayTagContainer actorTags);
             AbilityDefinitionRegistry? abilityDefinitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
-            InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            CastModeType interactionMode = inputMapping?.InteractionMode ?? CastModeType.TargetFirst;
 
             if (!TryResolveGroup(target, groupIndex, out var kind, out int routeIndex, out AbilityFormSetDefinition formSet, out _))
             {
@@ -284,15 +300,7 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             int count = Math.Min(destination.Length, ResolveDisplayedSlotCount(target, in baseSlots));
-            Span<string> actionIds = _skillActionIds.AsSpan(0, count);
-            if (inputMapping != null)
-            {
-                inputMapping.CopyPrimarySkillActionIds(actionIds);
-            }
-            else
-            {
-                actionIds.Clear();
-            }
+            ReadOnlySpan<string> actionIds = _skillActionIds.AsSpan(0, count);
 
             for (int slotIndex = 0; slotIndex < count; slotIndex++)
             {
@@ -437,12 +445,10 @@ namespace EntityCommandPanelMod.Runtime
                         displayLabel = ResolveFallbackLabel(effective.AbilityId, effective.TemplateEntityId);
                     }
 
-                    string abilityInteractionModeKey = string.Empty;
                     if (presentation != null &&
                         presentation.ModeHintOverrides.Count > 0)
                     {
-                        abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
-                        if (presentation.ModeHintOverrides.TryGetValue(abilityInteractionModeKey, out string? overrideHint) &&
+                        if (presentation.ModeHintOverrides.TryGetValue(ResolveActiveModeHintKey(), out string? overrideHint) &&
                             !string.IsNullOrWhiteSpace(overrideHint))
                         {
                             detailLabel = overrideHint;
@@ -457,12 +463,7 @@ namespace EntityCommandPanelMod.Runtime
                         }
                         else
                         {
-                            if (string.IsNullOrEmpty(abilityInteractionModeKey))
-                            {
-                                abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
-                            }
-
-                            detailLabel = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
+                            detailLabel = BuildDefaultDetailLabel(actionId);
                         }
                     }
                 }
@@ -602,15 +603,47 @@ namespace EntityCommandPanelMod.Runtime
             return _progressionRequirements;
         }
 
-        private static string ResolveAbilityInteractionModeKey(CastModeType interactionMode, in AbilityDefinition abilityDefinition)
+        private string ResolveActiveModeHintKey()
         {
-            if (abilityDefinition.HasInputBindingOverride &&
-                abilityDefinition.InputBindingOverride.HasCastModeOverride)
+            int index = ResolveActiveModeHintIndex();
+            return index < 0 ? string.Empty : _modeHintKeys[index];
+        }
+
+        private int ResolveActiveModeHintIndex()
+        {
+            if (_modeHintContextIds.Length == 0 ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity rep))
             {
-                return ResolveInteractionModeKey(abilityDefinition.InputBindingOverride.CastModeOverride);
+                return -1;
             }
 
-            return ResolveInteractionModeKey(interactionMode);
+            InteractionContextInstanceRuntime contexts = _engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("Entity command panel mode hints require InteractionContextInstances.");
+            if (!_modeHintProfileIdsResolved)
+            {
+                InteractionContextProfileRegistry profiles = _engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                    ?? throw new InvalidOperationException("Entity command panel mode hints require InteractionContextProfileRegistry.");
+                for (int i = 0; i < _modeHintContextIds.Length; i++)
+                {
+                    if (!profiles.ProfileIdRegistry.TryGetId(_modeHintContextIds[i], out _modeHintProfileIds[i]))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintContexts names unknown interaction context '{_modeHintContextIds[i]}'.");
+                    }
+                }
+
+                _modeHintProfileIdsResolved = true;
+            }
+
+            for (int i = 0; i < _modeHintProfileIds.Length; i++)
+            {
+                if (contexts.IsActive(rep, _modeHintProfileIds[i]))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private short ResolveLockoutPermille(Entity target, in AbilityDefinition abilityDefinition)
@@ -674,70 +707,48 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
+        public EntityCommandPanelActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
         {
-            if (groupIndex != 0 ||
-                slotIndex < 0 ||
-                !_engine.World.IsAlive(target) ||
-                !_engine.World.Has<AbilityStateBuffer>(target))
+            if (groupIndex != 0)
             {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidActor);
+                return EntityCommandPanelActivationResult.Rejected(target, EntityCommandPanelActivationRejection.NotActionable);
             }
 
-            if (!CanActivateProgressionRequirement(target, slotIndex))
+            EntityCommandPanelActivationRejection rejection = ValidateActivation(target, slotIndex);
+            if (rejection != EntityCommandPanelActivationRejection.None)
             {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedByRule);
+                return EntityCommandPanelActivationResult.Rejected(target, rejection);
             }
 
-            InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            if (inputMapping == null)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity owner) || !_engine.World.IsAlive(owner))
             {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidOrderType);
+                return EntityCommandPanelActivationResult.Rejected(target, EntityCommandPanelActivationRejection.InvalidActor);
             }
 
-            if ((uint)slotIndex >= (uint)_skillActionIds.Length)
-            {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedValidation);
-            }
-
-            inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, slotIndex + 1));
-            string actionId = _skillActionIds[slotIndex] ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(actionId))
-            {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidOrderType);
-            }
-
-            int playerId = inputMapping.PlayerId;
-            if (playerId <= 0)
-            {
-                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidActor);
-            }
-
-            return inputMapping.ActivateMappedAction(
-                actionId,
-                new InputOrderActivationContext(target, playerId),
-                preferUiAiming: true);
+            Span<Entity> members = stackalloc Entity[1];
+            members[0] = target;
+            return _activations.Enqueue(owner, slotIndex, members);
         }
 
-        public bool WouldEnterUiAiming(Entity target, int slotIndex)
+        internal EntityCommandPanelActivationRejection ValidateActivation(Entity target, int slotIndex)
         {
-            if (slotIndex < 0 ||
+            if ((uint)slotIndex >= (uint)AbilityStateBuffer.CAPACITY ||
                 !_engine.World.IsAlive(target) ||
                 !_engine.World.Has<AbilityStateBuffer>(target))
             {
-                return false;
+                return EntityCommandPanelActivationRejection.InvalidActor;
             }
 
-            InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            if (inputMapping == null ||
-                (uint)slotIndex >= (uint)_skillActionIds.Length)
+            ref readonly var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
+            AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
+            if (!HasContent(in slot))
             {
-                return false;
+                return EntityCommandPanelActivationRejection.EmptySlot;
             }
 
-            inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, slotIndex + 1));
-            string actionId = _skillActionIds[slotIndex] ?? string.Empty;
-            return inputMapping.WouldEnterUiAiming(actionId, target);
+            return CanActivateProgressionRequirement(target, slotIndex)
+                ? EntityCommandPanelActivationRejection.None
+                : EntityCommandPanelActivationRejection.BlockedByRule;
         }
 
         private bool CanActivateProgressionRequirement(Entity target, int slotIndex)
@@ -1332,22 +1343,10 @@ namespace EntityCommandPanelMod.Runtime
             return "(empty)";
         }
 
-        private static string BuildDefaultDetailLabel(string actionId, string interactionModeKey)
+        private static string BuildDefaultDetailLabel(string actionId)
         {
             string actionLabel = ResolveActionLabel(actionId);
-            string modeLabel = ResolveInteractionModeLabel(interactionModeKey);
-
-            if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(modeLabel))
-            {
-                return $"{actionLabel} · {modeLabel}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(actionLabel))
-            {
-                return actionLabel;
-            }
-
-            return string.IsNullOrWhiteSpace(modeLabel) ? "Ready" : modeLabel;
+            return string.IsNullOrWhiteSpace(actionLabel) ? "Ready" : actionLabel;
         }
 
         private static string BuildEmptyDetailLabel(string actionId)
@@ -1356,34 +1355,6 @@ namespace EntityCommandPanelMod.Runtime
             return string.IsNullOrWhiteSpace(actionLabel)
                 ? "No ability assigned"
                 : $"{actionLabel} · No ability assigned";
-        }
-
-        private static string ResolveInteractionModeLabel(string interactionModeKey)
-        {
-            return interactionModeKey switch
-            {
-                nameof(CastModeType.TargetFirst) => "Target First",
-                nameof(CastModeType.SmartCast) => "Smart Cast",
-                nameof(CastModeType.AimCast) => "Aim Then Confirm",
-                nameof(CastModeType.SmartCastWithIndicator) => "Release To Cast",
-                nameof(CastModeType.PressReleaseAimCast) => "Release Then Confirm",
-                nameof(CastModeType.ContextScored) => "Context Scored",
-                _ => string.Empty
-            };
-        }
-
-        private static string ResolveInteractionModeKey(CastModeType mode)
-        {
-            return mode switch
-            {
-                CastModeType.TargetFirst => nameof(CastModeType.TargetFirst),
-                CastModeType.SmartCast => nameof(CastModeType.SmartCast),
-                CastModeType.AimCast => nameof(CastModeType.AimCast),
-                CastModeType.SmartCastWithIndicator => nameof(CastModeType.SmartCastWithIndicator),
-                CastModeType.PressReleaseAimCast => nameof(CastModeType.PressReleaseAimCast),
-                CastModeType.ContextScored => nameof(CastModeType.ContextScored),
-                _ => mode.ToString()
-            };
         }
 
         private static string ResolveActionLabel(string actionId)

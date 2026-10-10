@@ -1,0 +1,1029 @@
+[
+  {
+    "id": "graph.champion.indicator_cast_r",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillr",
+        "action": "SkillR",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "held_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "held_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.HoldToChannel"
+      },
+      {
+        "id": "held_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "held_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "held_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "held_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "held_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "start_px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "start_py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "start_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "start_champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "start_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "start_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "start_pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 48
+      },
+      {
+        "id": "start_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "start_picked",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "start_has_pick",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "start_pick_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_pick_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_pick_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "start_assist_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_assist_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.NearestHostileAssist"
+      },
+      {
+        "id": "start_assist_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "start_assist_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "start_assist_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "start_assist_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "start_assist_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "start_assist_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "start_assist_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "start_assist_nearest",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "start_nearest_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_nearest_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_nearest_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "start_ground_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_ground_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_ground_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt_held_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt_held",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "remember_slot",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "champion_skill_sandbox.aim_slot"
+      },
+      {
+        "id": "view_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "view_idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "view_px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "view_py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "view_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "view_ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "view_rotation",
+        "op": "PointToDirection"
+      },
+      {
+        "id": "view_write_rotation",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "champion_skill_sandbox.aim_rotation_deg"
+      },
+      {
+        "id": "view_op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_write_caster",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.caster"
+      },
+      {
+        "id": "view_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "view_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "view_half",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "view_min_x",
+        "op": "SubFloat"
+      },
+      {
+        "id": "view_min_y",
+        "op": "SubFloat"
+      },
+      {
+        "id": "view_max_x",
+        "op": "AddFloat"
+      },
+      {
+        "id": "view_max_y",
+        "op": "AddFloat"
+      },
+      {
+        "id": "view_region",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "view_hover_op",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "view_write_hover",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.hover"
+      },
+      {
+        "id": "open_aim",
+        "op": "ActivateContext",
+        "context": "interaction.context.champion.aiming_hold",
+        "parentContext": "interaction.context.champion.indicator_cast"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "held_sel"
+      },
+      {
+        "from": "held_sel",
+        "fromPort": "next",
+        "to": "held_tagged"
+      },
+      {
+        "from": "held_tagged",
+        "fromPort": "next",
+        "to": "held_count"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "next",
+        "to": "held_count_f"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "next",
+        "to": "held_zero"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "next",
+        "to": "held_gt"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "next",
+        "to": "held_branch"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "true",
+        "to": "start_px"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "next",
+        "to": "start_py"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "next",
+        "to": "start_sel"
+      },
+      {
+        "from": "start_sel",
+        "fromPort": "next",
+        "to": "start_idx0"
+      },
+      {
+        "from": "start_idx0",
+        "fromPort": "next",
+        "to": "start_champ"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "next",
+        "to": "start_all"
+      },
+      {
+        "from": "start_all",
+        "fromPort": "next",
+        "to": "start_hostile"
+      },
+      {
+        "from": "start_hostile",
+        "fromPort": "next",
+        "to": "start_pick"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "next",
+        "to": "start_ground"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "next",
+        "to": "start_picked"
+      },
+      {
+        "from": "start_picked",
+        "fromPort": "next",
+        "to": "start_has_pick"
+      },
+      {
+        "from": "start_has_pick",
+        "fromPort": "true",
+        "to": "start_pick_members"
+      },
+      {
+        "from": "start_pick_members",
+        "fromPort": "next",
+        "to": "start_pick_slot"
+      },
+      {
+        "from": "start_pick_slot",
+        "fromPort": "next",
+        "to": "start_pick_submit"
+      },
+      {
+        "from": "start_pick_submit",
+        "fromPort": "next",
+        "to": "start_assist_sel"
+      },
+      {
+        "from": "start_has_pick",
+        "fromPort": "false",
+        "to": "start_assist_sel"
+      },
+      {
+        "from": "start_assist_sel",
+        "fromPort": "next",
+        "to": "start_assist_tagged"
+      },
+      {
+        "from": "start_assist_tagged",
+        "fromPort": "next",
+        "to": "start_assist_count"
+      },
+      {
+        "from": "start_assist_count",
+        "fromPort": "next",
+        "to": "start_assist_count_f"
+      },
+      {
+        "from": "start_assist_count_f",
+        "fromPort": "next",
+        "to": "start_assist_zero"
+      },
+      {
+        "from": "start_assist_zero",
+        "fromPort": "next",
+        "to": "start_assist_gt"
+      },
+      {
+        "from": "start_assist_gt",
+        "fromPort": "next",
+        "to": "start_assist_branch"
+      },
+      {
+        "from": "start_assist_branch",
+        "fromPort": "true",
+        "to": "start_assist_all"
+      },
+      {
+        "from": "start_assist_all",
+        "fromPort": "next",
+        "to": "start_assist_hostile"
+      },
+      {
+        "from": "start_assist_hostile",
+        "fromPort": "next",
+        "to": "start_assist_nearest"
+      },
+      {
+        "from": "start_assist_nearest",
+        "fromPort": "next",
+        "to": "start_nearest_members"
+      },
+      {
+        "from": "start_nearest_members",
+        "fromPort": "next",
+        "to": "start_nearest_slot"
+      },
+      {
+        "from": "start_nearest_slot",
+        "fromPort": "next",
+        "to": "start_nearest_submit"
+      },
+      {
+        "from": "start_nearest_submit",
+        "fromPort": "next",
+        "to": "start_ground_members"
+      },
+      {
+        "from": "start_assist_branch",
+        "fromPort": "false",
+        "to": "start_ground_members"
+      },
+      {
+        "from": "start_ground_members",
+        "fromPort": "next",
+        "to": "start_ground_slot"
+      },
+      {
+        "from": "start_ground_slot",
+        "fromPort": "next",
+        "to": "start_ground_submit"
+      },
+      {
+        "from": "start_ground_submit",
+        "fromPort": "next",
+        "to": "halt_held_ok"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "next",
+        "to": "halt_held"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "false",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "remember_slot"
+      },
+      {
+        "from": "remember_slot",
+        "fromPort": "next",
+        "to": "view_sel"
+      },
+      {
+        "from": "view_sel",
+        "fromPort": "next",
+        "to": "view_idx0"
+      },
+      {
+        "from": "view_idx0",
+        "fromPort": "next",
+        "to": "view_champ"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "next",
+        "to": "view_px"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "next",
+        "to": "view_py"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "next",
+        "to": "view_ground"
+      },
+      {
+        "from": "view_ground",
+        "fromPort": "next",
+        "to": "view_ground_branch"
+      },
+      {
+        "from": "view_ground_branch",
+        "fromPort": "true",
+        "to": "view_rotation"
+      },
+      {
+        "from": "view_rotation",
+        "fromPort": "next",
+        "to": "view_write_rotation"
+      },
+      {
+        "from": "view_write_rotation",
+        "fromPort": "next",
+        "to": "view_op_replace"
+      },
+      {
+        "from": "view_op_replace",
+        "fromPort": "next",
+        "to": "view_write_caster"
+      },
+      {
+        "from": "view_write_caster",
+        "fromPort": "next",
+        "to": "view_all"
+      },
+      {
+        "from": "view_ground_branch",
+        "fromPort": "false",
+        "to": "view_all"
+      },
+      {
+        "from": "view_all",
+        "fromPort": "next",
+        "to": "view_hostile"
+      },
+      {
+        "from": "view_hostile",
+        "fromPort": "next",
+        "to": "view_half"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "next",
+        "to": "view_min_x"
+      },
+      {
+        "from": "view_min_x",
+        "fromPort": "next",
+        "to": "view_min_y"
+      },
+      {
+        "from": "view_min_y",
+        "fromPort": "next",
+        "to": "view_max_x"
+      },
+      {
+        "from": "view_max_x",
+        "fromPort": "next",
+        "to": "view_max_y"
+      },
+      {
+        "from": "view_max_y",
+        "fromPort": "next",
+        "to": "view_region"
+      },
+      {
+        "from": "view_region",
+        "fromPort": "next",
+        "to": "view_hover_op"
+      },
+      {
+        "from": "view_hover_op",
+        "fromPort": "next",
+        "to": "view_write_hover"
+      },
+      {
+        "from": "view_write_hover",
+        "fromPort": "next",
+        "to": "open_aim"
+      },
+      {
+        "from": "open_aim",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "held_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "value",
+        "to": "held_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "value",
+        "to": "held_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "start_idx0",
+        "fromPort": "value",
+        "to": "start_champ",
+        "toPort": "value"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "value",
+        "to": "start_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "source"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "a"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "b"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "value",
+        "to": "start_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "value",
+        "to": "start_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_picked",
+        "toPort": "source"
+      },
+      {
+        "from": "start_picked",
+        "fromPort": "value",
+        "to": "start_has_pick",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_pick_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_pick_slot",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_assist_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "start_assist_count",
+        "fromPort": "value",
+        "to": "start_assist_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "start_assist_count_f",
+        "fromPort": "value",
+        "to": "start_assist_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "start_assist_zero",
+        "fromPort": "value",
+        "to": "start_assist_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "start_assist_gt",
+        "fromPort": "value",
+        "to": "start_assist_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "value",
+        "to": "start_assist_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_nearest_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_nearest_slot",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_assist_nearest",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_ground_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_ground_slot",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "value",
+        "to": "halt_held",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "remember_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "remember_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "view_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "view_idx0",
+        "fromPort": "value",
+        "to": "view_champ",
+        "toPort": "value"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "view_ground",
+        "fromPort": "value",
+        "to": "view_ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_write_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "view_rotation",
+        "fromPort": "value",
+        "to": "view_write_rotation",
+        "toPort": "value"
+      },
+      {
+        "from": "view_op_replace",
+        "fromPort": "value",
+        "to": "view_write_caster",
+        "toPort": "value"
+      },
+      {
+        "from": "view_champ",
+        "fromPort": "value",
+        "to": "view_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_min_x",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_min_x",
+        "toPort": "b"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_min_y",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_min_y",
+        "toPort": "b"
+      },
+      {
+        "from": "view_px",
+        "fromPort": "value",
+        "to": "view_max_x",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_max_x",
+        "toPort": "b"
+      },
+      {
+        "from": "view_py",
+        "fromPort": "value",
+        "to": "view_max_y",
+        "toPort": "a"
+      },
+      {
+        "from": "view_half",
+        "fromPort": "value",
+        "to": "view_max_y",
+        "toPort": "b"
+      },
+      {
+        "from": "view_min_x",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "a"
+      },
+      {
+        "from": "view_min_y",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "b"
+      },
+      {
+        "from": "view_max_x",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "c"
+      },
+      {
+        "from": "view_max_y",
+        "fromPort": "value",
+        "to": "view_region",
+        "toPort": "max"
+      },
+      {
+        "from": "view_hover_op",
+        "fromPort": "value",
+        "to": "view_write_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "open_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

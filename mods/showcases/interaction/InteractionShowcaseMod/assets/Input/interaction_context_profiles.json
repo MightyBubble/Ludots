@@ -5,12 +5,324 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command",
+        "Stop",
+        "QueueModifier",
+        "SkillZ",
+        "SkillF",
+        "RuneBurst"
       ],
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.interaction.move"
+        },
+        {
+          "trigger": "graph.interaction.stop"
+        },
+        {
+          "trigger": "graph.interaction.dash_z"
+        },
+        {
+          "trigger": "graph.interaction.toggle_f"
+        },
+        {
+          "trigger": "graph.interaction.rune_aim"
         }
+      ],
+      "onActivated": [
+        "graph.interaction.enter_smart_cast"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.target_first",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.smart_q"
+        },
+        {
+          "trigger": "graph.interaction.smart_w"
+        },
+        {
+          "trigger": "graph.interaction.smart_e"
+        },
+        {
+          "trigger": "graph.interaction.smart_r"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.smart_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.smart_q"
+        },
+        {
+          "trigger": "graph.interaction.smart_w"
+        },
+        {
+          "trigger": "graph.interaction.smart_e"
+        },
+        {
+          "trigger": "graph.interaction.smart_r"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aim_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.aim_cast_q"
+        },
+        {
+          "trigger": "graph.interaction.aim_cast_w"
+        },
+        {
+          "trigger": "graph.interaction.aim_cast_e"
+        },
+        {
+          "trigger": "graph.interaction.aim_cast_r"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.indicator_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillW",
+        "SkillE",
+        "SkillR"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.indicator_q"
+        },
+        {
+          "trigger": "graph.interaction.indicator_w"
+        },
+        {
+          "trigger": "graph.interaction.indicator_e"
+        },
+        {
+          "trigger": "graph.interaction.indicator_r"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.context_scored",
+      "bindings": [
+        "ActionAttack"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.action_attack"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_rune",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.rune_confirm"
+        },
+        {
+          "trigger": "graph.interaction.rune_cancel"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_click_q",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.aim_confirm_q"
+        },
+        {
+          "trigger": "graph.interaction.aim_cancel_q"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_hold_q",
+      "foreground": true,
+      "bindings": [
+        "SkillQ.Release"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.indicator_release_q"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_click_w",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.aim_confirm_w"
+        },
+        {
+          "trigger": "graph.interaction.aim_cancel_w"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_hold_w",
+      "foreground": true,
+      "bindings": [
+        "SkillW.Release"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.indicator_release_w"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_click_e",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.aim_confirm_e"
+        },
+        {
+          "trigger": "graph.interaction.aim_cancel_e"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_hold_e",
+      "foreground": true,
+      "bindings": [
+        "SkillE.Release"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.indicator_release_e"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_click_r",
+      "foreground": true,
+      "bindings": [
+        "Interaction.AimConfirm",
+        "Interaction.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.aim_confirm_r"
+        },
+        {
+          "trigger": "graph.interaction.aim_cancel_r"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
+      ]
+    },
+    {
+      "id": "interaction.context.interaction.aiming_hold_r",
+      "foreground": true,
+      "bindings": [
+        "SkillR.Release"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.interaction.indicator_release_r"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
+      ],
+      "onDeactivated": [
+        "graph.interaction.aim_clear"
       ]
     }
   ]

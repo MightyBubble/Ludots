@@ -36,6 +36,10 @@
         },
         {
           "trigger": "graph.rts.select_begin"
+        },
+        {
+          "trigger": "graph.rts.panel_activate_slot",
+          "event": "EntityCommandPanel.ActivateSlot"
         }
       ],
       "onActivated": [

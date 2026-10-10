@@ -1,0 +1,116 @@
+[
+  {
+    "id": "graph.champion.aim_clear",
+    "kind": "Script",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "op_subtract",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "caster_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "champion_skill_sandbox.aim.caster"
+      },
+      {
+        "id": "clear_caster",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.caster"
+      },
+      {
+        "id": "hover_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "champion_skill_sandbox.aim.hover"
+      },
+      {
+        "id": "clear_hover",
+        "op": "WriteCollection",
+        "collectionKey": "champion_skill_sandbox.aim.hover"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "op_subtract"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "next",
+        "to": "caster_members"
+      },
+      {
+        "from": "caster_members",
+        "fromPort": "next",
+        "to": "clear_caster"
+      },
+      {
+        "from": "clear_caster",
+        "fromPort": "next",
+        "to": "hover_members"
+      },
+      {
+        "from": "hover_members",
+        "fromPort": "next",
+        "to": "clear_hover"
+      },
+      {
+        "from": "clear_hover",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "caster_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_caster",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "hover_members",
+        "toPort": "source"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "clear_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

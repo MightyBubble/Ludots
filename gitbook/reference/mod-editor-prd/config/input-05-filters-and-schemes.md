@@ -67,4 +67,4 @@
 
 - 根四文件：`assets/Input/default_input.json`（22 动作 2 上下文）、`filter_profiles.json`、`control_schemes.json`、`action_attribute_bindings.json`
 
-**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [ord-06 配置说明](ord-06-input-mappings.md)
+**相关文档**：[input-05 PRD](../prd/input-05-filters-and-schemes.md) · [input-03 配置说明](input-03-interaction-context.md)

@@ -1,0 +1,1107 @@
+[
+  {
+    "id": "graph.champion.smart_cast_r",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillr",
+        "action": "SkillR",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "held_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "held_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.HoldToChannel"
+      },
+      {
+        "id": "held_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "held_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "held_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "held_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "held_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "start_px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "start_py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "start_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "start_champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "start_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "start_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "start_pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 48
+      },
+      {
+        "id": "start_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "start_picked",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "start_has_pick",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "start_pick_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_pick_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_pick_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "start_assist_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_assist_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.NearestHostileAssist"
+      },
+      {
+        "id": "start_assist_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "start_assist_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "start_assist_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "start_assist_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "start_assist_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "start_assist_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "start_assist_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "start_assist_nearest",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "start_nearest_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_nearest_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_nearest_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "start_ground_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "start_ground_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "start_ground_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.Start",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt_held_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt_held",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 48
+      },
+      {
+        "id": "ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "picked",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "has_pick",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "pick_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "pick_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "pick_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "assist_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "assist_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.NearestHostileAssist"
+      },
+      {
+        "id": "assist_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "assist_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "assist_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "assist_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "assist_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "assist_all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "assist_hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "assist_nearest",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "nearest_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "nearest_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "nearest_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "ground_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "ground_slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "ground_submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "held_sel"
+      },
+      {
+        "from": "held_sel",
+        "fromPort": "next",
+        "to": "held_tagged"
+      },
+      {
+        "from": "held_tagged",
+        "fromPort": "next",
+        "to": "held_count"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "next",
+        "to": "held_count_f"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "next",
+        "to": "held_zero"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "next",
+        "to": "held_gt"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "next",
+        "to": "held_branch"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "true",
+        "to": "start_px"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "next",
+        "to": "start_py"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "next",
+        "to": "start_sel"
+      },
+      {
+        "from": "start_sel",
+        "fromPort": "next",
+        "to": "start_idx0"
+      },
+      {
+        "from": "start_idx0",
+        "fromPort": "next",
+        "to": "start_champ"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "next",
+        "to": "start_all"
+      },
+      {
+        "from": "start_all",
+        "fromPort": "next",
+        "to": "start_hostile"
+      },
+      {
+        "from": "start_hostile",
+        "fromPort": "next",
+        "to": "start_pick"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "next",
+        "to": "start_ground"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "next",
+        "to": "start_picked"
+      },
+      {
+        "from": "start_picked",
+        "fromPort": "next",
+        "to": "start_has_pick"
+      },
+      {
+        "from": "start_has_pick",
+        "fromPort": "true",
+        "to": "start_pick_members"
+      },
+      {
+        "from": "start_pick_members",
+        "fromPort": "next",
+        "to": "start_pick_slot"
+      },
+      {
+        "from": "start_pick_slot",
+        "fromPort": "next",
+        "to": "start_pick_submit"
+      },
+      {
+        "from": "start_pick_submit",
+        "fromPort": "next",
+        "to": "start_assist_sel"
+      },
+      {
+        "from": "start_has_pick",
+        "fromPort": "false",
+        "to": "start_assist_sel"
+      },
+      {
+        "from": "start_assist_sel",
+        "fromPort": "next",
+        "to": "start_assist_tagged"
+      },
+      {
+        "from": "start_assist_tagged",
+        "fromPort": "next",
+        "to": "start_assist_count"
+      },
+      {
+        "from": "start_assist_count",
+        "fromPort": "next",
+        "to": "start_assist_count_f"
+      },
+      {
+        "from": "start_assist_count_f",
+        "fromPort": "next",
+        "to": "start_assist_zero"
+      },
+      {
+        "from": "start_assist_zero",
+        "fromPort": "next",
+        "to": "start_assist_gt"
+      },
+      {
+        "from": "start_assist_gt",
+        "fromPort": "next",
+        "to": "start_assist_branch"
+      },
+      {
+        "from": "start_assist_branch",
+        "fromPort": "true",
+        "to": "start_assist_all"
+      },
+      {
+        "from": "start_assist_all",
+        "fromPort": "next",
+        "to": "start_assist_hostile"
+      },
+      {
+        "from": "start_assist_hostile",
+        "fromPort": "next",
+        "to": "start_assist_nearest"
+      },
+      {
+        "from": "start_assist_nearest",
+        "fromPort": "next",
+        "to": "start_nearest_members"
+      },
+      {
+        "from": "start_nearest_members",
+        "fromPort": "next",
+        "to": "start_nearest_slot"
+      },
+      {
+        "from": "start_nearest_slot",
+        "fromPort": "next",
+        "to": "start_nearest_submit"
+      },
+      {
+        "from": "start_nearest_submit",
+        "fromPort": "next",
+        "to": "start_ground_members"
+      },
+      {
+        "from": "start_assist_branch",
+        "fromPort": "false",
+        "to": "start_ground_members"
+      },
+      {
+        "from": "start_ground_members",
+        "fromPort": "next",
+        "to": "start_ground_slot"
+      },
+      {
+        "from": "start_ground_slot",
+        "fromPort": "next",
+        "to": "start_ground_submit"
+      },
+      {
+        "from": "start_ground_submit",
+        "fromPort": "next",
+        "to": "halt_held_ok"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "next",
+        "to": "halt_held"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "false",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "sel"
+      },
+      {
+        "from": "sel",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "champ"
+      },
+      {
+        "from": "champ",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "hostile",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "picked"
+      },
+      {
+        "from": "picked",
+        "fromPort": "next",
+        "to": "has_pick"
+      },
+      {
+        "from": "has_pick",
+        "fromPort": "true",
+        "to": "pick_members"
+      },
+      {
+        "from": "pick_members",
+        "fromPort": "next",
+        "to": "pick_slot"
+      },
+      {
+        "from": "pick_slot",
+        "fromPort": "next",
+        "to": "pick_submit"
+      },
+      {
+        "from": "pick_submit",
+        "fromPort": "next",
+        "to": "assist_sel"
+      },
+      {
+        "from": "has_pick",
+        "fromPort": "false",
+        "to": "assist_sel"
+      },
+      {
+        "from": "assist_sel",
+        "fromPort": "next",
+        "to": "assist_tagged"
+      },
+      {
+        "from": "assist_tagged",
+        "fromPort": "next",
+        "to": "assist_count"
+      },
+      {
+        "from": "assist_count",
+        "fromPort": "next",
+        "to": "assist_count_f"
+      },
+      {
+        "from": "assist_count_f",
+        "fromPort": "next",
+        "to": "assist_zero"
+      },
+      {
+        "from": "assist_zero",
+        "fromPort": "next",
+        "to": "assist_gt"
+      },
+      {
+        "from": "assist_gt",
+        "fromPort": "next",
+        "to": "assist_branch"
+      },
+      {
+        "from": "assist_branch",
+        "fromPort": "true",
+        "to": "assist_all"
+      },
+      {
+        "from": "assist_all",
+        "fromPort": "next",
+        "to": "assist_hostile"
+      },
+      {
+        "from": "assist_hostile",
+        "fromPort": "next",
+        "to": "assist_nearest"
+      },
+      {
+        "from": "assist_nearest",
+        "fromPort": "next",
+        "to": "nearest_members"
+      },
+      {
+        "from": "nearest_members",
+        "fromPort": "next",
+        "to": "nearest_slot"
+      },
+      {
+        "from": "nearest_slot",
+        "fromPort": "next",
+        "to": "nearest_submit"
+      },
+      {
+        "from": "nearest_submit",
+        "fromPort": "next",
+        "to": "ground_members"
+      },
+      {
+        "from": "assist_branch",
+        "fromPort": "false",
+        "to": "ground_members"
+      },
+      {
+        "from": "ground_members",
+        "fromPort": "next",
+        "to": "ground_slot"
+      },
+      {
+        "from": "ground_slot",
+        "fromPort": "next",
+        "to": "ground_submit"
+      },
+      {
+        "from": "ground_submit",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "held_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "value",
+        "to": "held_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "value",
+        "to": "held_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "start_idx0",
+        "fromPort": "value",
+        "to": "start_champ",
+        "toPort": "value"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "value",
+        "to": "start_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "source"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "a"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "value",
+        "to": "start_pick",
+        "toPort": "b"
+      },
+      {
+        "from": "start_px",
+        "fromPort": "value",
+        "to": "start_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "start_py",
+        "fromPort": "value",
+        "to": "start_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_picked",
+        "toPort": "source"
+      },
+      {
+        "from": "start_picked",
+        "fromPort": "value",
+        "to": "start_has_pick",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_pick_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_pick_slot",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_pick_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_assist_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "start_assist_count",
+        "fromPort": "value",
+        "to": "start_assist_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "start_assist_count_f",
+        "fromPort": "value",
+        "to": "start_assist_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "start_assist_zero",
+        "fromPort": "value",
+        "to": "start_assist_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "start_assist_gt",
+        "fromPort": "value",
+        "to": "start_assist_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "start_champ",
+        "fromPort": "value",
+        "to": "start_assist_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_nearest_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_nearest_slot",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_assist_nearest",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_nearest_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "start_ground_members",
+        "toPort": "source"
+      },
+      {
+        "from": "start_ground_slot",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "start_pick",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "start_ground",
+        "fromPort": "value",
+        "to": "start_ground_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "value",
+        "to": "halt_held",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "sel",
+        "toPort": "source"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "champ",
+        "toPort": "value"
+      },
+      {
+        "from": "champ",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "picked",
+        "toPort": "source"
+      },
+      {
+        "from": "picked",
+        "fromPort": "value",
+        "to": "has_pick",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick_members",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_slot",
+        "fromPort": "value",
+        "to": "pick_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pick_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "pick_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "assist_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "assist_count",
+        "fromPort": "value",
+        "to": "assist_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "assist_count_f",
+        "fromPort": "value",
+        "to": "assist_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "assist_zero",
+        "fromPort": "value",
+        "to": "assist_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "assist_gt",
+        "fromPort": "value",
+        "to": "assist_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "champ",
+        "fromPort": "value",
+        "to": "assist_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "nearest_members",
+        "toPort": "source"
+      },
+      {
+        "from": "nearest_slot",
+        "fromPort": "value",
+        "to": "nearest_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "assist_nearest",
+        "fromPort": "value",
+        "to": "nearest_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "nearest_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "ground_members",
+        "toPort": "source"
+      },
+      {
+        "from": "ground_slot",
+        "fromPort": "value",
+        "to": "ground_submit",
+        "toPort": "value"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "ground_submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "ground_submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

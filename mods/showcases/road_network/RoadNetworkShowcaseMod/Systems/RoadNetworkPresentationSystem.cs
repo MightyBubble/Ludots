@@ -22,7 +22,6 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
-using CoreInputMod.Systems;
 using RoadNetworkShowcaseMod.Runtime;
 using Ludots.Platform.Abstractions;
 
@@ -308,31 +307,16 @@ namespace RoadNetworkShowcaseMod.Systems
                 }
             }
 
-            string groundDebug = ResolveDebugValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, "<none>");
-            string orderDebug = ResolveDebugValue(LocalOrderSourceHelper.LastOrderDebugKey, "<none>");
             string selectionDebug = DescribeCommandSourceSummary();
 
-            _overlay.AddRect(12, 12, 980, 170, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 8000, dirtySerial: 1);
+            _overlay.AddRect(12, 12, 980, 148, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 8000, dirtySerial: 1);
             _overlay.AddText(24, 24, "Road Network Showcase", 22, new Vector4(0.94f, 0.96f, 0.98f, 1f), stableId: 8001, dirtySerial: 1);
             _overlay.AddText(24, 50, $"Blue forts {blueForts} | Red forts {redForts} | Neutral forts {neutralForts}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8002, dirtySerial: blueForts ^ (redForts << 8) ^ (neutralForts << 16));
             _overlay.AddText(24, 72, $"Loaded chunks {_runtime.LoadedChunkCount} | Loaded nodes {_runtime.LoadedNodeCount}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8003, dirtySerial: _runtime.LoadedChunkCount ^ (_runtime.LoadedNodeCount << 8));
             _overlay.AddText(24, 94, "LMB chooses command columns, RMB dispatches along roads, Shift queues, pan camera to stream chunks, Home resets camera.", 15, new Vector4(0.93f, 0.79f, 0.45f, 1f), stableId: 8004, dirtySerial: 1);
             _overlay.AddText(24, 116, selectionDebug, 13, new Vector4(0.94f, 0.84f, 0.70f, 1f), stableId: 8008, dirtySerial: selectionDebug.GetHashCode(StringComparison.Ordinal));
-            _overlay.AddText(24, 138, $"Ground {groundDebug} | Order {orderDebug}", 13, new Vector4(0.68f, 0.83f, 0.96f, 1f), stableId: 8006, dirtySerial: HashCode.Combine(groundDebug.GetHashCode(StringComparison.Ordinal), orderDebug.GetHashCode(StringComparison.Ordinal)));
             string status = _runtime.LastSubmitStatus;
-            _overlay.AddText(24, 160, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 8005, dirtySerial: status.GetHashCode(StringComparison.Ordinal));
-        }
-
-        private string ResolveDebugValue(string key, string fallback)
-        {
-            if (_engine.GlobalContext.TryGetValue(key, out object? value) &&
-                value is string text &&
-                !string.IsNullOrWhiteSpace(text))
-            {
-                return text;
-            }
-
-            return fallback;
+            _overlay.AddText(24, 138, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 8005, dirtySerial: status.GetHashCode(StringComparison.Ordinal));
         }
 
         private string DescribeCommandSourceSummary()

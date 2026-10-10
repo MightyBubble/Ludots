@@ -1,0 +1,308 @@
+[
+  {
+    "id": "graph.interaction.indicator_r",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillr",
+        "action": "SkillR",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "rot_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "rot_idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "rot_champ",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "rot_px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "rot_py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "rot_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "rot_ground_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "rot_rotation",
+        "op": "PointToDirection"
+      },
+      {
+        "id": "rot_write_rotation",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "interaction_showcase.aim_rotation_deg"
+      },
+      {
+        "id": "shape_arcweaver_r_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "shape_arcweaver_r_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_arcweaver"
+      },
+      {
+        "id": "shape_arcweaver_r_op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "shape_arcweaver_r_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.arcweaver_r"
+      },
+      {
+        "id": "shape_vanguard_r_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "shape_vanguard_r_hero",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_vanguard"
+      },
+      {
+        "id": "shape_vanguard_r_op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "shape_vanguard_r_write",
+        "op": "WriteCollection",
+        "collectionKey": "interaction_showcase.aim.vanguard_r"
+      },
+      {
+        "id": "open_aim",
+        "op": "ActivateContext",
+        "context": "interaction.context.interaction.aiming_hold_r",
+        "parentContext": "interaction.context.interaction.indicator_cast"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "rot_sel"
+      },
+      {
+        "from": "rot_sel",
+        "fromPort": "next",
+        "to": "rot_idx0"
+      },
+      {
+        "from": "rot_idx0",
+        "fromPort": "next",
+        "to": "rot_champ"
+      },
+      {
+        "from": "rot_champ",
+        "fromPort": "next",
+        "to": "rot_px"
+      },
+      {
+        "from": "rot_px",
+        "fromPort": "next",
+        "to": "rot_py"
+      },
+      {
+        "from": "rot_py",
+        "fromPort": "next",
+        "to": "rot_ground"
+      },
+      {
+        "from": "rot_ground",
+        "fromPort": "next",
+        "to": "rot_ground_branch"
+      },
+      {
+        "from": "rot_ground_branch",
+        "fromPort": "true",
+        "to": "rot_rotation"
+      },
+      {
+        "from": "rot_rotation",
+        "fromPort": "next",
+        "to": "rot_write_rotation"
+      },
+      {
+        "from": "rot_write_rotation",
+        "fromPort": "next",
+        "to": "shape_arcweaver_r_sel"
+      },
+      {
+        "from": "rot_ground_branch",
+        "fromPort": "false",
+        "to": "shape_arcweaver_r_sel"
+      },
+      {
+        "from": "shape_arcweaver_r_sel",
+        "fromPort": "next",
+        "to": "shape_arcweaver_r_hero"
+      },
+      {
+        "from": "shape_arcweaver_r_hero",
+        "fromPort": "next",
+        "to": "shape_arcweaver_r_op_replace"
+      },
+      {
+        "from": "shape_arcweaver_r_op_replace",
+        "fromPort": "next",
+        "to": "shape_arcweaver_r_write"
+      },
+      {
+        "from": "shape_arcweaver_r_write",
+        "fromPort": "next",
+        "to": "shape_vanguard_r_sel"
+      },
+      {
+        "from": "shape_vanguard_r_sel",
+        "fromPort": "next",
+        "to": "shape_vanguard_r_hero"
+      },
+      {
+        "from": "shape_vanguard_r_hero",
+        "fromPort": "next",
+        "to": "shape_vanguard_r_op_replace"
+      },
+      {
+        "from": "shape_vanguard_r_op_replace",
+        "fromPort": "next",
+        "to": "shape_vanguard_r_write"
+      },
+      {
+        "from": "shape_vanguard_r_write",
+        "fromPort": "next",
+        "to": "open_aim"
+      },
+      {
+        "from": "open_aim",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "rot_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "rot_idx0",
+        "fromPort": "value",
+        "to": "rot_champ",
+        "toPort": "value"
+      },
+      {
+        "from": "rot_px",
+        "fromPort": "value",
+        "to": "rot_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "rot_py",
+        "fromPort": "value",
+        "to": "rot_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "rot_ground",
+        "fromPort": "value",
+        "to": "rot_ground_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "rot_champ",
+        "fromPort": "value",
+        "to": "rot_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "rot_champ",
+        "fromPort": "value",
+        "to": "rot_write_rotation",
+        "toPort": "source"
+      },
+      {
+        "from": "rot_rotation",
+        "fromPort": "value",
+        "to": "rot_write_rotation",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "shape_arcweaver_r_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "shape_arcweaver_r_op_replace",
+        "fromPort": "value",
+        "to": "shape_arcweaver_r_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "shape_vanguard_r_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "shape_vanguard_r_op_replace",
+        "fromPort": "value",
+        "to": "shape_vanguard_r_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "open_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

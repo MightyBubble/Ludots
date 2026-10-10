@@ -1,41 +1,80 @@
 using System;
+using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Scripting;
 
 namespace InteractionShowcaseMod.Runtime
 {
     /// <summary>
-    /// Showcase cast-mode switching over the engine's active input order mapping: the mode id
-    /// (toolbar/keyboard vocabulary) maps to the mapping's interaction mode; the Action mode also
-    /// swaps the local camera to the shared follow profile. Transitional home until the showcase's
-    /// order-mapping migration replaces the mapping system with graphs.
+    /// Showcase cast-mode switching: each mode is an interaction context mounted under the battle
+    /// context on the hero player's possessed rep; the Action mode also swaps the local camera to the shared
+    /// follow profile.
     /// </summary>
     internal static class InteractionShowCastModes
     {
+        private const string BattleContextId = "interaction.context.interaction.battle";
+
+        private static readonly (string ModeId, string ContextId)[] Modes =
+        {
+            (InteractionShowcaseIds.WowModeId, "interaction.context.interaction.target_first"),
+            (InteractionShowcaseIds.LolModeId, "interaction.context.interaction.smart_cast"),
+            (InteractionShowcaseIds.Sc2ModeId, "interaction.context.interaction.aim_cast"),
+            (InteractionShowcaseIds.IndicatorModeId, "interaction.context.interaction.indicator_cast"),
+            (InteractionShowcaseIds.ActionModeId, "interaction.context.interaction.context_scored"),
+        };
+
         public static bool TrySetActive(GameEngine engine, string? modeId)
         {
-            if (!TryGetCastModeType(modeId, out var castMode))
+            string? targetContextId = ResolveContextId(modeId);
+            if (targetContextId == null)
             {
                 return false;
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mapping)
+            InteractionContextInstanceRuntime runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("Interaction showcase cast modes require InteractionContextInstances.");
+            InteractionContextProfileRegistry profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("Interaction showcase cast modes require InteractionContextProfileRegistry.");
+            if (!InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity rep))
             {
-                mapping.SetInteractionMode(castMode);
+                throw new InvalidOperationException("Interaction showcase cast modes require a local seat possessing the hero player rep.");
+            }
+
+            bool alreadyActive = false;
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                string contextId = Modes[i].ContextId;
+                if (!runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(contextId)))
+                {
+                    continue;
+                }
+
+                if (string.Equals(contextId, targetContextId, StringComparison.Ordinal))
+                {
+                    alreadyActive = true;
+                    continue;
+                }
+
+                runtime.Deactivate(rep, ConfigKeyRegistry.Register(contextId));
+            }
+
+            if (!alreadyActive)
+            {
+                runtime.Activate(rep, ConfigKeyRegistry.Register(targetContextId), ConfigKeyRegistry.Register(BattleContextId));
             }
 
             // The mode owns the camera on switch: Tactical for the casting modes; the Action
             // mode follows the command-source collection (the selected heroes), not the rep.
-            if (string.Equals(modeId, InteractionShowcaseIds.ActionModeId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(modeId, InteractionShowcaseIds.ActionModeId, StringComparison.Ordinal))
             {
                 engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
                 {
                     Id = "Camera.Profile.Follow",
                     FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
-                    FollowCollectionOwnerOverride = ResolveSolePossessedRep(engine, modeId),
+                    FollowCollectionOwnerOverride = rep,
                     FollowCollectionKeyOverride = "collection.command.source",
                     ResetRuntimeState = true,
                     ReplaceActiveStack = true
@@ -54,18 +93,22 @@ namespace InteractionShowcaseMod.Runtime
             return true;
         }
 
-        /// <summary>
-        /// Current showcase mode id, or null when no mapping is installed or the installed cast
-        /// mode is foreign (another showcase's value) — the caller treats null as "reset to the
-        /// showcase default" instead of trusting a coincidental enum match.
-        /// </summary>
+        /// <summary>Active showcase mode id, or null when the battle context carries no mode context.</summary>
         public static string? GetActive(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is InputOrderMappingSystem mapping &&
-                TryGetModeId(mapping.InteractionMode, out string? modeId))
+            InteractionContextInstanceRuntime? runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances);
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (runtime == null || profiles == null || !InteractionShowcaseRuntime.TryGetShowcaseLocalPlayerRep(engine, out Entity rep))
             {
-                return modeId;
+                return null;
+            }
+
+            for (int i = 0; i < Modes.Length; i++)
+            {
+                if (runtime.IsActive(rep, profiles.ProfileIdRegistry.GetId(Modes[i].ContextId)))
+                {
+                    return Modes[i].ModeId;
+                }
             }
 
             return null;
@@ -84,67 +127,17 @@ namespace InteractionShowcaseMod.Runtime
             };
         }
 
-        private static Arch.Core.Entity ResolveSolePossessedRep(GameEngine engine, string modeId)
+        private static string? ResolveContextId(string? modeId)
         {
-            if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out var owner) ||
-                owner == Arch.Core.Entity.Null ||
-                !engine.World.IsAlive(owner))
+            for (int i = 0; i < Modes.Length; i++)
             {
-                throw new InvalidOperationException(
-                    $"Interaction showcase mode '{modeId}' requires a live sole ClientLocalSeat possession for its collection follow camera.");
+                if (string.Equals(Modes[i].ModeId, modeId, StringComparison.Ordinal))
+                {
+                    return Modes[i].ContextId;
+                }
             }
 
-            return owner;
-        }
-
-        private static bool TryGetCastModeType(string? modeId, out CastModeType castMode)
-        {
-            switch (modeId)
-            {
-                case InteractionShowcaseIds.WowModeId:
-                    castMode = CastModeType.TargetFirst;
-                    return true;
-                case InteractionShowcaseIds.LolModeId:
-                    castMode = CastModeType.SmartCast;
-                    return true;
-                case InteractionShowcaseIds.Sc2ModeId:
-                    castMode = CastModeType.AimCast;
-                    return true;
-                case InteractionShowcaseIds.IndicatorModeId:
-                    castMode = CastModeType.SmartCastWithIndicator;
-                    return true;
-                case InteractionShowcaseIds.ActionModeId:
-                    castMode = CastModeType.ContextScored;
-                    return true;
-                default:
-                    castMode = default;
-                    return false;
-            }
-        }
-
-        private static bool TryGetModeId(CastModeType castMode, out string? modeId)
-        {
-            switch (castMode)
-            {
-                case CastModeType.TargetFirst:
-                    modeId = InteractionShowcaseIds.WowModeId;
-                    return true;
-                case CastModeType.SmartCast:
-                    modeId = InteractionShowcaseIds.LolModeId;
-                    return true;
-                case CastModeType.AimCast:
-                    modeId = InteractionShowcaseIds.Sc2ModeId;
-                    return true;
-                case CastModeType.SmartCastWithIndicator:
-                    modeId = InteractionShowcaseIds.IndicatorModeId;
-                    return true;
-                case CastModeType.ContextScored:
-                    modeId = InteractionShowcaseIds.ActionModeId;
-                    return true;
-                default:
-                    modeId = null;
-                    return false;
-            }
+            return null;
         }
     }
 }

@@ -200,58 +200,6 @@ namespace Ludots.Tests.GAS
             Assert.That(cameraAttributes.GetCurrent(lookXAttribute), Is.EqualTo(3f).Within(0.001f));
         }
 
-        [Test]
-        public void InputOrderMapping_HeldQuickTap_EmitsStartAndEndOnSameLogicTick()
-        {
-            var (backend, handler) = BuildHandler();
-            var accumulator = new AuthoritativeInputAccumulator();
-            var snapshot = new FrozenInputActionReader();
-            var config = new InputOrderMappingConfig
-            {
-                Mappings = new List<InputOrderMapping>
-                {
-                    new()
-                    {
-                        ActionId = "Attack",
-                        Trigger = InputTriggerType.Held,
-                        HeldPolicy = HeldPolicy.StartEnd,
-                        OrderTypeKey = "beam",
-                        TargetType = OrderTargetType.None,
-                        RequireTarget = false,
-                        IsSkillMapping = false,
-                    }
-                }
-            };
-
-            var system = new InputOrderMappingSystem(snapshot, config);
-            var orders = new List<Order>();
-            system.SetOrderTypeKeyResolver(key => key switch
-            {
-                "beam.Start" => 101,
-                "beam.End" => 102,
-                "beam" => 100,
-                _ => 0
-            });
-            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
-
-            using var world = World.Create();
-            system.SetSolePossessedActor(world.Create(), 1);
-
-            backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update(1f / 60f);
-            accumulator.CaptureVisualFrame(handler);
-
-            backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update(1f / 60f);
-            accumulator.CaptureVisualFrame(handler);
-
-            accumulator.BuildTickSnapshot(snapshot);
-            system.Update(0f);
-
-            Assert.That(orders.Count, Is.EqualTo(2));
-            Assert.That(orders[0].OrderTypeId, Is.EqualTo(101));
-            Assert.That(orders[1].OrderTypeId, Is.EqualTo(102));
-        }
 
         [Test]
         public void InputRuntimeSystem_UiCaptured_SuppressesCameraUserInputOnlyForCapturedFrames()

@@ -22,4 +22,4 @@
 
 引用未注册的动作、属性、意图或派发档案、绑定形状非法、越权方案切换——启动失败或明确拒绝，并指明文件与条目。
 
-**相关文档**：[配置说明](../config/input-05-filters-and-schemes.md) · [ord-06](ord-06-input-mappings.md) · [input-01](input-01-command-intent.md)
+**相关文档**：[配置说明](../config/input-05-filters-and-schemes.md) · [input-03](input-03-interaction-context.md) · [input-01](input-01-command-intent.md)

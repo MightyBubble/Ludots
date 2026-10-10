@@ -25,7 +25,7 @@
 | 能力侧声明解析 | src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs |
 | 意图解析 | src/Core/Input/Interaction/CommandIntentArbiter.cs |
 | 集合提交（过滤 + 域路由） | src/Core/EntityCollections/CollectionApplier.cs |
-| 命令意图路由（集合锚 + cycle group key） | src/Core/Input/Orders/InputOrderMappingSystem.cs（SubmitCommandIntentOrder） |
+| 命令意图路由（集合锚 + cycle group key） | src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs（TryRouteSubmission） |
 | 上下文 → IMC 投影 | src/Core/Input/Systems/InputContextProjectionSystem.cs |
 | pushFrame/popFrame op（实体化内核） | src/Core/Input/Interaction/CastCommitProfileRegistry.cs |
 | 根资产 | assets/Input/interaction_context_profiles.json |

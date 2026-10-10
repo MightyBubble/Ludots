@@ -25,11 +25,6 @@
     "blockTags": {
       "blockedAny": ["Status.Rts.Training"]
     },
-    "input": {
-      "castModeOverride": "SmartCast",
-      "targetType": "None",
-      "modifierBehavior": "PersistentQueueOnModifier"
-    },
     "presentation": {
       "displayName": "Train Infantry",
       "iconGlyph": "I",

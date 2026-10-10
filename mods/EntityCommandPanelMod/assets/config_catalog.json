@@ -8,5 +8,14 @@
     "Path": "Panels/panel_templates.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Events/custom_events.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "UI/entity_command_panel_slot_actions.json",
+    "Policy": "DeepObject"
   }
 ]

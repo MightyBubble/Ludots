@@ -437,11 +437,6 @@
     "IdField": "id"
   },
   {
-    "Path": "Input/input_order_mappings.json",
-    "Policy": "DeepObject",
-    "AllowEmpty": true
-  },
-  {
     "Path": "Input/filter_profiles.json",
     "Policy": "DeepObject"
   },

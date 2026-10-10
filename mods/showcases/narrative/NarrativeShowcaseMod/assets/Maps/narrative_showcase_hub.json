@@ -62,7 +62,7 @@
   },
   "Entities": [
     {
-      "Template": "interaction_arcweaver",
+      "Template": "narrative_player_arcweaver",
       "InstanceId": "narrative_arcweaver",
       "Overrides": {
         "Name": {

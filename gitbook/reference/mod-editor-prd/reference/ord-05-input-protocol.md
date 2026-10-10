@@ -21,4 +21,4 @@
 | 等待开关的地图事件 | src/Core/Gameplay/MapTriggers/ResponseChainPromptEventSystem.cs |
 | EventGate 真实例 | mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/abilities.json |
 
-**相关文档**：[ord-05 PRD](../prd/ord-05-input-protocol.md) · [ord-06 reference](ord-06-input-mappings.md)
+**相关文档**：[ord-05 PRD](../prd/ord-05-input-protocol.md) · [input-03 reference](input-03-interaction-context.md)

@@ -26,7 +26,7 @@ public sealed class FormationCapabilityLifecycleTests
     {
         "FormationCapabilityShowcaseScenarioBindingSystem",
         "FormationCapabilityShowcaseStateSystem",
-        "FormationOrderPolicySystem",
+        "FormationCommandMembersSystem",
         "FormationCapabilityShowcaseFormationOutlinePresentationSystem",
         "FormationCapabilityShowcaseObstacleOverlayPresentationSystem",
     };

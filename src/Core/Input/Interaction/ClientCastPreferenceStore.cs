@@ -13,9 +13,8 @@ namespace Ludots.Core.Input.Interaction
     /// Cast commit ids live in <see cref="CastCommitProfileRegistry.ProfileIdRegistry"/>; template
     /// and form set ids resolve through injected key resolvers so the store shares the caller id
     /// spaces (<c>EntityTemplateKeyRegistry</c> / <c>AbilityFormSetIdRegistry</c>). Steady-state
-    /// resolution is allocation free. Persistence follows the
-    /// <c>InputOrderMappingSystem.SaveUserPreferences</c> file pattern (<c>user://</c> expansion,
-    /// pretty-printed camelCase JSON). No UI is wired here — settings screens call
+    /// resolution is allocation free. Persistence expands <c>user://</c> and writes
+    /// pretty-printed camelCase JSON. No UI is wired here — settings screens call
     /// <see cref="TrySetPreference"/> / <see cref="Save"/> directly.
     /// </summary>
     public sealed class ClientCastPreferenceStore
@@ -219,9 +218,8 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Persist player preferences (and the active scheme id) as JSON. Follows the
-        /// <c>InputOrderMappingSystem</c> persistence pattern: <c>user://</c> expands to the
-        /// per-user Ludots data directory, parent directories are created on demand.
+        /// Persist player preferences (and the active scheme id) as JSON. <c>user://</c> expands
+        /// to the per-user Ludots data directory, parent directories are created on demand.
         /// </summary>
         public void Save(string path)
         {

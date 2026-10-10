@@ -295,21 +295,14 @@ namespace Ludots.Tests.Architecture
         public void CommandTargetPaths_RequireExplicitKnowledgeGate()
         {
             string repoRoot = FindRepoRoot();
-            string localOrderSourcePath = Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs");
             string commandIntentRegistryPath = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "CommandIntentProfileRegistry.cs");
             string contextScoredResolverPath = Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "ContextScoredOrderResolver.cs");
 
-            string localOrderSource = File.ReadAllText(localOrderSourcePath);
             string commandIntentRegistry = File.ReadAllText(commandIntentRegistryPath);
             string contextScoredResolver = File.ReadAllText(contextScoredResolverPath);
 
             Assert.Multiple(() =>
             {
-                Assert.That(localOrderSource, Does.Contain("KnowledgeCommandTargetGate"),
-                    "CoreInputMod command target paths must use the explicit resolver-backed knowledge gate.");
-                Assert.That(localOrderSource, Does.Not.Contain("CommandSourceEligibility.CanTargetCommand("),
-                    "CoreInputMod hover/auto-target command paths must go through KnowledgeCommandTargetGate, not the raw command-source eligibility helper.");
-
                 Assert.That(commandIntentRegistry, Does.Not.Contain("targetGate = null"),
                     "CommandIntentProfileRegistry must not make the target gate optional.");
                 Assert.That(commandIntentRegistry, Does.Contain("throw new ArgumentNullException(nameof(targetGate))"),
@@ -389,7 +382,6 @@ namespace Ludots.Tests.Architecture
                 "EntityCollectionContextRuntime",
                 "InteractionContextStack",
                 "CommandSourceAcquisition",
-                "InputOrderMappingSystem",
                 "MassNavigationLocalCommandInputSystem",
                 "AuthoritativeInput",
                 "Ludots.Core.Input.Runtime",

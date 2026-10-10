@@ -1,0 +1,83 @@
+[
+  {
+    "id": "graph.champion.smart_cast_to_indicator_cast",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_castmodeindicator",
+        "action": "CastModeIndicator",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "leave",
+        "op": "DeactivateContext",
+        "context": "interaction.context.champion.smart_cast"
+      },
+      {
+        "id": "enter",
+        "op": "ActivateContext",
+        "context": "interaction.context.champion.indicator_cast",
+        "parentContext": "interaction.context.champion.battle"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "leave"
+      },
+      {
+        "from": "leave",
+        "fromPort": "next",
+        "to": "enter"
+      },
+      {
+        "from": "enter",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "leave",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "enter",
+        "toPort": "source"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

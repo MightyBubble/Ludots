@@ -4,11 +4,17 @@
     { "id": "SkillW", "name": "Interaction_SkillW", "type": "Button" },
     { "id": "SkillE", "name": "Interaction_SkillE", "type": "Button" },
     { "id": "SkillR", "name": "Interaction_SkillR", "type": "Button" },
+    { "id": "SkillQ.Release", "name": "Interaction_SkillQRelease", "type": "Button", "firesOn": "release" },
+    { "id": "SkillW.Release", "name": "Interaction_SkillWRelease", "type": "Button", "firesOn": "release" },
+    { "id": "SkillE.Release", "name": "Interaction_SkillERelease", "type": "Button", "firesOn": "release" },
+    { "id": "SkillR.Release", "name": "Interaction_SkillRRelease", "type": "Button", "firesOn": "release" },
     { "id": "SkillZ", "name": "Interaction_SkillZ", "type": "Button" },
     { "id": "SkillF", "name": "Interaction_SkillF", "type": "Button" },
     { "id": "ActionAttack", "name": "Interaction_ActionAttack", "type": "Button" },
     { "id": "RuneBurst", "name": "Interaction_RuneBurst", "type": "Button" },
     { "id": "Command", "name": "Interaction_Command", "type": "Button" },
+    { "id": "Interaction.AimConfirm", "name": "Interaction_AimConfirm", "type": "Button" },
+    { "id": "Interaction.AimCancel", "name": "Interaction_AimCancel", "type": "Button", "firesOn": "release" },
     { "id": "Stop", "name": "Interaction_Stop", "type": "Button" },
     { "id": "QueueModifier", "name": "Interaction_QueueModifier", "type": "Button" },
     { "id": "InteractionModeWoW", "name": "Interaction_Mode_WoW", "type": "Button" },
@@ -35,7 +41,23 @@
         { "actionId": "SkillW", "path": "<Keyboard>/w" },
         { "actionId": "SkillE", "path": "<Keyboard>/e" },
         { "actionId": "SkillR", "path": "<Keyboard>/r" },
-        { "actionId": "SkillZ", "path": "<Keyboard>/z" },
+        { "actionId": "SkillQ.Release", "path": "<Keyboard>/q" },
+        { "actionId": "SkillW.Release", "path": "<Keyboard>/w" },
+        { "actionId": "SkillE.Release", "path": "<Keyboard>/e" },
+        { "actionId": "SkillR.Release", "path": "<Keyboard>/r" },
+        {
+          "actionId": "SkillZ",
+          "path": "<Keyboard>/z",
+          "interactions": [
+            {
+              "type": "MultiTap",
+              "parameters": [
+                { "name": "TapCount", "value": 2 },
+                { "name": "TapWindowSeconds", "value": 0.28 }
+              ]
+            }
+          ]
+        },
         { "actionId": "SkillF", "path": "<Keyboard>/f" },
         { "actionId": "ActionAttack", "path": "<Keyboard>/space" },
         {
@@ -47,6 +69,8 @@
           ]
         },
         { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "Interaction.AimConfirm", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Interaction.AimCancel", "path": "<Mouse>/RightButton" },
         { "actionId": "Stop", "path": "<Keyboard>/s" },
         { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
         { "actionId": "InteractionModeWoW", "path": "<Keyboard>/f1" },

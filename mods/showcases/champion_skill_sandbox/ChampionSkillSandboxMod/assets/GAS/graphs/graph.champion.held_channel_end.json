@@ -1,0 +1,213 @@
+[
+  {
+    "id": "graph.champion.held_channel_end",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillr_release",
+        "action": "SkillR.Release",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "held_sel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "held_tagged",
+        "op": "QueryFilterTagAny",
+        "tag": "Champion.Input.HoldToChannel"
+      },
+      {
+        "id": "held_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "held_count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "held_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "held_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "held_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility.End"
+      },
+      {
+        "id": "halt_held_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt_held",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "held_sel"
+      },
+      {
+        "from": "held_sel",
+        "fromPort": "next",
+        "to": "held_tagged"
+      },
+      {
+        "from": "held_tagged",
+        "fromPort": "next",
+        "to": "held_count"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "next",
+        "to": "held_count_f"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "next",
+        "to": "held_zero"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "next",
+        "to": "held_gt"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "next",
+        "to": "held_branch"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "true",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "halt_held_ok"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "next",
+        "to": "halt_held"
+      },
+      {
+        "from": "held_branch",
+        "fromPort": "false",
+        "to": "halt_ok"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "held_sel",
+        "toPort": "source"
+      },
+      {
+        "from": "held_count",
+        "fromPort": "value",
+        "to": "held_count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "held_count_f",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "held_zero",
+        "fromPort": "value",
+        "to": "held_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "held_gt",
+        "fromPort": "value",
+        "to": "held_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "halt_held_ok",
+        "fromPort": "value",
+        "to": "halt_held",
+        "toPort": "value"
+      },
+      {
+        "from": "halt_ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

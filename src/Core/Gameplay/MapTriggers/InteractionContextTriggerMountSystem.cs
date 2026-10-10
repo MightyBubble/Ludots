@@ -69,6 +69,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<MapSessionManager?> _sessions;
         private readonly Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter _graphReturnWriter;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly InteractionContextInstanceRuntime _contextInstances;
 
         private Entity[] _subjects = new Entity[16];
         private int _subjectCount;
@@ -97,7 +98,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EventSchemaRegistry? eventSchemas,
             Func<MapSessionManager?> sessions,
             Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter graphReturnWriter,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi)
+            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
+            InteractionContextInstanceRuntime contextInstances)
             : base(world)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
@@ -108,6 +110,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _graphReturnWriter = graphReturnWriter ?? throw new ArgumentNullException(nameof(graphReturnWriter));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
             // An owner destroyed while still carrying context components never
             // went through an explicit deactivation — run each carried context's
             // onDeactivated slot at the destroy boundary so settlement/preview cleanup
@@ -169,6 +172,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
 
                 current.Add(subject);
+                ReleaseOrphanedInstances(subject);
                 CollectDesiredProfiles(subject, _desiredProfileIds);
                 ReconcileSubject(subject);
                 _desiredProfileIds.Clear();
@@ -213,6 +217,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             FlushDeferredDeactivatedUnmounts();
             if (!World.IsAlive(subject)) return;
+            ReleaseOrphanedInstances(subject);
             _desiredProfileIds.Clear();
             CollectDesiredProfiles(subject, _desiredProfileIds);
             ReconcileSubject(subject);
@@ -448,6 +453,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             World.GetEntities(in _activeContextQuery, _subjects);
+        }
+
+        // Deactivated slots of released orphans run at the release change point; flushing their
+        // deferred unmounts right away keeps the close pass from running the slot a second time.
+        private void ReleaseOrphanedInstances(Entity subject)
+        {
+            _contextInstances.ReleaseOrphanedInstances(subject);
+            FlushDeferredDeactivatedUnmounts();
         }
 
         private void CollectDesiredProfiles(Entity subject, List<int> profileIds)

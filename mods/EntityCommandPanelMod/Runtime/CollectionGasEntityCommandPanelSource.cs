@@ -7,7 +7,6 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -40,6 +39,8 @@ namespace EntityCommandPanelMod.Runtime
         private readonly GameEngine _engine;
         private readonly EntityCollectionStore _collections;
         private readonly GasEntityCommandPanelSource _gasSource;
+        private readonly EntityCommandPanelSlotActivations _activations;
+        private readonly Entity[] _activationMemberScratch = new Entity[MaxMembersPerSlot];
         private readonly IEntityCommandPanelCollectionQueryConfigRegistry _queryConfigs;
         private readonly AbilityAggregationProfileRegistry _aggregationProfiles;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
@@ -66,6 +67,7 @@ namespace EntityCommandPanelMod.Runtime
             GameEngine engine,
             EntityCollectionStore collections,
             GasEntityCommandPanelSource gasSource,
+            EntityCommandPanelSlotActivations activations,
             IEntityCommandPanelCollectionQueryConfigRegistry queryConfigs,
             AbilityAggregationProfileRegistry aggregationProfiles,
             string aggregationProfileId)
@@ -73,6 +75,7 @@ namespace EntityCommandPanelMod.Runtime
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
             _gasSource = gasSource ?? throw new ArgumentNullException(nameof(gasSource));
+            _activations = activations ?? throw new ArgumentNullException(nameof(activations));
             _queryConfigs = queryConfigs ?? throw new ArgumentNullException(nameof(queryConfigs));
             _aggregationProfiles = aggregationProfiles ?? throw new ArgumentNullException(nameof(aggregationProfiles));
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
@@ -163,23 +166,19 @@ namespace EntityCommandPanelMod.Runtime
             return BuildAggregatedSlots(handle, config, destination, updateActivationMap: true);
         }
 
-        public InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
+        public EntityCommandPanelActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
         {
             if (groupIndex != 0 ||
                 slotIndex < 0 ||
                 !TryResolveCollection(context, out EntityCommandPanelCollectionQueryConfig config, out EntityCollectionHandle handle, out _))
             {
-                return RecordActivationResult(InputOrderActivationResult.Rejected(
-                    context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation));
+                return EntityCommandPanelActivationResult.Rejected(context.TargetEntity, EntityCommandPanelActivationRejection.NotActionable);
             }
 
             BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
             if ((uint)slotIndex >= (uint)MaxAggregatedSlots)
             {
-                return RecordActivationResult(InputOrderActivationResult.Rejected(
-                    context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation));
+                return EntityCommandPanelActivationResult.Rejected(context.TargetEntity, EntityCommandPanelActivationRejection.NotActionable);
             }
 
             int start = _memberStarts[slotIndex];
@@ -188,85 +187,90 @@ namespace EntityCommandPanelMod.Runtime
                 start < 0 ||
                 start + count > _memberScratch.Length)
             {
-                return RecordActivationResult(InputOrderActivationResult.Rejected(
-                    context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation));
+                return EntityCommandPanelActivationResult.Rejected(context.TargetEntity, EntityCommandPanelActivationRejection.EmptySlot);
             }
 
-            InputOrderActivationResult firstAccepted = default;
-            InputOrderActivationResult firstRejected = default;
+            EntityCommandPanelActivationResult firstAccepted = default;
+            EntityCommandPanelActivationResult firstRejected = default;
             bool hasAccepted = false;
             bool hasRejected = false;
-
-            if (count > 1 &&
-                TryFindAimingMember(start, count, out Entity aimingActor))
-            {
-                return RecordActivationResult(InputOrderActivationResult.Rejected(
-                    aimingActor,
-                    OrderSubmitResult.RejectedByRule));
-            }
-
             for (int i = 0; i < count; i++)
             {
                 EntityCommandPanelAggregationMember member = _memberScratch[start + i];
-                InputOrderActivationResult result = _gasSource.ActivateSlot(member.Owner, groupIndex, member.SlotIndex);
-                if (result.State == InputOrderActivationState.Rejected)
+                if (IndexOfEarlierSlot(start, i, member.SlotIndex) >= 0)
+                {
+                    continue;
+                }
+
+                int groupCount = 0;
+                for (int j = i; j < count; j++)
+                {
+                    EntityCommandPanelAggregationMember candidate = _memberScratch[start + j];
+                    if (candidate.SlotIndex != member.SlotIndex)
+                    {
+                        continue;
+                    }
+
+                    EntityCommandPanelActivationRejection rejection = _gasSource.ValidateActivation(candidate.Owner, candidate.SlotIndex);
+                    if (rejection != EntityCommandPanelActivationRejection.None)
+                    {
+                        if (!hasRejected)
+                        {
+                            firstRejected = EntityCommandPanelActivationResult.Rejected(candidate.Owner, rejection);
+                            hasRejected = true;
+                        }
+
+                        continue;
+                    }
+
+                    _activationMemberScratch[groupCount++] = candidate.Owner;
+                }
+
+                if (groupCount == 0)
+                {
+                    continue;
+                }
+
+                EntityCommandPanelActivationResult result = _activations.Enqueue(
+                    context.TargetEntity,
+                    member.SlotIndex,
+                    _activationMemberScratch.AsSpan(0, groupCount));
+                if (result.State == EntityCommandPanelActivationState.Rejected)
                 {
                     if (!hasRejected)
                     {
                         firstRejected = result;
                         hasRejected = true;
                     }
-
-                    continue;
                 }
-
-                if (!hasAccepted)
+                else if (!hasAccepted)
                 {
                     firstAccepted = result;
                     hasAccepted = true;
-                }
-
-                if (result.State == InputOrderActivationState.EnteredAiming)
-                {
-                    break;
                 }
             }
 
             if (hasRejected)
             {
-                return RecordActivationResult(firstRejected);
+                return firstRejected;
             }
 
-            return RecordActivationResult(hasAccepted
+            return hasAccepted
                 ? firstAccepted
-                : InputOrderActivationResult.Rejected(
-                    context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation));
+                : EntityCommandPanelActivationResult.Rejected(context.TargetEntity, EntityCommandPanelActivationRejection.EmptySlot);
         }
 
-        private InputOrderActivationResult RecordActivationResult(in InputOrderActivationResult result)
+        private int IndexOfEarlierSlot(int start, int index, int slotIndex)
         {
-            InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            return mapping != null
-                ? mapping.RecordExternalActivationResult(in result)
-                : result;
-        }
-
-        private bool TryFindAimingMember(int start, int count, out Entity actor)
-        {
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < index; i++)
             {
-                EntityCommandPanelAggregationMember member = _memberScratch[start + i];
-                if (_gasSource.WouldEnterUiAiming(member.Owner, member.SlotIndex))
+                if (_memberScratch[start + i].SlotIndex == slotIndex)
                 {
-                    actor = member.Owner;
-                    return true;
+                    return i;
                 }
             }
 
-            actor = Entity.Null;
-            return false;
+            return -1;
         }
 
         public int CopyAggregationMembers(
@@ -321,8 +325,8 @@ namespace EntityCommandPanelMod.Runtime
 
         public int CopySlots(Entity target, int groupIndex, Span<EntityCommandPanelSlotView> destination) => 0;
 
-        public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex) =>
-            InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedByRule);
+        public EntityCommandPanelActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex) =>
+            EntityCommandPanelActivationResult.Rejected(target, EntityCommandPanelActivationRejection.NotActionable);
 
         private bool TryResolveCollection(
             in EntityCommandPanelSourceContext context,

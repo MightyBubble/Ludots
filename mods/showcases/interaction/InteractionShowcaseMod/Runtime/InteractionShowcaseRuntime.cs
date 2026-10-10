@@ -61,7 +61,6 @@ namespace InteractionShowcaseMod.Runtime
             {
                 _visibleUatFrame = 0;
                 ActivateInputContext(input);
-                EnsureDefaultShowcaseMode(engine);
                 SuppressNonEssentialHud(engine);
                 List<PossessedShowcaseRep> possessedReps = RequireShowcasePossessedReps(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!, possessedReps);
@@ -652,14 +651,6 @@ namespace InteractionShowcaseMod.Runtime
             return engine.GlobalContext.TryGetValue(InteractionShowcaseIds.SuppressUiPanelKey, out var suppressObj) &&
                    suppressObj is bool suppress &&
                    suppress;
-        }
-
-        private static void EnsureDefaultShowcaseMode(GameEngine engine)
-        {
-            if (!InteractionShowcaseIds.IsShowcaseMode(InteractionShowCastModes.GetActive(engine)))
-            {
-                InteractionShowCastModes.TrySetActive(engine, InteractionShowcaseIds.LolModeId);
-            }
         }
 
         private void SuppressNonEssentialHud(GameEngine engine)
