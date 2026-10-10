@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
@@ -20,6 +21,9 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
     private readonly CrowdWalkableVisualProjector _walkable;
     private readonly Func<NavContext?> _navSource;
 
+    /// <summary>可走视图本帧的认知变体尚未物化(仿真还没 Build)。场不提交。</summary>
+    internal bool WalkableNavPending { get; private set; }
+
     public S4DeployDemoViewProjector(S4DeployDemoRuntime demo, Func<CrowdSimSession?> sessionSource)
     {
         _demo = demo;
@@ -28,13 +32,19 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
         _navSource = () =>
         {
             var s = _sessionSource();
-            return DominantGroup(s)?.NavId is { } navId && s.Navs.TryGetValue(navId, out var nav) ? nav : null;
+            var group = DominantGroup(s);
+            if (s == null || group == null) return null;
+            // 认知号只读已物化变体。未物化不写场(构建归仿真,呈现不进 Build)。
+            if (s.TryGetMaterializedNav(group.NavId, out var nav)) return nav;
+            if (group.NavId >= CrowdBeliefNavs.BeliefStride) WalkableNavPending = true;
+            return null;
         };
         _walkable = new CrowdWalkableVisualProjector(_flowSource, _navSource);
     }
 
     public void Project(GlobalFieldVisualBuffer buffer)
     {
+        WalkableNavPending = false;
         var session = _sessionSource();
         if (session == null) return;
         var group = DominantGroup(session);

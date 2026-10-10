@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\crowd_simulation\CrowdSimulationS4DeployMod\CrowdSimulationS4DeployMod.csproj" />
   </ItemGroup>
 
   <ItemGroup>

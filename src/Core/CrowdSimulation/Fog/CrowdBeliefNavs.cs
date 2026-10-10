@@ -94,6 +94,27 @@ public sealed class CrowdBeliefNavs
         return v;
     }
 
+    /// <summary>
+    /// 只读已物化变体。与 <see cref="Get"/> 同持路径服务的导航互斥锁;
+    /// 槽内没有该号时返回 false,不进入 <see cref="Build"/>
+    /// (呈现侧禁止在仿真之外克隆变体、改 tile 缓存)。
+    /// </summary>
+    internal bool TryGetMaterialized(int id, out NavContext nav)
+    {
+        if (id < BeliefStride)
+            throw new ArgumentOutOfRangeException(nameof(id), id, "真相号不走认知注册表。");
+        NavContext? found = null;
+        bool hit = _sim.Planner!.Service.RunExclusive(() =>
+        {
+            var slot = SlotOf(id / BeliefStride);
+            if (!slot.Navs.TryGetValue(id, out var value)) return false;
+            found = value;
+            return true;
+        });
+        nav = found!;
+        return hit;
+    }
+
     private NavContext Build(Slot b, NavContext truth, int id, int slot)
     {
         // 参考端 beforeRebake 特例(belief 与真相只差一条未重烘实体)不移植:C# 的结构 op

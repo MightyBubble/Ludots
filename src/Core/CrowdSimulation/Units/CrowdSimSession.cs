@@ -126,6 +126,31 @@ public sealed class CrowdSimSession
         return Planner!.Service.RunExclusive(() => beliefs.Get(navId));
     }
 
+    /// <summary>
+    /// 呈现只读解析。真相号直接取 <see cref="Navs"/>;认知号只取已物化变体。
+    /// 未物化返回 false,不 Build。
+    /// </summary>
+    public bool TryGetMaterializedNav(int navId, out NavContext nav)
+    {
+        if (navId < CrowdBeliefNavs.BeliefStride)
+        {
+            if (!Navs.TryGetValue(navId, out var truth))
+                throw new InvalidOperationException($"真相 nav {navId} 不在会话字典。");
+            nav = truth;
+            return true;
+        }
+
+        var beliefs = Beliefs ?? throw new InvalidOperationException($"变体 nav {navId}:会话没有认知注册表(迷雾未启用)。");
+        if (beliefs.TryGetMaterialized(navId, out var variant))
+        {
+            nav = variant;
+            return true;
+        }
+
+        nav = null!;
+        return false;
+    }
+
     /// <summary>组的规划句柄解析(参考 navFor):玩家视野组当前槽的变体号(0 = 真相号)。</summary>
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
