@@ -50,9 +50,9 @@ public sealed class S7RebakeTruthTests
     /// 放置/重烘当帧的墙触推离两侧必须同值——开放格缓存按版本失效是其中的隐含合同
     /// (CrowdWalls.OpenCellCache:重烘对 Walk 原地腐蚀,失效只认引用会读到旧开放表,
     /// 放置当帧马达跳过亚格推出,p50 抬到 8cm 档)。</summary>
-    private const double P50BandCm = 0.5;
+    internal const double P50BandCm = 0.5;
     /// <summary>mode 双容忍:不一致率上限(实测 0.030%,留 5 倍余量)。</summary>
-    private const double MaxModeMismatchRate = 0.0015;
+    internal const double MaxModeMismatchRate = 0.0015;
     /// <summary>位置对齐判定(厘米):|Δ| ≤ 此值的样本视为"同输入",contacts 在其上走逐位硬门。</summary>
     private const double AlignedDeltaCm = 1.0;
 
