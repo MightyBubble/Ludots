@@ -21,6 +21,7 @@ public static class CrowdWalls
             public byte[]? Walk;
             public byte[]? UpWalk; // 桥面层以 UpPass 为 walk 口径
             public byte[]? Grid;
+            public bool Filled;
         }
 
         private readonly Dictionary<int, Entry> _byNavId = new();
@@ -43,29 +44,64 @@ public static class CrowdWalls
                 e.Version = nav.Version;
                 e.Walk = nav.Walk;
                 e.UpWalk = nav.UpPass;
+                e.Filled = false;
             }
 
             return e.Grid!;
         }
+
+        /// <summary>把两层开放格一次性写满。IsOpen 只读缓存字节，并行马达不能边查边写。</summary>
+        public void EnsureFilled(NavContext nav)
+        {
+            var grid = GridFor(nav);
+            if (!_byNavId.TryGetValue(nav.Id, out var e))
+            {
+                throw new InvalidOperationException($"开放格缓存缺少 nav {nav.Id}。");
+            }
+
+            if (e.Filled) return;
+            int n = nav.CellCount;
+            int n2 = n * n;
+            if (grid.Length < 2 * n2)
+            {
+                throw new InvalidOperationException($"开放格缓存长度 {grid.Length} 不足 nav {nav.Id} 的 {2 * n2}。");
+            }
+
+            Fill(grid, nav.Walk, n, 0, n2);
+            Fill(grid, nav.UpPass, n, n2, n2);
+            e.Filled = true;
+        }
     }
 
-    /// <summary>该格的 3×3 邻域(界内)是否全可走。</summary>
-    public static bool IsOpen(byte[] grid, byte[] walk, int n, int cell, int levelOffset)
+    /// <summary>该格的 3×3 邻域(界内)是否全可走。缓存必须已经由 EnsureFilled 写满。</summary>
+    public static bool IsOpen(byte[] grid, int cell, int levelOffset)
     {
         byte v = grid[levelOffset + cell];
-        if (v != 0) return v == 1;
-        int cy = cell / n, cx = cell - cy * n;
-        int open = 1;
-        for (int y = Math.Max(0, cy - 1); open != 0 && y <= Math.Min(n - 1, cy + 1); y++)
+        if (v == 0)
         {
-            for (int x = Math.Max(0, cx - 1); x <= Math.Min(n - 1, cx + 1); x++)
-            {
-                if (walk[y * n + x] == 0) { open = 0; break; }
-            }
+            throw new InvalidOperationException($"开放格缓存未填充: cell={cell} levelOffset={levelOffset}。");
         }
 
-        grid[levelOffset + cell] = open != 0 ? (byte)1 : (byte)2;
-        return open == 1;
+        return v == 1;
+    }
+
+    private static void Fill(byte[] grid, byte[] walk, int n, int levelOffset, int count)
+    {
+        for (int cell = 0; cell < count; cell++)
+        {
+            if (grid[levelOffset + cell] != 0) continue;
+            int cy = cell / n, cx = cell - cy * n;
+            int open = 1;
+            for (int y = Math.Max(0, cy - 1); open != 0 && y <= Math.Min(n - 1, cy + 1); y++)
+            {
+                for (int x = Math.Max(0, cx - 1); x <= Math.Min(n - 1, cx + 1); x++)
+                {
+                    if (walk[y * n + x] == 0) { open = 0; break; }
+                }
+            }
+
+            grid[levelOffset + cell] = open != 0 ? (byte)1 : (byte)2;
+        }
     }
 
     /// <summary>把圆盘推出所有相交的被挡格;返回 true 并写出修正位置与接触法线。</summary>

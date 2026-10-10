@@ -32,26 +32,20 @@ public static class CrowdAvoidance
 
     public static void Solve(CrowdMovementKernel k)
     {
-        var session = k.Session;
-        var hash = k.Hash;
-        var relations = session.Config.Relations;
-        int P = relations.PlayerCount;
-        var pushMode = relations.PushModeByPair;
-        var playerIndex = relations.IndexByPlayerId;
-        var hash2 = hash;
-        int dim = hash2.Dim, last = dim - 1;
-        int rr = hash2.Rings + 1;
-        int width = hash2.Width;
-        Fix64 cellCm = hash2.CellSize;
-        Fix64 reach = hash2.Reach;
-        Fix64 keep = Fix64.OneValue - k.Smoothing;
-        k.EnsureAvoidanceCapacity(session.Units.Capacity);
+        k.EnsureAvoidanceCapacity(k.Session.Units.Capacity);
+        int active = k.Hash.ActiveCount;
+        // 聚集写完唤醒标记之后才能解分离:邻格是否醒着要看全部占格。哈希插入不在这里。
+        k.RunRanges(active, CrowdMovementKernel.RangePhaseAvoidGather, default);
+        k.RunRanges(active, CrowdMovementKernel.RangePhaseAvoidSolve, default);
+    }
+
+    internal static void GatherRange(CrowdMovementKernel k, int start, int end)
+    {
+        var hash2 = k.Hash;
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
         var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
         var calm = k.Calm; var awake = k.Awake;
-
-        // 1:哈希序聚集 + 逐格唤醒标记
-        for (int a = 0; a < hash2.ActiveCount; a++)
+        for (int a = start; a < end; a++)
         {
             int c = hash2.Active[a];
             int kStart = hash2.StartOf(c), kEnd = kStart + hash2.CountOf(c);
@@ -77,9 +71,25 @@ public static class CrowdAvoidance
 
             awake[a] = (byte)aw;
         }
+    }
 
-        // 2:逐占格分离(按行走错峰)
-        for (int a = 0; a < hash2.ActiveCount; a++)
+    internal static void SolveRange(CrowdMovementKernel k, int start, int end)
+    {
+        var session = k.Session;
+        var relations = session.Config.Relations;
+        int P = relations.PlayerCount;
+        var pushMode = relations.PushModeByPair;
+        var hash2 = k.Hash;
+        int dim = hash2.Dim, last = dim - 1;
+        int rr = hash2.Rings + 1;
+        int width = hash2.Width;
+        Fix64 cellCm = hash2.CellSize;
+        Fix64 reach = hash2.Reach;
+        Fix64 keep = Fix64.OneValue - k.Smoothing;
+        var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
+        var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
+        var calm = k.Calm; var awake = k.Awake;
+        for (int a = start; a < end; a++)
         {
             int c = hash2.Active[a];
             int cy = c / dim;
@@ -119,7 +129,7 @@ public static class CrowdAvoidance
                 int scanned = 0, contacts = 0;
                 for (int o = 0; o < nearby && scanned < k.MaxScan && contacts < k.MaxNeighbors; o++)
                 {
-                    int pos = solo + o, end = hash2.NeighborEnd[pos];
+                    int pos = solo + o, neighborEnd = hash2.NeighborEnd[pos];
                     // 格剔除:矩形超出 ri + reach 的邻格不可能相碰(边格收着钳位单位,永不剔除)
                     int nc = hash2.Active[hash2.NeighborSlot[pos]], ny = nc / dim, nx = nc - ny * dim;
                     if (nx < last && ny < last)
@@ -131,7 +141,7 @@ public static class CrowdAvoidance
                         if (ex * ex + ey * ey >= lim * lim) continue;
                     }
 
-                    for (int q = hash2.NeighborStart[pos]; q < end && scanned < k.MaxScan && contacts < k.MaxNeighbors; q++)
+                    for (int q = hash2.NeighborStart[pos]; q < neighborEnd && scanned < k.MaxScan && contacts < k.MaxNeighbors; q++)
                     {
                         Fix64 rq = gr[q];
                         scanned++; // 读到的候选都计入 maxScan,含跳过的

@@ -258,6 +258,8 @@ public sealed class RuntimeSimSection
     public required Fix64 TimeScale { get; init; }
     /// <summary>timeScale 的配置原始值(到期 tick 等整数契约按参考端 f64 公式换算,不走 Fix64)。</summary>
     public required double TimeScaleRaw { get; init; }
+    /// <summary>运动内核工人数(1 = 单线程)。步进时读取,调用方改它必须仍落在配置校验范围内。</summary>
+    public required int ParallelWorkerCount { get; set; }
 }
 
 public sealed class RuntimeSpawnSection
