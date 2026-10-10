@@ -28,7 +28,10 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
         _navSource = () =>
         {
             var s = _sessionSource();
-            return DominantGroup(s)?.NavId is { } navId && s.Navs.TryGetValue(navId, out var nav) ? nav : null;
+            var group = DominantGroup(s);
+            if (s == null || group == null) return null;
+            // 迷雾开启后组导航号是认知变体,不在真相字典里,必须走会话解析。
+            return s.ResolveNavContext(group.NavId);
         };
         _walkable = new CrowdWalkableVisualProjector(_flowSource, _navSource);
     }

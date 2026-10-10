@@ -8,4 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrowdSimulationTests" />
+  </ItemGroup>
 </Project>

@@ -291,11 +291,16 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         int navId = group?.NavId ?? MinNavId(session);
         int reportTick = session.LastRebakeReport?.ReportTick ?? -1;
         if (_wireNavId == navId && _wireReportTick == reportTick) return;
+        if (navId < 0)
+        {
+            throw new InvalidOperationException("S4 NavMesh 视图没有导航上下文。");
+        }
+
+        var nav = session.ResolveNavContext(navId);
         _wireNavId = navId;
         _wireReportTick = reportTick;
         _wireLines.Clear();
         _wireMarkers.Clear();
-        if (!session.Navs.TryGetValue(navId, out var nav)) return;
 
         int n = session.Config.NavCellCount;
         float csM = session.Config.NavCellSizeCm / 100f;
