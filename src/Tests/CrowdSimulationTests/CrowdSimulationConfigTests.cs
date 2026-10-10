@@ -354,4 +354,82 @@ public class CrowdSimulationConfigTests
             Assert.That(ex!.Message, Does.Contain(expected), $"[{string.Join(',', ids)}] 的报错应写明规则");
         }
     }
+
+    [Test]
+    public void FogCellSize_BelowSquareBound_IsRejected_AtBound_Passes()
+    {
+        // 格长 = navCellSizeCm × cellCells。99 / 100 两侧各自合法(> 0、1..32);
+        // 导航边长取 16,能被默认 clusterSize 整除,且落在 16..1024。
+        var below = FogCellWorld(navCellSizeCm: 99, cellCells: 1, visionCm: 99);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map));
+        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
+        Assert.That(ex.Message, Does.Contain("world.navCellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
+        Assert.That(ex.Message, Does.Contain("= 99"));
+        Assert.That(ex.Message, Does.Contain("≥ 100"));
+
+        var atBound = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 100);
+        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map);
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void FogCellSize_IntProductWrap_IsRejected()
+    {
+        // 134217727×16 = 2147483632 仍是合法板宽;×32 = 4294967264 超出 int,运行时直乘环绕。
+        const int cellSizeCm = 134217727;
+        const int cellCells = 32;
+        const int widthCm = 2147483632;
+        var json = TestDefaults.DefaultConfigJson();
+        json["world"]!["navCellSizeCm"] = cellSizeCm;
+        json["fog"]!["cellCells"] = cellCells;
+        var map = TestDefaults.DemoMap();
+        map.Boards[0].WidthCm = widthCm;
+        map.Boards[0].HeightCm = widthCm;
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map));
+        Assert.That(ex!.Message, Does.Contain("world.navCellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("134217727"));
+        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
+        Assert.That(ex.Message, Does.Contain("32"));
+        Assert.That(ex.Message, Does.Contain("4294967264"));
+    }
+
+    [Test]
+    public void VisionRadiusCells_BeyondDiagonal_IsRejected_AtDiagonal_Passes()
+    {
+        // 现网:visionCm 80000、格长 6250×4=25000、F=256/4=64,半径 4 格。
+        var live = TestDefaults.Assemble();
+        Assert.That(live.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
+        Assert.That(live.NavCellSizeCm * live.Fog.CellCells, Is.EqualTo(25000));
+        Assert.That((live.NavCellCount + live.Fog.CellCells - 1) / live.Fog.CellCells, Is.EqualTo(64));
+
+        // 导航 16、cellCells 1 → F=16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22 而不是 F。
+        // 格长 100 cm;vision 2200 → ceil=22,2300 → ceil=23。
+        var over = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 2300);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map));
+        Assert.That(ex!.Message, Does.Contain("fog.visionCm"));
+        Assert.That(ex.Message, Does.Contain("2300"));
+        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
+        Assert.That(ex.Message, Does.Contain("world.navCellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("向上取整 = 23"));
+        Assert.That(ex.Message, Does.Contain("22"));
+
+        var atDiagonal = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 2200);
+        var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map);
+        Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(2200)));
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+    }
+
+    private static (CrowdSimulationConfig Config, MapConfig Map) FogCellWorld(int navCellSizeCm, int cellCells, int visionCm)
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        json["world"]!["navCellSizeCm"] = navCellSizeCm;
+        json["fog"]!["cellCells"] = cellCells;
+        json["fog"]!["visionCm"] = visionCm;
+        var map = TestDefaults.DemoMap();
+        int widthCm = navCellSizeCm * 16;
+        map.Boards[0].WidthCm = widthCm;
+        map.Boards[0].HeightCm = widthCm;
+        return (CrowdSimulationConfig.Load(json), map);
+    }
 }

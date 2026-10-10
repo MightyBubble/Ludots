@@ -110,7 +110,9 @@ public sealed record CrowdFogShape
 public static class CrowdFogArea
 {
     /// <summary>米域输入守卫:circle 半径/圆心与 poly 顶点超出即拒——Q31.32 平方安全界,
-    /// 回绕不许静默发生(rect 无平方不设守卫,越图仍走 clamp)。</summary>
+    /// 回绕不许静默发生(rect 无平方不设守卫,越图仍走 clamp)。
+    /// 与 <see cref="Ludots.Core.CrowdSimulation.Config.CrowdSimulationConfigLoader.MinFogCellSizeCm"/> 成对:格长 ≥ 1 米时,
+    /// 本守卫内的格坐标(圆扫描线再加半格)平方仍小于 2^31。</summary>
     private const double MaxShapeMeters = 46340.0;
 
     private static void RequireShapeMeters(double[] values)

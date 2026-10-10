@@ -22,6 +22,12 @@ public sealed class CrowdSimulationConfigLoader
 
     public const string RelativePath = "CrowdSimulationConfig.json";
 
+    /// <summary>迷雾格长下限(厘米),即 world.navCellSizeCm × fog.cellCells。
+    /// 形状米坐标先被 CrowdFogArea 的 ±46340 m 守卫卡住,再除以格长(米)。圆扫描线只走包围盒,
+    /// |py−圆心| ≤ 半径 + 1/2;圆心在负半轴、包围盒被夹到 0 格时 py 最小是 0.5,同样只多出半格。
+    /// 格长 ≥ 1 米时被平方的量 ≤ 46340.5,平方仍小于 2^31。</summary>
+    public const int MinFogCellSizeCm = 100;
+
     private const string MassNavigationRelativePath = "MassNavigationConfig.json";
 
     private readonly ConfigPipeline _pipeline;
@@ -117,6 +123,14 @@ public sealed class CrowdSimulationConfigLoader
             throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {cellSizeCm}，需为 > 0 的整数");
         }
 
+        // 运行时迷雾格长是 int 直乘,乘积出 int 即环绕成负数。
+        long fogCellCm = (long)cellSizeCm * config.Fog.CellCells;
+        if (fogCellCm < MinFogCellSizeCm || fogCellCm > int.MaxValue)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）= {fogCellCm}，需为 ≥ {MinFogCellSizeCm}、≤ {int.MaxValue}");
+        }
+
         if (board.WidthCm != board.HeightCm)
         {
             throw new InvalidOperationException($"{mapFile}: Boards[0] 必须是正方形（WidthCm {board.WidthCm} ≠ HeightCm {board.HeightCm}）。");
@@ -136,6 +150,15 @@ public sealed class CrowdSimulationConfigLoader
         if (navCellCount % config.Hpa.ClusterSize != 0)
         {
             throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navResolution（{navCellCount}）必须能被 hpa.clusterSize（{config.Hpa.ClusterSize}，tile 尺寸）整除");
+        }
+
+        int fogEdge = (navCellCount + config.Fog.CellCells - 1) / config.Fog.CellCells;
+        int radiusCells = (int)Math.Ceiling(config.Fog.VisionCm / (double)fogCellCm);
+        int maxRadiusCells = MaxFogVisionRadiusCells(fogEdge);
+        if (radiusCells > maxRadiusCells)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: fog.visionCm（{config.Fog.VisionCm}）/ (world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）)（{fogCellCm}）向上取整 = {radiusCells}，不得超过迷雾网格 F（{fogEdge}）对角格距的向上取整 {maxRadiusCells}");
         }
 
         if (map.Players.Count < 1 || map.Players.Count > 16)
@@ -608,5 +631,21 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         return parsed;
+    }
+
+    /// <summary>
+    /// 视盘格半径上限。视盘按偏移平铺,使用处只丢掉出图的格子,不把半径夹到 F。
+    /// |dx|≥F 或 |dy|≥F 加到任何格心都出图;半径小于对角 (F-1)*√2 时角上的单位仍看不见对角格,超过 F 仍会改变可见集。
+    /// 可见集在半径达到对角之后不再变,上限取满足 k² ≥ 2(F-1)² 的最小 k(F=1 时只有本格,上限为 1)。
+    /// F≤1024 时该值≤1447,循环角点的 dx*dx+dy*dy 仍小于 2^31。
+    /// </summary>
+    private static int MaxFogVisionRadiusCells(int fogEdge)
+    {
+        if (fogEdge <= 1) return 1;
+        int n = fogEdge - 1;
+        long need = 2L * n * n;
+        int k = n + 1;
+        while ((long)k * k < need) k++;
+        return k;
     }
 }
