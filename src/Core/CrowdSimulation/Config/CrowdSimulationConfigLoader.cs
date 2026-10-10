@@ -432,7 +432,13 @@ public sealed class CrowdSimulationConfigLoader
                 Hostile = ParsePushMode(config.Push.Modes.Hostile),
             },
             Relations = BuildRelations(config, map),
-            Sim = new RuntimeSimSection { MaxUnits = config.Sim.MaxUnits, TimeScale = Fix64.FromDouble(config.Sim.TimeScale), TimeScaleRaw = config.Sim.TimeScale },
+            Sim = new RuntimeSimSection
+            {
+                MaxUnits = config.Sim.MaxUnits,
+                TimeScale = Fix64.FromDouble(config.Sim.TimeScale),
+                TimeScaleRaw = config.Sim.TimeScale,
+                ParallelWorkerCount = config.Sim.ParallelWorkerCount,
+            },
             Spawn = new RuntimeSpawnSection
             {
                 PlacementTries = config.Spawn.PlacementTries,
