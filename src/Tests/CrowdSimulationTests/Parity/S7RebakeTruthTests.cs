@@ -85,7 +85,7 @@ public sealed class S7RebakeTruthTests
             .Where(c => c.Cmd.Kind == CrowdSimCommandKind.PlaceStructure)
             .Select(c => c.Tick).ToHashSet();
         var store = session.Structures!;
-        int gridN = store.CellCount, cellSize = store.CellSizeCm;
+        int gridN = store.NavCellsPerSide, cellSize = store.NavCellSizeCm;
         byte[] blockedGrid = store.Blocked;
 
         var bin = File.ReadAllBytes(Path.Combine(dir, "s7-rebake.bin"));

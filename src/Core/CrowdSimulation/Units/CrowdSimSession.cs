@@ -103,7 +103,7 @@ public sealed class CrowdSimSession
             Fog = new CrowdFog(Config, Config.Relations, Structures);
             if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
-            Belief = CrowdBeliefState.Create(Fog.G);
+            Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
         }
     }
 

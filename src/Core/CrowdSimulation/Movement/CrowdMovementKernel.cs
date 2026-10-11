@@ -411,7 +411,7 @@ public sealed class CrowdMovementKernel
                 leaders[li].Step(
                     Session.LayerSpeedCmPerSecond(leaders[li].LayerIdx),
                     LeaderSpeed, turnK, faceStep, dt,
-                    Session.Config.NavCellSizeCm, Session.Config.NavCellCount);
+                    Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }
         }
 
@@ -433,11 +433,11 @@ public sealed class CrowdMovementKernel
         Fix64 maxRadiusCm = Fix64.Zero;
         foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);
         Fix64 hashCellCm = Fix64.Max(Fix64.OneValue, maxRadiusCm * 2 / Fix64.FromInt(Math.Max(1, av.HashRings)));
-        var hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
+        var hash = new CrowdSpatialHash(cfg.NavCellsPerSide * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
         int stepHz = cfg.FixedHz * session.SubSteps;
         int avoidHz = (int)av.RateHz.ToDouble();
         int stride = Math.Max(1, (int)(stepHz / Math.Min(avoidHz, (double)stepHz) + 0.5));
-        int hashCells = hash.Dim * hash.Dim;
+        int hashCells = hash.CellsPerSide * hash.CellsPerSide;
         return new CrowdMovementKernel
         {
             Session = session,
@@ -487,6 +487,7 @@ internal struct CrowdIntentScalars
 {
     public Fix64 Dt;
     public Fix64 Cs;
+    public int NavCellSizeCm;
     public Fix64 WorldSizeCm;
     public Fix64 BStep;
     public Fix64 Wake2;
@@ -501,7 +502,7 @@ internal struct CrowdIntentScalars
 internal struct CrowdMotorFrame
 {
     public int NavN;
-    public int CellSizeCm;
+    public int NavCellSizeCm;
     public int N2;
     public Fix64 Dt;
     public Fix64 Cs;

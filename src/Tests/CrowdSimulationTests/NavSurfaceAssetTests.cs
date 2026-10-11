@@ -19,9 +19,9 @@ public class NavSurfaceAssetTests
 
         return new NavSurfaceAsset
         {
-            CellsX = 256,
-            CellsY = 256,
-            CellSizeCm = 6250,
+            NavCellsX = 256,
+            NavCellsY = 256,
+            NavCellSizeCm = 6250,
             TerrainTypeIds = new[] { "water", "shore", "land", "mountain", "cliff" },
             TerrainCells = cells,
             JumpCandidates = new[]
@@ -46,9 +46,9 @@ public class NavSurfaceAssetTests
         var bytes = Serialize(asset);
         var read = NavSurfaceAsset.Read(new MemoryStream(bytes));
 
-        Assert.That(read.CellsX, Is.EqualTo(asset.CellsX));
-        Assert.That(read.CellsY, Is.EqualTo(asset.CellsY));
-        Assert.That(read.CellSizeCm, Is.EqualTo(asset.CellSizeCm));
+        Assert.That(read.NavCellsX, Is.EqualTo(asset.NavCellsX));
+        Assert.That(read.NavCellsY, Is.EqualTo(asset.NavCellsY));
+        Assert.That(read.NavCellSizeCm, Is.EqualTo(asset.NavCellSizeCm));
         Assert.That(read.TerrainTypeIds, Is.EqualTo(asset.TerrainTypeIds));
         Assert.That(read.TerrainCells, Is.EqualTo(asset.TerrainCells));
         Assert.That(read.JumpCandidates.Length, Is.EqualTo(2));
@@ -109,9 +109,9 @@ public class NavSurfaceAssetTests
         ids[1] = ids[0];
         var broken = new NavSurfaceAsset
         {
-            CellsX = asset.CellsX,
-            CellsY = asset.CellsY,
-            CellSizeCm = asset.CellSizeCm,
+            NavCellsX = asset.NavCellsX,
+            NavCellsY = asset.NavCellsY,
+            NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = ids,
             TerrainCells = asset.TerrainCells,
             JumpCandidates = asset.JumpCandidates,
@@ -127,9 +127,9 @@ public class NavSurfaceAssetTests
         jumps[0] = new NavSurfaceJumpCandidate { FromX = 300, FromY = 0, ToX = 1, ToY = 1, DropCm = 0, LengthCells = 1f };
         var broken = new NavSurfaceAsset
         {
-            CellsX = asset.CellsX,
-            CellsY = asset.CellsY,
-            CellSizeCm = asset.CellSizeCm,
+            NavCellsX = asset.NavCellsX,
+            NavCellsY = asset.NavCellsY,
+            NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = asset.TerrainTypeIds,
             TerrainCells = asset.TerrainCells,
             JumpCandidates = jumps,
@@ -148,9 +148,9 @@ public class NavSurfaceAssetTests
 
         var reordered = new NavSurfaceAsset
         {
-            CellsX = asset.CellsX,
-            CellsY = asset.CellsY,
-            CellSizeCm = asset.CellSizeCm,
+            NavCellsX = asset.NavCellsX,
+            NavCellsY = asset.NavCellsY,
+            NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = asset.TerrainTypeIds.Reverse().ToArray(),
             TerrainCells = asset.TerrainCells,
             JumpCandidates = asset.JumpCandidates,
@@ -166,9 +166,9 @@ public class NavSurfaceAssetTests
         var asset = Sample();
         var wrong = new NavSurfaceAsset
         {
-            CellsX = 128,
-            CellsY = 128,
-            CellSizeCm = asset.CellSizeCm,
+            NavCellsX = 128,
+            NavCellsY = 128,
+            NavCellSizeCm = asset.NavCellSizeCm,
             TerrainTypeIds = asset.TerrainTypeIds,
             TerrainCells = new byte[128 * 128],
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),

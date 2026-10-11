@@ -95,10 +95,10 @@ public static class FlowFieldBuilder
 
     public static FlowField Build(NavContext nav, int goal, byte[] mask, FlowPool pool)
     {
-        int n = nav.CellCount, n2 = n * n;
+        int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var links = nav.Links;
         bool layered = nav.UpperTiles is { Count: > 0 };
-        int s = nav.Hpa!.ClusterSize, c = nav.Hpa.ClustersPerSide;
+        int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
         var f = pool.Take();
         var integ = f.Integ; var len = f.Len; var wp = f.Wp;
         var heap = pool.Heap; var order = pool.Order;
@@ -118,12 +118,12 @@ public static class FlowFieldBuilder
             int lv = u >= n2 ? 1 : 0, o = lv * n2, cell = u - o;
             var grid = lv != 0 ? nav.UpPass : nav.Passable;
             var cst = lv != 0 ? nav.UpCost : nav.Cost;
-            int x = cell % n, y = cell / n;
+            int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
             for (int d = 0; d < 8; d++)
             {
-                if (!NavGridSteps.CanStep(grid, n, x, y, d)) continue;
-                int vc = (y + NavGridSteps.DY[d]) * n + x + NavGridSteps.DX[d], v = o + vc;
-                if (mask[NavGridSteps.ClusterOf(vc, n, s, c)] == 0) continue;
+                if (!NavGridSteps.CanStep(grid, navCellsPerSide, x, y, d)) continue;
+                int vc = (y + NavGridSteps.DY[d]) * navCellsPerSide + x + NavGridSteps.DX[d], v = o + vc;
+                if (mask[NavGridSteps.TileOf(vc, navCellsPerSide, navCellsPerTile, navTilesPerSide)] == 0) continue;
                 var nd = k + NavGridSteps.StepCost(cst, cell, vc, d);
                 if (nd < integ[v])
                 {
@@ -142,7 +142,7 @@ public static class FlowFieldBuilder
                 for (int j = links.InStart[u], e1 = links.InStart[u + 1]; j < e1; j++)
                 {
                     int e = links.InList[j], v = links.From[e];
-                    if (mask[NavGridSteps.ClusterOf(v, n, s, c)] == 0) continue;
+                    if (mask[NavGridSteps.TileOf(v, navCellsPerSide, navCellsPerTile, navTilesPerSide)] == 0) continue;
                     var nd = k + links.Cost[e];
                     if (nd < integ[v])
                     {
@@ -173,7 +173,7 @@ public static class FlowFieldBuilder
                 continue;
             }
 
-            int x = cell % n, y = cell / n;
+            int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
             bool done = false;
             if (links != null && lv == 0)
             {
@@ -196,18 +196,18 @@ public static class FlowFieldBuilder
             int bd = -1;
             for (int d = 0; d < 8; d++)
             {
-                if (!NavGridSteps.CanStep(grid, n, x, y, d)) continue;
-                int v = o + (y + NavGridSteps.DY[d]) * n + x + NavGridSteps.DX[d];
+                if (!NavGridSteps.CanStep(grid, navCellsPerSide, x, y, d)) continue;
+                int v = o + (y + NavGridSteps.DY[d]) * navCellsPerSide + x + NavGridSteps.DX[d];
                 if (integ[v] < best) { best = integ[v]; bd = d; }
             }
 
             if (bd < 0) continue;
-            int p = o + (y + NavGridSteps.DY[bd]) * n + x + NavGridSteps.DX[bd];
+            int p = o + (y + NavGridSteps.DY[bd]) * navCellsPerSide + x + NavGridSteps.DX[bd];
             int cand = wp[p];
             // 拉直不跨层(另一层的路点经它的 portal 到达)
-            int t = cand >= o && cand < o + n2 && NavGridSteps.LineOfSight(grid, n, cell, cand - o) ? cand : p;
+            int t = cand >= o && cand < o + n2 && NavGridSteps.LineOfSight(grid, navCellsPerSide, cell, cand - o) ? cand : p;
             wp[i] = t;
-            int tc = t - o, dx = tc % n - x, dy = tc / n - y;
+            int tc = t - o, dx = tc % navCellsPerSide - x, dy = tc / navCellsPerSide - y;
             len[i] = len[t] + Fix64Math.Sqrt(Fix64.FromInt(dx * dx + dy * dy));
         }
 

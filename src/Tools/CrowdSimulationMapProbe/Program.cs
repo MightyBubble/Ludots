@@ -66,7 +66,7 @@ public static class Program
         RenderBlocked(bundle.Surface, bundle.Height, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
 
-        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.CellCount}x{bundle.Grid.CellCount} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
+        Console.WriteLine($"[probe] {bundle.MapId}: cells={bundle.Grid.NavCellsPerSide}x{bundle.Grid.NavCellsPerSide} blockers={bundle.MapSurface.Blockers.Count} bridges={bundle.MapSurface.Bridges.Count} jumps={bundle.Surface.JumpCandidates.Length}");
         return 0;
     }
 
@@ -75,7 +75,7 @@ public static class Program
     {
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, capabilityDir);
-        var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellCount, bundle.Runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellsPerSide, bundle.Runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
 
         var seen = new HashSet<int>();
@@ -97,23 +97,23 @@ public static class Program
     private static void RenderNav(SeedBundle bundle, NavContext nav, NavHeightField heights, string path)
     {
         var px = BaseLayer(bundle.Surface, bundle.Height);
-        int n = nav.CellCount;
+        int navCellsPerSide = nav.NavCellsPerSide;
         // 不可走遮罩
-        for (int cy = 0; cy < n; cy++)
+        for (int cy = 0; cy < navCellsPerSide; cy++)
         {
-            for (int cx = 0; cx < n; cx++)
+            for (int cx = 0; cx < navCellsPerSide; cx++)
             {
-                if (nav.Passable[cy * n + cx] == 0) FillCell(px, cx, cy, n, (160, 30, 30), 0.5f);
+                if (nav.Passable[cy * navCellsPerSide + cx] == 0) FillCell(px, cx, cy, navCellsPerSide, (160, 30, 30), 0.5f);
             }
         }
 
         // 桥面可走格与 portal
-        for (int cy = 0; cy < n; cy++)
+        for (int cy = 0; cy < navCellsPerSide; cy++)
         {
-            for (int cx = 0; cx < n; cx++)
+            for (int cx = 0; cx < navCellsPerSide; cx++)
             {
-                if (nav.Portal[cy * n + cx] != 0) FillCell(px, cx, cy, n, (255, 213, 79), 0.9f);
-                else if (nav.UpPass[cy * n + cx] != 0) FillCell(px, cx, cy, n, (150, 110, 70), 0.85f);
+                if (nav.Portal[cy * navCellsPerSide + cx] != 0) FillCell(px, cx, cy, navCellsPerSide, (255, 213, 79), 0.9f);
+                else if (nav.UpPass[cy * navCellsPerSide + cx] != 0) FillCell(px, cx, cy, navCellsPerSide, (150, 110, 70), 0.85f);
             }
         }
 
@@ -121,14 +121,14 @@ public static class Program
         if (nav.Links != null)
         {
             float cs = bundle.Runtime.NavCellSizeCm;
-            float worldCm = n * cs;
+            float worldCm = navCellsPerSide * cs;
             for (int e = 0; e < nav.Links.Count; e++)
             {
                 int from = nav.Links.From[e], to = nav.Links.To[e];
                 var color = nav.Links.TwoWay[e] != 0 ? (92, 107, 192) : (255, 179, 0);
                 DrawLine(px,
-                    (from % n + 0.5f) * cs, ((from / n) + 0.5f) * cs,
-                    (to % n + 0.5f) * cs, ((to / n) + 0.5f) * cs,
+                    (from % navCellsPerSide + 0.5f) * cs, ((from / navCellsPerSide) + 0.5f) * cs,
+                    (to % navCellsPerSide + 0.5f) * cs, ((to / navCellsPerSide) + 0.5f) * cs,
                     worldCm, color);
             }
         }
@@ -142,9 +142,9 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
-        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile, c = navCellsPerSide / t;
 
         // 步兵上下文(含桥面),缓存随烘焙填充
         var cache = new NavTileCache(
@@ -154,14 +154,14 @@ public static class Program
         var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, 0, 1, cache);
 
         var px = BaseLayer(bundle.Surface, bundle.Height);
-        float cellPx = (float)RenderSize / n;
+        float cellPx = (float)RenderSize / navCellsPerSide;
         float csCm = runtime.NavCellSizeCm;
 
         for (int ty = 0; ty < c; ty++)
         {
             for (int tx = 0; tx < c; tx++)
             {
-                DrawTileEntry(px, cache, nav.Passable, bundle.Grid.Area, n, tx, ty, t, (230, 230, 230), cellPx, csCm);
+                DrawTileEntry(px, cache, nav.Passable, bundle.Grid.Area, navCellsPerSide, tx, ty, t, (230, 230, 230), cellPx, csCm);
             }
         }
 
@@ -171,19 +171,19 @@ public static class Program
             int tx = tileId % c, ty = tileId / c;
             for (int y = ty * t; y < ty * t + t && !any; y++)
                 for (int x = tx * t; x < tx * t + t; x++)
-                    if (nav.UpPass[y * n + x] != 0) { any = true; break; }
-            if (any) DrawTileEntry(px, cache, nav.UpPass, nav.UpArea, n, tx, ty, t, (255, 213, 79), cellPx, csCm);
+                    if (nav.UpPass[y * navCellsPerSide + x] != 0) { any = true; break; }
+            if (any) DrawTileEntry(px, cache, nav.UpPass, nav.UpArea, navCellsPerSide, tx, ty, t, (255, 213, 79), cellPx, csCm);
         }
 
-        // HPA* 分区:cluster 网格 + 入口节点(抽象图形状)
+        // HPA* 分区:tile 网格 + 入口节点(抽象图形状)
         var hpa = HpaGraph.Build(nav, runtime);
         var flat = hpa.Flatten();
-        float worldCm2 = n * csCm;
+        float worldCm2 = navCellsPerSide * csCm;
         for (int i = 0; i < flat.NodeCell.Length; i++)
         {
             int cell = flat.NodeCell[i];
-            float cx = (cell % n + 0.5f) * csCm / worldCm2 * RenderSize;
-            float cy = ((cell / n) + 0.5f) * csCm / worldCm2 * RenderSize;
+            float cx = (cell % navCellsPerSide + 0.5f) * csCm / worldCm2 * RenderSize;
+            float cy = ((cell / navCellsPerSide) + 0.5f) * csCm / worldCm2 * RenderSize;
             FillDisc(px, cx, cy, 2.2f, flat.NodeLayer[i] != 0 ? (255, 213, 79) : (64, 196, 255));
         }
 
@@ -212,9 +212,9 @@ public static class Program
         Directory.CreateDirectory(outDir);
         var bundle = Load(seedDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
-        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize;
+        int navCellsPerSide = runtime.NavCellsPerSide, t = runtime.Hpa.NavCellsPerTile;
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulation", "parity", "s3c-query-truth.json")))!;
         var pairs = truth["pairs"]!.AsArray().Select(p => (Start: p![0]!.GetValue<int>(), Goal: p[1]!.GetValue<int>())).ToArray();
@@ -231,16 +231,16 @@ public static class Program
             var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, a, 1, cache);
             string typeId = runtime.AgentTypes[a].Id;
             var scratch = new CorridorQuery.Scratch(t * t);
-            var pool = new FlowPool(n, runtime.Flowfield.PoolCapacity);
+            var pool = new FlowPool(navCellsPerSide, runtime.Flowfield.PoolCapacity);
             int shown = 0;
             foreach (var (start, goal) in pairs)
             {
                 if (shown >= (a == 0 ? 6 : 2)) break;
-                var mask = new byte[(n / t) * (n / t)];
-                mask[NavGridSteps.ClusterOf(goal, n, t, n / t)] = 1;
+                var mask = new byte[(navCellsPerSide / t) * (navCellsPerSide / t)];
+                mask[NavGridSteps.TileOf(goal, navCellsPerSide, t, navCellsPerSide / t)] = 1;
                 var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
-                var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, n / t, runtime.Flowfield.CorridorPadding), pool);
-                var trace = FlowFieldBuilder.TracePath(flow, start, n * n);
+                var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navCellsPerSide / t, runtime.Flowfield.CorridorPadding), pool);
+                var trace = FlowFieldBuilder.TracePath(flow, start, navCellsPerSide * navCellsPerSide);
                 if (trace[trace.Count - 1] != goal && corridor.Points == null) { pool.Give(flow); continue; }
 
                 var pts = corridor.Points != null && nav.Links == null
@@ -261,22 +261,22 @@ public static class Program
     private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int start, int goal, string path)
     {
         var px = BaseLayer(bundle.Surface, bundle.Height);
-        int n = nav.CellCount, n2 = n * n;
-        float worldCm = n * bundle.Runtime.NavCellSizeCm;
+        int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
+        float worldCm = navCellsPerSide * bundle.Runtime.NavCellSizeCm;
 
         // 方向箭头:每 6 格抽样,从格心指向路点格心
-        for (int cy = 2; cy < n - 2; cy += 6)
+        for (int cy = 2; cy < navCellsPerSide - 2; cy += 6)
         {
-            for (int cx = 2; cx < n - 2; cx += 6)
+            for (int cx = 2; cx < navCellsPerSide - 2; cx += 6)
             {
-                int u = cy * n + cx;
+                int u = cy * navCellsPerSide + cx;
                 if (flow.Integ[u] >= Fix64.MaxValue / 4) continue;
                 int w = flow.Wp[u];
                 if (w < 0) continue;
                 int wc = w % n2;
                 float cs = bundle.Runtime.NavCellSizeCm;
                 float x0 = (cx + 0.5f) * cs, y0 = (cy + 0.5f) * cs;
-                float x1 = (wc % n + 0.5f) * cs, y1 = (wc / n + 0.5f) * cs;
+                float x1 = (wc % navCellsPerSide + 0.5f) * cs, y1 = (wc / navCellsPerSide + 0.5f) * cs;
                 float dx = x1 - x0, dy = y1 - y0;
                 float len = MathF.Sqrt(dx * dx + dy * dy);
                 if (len < 1e-3f) continue;
@@ -290,7 +290,7 @@ public static class Program
         for (int k = 1; k < trace.Count; k++)
         {
             int a = trace[k - 1] % n2, b = trace[k] % n2;
-            DrawLine(px, (a % n + 0.5f) * csCm, (a / n + 0.5f) * csCm, (b % n + 0.5f) * csCm, (b / n + 0.5f) * csCm, worldCm, (64, 196, 255));
+            DrawLine(px, (a % navCellsPerSide + 0.5f) * csCm, (a / navCellsPerSide + 0.5f) * csCm, (b % navCellsPerSide + 0.5f) * csCm, (b / navCellsPerSide + 0.5f) * csCm, worldCm, (64, 196, 255));
         }
 
         // 折线(查询结果)品红
@@ -306,8 +306,8 @@ public static class Program
         }
 
         // 起点绿 / 终点红
-        FillDisc(px, (start % n + 0.5f) * csCm / worldCm * RenderSize, (start / n + 0.5f) * csCm / worldCm * RenderSize, 5, (76, 217, 100));
-        FillDisc(px, (goal % n + 0.5f) * csCm / worldCm * RenderSize, (goal / n + 0.5f) * csCm / worldCm * RenderSize, 5, (255, 69, 58));
+        FillDisc(px, (start % navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, (start / navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, 5, (76, 217, 100));
+        FillDisc(px, (goal % navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, (goal / navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, 5, (255, 69, 58));
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
 
@@ -316,10 +316,10 @@ public static class Program
     {
         var bundle = Load(seedDir, capabilityDir);
         var runtime = bundle.Runtime;
-        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
             runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
@@ -347,7 +347,7 @@ public static class Program
         var session = new CrowdSimSession(runtime, probeWorld, navs, navByLayerRadius, BuildWiring(runtime, probeWorld, capabilityDir));
         // 复刻 spawn 的组分配(不生成),打印组清单与中心供对照
         var dbgRng = CrowdSimRng.Create((long)runtime.WorldSeed * 31 + 1L * 7919);
-        int n0 = runtime.NavCellCount;
+        int n0 = runtime.NavCellsPerSide;
         var dbgTypes = new List<int>();
         for (int t = 0; t < runtime.UnitTypes.Count; t++) if (!runtime.UnitTypes[t].Special) dbgTypes.Add(t);
         int gid = 0;
@@ -408,20 +408,20 @@ public static class Program
         return 0;
     }
 
-    private static void DrawTileEntry(byte[] px, NavTileCache cache, byte[] passable, byte[] area, int n, int tx, int ty, int tileCells, (int r, int g, int b) color, float cellPx, float csCm)
+    private static void DrawTileEntry(byte[] px, NavTileCache cache, byte[] passable, byte[] area, int navCellsPerSide, int tx, int ty, int navCellsPerTile, (int r, int g, int b) color, float cellPx, float csCm)
     {
-        var entry = cache.Acquire(passable, area, n, tx, ty);
+        var entry = cache.Acquire(passable, area, navCellsPerSide, tx, ty);
         for (int p = 0; p < entry.Count; p++)
         {
             int s = entry.PolyStart[p], e = entry.PolyStart[p + 1];
             for (int k = s; k < e; k++)
             {
                 int a = entry.PolyVerts[k], b = entry.PolyVerts[k + 1 < e ? k + 1 : s];
-                float x0 = (tx * tileCells + entry.Vx[a]) * csCm / 100f;
-                float y0 = (ty * tileCells + entry.Vy[a]) * csCm / 100f;
-                float x1 = (tx * tileCells + entry.Vx[b]) * csCm / 100f;
-                float y1 = (ty * tileCells + entry.Vy[b]) * csCm / 100f;
-                float worldCm = n * csCm;
+                float x0 = (tx * navCellsPerTile + entry.Vx[a]) * csCm / 100f;
+                float y0 = (ty * navCellsPerTile + entry.Vy[a]) * csCm / 100f;
+                float x1 = (tx * navCellsPerTile + entry.Vx[b]) * csCm / 100f;
+                float y1 = (ty * navCellsPerTile + entry.Vy[b]) * csCm / 100f;
+                float worldCm = navCellsPerSide * csCm;
                 int steps = (int)(MathF.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / worldCm * RenderSize * 2) + 1;
                 for (int si = 0; si <= steps; si++)
                 {
@@ -513,13 +513,13 @@ public static class Program
     private static void RenderBlocked(NavSurfaceAsset surface, ContinuousHeightmapAsset height, SurfaceGrid grid, string path)
     {
         var px = BaseLayer(surface, height);
-        int n = grid.CellCount;
-        for (int cy = 0; cy < n; cy++)
+        int navCellsPerSide = grid.NavCellsPerSide;
+        for (int cy = 0; cy < navCellsPerSide; cy++)
         {
-            for (int cx = 0; cx < n; cx++)
+            for (int cx = 0; cx < navCellsPerSide; cx++)
             {
-                if (grid.Blocked[cy * n + cx] == 0) continue;
-                FillCell(px, cx, cy, n, (211, 47, 47), blend: 0.55f);
+                if (grid.Blocked[cy * navCellsPerSide + cx] == 0) continue;
+                FillCell(px, cx, cy, navCellsPerSide, (211, 47, 47), blend: 0.55f);
             }
         }
 
@@ -535,19 +535,19 @@ public static class Program
         string path)
     {
         var px = BaseLayer(surface, height);
-        int n = grid.CellCount;
+        int navCellsPerSide = grid.NavCellsPerSide;
 
         // 阻挡格
-        for (int cy = 0; cy < n; cy++)
+        for (int cy = 0; cy < navCellsPerSide; cy++)
         {
-            for (int cx = 0; cx < n; cx++)
+            for (int cx = 0; cx < navCellsPerSide; cx++)
             {
-                if (grid.Blocked[cy * n + cx] != 0) FillCell(px, cx, cy, n, (211, 47, 47), 0.55f);
+                if (grid.Blocked[cy * navCellsPerSide + cx] != 0) FillCell(px, cx, cy, navCellsPerSide, (211, 47, 47), 0.55f);
             }
         }
 
         // 桥面(路径足迹,带宽)
-        float worldCm = (float)n * grid.CellSizeCm;
+        float worldCm = (float)navCellsPerSide * grid.NavCellSizeCm;
         foreach (var b in mapSurface.Bridges)
         {
             RasterizePath(px, b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm, worldCm, (150, 110, 70));
@@ -556,7 +556,7 @@ public static class Program
         // 跳跃候选:双向(落差 ≤ 25 m)靛蓝,单向琥珀
         foreach (var j in surface.JumpCandidates)
         {
-            float cs = grid.CellSizeCm;
+            float cs = grid.NavCellSizeCm;
             var color = j.DropCm <= 2500 ? (92, 107, 192) : (255, 179, 0);
             DrawLine(px, (j.FromX + 0.5f) * cs, (j.FromY + 0.5f) * cs, (j.ToX + 0.5f) * cs, (j.ToY + 0.5f) * cs, worldCm, color);
         }
@@ -568,7 +568,7 @@ public static class Program
     private static byte[] BaseLayer(NavSurfaceAsset surface, ContinuousHeightmapAsset height)
     {
         var px = new byte[RenderSize * RenderSize * 3];
-        int n = surface.CellsX;
+        int n = surface.NavCellsX;
         int b = height.SampleColumns;
         float[] heights = DecodeHeights(height);
 

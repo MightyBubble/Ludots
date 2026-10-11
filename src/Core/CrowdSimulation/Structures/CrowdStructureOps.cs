@@ -255,11 +255,11 @@ public static class CrowdStructureOps
     {
         var kernel = sim.Movement;
         if (kernel == null) return;
-        int cs = sim.Config.NavCellSizeCm;
+        int navCellSizeCm = sim.Config.NavCellSizeCm;
         Fix64 rMax = Fix64.Zero;
         foreach (var p in sim.Config.Profiles) rMax = Fix64.Max(rMax, p.PersonalRadiusCm);
-        Fix64 ax = Fix64.FromInt(rect.X0 * cs), ay = Fix64.FromInt(rect.Y0 * cs);
-        Fix64 bx = Fix64.FromInt(rect.X1 * cs), by = Fix64.FromInt(rect.Y1 * cs);
+        Fix64 ax = Fix64.FromInt(rect.X0 * navCellSizeCm), ay = Fix64.FromInt(rect.Y0 * navCellSizeCm);
+        Fix64 bx = Fix64.FromInt(rect.X1 * navCellSizeCm), by = Fix64.FromInt(rect.Y1 * navCellSizeCm);
         var units = sim.Units;
         for (int i = 0; i < units.Count; i++)
         {
@@ -268,7 +268,7 @@ public static class CrowdStructureOps
             var state = sim.World.Get<CrowdSimulationUnitState>(entity);
             int clearance = 1;
             if (sim.Groups.TryGet(state.GroupId, out var g)) clearance = sim.Navs[g.BodyNavId].ClearanceCells;
-            Fix64 pad = Fix64.FromInt(clearance * cs) + units.PersonalRadiusCmAt(i) + rMax;
+            Fix64 pad = Fix64.FromInt(clearance * navCellSizeCm) + units.PersonalRadiusCmAt(i) + rMax;
             var pos = sim.World.Get<Components.WorldPositionCm>(entity).Value;
             Fix64 dx = pos.X < ax ? ax - pos.X : pos.X > bx ? pos.X - bx : Fix64.Zero;
             Fix64 dy = pos.Y < ay ? ay - pos.Y : pos.Y > by ? pos.Y - by : Fix64.Zero;
@@ -284,13 +284,13 @@ public static class CrowdStructureOps
         var kernel = sim.Movement;
         var store = sim.Structures;
         if (kernel == null || store == null) return 0;
-        int n = sim.Config.NavCellCount, cs = sim.Config.NavCellSizeCm;
+        int navCellsPerSide = sim.Config.NavCellsPerSide, cs = sim.Config.NavCellSizeCm;
         int padCells = 0;
         foreach (var nav in sim.Navs.Values) padCells = Math.Max(padCells, 2 * nav.ClearanceCells);
         Fix64 ax = Fix64.FromInt(Math.Max(0, rect.X0 - padCells) * cs);
         Fix64 ay = Fix64.FromInt(Math.Max(0, rect.Y0 - padCells) * cs);
-        Fix64 bx = Fix64.FromInt(Math.Min(n, rect.X1 + padCells) * cs);
-        Fix64 by = Fix64.FromInt(Math.Min(n, rect.Y1 + padCells) * cs);
+        Fix64 bx = Fix64.FromInt(Math.Min(navCellsPerSide, rect.X1 + padCells) * cs);
+        Fix64 by = Fix64.FromInt(Math.Min(navCellsPerSide, rect.Y1 + padCells) * cs);
         var units = sim.Units;
         int moved = 0, stuck = 0;
         for (int i = 0; i < units.Count; i++)
@@ -304,7 +304,7 @@ public static class CrowdStructureOps
             if (px < ax || px >= bx || py < ay || py >= by) continue;
             if (!sim.Groups.TryGet(state.GroupId, out var g)) continue;
             var nav = sim.Navs[g.BodyNavId];
-            int cell = CrowdDeployment.CellAt(px, py, n, cs);
+            int cell = CrowdSimulationSpace.CellAtStrict(px, py, cs, navCellsPerSide);
             if (state.Level != 0)
             {
                 if (nav.UpPass[cell] != 0) continue;
@@ -321,8 +321,8 @@ public static class CrowdStructureOps
                 continue;
             }
 
-            Fix64 x = Fix64.FromInt(c % n * cs + cs / 2);
-            Fix64 y = Fix64.FromInt(c / n * cs + cs / 2);
+            Fix64 x = Fix64.FromInt(c % navCellsPerSide * cs + cs / 2);
+            Fix64 y = Fix64.FromInt(c / navCellsPerSide * cs + cs / 2);
             if (jumping)
             {
                 kin.JumpToCm = new Fix64Vec2(x, y);

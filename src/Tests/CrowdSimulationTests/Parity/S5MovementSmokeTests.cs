@@ -59,9 +59,9 @@ public sealed class S5MovementSmokeTests
         }
 
         Assert.That(goalCell, Is.GreaterThanOrEqualTo(0), "指令答复后组必须有目标格");
-        int n = session.Config.NavCellCount;
-        double goalXCm = (goalCell % n + 0.5) * session.Config.NavCellSizeCm;
-        double goalYCm = (goalCell / n + 0.5) * session.Config.NavCellSizeCm;
+        int navCellsPerSide = session.Config.NavCellsPerSide;
+        double goalXCm = (goalCell % navCellsPerSide + 0.5) * session.Config.NavCellSizeCm;
+        double goalYCm = (goalCell / navCellsPerSide + 0.5) * session.Config.NavCellSizeCm;
 
         var hashes = new List<ulong>();
         session.Advance(295, hashes);

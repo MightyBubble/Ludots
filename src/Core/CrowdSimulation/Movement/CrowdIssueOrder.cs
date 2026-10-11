@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -20,7 +21,7 @@ public static class CrowdIssueOrder
         var world = sim.World;
         var units = sim.Units;
         bool useSel = sim.SelectedCount > 0;
-        int clickCell = CrowdDeployment.CellAt(wxCm, wyCm, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
+        int clickCell = CrowdSimulationSpace.CellAtStrict(wxCm, wyCm, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
         var key = CrowdOrderDedupKey.Create(shapeId, auto, face, widthCm);
 
         // 同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
@@ -122,7 +123,7 @@ public static class CrowdIssueOrder
                 ty = wyCm + acc.Y / acc.N - ccy;
             }
 
-            int goalCell = CrowdDeployment.CellAt(tx, ty, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
+            int goalCell = CrowdSimulationSpace.CellAtStrict(tx, ty, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
             order.Groups.Add(new CrowdOrderGroupLink { GroupId = g.Id, GoalCell = goalCell });
             g.OrderId = order.Id;
         }

@@ -8,28 +8,28 @@ namespace Ludots.Core.CrowdSimulation.Nav.Recast;
 /// </summary>
 public static class DistanceField
 {
-    public static byte[] ComputeClearance(byte[] walk, int n)
+    public static byte[] ComputeClearance(byte[] walk, int navCellsPerSide)
     {
-        var d = new byte[n * n];
-        for (int y = 0; y < n; y++)
+        var d = new byte[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            for (int x = 0; x < n; x++)
+            for (int x = 0; x < navCellsPerSide; x++)
             {
-                int i = y * n + x;
+                int i = y * navCellsPerSide + x;
                 if (walk[i] == 0) continue;
-                if (x == 0 || y == 0 || x == n - 1 || y == n - 1) { d[i] = 1; continue; }
-                int m = Math.Min(Math.Min(d[i - 1], d[i - n]), Math.Min(d[i - n - 1], d[i - n + 1])) + 1;
+                if (x == 0 || y == 0 || x == navCellsPerSide - 1 || y == navCellsPerSide - 1) { d[i] = 1; continue; }
+                int m = Math.Min(Math.Min(d[i - 1], d[i - navCellsPerSide]), Math.Min(d[i - navCellsPerSide - 1], d[i - navCellsPerSide + 1])) + 1;
                 d[i] = (byte)Math.Min(m, 255);
             }
         }
 
-        for (int y = n - 2; y >= 1; y--)
+        for (int y = navCellsPerSide - 2; y >= 1; y--)
         {
-            for (int x = n - 2; x >= 1; x--)
+            for (int x = navCellsPerSide - 2; x >= 1; x--)
             {
-                int i = y * n + x;
+                int i = y * navCellsPerSide + x;
                 if (d[i] == 0) continue;
-                int m = Math.Min(Math.Min(d[i + 1], d[i + n]), Math.Min(d[i + n + 1], d[i + n - 1])) + 1;
+                int m = Math.Min(Math.Min(d[i + 1], d[i + navCellsPerSide]), Math.Min(d[i + navCellsPerSide + 1], d[i + navCellsPerSide - 1])) + 1;
                 if (m < d[i]) d[i] = (byte)m;
             }
         }

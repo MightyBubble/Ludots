@@ -7,10 +7,10 @@
     "title": "CrowdSimulation S3 · 两点路径与固定生效帧",
     "viewLabels": ["路线", "可走区域", "NavMesh+HPA"],
     "hud": {
-      "x": 16,
-      "y": 16,
-      "w": 1568,
-      "h": 118,
+      "originXPx": 16,
+      "originYPx": 16,
+      "widthPx": 1568,
+      "heightPx": 118,
       "keys": "左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {view}"
     },
     "path": {

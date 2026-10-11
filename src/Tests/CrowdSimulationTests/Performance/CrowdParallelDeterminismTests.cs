@@ -155,24 +155,24 @@ public sealed class CrowdParallelDeterminismTests
     {
         var flow = group.Flow ?? throw new InvalidOperationException("组没有流场。");
         var nav = session.Navs[group.BodyNavId];
-        int n = session.Config.NavCellCount;
-        int cs = session.Config.NavCellSizeCm;
+        int navCellsPerSide = session.Config.NavCellsPerSide;
+        int navCellSizeCm = session.Config.NavCellSizeCm;
         if (group.Goal < 0) throw new InvalidOperationException($"组 {group.Id} 没有目标格。");
         var goalArrive = session.Movement!.GoalArriveCells;
         var reach = Fix64.FromInt(order.ReachCells);
         double radiusSum = (session.Units.PersonalRadiusCmAt(0) + session.Units.PersonalRadiusCmAt(1)).ToDouble();
         var found = new List<Candidate>(512);
         var dirs = new (int X, int Y)[] { (1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) };
-        int gcx = group.Goal % n;
-        int gcy = group.Goal / n;
+        int gcx = group.Goal % navCellsPerSide;
+        int gcy = group.Goal / navCellsPerSide;
         for (int d = 0; d < dirs.Length; d++)
         {
             double len = Math.Sqrt(dirs[d].X * dirs[d].X + dirs[d].Y * dirs[d].Y);
-            for (double dist = cs * 0.3; dist <= cs * 2.6; dist += 200)
+            for (double dist = navCellSizeCm * 0.3; dist <= navCellSizeCm * 2.6; dist += 200)
             {
-                double x = (gcx + 0.5) * cs + dirs[d].X / len * dist;
-                double y = (gcy + 0.5) * cs + dirs[d].Y / len * dist;
-                if (TryCandidate(flow, nav, n, cs, x, y, out var candidate)) found.Add(candidate);
+                double x = (gcx + 0.5) * navCellSizeCm + dirs[d].X / len * dist;
+                double y = (gcy + 0.5) * navCellSizeCm + dirs[d].Y / len * dist;
+                if (TryCandidate(flow, nav, navCellsPerSide, navCellSizeCm, x, y, out var candidate)) found.Add(candidate);
             }
         }
 

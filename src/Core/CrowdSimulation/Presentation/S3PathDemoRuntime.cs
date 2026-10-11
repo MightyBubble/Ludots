@@ -83,11 +83,11 @@ public sealed class S3PathDemoRuntime : IDisposable
         }
 
         var heightAsset = ContinuousHeightmapBinary.Read(CrowdSimulationRuntime.OpenAsset(engine, heightRel));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
             runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 

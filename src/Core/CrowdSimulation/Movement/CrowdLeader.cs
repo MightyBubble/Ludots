@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -28,8 +29,8 @@ public sealed class CrowdLeader
         Fixed = fixedHeading;
         Face = face;
         _lookAheadCm = lookAheadCm;
-        X = _path[0].X;
-        Y = _path[0].Y;
+        XCm = _path[0].X;
+        YCm = _path[0].Y;
         Seg = 1;
         Hx = Fix64.OneValue;
         Hy = Fix64.Zero;
@@ -45,8 +46,8 @@ public sealed class CrowdLeader
     public NavContext Nav { get; internal set; }
     public bool Fixed { get; }
     public Fix64Vec2? Face { get; }
-    public Fix64 X { get; private set; }
-    public Fix64 Y { get; private set; }
+    public Fix64 XCm { get; private set; }
+    public Fix64 YCm { get; private set; }
     /// <summary>领队速度(前馈给槽位跟踪;厘米/秒)。</summary>
     public Fix64 Vx { get; private set; } = Fix64.Zero;
     public Fix64 Vy { get; private set; } = Fix64.Zero;
@@ -63,8 +64,8 @@ public sealed class CrowdLeader
     public void SetStart(Fix64 xCm, Fix64 yCm)
     {
         _path[0] = new Fix64Vec2(xCm, yCm);
-        X = xCm;
-        Y = yCm;
+        XCm = xCm;
+        YCm = yCm;
     }
 
     /// <summary>
@@ -137,7 +138,7 @@ public sealed class CrowdLeader
     }
 
     /// <summary>步进一个子步(dt 秒;pace = leaderSpeed;turnK = min(1, dt×leaderTurnRate);faceStep = 拖线朝向的转角步长)。</summary>
-    public void Step(Fix64 speedCmPerSecond, Fix64 pace, Fix64 turnK, Fix64 faceStep, Fix64 dt, int cellSizeCm, int mapCellCount)
+    public void Step(Fix64 speedCmPerSecond, Fix64 pace, Fix64 turnK, Fix64 faceStep, Fix64 dt, int navCellSizeCm, int navCellsPerSide)
     {
         if (Done)
         {
@@ -147,21 +148,21 @@ public sealed class CrowdLeader
         }
 
         int n = _path.Length;
-        Fix64 ox = X, oy = Y;
+        Fix64 ox = XCm, oy = YCm;
         // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
-        int cell = CrowdSimCell.At(X, Y, cellSizeCm, mapCellCount);
+        int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);
         Fix64 cost = Nav.Passable[cell] != 0 ? Nav.Cost[cell] : Nav.UpPass[cell] != 0 ? Nav.UpCost[cell] : Fix64.OneValue;
         Fix64 rem = (speedCmPerSecond / (cost == Fix64.Zero ? Fix64.OneValue : cost)) * pace * dt;
         while (rem > Fix64.Zero && Seg < n)
         {
-            Fix64 tx = _path[Seg].X - X, ty = _path[Seg].Y - Y;
+            Fix64 tx = _path[Seg].X - XCm, ty = _path[Seg].Y - YCm;
             Fix64 d = CrowdFix.Hypot(tx, ty);
             if (d > Eps && !Fixed)
             {
-                var aim = AimPoint(Seg, X, Y, _lookAheadCm);
+                var aim = AimPoint(Seg, XCm, YCm, _lookAheadCm);
                 if (aim.Full)
                 {
-                    Fix64 rdx = aim.X - X, rdy = aim.Y - Y;
+                    Fix64 rdx = aim.X - XCm, rdy = aim.Y - YCm;
                     Fix64 rl = CrowdFix.Hypot(rdx, rdy);
                     if (rl > Eps)
                     {
@@ -180,21 +181,21 @@ public sealed class CrowdLeader
 
             if (d <= rem)
             {
-                X = _path[Seg].X;
-                Y = _path[Seg].Y;
+                XCm = _path[Seg].X;
+                YCm = _path[Seg].Y;
                 rem -= d;
                 Seg++;
             }
             else
             {
-                X += (tx / d) * rem;
-                Y += (ty / d) * rem;
+                XCm += (tx / d) * rem;
+                YCm += (ty / d) * rem;
                 rem = Fix64.Zero;
             }
         }
 
-        Vx = (X - ox) / dt;
-        Vy = (Y - oy) / dt;
+        Vx = (XCm - ox) / dt;
+        Vy = (YCm - oy) / dt;
         if (Seg < n) return;
         if (Face is not { } f)
         {
@@ -218,17 +219,4 @@ public sealed class CrowdLeader
         Hx = hx0 * c - Hy * s;
         Hy = hx0 * s + Hy * c;
     }
-}
-
-/// <summary>世界厘米坐标 → 格子(cellAt 移植;越界钳到边界格,调用方负责可达性)。</summary>
-public static class CrowdSimCell
-{
-    public static int At(Fix64 xCm, Fix64 yCm, int cellSizeCm, int n)
-    {
-        int cx = Clamp((int)(xCm / Fix64.FromInt(cellSizeCm)).ToLong(), n);
-        int cy = Clamp((int)(yCm / Fix64.FromInt(cellSizeCm)).ToLong(), n);
-        return cy * n + cx;
-    }
-
-    private static int Clamp(int v, int n) => v < 0 ? 0 : v >= n ? n - 1 : v;
 }

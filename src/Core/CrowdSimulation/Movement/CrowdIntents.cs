@@ -2,6 +2,7 @@ using System;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -24,20 +25,22 @@ public static class CrowdIntents
         var session = k.Session;
         var groups = session.Groups;
         int n = session.Units.Count;
-        int navN = session.Config.NavCellCount;
-        Fix64 cs = Fix64.FromInt(session.Config.NavCellSizeCm);
+        int navCellsPerSide = session.Config.NavCellsPerSide;
+        int navCellSizeCm = session.Config.NavCellSizeCm;
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
         k.IntentScalars = new CrowdIntentScalars
         {
             Dt = dt,
-            Cs = cs,
-            WorldSizeCm = cs * navN,
+            Cs = navCellCm,
+            NavCellSizeCm = navCellSizeCm,
+            WorldSizeCm = navCellCm * navCellsPerSide,
             BStep = Fix64.Min(Fix64.OneValue, k.BlendRate * dt),
-            Wake2 = Square(cs * k.WakeDistanceCells),
-            ArriveSlot = cs * k.SlotArriveCells,
-            Settle = cs * k.SettleRadiusCells,
+            Wake2 = Square(navCellCm * k.WakeDistanceCells),
+            ArriveSlot = navCellCm * k.SlotArriveCells,
+            Settle = navCellCm * k.SettleRadiusCells,
             StallV2 = k.StallSpeedRatio * k.StallSpeedRatio,
-            NavN = navN,
-            N2 = navN * navN,
+            NavN = navCellsPerSide,
+            N2 = navCellsPerSide * navCellsPerSide,
             Every = k.SlotCheckInterval,
         };
         if (k.Proposals.Length < n) k.EnsureCapacity(Math.Max(n, session.Units.Capacity));
@@ -138,7 +141,7 @@ public static class CrowdIntents
 
         var pos = k.Positions[i];
         Fix64 px = pos.X, py = pos.Y;
-        int cx = CellCoord(px, s.Cs), cy = CellCoord(py, s.Cs);
+        int cx = CellCoord(px, s.NavCellSizeCm), cy = CellCoord(py, s.NavCellSizeCm);
         int cell = cy * s.NavN + cx;
 
         // 层切换:双层可走的桥头格上,取到终点路线更短的那层;等长(跨层边 0 代价)
@@ -173,10 +176,10 @@ public static class CrowdIntents
 
         // 槽位世界坐标 = 领队位置 + 槽位偏移旋进领队系
         Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
-        Fix64 tx = leader.X - leader.Hy * lat - leader.Hx * back;
-        Fix64 ty = leader.Y + leader.Hx * lat - leader.Hy * back;
+        Fix64 tx = leader.XCm - leader.Hy * lat - leader.Hx * back;
+        Fix64 ty = leader.YCm + leader.Hx * lat - leader.Hy * back;
         int sc = tx >= Fix64.Zero && ty >= Fix64.Zero && tx < s.WorldSizeCm && ty < s.WorldSizeCm
-            ? CellCoord(ty, s.Cs) * s.NavN + CellCoord(tx, s.Cs)
+            ? CellCoord(ty, s.NavCellSizeCm) * s.NavN + CellCoord(tx, s.NavCellSizeCm)
             : -1;
         // 槽位在地面(目标层)才算数;桥面上只跟流场
         bool slotOk = !converge && lv == 0 && sc >= 0 && pass[sc] == 1 && nav.Comp[sc] == g.GoalComp;
@@ -253,7 +256,7 @@ public static class CrowdIntents
 
                 k.OnStray?.Invoke(g.Id, cell);
                 // 走廊外保持朝领队速度,等走廊扩展落地
-                Fix64 lx = leader.X - px, ly = leader.Y - py;
+                Fix64 lx = leader.XCm - px, ly = leader.YCm - py;
                 Fix64 ld = CrowdFix.Hypot(lx, ly);
                 if (ld > Fix64.FromFloat(1e-6f))
                 {
@@ -338,26 +341,26 @@ public static class CrowdIntents
 
     private static int CompAt(NavContext nav, int cell, int lv) => nav.CompAt(cell, lv);
 
-    private static int CellCoord(Fix64 vCm, Fix64 cellSizeCm) => (int)(vCm / cellSizeCm).ToLong();
+    private static int CellCoord(Fix64 vCm, int navCellSizeCm) => CrowdSimulationSpace.NavCellCoord(vCm, navCellSizeCm);
 
     private static Fix64 Square(Fix64 v) => v * v;
 
     /// <summary>落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
     private static bool TryStartJump(
         ref CrowdSimulationUnitState state, ref CrowdSimulationKinematics kin,
-        NavLinkSet links, int linkIndex, NavContext nav, int n, int cellSizeCm, Fix64Vec2 pos)
+        NavLinkSet links, int linkIndex, NavContext nav, int navCellsPerSide, int navCellSizeCm, Fix64Vec2 pos)
     {
         Fix64 px = pos.X, py = pos.Y;
         int a = links.From[linkIndex], b = links.To[linkIndex];
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
-        Fix64 tx = (Fix64.FromInt(b % n) + Fix64.HalfValue) * cs + px - (Fix64.FromInt(a % n) + Fix64.HalfValue) * cs;
-        Fix64 ty = (Fix64.FromInt(b / n) + Fix64.HalfValue) * cs + py - (Fix64.FromInt(a / n) + Fix64.HalfValue) * cs;
-        int c = (int)(ty / cs).ToLong() * n + (int)(tx / cs).ToLong();
-        if (!(tx > Fix64.Zero && ty > Fix64.Zero && tx < cs * n && ty < cs * n && nav.Passable[c] != 0))
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
+        Fix64 tx = (Fix64.FromInt(b % navCellsPerSide) + Fix64.HalfValue) * navCellCm + px - (Fix64.FromInt(a % navCellsPerSide) + Fix64.HalfValue) * navCellCm;
+        Fix64 ty = (Fix64.FromInt(b / navCellsPerSide) + Fix64.HalfValue) * navCellCm + py - (Fix64.FromInt(a / navCellsPerSide) + Fix64.HalfValue) * navCellCm;
+        int c = CrowdSimulationSpace.NavCellCoord(ty, navCellSizeCm) * navCellsPerSide + CrowdSimulationSpace.NavCellCoord(tx, navCellSizeCm);
+        if (!(tx > Fix64.Zero && ty > Fix64.Zero && tx < navCellCm * navCellsPerSide && ty < navCellCm * navCellsPerSide && nav.Passable[c] != 0))
         {
             if (nav.Passable[b] == 0) return false;
-            tx = (Fix64.FromInt(b % n) + Fix64.HalfValue) * cs;
-            ty = (Fix64.FromInt(b / n) + Fix64.HalfValue) * cs;
+            tx = (Fix64.FromInt(b % navCellsPerSide) + Fix64.HalfValue) * navCellCm;
+            ty = (Fix64.FromInt(b / navCellsPerSide) + Fix64.HalfValue) * navCellCm;
         }
 
         state.State = (byte)CrowdUnitState.Jump;

@@ -14,9 +14,9 @@ public static class WatershedRegions
     private static readonly int[] OX = { -1, 0, 1, 0 };
     private static readonly int[] OY = { 0, 1, 0, -1 };
 
-    public static (int[] Reg, int Count) Build(byte[] passable, byte[] dist, int n, int minArea)
+    public static (int[] Reg, int Count) Build(byte[] passable, byte[] dist, int navCellsPerSide, int minArea)
     {
-        int nn = n * n;
+        int nn = navCellsPerSide * navCellsPerSide;
         var reg = new int[nn];
         int maxD = 0, total = 0;
         for (int i = 0; i < nn; i++)
@@ -52,13 +52,13 @@ public static class WatershedRegions
                 {
                     int c = pending[k];
                     if (reg[c] != 0) continue;
-                    int x = c % n, y = c / n;
+                    int x = c % navCellsPerSide, y = c / navCellsPerSide;
                     int best = 0, bd = -1;
                     for (int d = 0; d < 4; d++)
                     {
                         int nx = x + OX[d], ny = y + OY[d];
-                        if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
-                        int ni = ny * n + nx, r = reg[ni];
+                        if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) continue;
+                        int ni = ny * navCellsPerSide + nx, r = reg[ni];
                         if (r != 0 && passable[ni] == passable[c] && dist[ni] > bd) { bd = dist[ni]; best = r; }
                     }
 
@@ -79,14 +79,14 @@ public static class WatershedRegions
             while (sp > 0)
             {
                 int c = stack[--sp];
-                int x = c % n, y = c / n;
+                int x = c % navCellsPerSide, y = c / navCellsPerSide;
                 bool touch = false;
                 for (int d = 0; d < 4 && !touch; d++)
                 {
                     int nx = x + OX[d], ny = y + OY[d];
-                    if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
-                    int r = reg[ny * n + nx];
-                    if (r != 0 && r != id && passable[ny * n + nx] == code) touch = true;
+                    if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) continue;
+                    int r = reg[ny * navCellsPerSide + nx];
+                    if (r != 0 && r != id && passable[ny * navCellsPerSide + nx] == code) touch = true;
                 }
 
                 if (touch) { reg[c] = 0; continue; }
@@ -94,8 +94,8 @@ public static class WatershedRegions
                 for (int d = 0; d < 4; d++)
                 {
                     int nx = x + OX[d], ny = y + OY[d];
-                    if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
-                    int ni = ny * n + nx;
+                    if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) continue;
+                    int ni = ny * navCellsPerSide + nx;
                     if (passable[ni] == code && reg[ni] == 0 && dist[ni] >= level && sp < stack.Length) { reg[ni] = id; stack[sp++] = ni; }
                 }
             }
@@ -117,11 +117,11 @@ public static class WatershedRegions
         Expand(-1);
         for (int k = 0; k < pn; k++) { int c = pending[k]; if (reg[c] == 0 && Flood(c, 0, next)) next++; }
 
-        return MergeSmall(reg, passable, n, next, minArea);
+        return MergeSmall(reg, passable, navCellsPerSide, next, minArea);
     }
 
     // 小区域只并入同区域码的邻居
-    private static (int[] Reg, int Count) MergeSmall(int[] reg, byte[] code, int n, int r0, int minArea)
+    private static (int[] Reg, int Count) MergeSmall(int[] reg, byte[] code, int navCellsPerSide, int r0, int minArea)
     {
         var area = new int[r0];
         for (int i = 0; i < reg.Length; i++) if (reg[i] != 0) area[reg[i]]++;
@@ -138,14 +138,14 @@ public static class WatershedRegions
             else { idx[q] = nb[r].Count; nb[r].Add((q, 1)); }
         }
 
-        for (int y = 0; y < n; y++)
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            for (int x = 0; x < n; x++)
+            for (int x = 0; x < navCellsPerSide; x++)
             {
-                int i = y * n + x, r = reg[i];
+                int i = y * navCellsPerSide + x, r = reg[i];
                 if (r == 0) continue;
-                if (x + 1 < n) { int q = reg[i + 1]; if (q != 0 && q != r && code[i + 1] == code[i]) { Inc(r, q); Inc(q, r); } }
-                if (y + 1 < n) { int q = reg[i + n]; if (q != 0 && q != r && code[i + n] == code[i]) { Inc(r, q); Inc(q, r); } }
+                if (x + 1 < navCellsPerSide) { int q = reg[i + 1]; if (q != 0 && q != r && code[i + 1] == code[i]) { Inc(r, q); Inc(q, r); } }
+                if (y + 1 < navCellsPerSide) { int q = reg[i + navCellsPerSide]; if (q != 0 && q != r && code[i + navCellsPerSide] == code[i]) { Inc(r, q); Inc(q, r); } }
             }
         }
 

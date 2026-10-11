@@ -30,7 +30,7 @@ public class S1SurfaceTruthTests
         using var stream = File.OpenRead(Path.Combine(SeedDir(seed), "terrain", $"crowd_simulation_{seed}.navsurface"));
         var surface = NavSurfaceAsset.Read(stream);
         Assert.DoesNotThrow(() => NavSurfaceContract.Validate(surface, runtime));
-        Assert.That(surface.CellsX, Is.EqualTo(256));
+        Assert.That(surface.NavCellsX, Is.EqualTo(256));
     }
 
     [Test]
@@ -40,23 +40,23 @@ public class S1SurfaceTruthTests
         using var stream = File.OpenRead(Path.Combine(SeedDir("s1337"), "terrain", "crowd_simulation_s1337.navsurface"));
         var surface = NavSurfaceAsset.Read(stream);
 
-        NavSurfaceAsset Mutate(int cellsX, int cellsY, int cellSizeCm, string[] typeIds) => new()
+        NavSurfaceAsset Mutate(int cellsX, int cellsY, int navCellSizeCm, string[] typeIds) => new()
         {
-            CellsX = cellsX,
-            CellsY = cellsY,
-            CellSizeCm = cellSizeCm,
+            NavCellsX = cellsX,
+            NavCellsY = cellsY,
+            NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = typeIds,
             TerrainCells = surface.TerrainCells,
             JumpCandidates = surface.JumpCandidates,
         };
 
         Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.CellsX + 1, surface.CellsY, surface.CellSizeCm, surface.TerrainTypeIds), runtime));
+            NavSurfaceContract.Validate(Mutate(surface.NavCellsX + 1, surface.NavCellsY, surface.NavCellSizeCm, surface.TerrainTypeIds), runtime));
         Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.CellsX, surface.CellsY, surface.CellSizeCm * 2, surface.TerrainTypeIds), runtime));
+            NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm * 2, surface.TerrainTypeIds), runtime));
         string[] renamed = surface.TerrainTypeIds.Select(id => id + "_x").ToArray();
         Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.CellsX, surface.CellsY, surface.CellSizeCm, renamed), runtime));
+            NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm, renamed), runtime));
     }
 
     [Test]
@@ -187,14 +187,14 @@ public class S1SurfaceTruthTests
 
     private static NavSurfaceAsset EmptySurface(CrowdSimulationRuntimeConfig runtime)
     {
-        int n = runtime.NavCellCount;
+        int navCellsPerSide = runtime.NavCellsPerSide;
         return new NavSurfaceAsset
         {
-            CellsX = n,
-            CellsY = n,
-            CellSizeCm = runtime.NavCellSizeCm,
+            NavCellsX = navCellsPerSide,
+            NavCellsY = navCellsPerSide,
+            NavCellSizeCm = runtime.NavCellSizeCm,
             TerrainTypeIds = runtime.TerrainTypeIds.ToArray(),
-            TerrainCells = new byte[n * n], // 全部 water（下标 0）
+            TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
             JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
         };
     }
@@ -208,8 +208,8 @@ public class S1SurfaceTruthTests
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
         w.Write(Encoding.ASCII.GetBytes("LS1T"));
-        w.Write(surface.CellsX);
-        w.Write(surface.CellSizeCm);
+        w.Write(surface.NavCellsX);
+        w.Write(surface.NavCellSizeCm);
         w.Write((ushort)surface.TerrainTypeIds.Length);
         foreach (var id in surface.TerrainTypeIds)
         {

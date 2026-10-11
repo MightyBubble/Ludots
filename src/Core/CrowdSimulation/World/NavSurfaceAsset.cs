@@ -15,7 +15,7 @@ namespace Ludots.Core.CrowdSimulation.World;
 ///   6   u16  headerBytes = 32（头部总长度，供前向兼容扩展）
 ///   8   i32  cellsX        导航格数（X）
 ///   12  i32  cellsY        导航格数（Y；世界正方形由加载侧校验，本格式不强制）
-///   16  i32  cellSizeCm    导航格边长（厘米）
+///   16  i32  navCellSizeCm    导航格边长（厘米）
 ///   20  i32  jumpCount     跳跃候选条数
 ///   24  u16  terrainCount  地形类型表条数（1..256）
 ///   26  u16  reserved = 0
@@ -33,18 +33,18 @@ public sealed class NavSurfaceAsset
     public const ushort HeaderBytes = 32;
     public const int JumpCandidateRecordBytes = 16;
 
-    public required int CellsX { get; init; }
-    public required int CellsY { get; init; }
-    public required int CellSizeCm { get; init; }
+    public required int NavCellsX { get; init; }
+    public required int NavCellsY { get; init; }
+    public required int NavCellSizeCm { get; init; }
     /// <summary>地形类型 id 表；格值 = 本表下标。顺序与 CrowdSimulationConfig.world.terrainTypes 一致。</summary>
     public required string[] TerrainTypeIds { get; init; }
-    /// <summary>逐格地形类型编号（行优先，长度 = CellsX × CellsY）。</summary>
+    /// <summary>逐格地形类型编号（行优先，长度 = NavCellsX × NavCellsY）。</summary>
     public required byte[] TerrainCells { get; init; }
     public required NavSurfaceJumpCandidate[] JumpCandidates { get; init; }
 
-    public int CellCount => CellsX * CellsY;
+    public int NavCellTotal => NavCellsX * NavCellsY;
 
-    public byte TerrainAt(int cx, int cy) => TerrainCells[cy * CellsX + cx];
+    public byte TerrainAt(int cx, int cy) => TerrainCells[cy * NavCellsX + cx];
 
     public static NavSurfaceAsset Read(Stream stream)
     {
@@ -71,7 +71,7 @@ public sealed class NavSurfaceAsset
 
         int cellsX = reader.ReadInt32();
         int cellsY = reader.ReadInt32();
-        int cellSizeCm = reader.ReadInt32();
+        int navCellSizeCm = reader.ReadInt32();
         int jumpCount = reader.ReadInt32();
         int terrainCount = reader.ReadUInt16();
         ushort reserved16 = reader.ReadUInt16();
@@ -82,9 +82,9 @@ public sealed class NavSurfaceAsset
             throw new InvalidDataException($".navsurface: 尺寸 {cellsX} × {cellsY} 无效（需为 > 0）。");
         }
 
-        if (cellSizeCm <= 0)
+        if (navCellSizeCm <= 0)
         {
-            throw new InvalidDataException($".navsurface: cellSizeCm = {cellSizeCm}，需为 > 0。");
+            throw new InvalidDataException($".navsurface: navCellSizeCm = {navCellSizeCm}，需为 > 0。");
         }
 
         if (terrainCount < 1 || terrainCount > 256)
@@ -169,9 +169,9 @@ public sealed class NavSurfaceAsset
 
         return new NavSurfaceAsset
         {
-            CellsX = cellsX,
-            CellsY = cellsY,
-            CellSizeCm = cellSizeCm,
+            NavCellsX = cellsX,
+            NavCellsY = cellsY,
+            NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = terrainTypeIds,
             TerrainCells = terrainCells,
             JumpCandidates = jumps,
@@ -183,14 +183,14 @@ public sealed class NavSurfaceAsset
         ArgumentNullException.ThrowIfNull(asset);
         ArgumentNullException.ThrowIfNull(stream);
 
-        if (asset.CellsX <= 0 || asset.CellsY <= 0)
+        if (asset.NavCellsX <= 0 || asset.NavCellsY <= 0)
         {
-            throw new InvalidDataException($".navsurface: 尺寸 {asset.CellsX} × {asset.CellsY} 无效。");
+            throw new InvalidDataException($".navsurface: 尺寸 {asset.NavCellsX} × {asset.NavCellsY} 无效。");
         }
 
-        if (asset.CellSizeCm <= 0)
+        if (asset.NavCellSizeCm <= 0)
         {
-            throw new InvalidDataException($".navsurface: cellSizeCm = {asset.CellSizeCm}，需为 > 0。");
+            throw new InvalidDataException($".navsurface: navCellSizeCm = {asset.NavCellSizeCm}，需为 > 0。");
         }
 
         if (asset.TerrainTypeIds.Length < 1 || asset.TerrainTypeIds.Length > 256)
@@ -198,18 +198,18 @@ public sealed class NavSurfaceAsset
             throw new InvalidDataException($".navsurface: terrainCount = {asset.TerrainTypeIds.Length}，需为 1~256。");
         }
 
-        if (asset.TerrainCells.Length != asset.CellsX * asset.CellsY)
+        if (asset.TerrainCells.Length != asset.NavCellsX * asset.NavCellsY)
         {
-            throw new InvalidDataException($".navsurface: 格数据长度 {asset.TerrainCells.Length} 与尺寸 {asset.CellsX} × {asset.CellsY} 不符。");
+            throw new InvalidDataException($".navsurface: 格数据长度 {asset.TerrainCells.Length} 与尺寸 {asset.NavCellsX} × {asset.NavCellsY} 不符。");
         }
 
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
         writer.Write(Magic);
         writer.Write(CurrentVersion);
         writer.Write(HeaderBytes);
-        writer.Write(asset.CellsX);
-        writer.Write(asset.CellsY);
-        writer.Write(asset.CellSizeCm);
+        writer.Write(asset.NavCellsX);
+        writer.Write(asset.NavCellsY);
+        writer.Write(asset.NavCellSizeCm);
         writer.Write(asset.JumpCandidates.Length);
         writer.Write((ushort)asset.TerrainTypeIds.Length);
         writer.Write((ushort)0);

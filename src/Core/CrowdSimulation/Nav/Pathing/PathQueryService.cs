@@ -206,9 +206,9 @@ public sealed class PathQueryService : IDisposable
     private void WorkerLoop(object? state)
     {
         int workerIndex = (int)state!;
-        var pool = new FlowPool(_config.NavCellCount, _config.Flowfield.PoolCapacity);
+        var pool = new FlowPool(_config.NavCellsPerSide, _config.Flowfield.PoolCapacity);
         _pools.Add(pool);
-        var scratch = new CorridorQuery.Scratch(_config.Hpa.ClusterSize * _config.Hpa.ClusterSize);
+        var scratch = new CorridorQuery.Scratch(_config.Hpa.NavCellsPerTile * _config.Hpa.NavCellsPerTile);
         for (; ; )
         {
             (int Id, PathQuery Query) job;
@@ -275,12 +275,12 @@ public sealed class PathQueryService : IDisposable
         var nav = q.NavContextId < Fog.CrowdBeliefNavs.BeliefStride
             ? _navs[q.NavContextId]
             : _variantResolver!(q.NavContextId);
-        int n = nav.CellCount;
-        int cs = nav.Hpa!.ClusterSize, cc = nav.Hpa.ClustersPerSide;
+        int navCellsPerSide = nav.NavCellsPerSide;
+        int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
         if (q.CorridorMask != null)
         {
             // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
-            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, cc, _config.Flowfield.CorridorPadding);
+            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPadding);
             var region = FlowFieldBuilder.OrMask(padRegion, q.CorridorMask);
             var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, region, pool);
             return new PathResult
@@ -295,10 +295,10 @@ public sealed class PathQueryService : IDisposable
             };
         }
 
-        var mask = new byte[cc * cc];
-        mask[NavGridSteps.ClusterOf(q.GoalCell, n, cs, cc)] = 1;
+        var mask = new byte[navTilesPerSide * navTilesPerSide];
+        mask[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
         var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, mask, q.Level, scratch);
-        var padded = FlowFieldBuilder.PadMask(mask, cc, _config.Flowfield.CorridorPadding);
+        var padded = FlowFieldBuilder.PadMask(mask, navTilesPerSide, _config.Flowfield.CorridorPadding);
         var flow = FlowFieldBuilder.Build(nav, q.GoalCell, padded, pool);
 
         Fix64[]? points;

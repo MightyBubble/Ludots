@@ -15,7 +15,7 @@ public sealed class CrowdSimulationRuntimeConfig
     public required int FixedHz { get; init; }
 
     /// <summary>导航网格边长（格）。世界正方形，Boards[0].WidthCm / NavCellSizeCm。</summary>
-    public required int NavCellCount { get; init; }
+    public required int NavCellsPerSide { get; init; }
     public required int NavCellSizeCm { get; init; }
     /// <summary>世界种子(生成盐,与参考实现的 world.seed 同值;部署 / 生成的 RNG 流以此为根)。</summary>
     public required int WorldSeed { get; init; }
@@ -132,7 +132,7 @@ public sealed class RuntimeNavmeshSection
 
 public sealed class RuntimeHpaSection
 {
-    public required int ClusterSize { get; init; }
+    public required int NavCellsPerTile { get; init; }
     public required int MaxEntranceWidth { get; init; }
 }
 
@@ -155,7 +155,7 @@ public sealed class RuntimePlanningSection
 public sealed class RuntimeFogSection
 {
     public required Fix64 RateHz { get; init; }
-    public required int CellCells { get; init; }
+    public required int NavCellsPerFogCell { get; init; }
     public required Fix64 VisionCm { get; init; }
     public required int RevealTicks { get; init; }
     public required int SlotCacheCapacity { get; init; }
@@ -268,7 +268,7 @@ public sealed class RuntimeSimSection
 public sealed class RuntimeSpawnSection
 {
     public required int PlacementTries { get; init; }
-    public required Fix64 ClusterSpacing { get; init; }
+    public required Fix64 GroupSpacingScale { get; init; }
     public required int TargetSearchTries { get; init; }
     public required Fix64 CellInset { get; init; }
 }

@@ -43,11 +43,11 @@ public class S3RegressionTests
             },
             runtime);
 
-        int n = runtime.NavCellCount;
+        int navCellsPerSide = runtime.NavCellsPerSide;
         // 端点格 (182, 210) 必须被覆盖;段外一格 (183, 210) 不覆盖
-        Assert.That(deck.AreaIndex[210 * n + 182], Is.Not.EqualTo(0), "端点格(投影 t == 路径长)必须覆盖");
-        Assert.That(deck.AreaIndex[210 * n + 183], Is.EqualTo(0), "端点格外一格不得覆盖");
+        Assert.That(deck.AreaIndex[210 * navCellsPerSide + 182], Is.Not.EqualTo(0), "端点格(投影 t == 路径长)必须覆盖");
+        Assert.That(deck.AreaIndex[210 * navCellsPerSide + 183], Is.EqualTo(0), "端点格外一格不得覆盖");
         // portal:端点格距端 0 < portalCells → 标记
-        Assert.That(deck.PortalFlag[210 * n + 182], Is.EqualTo(1));
+        Assert.That(deck.PortalFlag[210 * navCellsPerSide + 182], Is.EqualTo(1));
     }
 }

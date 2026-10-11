@@ -55,7 +55,7 @@ public class S7RebakeSmokeTests
         Assert.That(rebakes, Is.GreaterThanOrEqualTo(5), $"重烘报告次数 {rebakes}:建筑放置/拆除 + 路障放置/到期 + 道路");
         Assert.That(dirtyTiles, Is.GreaterThan(0), $"重烘焙到的脏 tile 累计 {dirtyTiles}:足迹必须真实盖住格心");
         // 建筑拆除后原阻挡格必须解封(该点后被道路覆盖,EntityAt 非空是对的,查阻挡栅格)
-        int wallCell = 90 * session.Config.NavCellCount + 80;
+        int wallCell = 90 * session.Config.NavCellsPerSide + 80;
         Assert.That(session.Structures!.Blocked[wallCell], Is.EqualTo(0), "建筑拆除后原阻挡格仍被标阻挡");
 
         // 回放:同一脚本、全新会话,校验码逐位一致

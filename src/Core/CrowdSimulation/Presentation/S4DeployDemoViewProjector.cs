@@ -48,8 +48,8 @@ internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
         var session = _sessionSource();
         if (session == null) return;
         var group = DominantGroup(session);
-        _flowSource.CellCount = session.Config.NavCellCount;
-        _flowSource.CellSizeCm = session.Config.NavCellSizeCm;
+        _flowSource.NavCellsPerSide = session.Config.NavCellsPerSide;
+        _flowSource.NavCellSizeCm = session.Config.NavCellSizeCm;
         _flowSource.Flow = group?.Flow;
         switch (_demo.ViewMode)
         {

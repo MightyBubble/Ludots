@@ -33,7 +33,7 @@ public class S2NavTruthTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
 
         // 每个移动类型 × 其涉及的净空(默认全部 clearance 1,与参考实现按 navId 去重一致)
         var contexts = new List<NavContext>();
@@ -52,7 +52,7 @@ public class S2NavTruthTests
         }
 
         // 重建字节流并比对
-        var (hash, perContext) = ComputeDigest(runtime.NavCellCount, contexts);
+        var (hash, perContext) = ComputeDigest(runtime.NavCellsPerSide, contexts);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s2-nav-truth.json")))!;
         var expected = truth["fnv1a"]!.GetValue<string>();
         var truthContexts = truth["contexts"]!.AsArray();
@@ -104,7 +104,7 @@ public class S2NavTruthTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir("s1337"), "terrain", "crowd_simulation_s1337.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
 
         var baseline = NavContextBaker.Bake(runtime, grid, heights, deck, agentTypeIndex: 4, clearanceCells: 1);
         Assert.That(baseline.Links, Is.Not.Null);
@@ -128,11 +128,11 @@ public class S2NavTruthTests
         {
             var set = new HashSet<(int, int)>(
                 narrowed.Links.From.Zip(narrowed.Links.To, (f, t) => (f, t)));
-            int n = runtime.NavCellCount;
+            int navCellsPerSide = runtime.NavCellsPerSide;
             foreach (var cand in surface.JumpCandidates)
             {
                 if (cand.DropCm <= 5000) continue;
-                int a = cand.FromY * n + cand.FromX, b = cand.ToY * n + cand.ToX;
+                int a = cand.FromY * navCellsPerSide + cand.FromX, b = cand.ToY * navCellsPerSide + cand.ToX;
                 Assert.That(set.Contains((a, b)), Is.False, "超过 downCm 的候选不得成链");
             }
         }

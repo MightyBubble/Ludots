@@ -88,8 +88,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         // 路线视图:主力组目标标记(流场贴花由视图投影器写场)
         if (_demo.ViewMode == 0 && S4DeployDemoViewProjector.DominantGroup(session) is { Goal: >= 0 } group)
         {
-            int n = session.Config.NavCellCount;
-            _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % n + 0.5f) * csM, (group.Goal / n + 0.5f) * csM), RouteVisualMarkerShape.Diamond, csM * 1.2f, 1.5f, GoalCyan);
+            int navCellsPerSide = session.Config.NavCellsPerSide;
+            _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % navCellsPerSide + 0.5f) * csM, (group.Goal / navCellsPerSide + 0.5f) * csM), RouteVisualMarkerShape.Diamond, csM * 1.2f, 1.5f, GoalCyan);
         }
 
         // NavMesh + HPA 线框(视图模式 2)。变体未物化时本帧不提交,缓存键留给下一帧。
@@ -131,12 +131,12 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     {
         if (store.EntityAt(Fix64.FromInt(xCm), Fix64.FromInt(yCm)) >= 0) return false;
         var (minX, minY, maxX, maxY) = FootprintMeters(tpl, xCm, yCm);
-        int n = store.CellCount, cs = store.CellSizeCm;
-        int cx0 = Math.Clamp((int)Math.Floor(minX * 100 / cs), 0, n - 1), cy0 = Math.Clamp((int)Math.Floor(minY * 100 / cs), 0, n - 1);
-        int cx1 = Math.Clamp((int)Math.Floor(maxX * 100 / cs), 0, n - 1), cy1 = Math.Clamp((int)Math.Floor(maxY * 100 / cs), 0, n - 1);
+        int navCellsPerSide = store.NavCellsPerSide, navCellSizeCm = store.NavCellSizeCm;
+        int cx0 = Math.Clamp((int)Math.Floor(minX * 100 / navCellSizeCm), 0, navCellsPerSide - 1), cy0 = Math.Clamp((int)Math.Floor(minY * 100 / navCellSizeCm), 0, navCellsPerSide - 1);
+        int cx1 = Math.Clamp((int)Math.Floor(maxX * 100 / navCellSizeCm), 0, navCellsPerSide - 1), cy1 = Math.Clamp((int)Math.Floor(maxY * 100 / navCellSizeCm), 0, navCellsPerSide - 1);
         for (int cy = cy0; cy <= cy1; cy++)
         {
-            int row = cy * n;
+            int row = cy * navCellsPerSide;
             for (int cx = cx0; cx <= cx1; cx++)
             {
                 if (store.Blocked[row + cx] != 0) return false;
@@ -185,8 +185,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         long elapsed = Environment.TickCount64 - _flashStartMs;
         if (elapsed >= FlashMs) return;
         float alpha = 1f - elapsed / (float)FlashMs;
-        int n = session.Config.NavCellCount, tiles = session.Config.Hpa.ClusterSize;
-        int perRow = Math.Max(1, n / tiles);
+        int navCellsPerSide = session.Config.NavCellsPerSide, tiles = session.Config.Hpa.NavCellsPerTile;
+        int perRow = Math.Max(1, navCellsPerSide / tiles);
         float tileM = tiles * csM;
         var color = FlashYellow with { W = alpha };
         int shown = 0;
@@ -284,7 +284,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             .Replace("{activity}", activity, StringComparison.Ordinal)
             .Replace("{pending}", pending, StringComparison.Ordinal);
         CrowdHudPanel hud = _presentation.Hud;
-        _overlay.AddRect(hud.X, hud.Y, hud.W, hud.H, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        _overlay.AddRect(hud.OriginXPx, hud.OriginYPx, hud.WidthPx, hud.HeightPx, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         _overlay.AddText(32, 24, _presentation.Title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         _overlay.AddText(32, 54, status, 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 78, $"最近重烘:{rebake}", 18, new Vector4(1f, 1f, 1f, 1f));

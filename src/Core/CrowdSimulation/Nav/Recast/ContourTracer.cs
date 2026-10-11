@@ -14,20 +14,20 @@ public static class ContourTracer
     private static readonly int[] OX = { -1, 0, 1, 0 };
     private static readonly int[] OY = { 0, 1, 0, -1 };
 
-    public static List<List<int>>[] BuildContours(int[] reg, int regionCount, int n, double maxError, double maxEdgeLen)
+    public static List<List<int>>[] BuildContours(int[] reg, int regionCount, int navCellsPerSide, double maxError, double maxEdgeLen)
     {
-        var flags = new byte[n * n];
-        for (int y = 0; y < n; y++)
+        var flags = new byte[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            for (int x = 0; x < n; x++)
+            for (int x = 0; x < navCellsPerSide; x++)
             {
-                int i = y * n + x, r = reg[i];
+                int i = y * navCellsPerSide + x, r = reg[i];
                 if (r == 0) continue;
                 int f = 0;
                 for (int d = 0; d < 4; d++)
                 {
                     int nx = x + OX[d], ny = y + OY[d];
-                    int q = nx < 0 || ny < 0 || nx >= n || ny >= n ? 0 : reg[ny * n + nx];
+                    int q = nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide ? 0 : reg[ny * navCellsPerSide + nx];
                     if (q != r) f |= 1 << d;
                 }
 
@@ -37,12 +37,12 @@ public static class ContourTracer
 
         var loops = new List<List<int>>[regionCount + 1];
         for (int i = 0; i <= regionCount; i++) loops[i] = new List<List<int>>();
-        for (int i = 0; i < n * n; i++)
+        for (int i = 0; i < navCellsPerSide * navCellsPerSide; i++)
         {
             while (flags[i] != 0)
             {
                 var raw = new List<int>();
-                Walk(i % n, i / n, flags, reg, n, raw);
+                Walk(i % navCellsPerSide, i / navCellsPerSide, flags, reg, navCellsPerSide, raw);
                 var pts = Simplify(raw, maxError, maxEdgeLen);
                 if (pts.Count >= 6) loops[reg[i]].Add(pts);
             }
@@ -51,13 +51,13 @@ public static class ContourTracer
         return loops;
     }
 
-    private static void Walk(int sx, int sy, byte[] flags, int[] reg, int n, List<int> output)
+    private static void Walk(int sx, int sy, byte[] flags, int[] reg, int navCellsPerSide, List<int> output)
     {
-        int x = sx, y = sy, i = y * n + x;
+        int x = sx, y = sy, i = y * navCellsPerSide + x;
         int dir = 0;
         while ((flags[i] & (1 << dir)) == 0) dir++;
         int startDir = dir, startI = i;
-        for (int iter = 0; iter < 4 * n * n; iter++)
+        for (int iter = 0; iter < 4 * navCellsPerSide * navCellsPerSide; iter++)
         {
             if ((flags[i] & (1 << dir)) != 0)
             {
@@ -68,13 +68,13 @@ public static class ContourTracer
                 int nx = x + OX[dir], ny = y + OY[dir];
                 output.Add(px);
                 output.Add(py);
-                output.Add(nx < 0 || ny < 0 || nx >= n || ny >= n ? -1 - dir : reg[ny * n + nx]);
+                output.Add(nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide ? -1 - dir : reg[ny * navCellsPerSide + nx]);
                 flags[i] &= (byte)~(1 << dir);
                 dir = (dir + 1) & 3;
             }
             else
             {
-                x += OX[dir]; y += OY[dir]; i = y * n + x;
+                x += OX[dir]; y += OY[dir]; i = y * navCellsPerSide + x;
                 dir = (dir + 3) & 3;
             }
 

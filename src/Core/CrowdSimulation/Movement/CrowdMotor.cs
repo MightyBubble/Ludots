@@ -1,5 +1,6 @@
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -15,18 +16,18 @@ public static class CrowdMotor
     public static void Integrate(CrowdMovementKernel k, Fix64 dt)
     {
         var session = k.Session;
-        int navN = session.Config.NavCellCount;
-        int cellSizeCm = session.Config.NavCellSizeCm;
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
+        int navCellsPerSide = session.Config.NavCellsPerSide;
+        int navCellSizeCm = session.Config.NavCellSizeCm;
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
         Fix64 maxTurn = k.UnitTurnRate * dt;
         k.MotorFrame = new CrowdMotorFrame
         {
-            NavN = navN,
-            CellSizeCm = cellSizeCm,
-            N2 = navN * navN,
+            NavN = navCellsPerSide,
+            NavCellSizeCm = navCellSizeCm,
+            N2 = navCellsPerSide * navCellsPerSide,
             Dt = dt,
-            Cs = cs,
-            Lim = cs * navN - Fix64.FromFloat(0.01f),
+            Cs = navCellCm,
+            Lim = navCellCm * navCellsPerSide - Fix64.FromFloat(0.01f),
             Response = Fix64.OneValue - Fix64Math.Exp(-k.Accel * dt),
             ResponseRest = Fix64.OneValue - Fix64Math.Exp(-k.Accel * k.RestAccelScale * dt),
             CosT = Fix64Math.Cos(maxTurn),
@@ -45,9 +46,9 @@ public static class CrowdMotor
         var session = k.Session;
         var frame = k.MotorFrame;
         int navN = frame.NavN;
-        int cellSizeCm = frame.CellSizeCm;
+        int navCellSizeCm = frame.NavCellSizeCm;
         int n2 = frame.N2;
-        Fix64 cs = frame.Cs;
+        Fix64 navCellCm = frame.Cs;
         Fix64 lim = frame.Lim;
         Fix64 a = frame.Response;
         Fix64 aRest = frame.ResponseRest;
@@ -110,7 +111,7 @@ public static class CrowdMotor
             // 参考端是 x*inv(预存 f64 倒数);曾试改 Fix64 乘法同形,inv 本身下取整 + 乘积再
             // 下取整的双重取整反而更偏离参考——S5 实测 p50 0.07cm → 17.3cm(2026-10-09),已回退。
             // 格边界上与参考的 1 ulp 差属双数值系残余,不可在此框架内消除。
-            int cx = (int)(px / cs).ToLong(), cy = (int)(py / cs).ToLong();
+            int cx = CrowdSimulationSpace.NavCellCoord(px, navCellSizeCm), cy = CrowdSimulationSpace.NavCellCoord(py, navCellSizeCm);
             Fix64 spd = k.Speeds[i];
             Fix64 costHere = (lv != 0 ? nav.UpCost : nav.Cost)[cy * navN + cx];
             spd = spd / (costHere == Fix64.Zero ? Fix64.OneValue : costHere);
@@ -167,7 +168,7 @@ public static class CrowdMotor
             if (ny2 < Fix64.Zero) ny2 = Fix64.Zero; else if (ny2 > lim) ny2 = lim;
             // 同一对坐标的商只除一次。贴墙把 nx2/ny2 退回 px/py 时,商就是本步开头的 cx/cy。
             // 墙面解算改写坐标后商不再相同,必须重除。
-            int ncx = (int)(nx2 / cs).ToLong(), ncy = (int)(ny2 / cs).ToLong();
+            int ncx = CrowdSimulationSpace.NavCellCoord(nx2, navCellSizeCm), ncy = CrowdSimulationSpace.NavCellCoord(ny2, navCellSizeCm);
             if (pass[ncy * navN + ncx] == 0)
             {
                 if (pass[cy * navN + ncx] != 0) { ny2 = py; nvy = Fix64.Zero; ncy = cy; }
@@ -183,16 +184,16 @@ public static class CrowdMotor
                 openGrid = k.OpenCache.GridFor(nav);
             }
 
-            bool wallFree = radiusCm <= cs &&
+            bool wallFree = radiusCm <= navCellCm &&
                 CrowdWalls.IsOpen(openGrid!, ncy * navN + ncx, lv * n2);
-            if (!wallFree && CrowdWalls.ResolveWalls(walk, navN, cellSizeCm, nx2, ny2, radiusCm,
+            if (!wallFree && CrowdWalls.ResolveWalls(walk, navN, navCellSizeCm, nx2, ny2, radiusCm,
                     out var wx, out var wy, out var wnx, out var wny) &&
-                AcceptContact(pass, navN, cellSizeCm, lim, ref wx, ref wy))
+                AcceptContact(pass, navN, navCellSizeCm, lim, ref wx, ref wy))
             {
                 nx2 = wx;
                 ny2 = wy;
-                ncx = (int)(nx2 / cs).ToLong();
-                ncy = (int)(ny2 / cs).ToLong();
+                ncx = CrowdSimulationSpace.NavCellCoord(nx2, navCellSizeCm);
+                ncy = CrowdSimulationSpace.NavCellCoord(ny2, navCellSizeCm);
                 Fix64 vn = nvx * wnx + nvy * wny;
                 if (vn < Fix64.Zero)
                 {
@@ -205,7 +206,7 @@ public static class CrowdMotor
             {
                 int cell = ncy * navN + ncx;
                 if (colliders!.Resolve(cell, nx2, ny2, radiusCm, out var bx, out var by, out var bnx, out var bny) &&
-                    AcceptContact(pass, navN, cellSizeCm, lim, ref bx, ref by))
+                    AcceptContact(pass, navN, navCellSizeCm, lim, ref bx, ref by))
                 {
                     nx2 = bx;
                     ny2 = by;
@@ -259,12 +260,11 @@ public static class CrowdMotor
     }
 
     /// <summary>落在被挡格的修正不接收(参考实现的 acceptContact:钳到界内 + 落格可走才存)。</summary>
-    private static bool AcceptContact(byte[] pass, int n, int cellSizeCm, Fix64 lim, ref Fix64 x, ref Fix64 y)
+    private static bool AcceptContact(byte[] pass, int navCellsPerSide, int navCellSizeCm, Fix64 lim, ref Fix64 x, ref Fix64 y)
     {
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
         Fix64 qx = Fix64.Min(lim, Fix64.Max(Fix64.Zero, x));
         Fix64 qy = Fix64.Min(lim, Fix64.Max(Fix64.Zero, y));
-        if (pass[(int)(qy / cs).ToLong() * n + (int)(qx / cs).ToLong()] == 0) return false;
+        if (pass[CrowdSimulationSpace.NavCellCoord(qy, navCellSizeCm) * navCellsPerSide + CrowdSimulationSpace.NavCellCoord(qx, navCellSizeCm)] == 0) return false;
         x = qx;
         y = qy;
         return true;

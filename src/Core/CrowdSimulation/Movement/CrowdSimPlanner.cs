@@ -5,6 +5,7 @@ using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -94,7 +95,7 @@ public sealed class CrowdSimPlanner
     {
         var session = _session;
         var cfg = session.Config;
-        int n = cfg.NavCellCount;
+        int navCellsPerSide = cfg.NavCellsPerSide;
         foreach (var o in orders)
         {
             o.Leaders.Clear();
@@ -137,7 +138,7 @@ public sealed class CrowdSimPlanner
                 }
 
                 if (best < 0 || (g.Goal >= 0 && session.ResolveNavContext(g.NavId).CanReach(best, g.GoalComp))) continue;
-                g.Goal = NearestReachable(session.ResolveNavContext(g.NavId), best, link.GoalCell, n);
+                g.Goal = NearestReachable(session.ResolveNavContext(g.NavId), best, link.GoalCell, navCellsPerSide);
                 g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
                 link.GoalCell = g.Goal;
             }
@@ -252,7 +253,7 @@ public sealed class CrowdSimPlanner
 
                 var nav = session.ResolveNavContext(strictest.NavId);
                 int lc = CrowdDeployment.NearestPassable(nav,
-                    CrowdDeployment.CellAt(sx / cnt, sy / cnt, n, cfg.NavCellSizeCm));
+                    CrowdSimulationSpace.CellAtStrict(sx / cnt, sy / cnt, cfg.NavCellSizeCm, navCellsPerSide));
                 if (lc < 0 || !nav.CanReach(nav.Comp[lc], strictest.GoalComp)) lc = RepresentativeCell(session, membersByGroup[strictestId]);
                 CrowdLeader? prev = null;
                 foreach (int gid in bucket)
@@ -407,8 +408,8 @@ public sealed class CrowdSimPlanner
         var session = _session;
         var cfg = session.Config;
         var fc = cfg.Formation;
-        int cellSizeCm = cfg.NavCellSizeCm;
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
+        int navCellSizeCm = cfg.NavCellSizeCm;
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
 
         // 成员名单按落帧时刻重收(请求后单位可能移动)
         var membersByGroup = new Dictionary<int, List<int>>();
@@ -491,8 +492,8 @@ public sealed class CrowdSimPlanner
             }
 
             var leader = new CrowdLeader(
-                ToVec2Path(leaderResult.Points, cellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
-                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAhead * cs);
+                ToVec2Path(leaderResult.Points, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
+                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAhead * navCellCm);
 
             // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;
@@ -512,10 +513,10 @@ public sealed class CrowdSimPlanner
             {
                 cx /= cn;
                 cy /= cn;
-                int c = CrowdDeployment.CellAt(cx, cy, cfg.NavCellCount, cellSizeCm);
+                int c = CrowdSimulationSpace.CellAtStrict(cx, cy, navCellSizeCm, cfg.NavCellsPerSide);
                 if (c >= 0 && strictestPassable(session.ResolveNavContext(strictest.NavId), c) &&
-                    Math.Abs(c % cfg.NavCellCount - pl.StartCell % cfg.NavCellCount) <= 1 &&
-                    Math.Abs(c / cfg.NavCellCount - pl.StartCell / cfg.NavCellCount) <= 1)
+                    Math.Abs(c % cfg.NavCellsPerSide - pl.StartCell % cfg.NavCellsPerSide) <= 1 &&
+                    Math.Abs(c / cfg.NavCellsPerSide - pl.StartCell / cfg.NavCellsPerSide) <= 1)
                 {
                     leader.SetStart(cx, cy);
                 }
@@ -575,28 +576,28 @@ public sealed class CrowdSimPlanner
         // reachCells:聚拢按触碰判到达只认这个半径;阵型单到达视野上限也用它
         if (o.Mode == CrowdOrderMode.Converge)
         {
-            o.ReachCells = (int)Fix64.Max(fc.MinClumpCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / cs).ToLong();
+            o.ReachCells = (int)Fix64.Max(fc.MinClumpCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
         }
         else if (o.Mode == CrowdOrderMode.Preserve)
         {
-            o.ReachCells = (int)(ext / cs + fc.SettleRadiusCells).ToLong();
+            o.ReachCells = (int)(ext / navCellCm + fc.SettleRadiusCells).ToLong();
         }
         else
         {
             Fix64 w2 = Fix64.Zero;
             foreach (var b in blocks) w2 += b.Width;
-            o.ReachCells = (int)((w2 / 2 + Fix64Math.Sqrt(area)) / cs + fc.SettleRadiusCells).ToLong();
+            o.ReachCells = (int)((w2 / 2 + Fix64Math.Sqrt(area)) / navCellCm + fc.SettleRadiusCells).ToLong();
         }
     }
 
     private static bool strictestPassable(NavContext nav, int cell) => nav.Passable[cell] != 0;
 
     /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×cellSize 换算。</summary>
-    private static List<Fix64Vec2> ToVec2Path(Fix64[] points, int cellSizeCm)
+    private static List<Fix64Vec2> ToVec2Path(Fix64[] points, int navCellSizeCm)
     {
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
         var path = new List<Fix64Vec2>(points.Length / 2);
-        for (int i = 0; i + 1 < points.Length; i += 2) path.Add(new Fix64Vec2(points[i] * cs, points[i + 1] * cs));
+        for (int i = 0; i + 1 < points.Length; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
         return path;
     }
 
@@ -659,7 +660,7 @@ public sealed class CrowdSimPlanner
             if (r.DirtyTiles.Count > 0) dirtyByNav[r.NavId] = r.DirtyTiles;
         }
 
-        int n = session.Config.NavCellCount;
+        int navCellsPerSide = session.Config.NavCellsPerSide;
         var units = session.Units;
         var underway = new HashSet<int>();
         var reach = new Dictionary<int, Fix64>();
@@ -671,7 +672,7 @@ public sealed class CrowdSimPlanner
             if (st.State == (byte)CrowdUnitState.Moving || st.State == (byte)CrowdUnitState.Jump) underway.Add(g0.Id);
             if (g0.Flow == null) continue;
             int cell = CellOfUnit(session, i, st);
-            var len = g0.Flow.Len[(st.Level != 0 ? n * n : 0) + cell];
+            var len = g0.Flow.Len[(st.Level != 0 ? navCellsPerSide * navCellsPerSide : 0) + cell];
             if (!reach.TryGetValue(g0.Id, out var cur) || len > cur) reach[g0.Id] = len;
         }
 
@@ -744,16 +745,16 @@ public sealed class CrowdSimPlanner
     private static bool LeaderPathBlocked(CrowdLeader? leader, NavContext nav, CrowdSimSession session)
     {
         if (leader == null || leader.Done) return false;
-        int cs = session.Config.NavCellSizeCm, n = session.Config.NavCellCount;
-        Fix64 step = Fix64.FromInt(cs) / 2, e = Fix64.FromInt(cs) / 4;
+        int navCellSizeCm = session.Config.NavCellSizeCm, navCellsPerSide = session.Config.NavCellsPerSide;
+        Fix64 step = Fix64.FromInt(navCellSizeCm) / 2, e = Fix64.FromInt(navCellSizeCm) / 4;
         var pass = nav.Passable;
         var up = nav.UpPass;
         bool bad(int c) => pass[c] == 0 && up[c] == 0;
         bool blockedAt(Fix64 x, Fix64 y) =>
-            bad(CrowdSimCell.At(x - e, y - e, cs, n)) && bad(CrowdSimCell.At(x + e, y - e, cs, n)) &&
-            bad(CrowdSimCell.At(x - e, y + e, cs, n)) && bad(CrowdSimCell.At(x + e, y + e, cs, n));
+            bad(CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide)) && bad(CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide)) &&
+            bad(CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide)) && bad(CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
         var path = leader.Path;
-        Fix64 ax = leader.X, ay = leader.Y;
+        Fix64 ax = leader.XCm, ay = leader.YCm;
         for (int k = leader.Seg; k < path.Count; k++)
         {
             Fix64 bx = path[k].X, by = path[k].Y;
@@ -779,20 +780,20 @@ public sealed class CrowdSimPlanner
         Dictionary<int, Fix64> reach)
     {
         var f = g.Flow!;
-        int n = session.Config.NavCellCount, n2 = n * n;
+        int navCellsPerSide = session.Config.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var nav = session.ResolveNavContext(g.NavId);
-        int s = nav.Hpa!.ClusterSize, c = nav.Hpa.ClustersPerSide;
+        int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
         if (!reach.TryGetValue(g.Id, out var r)) return false;
         foreach (int t in tiles)
         {
             if (f.Mask![t] == 0) continue;
-            int x0 = t % c * s, y0 = t / c * s;
-            int x1 = Math.Min(n, x0 + s), y1 = Math.Min(n, y0 + s);
+            int x0 = t % navTilesPerSide * navCellsPerTile, y0 = t / navTilesPerSide * navCellsPerTile;
+            int x1 = Math.Min(navCellsPerSide, x0 + navCellsPerTile), y1 = Math.Min(navCellsPerSide, y0 + navCellsPerTile);
             for (int y = y0; y < y1; y++)
             {
                 for (int x = x0; x < x1; x++)
                 {
-                    if (f.Len[y * n + x] <= r || f.Len[n2 + y * n + x] <= r) return true;
+                    if (f.Len[y * navCellsPerSide + x] <= r || f.Len[n2 + y * navCellsPerSide + x] <= r) return true;
                 }
             }
         }
@@ -994,39 +995,39 @@ public sealed class CrowdSimPlanner
     private static int CellOfUnit(CrowdSimSession session, int dense, CrowdSimulationUnitState st)
     {
         var entity = session.Units.EntityAt(dense);
-        int n = session.Config.NavCellCount, cs = session.Config.NavCellSizeCm;
+        int navCellsPerSide = session.Config.NavCellsPerSide, cs = session.Config.NavCellSizeCm;
         if (st.State == (byte)CrowdUnitState.Jump)
         {
             var kin = session.World.Get<CrowdSimulationKinematics>(entity);
-            return CrowdDeployment.CellAt(kin.JumpToCm.X, kin.JumpToCm.Y, n, cs);
+            return CrowdSimulationSpace.CellAtStrict(kin.JumpToCm.X, kin.JumpToCm.Y, cs, navCellsPerSide);
         }
 
         var p = session.World.Get<Components.WorldPositionCm>(entity).Value;
-        return CrowdDeployment.CellAt(p.X, p.Y, n, cs);
+        return CrowdSimulationSpace.CellAtStrict(p.X, p.Y, cs, navCellsPerSide);
     }
 
     /// <summary>离 target 最近且从 fromComp 可达的可走格(环形外扩,平手取格号小者)。</summary>
-    private static int NearestReachable(NavContext nav, int fromComp, int target, int n)
+    private static int NearestReachable(NavContext nav, int fromComp, int target, int navCellsPerSide)
     {
         if (fromComp < 0) return -1;
-        int tx = target % n, ty = target / n;
+        int tx = target % navCellsPerSide, ty = target / navCellsPerSide;
         var pass = nav.Passable;
         var ok = new Dictionary<int, bool>();
         int best = -1;
         long bd = long.MaxValue;
-        for (int r = 0; r < n && (long)r * r <= bd; r++)
+        for (int r = 0; r < navCellsPerSide && (long)r * r <= bd; r++)
         {
             int x0 = tx - r, x1 = tx + r, y0 = ty - r, y1 = ty + r;
-            for (int y = Math.Max(0, y0); y <= Math.Min(n - 1, y1); y++)
+            for (int y = Math.Max(0, y0); y <= Math.Min(navCellsPerSide - 1, y1); y++)
             {
                 if (y == y0 || y == y1)
                 {
-                    for (int x = Math.Max(0, x0); x <= Math.Min(n - 1, x1); x++) Test(x, y);
+                    for (int x = Math.Max(0, x0); x <= Math.Min(navCellsPerSide - 1, x1); x++) Test(x, y);
                 }
                 else
                 {
                     if (x0 >= 0) Test(x0, y);
-                    if (x1 < n && r != 0) Test(x1, y);
+                    if (x1 < navCellsPerSide && r != 0) Test(x1, y);
                 }
             }
         }
@@ -1035,7 +1036,7 @@ public sealed class CrowdSimPlanner
 
         void Test(int x, int y)
         {
-            int c = y * n + x;
+            int c = y * navCellsPerSide + x;
             if (pass[c] == 0) return;
             long dx = x - tx, dy = y - ty, d = dx * dx + dy * dy;
             if (d > bd || (d == bd && c > best)) return;

@@ -91,17 +91,17 @@ public static class NavMeshAssembler
     }
 
     /// <summary>拼装某上下文的全部 tile(传 null 的槽位 = 该 tile 无内容,按空处理)。</summary>
-    public static NavMeshView Assemble(NavTileEntry?[] tiles, Fix64[] cost, int n, int tileCells)
+    public static NavMeshView Assemble(NavTileEntry?[] tiles, Fix64[] cost, int navCellsPerSide, int navCellsPerTile)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         ClearStitchMemo(); // memo 键是条目引用,跨烘焙复用;新会话清空避免老条目常驻
-        int c = n / tileCells, cc = c * c;
+        int c = navCellsPerSide / navCellsPerTile, navTileCount = c * c;
 
-        var polyBase = new int[cc + 1];
-        var vertBase = new int[cc + 1];
-        var idxBase = new int[cc + 1];
+        var polyBase = new int[navTileCount + 1];
+        var vertBase = new int[navTileCount + 1];
+        var idxBase = new int[navTileCount + 1];
         int regionCount = 0;
-        for (int t = 0; t < cc; t++)
+        for (int t = 0; t < navTileCount; t++)
         {
             var e = tiles[t] ?? EmptyEntry;
             polyBase[t + 1] = polyBase[t] + e.Count;
@@ -110,10 +110,10 @@ public static class NavMeshAssembler
             regionCount += e.RegionCount;
         }
 
-        int pCount = polyBase[cc], vCount = vertBase[cc];
+        int pCount = polyBase[navTileCount], vCount = vertBase[navTileCount];
         var vx = new int[vCount]; var vy = new int[vCount];
         var polyStart = new int[pCount + 1];
-        var polyVerts = new int[idxBase[cc]];
+        var polyVerts = new int[idxBase[navTileCount]];
         var polyTile = new int[pCount];
         var edgeP = new List<int>();
         var edgeQ = new List<int>();
@@ -126,10 +126,10 @@ public static class NavMeshAssembler
             edgeAx.Add(ax); edgeAy.Add(ay); edgeBx.Add(bx); edgeBy.Add(by);
         }
 
-        for (int t = 0; t < cc; t++)
+        for (int t = 0; t < navTileCount; t++)
         {
             var e = tiles[t] ?? EmptyEntry;
-            int ox = (t % c) * tileCells, oy = (t / c) * tileCells;
+            int ox = (t % c) * navCellsPerTile, oy = (t / c) * navCellsPerTile;
             int pb = polyBase[t], vb = vertBase[t], ib = idxBase[t];
             for (int v = 0; v < e.Vx.Length; v++) { vx[vb + v] = e.Vx[v] + ox; vy[vb + v] = e.Vy[v] + oy; }
             for (int k = 0; k < e.PolyVerts.Length; k++) polyVerts[ib + k] = vb + e.PolyVerts[k];
@@ -172,8 +172,8 @@ public static class NavMeshAssembler
             for (int tx = 0; tx < c; tx++)
             {
                 int t = ty * c + tx;
-                if (tx + 1 < c) Stitch(t, t + 1, 1, 0, true, (tx + 1) * tileCells, ty * tileCells);
-                if (ty + 1 < c) Stitch(t, t + c, 3, 2, false, (ty + 1) * tileCells, tx * tileCells);
+                if (tx + 1 < c) Stitch(t, t + 1, 1, 0, true, (tx + 1) * navCellsPerTile, ty * navCellsPerTile);
+                if (ty + 1 < c) Stitch(t, t + c, 3, 2, false, (ty + 1) * navCellsPerTile, tx * navCellsPerTile);
             }
         }
 
@@ -195,22 +195,22 @@ public static class NavMeshAssembler
         }
 
         // cell → 全局 poly;逐 poly 平均代价
-        var polyOf = new int[n * n];
+        var polyOf = new int[navCellsPerSide * navCellsPerSide];
         Array.Fill(polyOf, -1);
         var polyCostAcc = new Fix64[pCount];
         var cnt = new int[pCount];
-        for (int t = 0; t < cc; t++)
+        for (int t = 0; t < navTileCount; t++)
         {
             var e = tiles[t] ?? EmptyEntry;
-            int ox = (t % c) * tileCells, oy = (t / c) * tileCells;
+            int ox = (t % c) * navCellsPerTile, oy = (t / c) * navCellsPerTile;
             int pb = polyBase[t];
-            for (int y = 0; y < tileCells; y++)
+            for (int y = 0; y < navCellsPerTile; y++)
             {
-                for (int x = 0; x < tileCells; x++)
+                for (int x = 0; x < navCellsPerTile; x++)
                 {
-                    int lp = e.PolyOf[y * tileCells + x];
+                    int lp = e.PolyOf[y * navCellsPerTile + x];
                     if (lp < 0) continue;
-                    int cell = (oy + y) * n + ox + x;
+                    int cell = (oy + y) * navCellsPerSide + ox + x;
                     int g = pb + lp;
                     polyOf[cell] = g;
                     polyCostAcc[g] += cost[cell];

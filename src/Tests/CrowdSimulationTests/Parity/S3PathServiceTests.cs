@@ -37,10 +37,10 @@ public class S3PathServiceTests
         var grid = SurfaceGrid.Build(_runtime, surface, mapSurface.Blockers);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine("assets", "s1", Seed, "terrain", $"crowd_simulation_{Seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, _runtime.NavCellCount, _runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, _runtime.NavCellsPerSide, _runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, _runtime);
         var cache = new NavTileCache(
-            _runtime.NavtileCacheCapacity, _runtime.Hpa.ClusterSize,
+            _runtime.NavtileCacheCapacity, _runtime.Hpa.NavCellsPerTile,
             _runtime.Navmesh.MinRegionArea.ToDouble(), _runtime.Navmesh.MaxSimplificationError.ToDouble(),
             _runtime.Navmesh.MaxEdgeLen.ToDouble(), _runtime.Navmesh.MaxVertsPerPoly);
 

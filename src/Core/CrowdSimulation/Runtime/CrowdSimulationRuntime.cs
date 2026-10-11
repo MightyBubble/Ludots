@@ -238,12 +238,12 @@ public sealed partial class CrowdSimulationRuntime
         _mapSurfaceBridges = mapSurface.Bridges;
         var heights = NavHeightField.FromHeightmap(
             ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
-            runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
+            runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;
         var cache = new NavTileCache(
-            runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.ClusterSize,
+            runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
             runtimeConfig.Navmesh.MinRegionArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationError.ToDouble(),
             runtimeConfig.Navmesh.MaxEdgeLen.ToDouble(), runtimeConfig.Navmesh.MaxVertsPerPoly);
 
@@ -327,7 +327,7 @@ public sealed partial class CrowdSimulationRuntime
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.EnableMovement(kernel, planner);
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
-            mapSurface.Blockers, runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm));
+            mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
         // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
@@ -477,7 +477,7 @@ public sealed partial class CrowdSimulationRuntime
         {
             var replayNavs = new Dictionary<int, NavContext>();
             var replayCache = new NavTileCache(
-                session.Config.NavtileCacheCapacity, session.Config.Hpa.ClusterSize,
+                session.Config.NavtileCacheCapacity, session.Config.Hpa.NavCellsPerTile,
                 session.Config.Navmesh.MinRegionArea.ToDouble(), session.Config.Navmesh.MaxSimplificationError.ToDouble(),
                 session.Config.Navmesh.MaxEdgeLen.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
             var seenIds = new HashSet<int>();

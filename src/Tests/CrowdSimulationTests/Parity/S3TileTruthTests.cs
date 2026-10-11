@@ -29,12 +29,12 @@ public class S3TileTruthTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = Ludots.Core.Presentation.Terrain.ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
 
-        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = runtime.NavCellsPerSide, navCellsPerTile = runtime.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity,
-            t,
+            navCellsPerTile,
             runtime.Navmesh.MinRegionArea.ToDouble(),
             runtime.Navmesh.MaxSimplificationError.ToDouble(),
             runtime.Navmesh.MaxEdgeLen.ToDouble(),
@@ -51,7 +51,7 @@ public class S3TileTruthTests
             }
         }
 
-        var (hash, entryCount, perEntry) = ComputeDigest(cache, n);
+        var (hash, entryCount, perEntry) = ComputeDigest(cache, navCellsPerSide);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s3-tile-truth.json")))!;
         Assert.That(entryCount, Is.EqualTo(truth["tiles"]!.GetValue<int>()), "不同 tile 数");
         Assert.That(cache.Bakes, Is.EqualTo(truth["bakes"]!.GetValue<int>()), "烘焙次数");
@@ -65,7 +65,7 @@ public class S3TileTruthTests
                 string dumpDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "s3-diff", seed);
                 Directory.CreateDirectory(dumpDir);
                 File.WriteAllText(Path.Combine(dumpDir, $"key-{keyFp}.json"), System.Text.Json.JsonSerializer.Serialize(
-                    keyChars.Select(c => (int)c).ToArray()));
+                    keyChars.Select(navTilesPerSide => (int)navTilesPerSide).ToArray()));
                 Assert.Fail($"S3 tile 内容键 {keyFp} 在 Web 真相中不存在(seed {seed})——该 tile 的输入内容两端不同;键内容已转储 {dumpDir}/key-{keyFp}.json");
             }
 

@@ -70,7 +70,7 @@ public sealed class S7FogTruthTests
         int cursor = 4; // magic LS7F
         int ticks = BitConverter.ToInt32(bin, cursor); cursor += 4;
         int groups = BitConverter.ToInt32(bin, cursor); cursor += 4;
-        Assert.That(groups, Is.EqualTo(fog.G), "视野组数与真值不一致");
+        Assert.That(groups, Is.EqualTo(fog.VisionGroupCount), "视野组数与真值不一致");
 
         double maxDeltaCm = 0, finalMaxDeltaCm = 0;
         var deltas = new List<double>();
@@ -149,7 +149,7 @@ public sealed class S7FogTruthTests
             }
 
             // ── 迷雾 digest:逐位硬门(整数/集合态) ──
-            int f2 = fog.F * fog.F;
+            int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
             for (int g = 0; g < groups; g++)
             {
                 int tVis = BitConverter.ToInt32(bin, cursor); cursor += 4;

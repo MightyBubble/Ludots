@@ -175,7 +175,7 @@ public static class CrowdSimCommands
         }
 
         var shape = cmd.Area ?? throw new System.InvalidOperationException($"{type}: 缺少 area 形状。");
-        var (cells, box) = Fog.CrowdFogArea.AreaCells(fog.F, fog.FcsCm, shape);
+        var (cells, box) = Fog.CrowdFogArea.AreaCells(fog.FogCellsPerSide, fog.FogCellSizeCm, shape);
         if (cmd.Kind == CrowdSimCommandKind.Reveal) fog.RevealArea(g, cells);
         else if (cmd.Kind == CrowdSimCommandKind.Forget) fog.ForgetArea(g, cells, box);
         else

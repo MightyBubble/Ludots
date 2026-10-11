@@ -126,9 +126,9 @@ public static class CrowdFogArea
         }
     }
 
-    public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fcsCm, CrowdFogShape shape)
+    public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fogCellSizeCm, CrowdFogShape shape)
     {
-        Fix64 cs = Fix64.FromDouble(fcsCm / 100.0);
+        Fix64 cs = Fix64.FromDouble(fogCellSizeCm / 100.0);
         int ClampCell(Fix64 v) => Math.Max(0, Math.Min(f - 1, Fix64.Floor(v).ToInt()));
         Fix64 Cell(double cm) => Fix64.FromDouble(cm / 100.0) / cs;
         var cells = new List<int>();

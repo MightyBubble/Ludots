@@ -117,18 +117,18 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         var board = map.Boards[0];
-        int cellSizeCm = config.World.NavCellSizeCm;
-        if (cellSizeCm <= 0)
+        int navCellSizeCm = config.World.NavCellSizeCm;
+        if (navCellSizeCm <= 0)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {cellSizeCm}，需为 > 0 的整数");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {navCellSizeCm}，需为 > 0 的整数");
         }
 
         // 运行时迷雾格长是 int 直乘,乘积出 int 即环绕成负数。
-        long fogCellCm = (long)cellSizeCm * config.Fog.CellCells;
+        long fogCellCm = (long)navCellSizeCm * config.Fog.CellCells;
         if (fogCellCm < MinFogCellSizeCm || fogCellCm > int.MaxValue)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）= {fogCellCm}，需为 ≥ {MinFogCellSizeCm}、≤ {int.MaxValue}");
+                $"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm（{navCellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）= {fogCellCm}，需为 ≥ {MinFogCellSizeCm}、≤ {int.MaxValue}");
         }
 
         if (board.WidthCm != board.HeightCm)
@@ -136,12 +136,12 @@ public sealed class CrowdSimulationConfigLoader
             throw new InvalidOperationException($"{mapFile}: Boards[0] 必须是正方形（WidthCm {board.WidthCm} ≠ HeightCm {board.HeightCm}）。");
         }
 
-        if (board.WidthCm % cellSizeCm != 0)
+        if (board.WidthCm % navCellSizeCm != 0)
         {
-            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 world.navCellSizeCm（{cellSizeCm}）整除。");
+            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
         }
 
-        int navCellCount = board.WidthCm / cellSizeCm;
+        int navCellCount = board.WidthCm / navCellSizeCm;
         if (navCellCount < 16 || navCellCount > 1024)
         {
             throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navResolution = {navCellCount}（= Boards[0].WidthCm / world.navCellSizeCm），需为整数、≥ 16、≤ 1024");
@@ -158,7 +158,7 @@ public sealed class CrowdSimulationConfigLoader
         if (radiusCells > maxRadiusCells)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: fog.visionCm（{config.Fog.VisionCm}）/ (world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）)（{fogCellCm}）向上取整 = {radiusCells}，不得超过迷雾网格 F（{fogEdge}）对角格距的向上取整 {maxRadiusCells}");
+                $"{CrowdSimulationConfigValidator.FileName}: fog.visionCm（{config.Fog.VisionCm}）/ (world.navCellSizeCm（{navCellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）)（{fogCellCm}）向上取整 = {radiusCells}，不得超过迷雾网格 F（{fogEdge}）对角格距的向上取整 {maxRadiusCells}");
         }
 
         if (map.Players.Count < 1 || map.Players.Count > 16)
@@ -225,7 +225,7 @@ public sealed class CrowdSimulationConfigLoader
             }
 
             var radiusCm = Fix64.FromDouble(p.RadiusCm);
-            int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidanceRadiusScale, cellSizeCm);
+            int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidanceRadiusScale, navCellSizeCm);
             if (clearance > 255)
             {
                 throw new InvalidOperationException(
@@ -324,8 +324,8 @@ public sealed class CrowdSimulationConfigLoader
             Version = config.Version,
             MapId = config.MapId,
             FixedHz = fixedHz,
-            NavCellCount = navCellCount,
-            NavCellSizeCm = cellSizeCm,
+            NavCellsPerSide = navCellCount,
+            NavCellSizeCm = navCellSizeCm,
             WorldSeed = config.World.Seed,
             SurfaceAsset = config.World.SurfaceAsset,
             TerrainTypeIds = Array.ConvertAll(config.World.TerrainTypes, t => t.Id),
@@ -364,7 +364,7 @@ public sealed class CrowdSimulationConfigLoader
                 MaxVertsPerPoly = config.Navmesh.MaxVertsPerPoly,
                 PortalInsetCells = Fix64.FromDouble(config.Navmesh.PortalInsetCells),
             },
-            Hpa = new RuntimeHpaSection { ClusterSize = config.Hpa.ClusterSize, MaxEntranceWidth = config.Hpa.MaxEntranceWidth },
+            Hpa = new RuntimeHpaSection { NavCellsPerTile = config.Hpa.ClusterSize, MaxEntranceWidth = config.Hpa.MaxEntranceWidth },
             NavtileCacheCapacity = config.Navtile.CacheCapacity,
             Flowfield = new RuntimeFlowfieldSection
             {
@@ -383,7 +383,7 @@ public sealed class CrowdSimulationConfigLoader
             Fog = new RuntimeFogSection
             {
                 RateHz = Fix64.FromDouble(config.Fog.RateHz),
-                CellCells = config.Fog.CellCells,
+                NavCellsPerFogCell = config.Fog.CellCells,
                 VisionCm = Fix64.FromInt(config.Fog.VisionCm),
                 RevealTicks = config.Fog.RevealTicks,
                 SlotCacheCapacity = config.Fog.SlotCacheCapacity,
@@ -471,7 +471,7 @@ public sealed class CrowdSimulationConfigLoader
             Spawn = new RuntimeSpawnSection
             {
                 PlacementTries = config.Spawn.PlacementTries,
-                ClusterSpacing = Fix64.FromDouble(config.Spawn.ClusterSpacing),
+                GroupSpacingScale = Fix64.FromDouble(config.Spawn.ClusterSpacing),
                 TargetSearchTries = config.Spawn.TargetSearchTries,
                 CellInset = Fix64.FromDouble(config.Spawn.CellInset),
             },

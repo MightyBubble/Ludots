@@ -20,7 +20,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         Assert.That(runtime.Version, Is.EqualTo(7));
-        Assert.That(runtime.NavCellCount, Is.EqualTo(256));
+        Assert.That(runtime.NavCellsPerSide, Is.EqualTo(256));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
         Assert.That(runtime.FixedHz, Is.EqualTo(30));
         Assert.That(runtime.TerrainTypeIds, Is.EqualTo(new[] { "water", "shore", "land", "mountain", "cliff" }));
@@ -389,18 +389,18 @@ public class CrowdSimulationConfigTests
 
         var atBound = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 100);
         var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map);
-        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
 
     [Test]
     public void FogCellSize_IntProductWrap_IsRejected()
     {
         // 134217727×16 = 2147483632 仍是合法板宽;×32 = 4294967264 超出 int,运行时直乘环绕。
-        const int cellSizeCm = 134217727;
+        const int navCellSizeCm = 134217727;
         const int cellCells = 32;
         const int widthCm = 2147483632;
         var json = TestDefaults.DefaultConfigJson();
-        json["world"]!["navCellSizeCm"] = cellSizeCm;
+        json["world"]!["navCellSizeCm"] = navCellSizeCm;
         json["fog"]!["cellCells"] = cellCells;
         var map = TestDefaults.DemoMap();
         map.Boards[0].WidthCm = widthCm;
@@ -419,8 +419,8 @@ public class CrowdSimulationConfigTests
         // 现网:visionCm 80000、格长 6250×4=25000、F=256/4=64,半径 4 格。
         var live = TestDefaults.Assemble();
         Assert.That(live.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
-        Assert.That(live.NavCellSizeCm * live.Fog.CellCells, Is.EqualTo(25000));
-        Assert.That((live.NavCellCount + live.Fog.CellCells - 1) / live.Fog.CellCells, Is.EqualTo(64));
+        Assert.That(live.NavCellSizeCm * live.Fog.NavCellsPerFogCell, Is.EqualTo(25000));
+        Assert.That((live.NavCellsPerSide + live.Fog.NavCellsPerFogCell - 1) / live.Fog.NavCellsPerFogCell, Is.EqualTo(64));
 
         // 导航 16、cellCells 1 → F=16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22 而不是 F。
         // 格长 100 cm;vision 2200 → ceil=22,2300 → ceil=23。
@@ -436,7 +436,7 @@ public class CrowdSimulationConfigTests
         var atDiagonal = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 2200);
         var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map);
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(2200)));
-        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
 
     private static (CrowdSimulationConfig Config, MapConfig Map) FogCellWorld(int navCellSizeCm, int cellCells, int visionCm)

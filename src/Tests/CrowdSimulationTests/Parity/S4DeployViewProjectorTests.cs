@@ -28,8 +28,8 @@ public class S4DeployViewProjectorTests
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
 
         int truthId = session.Navs.Keys.Min();
-        int clusters = session.Navs[truthId].Hpa!.ClustersPerSide;
-        var unknown = Enumerable.Range(0, clusters * clusters / 2).ToList();
+        int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
+        var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();
         session.Beliefs!.Register(1, Array.Empty<(int Id, int TplIndex, CrowdStructureFootprint Fp)>(), unknown);
         int beliefId = CrowdBeliefNavs.BeliefStride + truthId;
         var variant = session.ResolveNavContext(beliefId);
@@ -106,8 +106,8 @@ public class S4DeployViewProjectorTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         int truthId = session.Navs.Keys.Min();
-        int clusters = session.Navs[truthId].Hpa!.ClustersPerSide;
-        var unknown = Enumerable.Range(0, clusters * clusters / 2).ToList();
+        int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
+        var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();
         session.Beliefs!.Register(1, Array.Empty<(int Id, int TplIndex, CrowdStructureFootprint Fp)>(), unknown);
         int beliefId = CrowdBeliefNavs.BeliefStride + truthId;
         var group = session.Groups.Alloc(player: 1, layerIdx: 0, rIdx: 0, navId: beliefId);
@@ -149,8 +149,8 @@ public class S4DeployViewProjectorTests
         var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         int truthId = session.Navs.Keys.Min();
-        int clusters = session.Navs[truthId].Hpa!.ClustersPerSide;
-        var unknown = Enumerable.Range(0, clusters * clusters / 2).ToList();
+        int navTilesPerSide = session.Navs[truthId].Hpa!.NavTilesPerSide;
+        var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();
         session.Beliefs!.Register(1, Array.Empty<(int Id, int TplIndex, CrowdStructureFootprint Fp)>(), unknown);
         int beliefId = CrowdBeliefNavs.BeliefStride + truthId;
         var variant = session.ResolveNavContext(beliefId);

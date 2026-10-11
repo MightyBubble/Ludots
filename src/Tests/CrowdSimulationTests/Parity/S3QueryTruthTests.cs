@@ -35,11 +35,11 @@ public class S3QueryTruthTests
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
             runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
             runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
@@ -52,10 +52,10 @@ public class S3QueryTruthTests
         var detail = File.ReadAllBytes(Path.Combine(parityDir, "s3c-detail.bin"));
         var wpBin = File.ReadAllBytes(Path.Combine(parityDir, "s3c-wp.bin"));
 
-        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = runtime.NavCellsPerSide, navCellsPerTile = runtime.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var exact = new List<byte>();
         exact.AddRange(Encoding.ASCII.GetBytes("LS3C"));
-        WriteI32(exact, n);
+        WriteI32(exact, navCellsPerSide);
         exact.AddRange(new byte[4]); // 上下文数占位,循环后回填
         WriteI32(exact, pairs.Length);
 
@@ -67,7 +67,7 @@ public class S3QueryTruthTests
         long wpDecisive = 0, wpTie = 0, exclusiveMine = 0, exclusiveWeb = 0, sharedCells = 0;
         var seen = new HashSet<int>();
         int ctxIndex = 0;
-        var pool = new FlowPool(n, runtime.Flowfield.PoolCapacity);
+        var pool = new FlowPool(navCellsPerSide, runtime.Flowfield.PoolCapacity);
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
             foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
@@ -78,17 +78,17 @@ public class S3QueryTruthTests
                 WriteI32(exact, nav.Id);
                 Assert.That(ReadI32(detail, ref detailCursor), Is.EqualTo(nav.Id), $"{seed} detail 流 navId 错位");
                 Assert.That(ReadI32(wpBin, ref wpCursor), Is.EqualTo(nav.Id), $"{seed} wp 流 navId 错位");
-                var scratch = new CorridorQuery.Scratch(t * t);
+                var scratch = new CorridorQuery.Scratch(navCellsPerTile * navCellsPerTile);
                 int reachable = 0;
                 int pairIndex = -1;
                 foreach (var (start, goal) in pairs)
                 {
                     pairIndex++;
-                    var mask = new byte[c * c];
-                    mask[NavGridSteps.ClusterOf(goal, n, t, c)] = 1;
+                    var mask = new byte[navTilesPerSide * navTilesPerSide];
+                    mask[NavGridSteps.TileOf(goal, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
                     var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
-                    var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, c, runtime.Flowfield.CorridorPadding), pool);
-                    var trace = FlowFieldBuilder.TracePath(flow, start, n * n);
+                    var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navTilesPerSide, runtime.Flowfield.CorridorPadding), pool);
+                    var trace = FlowFieldBuilder.TracePath(flow, start, navCellsPerSide * navCellsPerSide);
                     int traceOk = trace[trace.Count - 1] == goal ? 1 : 0;
                     var myCells = pool.Order.Take(flow.Reached).OrderBy(v => v).ToArray();
                     var myInteg = new Dictionary<int, Fix64>(flow.Reached);
@@ -126,12 +126,12 @@ public class S3QueryTruthTests
 
                     // 两侧走廊掩码(含 pad):独占格只能来自走廊分歧的 cluster(掩码对称差),
                     // 不能来自场内的随机泄漏
-                    var webMask = new byte[c * c];
-                    webMask[NavGridSteps.ClusterOf(goal, n, t, c)] = 1;
+                    var webMask = new byte[navTilesPerSide * navTilesPerSide];
+                    webMask[NavGridSteps.TileOf(goal, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
                     foreach (int cl in webClusters) webMask[cl] = 1;
-                    int tileCellsSq = t * t;
-                    foreach (int p in webPolys) webMask[(p / tileCellsSq) >> 1] = 1;
-                    webMask = FlowFieldBuilder.PadMask(webMask, c, runtime.Flowfield.CorridorPadding);
+                    int navCellsPerTileSq = navCellsPerTile * navCellsPerTile;
+                    foreach (int p in webPolys) webMask[(p / navCellsPerTileSq) >> 1] = 1;
+                    webMask = FlowFieldBuilder.PadMask(webMask, navTilesPerSide, runtime.Flowfield.CorridorPadding);
                     var myMask = flow.Mask!;
 
                     var webCellsArr = new int[webCellCount];
@@ -149,7 +149,7 @@ public class S3QueryTruthTests
                         if (!myInteg.ContainsKey(webCell))
                         {
                             exWeb++;
-                            int cl = NavGridSteps.ClusterOf(webCell % (n * n), n, t, c);
+                            int cl = NavGridSteps.TileOf(webCell % (navCellsPerSide * navCellsPerSide), navCellsPerSide, navCellsPerTile, navTilesPerSide);
                             if ((webMask[cl] != 0) == (myMask[cl] != 0)) unexplained++;
                         }
                     }
@@ -159,7 +159,7 @@ public class S3QueryTruthTests
                     {
                         if (webCells.Contains(cell)) continue;
                         exMine++;
-                        int cl = NavGridSteps.ClusterOf(cell % (n * n), n, t, c);
+                        int cl = NavGridSteps.TileOf(cell % (navCellsPerSide * navCellsPerSide), navCellsPerSide, navCellsPerTile, navTilesPerSide);
                         if ((webMask[cl] != 0) == (myMask[cl] != 0)) unexplained++;
                     }
 
@@ -168,9 +168,9 @@ public class S3QueryTruthTests
                     {
                         // 走廊分歧也会改变可达性:口袋格在双方掩码的交上连不到终点时,独占同样合法。
                         // 只有"交集洪泛内仍只被一侧到达"才算真分歧。
-                        var intersection = new byte[c * c];
+                        var intersection = new byte[navTilesPerSide * navTilesPerSide];
                         for (int k = 0; k < intersection.Length; k++) intersection[k] = (byte)(webMask[k] & myMask[k]);
-                        pairFlood = MaskedFlood(nav, goal, intersection, n);
+                        pairFlood = MaskedFlood(nav, goal, intersection, navCellsPerSide);
                         unexplained = 0;
                         foreach (int cell in webCells)
                         {
@@ -232,7 +232,7 @@ public class S3QueryTruthTests
                         int webCell = ReadI32(wpBin, ref wpCursor);
                         int webWp = ReadI32(wpBin, ref wpCursor);
                         if (webWp == cmpFlow.Wp[webCell]) { wpDecisive++; continue; }
-                        if (IsNearTieAccepted(nav, cmpFlow, webCell, webWp, n)) wpTie++;
+                        if (IsNearTieAccepted(nav, cmpFlow, webCell, webWp, navCellsPerSide)) wpTie++;
                         else
                         {
                             Assert.Fail($"{seed} navId {nav.Id} 格 {webCell}: 路点 {cmpFlow.Wp[webCell]} 与 Web {webWp} 既不相等也不是平局双解");
@@ -276,7 +276,7 @@ public class S3QueryTruthTests
     private static HashSet<int> MaskedFlood(NavContext nav, int goal, byte[] mask, int n)
     {
         int n2 = n * n;
-        int s = nav.Hpa!.ClusterSize, c = nav.Hpa.ClustersPerSide;
+        int navCellsPerTile = nav.Hpa!.NavCellsPerTile, navTilesPerSide = nav.Hpa.NavTilesPerSide;
         bool layered = nav.UpperTiles is { Count: > 0 };
         var seen = new HashSet<int> { goal };
         var queue = new Queue<int>(new[] { goal });
@@ -290,7 +290,7 @@ public class S3QueryTruthTests
             {
                 if (!NavGridSteps.CanStep(grid, n, x, y, d)) continue;
                 int vc = (y + NavGridSteps.DY[d]) * n + x + NavGridSteps.DX[d], v = o + vc;
-                if (mask[NavGridSteps.ClusterOf(vc, n, s, c)] == 0) continue;
+                if (mask[NavGridSteps.TileOf(vc, n, navCellsPerTile, navTilesPerSide)] == 0) continue;
                 if (seen.Add(v)) queue.Enqueue(v);
             }
 
@@ -305,7 +305,7 @@ public class S3QueryTruthTests
                 for (int j = nav.Links.OutStart[u], e1 = nav.Links.OutStart[u + 1]; j < e1; j++)
                 {
                     int v = nav.Links.To[nav.Links.OutList[j]];
-                    if (mask[NavGridSteps.ClusterOf(v, n, s, c)] == 0) continue;
+                    if (mask[NavGridSteps.TileOf(v, n, navCellsPerTile, navTilesPerSide)] == 0) continue;
                     if (seen.Add(v)) queue.Enqueue(v);
                 }
             }

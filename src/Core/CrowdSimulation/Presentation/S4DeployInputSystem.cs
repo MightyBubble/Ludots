@@ -34,7 +34,7 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     {
         if (!_demo.Active) return;
         var actions = CrowdAuthoritativeInput.Require(_engine);
-        bool picked = CrowdPointerGround.TryPick(_engine, actions, _hud.X, _hud.Y, _hud.W, _hud.H, out double xCm, out double yCm);
+        bool picked = CrowdPointerGround.TryPick(_engine, actions, _hud.OriginXPx, _hud.OriginYPx, _hud.WidthPx, _hud.HeightPx, out double xCm, out double yCm);
         _demo.HoverCm = picked ? (xCm, yCm) : null;
 
         if (actions.PressedThisTick(_bindings.CycleView)) _demo.EnqueueCycleView();

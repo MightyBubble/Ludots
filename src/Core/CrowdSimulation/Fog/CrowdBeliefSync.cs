@@ -21,7 +21,7 @@ public sealed class CrowdBeliefState
         public bool Dormant { get; set; }
     }
 
-    public required int G { get; init; }
+    public required int VisionGroupCount { get; init; }
     /// <summary>组 → 槽(0 = 真相)。</summary>
     public int[] Slot { get; init; } = null!;
     public Dictionary<uint, List<Entry>> SlotOfKey { get; } = new();
@@ -52,7 +52,7 @@ public sealed class CrowdBeliefState
 
     public static CrowdBeliefState Create(int g) => new()
     {
-        G = g,
+        VisionGroupCount = g,
         Slot = new int[g],
         LastKey = Enumerable.Repeat(-1L, g).ToArray(),
         LastEnt = Enumerable.Repeat(-1L, g).ToArray(),
@@ -80,7 +80,7 @@ public static class CrowdBeliefSync
         b.Revealed = null;
         var force = b.Force;
         b.Force = null;
-        for (int v = 0; v < fog.G; v++)
+        for (int v = 0; v < fog.VisionGroupCount; v++)
         {
             // 被并掉的组没有玩家——停在真相槽,不占变体
             if (fog.Empty(v))
@@ -242,7 +242,7 @@ public static class CrowdBeliefSync
         var b = sim.Belief!;
         int prev = b.Slot[v];
         if (prev <= 0) return false;
-        for (int u = 0; u < b.G; u++)
+        for (int u = 0; u < b.VisionGroupCount; u++)
         {
             if (u != v && b.Slot[u] == prev) return false; // 槽被共享,不能原位改
         }
