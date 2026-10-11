@@ -1,0 +1,46 @@
+[
+  {
+    "id": "showcase.graph_op.IsCastMode",
+    "kind": "Effect",
+    "entry": "drain",
+    "nodes": [
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "check",
+        "op": "IsCastMode",
+        "mode": "castMode.gallery"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      { "from": "drain", "fromPort": "next", "to": "slot" },
+      { "from": "slot", "fromPort": "next", "to": "check" },
+      { "from": "check", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" },
+      { "from": "explicit", "fromPort": "value", "to": "check", "toPort": "source" },
+      { "from": "explicit", "fromPort": "value", "to": "check", "toPort": "target" },
+      { "from": "slot", "fromPort": "value", "to": "check", "toPort": "value" }
+    ]
+  }
+]

@@ -393,7 +393,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ReadTimeFlowScalePermille or
                 GraphNodeOp.AcquireTimeFlowPause or
                 GraphNodeOp.AcquireTimeFlowScale or
-                GraphNodeOp.ReleaseTimeFlowToken
+                GraphNodeOp.ReleaseTimeFlowToken or
+                GraphNodeOp.IsCastMode or
+                GraphNodeOp.SetCastMode or
+                GraphNodeOp.SetTargetPos or
+                GraphNodeOp.LoadAbilityCastRange
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -969,6 +973,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
             Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
+            Register(GraphNodeOp.IsCastMode, HandleIsCastMode, "IsCastMode graph opcode.");
+            Register(GraphNodeOp.SetCastMode, HandleSetCastMode, "SetCastMode graph opcode.");
+            Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
+            Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
@@ -1793,6 +1801,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
             s.Api.SetInteractionMode(target, ins.Imm);
+        }
+
+        private static void HandleIsCastMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.IsCastMode(s.E[ins.A], s.E[ins.B], s.I[ins.C], ins.Imm) ? 1 : 0);
+        }
+
+        private static void HandleSetCastMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetCastMode(s.E[ins.A], ins.Imm);
+        }
+
+        private static void HandleSetTargetPos(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            var rounded = Fix64Vec2.FromFloat(s.F[ins.A], s.F[ins.B]).RoundToInt();
+            s.TargetPosCm = new IntVector2(rounded.x, rounded.y);
+        }
+
+        private static void HandleLoadAbilityCastRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.LoadAbilityCastRange(s.E[ins.A], s.I[ins.B]);
         }
 
         private static void HandleActivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

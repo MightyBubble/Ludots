@@ -10,5 +10,21 @@
         }
       ]
     }
+  },
+  {
+    "id": "Ability.GraphOps.CastRange",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 640,
+      "impactEffect": "Effect.GraphOps.ChainOpening"
+    }
   }
 ]

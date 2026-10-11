@@ -227,6 +227,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Targets = state.Targets;
             IntIdList = state.IntIdList;
             SubjectIntId = state.SubjectIntId;
+            // Register spans alias the frame; the ground point is a value, so a handler write is lost unless copied back.
+            TargetPosCm = state.TargetPosCm;
         }
     }
 }

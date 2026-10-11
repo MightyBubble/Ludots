@@ -148,6 +148,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
+        private StringIntRegistry? _castModes;
+        private AbilityDefinitionRegistry? _abilityDefinitions;
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
@@ -336,6 +338,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
         {
             _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
+        }
+
+        /// <summary>Binds the cast-mode id registry. Unbound calls fail closed.</summary>
+        public void BindCastModeRegistry(StringIntRegistry castModes)
+        {
+            _castModes = castModes ?? throw new ArgumentNullException(nameof(castModes));
+        }
+
+        /// <summary>Binds ability definitions so slot cast range can be read. Unbound calls fail closed.</summary>
+        public void BindAbilityDefinitions(AbilityDefinitionRegistry abilityDefinitions)
+        {
+            _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
         }
 
         /// <summary>
@@ -1085,6 +1099,118 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 _world.Add(target, component);
             }
+        }
+
+        /// <inheritdoc />
+        public bool IsCastMode(Entity rep, Entity actor, int slot, int modeKeyId)
+        {
+            if (_world == null || !_world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsCastModeRepDead: rep {rep} is not alive.");
+            }
+
+            if (!_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsCastModeActorDead: actor {actor} is not alive.");
+            }
+
+            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsCastModeRepHasNoPref: rep {rep} carries no InteractionPref.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsCastModeSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            int resolved = pref.ResolveCastMode(slotState.AbilityId);
+            if (resolved == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsCastModeUnseeded: rep {rep} resolved cast mode is 0.");
+            }
+
+            return resolved == ResolveInstalledCastMode(modeKeyId, nameof(IsCastMode));
+        }
+
+        /// <inheritdoc />
+        public void SetCastMode(Entity rep, int modeKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetCastMode));
+            if (_world == null || !_world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetCastModeRepDead: rep {rep} is not alive.");
+            }
+
+            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetCastModeRepHasNoPref: rep {rep} carries no InteractionPref.");
+            }
+
+            pref.SetDefaultCastMode(ResolveInstalledCastMode(modeKeyId, nameof(SetCastMode)));
+            _world.Set(rep, pref);
+        }
+
+        /// <inheritdoc />
+        public float LoadAbilityCastRange(Entity actor, int slot)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeActorDead: actor {actor} is not alive.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            AbilityDefinitionRegistry definitions = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.AbilityDefinitionsUnavailable: no ability definition registry is bound to the graph runtime.");
+            if (!definitions.TryGet(slotState.AbilityId, out AbilityDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
+            }
+
+            if (!definition.HasTargeting)
+            {
+                string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeNoTargeting: ability '{abilityName}' has no targeting.castRangeCm.");
+            }
+
+            return definition.Targeting.CastRangeCm;
+        }
+
+        private int ResolveInstalledCastMode(int modeKeyId, string opName)
+        {
+            StringIntRegistry modes = _castModes
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.CastModeRegistryUnavailable: no cast mode registry is bound to the graph runtime.");
+            string modeId = ConfigKeyRegistry.GetName(modeKeyId);
+            if (string.IsNullOrWhiteSpace(modeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}Unknown: mode key id {modeKeyId} resolves to no cast mode.");
+            }
+
+            if (!modes.TryGetId(modeId, out int registeredModeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}Unknown: cast mode '{modeId}' is not installed.");
+            }
+
+            return registeredModeId;
         }
 
         /// <summary>

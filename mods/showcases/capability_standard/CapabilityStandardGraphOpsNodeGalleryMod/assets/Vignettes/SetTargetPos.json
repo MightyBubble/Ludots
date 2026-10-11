@@ -1,0 +1,38 @@
+{
+  "op": "SetTargetPos",
+  "driver": "linear",
+  "title": "写下地面落点",
+  "beat": "两个厘米数写进图的地面点，后面的提交和夹取读的就是它。",
+  "detailTemplate": "落点写好了，木桩从{healthBefore}掉到{healthAfter}。",
+  "assertDetailContains": [
+    "落点写好了"
+  ],
+  "featuredNodeId": "point",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

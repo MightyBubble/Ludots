@@ -128,6 +128,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.WriteMapVarInt:
                     case GraphNodeOp.WriteMapVarFloat:
                     case GraphNodeOp.SetInteractionMode:
+                    case GraphNodeOp.IsCastMode:
+                    case GraphNodeOp.SetCastMode:
                     case GraphNodeOp.LoadEntryPayloadEntity:
                     case GraphNodeOp.LoadEntryPayloadInt:
                     case GraphNodeOp.LoadEntryPayloadFloat:

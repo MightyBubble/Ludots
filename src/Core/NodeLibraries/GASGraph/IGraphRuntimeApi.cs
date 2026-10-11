@@ -101,6 +101,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// True when the rep's resolved cast mode for the actor's ability at
+        /// <paramref name="slot"/> equals the cast mode named by <paramref name="modeKeyId"/>.
+        /// A resolved mode of 0 fails closed and names the rep. An empty slot fails closed.
+        /// </summary>
+        bool IsCastMode(Entity rep, Entity actor, int slot, int modeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CastModeRegistryUnavailable");
+        }
+
+        /// <summary>
+        /// Writes the player-default cast mode named by <paramref name="modeKeyId"/> onto
+        /// <paramref name="rep"/>. The rep must already carry InteractionPref.
+        /// </summary>
+        void SetCastMode(Entity rep, int modeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CastModeRegistryUnavailable");
+        }
+
+        /// <summary>
+        /// Reads <c>targeting.castRangeCm</c> of the ability on <paramref name="actor"/> at
+        /// <paramref name="slot"/>. An empty slot fails closed.
+        /// </summary>
+        float LoadAbilityCastRange(Entity actor, int slot)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
+        }
+
+        /// <summary>
         /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and

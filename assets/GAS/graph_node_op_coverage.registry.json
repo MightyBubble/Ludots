@@ -4393,6 +4393,90 @@
         "GraphOpsNodeGalleryCalendarAcceptanceTests.SubInt_ShowsDaysUntilDayThreeSixty"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "IsCastMode",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_IsCastMode",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.IsCastModeVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SetCastMode",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetCastMode",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.SetCastModeVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SetTargetPos",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetTargetPos",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.SetTargetPosVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadAbilityCastRange",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadAbilityCastRange",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.LoadAbilityCastRangeVignette_QuotesTheAuthoredCentimeters"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

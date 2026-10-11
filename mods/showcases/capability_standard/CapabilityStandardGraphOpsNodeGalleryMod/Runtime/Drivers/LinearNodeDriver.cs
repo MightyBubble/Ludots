@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.AimSource;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -42,7 +45,89 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             SeedPinnedLivePointer(ctx);
         }
 
+        SeedCastModeStage(ctx);
         GraphOpsNodeActorBinding.BindHud(ctx);
+    }
+
+    private const string GalleryCastModeId = "castMode.gallery";
+    private const string GalleryRangedAbilityId = "Ability.GraphOps.CastRange";
+
+    private static void SeedCastModeStage(GraphOpsNodeDriverContext ctx)
+    {
+        string op = ctx.Vignette.Op;
+        bool isCastMode = string.Equals(op, nameof(GraphNodeOp.IsCastMode), StringComparison.Ordinal);
+        bool setCastMode = string.Equals(op, nameof(GraphNodeOp.SetCastMode), StringComparison.Ordinal);
+        bool loadRange = string.Equals(op, nameof(GraphNodeOp.LoadAbilityCastRange), StringComparison.Ordinal);
+        if (!isCastMode && !setCastMode && !loadRange)
+        {
+            return;
+        }
+
+        Entity actor = ctx.Target;
+        if (actor == Entity.Null || !ctx.SimWorld.IsAlive(actor))
+        {
+            throw new InvalidOperationException($"Gallery '{op}' requires a live target actor.");
+        }
+
+        if (isCastMode || setCastMode)
+        {
+            var pref = default(InteractionPref);
+            pref.SetPlayerDefault(1, 1);
+            if (isCastMode)
+            {
+                pref.SetDefaultCastMode(RequireGalleryCastModeId(ctx));
+            }
+
+            if (ctx.SimWorld.Has<InteractionPref>(actor))
+            {
+                ctx.SimWorld.Set(actor, pref);
+            }
+            else
+            {
+                ctx.SimWorld.Add(actor, pref);
+            }
+        }
+
+        if (isCastMode || loadRange)
+        {
+            SeedRangedAbilitySlot(ctx, actor);
+        }
+    }
+
+    private static int RequireGalleryCastModeId(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.CastModeIdRegistry.Name, out object? raw)
+            || raw is not StringIntRegistry modes
+            || !modes.TryGetId(GalleryCastModeId, out int modeId)
+            || modeId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery cast-mode stage requires installed cast mode '{GalleryCastModeId}'.");
+        }
+
+        return modeId;
+    }
+
+    private static void SeedRangedAbilitySlot(GraphOpsNodeDriverContext ctx, Entity actor)
+    {
+        int abilityId = AbilityIdRegistry.GetId(GalleryRangedAbilityId);
+        if (abilityId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery ranged ability '{GalleryRangedAbilityId}' is not installed.");
+        }
+
+        if (!ctx.SimWorld.Has<AbilityStateBuffer>(actor))
+        {
+            ctx.SimWorld.Add(actor, new AbilityStateBuffer());
+        }
+
+        ref AbilityStateBuffer slots = ref ctx.SimWorld.Get<AbilityStateBuffer>(actor);
+        if (slots.Count == 0)
+        {
+            slots.AddAbility(abilityId);
+        }
     }
 
     private static bool IsLivePointerOp(string op) =>

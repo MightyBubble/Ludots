@@ -3736,6 +3736,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IsCastMode_raylib",
+      "name": "Graph Op IsCastMode Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IsCastMode"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadAbilityCastRange_raylib",
+      "name": "Graph Op LoadAbilityCastRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadAbilityCastRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetCastMode_raylib",
+      "name": "Graph Op SetCastMode Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetCastMode"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetTargetPos_raylib",
+      "name": "Graph Op SetTargetPos Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetTargetPos"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -2747,6 +2747,38 @@
         "type": "path",
         "value": "mods/showcases/panel_button_commands/PanelButtonCommandsShowcaseMod"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_IsCastMode",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsCastModeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIsCastModeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadAbilityCastRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetCastMode",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCastModeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetCastModeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetTargetPos",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetTargetPosEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetTargetPosEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

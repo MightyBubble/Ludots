@@ -529,6 +529,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         ActivateVirtualCamera = 530,
 
+        /// <summary>
+        /// B[Dst] = the rep's resolved cast mode for the actor's ability at slot I[C] equals the
+        /// cast mode named by symbols[Imm]. A is the rep, B is the actor. A resolved mode of 0
+        /// fails closed and names the rep.
+        /// </summary>
+        IsCastMode = 531,
+
+        /// <summary>
+        /// Write the player-default cast mode named by symbols[Imm] onto the rep in A.
+        /// The rep must already carry InteractionPref.
+        /// </summary>
+        SetCastMode = 532,
+
+        /// <summary>
+        /// TargetPosCm = round(F[A], F[B]) in centimeters, same rounding as ClampTargetToRange.
+        /// </summary>
+        SetTargetPos = 533,
+
+        /// <summary>
+        /// F[Dst] = targeting.castRangeCm of the ability on actor A at slot I[B].
+        /// An empty slot fails closed.
+        /// </summary>
+        LoadAbilityCastRange = 534,
+
     }
 
     public static class GraphNodeOpParser

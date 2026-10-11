@@ -1870,6 +1870,8 @@ namespace Ludots.Core.Engine
                 new InteractionModeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 inputConfigRoot);
             gasGraphApi.BindInteractionModeMap(interactionModeMap);
+            gasGraphApi.BindCastModeRegistry(castModeIds);
+            gasGraphApi.BindAbilityDefinitions(abilityDefinitions);
 
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
