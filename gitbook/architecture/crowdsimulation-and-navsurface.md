@@ -114,7 +114,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
 
 参数、地图事实、时钟分三处写。
 
-`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、关系、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
+`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、关系、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
 
 `CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。`agents.profilesUri` 仍指向这份档案。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
