@@ -63,13 +63,41 @@ public static class TestDefaults
         return new AgentProfileRegistry(list);
     }
 
+    /// <summary>
+    /// 演示图喂给装载的矩阵：队伍号相同（含自己对自己）为 Yield 并共享，不同为 Hold 且不共享。
+    /// 对拍直接喂这张表。它等于种子图投影结果：队伍代表之间有 pairRules 点名的自指边，跨队没有这条边。不是内核规则。
+    /// </summary>
+    public static CrowdPairRules ParityPairRules(MapConfig map)
+    {
+        int playerCount = map.Players.Count;
+        var response = new CrowdPushResponse[playerCount * playerCount];
+        var shares = new bool[playerCount * playerCount];
+        for (int a = 0; a < playerCount; a++)
+        {
+            int teamA = map.Players[a].TeamId;
+            for (int b = 0; b < playerCount; b++)
+            {
+                bool linked = teamA > 0 && teamA == map.Players[b].TeamId;
+                response[a * playerCount + b] = linked ? CrowdPushResponse.Yield : CrowdPushResponse.Hold;
+                shares[a * playerCount + b] = linked;
+            }
+        }
+
+        return CrowdPairRules.Matrices(playerCount, response, shares);
+    }
+
     public static CrowdSimulationRuntimeConfig Assemble(
         CrowdSimulationConfig? config = null,
         MapConfig? map = null,
-        AgentProfileRegistry? profiles = null)
-        => CrowdSimulationConfigLoader.Load(
+        AgentProfileRegistry? profiles = null,
+        CrowdPairRules? pairRules = null)
+    {
+        map ??= DemoMap();
+        return CrowdSimulationConfigLoader.Load(
             config ?? DefaultConfig(),
-            map ?? DemoMap(),
+            map,
             profiles ?? DemoProfiles(),
-            FixedHz);
+            FixedHz,
+            pairRules ?? ParityPairRules(map));
+    }
 }

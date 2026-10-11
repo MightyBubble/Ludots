@@ -219,10 +219,10 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void Relations_Matrix_AlignsUnorderedPlayerIds()
+    public void PairRules_UnorderedPlayerIds_KeepTheFedMatrix()
     {
-        // Players 不按 1..P 顺排(表序 [3,1,2])时,推挤矩阵按下标对齐:同队 ally、
-        // 跨队 enemy、overrides 翻转指定对(3↔1)——求解器的玩家号→下标换算吃同一张表。
+        // 玩家对级 overrides 已删除。装载不再从队伍号生成矩阵，只把喂进来的矩阵按下标挂上。
+        // 玩家号仍要能换成表序，乱序玩家号查的是同一张下标表。
         var map = TestDefaults.DemoMap();
         map.Players.Clear();
         map.Players.Add(new PlayerBindingData { PlayerId = 3, TeamId = 1, RepresentativeInstanceId = "player_3" });
@@ -230,27 +230,25 @@ public class CrowdSimulationConfigTests
         map.Players.Add(new PlayerBindingData { PlayerId = 2, TeamId = 1, RepresentativeInstanceId = "player_2" });
         map.Players.Add(new PlayerBindingData { PlayerId = 4, TeamId = 2, RepresentativeInstanceId = "player_4" });
 
-        var json = TestDefaults.DefaultConfigJson();
-        json["relations"]!["overrides"] = new JsonArray
-        {
-            new JsonObject { ["playerA"] = 1, ["playerB"] = 3, ["kind"] = "ally" },
-        };
-        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map);
+        var response = new CrowdPushResponse[16];
+        var shares = new bool[16];
+        response[0 * 4 + 1] = CrowdPushResponse.Yield;
+        response[1 * 4 + 0] = CrowdPushResponse.Hold;
+        shares[0 * 4 + 2] = true;
+        shares[2 * 4 + 0] = false;
+        var fed = CrowdPairRules.Matrices(4, response, shares);
+        var runtime = TestDefaults.Assemble(map: map, pairRules: fed);
 
-        var relations = runtime.Relations;
-        Assert.That(relations.PlayerCount, Is.EqualTo(4));
-        Assert.That(relations.IndexByPlayerId[3], Is.EqualTo(0));
-        Assert.That(relations.IndexByPlayerId[1], Is.EqualTo(1));
-        Assert.That(relations.IndexByPlayerId[2], Is.EqualTo(2));
-        Assert.That(relations.IndexByPlayerId[4], Is.EqualTo(3));
-
-        // 表序 [3,1,2,4]:(3,2) 同队 A → sameTeam=ally → priority;(1,2)/(3,4) 跨队 →
-        // default=enemy → rigid;override 翻转 (1,3) → ally → priority,且对称。
-        Assert.That(relations.PushModeByPair[0 * 4 + 2], Is.EqualTo(CrowdSimulationPushMode.Priority));
-        Assert.That(relations.PushModeByPair[1 * 4 + 2], Is.EqualTo(CrowdSimulationPushMode.Rigid));
-        Assert.That(relations.PushModeByPair[0 * 4 + 3], Is.EqualTo(CrowdSimulationPushMode.Rigid));
-        Assert.That(relations.PushModeByPair[0 * 4 + 1], Is.EqualTo(CrowdSimulationPushMode.Priority));
-        Assert.That(relations.PushModeByPair[1 * 4 + 0], Is.EqualTo(CrowdSimulationPushMode.Priority));
+        var pairRules = runtime.PairRules;
+        Assert.That(pairRules, Is.SameAs(fed));
+        Assert.That(pairRules.IndexByPlayerId[3], Is.EqualTo(0));
+        Assert.That(pairRules.IndexByPlayerId[1], Is.EqualTo(1));
+        Assert.That(pairRules.IndexByPlayerId[2], Is.EqualTo(2));
+        Assert.That(pairRules.IndexByPlayerId[4], Is.EqualTo(3));
+        Assert.That(pairRules.ResponseByPair[0 * 4 + 1], Is.EqualTo(CrowdPushResponse.Yield));
+        Assert.That(pairRules.ResponseByPair[1 * 4 + 0], Is.EqualTo(CrowdPushResponse.Hold));
+        Assert.That(pairRules.SharesVisionByPair[0 * 4 + 2], Is.True);
+        Assert.That(pairRules.SharesVisionByPair[2 * 4 + 0], Is.False);
     }
 
     [Test]
@@ -351,10 +349,10 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void Relations_NonPermutationPlayerIds_AreRejected()
+    public void PlayerIds_MustBePermutation_ForPairIndex()
     {
-        // 关系矩阵按玩家号直查(IndexByPlayerId 长度 P+1),玩家号必须恰为 1..P 的排列;
-        // 跳号/重复/0/超界全部进图即拒。
+        // 功能位矩阵按玩家号直查(IndexByPlayerId 长度 P+1),玩家号必须恰为 1..P 的排列。
+        // 这是下标合同,不是关系规则。跳号/重复/0/超界全部进图即拒。
         foreach (var (ids, expected) in new[]
                  {
                      (new[] { 1, 3 }, "缺失 2"),
@@ -405,6 +403,8 @@ public class CrowdSimulationConfigTests
         Assert.That(old, Does.Contain("movement.slotCheckInterval"));
         Assert.That(old, Does.Contain("formation.leaderTurnRate"));
         Assert.That(old, Does.Contain("avoidance.acceleration"));
+        Assert.That(old, Does.Contain("relations"));
+        Assert.That(old, Does.Contain("push.modes"));
     }
 
     private static string PlaceRetiredKey(JsonObject root, string oldPath)

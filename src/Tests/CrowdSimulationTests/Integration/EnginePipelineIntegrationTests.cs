@@ -76,6 +76,7 @@ public class EnginePipelineIntegrationTests
 
             var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession);
             Assert.That(session, Is.Not.Null, "crowd 地图聚焦后引擎自身的运行时应激活会话");
+            AssertSeedProjection(session!);
             var converter = engine.GetService(CoreServiceKeys.SpatialCoordinateConverter);
             Assert.That(converter, Is.Not.Null, "引擎应提供空间坐标转换服务");
 
@@ -132,6 +133,38 @@ public class EnginePipelineIntegrationTests
         {
             if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
         }
+    }
+
+    private static void AssertSeedProjection(CrowdSimSession session)
+    {
+        var rules = session.Config.PairRules;
+        Assert.That(rules.PlayerCount, Is.EqualTo(4));
+        AssertYield(rules, 0, 0);
+        AssertYield(rules, 0, 2);
+        AssertYield(rules, 2, 0);
+        AssertYield(rules, 1, 1);
+        AssertYield(rules, 1, 3);
+        AssertYield(rules, 3, 1);
+        AssertHold(rules, 0, 1);
+        AssertHold(rules, 1, 0);
+        Assert.That(session.Fog, Is.Not.Null);
+        int groupA = session.Fog!.GroupOf[rules.IndexByPlayerId[1]];
+        int groupB = session.Fog.GroupOf[rules.IndexByPlayerId[2]];
+        Assert.That(session.Fog.GroupOf[rules.IndexByPlayerId[3]], Is.EqualTo(groupA));
+        Assert.That(session.Fog.GroupOf[rules.IndexByPlayerId[4]], Is.EqualTo(groupB));
+        Assert.That(groupA, Is.Not.EqualTo(groupB));
+    }
+
+    private static void AssertYield(Ludots.Core.CrowdSimulation.Config.CrowdPairRules rules, int a, int b)
+    {
+        Assert.That(rules.ResponseByPair[a * 4 + b], Is.EqualTo(Ludots.Core.CrowdSimulation.Config.CrowdPushResponse.Yield));
+        Assert.That(rules.SharesVisionByPair[a * 4 + b], Is.True);
+    }
+
+    private static void AssertHold(Ludots.Core.CrowdSimulation.Config.CrowdPairRules rules, int a, int b)
+    {
+        Assert.That(rules.ResponseByPair[a * 4 + b], Is.EqualTo(Ludots.Core.CrowdSimulation.Config.CrowdPushResponse.Hold));
+        Assert.That(rules.SharesVisionByPair[a * 4 + b], Is.False);
     }
 
     private static (int X, int Y) CurrentCell(GameEngine engine, ISpatialCoordinateConverter converter, int dense)

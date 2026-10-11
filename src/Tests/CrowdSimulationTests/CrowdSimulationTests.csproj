@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\..\..\mods\capabilities\navigation\CrowdSimulationStandardMod\assets\CrowdSimulationConfig.json">
       <Link>assets\CrowdSimulationConfig.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
