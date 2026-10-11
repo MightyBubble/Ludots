@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -266,6 +267,43 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(second.ReturnInt, Is.EqualTo(9));
             Assert.That(cursor.Pc, Is.EqualTo(program.Length));
             Assert.That(cursor.Steps, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void ExecuteScriptSlice_ResumeKeepsResolvedGroundPoint()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 4, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadTargetPosX, Dst = 5 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadTargetPosY, Dst = 6 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 5 }
+            };
+
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            var cursor = new GraphExecutionCursor();
+            var ground = new IntVector2(1960, 680);
+
+            GraphSliceResult first = GraphExecutor.ExecuteScriptSlice(
+                world, caster, Entity.Null, ground, program, api: null!, programs: null,
+                floats, ints, bools, entities, targets, callStack, ref cursor, budgetSteps: 1);
+            Assert.That(first.BudgetSuspended, Is.True);
+            Assert.That(cursor.TargetPosCm, Is.EqualTo(ground));
+
+            GraphSliceResult second = GraphExecutor.ExecuteScriptSlice(
+                world, caster, Entity.Null, default, program, api: null!, programs: null,
+                floats, ints, bools, entities, targets, callStack, ref cursor, budgetSteps: 8);
+            Assert.That(second.Halted, Is.True);
+            Assert.That(second.ReturnInt, Is.EqualTo(1960));
+            Assert.That(ints[5], Is.EqualTo(1960));
+            Assert.That(ints[6], Is.EqualTo(680));
         }
     }
 }

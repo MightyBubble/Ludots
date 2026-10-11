@@ -142,6 +142,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 targets = cursor.TargetSnapshot;
             var targetList = new GraphTargetList(targets);
             if (cursor.IsSuspended) targetList.SetCount(cursor.TargetCount);
+            // A suspended run already resolved the ground point; the caller's argument is the
+            // fresh-slice default and would discard it.
+            IntVector2 resolvedTargetPosCm = cursor.IsSuspended ? cursor.TargetPosCm : targetPosCm;
             return new GraphFrame
             {
                 Kind = kind,
@@ -151,7 +154,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ExplicitTarget = explicitTarget,
                 TargetContext = targetContext,
                 Viewer = viewer,
-                TargetPosCm = targetPosCm,
+                TargetPosCm = resolvedTargetPosCm,
                 RandomSeed = randomSeed,
                 EventPayload = eventPayload,
                 Api = api,
