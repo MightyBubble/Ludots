@@ -49,7 +49,7 @@ namespace Ludots.Tests.Architecture
         }
 
         /// <summary>
-        /// 白名单实际扫到的 src/Core 一级目录。新目录必须进这里或 <see cref="NonSpatialCoreDirectories"/>。
+        /// 白名单实际扫到的 src/Core 一级目录。新目录必须进这里或 <see cref="UnscannedCoreDirectories"/>。
         /// </summary>
         private static readonly string[] CoreScanRoots =
         [
@@ -59,8 +59,8 @@ namespace Ludots.Tests.Architecture
             "Navigation",
         ];
 
-        /// <summary>不产板格、导航烘焙或群体导航格的 src/Core 一级目录。</summary>
-        private static readonly string[] NonSpatialCoreDirectories =
+        /// <summary>当前未纳入字面量扫描的 src/Core 一级目录；登记在这里不代表该目录不涉及空间尺度。</summary>
+        private static readonly string[] UnscannedCoreDirectories =
         [
             "Association",
             "Client",
@@ -108,7 +108,7 @@ namespace Ludots.Tests.Architecture
         ];
 
         [Test]
-        public void CoreTopLevelDirectories_AreRegisteredAsScanRootOrNonSpatial()
+        public void CoreTopLevelDirectories_AreRegisteredAsScannedOrUnscanned()
         {
             string repoRoot = FindRepoRoot();
             string[] actual = Directory.GetDirectories(Path.Combine(repoRoot, "src", "Core"))
@@ -119,15 +119,15 @@ namespace Ludots.Tests.Architecture
                 .ToArray();
 
             string[] registered = CoreScanRoots
-                .Concat(NonSpatialCoreDirectories)
+                .Concat(UnscannedCoreDirectories)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();
-            string[] overlap = CoreScanRoots.Intersect(NonSpatialCoreDirectories, StringComparer.Ordinal).ToArray();
+            string[] overlap = CoreScanRoots.Intersect(UnscannedCoreDirectories, StringComparer.Ordinal).ToArray();
             string[] missing = actual.Except(registered, StringComparer.Ordinal).ToArray();
             string[] extra = registered.Except(actual, StringComparer.Ordinal).ToArray();
 
-            Assert.That(overlap, Is.Empty, "扫描根与非空间短名单重叠。\n" + string.Join(Environment.NewLine, overlap));
-            Assert.That(missing, Is.Empty, "src/Core 一级目录未登记为扫描根或非空间子系统。\n" + string.Join(Environment.NewLine, missing));
+            Assert.That(overlap, Is.Empty, "扫描根与未纳入扫描名单重叠。\n" + string.Join(Environment.NewLine, overlap));
+            Assert.That(missing, Is.Empty, "src/Core 一级目录未登记为扫描根或未纳入扫描。\n" + string.Join(Environment.NewLine, missing));
             Assert.That(extra, Is.Empty, "登记了不存在的 src/Core 一级目录。\n" + string.Join(Environment.NewLine, extra));
             Assert.That(registered, Is.EqualTo(actual));
 
