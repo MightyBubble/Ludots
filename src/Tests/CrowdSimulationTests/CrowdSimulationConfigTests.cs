@@ -423,6 +423,11 @@ public class CrowdSimulationConfigTests
         Equal(runtime.Deploy.SpreadNavCells, config.Deploy.SpreadCm, 30, navCellSizeCm);
         Equal(runtime.Deploy.BaseJitterNavCells, config.Deploy.BaseJitterCm, 20, navCellSizeCm);
 
+        long legacyPad = (Fix64.FromDouble(1) * navCellSizeCm).RawValue;
+        Assert.That(runtime.Formation.MagicBoxPadCm.RawValue, Is.EqualTo(legacyPad));
+        Assert.That(runtime.Formation.MagicBoxPadCm.RawValue, Is.EqualTo(Fix64.FromDouble(config.Formation.MagicBoxPadCm).RawValue));
+        Assert.That(config.Formation.MagicBoxPadCm, Is.EqualTo(navCellSizeCm));
+
         Assert.That(runtime.Movement.MaxStepNavCells.RawValue, Is.EqualTo(Fix64.FromDouble(0.45).RawValue));
         Assert.That(runtime.Navmesh.PortalInsetNavCells.RawValue, Is.EqualTo(Fix64.FromDouble(0.5).RawValue));
         Assert.That(runtime.Spawn.NavCellInsetFraction.RawValue, Is.EqualTo(Fix64.FromDouble(0.02).RawValue));

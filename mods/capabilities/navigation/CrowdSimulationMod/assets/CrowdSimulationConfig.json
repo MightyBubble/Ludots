@@ -291,7 +291,7 @@
     "settleTime": 4,
     "leaderLookAheadCm": 37500,
     "magicBoxMaxSpreadCm": 250000,
-    "magicBoxPadNavCells": 1,
+    "magicBoxPadCm": 6250,
     "slotArriveCm": 2187.5,
     "goalArriveCm": 6250,
     "settleRadiusCm": 12500,

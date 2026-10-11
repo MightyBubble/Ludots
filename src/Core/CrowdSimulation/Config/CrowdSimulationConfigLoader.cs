@@ -440,7 +440,7 @@ public sealed class CrowdSimulationConfigLoader
                 SettleTime = Fix64.FromDouble(config.Formation.SettleTime),
                 LeaderLookAheadNavCells = NavCellsFromCm(config.Formation.LeaderLookAheadCm),
                 MagicBoxMaxSpreadCm = Fix64.FromDouble(config.Formation.MagicBoxMaxSpreadCm),
-                MagicBoxPadNavCells = Fix64.FromDouble(config.Formation.MagicBoxPadNavCells),
+                MagicBoxPadCm = Fix64.FromDouble(config.Formation.MagicBoxPadCm),
                 SlotArriveNavCells = NavCellsFromCm(config.Formation.SlotArriveCm),
                 GoalArriveNavCells = NavCellsFromCm(config.Formation.GoalArriveCm),
                 SettleRadiusNavCells = NavCellsFromCm(config.Formation.SettleRadiusCm),

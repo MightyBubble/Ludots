@@ -112,11 +112,12 @@ flowchart TD
 | `movement.maxStepNavCells` | 子步上限 | 导航格 | 0.45 | 防穿格。 |
 | `structures.portalReachNavCells` | 桥头 | 导航格 | 4 | 腐蚀半径。 |
 | 跳跃 `rangeNavCells` | 跳跃 | 导航格 | 按 profile | 与 `.navsurface` 候选的格距比较。 |
-| `formation.magicBoxPadNavCells` | 框边 | 导航格 | 1 | 栅格外扩。 |
+| `formation.magicBoxPadCm` | 点选框外扩 | cm | 6250 | 世界厘米，与包围盒厘米坐标比较。 |
 | `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0.02 | 0..1。 |
-| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` / `magicBoxMaxSpreadCm` | 阵型距离 | cm | 100000 / 37500 / 2187.5 / 6250 / 12500 / 9375 / 250000 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
-| `movement.wakeDistanceCm` | 唤醒 | cm | 12500 | 同上。 |
-| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 同上。 |
+| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 100000 / 37500 / 2187.5 / 6250 / 12500 / 9375 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
+| `formation.magicBoxMaxSpreadCm` | 点选框最大跨度 | cm | 250000 | 直接当厘米用，`Fix64.FromDouble`。 |
+| `movement.wakeDistanceCm` | 唤醒 | cm | 12500 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
+| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
 | `fog.visionCm` / `fog.eyeCm` | 视野 / 眼高 | cm | 80000 / 1000 | 视野半径相对迷雾格有上限。 |
 | `spawn.groupSpacingScale` | 团间距 | 无量纲 | 2.2 | 乘个人半径。旧键 `spawn.clusterSpacing`。 |
 | `formations[].spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。 |

@@ -178,7 +178,7 @@ public sealed class RuntimeFormationSection
     public required Fix64 SettleTime { get; init; }
     public required Fix64 LeaderLookAheadNavCells { get; init; }
     public required Fix64 MagicBoxMaxSpreadCm { get; init; }
-    public required Fix64 MagicBoxPadNavCells { get; init; }
+    public required Fix64 MagicBoxPadCm { get; init; }
     public required Fix64 SlotArriveNavCells { get; init; }
     public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SettleRadiusNavCells { get; init; }

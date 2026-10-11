@@ -125,7 +125,7 @@ public static class CrowdSimulationConfigValidator
         Rule("formation.clumpSlack", config.Formation.ClumpSlack, gt: 0);
         Rule("formation.minClumpCm", config.Formation.MinClumpCm, gt: 0);
         Rule("formation.settleTime", config.Formation.SettleTime, min: 0);
-        Rule("formation.magicBoxPadNavCells", config.Formation.MagicBoxPadNavCells, min: 0);
+        Rule("formation.magicBoxPadCm", config.Formation.MagicBoxPadCm, min: 0);
         Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
         Rule("formation.leaderTurnRate", config.Formation.LeaderTurnRate, gt: 0);
         Rule("formation.faceTurnScale", config.Formation.FaceTurnScale, gt: 0);

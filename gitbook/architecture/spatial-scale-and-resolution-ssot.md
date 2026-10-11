@@ -160,7 +160,7 @@ Out of scope：
 | `movement.maxStepCells` | `maxStepNavCells` | 子步上限，导航格 |
 | `structures.portalCells` | `portalReachNavCells` | 桥头腐蚀格数 |
 | `jump.rangeCells` | `rangeNavCells` | 跳跃候选格距 |
-| `formation.magicBoxPadCells` | `magicBoxPadNavCells` | 框边外扩 |
+| `formation.magicBoxPadCells` | `magicBoxPadCm` | 点选框外扩，世界厘米，与包围盒厘米坐标比较 |
 | `spawn.cellInset` | `navCellInsetFraction` | 格内比例 |
 | `formation.slotSightCells` / `slotArriveCells` / `goalArriveCells` / `settleRadiusCells` / `minClumpCells` | `slotSightCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 世界距离。装载时 `cm / navCellSizeCm` 再 `Fix64.FromDouble` |
 | `formation.leaderLookAhead` | `leaderLookAheadCm` | 世界距离，同上 |
@@ -224,17 +224,18 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `movement.maxStepNavCells` | 子步上限 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
 | `structures.portalReachNavCells` | 桥头可达 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
 | `navProfiles` 跳跃 `rangeNavCells` | 跳跃格距 | 导航格 | 与 `.navsurface` 候选比较 | `CrowdSimulationConfig.json` |
-| `formation.magicBoxPadNavCells` | 框边外扩 | 导航格 | 声明式范围 | `CrowdSimulationConfig.json` |
+| `formation.magicBoxPadCm` | 点选框外扩 | cm | 直接当厘米用，标准 6250。与包围盒厘米坐标比较 | `CrowdSimulationConfig.json` |
 | `spawn.navCellInsetFraction` | 格内缩进 | 比例 | 0..1 | `CrowdSimulationConfig.json` |
-| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` / `magicBoxMaxSpreadCm` | 阵型距离 | cm | 装载时除以 `world.navCellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
-| `movement.wakeDistanceCm` | 唤醒距离 | cm | 同上 | `CrowdSimulationConfig.json` |
-| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 同上 | `CrowdSimulationConfig.json` |
+| `formation.slotSightCm` / `leaderLookAheadCm` / `slotArriveCm` / `goalArriveCm` / `settleRadiusCm` / `minClumpCm` | 阵型距离 | cm | 装载时除以 `world.navCellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
+| `formation.magicBoxMaxSpreadCm` | 点选框最大跨度 | cm | 直接当厘米用，`Fix64.FromDouble`，标准 250000 | `CrowdSimulationConfig.json` |
+| `movement.wakeDistanceCm` | 唤醒距离 | cm | 装载时除以 `world.navCellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
+| `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 装载时除以 `world.navCellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
 | `fog.visionCm` / `fog.eyeCm` | 视野半径 / 眼高 | cm | 视野半径相对迷雾格对角线有上限 | `CrowdSimulationConfig.json` |
 | `spawn.groupSpacingScale` | 部署团间距 | 无量纲 | 乘个人半径 | `CrowdSimulationConfig.json` |
 | `formations[].spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 乘直径或个人间距 | `CrowdSimulationConfig.json` |
 | `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 乘速度 | `CrowdSimulationConfig.json` |
 
-世界距离键在装载器里用 double 做 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。栅格算法量保持导航格或导航 tile 计数，不改成厘米。
+阵型距离、唤醒距离和部署散布在装载器里用 double 做 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。`magicBoxPadCm` 与 `magicBoxMaxSpreadCm` 的厘米值直接 `Fix64.FromDouble`。栅格算法量保持导航格或导航 tile 计数。
 
 更短的查表入口见 `gitbook/reference/spatial-scale-configuration.md`。
 

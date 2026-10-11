@@ -11,9 +11,9 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// <summary>
 /// CrowdSimulationConfig.json 的反序列化形状（键与 JSON 一一对应，camelCase）。
 /// 显式必填：缺键 / 未知键直接拒绝（反序列化层），数值范围与跨文件引用由
-/// <see cref="CrowdSimulationConfigLoader"/> 校验。世界距离用厘米（Cm）；
-/// 栅格算法量用 NavCells / NavCellArea / NavTiles / Fraction。装载器把世界距离
-/// 换成导航格 Fix64 交给内核，内核坐标保持厘米，不再换算成米。
+/// <see cref="CrowdSimulationConfigLoader"/> 校验。世界距离用厘米（Cm）。
+/// 阵型距离、唤醒和部署散布装载时换成导航格 Fix64；magicBox 的外扩和最大跨度保持厘米。
+/// 栅格算法量用 NavCells / NavCellArea / NavTiles / Fraction。内核坐标保持厘米。
 /// </summary>
 public sealed class CrowdSimulationConfig
 {
@@ -218,7 +218,7 @@ public sealed class CrowdSimulationConfig
         public required double SettleTime { get; init; }
         public required double LeaderLookAheadCm { get; init; }
         public required double MagicBoxMaxSpreadCm { get; init; }
-        public required double MagicBoxPadNavCells { get; init; }
+        public required double MagicBoxPadCm { get; init; }
         public required double SlotArriveCm { get; init; }
         public required double GoalArriveCm { get; init; }
         public required double SettleRadiusCm { get; init; }

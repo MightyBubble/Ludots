@@ -106,7 +106,7 @@ public static class CrowdIssueOrder
         var fc = sim.Config.Formation;
         var mode = CrowdOrderModeChooser.Choose(
             x0, y0, x1, y1, wxCm, wyCm,
-            fc.MagicBoxPadNavCells * Fix64.FromInt(sim.Config.NavCellSizeCm),
+            fc.MagicBoxPadCm,
             fc.MagicBoxMaxSpreadCm,
             face.HasValue, auto == false);
         var order = sim.Orders.Create(player, mode, shapeId, face, widthCm);
