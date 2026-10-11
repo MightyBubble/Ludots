@@ -73,15 +73,18 @@ public sealed class CrowdSimulationConfigLoader
     /// <param name="map">地图（Boards / Teams / Players / Entities）。</param>
     /// <param name="profiles">Navigation/agent_profiles.json 注册表。</param>
     /// <param name="fixedHz">Engine/clock.json 的 FixedHz——仿真频率的唯一来源。</param>
+    /// <param name="pairRules">已经投影好的玩家对矩阵。装载只按下标挂到地图玩家上，不解释关系类型。</param>
     public static CrowdSimulationRuntimeConfig Load(
         CrowdSimulationConfig config,
         MapConfig map,
         AgentProfileRegistry profiles,
-        int fixedHz)
+        int fixedHz,
+        CrowdPairRules pairRules)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(profiles);
+        ArgumentNullException.ThrowIfNull(pairRules);
         if (fixedHz < 1)
         {
             throw new InvalidOperationException(
@@ -189,25 +192,17 @@ public sealed class CrowdSimulationConfigLoader
             throw new InvalidOperationException($"{mapFile}: Players 需要 1~16 个（当前 {map.Players.Count} 个）。");
         }
 
+        if (pairRules.PlayerCount != map.Players.Count)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: 功能位矩阵有 {pairRules.PlayerCount} 个玩家，地图 Players 有 {map.Players.Count} 个。");
+        }
+
+        pairRules.BindPlayerIndex(map);
         var playerIds = new HashSet<int>();
         foreach (var p in map.Players)
         {
             playerIds.Add(p.PlayerId);
-        }
-
-        // 关系矩阵按"玩家号 = 1..P 的排列"建表(IndexByPlayerId 以玩家号为下标直查,长度 P+1):
-        // 跳号/重复/0/负/超界都会让表外 id 越界或被当成别的玩家,进图即拒。
-        if (playerIds.Count != map.Players.Count)
-        {
-            throw new InvalidOperationException($"{mapFile}: Players[].playerId 重复(需恰为 1..{map.Players.Count} 的一个排列,当前 {map.Players.Count} 个条目只有 {playerIds.Count} 个不同 id)。");
-        }
-
-        for (int expected = 1; expected <= map.Players.Count; expected++)
-        {
-            if (!playerIds.Contains(expected))
-            {
-                throw new InvalidOperationException($"{mapFile}: Players[].playerId 必须恰为 1..{map.Players.Count} 的一个排列(缺失 {expected};求解器按玩家号直查关系矩阵,表外 id 不允许)。");
-            }
         }
 
         foreach (var b in config.Deploy.Bases)
@@ -484,12 +479,8 @@ public sealed class CrowdSimulationConfigLoader
             {
                 MovingBonus = Fix64.FromDouble(config.Push.MovingBonus),
                 DominantShare = Fix64.FromDouble(config.Push.DominantShare),
-                SamePlayer = ParsePushMode(config.Push.Modes.SamePlayer),
-                Friendly = ParsePushMode(config.Push.Modes.Friendly),
-                Neutral = ParsePushMode(config.Push.Modes.Neutral),
-                Hostile = ParsePushMode(config.Push.Modes.Hostile),
             },
-            Relations = BuildRelations(config, map),
+            PairRules = pairRules,
             Sim = new RuntimeSimSection
             {
                 MaxUnits = config.Sim.MaxUnits,
@@ -556,13 +547,6 @@ public sealed class CrowdSimulationConfigLoader
         return radiusCm > 0 && string.Equals(key, radiusCm.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
     }
 
-    private static CrowdSimulationPushMode ParsePushMode(string value) => value switch
-    {
-        "priority" => CrowdSimulationPushMode.Priority,
-        "rigid" => CrowdSimulationPushMode.Rigid,
-        _ => throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: push.modes 值 \"{value}\" 需为 priority / rigid"),
-    };
-
     /// <summary>结构模板表装载(参考 templates.structures):模板 area id 解析为导航区域下标,
     /// 未知区域在装载即报错。表按 id 排序,place 指令按 id 查本表,不看 JSON 键顺序。</summary>
     private static RuntimeStructureTemplate[] BuildStructureTemplates(CrowdSimulationConfig config)
@@ -583,94 +567,6 @@ public sealed class CrowdSimulationConfigLoader
             LifetimeSecRaw = t.LifetimeSec,
             Layered = t.Layered,
         });
-    }
-
-    /// <summary>关系推挤矩阵:先按自身、同队、默认填格,再由 overrides 成对覆盖。
-    /// overrides 的玩家号必须存在于地图 Players。矩阵下标 = Players 表序,另存玩家号 → 下标表。</summary>
-    private static RuntimeRelations BuildRelations(CrowdSimulationConfig config, MapConfig map)
-    {
-        var kinds = config.Relations.Kinds;
-        var kindIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var name in kinds.Keys)
-        {
-            if (!kindIndexByName.TryAdd(name, kindIndexByName.Count))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: relations.kinds 关系 \"{name}\" 重复");
-            }
-        }
-
-        var kindPush = new CrowdSimulationPushMode[kinds.Count];
-        var kindShareVision = new bool[kinds.Count];
-        foreach (var (name, entry) in kinds)
-        {
-            if (entry.Push is not ("priority" or "rigid"))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: relations.kinds.{name}.push 值 \"{entry.Push}\" 需为 priority / rigid");
-            }
-
-            kindPush[kindIndexByName[name]] = ParsePushMode(entry.Push);
-            kindShareVision[kindIndexByName[name]] = entry.ShareVision;
-        }
-
-        int P = map.Players.Count;
-        var indexByPlayerIdDict = new Dictionary<int, int>(P);
-        var teamByIndex = new int?[P];
-        for (int i = 0; i < P; i++)
-        {
-            indexByPlayerIdDict[map.Players[i].PlayerId] = i;
-            teamByIndex[i] = map.Players[i].TeamId > 0 ? map.Players[i].TeamId : null;
-        }
-
-        string KindOf(int a, int b) =>
-            a == b ? config.Relations.Self
-            : teamByIndex[a] != null && teamByIndex[a] == teamByIndex[b] ? config.Relations.SameTeam
-            : config.Relations.Default;
-
-        var matrix = new CrowdSimulationPushMode[P * P];
-        var shareVision = new bool[P * P];
-        for (int a = 0; a < P; a++)
-        {
-            for (int b = 0; b < P; b++)
-            {
-                string kindName = KindOf(a, b);
-                if (!kindIndexByName.TryGetValue(kindName, out int kindIndex))
-                {
-                    throw new InvalidOperationException(
-                        $"{CrowdSimulationConfigValidator.FileName}: relations.self / relations.sameTeam / relations.default 引用未定义的关系 \"{kindName}\"");
-                }
-
-                matrix[a * P + b] = kindPush[kindIndex];
-                shareVision[a * P + b] = kindShareVision[kindIndex];
-            }
-        }
-
-        foreach (var o in config.Relations.Overrides)
-        {
-            if (!indexByPlayerIdDict.TryGetValue(o.PlayerA, out int a) || !indexByPlayerIdDict.TryGetValue(o.PlayerB, out int b))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未知玩家 {o.PlayerA} / {o.PlayerB}");
-            }
-
-            if (!kindIndexByName.TryGetValue(o.Kind, out int kindIndex))
-            {
-                throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未定义的关系 \"{o.Kind}\"");
-            }
-
-            matrix[a * P + b] = matrix[b * P + a] = kindPush[kindIndex];
-            shareVision[a * P + b] = shareVision[b * P + a] = kindShareVision[kindIndex];
-        }
-
-        var indexByPlayerId = new int[P + 1];
-        foreach (var (playerId, index) in indexByPlayerIdDict)
-        {
-            indexByPlayerId[playerId] = index;
-        }
-
-        return new RuntimeRelations { PlayerCount = P, PushModeByPair = matrix, ShareVisionByPair = shareVision, IndexByPlayerId = indexByPlayerId };
     }
 
     /// <summary>unitTypes[].templates 的半径级键按整数厘米解析(声明式映射,不是 id 字符串约定)。</summary>

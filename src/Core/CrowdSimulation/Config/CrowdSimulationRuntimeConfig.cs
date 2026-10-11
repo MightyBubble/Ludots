@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -43,8 +44,8 @@ public sealed class CrowdSimulationRuntimeConfig
     public required RuntimeMovementSection Movement { get; init; }
     public required RuntimeAvoidanceSection Avoidance { get; init; }
     public required RuntimePushSection Push { get; init; }
-    /// <summary>关系推挤矩阵(P×P,玩家下标 = 地图 Players 表序):逐对推挤模式,避让热路径查表。</summary>
-    public required RuntimeRelations Relations { get; init; }
+    /// <summary>玩家对功能位(P×P,下标 = 地图 Players 表序)。避让和视野组热路径只查这张表。</summary>
+    public required CrowdPairRules PairRules { get; init; }
     public required RuntimeSimSection Sim { get; init; }
     public required RuntimeSpawnSection Spawn { get; init; }
     public required RuntimeStructuresSection Structures { get; init; }
@@ -55,10 +56,11 @@ public sealed class CrowdSimulationRuntimeConfig
     public required IReadOnlyList<int> RadiusClasses { get; init; }
 }
 
-public enum CrowdSimulationPushMode
+/// <summary>有序玩家对上的推挤响应。Yield 按推挤优先级让路；Hold 静止时不让、自己移动时全让。</summary>
+public enum CrowdPushResponse
 {
-    Priority,
-    Rigid,
+    Yield,
+    Hold,
 }
 
 public sealed class RuntimeNavArea
@@ -234,25 +236,87 @@ public sealed class RuntimePushSection
 {
     public required Fix64 MovingBonus { get; init; }
     public required Fix64 DominantShare { get; init; }
-    public required CrowdSimulationPushMode SamePlayer { get; init; }
-    public required CrowdSimulationPushMode Friendly { get; init; }
-    public required CrowdSimulationPushMode Neutral { get; init; }
-    public required CrowdSimulationPushMode Hostile { get; init; }
 }
 
-/// <summary>关系推挤矩阵(core/relations.js buildRelations 产物):PushModeByPair[a * P + b] 为
-/// 玩家下标 a 对 b 的推挤模式(下标 = 地图 Players 表序)。IndexByPlayerId 把 PlayerOwner 的
-/// 玩家号换算成表序下标;门禁保证玩家号恰为 1..P 的排列,数组按玩家号直查,长度 = P + 1。</summary>
-public sealed class RuntimeRelations
+/// <summary>
+/// 玩家对功能位。ResponseByPair[a * P + b] 是表序 a 碰到表序 b 时的推挤响应。
+/// SharesVisionByPair 同下标；两个方向都为真才并视野组。
+/// IndexByPlayerId 把玩家号换成表序：玩家号必须恰为 1..P 的排列，数组按下标直查，长度 = P + 1。
+/// </summary>
+public sealed class CrowdPairRules
 {
     public required int PlayerCount { get; init; }
-    public required CrowdSimulationPushMode[] PushModeByPair { get; init; }
-    /// <summary>ShareVisionByPair[a * P + b] = 玩家下标 a 对 b 的关系是否共享视野;
-    /// 迷雾视野组的并查集只在双向都真时连边(与参考端 kindOf 双查同构)。</summary>
-    public required bool[] ShareVisionByPair { get; init; }
-    /// <summary>长度 = P + 1(下标 0 弃用);IndexByPlayerId[ playerId ] = 表序下标,
-    /// 仅对 1..P 的玩家号有定义(装载门禁拒绝表外 id)。</summary>
+    public required CrowdPushResponse[] ResponseByPair { get; init; }
+    public required bool[] SharesVisionByPair { get; init; }
     public required int[] IndexByPlayerId { get; init; }
+
+    public static CrowdPairRules Matrices(int playerCount, CrowdPushResponse[] responseByPair, bool[] sharesVisionByPair)
+    {
+        if (playerCount < 1)
+        {
+            throw new InvalidOperationException($"CrowdPairRules: 玩家数 {playerCount}，需为 ≥ 1。");
+        }
+
+        int cells = playerCount * playerCount;
+        if (responseByPair.Length != cells || sharesVisionByPair.Length != cells)
+        {
+            throw new InvalidOperationException(
+                $"CrowdPairRules: 矩阵长度需为 {cells}（玩家数 {playerCount}），推挤 {responseByPair.Length}，视野 {sharesVisionByPair.Length}。");
+        }
+
+        return new CrowdPairRules
+        {
+            PlayerCount = playerCount,
+            ResponseByPair = responseByPair,
+            SharesVisionByPair = sharesVisionByPair,
+            IndexByPlayerId = new int[playerCount + 1],
+        };
+    }
+
+    /// <summary>
+    /// 按地图 Players 表序写下标。热路径用玩家号当数组下标，所以玩家号必须恰为 1..P，不能跳号。
+    /// </summary>
+    public void BindPlayerIndex(MapConfig map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        int count = map.Players.Count;
+        if (count != PlayerCount)
+        {
+            throw new InvalidOperationException(
+                $"Maps/{map.Id}.json: Players 有 {count} 个，功能位矩阵按 {PlayerCount} 个玩家。");
+        }
+
+        var playerIds = new HashSet<int>();
+        foreach (var player in map.Players)
+        {
+            playerIds.Add(player.PlayerId);
+        }
+
+        if (playerIds.Count != count)
+        {
+            throw new InvalidOperationException($"Maps/{map.Id}.json: Players[].playerId 重复(需恰为 1..{count} 的一个排列,当前 {count} 个条目只有 {playerIds.Count} 个不同 id)。");
+        }
+
+        for (int expected = 1; expected <= count; expected++)
+        {
+            if (!playerIds.Contains(expected))
+            {
+                throw new InvalidOperationException($"Maps/{map.Id}.json: Players[].playerId 必须恰为 1..{count} 的一个排列(缺失 {expected};求解器按玩家号直查功能位矩阵,表外 id 不允许)。");
+            }
+        }
+
+        if (IndexByPlayerId.Length != count + 1)
+        {
+            throw new InvalidOperationException(
+                $"Maps/{map.Id}.json: 玩家下标表长度 {IndexByPlayerId.Length}，需为 {count + 1}。");
+        }
+
+        Array.Clear(IndexByPlayerId);
+        for (int i = 0; i < count; i++)
+        {
+            IndexByPlayerId[map.Players[i].PlayerId] = i;
+        }
+    }
 }
 
 public sealed class RuntimeSimSection

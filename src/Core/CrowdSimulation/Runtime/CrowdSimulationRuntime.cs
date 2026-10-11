@@ -47,6 +47,7 @@ public sealed partial class CrowdSimulationRuntime
     private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
+    private CrowdPairRulesSessionGuard? _pairRulesGuard;
     private Entity _sessionEntity;
 
     /// <summary>地图桥入认知仓(F02):桥模板按 id 查配置表(缺失 = 配置没有 bridge 模板,
@@ -235,8 +236,14 @@ public sealed partial class CrowdSimulationRuntime
                 ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 AgentProfiles 服务。");
         }
 
+        var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话需要 TeamRelationQuery。");
+        var players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话需要 PlayerEntityLookup。");
+        var projected = CrowdPairRulesProjection.Project(_configDto!, mapConfig, teamRelations, players, engine.World);
+        _pairRulesGuard = projected.Guard;
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
-            _configDto!, mapConfig, agentProfiles, (int)MathF.Round(1f / Time.FixedDeltaTime));
+            _configDto!, mapConfig, agentProfiles, (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
 
         // 模板级契约(双求解器 Agent 互斥/模板 profileId 存在/阻挡物正方形 Box)在进图激活时执行,
         // 与配置门禁构成同一条装载检查链;失败即报错,不进入烘焙与生成。
@@ -400,6 +407,7 @@ public sealed partial class CrowdSimulationRuntime
         if (engine.World.IsAlive(_sessionEntity)) engine.World.Destroy(_sessionEntity);
         _sessionEntity = Entity.Null;
         _session = null;
+        _pairRulesGuard = null;
         _activeMapId = null;
         _hashCount = 0;
         _hashHead = 0;
@@ -416,6 +424,10 @@ public sealed partial class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
+        // 系统组 FixedHz 的 tick 边界，先于本 tick 的指令和运动。
+        // 先重读玩家代表的 Team，再在修订号变化时重算矩阵。队伍没变且修订号没变时不重算、不分配。
+        (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
+            .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
         if (!session.Step(out var hash))
         {
@@ -565,7 +577,7 @@ public sealed partial class CrowdSimulationRuntime
         blackboard.Set(StatKeyIds.ReplayStatus, ReplayStatus);
         blackboard.Set(StatKeyIds.ReplayDivergenceTick, ReplayDivergenceTick);
         // F02 迷雾 HUD 计数:玩家 1 的视野组(无迷雾会话不写,呈现层回退缺省)
-        if (session.Fog is { } fog && session.Config.Relations.IndexByPlayerId[1] is { } pIdx)
+        if (session.Fog is { } fog && session.Config.PairRules.IndexByPlayerId[1] is { } pIdx)
         {
             int g = fog.GroupOf[pIdx];
             blackboard.Set(StatKeyIds.FogVisible, fog.VisibleCount[g]);

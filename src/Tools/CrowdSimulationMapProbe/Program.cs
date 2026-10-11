@@ -1,6 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
+using Ludots.Core.Systems;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
@@ -503,6 +510,100 @@ public static class Program
         return fixedHz;
     }
 
+    /// <summary>
+    /// 探针不启引擎。关系类型从仓库里的 Relationships/catalog.json 登记，边交给
+    /// InstanceRelationMaterializer。RelationshipCatalogPipelineLoader 要 ConfigPipeline、
+    /// ModLoader 和 VFS，那是引擎的配置合并，这里不另起一套。
+    /// 物化器会建地图上全部实例边，不按队伍代表过滤：过滤又是一套边遍历。
+    /// 功能位投影只问队伍代表之间的边，其它边上的关系留在运行时里，不进矩阵。
+    /// </summary>
+    private static CrowdPairRules ProjectSeedMap(string seedDir, CrowdSimulationConfig config, MapConfig map)
+    {
+        using var world = World.Create();
+        var types = new RelationshipTypeRegistry();
+        var metrics = new RelationshipMetricRegistry();
+        var flags = new RelationshipFlagRegistry();
+        var bands = new RelationshipBandRegistry();
+        foreach (string catalogPath in RelationshipCatalogPaths(seedDir))
+        {
+            RelationshipCatalogConfig? catalog = JsonSerializer.Deserialize<RelationshipCatalogConfig>(
+                File.ReadAllText(catalogPath),
+                RelationshipCatalogPipelineLoader.SerializerOptions);
+            if (catalog == null)
+            {
+                throw new InvalidOperationException($"关系目录反序列化为空：{catalogPath}");
+            }
+
+            RelationshipCatalogInstaller.RegisterCatalog(catalog, types, metrics, flags, bands);
+        }
+
+        var relationships = new RelationshipRuntime(
+            world,
+            types,
+            metrics,
+            flags,
+            bands,
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(world));
+        var index = new MapLoadEntityIndex();
+        foreach (var authored in map.Entities)
+        {
+            if (string.IsNullOrWhiteSpace(authored.InstanceId))
+            {
+                continue;
+            }
+
+            index.Register(map.Id, authored.InstanceId, world.Create());
+        }
+
+        var teams = new TeamEntityLookup();
+        foreach (var team in map.Teams)
+        {
+            Entity entity = index.GetRequired(map.Id, team.RepresentativeInstanceId, $"Teams TeamId {team.TeamId}");
+            world.Add(entity, new Team { Id = team.TeamId });
+            world.Add(entity, new TeamIdentity { TeamId = team.TeamId });
+            teams.Register(team.TeamId, entity);
+        }
+
+        var players = new PlayerEntityLookup();
+        foreach (var player in map.Players)
+        {
+            Entity entity = index.GetRequired(map.Id, player.RepresentativeInstanceId, $"Players PlayerId {player.PlayerId}");
+            world.Add(entity, new PlayerIdentity { PlayerId = player.PlayerId });
+            world.Add(entity, new Team { Id = player.TeamId });
+            players.Register(player.PlayerId, entity);
+        }
+
+        using var session = new MapSession(new MapId(map.Id), map);
+        InstanceRelationMaterializer.Materialize(session, map, index, relationships, types, metrics);
+        return CrowdPairRulesProjection.Project(config, map, new TeamRelationQuery(relationships, teams), players, world).Rules;
+    }
+
+    /// <summary>
+    /// 群体模拟进图时引擎合并的两份目录：仓库 assets 在前，LudotsCoreMod 在后。
+    /// 探针参数只有种子和两个群体目录，目录文件在仓库根，从种子目录往上找。
+    /// </summary>
+    private static IEnumerable<string> RelationshipCatalogPaths(string seedDir)
+    {
+        var dir = new DirectoryInfo(Path.GetFullPath(seedDir));
+        while (dir != null)
+        {
+            string engineCatalog = Path.Combine(dir.FullName, "assets", "Relationships", "catalog.json");
+            string coreModCatalog = Path.Combine(dir.FullName, "mods", "LudotsCoreMod", "assets", "Relationships", "catalog.json");
+            if (File.Exists(engineCatalog) && File.Exists(coreModCatalog))
+            {
+                yield return engineCatalog;
+                yield return coreModCatalog;
+                yield break;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException(
+            $"从 {seedDir} 往上找不到 assets/Relationships/catalog.json 和 mods/LudotsCoreMod 的关系目录。");
+    }
+
     private static SeedBundle Load(string seedDir, string standardDir, string capabilityDir)
     {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
@@ -524,7 +625,8 @@ public static class Program
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
-        var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir));
+        var runtime = CrowdSimulationConfigLoader.Load(
+            config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir), ProjectSeedMap(seedDir, config, map));
 
         var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);

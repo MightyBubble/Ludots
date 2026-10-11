@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Terrain;
 
 namespace Ludots.Core.CrowdSimulation.Presentation;
@@ -69,7 +70,13 @@ public sealed class S3PathDemoRuntime : IDisposable
             CrowdSimulationRuntime.OpenUri(engine, profileUri), StrictJsonOptions.CreateCamelCase())
             ?? throw new InvalidOperationException($"体型档案反序列化为空: {profileUri}");
         int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
-        var runtime = CrowdSimulationConfigLoader.Load(configDto, map, new AgentProfileRegistry(profileList), fixedHz);
+        var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+            ?? throw new InvalidOperationException("S3 路径演示需要 TeamRelationQuery。");
+        var players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("S3 路径演示需要 PlayerEntityLookup。");
+        var projected = CrowdPairRulesProjection.Project(configDto, map, teamRelations, players, engine.World);
+        var runtime = CrowdSimulationConfigLoader.Load(
+            configDto, map, new AgentProfileRegistry(profileList), fixedHz, projected.Rules);
         var templatesById = engine.MapLoader.TemplateRegistry.GetAll()
             .Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);

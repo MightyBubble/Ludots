@@ -63,13 +63,62 @@ public static class TestDefaults
         return new AgentProfileRegistry(list);
     }
 
+    /// <summary>
+    /// 演示图 / 三张种子图的字面 4×4。表序是玩家 1..4，队伍 1/2/1/2。
+    /// 不按 TeamId 推导。种子图投影要对上这张表，不能再写一套“同队即让路”。
+    /// </summary>
+    public static readonly CrowdPushResponse[] DemoResponse =
+    {
+        CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold,
+        CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield,
+        CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold,
+        CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield,
+    };
+
+    public static readonly bool[] DemoShares =
+    {
+        true, false, true, false,
+        false, true, false, true,
+        true, false, true, false,
+        false, true, false, true,
+    };
+
+    /// <summary>上表两个方向都共享之后的视野组。下标是玩家表序。</summary>
+    public static readonly byte[] DemoVisionGroups = { 0, 1, 0, 1 };
+
+    public static CrowdPairRules DemoPairRules()
+    {
+        var response = new CrowdPushResponse[DemoResponse.Length];
+        var shares = new bool[DemoShares.Length];
+        DemoResponse.CopyTo(response, 0);
+        DemoShares.CopyTo(shares, 0);
+        return CrowdPairRules.Matrices(4, response, shares);
+    }
+
     public static CrowdSimulationRuntimeConfig Assemble(
         CrowdSimulationConfig? config = null,
         MapConfig? map = null,
-        AgentProfileRegistry? profiles = null)
-        => CrowdSimulationConfigLoader.Load(
+        AgentProfileRegistry? profiles = null,
+        CrowdPairRules? pairRules = null)
+    {
+        bool implicitDemoMap = map == null;
+        map ??= DemoMap();
+        if (pairRules == null)
+        {
+            if (!implicitDemoMap)
+            {
+                throw new InvalidOperationException(
+                    "功能位矩阵必须显式传入。演示图的字面表只在不传地图时使用，其它地图不能按队伍号推导。");
+            }
+
+            pairRules = DemoPairRules();
+        }
+
+        return CrowdSimulationConfigLoader.Load(
             config ?? DefaultConfig(),
-            map ?? DemoMap(),
+            map,
             profiles ?? DemoProfiles(),
-            FixedHz);
+            FixedHz,
+            pairRules);
+    }
 }

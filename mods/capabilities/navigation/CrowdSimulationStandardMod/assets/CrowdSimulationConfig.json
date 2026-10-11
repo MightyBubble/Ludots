@@ -351,13 +351,11 @@
   },
   "push": {
     "movingBonus": 1,
-    "dominantShare": 0.1,
-    "modes": {
-      "samePlayer": "priority",
-      "Friendly": "priority",
-      "Neutral": "rigid",
-      "Hostile": "rigid"
-    }
+    "dominantShare": 0.1
+  },
+  "pairRules": {
+    "yieldsTo": { "relation": "Friendly" },
+    "sharesVisionWith": { "relation": "Friendly" }
   },
   "sim": {
     "maxUnits": 50000,
@@ -416,25 +414,5 @@
   "telemetry": {
     "turnEpsRad": 0.035,
     "ema": 0.2
-  },
-  "relations": {
-    "kinds": {
-      "self": {
-        "push": "priority",
-        "shareVision": true
-      },
-      "ally": {
-        "push": "priority",
-        "shareVision": true
-      },
-      "enemy": {
-        "push": "rigid",
-        "shareVision": false
-      }
-    },
-    "self": "self",
-    "sameTeam": "ally",
-    "default": "enemy",
-    "overrides": []
   }
 }

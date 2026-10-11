@@ -76,6 +76,7 @@ public class EnginePipelineIntegrationTests
 
             var session = engine.GetService(CoreServiceKeys.CrowdSimulationSession);
             Assert.That(session, Is.Not.Null, "crowd 地图聚焦后引擎自身的运行时应激活会话");
+            AssertSeedProjection(session!);
             var converter = engine.GetService(CoreServiceKeys.SpatialCoordinateConverter);
             Assert.That(converter, Is.Not.Null, "引擎应提供空间坐标转换服务");
 
@@ -132,6 +133,17 @@ public class EnginePipelineIntegrationTests
         {
             if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
         }
+    }
+
+    private static void AssertSeedProjection(CrowdSimSession session)
+    {
+        var rules = session.Config.PairRules;
+        var literal = TestDefaults.DemoPairRules();
+        Assert.That(rules.PlayerCount, Is.EqualTo(4));
+        Assert.That(rules.ResponseByPair, Is.EqualTo(literal.ResponseByPair));
+        Assert.That(rules.SharesVisionByPair, Is.EqualTo(literal.SharesVisionByPair));
+        Assert.That(session.Fog, Is.Not.Null);
+        Assert.That(session.Fog!.GroupOf, Is.EqualTo(TestDefaults.DemoVisionGroups));
     }
 
     private static (int X, int Y) CurrentCell(GameEngine engine, ISpatialCoordinateConverter converter, int dense)

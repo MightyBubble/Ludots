@@ -60,40 +60,8 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
-        // 关系种类上限是一个字节的编号域（P×P Uint8 矩阵）。
-        if (config.Relations.Kinds.Count < 1 || config.Relations.Kinds.Count > CrowdSimulationLimits.MaxRelationKinds)
-        {
-            throw Invalid("relations.kinds", $"需要 1~{CrowdSimulationLimits.MaxRelationKinds} 项（当前 {config.Relations.Kinds.Count} 项）");
-        }
-
-        foreach (var (name, kind) in config.Relations.Kinds)
-        {
-            if (kind.Push is not ("priority" or "rigid"))
-            {
-                throw Invalid($"relations.kinds.{name}.push", "需为 priority / rigid");
-            }
-        }
-
-        foreach (var (path, kind) in new[]
-        {
-            (path: "relations.self", kind: config.Relations.Self),
-            (path: "relations.sameTeam", kind: config.Relations.SameTeam),
-            (path: "relations.default", kind: config.Relations.Default),
-        })
-        {
-            if (!config.Relations.Kinds.ContainsKey(kind))
-            {
-                throw Invalid(path, $"引用未定义的关系 \"{kind}\"");
-            }
-        }
-
-        foreach (var o in config.Relations.Overrides)
-        {
-            if (!config.Relations.Kinds.ContainsKey(o.Kind))
-            {
-                throw Invalid("relations.overrides", $"引用未定义的关系 \"{o.Kind}\"");
-            }
-        }
+        RequireRelationId("pairRules.yieldsTo.relation", config.PairRules.YieldsTo.Relation);
+        RequireRelationId("pairRules.sharesVisionWith.relation", config.PairRules.SharesVisionWith.Relation);
 
         var radiusSeen = new HashSet<int>();
         foreach (var (key, rc) in config.Agents.RadiusClasses)
@@ -289,18 +257,13 @@ public static class CrowdSimulationConfigValidator
             }
         }
 
-        foreach (var mode in new[]
+    }
+
+    private static void RequireRelationId(string path, string relation)
+    {
+        if (string.IsNullOrWhiteSpace(relation))
         {
-            (path: "push.modes.samePlayer", value: config.Push.Modes.SamePlayer),
-            (path: "push.modes.Friendly", value: config.Push.Modes.Friendly),
-            (path: "push.modes.Neutral", value: config.Push.Modes.Neutral),
-            (path: "push.modes.Hostile", value: config.Push.Modes.Hostile),
-        })
-        {
-            if (mode.value is not ("priority" or "rigid"))
-            {
-                throw Invalid(mode.path, "需为 priority / rigid");
-            }
+            throw Invalid(path, "需为非空的关系类型 id");
         }
     }
 

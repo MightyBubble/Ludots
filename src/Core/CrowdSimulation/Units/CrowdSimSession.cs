@@ -100,7 +100,7 @@ public sealed class CrowdSimSession
         // 纯部署会话(S4 形状)不建迷雾。LOS 开启需要高度场(装配缺口即报)。
         if (Structures != null)
         {
-            Fog = new CrowdFog(Config, Config.Relations, Structures);
+            Fog = new CrowdFog(Config, Config.PairRules, Structures);
             if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
             Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);

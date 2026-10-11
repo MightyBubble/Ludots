@@ -47,7 +47,7 @@ public sealed class CrowdMovementKernel
     public Fix64[] Speeds = Array.Empty<Fix64>();
     /// <summary>推挤优先级(Agent 解析值,不含移动加成——加成依赖子步间的状态,避让层现算)。</summary>
     public Fix64[] PushPriorities = Array.Empty<Fix64>();
-    /// <summary>玩家表序下标(PlayerOwner → Relations.IndexByPlayerId 一次收拢)。</summary>
+    /// <summary>玩家表序下标(PlayerOwner → PairRules.IndexByPlayerId 一次收拢)。</summary>
     public int[] PlayerIdx = Array.Empty<int>();
 
     // 意图层逐子步的组级备忘:指令簿线性扫与认知槽字典解析只在 tick 边界变,gather 时失效。
@@ -134,7 +134,7 @@ public sealed class CrowdMovementKernel
         var world = session.World;
         int n = units.Count;
         EnsureCapacity(units.Capacity);
-        var playerIndex = session.Config.Relations.IndexByPlayerId;
+        var playerIndex = session.Config.PairRules.IndexByPlayerId;
         var states = States; var kins = Kins; var positions = Positions; var radii = Radii;
         var speeds = Speeds; var push = PushPriorities; var playerIdx = PlayerIdx;
         for (int i = 0; i < n; i++)
