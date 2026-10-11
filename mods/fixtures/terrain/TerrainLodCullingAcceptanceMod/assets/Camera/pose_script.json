@@ -1,0 +1,28 @@
+{
+  "mapId": "terrain_lod_culling_acceptance",
+  "virtualCameraId": "TerrainLod.Script",
+  "logEveryFrames": 60,
+  "flyover": {
+    "endFrame": 300,
+    "from": { "x": 90000, "y": 90000, "yaw": 40, "pitch": 46, "distanceCm": 5200 },
+    "to": { "x": 320000, "y": 320000, "yaw": 40, "pitch": 46, "distanceCm": 5200 }
+  },
+  "yawSweep": {
+    "endFrame": 480,
+    "from": { "x": 204800, "y": 204800, "yaw": 210, "pitch": 36, "distanceCm": 26000 },
+    "to": { "x": 204800, "y": 204800, "yaw": 30, "pitch": 36, "distanceCm": 26000 }
+  },
+  "pullback": {
+    "endFrame": 1020,
+    "easeFrames": 60,
+    "from": { "x": 204800, "y": 204800, "yaw": 40, "pitch": 36, "distanceCm": 26000 },
+    "to": { "x": 204800, "y": 204800, "yaw": 40, "pitch": 62, "distanceCm": 900000 }
+  },
+  "reentry": {
+    "endFrame": 1080,
+    "easeFrames": 12,
+    "from": { "x": 204800, "y": 204800, "yaw": 40, "pitch": 62, "distanceCm": 900000 },
+    "to": { "x": 204800, "y": 204800, "yaw": 40, "pitch": 46, "distanceCm": 5200 }
+  },
+  "hold": { "x": 204800, "y": 204800, "yaw": 40, "pitch": 46, "distanceCm": 5200 }
+}

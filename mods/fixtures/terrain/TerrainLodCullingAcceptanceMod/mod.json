@@ -1,8 +1,7 @@
 {
   "name": "TerrainLodCullingAcceptanceMod",
   "version": "1.0.0",
-  "description": "地形 LOD/裁剪验收夹具：程序化镜头脚本驱动同一地形(B3 接缝巡飞/D2 斜视旋转/D1 overview 驻留回切)，供前后对照截图与帧计时取证。",
-  "main": "bin/net9.0/TerrainLodCullingAcceptanceMod.dll",
+  "description": "地形 LOD/裁剪验收夹具：Camera/pose_script.json 驱动同一地形(B3 接缝巡飞/D2 斜视旋转/D1 overview 驻留回切)，供前后对照截图与帧计时取证。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

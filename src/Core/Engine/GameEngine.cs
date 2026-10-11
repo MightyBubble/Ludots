@@ -2248,6 +2248,8 @@ namespace Ludots.Core.Engine
             Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Bind(worldAttributeStore);
             SetService(CoreServiceKeys.WorldAttributeStore, worldAttributeStore);
             _cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
+            CameraPoseScriptSystem.TryInstall(this);
+            ScriptedFogSourceSystem.TryInstall(this);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
