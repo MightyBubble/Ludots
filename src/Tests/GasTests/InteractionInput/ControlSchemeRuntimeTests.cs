@@ -185,6 +185,122 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void SetActiveScheme_Null_Fails()
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(null!));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void SetActiveScheme_Blank_Fails(string schemeId)
+        {
+            RejectActiveScheme(schemeId);
+        }
+
+        private static void RejectActiveScheme(string schemeId)
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(schemeId));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [Test]
+        public void SetActiveScheme_WhitespacePadded_Fails()
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(" scheme.test "));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(error.Message, Does.Contain("whitespace"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [Test]
+        public void Save_BeforeAnyScheme_FailsAndWritesNothing()
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Save(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(File.Exists(path), Is.False);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestCase("null", TestName = "Load_NullDocument_FailsNamingPathAndField")]
+        [TestCase("{ }", TestName = "Load_MissingActiveSchemeId_FailsNamingPathAndField")]
+        [TestCase("{ \"activeSchemeId\": \"\" }", TestName = "Load_BlankActiveSchemeId_FailsNamingPathAndField")]
+        [TestCase("{ \"activeSchemeId\": \"   \" }", TestName = "Load_WhitespaceActiveSchemeId_FailsNamingPathAndField")]
+        public void Load_ActiveSchemeIdAbsentOrBlank_FailsNamingPathAndField(string json)
+        {
+            RejectSchemeFile(json, "activeSchemeId");
+        }
+
+        [Test]
+        public void Load_WhitespacePaddedActiveSchemeId_FailsWithoutTrimming()
+        {
+            RejectSchemeFile("{ \"activeSchemeId\": \" scheme.test \" }", "activeSchemeId");
+        }
+
+        [Test]
+        public void Load_OldCastCommitFields_FailsNamingThePath()
+        {
+            const string json = """
+                {
+                  "activeSchemeId": "scheme.test.keep",
+                  "global": { "castCommitId": "cast.commit.old" }
+                }
+                """;
+            string path = WriteSchemeFile(json);
+            var store = new ClientControlSchemePreferenceStore();
+            store.SetActiveScheme("scheme.test.keep");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Load(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(error.InnerException, Is.InstanceOf<JsonException>());
+                Assert.That(store.ActiveSchemeId, Is.EqualTo("scheme.test.keep"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static void RejectSchemeFile(string json, string field)
+        {
+            string path = WriteSchemeFile(json);
+            var store = new ClientControlSchemePreferenceStore();
+            store.SetActiveScheme("scheme.test.keep");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Load(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(error.Message, Does.Contain(field));
+                Assert.That(store.ActiveSchemeId, Is.EqualTo("scheme.test.keep"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static string WriteSchemeFile(string json)
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            File.WriteAllText(path, json);
+            return path;
+        }
+
+        [Test]
         public void Install_ActivatesPersistedSchemeWhenItIsAllowed()
         {
             using var world = World.Create();

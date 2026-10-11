@@ -355,7 +355,7 @@ namespace Ludots.Core.Input.Interaction
 
             if (_preferences != null && !string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
             {
-                string preferredScheme = _preferences.ActiveSchemeId.Trim();
+                string preferredScheme = _preferences.ActiveSchemeId;
                 if (!_schemeIds.TryGetId(preferredScheme, out int preferredSchemeId))
                 {
                     throw new InvalidOperationException(
