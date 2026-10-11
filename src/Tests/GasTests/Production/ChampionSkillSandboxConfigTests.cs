@@ -21,6 +21,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
@@ -71,9 +72,7 @@ namespace Ludots.Tests.GAS.Production
         private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
         private const string RosterKeyChannel = "ChampionSkillSandbox.Collection.ActiveKey";
         private const string BattleContextId = "interaction.context.champion.battle";
-        private const string SmartCastContextId = "interaction.context.champion.smart_cast";
-        private const string IndicatorContextId = "interaction.context.champion.indicator_cast";
-        private const string PressReleaseContextId = "interaction.context.champion.press_release_cast";
+        private const string AimCastContextId = "interaction.context.aim.cast";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
@@ -81,6 +80,7 @@ namespace Ludots.Tests.GAS.Production
             "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",
+            "AimInteractionMod",
             "EntityCommandPanelMod",
             "ChampionSkillSandboxMod"
         };
@@ -274,7 +274,7 @@ namespace Ludots.Tests.GAS.Production
             int ezrealCount = source.CopySlots(FindEntityByName(engine.World, "Ezreal Cooldown"), 0, ezrealSlots);
             Assert.That(ezrealCount, Is.EqualTo(4));
             Assert.That(ezrealSlots[3].DisplayLabel, Is.EqualTo("Trueshot Barrage"));
-            Assert.That(ezrealSlots[3].ActionId, Is.EqualTo("SkillR"));
+            Assert.That(ezrealSlots[3].ActionId, Is.EqualTo("Aim.Slot4"));
             Assert.That(ezrealSlots[3].DetailLabel, Is.EqualTo("Global projectile fired by direction"));
             Assert.That(ezrealSlots[3].StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), Is.True);
 
@@ -282,14 +282,14 @@ namespace Ludots.Tests.GAS.Production
             int garenCount = source.CopySlots(FindEntityByName(engine.World, "Garen Courage"), 0, garenSlots);
             Assert.That(garenCount, Is.EqualTo(4));
             Assert.That(garenSlots[1].DisplayLabel, Is.EqualTo("Courage"));
-            Assert.That(garenSlots[1].ActionId, Is.EqualTo("SkillW"));
+            Assert.That(garenSlots[1].ActionId, Is.EqualTo("Aim.Slot2"));
             Assert.That(garenSlots[1].StateFlags.HasFlag(EntityCommandSlotStateFlags.Active), Is.True);
 
             var jayceSlots = new EntityCommandPanelSlotView[8];
             int jayceCount = source.CopySlots(FindEntityByName(engine.World, "Jayce Hammer"), 0, jayceSlots);
             Assert.That(jayceCount, Is.EqualTo(4));
             Assert.That(jayceSlots[0].DisplayLabel, Is.EqualTo("To The Skies!"));
-            Assert.That(jayceSlots[0].ActionId, Is.EqualTo("SkillQ"));
+            Assert.That(jayceSlots[0].ActionId, Is.EqualTo("Aim.Slot1"));
             Assert.That(jayceSlots[0].StateFlags.HasFlag(EntityCommandSlotStateFlags.FormOverride), Is.True);
             Assert.That(jayceSlots[3].DisplayLabel, Is.EqualTo("Mercury Cannon"));
 
@@ -312,7 +312,8 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
             Assert.That(toolbar.IsVisible, Is.True);
             Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True);
-            Assert.That(IsInteractionContextActive(engine, SmartCastContextId), Is.True);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.smart"));
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -345,8 +346,8 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
-            Assert.That(IsInteractionContextActive(engine, IndicatorContextId), Is.True);
-            Assert.That(IsInteractionContextActive(engine, SmartCastContextId), Is.False);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_release"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -357,8 +358,8 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
             Tick(engine, 1);
-            Assert.That(IsInteractionContextActive(engine, PressReleaseContextId), Is.True);
-            Assert.That(IsInteractionContextActive(engine, IndicatorContextId), Is.False);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_click"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
@@ -1067,6 +1068,26 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
             return profiles.ProfileIdRegistry.TryGetId(contextId, out int profileId) &&
                    runtime.IsActive(ClientLocalSeatAccess.RequireSolePossessedRep(engine), profileId);
+        }
+
+        private static string ReadCastModeId(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+            {
+                throw new InvalidOperationException("Possessed rep cast mode is not seeded.");
+            }
+
+            string name = registry.GetName(pref.DefaultCastModeId);
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new InvalidOperationException(
+                    $"Possessed rep cast mode id {pref.DefaultCastModeId} is not registered.");
+            }
+
+            return name;
         }
 
         private static void Tick(GameEngine engine, int frames)

@@ -1,11 +1,11 @@
 [
   {
-    "id": "graph.champion.aim_cancel",
+    "id": "graph.champion.set_cast_mode_aim_release",
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_champion_aimcancel",
-        "action": "Champion.AimCancel",
+        "label": "CastModeIndicator",
+        "action": "CastModeIndicator",
         "start": "rep",
         "refire": "restart"
       }
@@ -13,16 +13,15 @@
     "nodes": [
       {
         "id": "rep",
-        "op": "LoadEntryPayloadEntity",
-        "payloadKey": "MapTrigger.Rep"
+        "op": "LoadCaster"
       },
       {
-        "id": "close_aim",
-        "op": "DeactivateContext",
-        "context": "interaction.context.champion.aiming_click"
+        "id": "set",
+        "op": "SetCastMode",
+        "mode": "castMode.aim_release"
       },
       {
-        "id": "halt_ok",
+        "id": "c1",
         "op": "ConstInt",
         "intValue": 1
       },
@@ -35,31 +34,31 @@
       {
         "from": "rep",
         "fromPort": "next",
-        "to": "close_aim"
+        "to": "set"
       },
       {
-        "from": "close_aim",
+        "from": "set",
         "fromPort": "next",
-        "to": "halt_ok"
+        "to": "c1"
       },
       {
-        "from": "halt_ok",
+        "from": "c1",
         "fromPort": "next",
         "to": "halt"
       }
     ],
     "valueEdges": [
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "close_aim",
-        "toPort": "source"
-      },
-      {
-        "from": "halt_ok",
+        "from": "c1",
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "source"
       }
     ]
   }

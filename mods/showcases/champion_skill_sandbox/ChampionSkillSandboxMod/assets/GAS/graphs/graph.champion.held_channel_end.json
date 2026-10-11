@@ -4,8 +4,8 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_skillr_release",
-        "action": "SkillR.Release",
+        "label": "on_slot4_release",
+        "action": "Aim.Slot4.Release",
         "start": "rep",
         "refire": "restart"
       }

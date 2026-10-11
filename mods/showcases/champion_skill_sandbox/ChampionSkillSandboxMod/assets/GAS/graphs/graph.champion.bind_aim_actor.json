@@ -1,0 +1,451 @@
+[
+  {
+    "id": "graph.champion.bind_aim_actor",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "bind_press",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.press",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_pointer",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.track_pointer",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_stick",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.track_stick",
+          "nodeId": "actors"
+        }
+      },
+      {
+        "label": "bind_resolve",
+        "event": "AimBind",
+        "start": "b_rep",
+        "hookNodeBefore": {
+          "graphId": "graph.aim.resolve_submit",
+          "nodeId": "actors"
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "b_rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "b_qsel",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "b_lim",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "b_c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "b_sel",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_qaim",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "b_aim",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_eq",
+        "op": "CompareEqEntity"
+      },
+      {
+        "id": "b_same",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "b_qwrite",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "b_lim2",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "b_write",
+        "op": "WriteCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "b_actor",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "b_alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "b_z",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "b_slot",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "b_valid",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "b_x",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "b_y",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "b_range",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
+      },
+      {
+        "id": "b_c99",
+        "op": "ConstInt",
+        "intValue": 99
+      },
+      {
+        "id": "b_null",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "b_target",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "b_halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "b_rep",
+        "fromPort": "next",
+        "to": "b_qsel"
+      },
+      {
+        "from": "b_qsel",
+        "fromPort": "next",
+        "to": "b_lim"
+      },
+      {
+        "from": "b_lim",
+        "fromPort": "next",
+        "to": "b_c0"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "next",
+        "to": "b_sel"
+      },
+      {
+        "from": "b_sel",
+        "fromPort": "next",
+        "to": "b_qaim"
+      },
+      {
+        "from": "b_qaim",
+        "fromPort": "next",
+        "to": "b_aim"
+      },
+      {
+        "from": "b_aim",
+        "fromPort": "next",
+        "to": "b_eq"
+      },
+      {
+        "from": "b_eq",
+        "fromPort": "next",
+        "to": "b_same"
+      },
+      {
+        "from": "b_same",
+        "fromPort": "true",
+        "to": "b_halt"
+      },
+      {
+        "from": "b_qwrite",
+        "fromPort": "next",
+        "to": "b_lim2"
+      },
+      {
+        "from": "b_lim2",
+        "fromPort": "next",
+        "to": "b_write"
+      },
+      {
+        "from": "b_write",
+        "fromPort": "next",
+        "to": "b_actor"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "next",
+        "to": "b_alive"
+      },
+      {
+        "from": "b_alive",
+        "fromPort": "next",
+        "to": "b_alive_jump"
+      },
+      {
+        "from": "b_same",
+        "fromPort": "false",
+        "to": "b_qwrite"
+      },
+      {
+        "from": "b_alive_jump",
+        "fromPort": "false",
+        "to": "b_halt"
+      },
+      {
+        "from": "b_z",
+        "fromPort": "next",
+        "to": "b_slot"
+      },
+      {
+        "from": "b_slot",
+        "fromPort": "next",
+        "to": "b_valid"
+      },
+      {
+        "from": "b_valid",
+        "fromPort": "next",
+        "to": "b_x"
+      },
+      {
+        "from": "b_x",
+        "fromPort": "next",
+        "to": "b_y"
+      },
+      {
+        "from": "b_y",
+        "fromPort": "next",
+        "to": "b_range"
+      },
+      {
+        "from": "b_range",
+        "fromPort": "next",
+        "to": "b_c99"
+      },
+      {
+        "from": "b_c99",
+        "fromPort": "next",
+        "to": "b_null"
+      },
+      {
+        "from": "b_null",
+        "fromPort": "next",
+        "to": "b_target"
+      },
+      {
+        "from": "b_target",
+        "fromPort": "next",
+        "to": "b_halt"
+      },
+      {
+        "from": "b_alive_jump",
+        "fromPort": "true",
+        "to": "b_z"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_halt",
+        "toPort": "value"
+      },
+      {
+        "from": "b_rep",
+        "fromPort": "value",
+        "to": "b_qsel",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_sel",
+        "toPort": "value"
+      },
+      {
+        "from": "b_rep",
+        "fromPort": "value",
+        "to": "b_qaim",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_aim",
+        "toPort": "value"
+      },
+      {
+        "from": "b_sel",
+        "fromPort": "value",
+        "to": "b_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "b_aim",
+        "fromPort": "value",
+        "to": "b_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "b_eq",
+        "fromPort": "value",
+        "to": "b_same",
+        "toPort": "condition"
+      },
+      {
+        "from": "b_rep",
+        "fromPort": "value",
+        "to": "b_qwrite",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_write",
+        "toPort": "value"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_actor",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "b_alive",
+        "fromPort": "value",
+        "to": "b_alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_slot",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "b_c0",
+        "fromPort": "value",
+        "to": "b_valid",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_x",
+        "toPort": "source"
+      },
+      {
+        "from": "b_z",
+        "fromPort": "value",
+        "to": "b_x",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_y",
+        "toPort": "source"
+      },
+      {
+        "from": "b_z",
+        "fromPort": "value",
+        "to": "b_y",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_range",
+        "toPort": "source"
+      },
+      {
+        "from": "b_z",
+        "fromPort": "value",
+        "to": "b_range",
+        "toPort": "value"
+      },
+      {
+        "from": "b_c99",
+        "fromPort": "value",
+        "to": "b_null",
+        "toPort": "value"
+      },
+      {
+        "from": "b_actor",
+        "fromPort": "value",
+        "to": "b_target",
+        "toPort": "source"
+      },
+      {
+        "from": "b_null",
+        "fromPort": "value",
+        "to": "b_target",
+        "toPort": "value"
+      }
+    ]
+  }
+]

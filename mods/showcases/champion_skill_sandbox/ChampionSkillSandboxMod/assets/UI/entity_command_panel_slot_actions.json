@@ -1,8 +1,8 @@
 {
-  "slotActionIds": ["SkillQ", "SkillW", "SkillE", "SkillR"],
-  "modeHintContexts": {
-    "interaction.context.champion.smart_cast": "SmartCast",
-    "interaction.context.champion.indicator_cast": "SmartCastWithIndicator",
-    "interaction.context.champion.press_release_cast": "PressReleaseAimCast"
+  "slotActionIds": ["Aim.Slot1", "Aim.Slot2", "Aim.Slot3", "Aim.Slot4"],
+  "modeHintContexts": {},
+  "modeHintCastModes": {
+    "castMode.aim_release": "SmartCastWithIndicator",
+    "castMode.aim_click": "PressReleaseAimCast"
   }
 }

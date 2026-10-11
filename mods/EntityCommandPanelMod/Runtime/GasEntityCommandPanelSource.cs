@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -27,6 +28,10 @@ namespace EntityCommandPanelMod.Runtime
         private readonly string[] _modeHintKeys;
         private readonly int[] _modeHintProfileIds;
         private bool _modeHintProfileIdsResolved;
+        private readonly string[] _modeHintCastModeIds;
+        private readonly string[] _modeHintCastModeKeys;
+        private readonly int[] _modeHintCastModeRegistryIds;
+        private bool _modeHintCastModeIdsResolved;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
@@ -59,6 +64,16 @@ namespace EntityCommandPanelMod.Runtime
             {
                 _modeHintContextIds[i] = slotConfig.ModeHintContextIds[i];
                 _modeHintKeys[i] = slotConfig.ModeHintKeys[i];
+            }
+
+            int castModeHintCount = slotConfig.ModeHintCastModeIds.Count;
+            _modeHintCastModeIds = new string[castModeHintCount];
+            _modeHintCastModeKeys = new string[castModeHintCount];
+            _modeHintCastModeRegistryIds = new int[castModeHintCount];
+            for (int i = 0; i < castModeHintCount; i++)
+            {
+                _modeHintCastModeIds[i] = slotConfig.ModeHintCastModeIds[i];
+                _modeHintCastModeKeys[i] = slotConfig.ModeHintCastModeKeys[i];
             }
 
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
@@ -152,7 +167,10 @@ namespace EntityCommandPanelMod.Runtime
                 revision = HashTagContainer(revision, in actorTags);
             }
 
-            revision = HashCombine(revision, (uint)(ResolveActiveModeHintIndex() + 1));
+            string modeHintKey = ResolveActiveModeHintKey();
+            revision = HashCombine(
+                revision,
+                string.IsNullOrEmpty(modeHintKey) ? 1u : (uint)modeHintKey.GetHashCode(StringComparison.Ordinal));
             return true;
         }
 
@@ -605,14 +623,72 @@ namespace EntityCommandPanelMod.Runtime
 
         private string ResolveActiveModeHintKey()
         {
-            int index = ResolveActiveModeHintIndex();
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity rep))
+            {
+                return string.Empty;
+            }
+
+            if (TryResolveCastModeHintKey(rep, out string castModeKey))
+            {
+                return castModeKey;
+            }
+
+            int index = ResolveActiveModeHintIndex(rep);
             return index < 0 ? string.Empty : _modeHintKeys[index];
         }
 
-        private int ResolveActiveModeHintIndex()
+        private bool TryResolveCastModeHintKey(Entity rep, out string key)
         {
-            if (_modeHintContextIds.Length == 0 ||
-                !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity rep))
+            key = string.Empty;
+            if (_modeHintCastModeIds.Length == 0)
+            {
+                return false;
+            }
+
+            if (!_modeHintCastModeIdsResolved)
+            {
+                StringIntRegistry registry = _engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                    ?? throw new InvalidOperationException(
+                        $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes requires CastModeIdRegistry.");
+                for (int i = 0; i < _modeHintCastModeIds.Length; i++)
+                {
+                    if (!registry.TryGetId(_modeHintCastModeIds[i], out _modeHintCastModeRegistryIds[i]))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes names unknown cast mode '{_modeHintCastModeIds[i]}'.");
+                    }
+                }
+
+                _modeHintCastModeIdsResolved = true;
+            }
+
+            if (!_engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes requires InteractionPref on the possessed rep.");
+            }
+
+            if (pref.DefaultCastModeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes is configured but the possessed rep's cast mode is not seeded.");
+            }
+
+            for (int i = 0; i < _modeHintCastModeRegistryIds.Length; i++)
+            {
+                if (_modeHintCastModeRegistryIds[i] == pref.DefaultCastModeId)
+                {
+                    key = _modeHintCastModeKeys[i];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private int ResolveActiveModeHintIndex(Entity rep)
+        {
+            if (_modeHintContextIds.Length == 0)
             {
                 return -1;
             }

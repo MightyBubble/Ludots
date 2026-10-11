@@ -14,11 +14,18 @@ namespace EntityCommandPanelMod.Runtime
     {
         public const string RelativePath = "UI/entity_command_panel_slot_actions.json";
 
-        private EntityCommandPanelSlotActionConfig(string[] slotActionIds, string[] modeHintContextIds, string[] modeHintKeys)
+        private EntityCommandPanelSlotActionConfig(
+            string[] slotActionIds,
+            string[] modeHintContextIds,
+            string[] modeHintKeys,
+            string[] modeHintCastModeIds,
+            string[] modeHintCastModeKeys)
         {
             SlotActionIds = slotActionIds;
             ModeHintContextIds = modeHintContextIds;
             ModeHintKeys = modeHintKeys;
+            ModeHintCastModeIds = modeHintCastModeIds;
+            ModeHintCastModeKeys = modeHintCastModeKeys;
         }
 
         public IReadOnlyList<string> SlotActionIds { get; }
@@ -28,6 +35,12 @@ namespace EntityCommandPanelMod.Runtime
 
         /// <summary><c>modeHints</c> key used while the context at the same index is active.</summary>
         public IReadOnlyList<string> ModeHintKeys { get; }
+
+        /// <summary>Cast mode ids, checked before interaction contexts. Absent when the file omits the object.</summary>
+        public IReadOnlyList<string> ModeHintCastModeIds { get; }
+
+        /// <summary><c>modeHints</c> key used while the cast mode at the same index is the player default.</summary>
+        public IReadOnlyList<string> ModeHintCastModeKeys { get; }
 
         public static EntityCommandPanelSlotActionConfig Load(ConfigPipeline pipeline, ConfigCatalog? catalog, ConfigConflictReport? report)
         {
@@ -74,7 +87,34 @@ namespace EntityCommandPanelMod.Runtime
                 index++;
             }
 
-            return new EntityCommandPanelSlotActionConfig(actionIds, contextIds, modeKeys);
+            string[] castModeIds = Array.Empty<string>();
+            string[] castModeKeys = Array.Empty<string>();
+            if (merged.ContainsKey("modeHintCastModes"))
+            {
+                if (merged["modeHintCastModes"] is not JsonObject modeHintCastModes)
+                {
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintCastModes must be an object.");
+                }
+
+                castModeIds = new string[modeHintCastModes.Count];
+                castModeKeys = new string[modeHintCastModes.Count];
+                int castIndex = 0;
+                foreach (KeyValuePair<string, JsonNode?> pair in modeHintCastModes)
+                {
+                    string? modeKey = pair.Value?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(modeKey))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{RelativePath}' modeHintCastModes['{pair.Key}'] must map a cast mode id to a non-empty modeHints key.");
+                    }
+
+                    castModeIds[castIndex] = pair.Key;
+                    castModeKeys[castIndex] = modeKey;
+                    castIndex++;
+                }
+            }
+
+            return new EntityCommandPanelSlotActionConfig(actionIds, contextIds, modeKeys, castModeIds, castModeKeys);
         }
     }
 }
