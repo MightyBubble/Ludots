@@ -128,8 +128,20 @@ for (const e of entityList(structures)) {
 // 迷雾认知的逐 id 语义(残影/遗忘/共享)要求两端 id 同构(F02)。
 
 const entities = [
-  { InstanceId: 'team_1', Template: 'crowd_simulation_team' },
-  { InstanceId: 'team_2', Template: 'crowd_simulation_team' },
+  {
+    InstanceId: 'team_1', Template: 'crowd_simulation_team',
+    Relations: [
+      { To: 'team_1', Type: 'Friendly' },
+      { To: 'team_2', Type: 'Hostile' },
+    ],
+  },
+  {
+    InstanceId: 'team_2', Template: 'crowd_simulation_team',
+    Relations: [
+      { To: 'team_2', Type: 'Friendly' },
+      { To: 'team_1', Type: 'Hostile' },
+    ],
+  },
   ...config.players.map((p, i) => ({ InstanceId: `player_${i + 1}`, Template: 'crowd_simulation_player' })),
   ...blockers.map((b, i) => ({
     InstanceId: `building_${String(i + 1).padStart(4, '0')}`,
@@ -171,7 +183,6 @@ const mapJson = {
   DefaultCamera: { VirtualCameraId: 'CrowdSimulation.Camera.Terrain', TargetXCm: worldCm / 2, TargetYCm: worldCm / 2, Yaw: 45, Pitch: 55, DistanceCm: Math.round(worldCm * 1.2), FovYDeg: 50 },
   Teams: [{ TeamId: 1, RepresentativeInstanceId: 'team_1' }, { TeamId: 2, RepresentativeInstanceId: 'team_2' }],
   Players: config.players.map((p, i) => ({ PlayerId: i + 1, TeamId: p.team === 'A' ? 1 : 2, RepresentativeInstanceId: `player_${i + 1}` })),
-  ParticipantRelationships: { Teams: [{ TeamA: 1, TeamB: 2, TypeId: 'LudotsCore.Participant', Attitude: 'Hostile', Symmetric: true }] },
   Entities: entities,
 };
 writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));
