@@ -334,6 +334,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");
         public static readonly ServiceKey<InteractionContextProfileRegistry> InteractionContextProfileRegistry = new("InteractionContextProfileRegistry");
+        public static readonly ServiceKey<StringIntRegistry> CastModeIdRegistry = new("CastModeIdRegistry");
         public static readonly ServiceKey<CastCommitProfileRegistry> CastCommitProfileRegistry = new("CastCommitProfileRegistry");
         public static readonly ServiceKey<ClientCastPreferenceStore> ClientCastPreferenceStore = new("ClientCastPreferenceStore");
         public static readonly ServiceKey<ControlSchemeRuntime> ControlSchemeRuntime = new("ControlSchemeRuntime");

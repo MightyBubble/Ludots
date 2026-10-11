@@ -1834,14 +1834,21 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
+            // Cast-mode vocabulary (id catalog only). The engine ships an empty list; mods
+            // contribute ids. Core never branches on the names.
+            var castModeIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            new CastModeConfigLoader(ConfigPipeline).Install(castModeIds, ConfigCatalog, ConfigConflictReport);
+
             // Game-instance InteractionPref seed: the player-level default intent +
-            // dispatch pair map binding plants on every bound player representative lacking the
-            // component. Seed ids are the kernel registries' own id spaces — the spaces the
-            // arbiter and mounted contexts resolve in.
+            // dispatch pair, plus the optional cast mode, that map binding plants on every
+            // bound player representative lacking the component. Seed ids are the kernel
+            // registries' own id spaces.
             _interactionPrefSeed = InteractionPrefConfigLoader.ResolveSeed(
                 new InteractionPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
-                castDispatchProfileRegistry);
+                castDispatchProfileRegistry,
+                castModeIds,
+                abilityDefinitions);
 
 
             // Per-seat input interpretation channels: zero channels for sole-seat clients (their
@@ -1998,6 +2005,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
+            SetService(CoreServiceKeys.CastModeIdRegistry, castModeIds);
             SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
             SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
