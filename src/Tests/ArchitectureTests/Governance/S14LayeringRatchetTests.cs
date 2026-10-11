@@ -13,7 +13,8 @@ public sealed class S14LayeringRatchetTests
     public const int MaxGetEngineCalls = 205;
     public const int MaxUndeclaredModRegisterSystemCalls = 100;
     public const int MaxProductionStaticRegistryClearCalls = 9;
-    public const int MaxModProjectsReferencingFacadeGameEngine = 153;
+    // 153 -> 157: 群体模拟分支四个引用 Core 的 mod 工程（S3 寻路、S4 部署、雾地贴花、地形 LOD 验收）。
+    public const int MaxModProjectsReferencingFacadeGameEngine = 157;
     public const int MaxModGraphIdRegistryClearCalls = 5;
 
     private static readonly Regex GetEngineCall = new(@"\.GetEngine\s*\(", RegexOptions.Compiled);

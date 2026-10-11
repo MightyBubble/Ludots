@@ -22,7 +22,7 @@ public sealed class CrowdSimulationS3PathModEntry : IMod
         _runtime = S3PathDemoRuntime.Load(context);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
+            GameEngine? engine = ctx.Get(CoreServiceKeys.Engine);
             if (engine == null || _runtime == null) return Task.CompletedTask;
 
             // 呈现走正式基建:流场经投影器注册表进全场视觉缓冲(方向图),

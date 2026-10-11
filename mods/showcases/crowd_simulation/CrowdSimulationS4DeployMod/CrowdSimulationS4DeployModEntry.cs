@@ -28,7 +28,7 @@ public sealed class CrowdSimulationS4DeployModEntry : IMod
         context.Log("[CrowdSimulationS4DeployMod] Loaded.");
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
+            GameEngine? engine = ctx.Get(CoreServiceKeys.Engine);
             if (engine == null) return Task.CompletedTask;
 
             _runtime = new S4DeployDemoRuntime(engine);

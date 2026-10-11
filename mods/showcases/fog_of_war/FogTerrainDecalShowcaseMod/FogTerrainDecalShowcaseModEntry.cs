@@ -11,7 +11,7 @@ public sealed class FogTerrainDecalShowcaseModEntry : IMod
     {
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
+            GameEngine? engine = ctx.Get(CoreServiceKeys.Engine);
             if (engine == null)
             {
                 return Task.CompletedTask;
