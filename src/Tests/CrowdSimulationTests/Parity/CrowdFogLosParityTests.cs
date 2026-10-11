@@ -33,10 +33,10 @@ public sealed class CrowdFogLosParityTests
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7los-truth.json")))!;
-        int f = meta["F"]!.GetValue<int>();
+        int f = meta["fogCellsPerSide"]!.GetValue<int>();
         Assert.That(f, Is.EqualTo(fog.FogCellsPerSide), "真值 fog 格数与会话不一致");
-        int cx = meta["from"]![0]!.GetValue<int>(), cy = meta["from"]![1]!.GetValue<int>();
-        int tx = meta["to"]![0]!.GetValue<int>(), ty = meta["to"]![1]!.GetValue<int>();
+        int cx = meta["fromFogCell"]![0]!.GetValue<int>(), cy = meta["fromFogCell"]![1]!.GetValue<int>();
+        int tx = meta["toFogCell"]![0]!.GetValue<int>(), ty = meta["toFogCell"]![1]!.GetValue<int>();
         long hAvgTRaw = meta["hAvgTRaw"]!.GetValue<long>();
 
         var flags = BindingFlags.NonPublic | BindingFlags.Instance;

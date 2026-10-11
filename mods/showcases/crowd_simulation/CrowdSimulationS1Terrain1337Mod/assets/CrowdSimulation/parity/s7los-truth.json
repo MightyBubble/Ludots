@@ -1,14 +1,14 @@
 {
   "mapId": "crowd_simulation_s1337",
   "seed": 1337,
-  "F": 64,
-  "eyeM": 10,
+  "fogCellsPerSide": 64,
+  "eyeCm": 1000,
   "note": "L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。",
-  "from": [
+  "fromFogCell": [
     10,
     10
   ],
-  "to": [
+  "toFogCell": [
     16,
     10
   ],

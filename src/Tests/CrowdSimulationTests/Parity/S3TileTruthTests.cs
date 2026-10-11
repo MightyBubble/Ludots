@@ -53,7 +53,7 @@ public class S3TileTruthTests
 
         var (hash, entryCount, perEntry) = ComputeDigest(cache, navCellsPerSide);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s3-tile-truth.json")))!;
-        Assert.That(entryCount, Is.EqualTo(truth["tiles"]!.GetValue<int>()), "不同 tile 数");
+        Assert.That(entryCount, Is.EqualTo(truth["navTileEntries"]!.GetValue<int>()), "不同 tile 数");
         Assert.That(cache.Bakes, Is.EqualTo(truth["bakes"]!.GetValue<int>()), "烘焙次数");
         // 按键指纹对齐比较(内容键相同才是同一块 tile;位置序不作准)
         var truthByKey = truth["entryHashes"]!.AsObject().ToDictionary(kv => kv.Key, kv => kv.Value!.GetValue<string>());
