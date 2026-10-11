@@ -359,12 +359,12 @@ public sealed class CrowdStructuresStore
     }
 
     /// <summary>格 c 与区间 [a0,a1) 的重叠份额(轴);与 SurfaceGrid.Build 的阻挡覆盖公式同源。</summary>
-    private Fix64 CoverShare(Fix64 a0, Fix64 a1, int c, Fix64 cs)
+    private Fix64 CoverShare(Fix64 a0, Fix64 a1, int c, Fix64 navCellSizeCm)
     {
-        Fix64 cellLo = Fix64.FromInt(c) * cs;
-        Fix64 cellHi = cellLo + cs;
+        Fix64 cellLo = Fix64.FromInt(c) * navCellSizeCm;
+        Fix64 cellHi = cellLo + navCellSizeCm;
         Fix64 overlap = Fix64.Min(a1, cellHi) - Fix64.Max(a0, cellLo);
-        return overlap > Fix64.Zero ? overlap / cs : Fix64.Zero;
+        return overlap > Fix64.Zero ? overlap / navCellSizeCm : Fix64.Zero;
     }
 
     /// <summary>阻挡盒 CSR 整体重建(参考 rebuildColliders):注册格矩形按包围盒外扩 reach

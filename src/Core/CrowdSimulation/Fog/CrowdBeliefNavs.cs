@@ -155,13 +155,13 @@ public sealed class CrowdBeliefNavs
                 else if (write != unknown.Count) unknown.RemoveRange(write, unknown.Count - write);
             }
 
-            int navCellsPerSide = b.Field.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, side = navCellsPerSide / navCellsPerTile;
+            int navCellsPerSide = b.Field.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
             _revealRects.Clear();
             for (int i = 0; i < tiles.Count; i++)
             {
                 int tile = tiles[i];
-                int x = tile % side * navCellsPerTile;
-                int y = tile / side * navCellsPerTile;
+                int x = tile % navTilesPerSide * navCellsPerTile;
+                int y = tile / navTilesPerSide * navCellsPerTile;
                 _revealRects.Add((x, y, x + navCellsPerTile, y + navCellsPerTile));
             }
 

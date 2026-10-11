@@ -117,7 +117,7 @@ public sealed class RuntimeAgentProfile
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
     public required int ClearanceNavCells { get; init; }
-    /// <summary>导航上下文 id = layer × 256 + clearance（数值键，禁止字符串拼接）。</summary>
+    /// <summary>导航上下文 id = layer × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
     public required int NavContextId { get; init; }
 }
 

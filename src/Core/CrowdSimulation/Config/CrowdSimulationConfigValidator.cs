@@ -214,7 +214,7 @@ public static class CrowdSimulationConfigValidator
 
             if (a.Layer < 0 || a.Layer > 255)
             {
-                throw Invalid($"agentTypes.{a.Id}.layer", "需为 0~255（导航上下文键 = layer × 256 + clearance）");
+                throw Invalid($"agentTypes.{a.Id}.layer", $"需为 0~255（导航上下文键 = layer × {CrowdSimulationLimits.NavContextLayerStride} + clearance）");
             }
 
             if (!layerSeen.Add(a.Layer))

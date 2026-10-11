@@ -95,7 +95,7 @@ public static class NavMeshAssembler
     {
         ArgumentNullException.ThrowIfNull(tiles);
         ClearStitchMemo(); // memo 键是条目引用,跨烘焙复用;新会话清空避免老条目常驻
-        int c = navCellsPerSide / navCellsPerTile, navTileCount = c * c;
+        int navTilesPerSide = navCellsPerSide / navCellsPerTile, navTileCount = navTilesPerSide * navTilesPerSide;
 
         var polyBase = new int[navTileCount + 1];
         var vertBase = new int[navTileCount + 1];
@@ -129,7 +129,7 @@ public static class NavMeshAssembler
         for (int t = 0; t < navTileCount; t++)
         {
             var e = tiles[t] ?? EmptyEntry;
-            int ox = (t % c) * navCellsPerTile, oy = (t / c) * navCellsPerTile;
+            int ox = (t % navTilesPerSide) * navCellsPerTile, oy = (t / navTilesPerSide) * navCellsPerTile;
             int pb = polyBase[t], vb = vertBase[t], ib = idxBase[t];
             for (int v = 0; v < e.Vx.Length; v++) { vx[vb + v] = e.Vx[v] + ox; vy[vb + v] = e.Vy[v] + oy; }
             for (int k = 0; k < e.PolyVerts.Length; k++) polyVerts[ib + k] = vb + e.PolyVerts[k];
@@ -167,13 +167,13 @@ public static class NavMeshAssembler
             }
         }
 
-        for (int ty = 0; ty < c; ty++)
+        for (int ty = 0; ty < navTilesPerSide; ty++)
         {
-            for (int tx = 0; tx < c; tx++)
+            for (int tx = 0; tx < navTilesPerSide; tx++)
             {
-                int t = ty * c + tx;
-                if (tx + 1 < c) Stitch(t, t + 1, 1, 0, true, (tx + 1) * navCellsPerTile, ty * navCellsPerTile);
-                if (ty + 1 < c) Stitch(t, t + c, 3, 2, false, (ty + 1) * navCellsPerTile, tx * navCellsPerTile);
+                int t = ty * navTilesPerSide + tx;
+                if (tx + 1 < navTilesPerSide) Stitch(t, t + 1, 1, 0, true, (tx + 1) * navCellsPerTile, ty * navCellsPerTile);
+                if (ty + 1 < navTilesPerSide) Stitch(t, t + navTilesPerSide, 3, 2, false, (ty + 1) * navCellsPerTile, tx * navCellsPerTile);
             }
         }
 
@@ -202,7 +202,7 @@ public static class NavMeshAssembler
         for (int t = 0; t < navTileCount; t++)
         {
             var e = tiles[t] ?? EmptyEntry;
-            int ox = (t % c) * navCellsPerTile, oy = (t / c) * navCellsPerTile;
+            int ox = (t % navTilesPerSide) * navCellsPerTile, oy = (t / navTilesPerSide) * navCellsPerTile;
             int pb = polyBase[t];
             for (int y = 0; y < navCellsPerTile; y++)
             {

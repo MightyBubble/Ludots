@@ -599,7 +599,7 @@ public sealed class CrowdSimPlanner
 
     private static bool strictestPassable(NavContext nav, int cell) => nav.Passable[cell] != 0;
 
-    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×cellSize 换算。</summary>
+    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×navCellSizeCm 换算。</summary>
     private static List<Fix64Vec2> ToVec2Path(Fix64[] points, int navCellSizeCm)
     {
         Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
@@ -1002,15 +1002,15 @@ public sealed class CrowdSimPlanner
     private static int CellOfUnit(CrowdSimSession session, int dense, CrowdSimulationUnitState st)
     {
         var entity = session.Units.EntityAt(dense);
-        int navCellsPerSide = session.Config.NavCellsPerSide, cs = session.Config.NavCellSizeCm;
+        int navCellsPerSide = session.Config.NavCellsPerSide, navCellSizeCm = session.Config.NavCellSizeCm;
         if (st.State == (byte)CrowdUnitState.Jump)
         {
             var kin = session.World.Get<CrowdSimulationKinematics>(entity);
-            return CrowdSimulationSpace.CellAtStrict(kin.JumpToCm.X, kin.JumpToCm.Y, cs, navCellsPerSide);
+            return CrowdSimulationSpace.CellAtStrict(kin.JumpToCm.X, kin.JumpToCm.Y, navCellSizeCm, navCellsPerSide);
         }
 
         var p = session.World.Get<Components.WorldPositionCm>(entity).Value;
-        return CrowdSimulationSpace.CellAtStrict(p.X, p.Y, cs, navCellsPerSide);
+        return CrowdSimulationSpace.CellAtStrict(p.X, p.Y, navCellSizeCm, navCellsPerSide);
     }
 
     /// <summary>离 target 最近且从 fromComp 可达的可走格(环形外扩,平手取格号小者)。</summary>

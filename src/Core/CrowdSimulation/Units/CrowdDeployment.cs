@@ -23,7 +23,7 @@ public static class CrowdDeployment
         var dp = cfg.Deploy;
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed * SaltSpawnSeed + (long)++sim.SpawnSeq * SaltSpawn);
         int navCellsPerSide = cfg.NavCellsPerSide;
-        var cellSize = Fix64.FromInt(cfg.NavCellSizeCm);
+        var navCellSizeCm = Fix64.FromInt(cfg.NavCellSizeCm);
 
         // 单位先清——后续任何异常都不会留下指着已清组的活单位
         sim.Units.Clear();
@@ -93,7 +93,7 @@ public static class CrowdDeployment
                 if (x >= 0 && y >= 0 && x < navCellsPerSide && y < navCellsPerSide && sim.NavFor(g.LayerIdx, g.RIdx).Passable[y * navCellsPerSide + x] != 0) cell = y * navCellsPerSide + x;
             }
 
-            if (AddUnit(sim, cell < 0 ? c : cell, rng, g, typeOf[g.Id], cellSize) >= 0) made++;
+            if (AddUnit(sim, cell < 0 ? c : cell, rng, g, typeOf[g.Id], navCellSizeCm) >= 0) made++;
         }
 
         if (skipped > 0) sim.NotifySpawnSkip(skipped, total);
@@ -108,7 +108,7 @@ public static class CrowdDeployment
         int l = cfg.UnitTypes[unitType].AgentTypeIndex;
         var nav = sim.NavFor(l, rIdx);
         int navCellsPerSide = cfg.NavCellsPerSide;
-        var cellSize = Fix64.FromInt(cfg.NavCellSizeCm);
+        var navCellSizeCm = Fix64.FromInt(cfg.NavCellSizeCm);
         int c0 = NearestPassable(nav, CrowdSimulationSpace.CellAtStrict(wx, wy, cfg.NavCellSizeCm, navCellsPerSide));
         if (c0 < 0 || sim.Units.Count >= sim.Units.Capacity) return 0;
         var rng = CrowdSimRng.Create((long)cfg.WorldSeed + (long)++sim.SpawnSeq * SaltSpawnAt);
@@ -118,7 +118,7 @@ public static class CrowdDeployment
         int comp = nav.Comp[c0];
         var profile = ProfileOf(cfg, l, rIdx);
         var spread = Fix64.Max(Fix64.OneValue,
-            CrowdReferenceMeters.SpawnSpreadNavCells(count, profile.PersonalRadiusCm, cfg.Spawn.GroupSpacingScale, cellSize));
+            CrowdReferenceMeters.SpawnSpreadNavCells(count, profile.PersonalRadiusCm, cfg.Spawn.GroupSpacingScale, navCellSizeCm));
         int cx0 = c0 % navCellsPerSide, cy0 = c0 / navCellsPerSide, made = 0;
         for (; made < count && sim.Units.Count < sim.Units.Capacity; made++)
         {
@@ -137,7 +137,7 @@ public static class CrowdDeployment
                 }
             }
 
-            AddUnit(sim, cell, rng, g, unitType, cellSize);
+            AddUnit(sim, cell, rng, g, unitType, navCellSizeCm);
         }
 
         sim.Groups.ReleaseEmpty();
@@ -145,14 +145,14 @@ public static class CrowdDeployment
     }
 
     // t = 单位模板下标;其移动类型必须是组的导航层(满容量只影响计数,不留半生成状态)
-    private static int AddUnit(CrowdSimSession sim, int cell, CrowdSimRng rng, CrowdNavGroupSet.Group g, int t, Fix64 cellSize)
+    private static int AddUnit(CrowdSimSession sim, int cell, CrowdSimRng rng, CrowdNavGroupSet.Group g, int t, Fix64 navCellSizeCm)
     {
         var cfg = sim.Config;
         int navCellsPerSide = cfg.NavCellsPerSide;
         var e = cfg.Spawn.NavCellInsetFraction;
         var w = Fix64.OneValue - 2 * e;
-        var x = (Fix64.FromInt(cell % navCellsPerSide) + e + rng.Next() * w) * cellSize;
-        var y = (Fix64.FromInt(cell / navCellsPerSide) + e + rng.Next() * w) * cellSize;
+        var x = (Fix64.FromInt(cell % navCellsPerSide) + e + rng.Next() * w) * navCellSizeCm;
+        var y = (Fix64.FromInt(cell / navCellsPerSide) + e + rng.Next() * w) * navCellSizeCm;
         var profile = ProfileOf(cfg, g.LayerIdx, g.RIdx);
         // PlayerOwner 用 Ludots 玩家号(1..P;组内索引 0 基只服务于 RNG 与编号序)
         var unit = new CrowdUnitSpawnRequest(

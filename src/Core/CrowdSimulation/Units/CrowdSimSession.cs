@@ -174,7 +174,7 @@ public sealed class CrowdSimSession
     internal readonly List<Arch.Core.Entity> SelectionMembers = new();
     internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new();
     internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new();
-    internal readonly Dictionary<int, (Fix64 X, Fix64 Y, int N)> IssueLayerSums = new();
+    internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new();
     internal readonly CrowdOrder[] IssueBatch = new CrowdOrder[1];
     internal Fix64[] FormationDiameter = Array.Empty<Fix64>();
     internal Fix64[] FormationForward = Array.Empty<Fix64>();

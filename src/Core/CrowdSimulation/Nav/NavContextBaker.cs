@@ -103,19 +103,19 @@ public static class NavContextBaker
         Dictionary<int, UpperTileInfo>? upperTiles = null;
         if (tileCache != null)
         {
-            int navCellsPerTile = config.Hpa.NavCellsPerTile, c = navCellsPerSide / navCellsPerTile;
-            tiles = new NavTileEntry?[c * c];
-            for (int ty = 0; ty < c; ty++)
+            int navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
+            tiles = new NavTileEntry?[navTilesPerSide * navTilesPerSide];
+            for (int ty = 0; ty < navTilesPerSide; ty++)
             {
-                for (int tx = 0; tx < c; tx++)
+                for (int tx = 0; tx < navTilesPerSide; tx++)
                 {
-                    tiles[ty * c + tx] = tileCache.Acquire(passable, surface.Area, navCellsPerSide, tx, ty);
+                    tiles[ty * navTilesPerSide + tx] = tileCache.Acquire(passable, surface.Area, navCellsPerSide, tx, ty);
                 }
             }
 
             foreach (int tileId in deck.TileOrder)
             {
-                int tx = tileId % c, ty = tileId / c;
+                int tx = tileId % navTilesPerSide, ty = tileId / navTilesPerSide;
                 bool any = false;
                 for (int y = ty * navCellsPerTile; y < ty * navCellsPerTile + navCellsPerTile && !any; y++)
                 {

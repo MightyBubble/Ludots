@@ -176,15 +176,15 @@ public static class CrowdNavRebake
         Math.Min(navCellsPerSide, rect.Y1 + k));
 
     /// <summary>格矩形触到的 tile id(升序去重)。</summary>
-    internal static List<int> TilesOf((int X0, int Y0, int X1, int Y1) rect, int t, int c)
+    internal static List<int> TilesOf((int X0, int Y0, int X1, int Y1) rect, int navCellsPerTile, int navTilesPerSide)
     {
         var tiles = new List<int>();
         var seen = new HashSet<int>();
-        for (int ty = rect.Y0 / t; ty <= (rect.Y1 - 1) / t; ty++)
+        for (int ty = rect.Y0 / navCellsPerTile; ty <= (rect.Y1 - 1) / navCellsPerTile; ty++)
         {
-            for (int tx = rect.X0 / t; tx <= (rect.X1 - 1) / t; tx++)
+            for (int tx = rect.X0 / navCellsPerTile; tx <= (rect.X1 - 1) / navCellsPerTile; tx++)
             {
-                if (seen.Add(ty * c + tx)) tiles.Add(ty * c + tx);
+                if (seen.Add(ty * navTilesPerSide + tx)) tiles.Add(ty * navTilesPerSide + tx);
             }
         }
 

@@ -90,7 +90,7 @@ public static class CrowdIssueOrder
             g.Count++;
             var p = world.Get<WorldPositionCm>(entity).Value;
             if (!lsum.TryGetValue(g.LayerIdx, out var acc)) acc = (Fix64.Zero, Fix64.Zero, 0);
-            lsum[g.LayerIdx] = (acc.X + p.X, acc.Y + p.Y, acc.N + 1);
+            lsum[g.LayerIdx] = (acc.XCm + p.X, acc.YCm + p.Y, acc.Count + 1);
             sx += p.X;
             sy += p.Y;
             n++;
@@ -117,10 +117,10 @@ public static class CrowdIssueOrder
         {
             // PRESERVE:各层块按(层质心 − 指令质心)平移目标
             Fix64 tx = wxCm, ty = wyCm;
-            if (mode == CrowdOrderMode.Preserve && lsum.TryGetValue(g.LayerIdx, out var acc) && acc.N > 0)
+            if (mode == CrowdOrderMode.Preserve && lsum.TryGetValue(g.LayerIdx, out var acc) && acc.Count > 0)
             {
-                tx = wxCm + acc.X / acc.N - ccx;
-                ty = wyCm + acc.Y / acc.N - ccy;
+                tx = wxCm + acc.XCm / acc.Count - ccx;
+                ty = wyCm + acc.YCm / acc.Count - ccy;
             }
 
             int goalCell = CrowdSimulationSpace.CellAtStrict(tx, ty, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);

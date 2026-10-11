@@ -231,21 +231,21 @@ public static class FlowFieldBuilder
         return cells;
     }
 
-    public static byte[] PadMask(byte[] mask, int c, int pad)
+    public static byte[] PadMask(byte[] mask, int navTilesPerSide, int pad)
     {
         if (pad == 0) return mask;
         var output = new byte[mask.Length];
-        for (int cy = 0; cy < c; cy++)
+        for (int cy = 0; cy < navTilesPerSide; cy++)
         {
-            for (int cx = 0; cx < c; cx++)
+            for (int cx = 0; cx < navTilesPerSide; cx++)
             {
-                if (mask[cy * c + cx] == 0) continue;
+                if (mask[cy * navTilesPerSide + cx] == 0) continue;
                 for (int dy = -pad; dy <= pad; dy++)
                 {
                     for (int dx = -pad; dx <= pad; dx++)
                     {
                         int x = cx + dx, y = cy + dy;
-                        if (x >= 0 && y >= 0 && x < c && y < c) output[y * c + x] = 1;
+                        if (x >= 0 && y >= 0 && x < navTilesPerSide && y < navTilesPerSide) output[y * navTilesPerSide + x] = 1;
                     }
                 }
             }

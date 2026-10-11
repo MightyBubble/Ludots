@@ -284,13 +284,13 @@ public static class CrowdStructureOps
         var kernel = sim.Movement;
         var store = sim.Structures;
         if (kernel == null || store == null) return 0;
-        int navCellsPerSide = sim.Config.NavCellsPerSide, cs = sim.Config.NavCellSizeCm;
+        int navCellsPerSide = sim.Config.NavCellsPerSide, navCellSizeCm = sim.Config.NavCellSizeCm;
         int padCells = 0;
         foreach (var nav in sim.Navs.Values) padCells = Math.Max(padCells, 2 * nav.ClearanceNavCells);
-        Fix64 ax = Fix64.FromInt(Math.Max(0, rect.X0 - padCells) * cs);
-        Fix64 ay = Fix64.FromInt(Math.Max(0, rect.Y0 - padCells) * cs);
-        Fix64 bx = Fix64.FromInt(Math.Min(navCellsPerSide, rect.X1 + padCells) * cs);
-        Fix64 by = Fix64.FromInt(Math.Min(navCellsPerSide, rect.Y1 + padCells) * cs);
+        Fix64 ax = Fix64.FromInt(Math.Max(0, rect.X0 - padCells) * navCellSizeCm);
+        Fix64 ay = Fix64.FromInt(Math.Max(0, rect.Y0 - padCells) * navCellSizeCm);
+        Fix64 bx = Fix64.FromInt(Math.Min(navCellsPerSide, rect.X1 + padCells) * navCellSizeCm);
+        Fix64 by = Fix64.FromInt(Math.Min(navCellsPerSide, rect.Y1 + padCells) * navCellSizeCm);
         var units = sim.Units;
         int moved = 0, stuck = 0;
         for (int i = 0; i < units.Count; i++)
@@ -304,7 +304,7 @@ public static class CrowdStructureOps
             if (px < ax || px >= bx || py < ay || py >= by) continue;
             if (!sim.Groups.TryGet(state.GroupId, out var g)) continue;
             var nav = sim.Navs[g.BodyNavId];
-            int cell = CrowdSimulationSpace.CellAtStrict(px, py, cs, navCellsPerSide);
+            int cell = CrowdSimulationSpace.CellAtStrict(px, py, navCellSizeCm, navCellsPerSide);
             if (state.Level != 0)
             {
                 if (nav.UpPass[cell] != 0) continue;
@@ -321,8 +321,8 @@ public static class CrowdStructureOps
                 continue;
             }
 
-            Fix64 x = Fix64.FromInt(c % navCellsPerSide * cs + cs / 2);
-            Fix64 y = Fix64.FromInt(c / navCellsPerSide * cs + cs / 2);
+            Fix64 x = Fix64.FromInt(c % navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
+            Fix64 y = Fix64.FromInt(c / navCellsPerSide * navCellSizeCm + navCellSizeCm / 2);
             if (jumping)
             {
                 kin.JumpToCm = new Fix64Vec2(x, y);
