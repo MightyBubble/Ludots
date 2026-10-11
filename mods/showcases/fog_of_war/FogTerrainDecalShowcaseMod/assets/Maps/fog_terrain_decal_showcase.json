@@ -1,5 +1,8 @@
 {
   "Id": "fog_terrain_decal_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/fog_terrain_decal.height",
     "RenderProfile": {

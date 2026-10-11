@@ -1,5 +1,8 @@
 {
   "Id": "terrain_lod_culling_acceptance",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/terrain_lod_culling.height",
     "RenderProfile": {

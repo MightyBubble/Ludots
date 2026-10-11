@@ -1,5 +1,8 @@
 {
   "Id": "terrain_1743_evidence",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/crowd_simulation_s1337.height",
     "RenderProfile": {
