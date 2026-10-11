@@ -31,8 +31,6 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId WireframeId = new(100);
     private static readonly RouteVisualId FlashBase = new(200);
 
-    // HUD 面板矩形(窗口像素)。点选排除用同一份,见 S4DeployInputSystem。
-    internal const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 148;
     private const long FlashMs = 2500; // 脏 tile 闪烁时长(呈现口径,与仿真无关)
 
     private readonly S4DeployDemoRuntime _demo;
@@ -40,26 +38,26 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly ScreenOverlayBuffer _overlay;
     private readonly Func<CrowdSimulationRuntime?> _runtimeSource;
     private readonly Func<CrowdSimSession?> _sessionSource;
-    private readonly string _title;
+    private readonly CrowdPresentationConfig _presentation;
 
     private readonly S4DeployNavWireframe _wire = new();
     private int _flashReportTick = -1;
     private long _flashStartMs;
 
-    public S4DeployDemoPresentationSystem(
+    internal S4DeployDemoPresentationSystem(
         S4DeployDemoRuntime demo,
         RouteVisualBuffer routeVisuals,
         ScreenOverlayBuffer overlay,
         Func<CrowdSimulationRuntime?> runtimeSource,
         Func<CrowdSimSession?> sessionSource,
-        string title)
+        CrowdPresentationConfig presentation)
     {
         _demo = demo;
         _routeVisuals = routeVisuals;
         _overlay = overlay;
         _runtimeSource = runtimeSource;
         _sessionSource = sessionSource;
-        _title = title;
+        _presentation = presentation;
     }
 
     public void Initialize() { }
@@ -151,7 +149,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     /// <summary>足迹包围盒(米)。rect = 中心 ± size/2;道路 = 光标向 +X 的条带(宽 size,长 RoadLength)。</summary>
     private static (double MinX, double MinY, double MaxX, double MaxY) FootprintMeters(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
     {
-        if (tpl.RoadLengthCm > 0)
+        if (tpl.IsRoad)
         {
             return (xCm / 100.0, (yCm - tpl.SizeCm / 2) / 100.0, (xCm + tpl.RoadLengthCm) / 100.0, (yCm + tpl.SizeCm / 2) / 100.0);
         }
@@ -267,14 +265,27 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     };
         }
 
-        string templateLine = _demo.BuildMode
-            ? $"建造模式 · {_demo.Template.Label}{(preview == null ? "" : preview.Value.Shown ? (preview.Value.Valid ? "(此处可放)" : "(此处不可放)") : "(光标不在地图上)")}"
-            : "观察模式";
-        string pending = session != null && NavVariantPending(session, _demo.ViewMode) ? " · 导航变体未就绪" : "";
-        string keys =
-            $"V 视图 {S4DeployDemoRuntime.ViewModeLabels[_demo.ViewMode]} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{_demo.TemplateIndex + 1}] · 建造模式下左键放置 · {templateLine}{pending}";
-        _overlay.AddRect(HudPanelX, HudPanelY, HudPanelW, HudPanelH, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
-        _overlay.AddText(32, 24, _title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
+        CrowdDeployPresentation deploy = _presentation.Deploy
+            ?? throw new InvalidOperationException("部署演示 HUD 缺少 deploy 文案。");
+        string placeHint = preview == null
+            ? ""
+            : preview.Value.Shown
+                ? (preview.Value.Valid ? deploy.PlaceOk : deploy.PlaceBlocked)
+                : deploy.PlaceOffMap;
+        string activity = _demo.BuildMode
+            ? deploy.BuildActivity
+                .Replace("{label}", _demo.Template.Label, StringComparison.Ordinal)
+                .Replace("{placeHint}", placeHint, StringComparison.Ordinal)
+            : deploy.ObserveActivity;
+        string pending = session != null && NavVariantPending(session, _demo.ViewMode) ? deploy.PendingNav : "";
+        string keys = _presentation.Hud.Keys
+            .Replace("{view}", _demo.ViewLabel, StringComparison.Ordinal)
+            .Replace("{templateIndex}", (_demo.TemplateIndex + 1).ToString(), StringComparison.Ordinal)
+            .Replace("{activity}", activity, StringComparison.Ordinal)
+            .Replace("{pending}", pending, StringComparison.Ordinal);
+        CrowdHudPanel hud = _presentation.Hud;
+        _overlay.AddRect(hud.X, hud.Y, hud.W, hud.H, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        _overlay.AddText(32, 24, _presentation.Title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         _overlay.AddText(32, 54, status, 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 78, $"最近重烘:{rebake}", 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 102, replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));

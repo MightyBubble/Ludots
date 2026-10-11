@@ -12,7 +12,8 @@ public interface IGlobalFieldVisualProjector
 /// <summary>
 /// 全场视觉投影器注册表:能力 / Mod 在此登记自己的投影器,宿主每帧在 BeginFrame 后
 /// 逐个调用——宿主不需要知道有哪些场(流的"发布到共享缓冲,再补渲染契约"的另一半)。
-/// 注册在 GameStart 期完成,运行期不增删(投影是纯函数,顺序只影响同格覆写序)。
+/// 登记在引擎安装服务时完成,运行期不增删列表(投影是纯函数,顺序只影响同格覆写序)。
+/// 需要随地图开关的写入由投影器自身在无会话或未激活时跳过,不从列表摘除。
 /// </summary>
 public sealed class GlobalFieldVisualProjectorRegistry
 {

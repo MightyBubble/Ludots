@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Nodes;
+using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Engine;
@@ -18,51 +19,126 @@ public sealed partial class CrowdSimulationRuntime
     private bool _deployPresentationInstalled;
     private S3PathDemoRuntime? _pathDemo;
     private S4DeployDemoRuntime? _deployDemo;
+    private CrowdPresentationConfig? _presentation;
+    private CrowdFieldProjectorSlot? _projectorSlot;
+    private ISystem<float>? _pathInput;
+    private ISystem<float>? _pathSimulation;
+    private ISystem<float>? _pathPresentation;
+    private ISystem<float>? _deployInput;
+    private ISystem<float>? _deployPresentation;
+
+    internal void BindProjectorSlot(GlobalFieldVisualProjectorRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        if (_projectorSlot != null)
+            throw new InvalidOperationException("群体场投影槽已登记。");
+        _projectorSlot = new CrowdFieldProjectorSlot();
+        registry.Register(_projectorSlot);
+    }
+
+    private string? PresentationKindName => _presentation?.Kind;
+
+    internal void ParsePresentation(JsonObject debug)
+    {
+        _presentation = CrowdPresentationConfig.ParseOptional(debug);
+    }
 
     public bool ReleasePathPresentation(GameEngine engine, MapId mapId)
     {
-        if (_pathDemo == null || _configDto == null || _debug == null) return false;
+        if (_pathDemo == null || _configDto == null || _presentation == null) return false;
         if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
-        if (PresentationKind(_debug) != "path") return false;
-        _pathDemo.Active = false;
-        _pathDemo.Dispose();
-        _pathDemo = null;
-        _pathPresentationInstalled = false;
+        if (_presentation.Kind != CrowdPresentationConfig.KindPath) return false;
+        DetachPath(engine);
+        if (_projectorSlot != null) _projectorSlot.Current = null;
         return true;
+    }
+
+    public bool ReleaseDeployPresentation(GameEngine engine, MapId mapId)
+    {
+        if (_deployDemo == null || _configDto == null || _presentation == null) return false;
+        if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
+        if (_presentation.Kind != CrowdPresentationConfig.KindDeploy) return false;
+        DetachDeploy(engine);
+        if (_projectorSlot != null) _projectorSlot.Current = null;
+        return true;
+    }
+
+    private void DetachPath(GameEngine engine)
+    {
+        if (_pathDemo != null)
+        {
+            _pathDemo.Active = false;
+            _pathDemo.Dispose();
+            _pathDemo = null;
+        }
+
+        UnregisterFixed(engine, ref _pathInput, SystemGroup.PostMovement);
+        UnregisterFixed(engine, ref _pathSimulation, SystemGroup.PostMovement);
+        UnregisterPresented(engine, ref _pathPresentation);
+        _pathPresentationInstalled = false;
+    }
+
+    private void DetachDeploy(GameEngine engine)
+    {
+        if (_deployDemo != null) _deployDemo.Active = false;
+        _deployDemo = null;
+        UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
+        UnregisterPresented(engine, ref _deployPresentation);
+        _deployPresentationInstalled = false;
+    }
+
+    private static void UnregisterFixed(GameEngine engine, ref ISystem<float>? system, SystemGroup group)
+    {
+        if (system == null) return;
+        if (!engine.UnregisterSystem(system, group))
+            throw new InvalidOperationException($"卸载群体演示系统失败: {system.GetType().Name}。");
+        system = null;
+    }
+
+    private static void UnregisterPresented(GameEngine engine, ref ISystem<float>? system)
+    {
+        if (system == null) return;
+        if (!engine.UnregisterPresentationSystem(system))
+            throw new InvalidOperationException($"卸载群体呈现系统失败: {system.GetType().Name}。");
+        system = null;
     }
 
     private void InstallPathPresentation(GameEngine engine, MapConfig mapConfig)
     {
         if (_pathPresentationInstalled) return;
-        var presentation = RequirePresentation(_debug!);
+        CrowdPresentationConfig presentation = _presentation
+            ?? throw new InvalidOperationException("CrowdSimulationDebug.json 缺少 presentation。");
+        CrowdPathPresentation path = presentation.Path
+            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.path 必填。");
         var bindings = new CrowdPathBindings
         {
-            SetStart = RequireAction(presentation, "setStart"),
-            SetGoal = RequireAction(presentation, "setGoal"),
-            CycleContext = RequireAction(presentation, "cycleContext"),
-            ToggleThreads = RequireAction(presentation, "toggleThreads"),
-            ToggleSlow = RequireAction(presentation, "toggleSlow"),
-            CycleView = RequireAction(presentation, "cycleView"),
+            SetStart = path.Actions.SetStart,
+            SetGoal = path.Actions.SetGoal,
+            CycleContext = path.Actions.CycleContext,
+            ToggleThreads = path.Actions.ToggleThreads,
+            ToggleSlow = path.Actions.ToggleSlow,
+            CycleView = path.Actions.CycleView,
         };
-        string truth = presentation["truthAsset"]?.GetValue<string>()
-            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.truthAsset 必填(path)。");
-        string title = RequireTitle(presentation);
-        var (registry, routes) = EnsureVisualServices(engine);
-        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, truth);
+        var (routes, slot) = RequireVisualServices(engine);
+        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, path.TruthAsset);
+        demo.UseViewLabels(presentation.ViewLabels);
         var flow = new CrowdFlowFieldVisualSource
         {
             CellCount = demo.Nav.CellCount,
             CellSizeCm = demo.Config.NavCellSizeCm,
         };
         demo.FlowVisual = flow;
-        registry.Register(new DemoViewProjector(
+        slot.Current = new DemoViewProjector(
             demo,
             new CrowdFlowFieldVisualProjector(flow),
-            new CrowdWalkableVisualProjector(flow, () => demo.Nav)));
+            new CrowdWalkableVisualProjector(flow, () => demo.Nav));
         var overlay = RequireOverlay(engine);
-        engine.RegisterSystem(new S3PathInputSystem(engine, demo, bindings), SystemGroup.PostMovement);
-        engine.RegisterSystem(new S3PathDemoSimulationSystem(demo), SystemGroup.PostMovement);
-        engine.RegisterPresentationSystem(new S3PathDemoPresentationSystem(demo, routes, overlay, title));
+        _pathInput = new S3PathInputSystem(engine, demo, bindings, presentation.Hud);
+        _pathSimulation = new S3PathDemoSimulationSystem(demo);
+        _pathPresentation = new S3PathDemoPresentationSystem(demo, routes, overlay, presentation);
+        engine.RegisterSystem(_pathInput, SystemGroup.PostMovement);
+        engine.RegisterSystem(_pathSimulation, SystemGroup.PostMovement);
+        engine.RegisterPresentationSystem(_pathPresentation);
         _pathDemo = demo;
         _pathPresentationInstalled = true;
     }
@@ -70,106 +146,64 @@ public sealed partial class CrowdSimulationRuntime
     private void InstallDeployPresentation(GameEngine engine)
     {
         if (_deployPresentationInstalled) return;
-        var presentation = RequirePresentation(_debug!);
+        CrowdPresentationConfig presentation = _presentation
+            ?? throw new InvalidOperationException("CrowdSimulationDebug.json 缺少 presentation。");
+        CrowdDeployPresentation deploy = presentation.Deploy
+            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.deploy 必填。");
         var bindings = new CrowdDeployBindings
         {
-            CycleView = RequireAction(presentation, "cycleView"),
-            ToggleBuild = RequireAction(presentation, "toggleBuild"),
-            Remove = RequireAction(presentation, "remove"),
-            Place = RequireAction(presentation, "place"),
-            Template1 = RequireAction(presentation, "template1"),
-            Template2 = RequireAction(presentation, "template2"),
-            Template3 = RequireAction(presentation, "template3"),
+            CycleView = deploy.Actions.CycleView,
+            ToggleBuild = deploy.Actions.ToggleBuild,
+            Remove = deploy.Actions.Remove,
+            Place = deploy.Actions.Place,
         };
-        var structures = presentation["structures"]?.AsArray()
-            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.structures 必填(deploy)。");
-        if (structures.Count != 3)
+        var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
+        for (int i = 0; i < deploy.Structures.Length; i++)
         {
-            throw new InvalidOperationException("CrowdSimulationDebug.json presentation.structures 需要 3 条,与模板动作一一对应。");
-        }
-
-        var choices = new S4DeployDemoRuntime.StructureChoice[3];
-        for (int i = 0; i < 3; i++)
-        {
-            var item = structures[i]!.AsObject();
+            CrowdStructureTemplateDto item = deploy.Structures[i];
             choices[i] = new S4DeployDemoRuntime.StructureChoice(
-                item["id"]?.GetValue<string>() ?? throw new InvalidOperationException("presentation.structures.id 必填。"),
-                item["label"]?.GetValue<string>() ?? throw new InvalidOperationException("presentation.structures.label 必填。"),
-                item["sizeCm"]?.GetValue<int>() ?? throw new InvalidOperationException("presentation.structures.sizeCm 必填。"),
-                item["roadLengthCm"]?.GetValue<int>() ?? 0);
+                item.Id,
+                item.Label,
+                item.Shape,
+                item.SizeCm,
+                item.RoadLengthCm ?? 0,
+                item.SelectAction);
         }
 
-        string title = RequireTitle(presentation);
-        var (registry, routes) = EnsureVisualServices(engine);
+        var (routes, slot) = RequireVisualServices(engine);
         var demo = new S4DeployDemoRuntime(engine);
+        demo.UseViewLabels(presentation.ViewLabels);
         demo.UseStructures(choices);
-        registry.Register(new S4DeployDemoViewProjector(
+        slot.Current = new S4DeployDemoViewProjector(
             demo,
-            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null));
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null);
         var overlay = RequireOverlay(engine);
-        engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(
-            new S4DeployInputSystem(engine, demo, bindings), SystemGroup.PostMovement);
-        engine.RegisterPresentationSystem(new S4DeployDemoPresentationSystem(
+        _deployInput = new S4DeployInputSystem(engine, demo, bindings, presentation.Hud);
+        _deployPresentation = new S4DeployDemoPresentationSystem(
             demo,
             routes,
             overlay,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null,
-            title));
+            presentation);
+        engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(_deployInput, SystemGroup.PostMovement);
+        engine.RegisterPresentationSystem(_deployPresentation);
         _deployDemo = demo;
         _deployPresentationInstalled = true;
     }
 
-    private static (GlobalFieldVisualProjectorRegistry Registry, RouteVisualBuffer Routes) EnsureVisualServices(GameEngine engine)
+    private (RouteVisualBuffer Routes, CrowdFieldProjectorSlot Slot) RequireVisualServices(GameEngine engine)
     {
-        var registry = engine.GetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry);
-        if (registry == null)
-        {
-            registry = new GlobalFieldVisualProjectorRegistry();
-            engine.SetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, registry);
-        }
-
-        var routes = engine.GetService(CoreServiceKeys.RouteVisualBuffer);
-        if (routes == null)
-        {
-            routes = new RouteVisualBuffer();
-            engine.SetService(CoreServiceKeys.RouteVisualBuffer, routes);
-        }
-
-        return (registry, routes);
+        var routes = engine.GetService(CoreServiceKeys.RouteVisualBuffer)
+            ?? throw new InvalidOperationException("群体演示需要 RouteVisualBuffer。");
+        CrowdFieldProjectorSlot slot = _projectorSlot
+            ?? throw new InvalidOperationException("群体演示需要已登记的场投影槽。");
+        if (engine.GetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry) == null)
+            throw new InvalidOperationException("群体演示需要 GlobalFieldVisualProjectorRegistry。");
+        return (routes, slot);
     }
 
     private static ScreenOverlayBuffer RequireOverlay(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
         ?? throw new InvalidOperationException("群体演示需要 ScreenOverlayBuffer。");
-
-    private static string? PresentationKind(JsonObject debug)
-    {
-        var presentation = debug["presentation"] as JsonObject;
-        if (presentation == null) return null;
-        string kind = presentation["kind"]?.GetValue<string>()
-            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.kind 必填。");
-        if (kind is not ("path" or "deploy"))
-        {
-            throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.kind \"{kind}\" 需为 path / deploy。");
-        }
-
-        return kind;
-    }
-
-    private static JsonObject RequirePresentation(JsonObject debug) =>
-        debug["presentation"] as JsonObject
-        ?? throw new InvalidOperationException("CrowdSimulationDebug.json 缺少 presentation。");
-
-    private static string RequireTitle(JsonObject presentation) =>
-        presentation["title"]?.GetValue<string>()
-        ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.title 必填。");
-
-    private static string RequireAction(JsonObject presentation, string name)
-    {
-        var actions = presentation["actions"] as JsonObject
-            ?? throw new InvalidOperationException("CrowdSimulationDebug.json presentation.actions 必填。");
-        return actions[name]?.GetValue<string>()
-            ?? throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.actions.{name} 必填。");
-    }
 }

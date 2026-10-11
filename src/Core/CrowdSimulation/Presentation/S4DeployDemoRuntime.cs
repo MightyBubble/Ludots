@@ -8,25 +8,21 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
-/// S4 部署演示交互运行时(F03-b):演示态(视图/建造模式/模板选择)与现场指令
-/// (placeStructure/removeStructureAt)全部经输入队列在仿真 tick 边界消费——呈现线程只入队。
+/// S4 部署演示交互运行时:演示态(视图/建造模式/模板选择)与现场指令
+/// (placeStructure/removeStructureAt)经输入队列在仿真 tick 边界消费。固定步输入系统入队并在会话步进前调用 Tick。
 /// 首条现场指令进入会话后停用本次激活的自动回放(回放是对拍自证,现场输入后不再成立),
 /// 停用走 CrowdSimulationRuntime.SuppressAutoReplay 正式面,回放语义本身不动。
 /// </summary>
 public sealed class S4DeployDemoRuntime
 {
-    /// <summary>建造模板(1/2/3):尺寸与演示脚本同值(building 140m / 路障 70m / 道路 30m 宽×250m 长,
-    /// 道路自光标向 +X 铺 250m——单击建造的演示口径,脚本里的道路同为 X 向条带)。</summary>
-    public sealed record StructureChoice(string Id, string Label, int SizeCm, int RoadLengthCm);
+    public const string ShapePoint = "point";
+    public const string ShapeRoad = "road";
 
-    public static readonly StructureChoice[] Templates =
+    /// <summary>建造模板。shape=road 时道路自光标向 +X 铺 RoadLengthCm;point 的 RoadLengthCm 恒为 0,形状以 Shape 为准。</summary>
+    public sealed record StructureChoice(string Id, string Label, string Shape, int SizeCm, int RoadLengthCm, string SelectAction)
     {
-        new("building", "建筑 rect 140m", 14000, 0),
-        new("s7barrier", "路障 rect 70m(4s 寿命)", 7000, 0),
-        new("road", "道路 path 30m×250m(+X)", 3000, 25000),
-    };
-
-    public static readonly string[] ViewModeLabels = { "路线(流场)", "可走区域", "NavMesh+HPA" };
+        public bool IsRoad => string.Equals(Shape, ShapeRoad, StringComparison.Ordinal);
+    }
 
     private readonly GameEngine? _engine;
     private readonly object _inputGate = new();
@@ -43,29 +39,39 @@ public sealed class S4DeployDemoRuntime
     public int TemplateIndex { get; private set; }
     /// <summary>现场指令已进入本次会话(自动回放停用;会话重激活时随运行时一起复位)。</summary>
     public bool InteractiveMode { get; private set; }
-    private StructureChoice[] _choices = Templates;
+    private StructureChoice[] _choices = Array.Empty<StructureChoice>();
+    private string[]? _viewLabels;
+    private int _viewModeCount = 3;
     public StructureChoice Template => _choices[TemplateIndex];
+    public int StructureCount => _choices.Length;
+    public string SelectActionAt(int index) => _choices[index].SelectAction;
+    public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("部署演示视图名未配置。"))[ViewMode];
+
+    public void UseViewLabels(string[] labels)
+    {
+        if (labels == null || labels.Length == 0)
+            throw new InvalidOperationException("部署演示视图名至少一条。");
+        _viewLabels = labels;
+        _viewModeCount = labels.Length;
+    }
 
     public void UseStructures(StructureChoice[] choices)
     {
-        if (choices.Length != Templates.Length)
-        {
-            throw new InvalidOperationException($"部署演示模板数 {choices.Length} 与动作槽 {Templates.Length} 不一致。");
-        }
-
+        if (choices == null || choices.Length == 0)
+            throw new InvalidOperationException("部署演示至少一条结构模板。");
         _choices = choices;
     }
 
     public S4DeployDemoRuntime(GameEngine? engine) => _engine = engine;
 
-    // ── 呈现线程入口(只入队) ─────────────────────────────
-    public void EnqueueCycleView() => Enqueue(() => ViewMode = (ViewMode + 1) % ViewModeLabels.Length);
+    // ── 固定步入口(只入队) ─────────────────────────────
+    public void EnqueueCycleView() => Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount);
     public void EnqueueToggleBuild() => Enqueue(() => BuildMode = !BuildMode);
     public void EnqueueSelectTemplate(int index) => Enqueue(() => TemplateIndex = index);
     public void EnqueuePlace(int xCm, int yCm) => Enqueue(() =>
     {
         var tpl = Template;
-        bool road = tpl.RoadLengthCm > 0;
+        bool road = tpl.IsRoad;
         SubmitInteractive(new CrowdSimCommand
         {
             Kind = CrowdSimCommandKind.PlaceStructure,
@@ -85,7 +91,7 @@ public sealed class S4DeployDemoRuntime
         lock (_inputGate) _inputQueue.Enqueue(action);
     }
 
-    /// <summary>仿真 tick 边界消费(PostMovement 组,先于 Cleanup 组的会话步进)。</summary>
+    /// <summary>固定步消费队列。S4DeployInputSystem 在 PostMovement、会话步进之前调用。</summary>
     public void Tick()
     {
         if (!Active) return;
@@ -123,18 +129,4 @@ public sealed class S4DeployDemoRuntime
 
         session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
     }
-}
-
-/// <summary>输入队列消费系统(固定 tick,PostMovement 组:现场指令在本 tick 的会话步进前落地)。</summary>
-public sealed class S4DeployDemoInteractionSystem : Arch.System.ISystem<float>
-{
-    private readonly S4DeployDemoRuntime _runtime;
-
-    public S4DeployDemoInteractionSystem(S4DeployDemoRuntime runtime) => _runtime = runtime;
-
-    public void Initialize() { }
-    public void BeforeUpdate(in float t) { }
-    public void Update(in float dt) => _runtime.Tick();
-    public void AfterUpdate(in float t) { }
-    public void Dispose() { }
 }

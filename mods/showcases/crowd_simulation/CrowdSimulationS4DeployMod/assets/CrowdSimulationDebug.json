@@ -145,32 +145,51 @@
   "presentation": {
     "kind": "deploy",
     "title": "CrowdSimulation S4 · 部署演示(种子 1337,脚本行军 + 交互建造)",
-    "actions": {
-      "cycleView": "CrowdSimulation.S4.CycleView",
-      "toggleBuild": "CrowdSimulation.S4.ToggleBuild",
-      "remove": "CrowdSimulation.S4.RemoveStructure",
-      "place": "CrowdSimulation.S4.Place",
-      "template1": "CrowdSimulation.S4.Template1",
-      "template2": "CrowdSimulation.S4.Template2",
-      "template3": "CrowdSimulation.S4.Template3"
+    "viewLabels": ["路线(流场)", "可走区域", "NavMesh+HPA"],
+    "hud": {
+      "x": 16,
+      "y": 16,
+      "w": 1568,
+      "h": 148,
+      "keys": "V 视图 {view} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{templateIndex}] · 建造模式下左键放置 · {activity}{pending}"
     },
-    "structures": [
-      {
-        "id": "building",
-        "label": "建筑 rect 140m",
-        "sizeCm": 14000
+    "deploy": {
+      "actions": {
+        "cycleView": "CrowdSimulation.S4.CycleView",
+        "toggleBuild": "CrowdSimulation.S4.ToggleBuild",
+        "remove": "CrowdSimulation.S4.RemoveStructure",
+        "place": "CrowdSimulation.S4.Place"
       },
-      {
-        "id": "s7barrier",
-        "label": "路障 rect 70m(4s 寿命)",
-        "sizeCm": 7000
-      },
-      {
-        "id": "road",
-        "label": "道路 path 30m×250m(+X)",
-        "sizeCm": 3000,
-        "roadLengthCm": 25000
-      }
-    ]
+      "buildActivity": "建造模式 · {label}{placeHint}",
+      "observeActivity": "观察模式",
+      "placeOk": "(此处可放)",
+      "placeBlocked": "(此处不可放)",
+      "placeOffMap": "(光标不在地图上)",
+      "pendingNav": " · 导航变体未就绪",
+      "structures": [
+        {
+          "id": "building",
+          "label": "建筑 rect 140m",
+          "shape": "point",
+          "sizeCm": 14000,
+          "selectAction": "CrowdSimulation.S4.Template1"
+        },
+        {
+          "id": "s7barrier",
+          "label": "路障 rect 70m(4s 寿命)",
+          "shape": "point",
+          "sizeCm": 7000,
+          "selectAction": "CrowdSimulation.S4.Template2"
+        },
+        {
+          "id": "road",
+          "label": "道路 path 30m×250m(+X)",
+          "shape": "road",
+          "sizeCm": 3000,
+          "roadLengthCm": 25000,
+          "selectAction": "CrowdSimulation.S4.Template3"
+        }
+      ]
+    }
   }
 }

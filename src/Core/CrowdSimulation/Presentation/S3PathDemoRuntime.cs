@@ -34,7 +34,9 @@ public sealed class S3PathDemoRuntime : IDisposable
     public int ContextIndex { get; private set; }
     /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/桥面/portal) · 2 NavMesh+HPA 线框。</summary>
     public int ViewMode { get; private set; }
-    public static readonly string[] ViewModeLabels = { "路线", "可走区域", "NavMesh+HPA" };
+    private string[]? _viewLabels;
+    private int _viewModeCount = 3;
+    public string ViewLabel => (_viewLabels ?? throw new InvalidOperationException("路径演示视图名未配置。"))[ViewMode];
     public int StartCell { get; private set; } = -1;
     public int GoalCell { get; private set; } = -1;
     public int HoveredCell { get; set; } = -1;
@@ -125,7 +127,15 @@ public sealed class S3PathDemoRuntime : IDisposable
     public void EnqueueSetGoal(int cell) { lock (_inputGate) _inputQueue.Enqueue(() => { GoalCell = cell; _pathDirty = true; }); }
     public void EnqueueCycleContext() { lock (_inputGate) _inputQueue.Enqueue(() => { ContextIndex = (ContextIndex + 1) % Contexts.Count; _pathDirty = true; }); }
     public void EnqueueCycleThreads() { lock (_inputGate) _inputQueue.Enqueue(() => Service.SetWorkerCount(Service.WorkerCount == 1 ? 2 : Service.WorkerCount == 2 ? 4 : 1)); }
-    public void EnqueueCycleView() { lock (_inputGate) _inputQueue.Enqueue(() => ViewMode = (ViewMode + 1) % ViewModeLabels.Length); }
+    public void UseViewLabels(string[] labels)
+    {
+        if (labels == null || labels.Length == 0)
+            throw new InvalidOperationException("路径演示视图名至少一条。");
+        _viewLabels = labels;
+        _viewModeCount = labels.Length;
+    }
+
+    public void EnqueueCycleView() { lock (_inputGate) _inputQueue.Enqueue(() => ViewMode = (ViewMode + 1) % _viewModeCount); }
     public void EnqueueToggleSlow()
     {
         lock (_inputGate) _inputQueue.Enqueue(() =>

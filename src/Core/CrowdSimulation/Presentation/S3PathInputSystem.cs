@@ -14,13 +14,14 @@ internal sealed class S3PathInputSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly S3PathDemoRuntime _runtime;
     private readonly CrowdPathBindings _bindings;
-    private bool _prevStart, _prevGoal, _prevContext, _prevThreads, _prevSlow, _prevView;
+    private readonly CrowdHudPanel _hud;
 
-    public S3PathInputSystem(GameEngine engine, S3PathDemoRuntime runtime, CrowdPathBindings bindings)
+    public S3PathInputSystem(GameEngine engine, S3PathDemoRuntime runtime, CrowdPathBindings bindings, CrowdHudPanel hud)
     {
         _engine = engine;
         _runtime = runtime;
         _bindings = bindings;
+        _hud = hud;
     }
 
     public void Initialize() { }
@@ -31,18 +32,11 @@ internal sealed class S3PathInputSystem : ISystem<float>
     public void Update(in float dt)
     {
         if (!_runtime.Active) return;
-        var actions = _engine.GetService(CoreServiceKeys.InputHandler)
-            ?? throw new InvalidOperationException("群体路径演示需要 InputHandler。");
+        var actions = CrowdAuthoritativeInput.Require(_engine);
         int n = _runtime.Nav.CellCount;
         float csCm = _runtime.Config.NavCellSizeCm;
         int hovered = -1;
-        if (CrowdPointerGround.TryPick(
-                _engine, actions,
-                S3PathDemoPresentationSystem.HudPanelX,
-                S3PathDemoPresentationSystem.HudPanelY,
-                S3PathDemoPresentationSystem.HudPanelW,
-                S3PathDemoPresentationSystem.HudPanelH,
-                out double xCm, out double yCm))
+        if (CrowdPointerGround.TryPick(_engine, actions, _hud.X, _hud.Y, _hud.W, _hud.H, out double xCm, out double yCm))
         {
             int cx = (int)MathF.Floor((float)xCm / csCm);
             int cy = (int)MathF.Floor((float)yCm / csCm);
@@ -50,24 +44,12 @@ internal sealed class S3PathInputSystem : ISystem<float>
         }
 
         _runtime.HoveredCell = hovered;
-        bool start = actions.IsDown(_bindings.SetStart);
-        bool goal = actions.IsDown(_bindings.SetGoal);
-        bool context = actions.IsDown(_bindings.CycleContext);
-        bool threads = actions.IsDown(_bindings.ToggleThreads);
-        bool slow = actions.IsDown(_bindings.ToggleSlow);
-        bool view = actions.IsDown(_bindings.CycleView);
-        if (start && !_prevStart && hovered >= 0) _runtime.EnqueueSetStart(hovered);
-        if (goal && !_prevGoal && hovered >= 0) _runtime.EnqueueSetGoal(hovered);
-        if (context && !_prevContext) _runtime.EnqueueCycleContext();
-        if (threads && !_prevThreads) _runtime.EnqueueCycleThreads();
-        if (slow && !_prevSlow) _runtime.EnqueueToggleSlow();
-        if (view && !_prevView) _runtime.EnqueueCycleView();
-        _prevStart = start;
-        _prevGoal = goal;
-        _prevContext = context;
-        _prevThreads = threads;
-        _prevSlow = slow;
-        _prevView = view;
+        if (actions.PressedThisTick(_bindings.SetStart) && hovered >= 0) _runtime.EnqueueSetStart(hovered);
+        if (actions.PressedThisTick(_bindings.SetGoal) && hovered >= 0) _runtime.EnqueueSetGoal(hovered);
+        if (actions.PressedThisTick(_bindings.CycleContext)) _runtime.EnqueueCycleContext();
+        if (actions.PressedThisTick(_bindings.ToggleThreads)) _runtime.EnqueueCycleThreads();
+        if (actions.PressedThisTick(_bindings.ToggleSlow)) _runtime.EnqueueToggleSlow();
+        if (actions.PressedThisTick(_bindings.CycleView)) _runtime.EnqueueCycleView();
     }
 }
 

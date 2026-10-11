@@ -362,6 +362,31 @@ namespace Ludots.Core.Engine
             return false;
         }
 
+        internal int CountSystemsOfType(SystemGroup group, Type type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            if (!_systemGroups.TryGetValue(group, out var systems)) return 0;
+            int count = 0;
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i].GetType() == type) count++;
+            }
+
+            return count;
+        }
+
+        internal int CountPresentationSystemsOfType(Type type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            int count = 0;
+            for (int i = 0; i < _presentationSystems.Count; i++)
+            {
+                if (_presentationSystems[i].GetType() == type) count++;
+            }
+
+            return count;
+        }
+
         public void InsertPresentationSystemBefore<TAnchor>(ISystem<float> system)
             where TAnchor : class
         {
@@ -2128,6 +2153,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             var screenOverlayBuffer = new ScreenOverlayBuffer();
             SetService(CoreServiceKeys.ScreenOverlayBuffer, screenOverlayBuffer);
+            var fieldProjectors = new Ludots.Core.Presentation.Fields.GlobalFieldVisualProjectorRegistry();
+            _crowdSimulationRuntime.BindProjectorSlot(fieldProjectors);
+            SetService(CoreServiceKeys.GlobalFieldVisualProjectorRegistry, fieldProjectors);
+            SetService(CoreServiceKeys.RouteVisualBuffer, new RouteVisualBuffer());
             SetService(CoreServiceKeys.MinimapRuntime, minimapRuntime);
             SetService(CoreServiceKeys.MinimapMarkerBuffer, minimapMarkerBuffer);
             SetService(CoreServiceKeys.MinimapScreenMarkerBuffer, minimapScreenMarkerBuffer);
@@ -2248,8 +2277,6 @@ namespace Ludots.Core.Engine
             Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Bind(worldAttributeStore);
             SetService(CoreServiceKeys.WorldAttributeStore, worldAttributeStore);
             _cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
-            CameraPoseScriptSystem.TryInstall(this);
-            ScriptedFogSourceSystem.TryInstall(this);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
@@ -2372,6 +2399,7 @@ namespace Ludots.Core.Engine
                     knowledgeProjectionStore,
                     new PlayerOwnedEntityObserverResolver(playerEntityLookup)),
                 SystemGroup.PostMovement);
+            ScriptedFogSourceSystem.TryInstall(this);
             RegisterSystem(
                 new UtilityAiDecisionSystem(
                     World,
@@ -2511,6 +2539,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
+            CameraPoseScriptSystem.TryInstall(this);
             RegisterSystem(new CameraProfileBindingSystem(World, GlobalContext, virtualCameraRegistry), SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection

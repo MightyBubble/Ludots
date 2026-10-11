@@ -15,13 +15,14 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly S4DeployDemoRuntime _demo;
     private readonly CrowdDeployBindings _bindings;
-    private bool _prevView, _prevBuild, _prevRemove, _prevPlace, _prevT1, _prevT2, _prevT3;
+    private readonly CrowdHudPanel _hud;
 
-    public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings)
+    public S4DeployInputSystem(GameEngine engine, S4DeployDemoRuntime demo, CrowdDeployBindings bindings, CrowdHudPanel hud)
     {
         _engine = engine;
         _demo = demo;
         _bindings = bindings;
+        _hud = hud;
     }
 
     public void Initialize() { }
@@ -32,46 +33,27 @@ internal sealed class S4DeployInputSystem : ISystem<float>
     public void Update(in float dt)
     {
         if (!_demo.Active) return;
-        var actions = _engine.GetService(CoreServiceKeys.InputHandler)
-            ?? throw new InvalidOperationException("群体部署演示需要 InputHandler。");
-        bool picked = CrowdPointerGround.TryPick(
-            _engine, actions,
-            S4DeployDemoPresentationSystem.HudPanelX,
-            S4DeployDemoPresentationSystem.HudPanelY,
-            S4DeployDemoPresentationSystem.HudPanelW,
-            S4DeployDemoPresentationSystem.HudPanelH,
-            out double xCm, out double yCm);
+        var actions = CrowdAuthoritativeInput.Require(_engine);
+        bool picked = CrowdPointerGround.TryPick(_engine, actions, _hud.X, _hud.Y, _hud.W, _hud.H, out double xCm, out double yCm);
         _demo.HoverCm = picked ? (xCm, yCm) : null;
 
-        bool view = actions.IsDown(_bindings.CycleView);
-        bool build = actions.IsDown(_bindings.ToggleBuild);
-        bool remove = actions.IsDown(_bindings.Remove);
-        bool place = actions.IsDown(_bindings.Place);
-        bool t1 = actions.IsDown(_bindings.Template1);
-        bool t2 = actions.IsDown(_bindings.Template2);
-        bool t3 = actions.IsDown(_bindings.Template3);
-        if (view && !_prevView) _demo.EnqueueCycleView();
-        if (build && !_prevBuild) _demo.EnqueueToggleBuild();
-        if (t1 && !_prevT1) _demo.EnqueueSelectTemplate(0);
-        if (t2 && !_prevT2) _demo.EnqueueSelectTemplate(1);
-        if (t3 && !_prevT3) _demo.EnqueueSelectTemplate(2);
-        if (place && !_prevPlace && _demo.BuildMode && picked)
+        if (actions.PressedThisTick(_bindings.CycleView)) _demo.EnqueueCycleView();
+        if (actions.PressedThisTick(_bindings.ToggleBuild)) _demo.EnqueueToggleBuild();
+        for (int i = 0; i < _demo.StructureCount; i++)
+        {
+            if (actions.PressedThisTick(_demo.SelectActionAt(i))) _demo.EnqueueSelectTemplate(i);
+        }
+
+        if (actions.PressedThisTick(_bindings.Place) && _demo.BuildMode && picked)
         {
             _demo.EnqueuePlace((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
-        if (remove && !_prevRemove && picked)
+        if (actions.PressedThisTick(_bindings.Remove) && picked)
         {
             _demo.EnqueueRemove((int)Math.Floor(xCm), (int)Math.Floor(yCm));
         }
 
-        _prevView = view;
-        _prevBuild = build;
-        _prevRemove = remove;
-        _prevPlace = place;
-        _prevT1 = t1;
-        _prevT2 = t2;
-        _prevT3 = t3;
         _demo.Tick();
     }
 }
@@ -82,7 +64,4 @@ internal sealed class CrowdDeployBindings
     public required string ToggleBuild { get; init; }
     public required string Remove { get; init; }
     public required string Place { get; init; }
-    public required string Template1 { get; init; }
-    public required string Template2 { get; init; }
-    public required string Template3 { get; init; }
 }

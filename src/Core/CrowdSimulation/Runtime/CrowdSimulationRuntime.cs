@@ -10,6 +10,7 @@ using ArchWorld = Arch.Core.World;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
@@ -136,12 +137,12 @@ public sealed partial class CrowdSimulationRuntime
         if (!TryEnsureConfig(engine) || _configDto == null || _debug == null) return false;
         if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
 
-        string? presentationKind = PresentationKind(_debug);
-        if (presentationKind == "path") InstallPathPresentation(engine, mapConfig);
-        if (!IsAutostartEnabled(_debug)) return presentationKind == "path";
+        string? presentationKind = PresentationKindName;
+        if (presentationKind == CrowdPresentationConfig.KindPath) InstallPathPresentation(engine, mapConfig);
+        if (!IsAutostartEnabled(_debug)) return presentationKind == CrowdPresentationConfig.KindPath;
 
         Activate(engine, mapId, mapConfig);
-        if (presentationKind == "deploy") InstallDeployPresentation(engine);
+        if (presentationKind == CrowdPresentationConfig.KindDeploy) InstallDeployPresentation(engine);
         return true;
     }
 
@@ -149,7 +150,9 @@ public sealed partial class CrowdSimulationRuntime
     {
         ArgumentNullException.ThrowIfNull(engine);
         bool releasedPath = ReleasePathPresentation(engine, mapId);
-        if (_activeMapId == null || !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal)) return releasedPath;
+        bool releasedDeploy = ReleaseDeployPresentation(engine, mapId);
+        if (_activeMapId == null || !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal))
+            return releasedPath || releasedDeploy;
         Deactivate(engine);
         return true;
     }
@@ -174,6 +177,7 @@ public sealed partial class CrowdSimulationRuntime
         _configDto = CrowdSimulationConfig.Load(merged);
         _debug = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+        ParsePresentation(_debug);
         return true;
     }
 

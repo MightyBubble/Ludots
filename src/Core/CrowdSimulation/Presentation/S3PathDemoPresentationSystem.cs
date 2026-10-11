@@ -23,27 +23,25 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId RouteGoal = new(3);
     private static readonly RouteVisualId RouteHover = new(4);
 
-    internal const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 118;
-
     private readonly S3PathDemoRuntime _runtime;
     private readonly RouteVisualBuffer _routeVisuals;
     private readonly ScreenOverlayBuffer _overlay;
-    private readonly string _title;
+    private readonly CrowdPresentationConfig _presentation;
 
     private int _wireNavId = -1;
     private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
     private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
 
-    public S3PathDemoPresentationSystem(
+    internal S3PathDemoPresentationSystem(
         S3PathDemoRuntime runtime,
         RouteVisualBuffer routeVisuals,
         ScreenOverlayBuffer overlay,
-        string title)
+        CrowdPresentationConfig presentation)
     {
         _runtime = runtime;
         _routeVisuals = routeVisuals;
         _overlay = overlay;
-        _title = title;
+        _presentation = presentation;
     }
 
     public void Initialize() { }
@@ -113,10 +111,12 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
             (current == null ? "" : $"；可达 {(current.Reachable ? "是" : "否")}；流场到达 {(current.Flow?.Reached ?? 0)} 格") +
             (_runtime.SlowInjected ? "；后台慢注入中——仿真暂停等待,绝不使用半成品" : "") +
             (_runtime.Fault != null ? $"；服务故障 {_runtime.Fault}" : "");
-        DrawCaption(_overlay,
-            _title,
+        DrawCaption(
+            _overlay,
+            _presentation.Hud,
+            _presentation.Title,
             detail,
-            $"左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {S3PathDemoRuntime.ViewModeLabels[_runtime.ViewMode]}");
+            _presentation.Hud.Keys.Replace("{view}", _runtime.ViewLabel, StringComparison.Ordinal));
     }
 
     private static Vector2 CellCenter(int cell, int n, float csM)
@@ -198,9 +198,9 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         }
     }
 
-    private static void DrawCaption(ScreenOverlayBuffer overlay, string title, string detail, string keys)
+    private static void DrawCaption(ScreenOverlayBuffer overlay, CrowdHudPanel hud, string title, string detail, string keys)
     {
-        overlay.AddRect(HudPanelX, HudPanelY, HudPanelW, HudPanelH, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        overlay.AddRect(hud.X, hud.Y, hud.W, hud.H, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         overlay.AddText(32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         overlay.AddText(32, 56, detail, 18, new Vector4(1f, 1f, 1f, 1f));
         overlay.AddText(32, 84, keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));

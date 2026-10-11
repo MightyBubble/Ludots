@@ -15,7 +15,7 @@ internal static class CrowdPointerGround
 {
     public static bool TryPick(
         GameEngine engine,
-        PlayerInputHandler actions,
+        IInputActionReader actions,
         int hudX,
         int hudY,
         int hudW,
@@ -25,7 +25,7 @@ internal static class CrowdPointerGround
     {
         xCm = 0;
         yCm = 0;
-        Vector3 pointer = actions.ReadAction<Vector3>("PointerPos");
+        Vector3 pointer = actions.ReadAction<Vector3>(ReservedInputActionIds.PointerPos);
         if (pointer.X >= hudX && pointer.X <= hudX + hudW &&
             pointer.Y >= hudY && pointer.Y <= hudY + hudH)
         {
@@ -45,5 +45,15 @@ internal static class CrowdPointerGround
         xCm = hit.WorldXCm;
         yCm = hit.WorldYCm;
         return true;
+    }
+}
+
+internal static class CrowdAuthoritativeInput
+{
+    public static FrozenInputActionReader Require(GameEngine engine)
+    {
+        var input = engine.GetService(CoreServiceKeys.AuthoritativeInput);
+        if (input is FrozenInputActionReader frozen) return frozen;
+        throw new InvalidOperationException("固定步群体输入需要 AuthoritativeInput 的冻结快照。");
     }
 }
