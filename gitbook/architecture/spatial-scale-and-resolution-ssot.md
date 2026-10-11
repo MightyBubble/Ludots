@@ -46,7 +46,7 @@ In scope：
 
 - 本页定义尺度 taxonomy、owner、约束和现状名到目标名映射。
 - 新增命名常量模块，集中 `256` / `64` / `100` / `50` / `16` 等尺度默认值。
-- 添加全仓扫描 contract：默认扫 `src/` 与 `mods/` 的生产 `.cs`，禁止内联 `256` / `64` / `100`。`SpatialScaleDefaults.cs`、`Ludots.Physics2D`，以及一份只减不增的存量文件豁免除外。群体模拟目录不在豁免里。
+- 添加路径白名单 contract：扫描板烘焙（`/Map/Board/`、`/NavMesh/Bake/`、`NavBake.`）、`Ludots.Tool` 的地图转换入口，以及文件名含 `NavTileBuilder` / `MassNavigationFlow` / `FlowField` 的源码；群体模拟另扫 `src/Core/CrowdSimulation/`、`mods/capabilities/navigation/CrowdSimulationMod/`、`mods/showcases/crowd_simulation/`。这些路径禁止内联 `256` / `64` / `100`。常驻豁免：`SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 每个一级目录登记为扫描根或非空间子系统，漏登记则测试失败。
 - 更新 GitBook 索引。
 
 Out of scope：
@@ -179,7 +179,7 @@ Given 仓库存在 board/bake/MassNavigationFlow 多套尺度词；When 我打�
 
 US-0.2：作为评审者，我要尺度魔数集中到常量模块，以便新增代码不能重新散落 `256` / `64` / `100`。
 
-Given `SpatialScaleDefaults` 已落地；When 有人在 `src/` 或 `mods/` 的生产代码中写入字面 `256` / `64` / `100`，且该文件不在豁免清单；Then `NavigationSpatialScaleMagicNumberContractTests` 失败并输出文件与行号。清单变长也失败。
+Given `SpatialScaleDefaults` 已落地；When 有人在扫描根（板烘焙、`NavTileBuilder` / `MassNavigationFlow` / `FlowField`、群体模拟三处目录）写入字面 `256` / `64` / `100`，且该文件不是常驻豁免；Then `NavigationSpatialScaleMagicNumberContractTests` 失败并输出文件与行号。`src/Core/` 新增一级目录未登记也失败。
 
 ## UAT Showcase（钉死）
 
@@ -245,7 +245,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | 修改板的 `Grid.CellSizeCm` | 厘米矩形不变，格数按除法向下取整变化 | 板范围 contract |
 | 修改 `PartitionChunkCells` 或 `ChunkSizeCells` | spatial query/AOI 分区粒度变化，世界范围不变化 | 现有 spatial partition tests + #283 补充 |
 | 修改 `FlowCellSizeCm` | MassNavigationFlow grid 宽高按 `FieldWidthCm / FlowCellSizeCm` 改变 | 现有 `MassNavigationFlowSolverStateConfigurationTests` + #288 补充 |
-| 在 `src/` 或 `mods/` 的生产代码内联 `256` / `64` / `100` | 不允许，除非文件已在只减不增的豁免清单 | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号 |
+| 在扫描根（板烘焙、`NavTileBuilder` / `MassNavigationFlow` / `FlowField`、群体模拟三处目录）内联 `256` / `64` / `100` | 不允许。常驻豁免只有 `SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs` | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号；`src/Core/` 一级目录未登记同样失败 |
 | 修改 map `World.WidthCm/HeightCm`（#1567 切 1 后） | 世界边界、越界校验、minimap 全图按声明变化；地形数据页数为派生值 | #1567 切 1 contract：World 派生链 + 全 mod 扫描 |
 | 修改 `Boards[].Anchor` | 格子角移到 `World − Local`，矩形跟着走。根板世界范围仍是根板自己的厘米矩形 | 锚点 contract：根板 `World` 必须是 `(0, 0)`；拓扑原点不在 Ludots 原点的板暂不参与导航 |
 | 修改 navmesh.json `tileWorldWidthCm/HeightCm`（#1567 切 3 后） | nav 瓦片颗粒度与重烤预算变化，板范围与地形块不变 | #1567 切 3 contract |
@@ -266,7 +266,7 @@ NAV-0 不合并任何外部分支，不试合 PR #235/#186。复用项：
 - 无 fallback：NAV-0 不新增任何缺失配置兜底。
 - 无重复数据源：`TerrainPageCells` 引用 `MapTile.Size`；`WorldExtentSpec` 产出 `WorldSizeSpec`，不替换。
 - 大小写严格 fail-fast：本步不改变 loader；后续 #283/#285/#287 迁移时沿用严格 loader。
-- 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 默认扫描 `src/` 与 `mods/`，存量命中按文件豁免且只减不增。`SpatialVocabularyContractTests` 钉住群体配置后缀、退役键名和米域文件范围。
+- 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 扫描板烘焙、MassNavigationFlow 与群体模拟目录，常驻豁免 `SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 一级目录必须登记为扫描根或非空间子系统。`SpatialVocabularyContractTests` 钉住群体配置后缀、退役键名和米域文件范围。
 - 更新 GitBook：本页加入 `gitbook/architecture/README.md` 与 `gitbook/SUMMARY.md`，配置查表加入 `gitbook/reference/`。
 - 回链总单：本文回链 #281 与 #282。
 - #1567 回链：四域归位每一切的 owner、键位与派生规则变更，以本页层级表/映射表为唯一词汇来源，切 PR 回链 #1567。

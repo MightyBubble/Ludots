@@ -21,10 +21,6 @@ namespace CrowdSimulationMapProbe;
 public static class Program
 {
     private const int RenderSize = 1024;
-    private static readonly (int r, int g, int b) GroundNodeColor = (0x40, 196, 255);
-    private static readonly (int r, int g, int b) WaypointColor = (0x40, 196, 255);
-    private static readonly (int r, int g, int b) PolylineColor = (255, 0x40, 200);
-    private static readonly (int r, int g, int b) StartColor = (76, 217, 0x64);
 
     // 地形类型着色用水/岸/陆/山/悬崖各自一眼可分的颜色(与参考实现区域着色同色系)
     private static readonly (int r, int g, int b)[] TypeColors =
@@ -190,7 +186,7 @@ public static class Program
             int cell = flat.NodeCell[i];
             float cx = (cell % navCellsPerSide + 0.5f) * csCm / worldCm2 * RenderSize;
             float cy = ((cell / navCellsPerSide) + 0.5f) * csCm / worldCm2 * RenderSize;
-            FillDisc(px, cx, cy, 2.2f, flat.NodeLayer[i] != 0 ? (255, 213, 79) : GroundNodeColor);
+            FillDisc(px, cx, cy, 2.2f, flat.NodeLayer[i] != 0 ? (255, 213, 79) : (64, 196, 255));
         }
 
         for (int b = 0; b <= c; b++)
@@ -296,7 +292,7 @@ public static class Program
         for (int k = 1; k < trace.Count; k++)
         {
             int a = trace[k - 1] % n2, b = trace[k] % n2;
-            DrawLine(px, (a % navCellsPerSide + 0.5f) * csCm, (a / navCellsPerSide + 0.5f) * csCm, (b % navCellsPerSide + 0.5f) * csCm, (b / navCellsPerSide + 0.5f) * csCm, worldCm, WaypointColor);
+            DrawLine(px, (a % navCellsPerSide + 0.5f) * csCm, (a / navCellsPerSide + 0.5f) * csCm, (b % navCellsPerSide + 0.5f) * csCm, (b / navCellsPerSide + 0.5f) * csCm, worldCm, (64, 196, 255));
         }
 
         // 折线(查询结果)品红
@@ -307,12 +303,12 @@ public static class Program
                 DrawLine(px,
                     (float)pts[k - 2].ToDouble() * csCm, (float)pts[k - 1].ToDouble() * csCm,
                     (float)pts[k].ToDouble() * csCm, (float)pts[k + 1].ToDouble() * csCm,
-                    worldCm, PolylineColor);
+                    worldCm, (255, 64, 200));
             }
         }
 
         // 起点绿 / 终点红
-        FillDisc(px, (start % navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, (start / navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, 5, StartColor);
+        FillDisc(px, (start % navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, (start / navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, 5, (76, 217, 100));
         FillDisc(px, (goal % navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, (goal / navCellsPerSide + 0.5f) * csCm / worldCm * RenderSize, 5, (255, 69, 58));
         PngWriter.Write(path, RenderSize, RenderSize, px);
     }
