@@ -7,7 +7,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -196,7 +195,7 @@ namespace Ludots.Tests.GAS.Production
         {
             try
             {
-                int keyId = ConfigKeyRegistry.GetId(key);
+                int keyId = OrderBlackboardKeyRegistry.Resolve(key);
                 if (!engine.World.TryGet(actor, out BlackboardFloatBuffer floats) || !floats.TryGet(keyId, out float value))
                 {
                     return "<missing>";
@@ -224,7 +223,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static int ReadAimInt(GameEngine engine, Entity actor, string key)
         {
-            int keyId = ConfigKeyRegistry.GetId(key);
+            int keyId = OrderBlackboardKeyRegistry.Resolve(key);
             if (!engine.World.TryGet(actor, out BlackboardIntBuffer ints) || !ints.TryGet(keyId, out int value))
             {
                 throw new InvalidOperationException($"Blackboard int '{key}' is missing on {actor.Id}.");
@@ -245,7 +244,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity ReadAimEntity(GameEngine engine, Entity actor, string key)
         {
-            int keyId = ConfigKeyRegistry.GetId(key);
+            int keyId = OrderBlackboardKeyRegistry.Resolve(key);
             if (!engine.World.TryGet(actor, out BlackboardEntityBuffer entities) || !entities.TryGet(keyId, out Entity value))
             {
                 throw new InvalidOperationException($"Blackboard entity '{key}' is missing on {actor.Id}.");

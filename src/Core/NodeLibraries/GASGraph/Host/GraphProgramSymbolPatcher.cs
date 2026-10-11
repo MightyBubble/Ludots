@@ -403,18 +403,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return symbols[symbolIndex] ?? string.Empty;
         }
 
-        private static int ResolveBlackboardKey(string key)
-        {
-            // Order keys (Cast.Facing and the other builtin order slots) live in their own
-            // id space. ConfigKeyRegistry.Register would mint a second id and the effect
-            // facing read would miss the value the graph just wrote.
-            if (OrderBlackboardKeyRegistry.TryGetId(key, out int orderKeyId))
-            {
-                return orderKeyId;
-            }
-
-            return ConfigKeyRegistry.Register(key);
-        }
+        private static int ResolveBlackboardKey(string key) => OrderBlackboardKeyRegistry.Resolve(key);
 
         private static int ResolveEntityCollectionKey(EntityCollectionStore? entityCollections, string key)
         {

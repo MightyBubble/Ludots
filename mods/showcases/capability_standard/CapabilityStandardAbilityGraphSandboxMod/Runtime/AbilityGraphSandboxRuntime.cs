@@ -7,7 +7,7 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
@@ -79,10 +79,10 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         _bundle = AbilityGraphSandboxGraphBootstrap.LoadModGraphs(
             AbilityGraphSandboxGraphBootstrap.FindModAssetsRoot());
         _programs = _bundle.Programs;
-        _nearbyCountKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearbyCountKey);
-        _nearestKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearestKey);
-        _buffTemplateKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.BuffTemplateKey);
-        _loyaltyKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.LoyaltyKey);
+        _nearbyCountKeyId = OrderBlackboardKeyRegistry.Resolve(AbilityGraphSandboxGraphKeys.NearbyCountKey);
+        _nearestKeyId = OrderBlackboardKeyRegistry.Resolve(AbilityGraphSandboxGraphKeys.NearestKey);
+        _buffTemplateKeyId = OrderBlackboardKeyRegistry.Resolve(AbilityGraphSandboxGraphKeys.BuffTemplateKey);
+        _loyaltyKeyId = OrderBlackboardKeyRegistry.Resolve(AbilityGraphSandboxGraphKeys.LoyaltyKey);
     }
 
     public void BindStageVisuals(GraphOpsStageVisuals stage)

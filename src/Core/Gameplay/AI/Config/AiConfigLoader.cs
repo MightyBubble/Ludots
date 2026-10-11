@@ -1691,12 +1691,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                         throw Fail(path, "Order blackboard key must not contain leading or trailing whitespace.");
                     }
 
-                    if (OrderBlackboardKeyRegistry.TryGetId(text, out int keyId))
-                    {
-                        return keyId;
-                    }
-
-                    throw Fail(path, $"References unknown order blackboard key '{text}'. Declare it in GAS/order_types.json orderBlackboardKeys or use a built-in key.");
+                    return OrderBlackboardKeyRegistry.Resolve(text);
                 }
             }
 

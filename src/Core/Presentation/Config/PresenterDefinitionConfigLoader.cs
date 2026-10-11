@@ -2224,19 +2224,7 @@ namespace Ludots.Core.Presentation.Config
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)
         {
             string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
-            if (OrderBlackboardKeyRegistry.TryGetId(keyName, out int orderKeyId))
-            {
-                return orderKeyId;
-            }
-
-            int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
-            if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
-            {
-                throw new InvalidOperationException(
-                    $"{context} ownerBlackboardFloat.sourceId '{keyName}' did not resolve to a config key id.");
-            }
-
-            return keyId;
+            return OrderBlackboardKeyRegistry.Resolve(keyName);
         }
 
         private static void RejectRemovedBindingFields(JsonNode node, string context)

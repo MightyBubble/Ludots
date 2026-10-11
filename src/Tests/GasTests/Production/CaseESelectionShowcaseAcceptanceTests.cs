@@ -8,7 +8,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Client;
@@ -271,11 +270,11 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
             "按下即激活衍生 boxing context（父=战斗）");
         Assert.That(
             engine.World.TryGet<BlackboardFloatBuffer>(commander, out BlackboardFloatBuffer pressBoard) &&
-            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.px"), out float pressPx) &&
+            pressBoard.TryGet(OrderBlackboardKeyRegistry.Resolve("case_e.press.px"), out float pressPx) &&
             pressPx == -1200f,
             "框起角 X=press 指针窗口像素写入操作者 rep 黑板，禁止 map var");
         Assert.That(
-            pressBoard.TryGet(ConfigKeyRegistry.GetId("case_e.press.py"), out float pressPy) &&
+            pressBoard.TryGet(OrderBlackboardKeyRegistry.Resolve("case_e.press.py"), out float pressPy) &&
             pressPy == -100f,
             "框起角 Y 同挂操作者 rep 黑板");
 

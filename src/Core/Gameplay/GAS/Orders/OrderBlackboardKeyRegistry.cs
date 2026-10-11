@@ -30,6 +30,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        // Shared name→id path for every blackboard key. Builtins keep their fixed ids; other names register at or above 10_000.
+        public static int Resolve(string key) => Register(key);
+
         public static bool TryGetId(string key, out int id)
         {
             if (!TryRequireCanonicalKey(key, out string canonicalKey))

@@ -981,13 +981,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private static int ResolveConfiguredBlackboardKey(string text, string ownerId, string relativePath, string fieldName)
         {
-            if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
+            try
             {
-                return blackboardKey;
+                return OrderBlackboardKeyRegistry.Resolve(text);
             }
-
-            throw new InvalidOperationException(
-                $"Effect template '{ownerId}' in {relativePath}: unknown {fieldName} '{text}'.");
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: invalid {fieldName} '{text}'.", ex);
+            }
         }
 
         private static OrderSubmitMode ParseOrderSubmitMode(string raw, string ownerId, string relativePath)
