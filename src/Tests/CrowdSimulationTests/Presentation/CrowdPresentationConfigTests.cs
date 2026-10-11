@@ -28,6 +28,31 @@ public sealed class CrowdPresentationConfigTests
     }
 
     [Test]
+    public void DeadKey_IsRejected()
+    {
+        var debug = JsonNode.Parse(File.ReadAllText(DebugPath("CrowdSimulationS3PathMod")))!.AsObject();
+        debug["tools"] = new JsonObject { ["spawnCount"] = 20 };
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationDebugConfig.Load(debug));
+        Assert.That(ex!.Message, Does.Contain("tools"));
+    }
+
+    [Test]
+    public void EveryDebugFile_LoadsStrictly()
+    {
+        string mods = Path.Combine(FindRepoRoot(), "mods");
+        var files = Directory.EnumerateFiles(mods, "CrowdSimulationDebug.json", SearchOption.AllDirectories)
+            .Where(path => path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") == false
+                && path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") == false)
+            .ToList();
+        Assert.That(files, Is.Not.Empty);
+        foreach (string file in files)
+        {
+            var debug = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
+            Assert.DoesNotThrow(() => CrowdSimulationDebugConfig.Load(debug), file);
+        }
+    }
+
+    [Test]
     public void PointWithRoadLength_IsRejected()
     {
         string json = File.ReadAllText(DebugPath("CrowdSimulationS4DeployMod"));
@@ -42,7 +67,7 @@ public sealed class CrowdPresentationConfigTests
     private static CrowdPresentationConfig ParseMod(string mod)
     {
         var debug = JsonNode.Parse(File.ReadAllText(DebugPath(mod)))!.AsObject();
-        return CrowdPresentationConfig.ParseOptional(debug)!;
+        return CrowdSimulationDebugConfig.Load(debug).Presentation!;
     }
 
     private static string DebugPath(string mod)

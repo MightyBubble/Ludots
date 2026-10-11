@@ -191,7 +191,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     public void Dispose() => Service.Dispose();
 }
 
-/// <summary>固定步进仿真驱动(30 Hz,一帧一 tick)。</summary>
+/// <summary>固定步进仿真驱动(一帧一 tick,步频跟引擎 FixedHz)。</summary>
 public sealed class S3PathDemoSimulationSystem : Arch.System.ISystem<float>
 {
     private readonly S3PathDemoRuntime _runtime;

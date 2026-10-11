@@ -32,6 +32,12 @@ internal sealed class CrowdPresentationConfig
             throw new InvalidOperationException($"CrowdSimulationDebug.json presentation 严格反序列化失败: {ex.Message}", ex);
         }
 
+        Validate(cfg);
+        return cfg;
+    }
+
+    internal static void Validate(CrowdPresentationConfig cfg)
+    {
         if (string.IsNullOrWhiteSpace(cfg.Title))
             throw new InvalidOperationException("CrowdSimulationDebug.json presentation.title 必填。");
         if (cfg.ViewLabels == null || cfg.ViewLabels.Length == 0)
@@ -84,8 +90,6 @@ internal sealed class CrowdPresentationConfig
             throw new InvalidOperationException(
                 $"CrowdSimulationDebug.json presentation.kind \"{cfg.Kind}\" 需为 {KindPath} / {KindDeploy}。");
         }
-
-        return cfg;
     }
 
     private static void RequireActions(CrowdPathActions? actions)

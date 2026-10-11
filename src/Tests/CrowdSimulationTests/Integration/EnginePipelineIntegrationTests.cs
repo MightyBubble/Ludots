@@ -40,6 +40,11 @@ public class EnginePipelineIntegrationTests
             Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Engine"));
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "Engine", "clock.json"),
                 """{"FixedHz":30}""");
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "config_catalog.json"), """
+[
+  { "Path": "CrowdSimulationDebug.json", "Policy": "DeepObject" }
+]
+""");
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationDebug.json"), """
 {
   "worker": { "planTimeoutMs": 5000 },

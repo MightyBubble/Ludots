@@ -2,9 +2,6 @@
   "worker": {
     "planTimeoutMs": 5000
   },
-  "tools": {
-    "spawnCount": 20
-  },
   "session": {
     "autostart": true,
     "script": [

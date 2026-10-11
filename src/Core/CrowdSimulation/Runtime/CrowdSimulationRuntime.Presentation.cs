@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Nodes;
 using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -37,11 +36,6 @@ public sealed partial class CrowdSimulationRuntime
     }
 
     private string? PresentationKindName => _presentation?.Kind;
-
-    internal void ParsePresentation(JsonObject debug)
-    {
-        _presentation = CrowdPresentationConfig.ParseOptional(debug);
-    }
 
     public bool ReleasePathPresentation(GameEngine engine, MapId mapId)
     {

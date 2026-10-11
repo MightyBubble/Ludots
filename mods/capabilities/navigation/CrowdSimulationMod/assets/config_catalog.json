@@ -4,11 +4,6 @@
     "Policy": "DeepObject"
   },
   {
-    "Path": "CrowdSimulationDebug.json",
-    "Policy": "DeepObject",
-    "AllowEmpty": true
-  },
-  {
     "Path": "Entities/templates.json",
     "Policy": "ArrayById",
     "IdField": "id"

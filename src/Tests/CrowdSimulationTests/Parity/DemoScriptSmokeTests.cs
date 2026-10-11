@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using NUnit.Framework;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
 
@@ -31,7 +32,8 @@ public sealed class DemoScriptSmokeTests
         foreach (string file in files)
         {
             string modDir = Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar)[0];
-            var debug = JsonNode.Parse(File.ReadAllText(file))!;
+            var debug = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
+            CrowdSimulationDebugConfig.Load(debug);
             if (debug["session"]?["script"] is not JsonArray script || script.Count == 0)
             {
                 TestContext.Out.WriteLine($"{modDir}: 无 session.script,跳过");

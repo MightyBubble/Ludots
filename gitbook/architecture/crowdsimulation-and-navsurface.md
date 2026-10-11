@@ -41,7 +41,7 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
                                      NavContext / NavLinkSet（上下文产物）
   CrowdSimulationAgent.cs            单位组件 { profileId }
 mods/capabilities/navigation/CrowdSimulationMod/
-  assets/config_catalog.json         登记配置与调试文件；调试文件 AllowEmpty
+  assets/config_catalog.json         登记正式配置。调试文件由提供它的 Mod 自己登记
   assets/Navigation/agent_profiles.json
                                      体型档案。agents.profilesUri 指向这里
 mods/capabilities/navigation/CrowdSimulationStandardMod/
@@ -130,7 +130,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
 - `sim.simSecondsPerTickSecond` 是每个 tick 秒推进多少仿真秒。旧键 `sim.timeScale` 已删除。
 - 玩法时长带 `Sec`：`formation.settleTimeSec`、`movement.slotTimeConstantSec`、结构模板的 `lifetimeSec`。调度延迟和每 tick 预算仍用 `Ticks` / `PerTick`，例如 `planning.latencyTicks`、`fog.revealTicks`、`flowfield.maxRebuildsPerTick`。寿命到期 tick 是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`。
 
-调试文件 `CrowdSimulationDebug.json` 在目录里声明了 `AllowEmpty`。没有任何 Mod 提供片段时，不装调试功能，S1 因此不用带调试文件。要开路径演示或自动会话，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
+调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，会话不自动激活。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。要开路径服务，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
