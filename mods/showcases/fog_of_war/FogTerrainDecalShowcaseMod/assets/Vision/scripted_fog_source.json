@@ -1,18 +1,23 @@
 {
   "mapId": "fog_terrain_decal_showcase",
-  "layerKey": "fog-terrain-decal-ground",
+  "layerId": "fog-terrain-decal-ground",
   "scopeKeyId": 316,
   "overlayStableId": 7316,
-  "cellSizeCm": 400,
-  "updateHz": 10,
   "centerXCm": 204800,
   "centerYCm": 204800,
-  "radiusXCm": 60000,
-  "radiusYCm": 45000,
   "visionRadiusCm": 24000,
-  "mapExtentCm": 409600,
-  "angularSpeedX": 0.09,
-  "angularSpeedY": 0.13,
+  "ageVisibleToExplored": true,
+  "seedExplored": [
+    { "x": 0, "y": 0 },
+    { "x": 1023, "y": 1023 }
+  ],
+  "motion": {
+    "kind": "ellipse",
+    "radiusXCm": 60000,
+    "radiusYCm": 45000,
+    "angularSpeedX": 0.09,
+    "angularSpeedY": 0.13
+  },
   "ringHeight": 1.2,
   "borderWidth": 0.06,
   "fill": [0.15, 0.65, 1, 0.10],
