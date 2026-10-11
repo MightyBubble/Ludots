@@ -20,14 +20,14 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["控制组存取仅 InteractionShowcase，未进 Core 正式 API"],
     ),
     "basic-order": (
-        "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue"
+        "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue"
         "（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
         ["默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"],
     ),
     "aim": (
         "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；"
         "指针地面点 ScreenPointToGround。",
-        ["瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"],
+        ["瞄准指示 presenter 还没搬进纯配置能力 mod"],
     ),
     "attack": (
         "普攻/射击：经 OrderQueue / AbilityExec；RTS 右键攻击走 attackTarget intent。",
@@ -39,7 +39,7 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
     ),
     "instant-skill": (
         "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
-        ["施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"],
+        ["施法方式由各 mod 的 InteractionPref 施法模式声明"],
     ),
     "unit-skill": (
         "点单位技：施法图 ScreenPointToEntity 选目标 → SubmitCast；智能施法是 mod 自己声明的一个交互状态。",
@@ -74,7 +74,7 @@ CATEGORY_DEFAULTS: dict[str, tuple[str, list[str]]] = {
         ["宝宝 AI 自动技见 Utility Autocast，与玩家开关不是一条链"],
     ),
     "cast-habit": (
-        "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；"
+        "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；"
         "Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
         ["Settings UI 未把偏好链完整接到玩家可点选项"],
     ),
@@ -284,7 +284,7 @@ CASE_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "auto-cast-toggle-ability": {
         "ludots": "玩家绿点自动施法：缺失。现有是 AI Utility Autocast，不是玩家开关。",
-        "todos": ["TODO: 每技能 Autocast 开关写入偏好并参与 CastCommit"],
+        "todos": ["TODO: 每技能 Autocast 开关还没接到施法图"],
     },
     "loco-wasd-camera": {
         "ludots": "WASD：AxisMoveOrderSystem + ControlScheme 轴绑定；镜头相对需相机/朝向约定。",

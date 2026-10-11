@@ -21,8 +21,7 @@ namespace Ludots.Core.Input.Interaction
     /// readers fail closed instead of silently falling back to the steady state. Steady state
     /// is allocation free.
     /// <para>
-    /// This system manages only <see cref="InteractionContextInstanceSource.ExecLifecycle"/>
-    /// mounts; cast commit <c>pushFrame</c> op mounts live and die with their own ops.
+    /// This system manages only <see cref="InteractionContextInstanceSource.ExecLifecycle"/> mounts.
     /// </para>
     /// </summary>
     public sealed class AbilityExecInteractionContextSystem : BaseSystem<World, float>
@@ -141,7 +140,7 @@ namespace Ludots.Core.Input.Interaction
         /// Project the exec lifecycles onto entity-mounted interaction state: per control
         /// domain, the latest-activated tracked carrier resolving to the domain representative
         /// wins (LIFO). Mounts this system no longer desires are released back to the steady
-        /// state; cast commit op mounts are foreign and stay untouched.
+        /// state; mounts owned by other lifecycles stay untouched.
         /// </summary>
         private void ReconcileActiveContextState()
         {
@@ -231,9 +230,8 @@ namespace Ludots.Core.Input.Interaction
                     continue;
                 }
 
-                // Foreign lifecycles own their mounts: cast commit ops pop their own frames
-                // and template-spawn mounts live until the entity dies — this
-                // reconciliation reclaims only its own exec-carried contexts.
+                // Foreign lifecycles own their mounts. Template-spawn mounts live until the
+                // entity dies; this reconciliation reclaims only its own exec-carried contexts.
                 if (World.Get<InteractionContextInstance>(holder).Source != InteractionContextInstanceSource.ExecLifecycle)
                 {
                     continue;

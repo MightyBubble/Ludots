@@ -793,7 +793,7 @@ namespace InteractionShowcaseMod.UI
                 return "no-pref";
             }
 
-            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, rep, in pref);
+            int intentId = Ludots.Core.Input.Interaction.InteractionContextInstance.ResolveCommandIntent(engine.World, rep, in pref);
             return intentId == 0 ? "none" : ResolveIntentDisplayName(intents.ProfileIdRegistry.GetName(intentId));
         }
 

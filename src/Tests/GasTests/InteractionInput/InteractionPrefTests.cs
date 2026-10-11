@@ -334,7 +334,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(
                 harness.Intents.ProfileIdRegistry.GetName(
-                    CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref)),
+                    InteractionContextInstance.ResolveCommandIntent(world, harness.Rep, in harness.Pref)),
                 Is.EqualTo(IntentId));
         }
 
@@ -345,14 +345,14 @@ namespace Ludots.Tests.GAS
             ChainHarness harness = ChainHarness.Create(world);
             harness.InstallSchemes();
 
-            int intentBefore = CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref);
+            int intentBefore = InteractionContextInstance.ResolveCommandIntent(world, harness.Rep, in harness.Pref);
             int dispatchBefore = harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0);
 
             Assert.That(harness.Schemes!.TrySwitch(harness.SchemeId("scheme.pref.alternate")), Is.True);
             Assert.That(harness.Schemes.ActiveSchemeId, Is.EqualTo(harness.SchemeId("scheme.pref.alternate")), "the switch really happened");
 
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, harness.Rep, in harness.Pref),
+                InteractionContextInstance.ResolveCommandIntent(world, harness.Rep, in harness.Pref),
                 Is.EqualTo(intentBefore),
                 "the player's routing preference lives on the representative and survives scheme switches");
             Assert.That(harness.Pref.ResolveCastDispatchProfile(abilityTemplateId: 0), Is.EqualTo(dispatchBefore));

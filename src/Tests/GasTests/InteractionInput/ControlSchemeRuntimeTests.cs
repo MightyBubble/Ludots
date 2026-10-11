@@ -126,7 +126,7 @@ namespace Ludots.Tests.GAS
             // Headless: no input handler exists; only preference bookkeeping runs.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeB),
-                "the active scheme choice must persist into the CTX-8 preference store.");
+                "the active scheme choice must persist into the scheme preference store.");
         }
 
         [Test]
@@ -148,6 +148,40 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.TrySwitchRuntimeOnly(schemeId: 999), Is.False,
                 "runtime-only activation keeps the installed/allowed-set refusal semantics.");
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
+        }
+
+        [Test]
+        public void ActiveScheme_SaveLoad_RoundTripsTheSchemeId()
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            store.SetActiveScheme("scheme.test.roundtrip");
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            try
+            {
+                store.Save(path);
+                using JsonDocument saved = JsonDocument.Parse(File.ReadAllText(path));
+                string[] keys = saved.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
+                Assert.That(keys, Is.EqualTo(new[] { "activeSchemeId" }));
+                Assert.That(saved.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo("scheme.test.roundtrip"));
+                var reloaded = new ClientControlSchemePreferenceStore();
+                uint revisionBefore = reloaded.Revision;
+                reloaded.Load(path);
+                Assert.That(reloaded.Revision, Is.GreaterThan(revisionBefore));
+                Assert.That(reloaded.ActiveSchemeId, Is.EqualTo("scheme.test.roundtrip"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Test]
+        public void ActiveScheme_LoadMissingFile_ClearsTheScheme()
+        {
+            var store = new ClientControlSchemePreferenceStore();
+            store.SetActiveScheme("scheme.test.was");
+            store.Load(Path.Combine(Path.GetTempPath(), $"ludots_missing_{Guid.NewGuid():N}.json"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
         }
 
         [Test]
@@ -208,6 +242,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
             harness.Runtime.Install(new ControlSchemesConfig
             {
@@ -219,6 +254,7 @@ namespace Ludots.Tests.GAS
             Assert.That(binding.OrderTypeId, Is.EqualTo(2), "orderTypeKey resolves to its registry id at install.");
             Assert.That(binding.ThrottleTicks, Is.EqualTo(6));
             Assert.That(binding.StepDistanceCm, Is.EqualTo(400));
+            Assert.That(binding.DirectionMode, Is.EqualTo(ControlSchemeAxisMoveDirectionMode.WorldAbsolute));
 
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Runtime.TryGetActiveAxisMove(out _), Is.False);
@@ -237,6 +273,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -251,6 +288,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -271,6 +309,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "orders.test.unknown",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -293,6 +332,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = orderTypeKey,
                 ThrottleTicks = throttleTicks,
                 StepDistanceCm = stepDistanceCm,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(
@@ -317,7 +357,7 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "the active context's explicit intent must win over the player default.");
         }
@@ -331,13 +371,13 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(DefaultIntent)),
                 "steady state (no mounted interaction context) consumes the possessed rep's player default intent (DEC-14).");
 
             InteractionPref other = NewPref(harness, AltIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in other),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in other),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "switching the player's preference changes the steady state's intent.");
         }
@@ -356,7 +396,7 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(0),
                 "an active context without an explicit intent does not route and never bubbles to the player default (DEC-14).");
         }
@@ -449,7 +489,7 @@ namespace Ludots.Tests.GAS
         {
             public StringIntRegistry IntentIds = null!;
             public ControlSchemeRuntime Runtime = null!;
-            public ClientCastPreferenceStore Preferences = null!;
+            public ClientControlSchemePreferenceStore Preferences = null!;
             public PlayerInputHandler Handler;
             public TestInputBackend Backend;
             private StringIntRegistry _schemeIds = null!;
@@ -458,20 +498,7 @@ namespace Ludots.Tests.GAS
             {
                 var intentIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
-                // Minimal CTX-8 store: this fixture only exercises active-scheme persistence.
-                var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var preferences = new ClientCastPreferenceStore(
-                    new CastCommitProfileRegistry(
-                        castCommitIds,
-                        castCommitActionIds,
-                        new InteractionContextProfileRegistry(new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal))),
-                    templateKeys.Register,
-                    templateKeys.GetName,
-                    formSetKeys.Register,
-                    formSetKeys.GetName);
+                var preferences = new ClientControlSchemePreferenceStore();
 
                 var harness = new Harness
                 {

@@ -23,7 +23,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly OrderTypeRegistry _orderTypes;
         private readonly InputConfigRoot _inputConfig;
         private readonly Func<PlayerInputHandler> _handlerProvider;
-        private readonly ClientCastPreferenceStore _preferences;
+        private readonly ClientControlSchemePreferenceStore _preferences;
 
         private CompiledScheme[] _schemes = new CompiledScheme[8];
         private bool _allowAll = true;
@@ -34,7 +34,7 @@ namespace Ludots.Core.Input.Interaction
             StringIntRegistry schemeIdRegistry,
             OrderTypeRegistry orderTypes,
             Func<PlayerInputHandler> handlerProvider = null,
-            ClientCastPreferenceStore preferences = null,
+            ClientControlSchemePreferenceStore preferences = null,
             InputConfigRoot inputConfig = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));

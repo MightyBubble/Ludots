@@ -7975,7 +7975,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "给选中单位下达移动到该点的指令"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8122,7 +8122,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "命中检测遇敌后插入攻击再续行"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8281,7 +8281,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "切换为坚守姿态：不追击只还击"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8551,7 +8551,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "弹出队首路点并自动执行下一项"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8662,7 +8662,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把兵营新生单位的默认集结点设好"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8785,7 +8785,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "下达卸载并在旁生成下车单位"
         }
       ],
-      "ludots": "右键/指令：CommandIntentArbiter + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
+      "ludots": "右键/指令：InteractionContextInstance.ResolveCommandIntent + command_intent_profiles → OrderQueue（moveTo / attackTarget / stop）；群体走位走 MassNavigation 执行链。",
       "todos": [
         "默认 intent 配置偏 moveTo，复杂兵种语义需数据补齐"
       ],
@@ -8845,7 +8845,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8907,7 +8907,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-142",
@@ -8990,7 +8990,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-143",
@@ -9110,7 +9110,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-118",
@@ -9241,7 +9241,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-148",
@@ -9375,7 +9375,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "瞄准：各 mod 的瞄准交互状态 + 施法图（ActivateContext → 确认图 SubmitCast / 取消图 DeactivateContext）；指针地面点 ScreenPointToGround。",
       "todos": [
-        "瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles"
+        "瞄准指示 presenter 还没搬进纯配置能力 mod"
       ],
       "familyTitle": "对准世界",
       "actionNo": "UX-116",
@@ -10690,7 +10690,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-095",
@@ -10776,7 +10776,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-128",
@@ -10844,7 +10844,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-104",
@@ -10951,7 +10951,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "无目标技：交互状态绑定按键 → 施法图 SubmitCast → castAbility Order；自身/脚下类目标写在施法图里。",
       "todos": [
-        "施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile"
+        "施法方式由各 mod 的 InteractionPref 施法模式声明"
       ],
       "familyTitle": "不用瞄的技能",
       "actionNo": "UX-067",
@@ -14425,7 +14425,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "确认点击后在指示器落点出手"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14547,7 +14547,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "Alt 修饰则跳过选目标直接自施"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14691,7 +14691,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "前序走完后自动执行排队施法"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -14788,7 +14788,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "双击判定成立则走双击技能变体"
         }
       ],
-      "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
+      "ludots": "同技能不同手感：InteractionPref 的施法模式（玩家默认和单技能覆盖）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
       "todos": [
         "Settings UI 未把偏好链完整接到玩家可点选项"
       ],
@@ -25157,7 +25157,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "ludots": "玩家绿点自动施法：缺失。现有是 AI Utility Autocast，不是玩家开关。",
       "todos": [
-        "TODO: 每技能 Autocast 开关写入偏好并参与 CastCommit"
+        "TODO: 每技能 Autocast 开关还没接到施法图"
       ],
       "familyTitle": "自动施法",
       "actionNo": "UX-082",

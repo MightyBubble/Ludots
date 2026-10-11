@@ -156,7 +156,7 @@ namespace Ludots.Tests.GAS
             public Dictionary<string, object> Globals = null!;
             public ClientLocalSeatRegistry Seats = null!;
             public ControlSchemeRuntime Schemes = null!;
-            public ClientCastPreferenceStore Preferences = null!;
+            public ClientControlSchemePreferenceStore Preferences = null!;
             public ClientLocalSeatInputRuntime Runtime = null!;
 
             public static Harness Create(List<string>? allowedSchemes = null, bool withPreferences = false)
@@ -217,6 +217,7 @@ namespace Ludots.Tests.GAS
                                 OrderTypeKey = "moveTo",
                                 ThrottleTicks = 6,
                                 StepDistanceCm = 400,
+                                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
                             },
                         },
                         new()
@@ -252,22 +253,9 @@ namespace Ludots.Tests.GAS
                 World.Destroy(World);
             }
 
-            private static ClientCastPreferenceStore CreatePreferenceStore()
+            private static ClientControlSchemePreferenceStore CreatePreferenceStore()
             {
-                var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                return new ClientCastPreferenceStore(
-                    new CastCommitProfileRegistry(
-                        castCommitIds,
-                        castCommitActionIds,
-                        new InteractionContextProfileRegistry(contextProfileIds)),
-                    templateKeys.Register,
-                    templateKeys.GetName,
-                    formSetKeys.Register,
-                    formSetKeys.GetName);
+                return new ClientControlSchemePreferenceStore();
             }
         }
     }

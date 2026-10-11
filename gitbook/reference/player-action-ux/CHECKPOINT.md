@@ -124,7 +124,7 @@
 - TODO: 撤离读条受击中断与进度作废
 - TODO: 断线重连与队友托管（含玩家可见的状态回显）
 - TODO: 条件筛选作为目标选择方式（含空集时的拒绝）
-- TODO: 每技能 Autocast 开关写入偏好并参与 CastCommit
+- TODO: 每技能 Autocast 开关还没接到施法图
 - TODO: 状态的可移除性与转移（驱散 / 偷取 / 延长）
 - TODO: 玩家 Autocast 开关、进距门闩、多技能优先级、手动抢占规则
 - TODO: 生命作为代价及其阈值保护
@@ -148,11 +148,11 @@
 - 按住连发与通道打断的统一手感表仍分散在各 ability
 - 控制组存取仅 InteractionShowcase，未进 Core 正式 API
 - 提升为 Core：编队存取与跨会话策略
-- 施法方式由各 mod 的交互状态声明，未完全切到 CastCommitProfile
+- 施法方式由各 mod 的 InteractionPref 施法模式声明
 - 无统一「连段编辑器」产品链，多在具体 showcase/模组
 - 点地走自己与 WASD 冲突仲裁需在 scheme/意图层写清；冲刺耐力属能力/属性
 - 玩法向轮盘/信号需接到 CommandIntent 或 UI→Order 桥，尚未标准菜谱
-- 瞄准指示 presenter 还没搬进纯配置能力 mod，CastCommit 配置当前多为空 profiles
+- 瞄准指示 presenter 还没搬进纯配置能力 mod
 - 磁吸辅助、翻滚中转向等属手感策略，需模组/配置声明，非全家桶默认开
 - 缺统一动态 context 交互键（与二十三类同源缺口）
 - 钩索等品类手感在模组，不在 Core 通用动词里写死

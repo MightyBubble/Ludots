@@ -99,7 +99,7 @@ namespace Ludots.Tests.GAS.Production
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
                 ?? throw new InvalidOperationException("CommandIntentProfileRegistry service is missing.");
             Assert.That(
-                intents.ProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, localPlayer, in localPlayerPref)),
+                intents.ProfileIdRegistry.GetName(InteractionContextInstance.ResolveCommandIntent(engine.World, localPlayer, in localPlayerPref)),
                 Is.EqualTo(DefaultIntentId));
             int intentProfileId = intents.ProfileIdRegistry.GetId(DefaultIntentId);
             Assert.That(intents.IsInstalled(intentProfileId), Is.True);
@@ -780,7 +780,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, repEntity, in repPref);
+            int intentId = InteractionContextInstance.ResolveCommandIntent(engine.World, repEntity, in repPref);
             builder.Append("intent=");
             builder.Append(intents.ProfileIdRegistry.GetName(intentId));
             builder.Append("(");
@@ -966,7 +966,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Scenario Card");
             sb.AppendLine("- Player goal: issue a ground pointer command with three command-source actors active.");
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
-            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> battle context trigger `graph.interaction.move` -> `SubmitCommandIntent` -> `CommandIntentBufferDrainSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
+            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> battle context trigger `graph.interaction.move` -> `SubmitCommandIntent` -> `CommandIntentBufferDrainSystem` -> `InteractionContextInstance.ResolveCommandIntent` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
             sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.");
             sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
@@ -1115,7 +1115,7 @@ namespace Ludots.Tests.GAS.Production
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",
                 "    E --> F[\"InputRuntimeSystem writes authoritative snapshot + ground override\"]",
                 "    F --> G[\"Battle context trigger graph.interaction.move submits the command intent\"]",
-                "    G --> H[\"CommandIntentArbiter.ResolveActiveCommandIntent\"]",
+                "    G --> H[\"InteractionContextInstance.ResolveCommandIntent\"]",
                 "    H --> I[\"CommandIntentProfileRegistry.RouteGroup -> moveTo\"]",
                 "    I --> J[\"CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together\"]",
                 "    J --> K[\"OrderQueue assigns unique receipts in one admission batch\"]",

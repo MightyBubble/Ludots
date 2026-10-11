@@ -1771,7 +1771,7 @@ namespace Ludots.Core.Engine
                 commandIntentTargetGate.CanTarget);
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
+            // Interaction context profiles (RFC-0065 CTX-6).
             // Id fields resolve at install: collection keys into the store's key space, filter and
             // command intent names against their kernel registries (installed above), so unknown
             // references fail fast at startup. The engine installs no profile of its own — the
@@ -1800,21 +1800,6 @@ namespace Ludots.Core.Engine
             var collectionApplier = new CollectionApplier(World, entityCollectionStore);
             collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.CastRawKeyId);
             gasGraphApi.BindCollectionApplier(collectionApplier);
-            var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
-            castCommitProfileRegistry.Install(new CastCommitProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-
-            // Client cast preference scope chain (RFC-0065 CTX-8, §5.6): player preference layers plus
-            // the mod lock set; template/form-set keys resolve through the engine-wide id spaces.
-            var clientCastPreferences = new ClientCastPreferenceStore(
-                castCommitProfileRegistry,
-                MapLoader.EntityTemplateKeys.Register,
-                MapLoader.EntityTemplateKeys.GetName,
-                RequireAbilityFormSetId,
-                AbilityFormSetIdRegistry.GetName);
-            clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-
             // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
             var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1826,11 +1811,12 @@ namespace Ludots.Core.Engine
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var schemePreferences = new ClientControlSchemePreferenceStore();
             var controlSchemeRuntime = new ControlSchemeRuntime(
                 controlSchemeIds,
                 orderTypeRegistry,
                 () => GetService(CoreServiceKeys.InputHandler),
-                clientCastPreferences,
+                schemePreferences,
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
@@ -2008,8 +1994,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
             SetService(CoreServiceKeys.CastModeIdRegistry, castModeIds);
-            SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
-            SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
+            SetService(CoreServiceKeys.ClientControlSchemePreferenceStore, schemePreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
             SetService(CoreServiceKeys.InteractionModeMap, interactionModeMap);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
@@ -2903,18 +2888,6 @@ namespace Ludots.Core.Engine
             }
 
             return orderTypeId;
-        }
-
-        private static int RequireAbilityFormSetId(string formSetKey)
-        {
-            int formSetId = AbilityFormSetIdRegistry.GetId(formSetKey);
-            if (formSetId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Cast preference references unknown ability form set '{formSetKey}'. Declare it in GAS/ability_form_sets.json.");
-            }
-
-            return formSetId;
         }
 
         public void LoadMap(string mapId) => LoadMap(MapLoadRequest.FromMapId(mapId));

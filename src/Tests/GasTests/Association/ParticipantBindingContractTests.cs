@@ -356,7 +356,7 @@ namespace Ludots.Tests.GAS
             Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
             var players = new PlayerEntityLookup();
             players.Register(7, player);
-            ClientCastPreferenceStore preferences = CreateSeatPreferenceStore();
+            ClientControlSchemePreferenceStore preferences = CreateSeatPreferenceStore();
             preferences.SetActiveScheme("scheme.seat.first");
             ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(
                 world, "scheme.seat.first", "scheme.seat.declared", preferences: preferences);
@@ -707,7 +707,7 @@ namespace Ludots.Tests.GAS
             string initialScheme,
             string alternateScheme,
             List<string> allowedSchemes = null,
-            ClientCastPreferenceStore preferences = null)
+            ClientControlSchemePreferenceStore preferences = null)
         {
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
@@ -736,22 +736,9 @@ namespace Ludots.Tests.GAS
             return runtime;
         }
 
-        private static ClientCastPreferenceStore CreateSeatPreferenceStore()
+        private static ClientControlSchemePreferenceStore CreateSeatPreferenceStore()
         {
-            var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            return new ClientCastPreferenceStore(
-                new CastCommitProfileRegistry(
-                    castCommitIds,
-                    castCommitActionIds,
-                    new InteractionContextProfileRegistry(contextProfileIds)),
-                templateKeys.Register,
-                templateKeys.GetName,
-                formSetKeys.Register,
-                formSetKeys.GetName);
+            return new ClientControlSchemePreferenceStore();
         }
 
         [Test]

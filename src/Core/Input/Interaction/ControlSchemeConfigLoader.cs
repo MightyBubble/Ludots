@@ -6,9 +6,8 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Follows the
-    /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>. Schemes are pure device binding profiles:
+    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Catalog-declared
+    /// DeepObject merge through the shared <see cref="ConfigPipeline"/>. Schemes are pure device binding profiles:
     /// order routing preferences live on the player representative (<see cref="InteractionPref"/>) and
     /// a legacy <c>defaults</c> node fails fast by name instead of being silently dropped. Axis
     /// move order type references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast

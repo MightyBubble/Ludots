@@ -266,7 +266,6 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | **已写** |
 | `input-02-cast-dispatch.md` | 施法派发档案 | cast_dispatch_profiles.json、目标收集与派发策略 | P2 | **已写** |
 | `input-03-interaction-context.md` | 交互上下文档案 | interaction_context_profiles.json、交互模式与上下文 | P2 | **已写** |
-| `input-04-cast-commit.md` | 施法提交档案 | cast_commit_profiles 与 locks、提交确认与锁 | P2 | **已写** |
 | `input-05-filters-and-schemes.md` | 过滤与输入方案 | default_input、filter_profiles、control_schemes、动作属性绑定 | P2 | **已写** |
 
 ### 卷 8 · Graph

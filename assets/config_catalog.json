@@ -460,14 +460,6 @@
     ]
   },
   {
-    "Path": "Input/cast_commit_profiles.json",
-    "Policy": "DeepObject"
-  },
-  {
-    "Path": "Input/cast_commit_locks.json",
-    "Policy": "DeepObject"
-  },
-  {
     "Path": "Input/interaction_modes.json",
     "Policy": "DeepObject"
   },
