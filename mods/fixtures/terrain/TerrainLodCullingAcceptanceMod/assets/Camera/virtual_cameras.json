@@ -3,6 +3,7 @@
     "id": "TerrainLod.Script",
     "displayName": "Terrain LOD Acceptance Scripted Orbit",
     "priority": 0,
+    "facingMode": "none",
     "distanceCm": 5200,
     "pitch": 46,
     "fovYDeg": 48,

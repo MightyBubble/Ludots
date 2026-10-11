@@ -3,6 +3,7 @@
     "id": "CrowdSimulation.Camera.Terrain",
     "displayName": "CrowdSimulation Terrain Orbit",
     "priority": 0,
+    "facingMode": "none",
     "distanceCm": 1920000,
     "pitch": 55,
     "fovYDeg": 50,

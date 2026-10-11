@@ -3,6 +3,7 @@
     "id": "Terrain1743.Evidence",
     "displayName": "Terrain 1743 Evidence Fixed Orbit",
     "priority": 10,
+    "facingMode": "none",
     "targetSource": "Fixed",
     "fixedTargetCm": { "x": 1577300, "y": 1393500 },
     "distanceCm": 60000,
