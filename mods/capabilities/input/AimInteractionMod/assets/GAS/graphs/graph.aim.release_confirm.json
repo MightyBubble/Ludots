@@ -106,6 +106,16 @@
       {
         "id": "halt_ok",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "load_queue_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "store_queue_mod",
+        "op": "StoreArgInt",
+        "argKey": "MapTrigger.Modifiers"
       }
     ],
     "controlEdges": [
@@ -182,6 +192,16 @@
       {
         "from": "eq_jump",
         "fromPort": "true",
+        "to": "load_queue_mod"
+      },
+      {
+        "from": "load_queue_mod",
+        "fromPort": "next",
+        "to": "store_queue_mod"
+      },
+      {
+        "from": "store_queue_mod",
+        "fromPort": "next",
         "to": "invoke"
       }
     ],
@@ -239,6 +259,12 @@
         "fromPort": "value",
         "to": "deact",
         "toPort": "source"
+      },
+      {
+        "from": "load_queue_mod",
+        "fromPort": "value",
+        "to": "store_queue_mod",
+        "toPort": "value"
       }
     ]
   }

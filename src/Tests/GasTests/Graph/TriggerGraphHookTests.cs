@@ -178,6 +178,7 @@ namespace Ludots.Tests.Gas.Graph
                 ValueEdges = new List<GraphControlFlowValueEdge>
                 {
                     new("hook_const", "value", "hook_fire", "amount"),
+                    new("hook_const", "value", "hook_done", "value"),
                 },
             };
         }

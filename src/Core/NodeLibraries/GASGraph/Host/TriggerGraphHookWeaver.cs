@@ -512,6 +512,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             GraphProgramPackage package = compiled.Package.Value;
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, symbolResolver, entityCollections, builtinHandlers);
+            GraphProgramSymbolPatcher.PatchInvokeGraphKeys(package.Symbols, package.Program);
 
             int graphId = GraphIdRegistry.GetId(targetGraphId);
             registry.ReplaceProgram(
@@ -709,6 +710,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             foreach (GraphControlFlowValueEdge edge in fragment.ValueEdges)
             {
+                // HaltReturnInt terminals are not copied; their value input has no consumer
+                // once control is handed to the continuation.
+                if (fragment.DroppedHaltNodes.Contains(edge.To) || fragment.DroppedHaltNodes.Contains(edge.From))
+                {
+                    continue;
+                }
+
                 merged.ValueEdges.Add(new GraphControlFlowValueEdge(
                     PrefixedId(hook.CallerGraphId, edge.From),
                     edge.FromPort,

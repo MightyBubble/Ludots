@@ -344,32 +344,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (program == null || program.Length == 0) return;
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
 
+            PatchInvokeGraphKeys(symbols, program);
             for (int i = 0; i < program.Length; i++)
             {
                 ref var ins = ref program[i];
-                if ((ins.Op == (ushort)GraphNodeOp.InvokeScript || ins.Op == (ushort)GraphNodeOp.InvokeGraph) &&
+                if (ins.Op == (ushort)GraphNodeOp.InvokeScript &&
                     (ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
                 {
                     string symbol = ResolveSymbol(symbols, ins.Imm);
-                    if (ins.Op == (ushort)GraphNodeOp.InvokeGraph)
-                    {
-                        int targetGraphId = GraphIdRegistry.GetId(symbol);
-                        if (targetGraphId <= 0)
-                        {
-                            throw new InvalidOperationException(
-                                $"InvokeGraph.functionName '{symbol}' is not a registered graph key.");
-                        }
-
-                        ins.Imm = targetGraphId;
-                    }
-                    else
-                    {
-                        GraphFunctionEntry entry = catalog.Require(symbol);
-                        ins.Imm = entry.GraphId;
-                    }
-
+                    GraphFunctionEntry entry = catalog.Require(symbol);
+                    ins.Imm = entry.GraphId;
                     ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Resolves InvokeGraph keys while graph ids are already frozen. Hook weaving
+        /// recompiles the target, so this must run on the replacement program; the later
+        /// Func Lib pass only sees the pre-weave package array.
+        /// </summary>
+        public static void PatchInvokeGraphKeys(string[]? symbols, GraphInstruction[] program)
+        {
+            if (program == null || program.Length == 0 || symbols == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < program.Length; i++)
+            {
+                ref var ins = ref program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeGraph ||
+                    (ins.Flags & GraphInstructionFlags.FuncLibName) == 0)
+                {
+                    continue;
+                }
+
+                string symbol = ResolveSymbol(symbols, ins.Imm);
+                int targetGraphId = GraphIdRegistry.GetId(symbol);
+                if (targetGraphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeGraph.functionName '{symbol}' is not a registered graph key.");
+                }
+
+                ins.Imm = targetGraphId;
+                ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
             }
         }
 
