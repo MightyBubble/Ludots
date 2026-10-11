@@ -170,7 +170,7 @@ public sealed class RuntimeFormationSection
 {
     public required Fix64 SpacingScale { get; init; }
     public required Fix64 LeaderSpeed { get; init; }
-    public required Fix64 LeaderTurnRate { get; init; }
+    public required Fix64 LeaderTurnRatePerSec { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 CatchUp { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
@@ -201,15 +201,15 @@ public sealed class RuntimeMovementSection
     public required Fix64 MaxStepNavCells { get; init; }
     public required int MaxSubSteps { get; init; }
     public required Fix64 SlotTimeConstantSec { get; init; }
-    public required Fix64 BlendRate { get; init; }
+    public required Fix64 BlendRatePerSec { get; init; }
     public required Fix64 BlendCommit { get; init; }
-    public required int SlotCheckInterval { get; init; }
+    public required int SlotCheckIntervalSubSteps { get; init; }
     public required Fix64 SightHysteresis { get; init; }
     public required Fix64 LaneSpreadSpeedRatio { get; init; }
     public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
-    public required Fix64 StallDecay { get; init; }
-    public required Fix64 UnitTurnRate { get; init; }
+    public required Fix64 StallDecayPerSec { get; init; }
+    public required Fix64 UnitTurnRateRadPerSec { get; init; }
     public required Fix64 StopSpeedRatio { get; init; }
     public required Fix64 SpeedCapRatio { get; init; }
     public required Fix64 RestAccelScale { get; init; }
@@ -224,7 +224,7 @@ public sealed class RuntimeAvoidanceSection
     public required int MaxNeighbors { get; init; }
     public required int MaxScan { get; init; }
     public required Fix64 SeparationWeight { get; init; }
-    public required Fix64 Acceleration { get; init; }
+    public required Fix64 AccelerationPerSec { get; init; }
     public required Fix64 RestDeadband { get; init; }
     public required Fix64 MaxPush { get; init; }
     public required Fix64 Smoothing { get; init; }

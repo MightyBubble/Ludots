@@ -43,20 +43,20 @@ public static class CrowdSimulationConfigValidator
         Rule("spawn.navCellInsetFraction", config.Spawn.NavCellInsetFraction, min: 0, lt: 0.5);
         Rule("movement.sightHysteresis", config.Movement.SightHysteresis, min: 1);
         Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);
-        Rule("movement.stallDecay", config.Movement.StallDecay, min: 0);
+        Rule("movement.stallDecayPerSec", config.Movement.StallDecayPerSec, min: 0);
         Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxSubSteps);
         Rule("movement.restAccelScale", config.Movement.RestAccelScale, gt: 0);
         Rule("movement.restSeparationScale", config.Movement.RestSeparationScale, min: 0);
         // 墙面测试假设单个子步位移小于一格
         Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
         Rule("movement.slotTimeConstantSec", config.Movement.SlotTimeConstantSec, gt: 0);
-        Rule("movement.unitTurnRate", config.Movement.UnitTurnRate, gt: 0);
+        Rule("movement.unitTurnRateRadPerSec", config.Movement.UnitTurnRateRadPerSec, gt: 0);
         Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
-        Rule("movement.blendRate", config.Movement.BlendRate, gt: 0);
+        Rule("movement.blendRatePerSec", config.Movement.BlendRatePerSec, gt: 0);
         Rule("movement.speedCapRatio", config.Movement.SpeedCapRatio, gt: 0);
         Rule("movement.stopSpeedRatio", config.Movement.StopSpeedRatio, gt: 0);
         Rule("movement.stallSpeedRatio", config.Movement.StallSpeedRatio, gt: 0);
-        Rule("movement.slotCheckInterval", config.Movement.SlotCheckInterval, intRequired: true, min: 1);
+        Rule("movement.slotCheckIntervalSubSteps", config.Movement.SlotCheckIntervalSubSteps, intRequired: true, min: 1);
         Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
@@ -113,7 +113,7 @@ public static class CrowdSimulationConfigValidator
             Rule($"agents.radiusClasses.{radiusCm}.pushPriority", rc.PushPriority, min: 0);
         }
         Rule("avoidance.rateHz", config.Avoidance.RateHz, gt: 0);
-        Rule("avoidance.acceleration", config.Avoidance.Acceleration, gt: 0);
+        Rule("avoidance.accelerationPerSec", config.Avoidance.AccelerationPerSec, gt: 0);
         Rule("avoidance.maxPush", config.Avoidance.MaxPush, gt: 0);
         Rule("avoidance.separationWeight", config.Avoidance.SeparationWeight, min: 0);
         Rule("avoidance.restDeadband", config.Avoidance.RestDeadband, min: 0);
@@ -129,7 +129,7 @@ public static class CrowdSimulationConfigValidator
         Rule("formation.settleTimeSec", config.Formation.SettleTimeSec, min: 0);
         Rule("formation.magicBoxPadCm", config.Formation.MagicBoxPadCm, min: 0);
         Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
-        Rule("formation.leaderTurnRate", config.Formation.LeaderTurnRate, gt: 0);
+        Rule("formation.leaderTurnRatePerSec", config.Formation.LeaderTurnRatePerSec, gt: 0);
         Rule("formation.faceTurnScale", config.Formation.FaceTurnScale, gt: 0);
         Rule("formation.slotArriveCm", config.Formation.SlotArriveCm, gt: 0);
         Rule("formation.goalArriveCm", config.Formation.GoalArriveCm, gt: 0);

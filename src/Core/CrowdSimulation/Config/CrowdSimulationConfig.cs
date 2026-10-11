@@ -103,6 +103,12 @@ public sealed class CrowdSimulationConfig
         ("formation.settleTime", "formation.settleTimeSec"),
         ("movement.slotTimeConstant", "movement.slotTimeConstantSec"),
         ("sim.timeScale", "sim.simSecondsPerTickSecond"),
+        ("movement.blendRate", "movement.blendRatePerSec"),
+        ("movement.unitTurnRate", "movement.unitTurnRateRadPerSec"),
+        ("movement.stallDecay", "movement.stallDecayPerSec"),
+        ("movement.slotCheckInterval", "movement.slotCheckIntervalSubSteps"),
+        ("formation.leaderTurnRate", "formation.leaderTurnRatePerSec"),
+        ("avoidance.acceleration", "avoidance.accelerationPerSec"),
     ];
 
     private static readonly string[] IdKeyedObjects =
@@ -362,7 +368,7 @@ public sealed class CrowdSimulationConfig
     {
         public required double SpacingScale { get; init; }
         public required double LeaderSpeed { get; init; }
-        public required double LeaderTurnRate { get; init; }
+        public required double LeaderTurnRatePerSec { get; init; }
         public required double FaceTurnScale { get; init; }
         public required double CatchUp { get; init; }
         public required double SlotSightCm { get; init; }
@@ -394,15 +400,15 @@ public sealed class CrowdSimulationConfig
         public required double MaxStepNavCells { get; init; }
         public required int MaxSubSteps { get; init; }
         public required double SlotTimeConstantSec { get; init; }
-        public required double BlendRate { get; init; }
+        public required double BlendRatePerSec { get; init; }
         public required double BlendCommit { get; init; }
-        public required int SlotCheckInterval { get; init; }
+        public required int SlotCheckIntervalSubSteps { get; init; }
         public required double SightHysteresis { get; init; }
         public required double LaneSpreadSpeedRatio { get; init; }
         public required double WakeDistanceCm { get; init; }
         public required double StallSpeedRatio { get; init; }
-        public required double StallDecay { get; init; }
-        public required double UnitTurnRate { get; init; }
+        public required double StallDecayPerSec { get; init; }
+        public required double UnitTurnRateRadPerSec { get; init; }
         public required double StopSpeedRatio { get; init; }
         public required double SpeedCapRatio { get; init; }
         public required double RestAccelScale { get; init; }
@@ -417,7 +423,7 @@ public sealed class CrowdSimulationConfig
         public required int MaxNeighbors { get; init; }
         public required int MaxScan { get; init; }
         public required double SeparationWeight { get; init; }
-        public required double Acceleration { get; init; }
+        public required double AccelerationPerSec { get; init; }
         public required double RestDeadband { get; init; }
         public required double MaxPush { get; init; }
         public required double Smoothing { get; init; }

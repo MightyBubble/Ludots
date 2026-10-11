@@ -399,6 +399,12 @@ public class CrowdSimulationConfigTests
         Assert.That(old, Does.Contain("sim.timeScale"));
         Assert.That(old, Does.Contain("formations[].spacing"));
         Assert.That(old, Does.Contain("fog.cellCells"));
+        Assert.That(old, Does.Contain("movement.blendRate"));
+        Assert.That(old, Does.Contain("movement.unitTurnRate"));
+        Assert.That(old, Does.Contain("movement.stallDecay"));
+        Assert.That(old, Does.Contain("movement.slotCheckInterval"));
+        Assert.That(old, Does.Contain("formation.leaderTurnRate"));
+        Assert.That(old, Does.Contain("avoidance.acceleration"));
     }
 
     private static string PlaceRetiredKey(JsonObject root, string oldPath)

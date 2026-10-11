@@ -16,7 +16,7 @@ public class CrowdSimulationRateTests
     {
         Assert.That(CrowdFog.PeriodTicks(30, 4), Is.EqualTo(8));
         Assert.That(CrowdMovementKernel.AvoidanceStride(30, 15), Is.EqualTo(2));
-        Assert.That(CrowdMovementKernel.AvoidanceStride(30, 15.9), Is.EqualTo(2));
+        Assert.That(CrowdMovementKernel.AvoidanceStride(30, 20.6), Is.EqualTo(1));
 
         var fog = Assert.Throws<InvalidOperationException>(() => CrowdFog.PeriodTicks(30, 31));
         Assert.That(fog!.Message, Does.Contain("fog.rateHz"));

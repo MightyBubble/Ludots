@@ -129,6 +129,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
 - 步进频率是 `FixedHz`。`fog.rateHz` 相对它，`avoidance.rateHz` 相对 `FixedHz × 子步`。两者都必须 > 0，并且不能超过对应的步进频率。周期是 `max(1, round(步进频率 / rateHz))`。实际频率打在引擎日志里。超过步进频率直接报错。
 - `sim.simSecondsPerTickSecond` 是每个 tick 秒推进多少仿真秒。旧键 `sim.timeScale` 已删除。
 - 玩法时长带 `Sec`：`formation.settleTimeSec`、`movement.slotTimeConstantSec`、结构模板的 `lifetimeSec`。调度延迟和每 tick 预算仍用 `Ticks` / `PerTick`，例如 `planning.latencyTicks`、`fog.revealTicks`、`flowfield.maxRebuildsPerTick`。寿命到期 tick 是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`。
+- 速率同样带单位后缀。`movement.blendRatePerSec`、`movement.stallDecayPerSec`、`formation.leaderTurnRatePerSec`、`avoidance.accelerationPerSec` 是 1/仿真秒。`movement.unitTurnRateRadPerSec` 是弧度/仿真秒。`movement.slotCheckIntervalSubSteps` 是子步间隔。旧键出现即失败。
 
 调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，会话不自动激活。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。要开路径服务，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
 

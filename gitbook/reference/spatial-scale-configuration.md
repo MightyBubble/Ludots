@@ -122,6 +122,13 @@ flowchart TD
 | `spawn.groupSpacingScale` | 团间距 | 无量纲 | 2.2 | 乘个人半径。旧键 `spawn.clusterSpacing`。 |
 | `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。键是阵型 id。 |
 | `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 0.5 | 乘速度。 |
+| `movement.blendRatePerSec` / `stallDecayPerSec` | 混合 / 卡住衰减 | 1/仿真秒 | 2.5 / 0.5 | `min(1, rate × dt)`；卡住计时按 `dt × stallDecayPerSec` 衰减。 |
+| `formation.leaderTurnRatePerSec` | 领队转向 | 1/仿真秒 | 3 | `min(1, dt × leaderTurnRatePerSec)`。 |
+| `avoidance.accelerationPerSec` | 分离加速 | 1/仿真秒 | 4 | `1 − exp(−accelerationPerSec × dt)`，dt 为子步仿真秒。 |
+| `movement.unitTurnRateRadPerSec` | 单位转向 | 弧度/仿真秒 | 2.5 | `unitTurnRateRadPerSec × dt`。 |
+| `movement.slotCheckIntervalSubSteps` | 槽位视线检查 | 子步 | 4 | 每隔这么多子步查一次，按单位句柄错峰。 |
+
+旧键 `movement.blendRate`、`movement.stallDecay`、`formation.leaderTurnRate`、`avoidance.acceleration`、`movement.unitTurnRate`、`movement.slotCheckInterval` 出现即失败。
 
 避让哈希格 `CrowdSpatialHash.CellSizeCm` / `CellsPerSide` 由半径和 `avoidance.hashRings` 派生，没有边长配置键。
 
