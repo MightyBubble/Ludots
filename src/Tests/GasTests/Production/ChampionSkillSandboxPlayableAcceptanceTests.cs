@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using CoreInputMod.Systems;
-using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -189,18 +188,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add($"[T+005] Idle hover over {hoverEntityName} shows a dedicated hover marker before any cast input");
 
             Vector2 moveTargetWorld = ezrealStart + new Vector2(220f, 0f);
-            int baselineMoveLines = CountOverlays(overlays, GroundOverlayShape.Line);
             RightClickWorld(engine, backend, moveTargetWorld, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineMoveLines,
-                maxFrames: 8,
-                describeFailure: () => BuildMovePathOverlayDiagnostics(engine, overlays, "Ezreal Alpha", baselineMoveLines));
-            Assert.That(
-                CountOverlays(overlays, GroundOverlayShape.Line),
-                Is.GreaterThan(baselineMoveLines),
-                "Selected champion move orders should render a visible path overlay.");
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -209,7 +197,7 @@ namespace Ludots.Tests.GAS.Production
             Vector2 ezrealAfterMove = ReadPosition(engine.World, "Ezreal Alpha");
             Assert.That(ezrealAfterMove.X, Is.GreaterThan(ezrealStart.X + 80f), "Right-click move should let the selected champion create distance.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "move_reposition");
-            timeline.Add($"[T+006] Ezreal Alpha.Move(RMB) -> X {ezrealStart.X:0} to {ezrealAfterMove.X:0} to create spacing with a visible path overlay");
+            timeline.Add($"[T+006] Ezreal Alpha.Move(RMB) -> X {ezrealStart.X:0} to {ezrealAfterMove.X:0} to create spacing");
 
             engine.AuthorityCamera().ApplyPose(new CameraPoseRequest
             {
@@ -1883,13 +1871,6 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) &&
-                modeIdObj is string modeId &&
-                !string.IsNullOrWhiteSpace(modeId))
-            {
-                return modeId;
-            }
-
             return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
             {
                 CastModeType.SmartCastWithIndicator => IndicatorModeId,
@@ -2681,7 +2662,7 @@ Assert.Fail(
                 Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
                 var world = engine.World;
                 string ctx = world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance inst)
-                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} activeKey={inst.ActiveCollectionKeyId}"
+                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} ctxId={inst.ContextId}"
                     : "ctx=<none>";
                 string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView v)
                     ? $"view owner={v.Owner.Id} key={v.Key} count={v.Count} primary={v.PrimaryEntity.Id}"
@@ -2876,67 +2857,6 @@ Assert.Fail(
                     .Take(8)
                     .Select(item => $"stable={item.StableId},center=({item.Center.X:0.##},{item.Center.Y:0.##},{item.Center.Z:0.##}),r={item.Radius:0.##},inner={item.InnerRadius:0.##}")));
             return sb.ToString();
-        }
-
-        private static string BuildMovePathOverlayDiagnostics(
-            GameEngine engine,
-            GroundOverlayBuffer overlays,
-            string actorName,
-            int baselineMoveLines)
-        {
-            string debugSummary = engine.GlobalContext.TryGetValue(CommandActorMovePathPresentationSystem.DebugSummaryKey, out object? summaryObj)
-                ? summaryObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? lastGroundObj)
-                ? lastGroundObj?.ToString() ?? "<null>"
-                : "<missing>";
-            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? lastOrderObj)
-                ? lastOrderObj?.ToString() ?? "<null>"
-                : "<missing>";
-
-            Entity actor = FindEntityByName(engine.World, actorName);
-            string orderBuffer = DescribeOrderBuffer(engine.World, actor);
-            return string.Join(" || ",
-                BuildOverlayDiagnostics(overlays),
-                $"baselineLine={baselineMoveLines}",
-                $"movePath={debugSummary}",
-                $"lastGround={lastGround}",
-                $"lastOrder={lastOrder}",
-                BuildInputActionDiagnostics(engine, "Command"),
-                BuildSelectionStateDiagnostics(engine),
-                $"actorOrderBuffer={orderBuffer}");
-        }
-
-        private static string DescribeOrderBuffer(World world, Entity actor)
-        {
-            if (!world.IsAlive(actor))
-            {
-                return "<dead>";
-            }
-
-            if (!world.Has<OrderBuffer>(actor))
-            {
-                return "<missing>";
-            }
-
-            ref readonly OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
-            var parts = new List<string>
-            {
-                $"hasActive={buffer.HasActive}",
-                $"queued={buffer.QueuedCount}",
-            };
-            if (buffer.HasActive)
-            {
-                parts.Add($"active={DescribeOrderBrief(in buffer.ActiveOrder.Order)}");
-            }
-
-            for (int i = 0; i < buffer.QueuedCount && i < 4; i++)
-            {
-                Order queued = buffer.GetQueued(i).Order;
-                parts.Add($"q{i}={DescribeOrderBrief(in queued)}");
-            }
-
-            return string.Join(",", parts);
         }
 
         private static string DescribeOrderBrief(in Order order)

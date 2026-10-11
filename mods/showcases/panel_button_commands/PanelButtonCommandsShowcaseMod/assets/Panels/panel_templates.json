@@ -1,0 +1,81 @@
+[
+  {
+    "id": "panel.buttonCommands.skillChip",
+    "subject": "AbilitySlot",
+    "graph": "Graph.ButtonCommands.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.buttonCommands.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "events": [
+      {
+        "eventId": "ButtonCommands.Cast",
+        "control": "cast",
+        "gesture": "tap",
+        "payload": {
+          "Panel.Slot": "Int"
+        }
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "button",
+          "control": "cast",
+          "bind": "displayName",
+          "tip": {
+            "titleBind": "displayName",
+            "text": "点击下令施放"
+          },
+          "payload": {
+            "Panel.Slot": "slotIndex"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.buttonCommands.strip",
+    "graph": "Graph.ButtonCommands.Strip",
+    "pins": [
+      {
+        "name": "targetCount",
+        "key": "panel.buttonCommands.targetCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "collections": [
+      {
+        "name": "skills",
+        "source": "selfGraph",
+        "collectionKey": "panel.buttonCommands.slots",
+        "template": "panel.buttonCommands.skillChip"
+      }
+    ],
+    "width": 360,
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "text": "技能（按图规则聚合）"
+        },
+        {
+          "type": "list",
+          "bind": "skills",
+          "viewportHeight": 96,
+          "itemExtent": 40
+        },
+        {
+          "type": "label",
+          "bind": "targetCount",
+          "prefix": "靶子: "
+        }
+      ]
+    }
+  }
+]

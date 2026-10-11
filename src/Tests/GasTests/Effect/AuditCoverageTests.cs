@@ -1,3 +1,4 @@
+using Ludots.Core.Gameplay.GAS.Input;
 using System;
 using System.IO;
 using Arch.Core;
@@ -8,6 +9,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
@@ -207,7 +210,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests: null,
+                    promptState: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
@@ -458,10 +461,20 @@ namespace Ludots.Tests.GAS
             // so we mount at the mod root, not the assets subdirectory.
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", coreAssetsDir);
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
             vfs.Mount("MobaDemoMod", mobaModDir);
             var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
             modLoader.LoadedModIds.Add("MobaDemoMod");
             var pipeline = new ConfigPipeline(vfs, modLoader);
+            ConfigCatalog configCatalog = ConfigCatalogLoader.Load(pipeline);
+            var relationshipTypes = new RelationshipTypeRegistry();
+            RelationshipCatalogInstaller.RegisterCatalog(
+                new RelationshipCatalogPipelineLoader(pipeline).Load(configCatalog),
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry());
 
             EffectParamKeys.Initialize();
             EffectTemplateIdRegistry.Clear();
@@ -475,9 +488,10 @@ namespace Ludots.Tests.GAS
             var loader = new EffectTemplateLoader(
                 pipeline,
                 registry,
-                entityTemplateKeys: new EntityTemplateKeyRegistry());
+                entityTemplateKeys: new EntityTemplateKeyRegistry(),
+                relationshipTypes: relationshipTypes);
 
-            Assert.DoesNotThrow(() => loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"),
+            Assert.DoesNotThrow(() => loader.Load(configCatalog, relativePath: "GAS/effects.json"),
                 "Loading MobaDemoMod effects.json via VFS + ConfigPipeline must not throw");
 
             // Verify key MobaDemoMod templates are loaded

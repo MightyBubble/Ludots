@@ -1,11 +1,12 @@
 {
   "types": [
     {
-      "id": "LudotsCore.Participant",
+      "id": "Hostile",
+      "isSymmetric": false
+    },
+    {
+      "id": "Friendly",
       "isSymmetric": false
     }
-  ],
-  "metrics": [],
-  "flags": [],
-  "reasons": []
+  ]
 }

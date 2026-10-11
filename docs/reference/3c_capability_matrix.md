@@ -57,7 +57,7 @@
 - [x] `InputRuntimeSystem` 采样 live 输入
 - [x] `AuthoritativeInputSnapshotSystem` 冻结 fixed-step 快照
 - [x] Camera / Input / Order 共用同一固定步输入快照
-- [x] Click select / GAS response / ViewMode 切换
+- [x] Click select / GAS response / 相机模式切换（消费方自持按键 → VirtualCameraRequest）
 - [x] 交互模式、选择模式、瞄准状态机
 - [x] IME 文本输入
 - [x] JSON 驱动输入配置

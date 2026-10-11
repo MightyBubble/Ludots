@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Interaction
@@ -14,8 +15,8 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// CommandIntentProfile registry and evaluator (RFC-0065 INT-1/2/3, DEC-14). Profiles are declared
     /// in <c>Input/command_intent_profiles.json</c> and compiled at install time: predicate shorthands
-    /// lower to tag bitsets and ids (single predicate evaluation path), stance names resolve through
-    /// <see cref="DomainStanceQuery"/>, order type keys are validated against <see cref="OrderTypeRegistry"/>,
+    /// lower to tag bitsets and ids (single predicate evaluation path), relation names resolve through
+    /// the relationship type registry, order type keys are validated against <see cref="OrderTypeRegistry"/>,
     /// and slot selectors compile to (kind, param id). Evaluation walks rules in descending priority and
     /// the first full predicate match wins — winning is final: a later failure to land the route must not
     /// fall through to lower-priority rules (no fallback). Steady-state evaluation is allocation free and
@@ -23,7 +24,7 @@ namespace Ludots.Core.Input.Interaction
     /// <para>
     /// Knowledge gating (INT-2) is built into evaluation: entity facts the acting domain cannot know
     /// are demoted to a ground hit before any
-    /// rule (including target domain resolution for stance predicates) sees them — per DEC-14 a unit
+    /// rule (including relation predicates) sees them — per DEC-14 a unit
     /// invisible under fog must not be routable, so ground rules may still win but no entity predicate
     /// can. Assemblies that intentionally run without fog must pass an explicit no-op gate; a missing
     /// gate is a startup error, not an allow-all fallback.
@@ -36,7 +37,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly TagOps _tagOps;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
         private readonly ControlDomainQuery _controlDomains;
-        private readonly DomainStanceQuery _stances;
+        private readonly TeamRelationQuery _teamRelations;
         private readonly OrderTypeRegistry _orderTypes;
         private readonly CommandIntentTargetGate _targetGate;
         private readonly Dictionary<string, int> _groupPolicyIndexByKind = new(StringComparer.Ordinal);
@@ -53,7 +54,7 @@ namespace Ludots.Core.Input.Interaction
             TagOps tagOps,
             AbilityDefinitionRegistry abilityDefinitions,
             ControlDomainQuery controlDomains,
-            DomainStanceQuery stances,
+            TeamRelationQuery teamRelations,
             OrderTypeRegistry orderTypes,
             CommandIntentTargetGate targetGate)
         {
@@ -62,7 +63,7 @@ namespace Ludots.Core.Input.Interaction
             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
             _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
-            _stances = stances ?? throw new ArgumentNullException(nameof(stances));
+            _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
             _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             _groupPolicyIndexByKind.Add(CommandIntentGroupPolicyKinds.Independent, 0);
@@ -95,7 +96,7 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Compile and install every profile in the config. Fails fast on duplicate priorities, unknown
-        /// group policy kinds, unresolvable stance names, unknown order type keys, non-semantic slot
+        /// group policy kinds, unresolvable relation names, unknown order type keys, non-semantic slot
         /// selectors (DEC-14: bare slot indices are forbidden), and duplicate installs.
         /// </summary>
         public void Install(CommandIntentProfilesConfig config)
@@ -122,12 +123,12 @@ namespace Ludots.Core.Input.Interaction
         /// Route a single actor: rules are evaluated in descending priority and the first rule whose
         /// actor and target predicates all hold wins. Returns false when no rule matches.
         /// <paramref name="actorDomainRep"/> is the actor's own control domain (proxy control still
-        /// evaluates stance from the acting domain, DEC-14); pass <see cref="Entity.Null"/> when the
-        /// actor has no domain — stance-requiring rules then never match.
+        /// evaluates relations from the acting domain, DEC-14); pass <see cref="Entity.Null"/> when the
+        /// actor has no domain — relation-requiring rules then never match.
         /// INT-2: when the injected gate rejects an entity fact for <paramref name="actorDomainRep"/>,
         /// the facts are demoted to a ground hit before evaluation — the target can never satisfy an
         /// entity predicate (equivalent to the entity not existing) but ground rules may still win, and
-        /// target domain resolution for stance happens only after the gate passed.
+        /// relation predicates see the target only after the gate passed.
         /// </summary>
         public bool TryRoute(
             int profileId,
@@ -141,7 +142,7 @@ namespace Ludots.Core.Input.Interaction
             CompiledRule[] rules = profile.Rules;
             for (int i = 0; i < rules.Length; i++)
             {
-                if (Matches(in rules[i], profile.StancePool, actorEntity, actorDomainRep, in gatedFacts))
+                if (Matches(in rules[i], profile.RelationPool, actorEntity, actorDomainRep, in gatedFacts))
                 {
                     route = rules[i].Route;
                     return true;
@@ -212,7 +213,7 @@ namespace Ludots.Core.Input.Interaction
 
         private bool Matches(
             in CompiledRule rule,
-            int[] stancePool,
+            int[] relationPool,
             Entity actorEntity,
             Entity actorDomainRep,
             in CommandIntentTargetFacts facts)
@@ -247,6 +248,14 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
+            if (rule.HasActorNoneTags &&
+                _world.IsAlive(actorEntity) &&
+                _world.Has<GameplayTagContainer>(actorEntity) &&
+                _tagOps.Intersects(ref _world.Get<GameplayTagContainer>(actorEntity), in rule.ActorNoneTags, TagSense.Effective))
+            {
+                return false;
+            }
+
             if (rule.ActorAbilityCategoryId != 0 && !HasAbilityWithCategory(actorEntity, rule.ActorAbilityCategoryId))
             {
                 return false;
@@ -271,31 +280,26 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
-            if (rule.StanceCount > 0)
+            if (rule.RelationCount > 0)
             {
-                // A stance-requiring rule never matches when either side's domain cannot be resolved.
                 if (!facts.HasEntity || actorDomainRep == Entity.Null)
                 {
                     return false;
                 }
 
-                if (!_controlDomains.TryResolveControlDomain(facts.Target, out Entity targetDomainRep))
+                int actorTeamId = _teamRelations.ResolveTeamId(actorDomainRep);
+                int targetTeamId = _teamRelations.ResolveTeamId(facts.Target);
+                bool relationMatched = false;
+                for (int i = 0; i < rule.RelationCount; i++)
                 {
-                    return false;
-                }
-
-                int stanceId = _stances.GetStance(actorDomainRep, targetDomainRep);
-                bool stanceMatched = false;
-                for (int i = 0; i < rule.StanceCount; i++)
-                {
-                    if (stancePool[rule.StanceOffset + i] == stanceId)
+                    if (_teamRelations.Has(actorTeamId, targetTeamId, relationPool[rule.RelationOffset + i]))
                     {
-                        stanceMatched = true;
+                        relationMatched = true;
                         break;
                     }
                 }
 
-                if (!stanceMatched)
+                if (!relationMatched)
                 {
                     return false;
                 }
@@ -373,17 +377,17 @@ namespace Ludots.Core.Input.Interaction
             sorted.Sort(static (a, b) => b.Priority.CompareTo(a.Priority));
 
             var rules = new CompiledRule[sorted.Count];
-            var stancePool = new List<int>();
+            var relationPool = new List<int>();
             for (int i = 0; i < sorted.Count; i++)
             {
-                rules[i] = CompileRule(definition.Id, sorted[i], ruleIndex: i, stancePool);
+                rules[i] = CompileRule(definition.Id, sorted[i], ruleIndex: i, relationPool);
             }
 
             var profile = new CompiledProfile
             {
                 GroupPolicyIndex = groupPolicyIndex,
                 Rules = rules,
-                StancePool = stancePool.ToArray(),
+                RelationPool = relationPool.ToArray(),
             };
 
             if (profileId >= _profiles.Length)
@@ -404,7 +408,7 @@ namespace Ludots.Core.Input.Interaction
             string profileId,
             CommandIntentRuleDefinition definition,
             int ruleIndex,
-            List<int> stancePool)
+            List<int> relationPool)
         {
             var rule = new CompiledRule
             {
@@ -417,6 +421,7 @@ namespace Ludots.Core.Input.Interaction
             {
                 rule.HasActorAllTags = TryBuildMask(profileId, actor.AllTags, ref rule.ActorAllTags);
                 rule.HasActorAnyTags = TryBuildMask(profileId, actor.AnyTags, ref rule.ActorAnyTags);
+                rule.HasActorNoneTags = TryBuildMask(profileId, actor.NoneTags, ref rule.ActorNoneTags);
                 if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithCategory))
                 {
                     rule.ActorAbilityCategoryId = ResolveAbilityCategoryId(profileId, actor.HasAbilityWithCategory);
@@ -433,19 +438,19 @@ namespace Ludots.Core.Input.Interaction
                     rule.HasEntity = target.HasEntity.Value ? (sbyte)1 : (sbyte)0;
                 }
 
-                if (target.Stance is { Count: > 0 })
+                if (target.Relation is { Count: > 0 })
                 {
-                    rule.StanceOffset = stancePool.Count;
-                    rule.StanceCount = target.Stance.Count;
-                    for (int i = 0; i < target.Stance.Count; i++)
+                    rule.RelationOffset = relationPool.Count;
+                    rule.RelationCount = target.Relation.Count;
+                    for (int i = 0; i < target.Relation.Count; i++)
                     {
-                        if (!_stances.TryResolveStanceId(target.Stance[i], out int stanceId))
+                        if (!_teamRelations.Types.TryGetId(target.Relation[i], out int relationTypeId))
                         {
                             throw new InvalidOperationException(
-                                $"Command intent profile '{profileId}' references unknown stance '{target.Stance[i]}'.");
+                                $"Command intent profile '{profileId}' references unknown relationship type '{target.Relation[i]}'.");
                         }
 
-                        stancePool.Add(stanceId);
+                        relationPool.Add(relationTypeId);
                     }
                 }
             }
@@ -482,7 +487,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.None,
                     0,
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             if (slot.StartsWith("byAbilityTag:", StringComparison.Ordinal))
@@ -505,7 +511,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.ByAbilityCategory,
                     ResolveAbilityCategoryId(profileId, categoryName),
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             if (slot.StartsWith(ContextGroupSelectorPrefix, StringComparison.Ordinal))
@@ -530,7 +537,8 @@ namespace Ludots.Core.Input.Interaction
                     orderTypeId,
                     CommandIntentRouteKinds.ContextGroup,
                     groupId,
-                    targetShape);
+                    targetShape,
+                    definition.ExactGroundPoint);
             }
 
             // DEC-14: semantic routing forbids bare slot indices (bySlotIndex / slotN / anything else).
@@ -556,7 +564,7 @@ namespace Ludots.Core.Input.Interaction
 
             return (target.AllTags == null || target.AllTags.Count == 0) &&
                    (target.AnyTags == null || target.AnyTags.Count == 0) &&
-                   (target.Stance == null || target.Stance.Count == 0);
+                   (target.Relation == null || target.Relation.Count == 0);
         }
 
         private static bool TryBuildMask(string profileId, List<string> tags, ref GameplayTagContainer mask)
@@ -613,13 +621,15 @@ namespace Ludots.Core.Input.Interaction
             public GameplayTagContainer ActorAnyTags;
             public bool HasActorAllTags;
             public bool HasActorAnyTags;
+            public GameplayTagContainer ActorNoneTags;
+            public bool HasActorNoneTags;
             public int ActorAbilityCategoryId;
             public GameplayTagContainer TargetAllTags;
             public GameplayTagContainer TargetAnyTags;
             public bool HasTargetAllTags;
             public bool HasTargetAnyTags;
-            public int StanceOffset;
-            public int StanceCount;
+            public int RelationOffset;
+            public int RelationCount;
             /// <summary>Tri-state: -1 unspecified (matches both), 0 ground only, 1 entity only.</summary>
             public sbyte HasEntity;
             public CommandIntentRoute Route;
@@ -629,7 +639,7 @@ namespace Ludots.Core.Input.Interaction
         {
             public int GroupPolicyIndex;
             public CompiledRule[] Rules = Array.Empty<CompiledRule>();
-            public int[] StancePool = Array.Empty<int>();
+            public int[] RelationPool = Array.Empty<int>();
         }
     }
 }

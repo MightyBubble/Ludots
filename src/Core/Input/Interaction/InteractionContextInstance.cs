@@ -37,10 +37,9 @@ namespace Ludots.Core.Input.Interaction
     /// record of "which context this subject is in right now", present on the interaction
     /// subject (the control-domain representative) only while an interaction context is
     /// active in that entity's control domain, absent otherwise. Absence is the steady
-    /// state — the entity-side anchor of the retired reserved default frame, where the
-    /// player's
-    /// <see cref="InteractionPref"/> default applies, command sources resolve to the subject itself,
-    /// and cast commits route through the data-declared default profile's collection key.
+    /// state: the player's <see cref="InteractionPref"/> default applies, and command
+    /// sources resolve to the subject itself. Cast commits take their collection key from
+    /// the caller; the mounted context only supplies the filter profile.
     /// Sparse like <see cref="InteractionMode"/> and <see cref="InteractionPref"/>: the vast
     /// majority of entities never carry it, and holders are discoverable by archetype query.
     /// <para>
@@ -55,8 +54,7 @@ namespace Ludots.Core.Input.Interaction
     /// <para>
     /// All int fields are registry ids resolved once at
     /// <see cref="InteractionContextProfileRegistry"/> install time: context and input context
-    /// ids in the profile registry's own spaces, collection keys in the
-    /// <c>EntityCollectionStore</c> key space, filter and command intent ids in their kernel
+    /// ids in the profile registry's own spaces, filter and command intent ids in their kernel
     /// registries' spaces. Component equality across a save round trip therefore only requires
     /// the same install order.
     /// </para>
@@ -85,14 +83,6 @@ namespace Ludots.Core.Input.Interaction
         /// and pointer commands do not route — never bubble (no fallback).
         /// </summary>
         public int CommandIntentProfileId;
-
-        /// <summary>
-        /// Collection key id in the <c>EntityCollectionStore</c> key space that command intent
-        /// routing reads while this context is active. Copied at mount from the profile's
-        /// <c>activeCollectionKey</c>, or from the collectionKey declared on the context's
-        /// submit graph when the profile leaves that field empty.
-        /// </summary>
-        public int ActiveCollectionKeyId;
 
         /// <summary>
         /// Filter profile id in the <see cref="FilterProfileRegistry.ProfileIdRegistry"/> id

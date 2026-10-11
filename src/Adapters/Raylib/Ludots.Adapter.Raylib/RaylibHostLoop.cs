@@ -14,6 +14,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.FieldRegions;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
@@ -56,6 +57,50 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibHostLoop
     {
+        /// <summary>
+        /// 指针捕获策略（sole-seat）：UI 路由 → 释放；世界路由 + 活动虚拟相机带无按住
+        /// DragRotate（look 模式）→ 捕获并隐藏（raylib 虚拟移动，指针出窗 look 不断流）。
+        /// 指针路由语义归 InteractionContextProfile（#1585），捕获是实现，不新增声明字段。
+        /// </summary>
+        private static void UpdateCursorCapturePolicy(GameEngine engine)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) ||
+                seats is not { Count: 1 })
+            {
+                return;
+            }
+
+            string seatId = seats.SeatIds[0];
+            var profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            bool uiRouted = profiles != null &&
+                UiPointerRoutingQuery.RoutesPointerToUi(engine.World, seats, profiles, seatId);
+
+            bool captureWanted = false;
+            if (!uiRouted &&
+                ClientLocalSeatAccess.TryResolvePresentCamera(engine, seatId, out var camera, out _) &&
+                camera.VirtualCameraBrain is { } brain &&
+                brain.ActiveDefinition is { RotateMode: CameraRotateMode.DragRotate, AllowUserInput: true } &&
+                brain.AllowsInput)
+            {
+                captureWanted = true;
+            }
+
+            // 窗口未聚焦（用户还没点进来/切走了）绝不锁鼠标——否则用户连聚焦都做不到。
+            if (!Rl.IsWindowFocused())
+            {
+                captureWanted = false;
+            }
+
+            bool hidden = Rl.IsCursorHidden();
+            if (captureWanted && !hidden)
+            {
+                Rl.DisableCursor();
+            }
+            else if (!captureWanted && hidden)
+            {
+                Rl.EnableCursor();
+            }
+        }
         private static VertexMapTerrainChunkMeshSource? _terrainSource;
 
         private const uint FlagWindowResizable = 4;
@@ -704,6 +749,8 @@ namespace Ludots.Adapter.Raylib
                         {
                             soundConsumer.Consume(soundRequests.GetSpan(), cameraAdapter.Camera.position);
                         }
+
+                        UpdateCursorCapturePolicy(engine);
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         presentFrames.Clear();
@@ -2771,17 +2818,13 @@ namespace Ludots.Adapter.Raylib
 
             string selectedSummary = "commandSource=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out debugOwner, out debugCollections) &&
-                engine.World.IsAlive(debugOwner) &&
-                engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(debugOwner, out var debugContext) &&
-                debugContext.ActiveCollectionKeyId > 0)
+                engine.World.IsAlive(debugOwner))
             {
-                string activeKey = debugCollections.KeyRegistry.GetName(debugContext.ActiveCollectionKeyId);
-                if (!string.IsNullOrEmpty(activeKey) &&
-                    EntityCollectionContextRuntime.TryGetPrimary(
+                if (EntityCollectionContextRuntime.TryGetPrimary(
                         engine.World,
                         debugCollections,
                         debugOwner,
-                        activeKey,
+                        "collection.command.source",
                         out Entity commandSource) &&
                     commandSource != Entity.Null)
                 {

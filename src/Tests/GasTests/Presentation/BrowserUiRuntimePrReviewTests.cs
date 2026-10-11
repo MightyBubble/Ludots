@@ -342,6 +342,11 @@ namespace GasTests
         [Test]
         public void LauncherCefPreset_CompletesHostProviderDescriptorFromRegistry()
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Ignore("browserRuntime provider 'cef' requires Windows (CefSharp.OffScreen.NETCore win-x64).");
+            }
+
             string repoRoot = FindRepoRoot();
             string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"browser-provider-registry-{Guid.NewGuid():N}");
             string graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");

@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -762,12 +763,12 @@ namespace Ludots.Tests.Presentation
 
             MassNavigationConfig config = CreateTestConfig(membershipCapacity, relationshipDomainCapacity);
             var simulation = CreateConfiguredSimulation(config);
-            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
-                ?? throw new InvalidOperationException("Test requires DomainStanceQuery.");
-            simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
-                stances,
+            TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+                ?? throw new InvalidOperationException("Test requires TeamRelationQuery.");
+            simulation.SetDomainRelationshipProjection(new MassNavigationDomainRelationProjection(
+                teamRelations,
                 config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
-                config.RelationshipPolicy.CooperativeStance));
+                config.RelationshipPolicy.CooperativeRelation));
             var mapId = new MapId(config.MapId);
             var runtimeBinding = new MassNavigationRuntimeBinding();
             runtimeBinding.Activate(mapId, simulation);

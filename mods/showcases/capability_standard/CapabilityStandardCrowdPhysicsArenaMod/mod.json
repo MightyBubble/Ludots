@@ -6,7 +6,7 @@
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
+    "SelectionInteractionMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0"
   },
   "author": "Ludots Team",

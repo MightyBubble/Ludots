@@ -42,7 +42,7 @@ PR 要求：优先复用仓库已有实体索引结构；用字典时预分配�
 - `RegionEntityIndex`(Dictionary<long,Entity>)：长期可增长表、非固定容量、不可清空复用 —— 不适用。
 - `MapLoadEntityIndex`(Dictionary<string,Entity>)：字符串键、非固定容量 —— 不适用。
 - `RelationshipReverseIndex`：世界级长期索引、需要事件驱动维护 —— 不是事务内暂存索引，不适用。
-- `DomainRoutedCollectionWriter._domainIndexMap`(Dictionary<Entity,int>)：模式相近（Entity→row 下标），
+- `CollectionApplier._domainIndexMap`(Dictionary<Entity,int>)：模式相近（Entity→row 下标），
   但内嵌私有、容量 8 起，未抽象成可复用类型。
 - **结论**：仓库没有现成的「固定容量 + 完整实体身份 + 清空复用 + 稳定零分配」的事务内
   `Entity→下标` 索引类型可直接复用。采用 `Dictionary<Entity,int>`，构造时 `new(capacity)`、

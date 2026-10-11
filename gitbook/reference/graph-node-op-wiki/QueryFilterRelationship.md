@@ -12,17 +12,17 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体） |
-| 特殊写法 | imm 填整数立即数 |
+| 特殊写法 | dst 填符号名（编译期解析） |
 
 手册分册（全量字段与语义）：[空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)
 
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/QueryFilterRelationship.json`）：
 
 ```json
-{"id": "relFilter", "op": "QueryFilterRelationship", "relationshipMode": "Hostile"}
+{"id": "relFilter", "op": "QueryFilterRelationship", "relationshipType": "Hostile"}
 ```
 
 接线（值边把上一步的结果送进本节点端口）：
@@ -43,7 +43,7 @@ ConstInt → ConstInt → QueryCone → LoadCaster → QueryFilterNotEntity → 
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - 同类用法：范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。
 ## 怎么进
 

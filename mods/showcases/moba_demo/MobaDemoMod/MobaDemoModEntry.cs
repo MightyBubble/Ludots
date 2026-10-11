@@ -1,6 +1,4 @@
 using Ludots.Core.Modding;
-using Ludots.Core.Scripting;
-using MobaDemoMod.Triggers;
 
 namespace MobaDemoMod
 {
@@ -9,7 +7,6 @@ namespace MobaDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[MobaDemoMod] Loaded");
-            context.OnEvent(GameEvents.GameStart, new InstallMobaDemoOnGameStartTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

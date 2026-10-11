@@ -1,0 +1,229 @@
+[
+  {
+    "id": "graph.moba.aim_confirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_moba_aimconfirm",
+        "action": "Moba.AimConfirm",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "candidates",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 48
+      },
+      {
+        "id": "pick_valid",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "hit_branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "moba_demo.aim_slot"
+      },
+      {
+        "id": "all_entities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "champions",
+        "op": "QueryFilterTemplate",
+        "template": "moba_hero"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "close_aim",
+        "op": "DeactivateContext",
+        "context": "interaction.context.moba_demo.aiming"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "candidates"
+      },
+      {
+        "from": "candidates",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "hostile",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "pick_valid"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "next",
+        "to": "hit_branch"
+      },
+      {
+        "from": "hit_branch",
+        "fromPort": "true",
+        "to": "slot"
+      },
+      {
+        "from": "hit_branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "all_entities"
+      },
+      {
+        "from": "all_entities",
+        "fromPort": "next",
+        "to": "champions"
+      },
+      {
+        "from": "champions",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "close_aim"
+      },
+      {
+        "from": "close_aim",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pick_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "value",
+        "to": "hit_branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "slot",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "close_aim",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

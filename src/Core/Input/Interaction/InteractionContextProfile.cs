@@ -7,9 +7,8 @@ namespace Ludots.Core.Input.Interaction
     public static class InteractionContextIds
     {
         /// <summary>
-        /// Data-declared steady-state profile: never mounted (absence of
-        /// <see cref="InteractionContextInstance"/> is the steady state), but its collection key
-        /// and filter profile anchor steady-state cast commits and command routing.
+        /// Reserved profile id data may declare. The engine does not install it. Steady state is
+        /// the absence of <see cref="InteractionContextInstance"/>, not this profile.
         /// </summary>
         public const string Default = "interaction.context.default";
     }
@@ -30,13 +29,6 @@ namespace Ludots.Core.Input.Interaction
     {
         public string Id { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Routing collection key copied onto <see cref="InteractionContextInstance"/> at mount.
-        /// Leave empty when a bound submit graph declares <c>collectionKey</c> — that graph
-        /// declaration is the one persisted on the entity. Declaring both fails install.
-        /// </summary>
-        public string ActiveCollectionKey { get; set; } = string.Empty;
-
         /// <summary>Optional filter profile applied to cast commits (empty = pass-through).</summary>
         public string FilterProfileId { get; set; }
 
@@ -45,6 +37,15 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Optional pointer command intent profile active while the context is mounted (DEC-14).</summary>
         public string CommandIntentId { get; set; }
+
+        /// <summary>
+        /// Pointer routing declaration ("ui" = while this context is active on the seat's rep,
+        /// the host routes device pointer input to UI surfaces). Input semantics belong to the
+        /// state definition, never to a view — hosts ask the read-only projection
+        /// (<see cref="UiPointerRoutingQuery"/>) instead of consulting any capture flag.
+        /// Empty = world routing. Only "ui" is defined.
+        /// </summary>
+        public string PointerRouting { get; set; }
 
         /// <summary>
         /// Foreground declaration: while this context is active, every active

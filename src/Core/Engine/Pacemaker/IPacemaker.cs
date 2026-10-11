@@ -34,8 +34,18 @@ namespace Ludots.Core.Engine.Pacemaker
         private bool _stepInProgress;
         private int _slicesInCurrentStep;
         private bool _budgetFused;
+        private long _lastClampWarnTimestamp;
 
         public bool IsBudgetFused => _budgetFused;
+
+        /// <summary>
+        /// Backlog ceiling for the fixed-step accumulator (seconds). After a host stall, the
+        /// excess is dropped instead of consumed, trading a brief slow-motion for a positional
+        /// teleport. Must stay >= 2x FixedDeltaTime: an in-flight cooperative step still owns one
+        /// un-deducted FixedDeltaTime inside the accumulator, and at least one full step must
+        /// remain digestible after the clamp.
+        /// </summary>
+        public double MaxAccumulatedSeconds { get; set; } = 0.1;
         
         /// <summary>
         /// Interpolation alpha [0, 1] for smooth visual rendering.
@@ -61,6 +71,7 @@ namespace Ludots.Core.Engine.Pacemaker
             if (dt <= 0f) return;
 
             _accumulator += dt;
+            ClampAccumulatorBacklog();
             while (_accumulator >= Time.FixedDeltaTime)
             {
                 simulationGroup.Update(Time.FixedDeltaTime);
@@ -75,6 +86,7 @@ namespace Ludots.Core.Engine.Pacemaker
             if (dt <= 0f) return;
 
             _accumulator += dt;
+            ClampAccumulatorBacklog();
             if (timeBudgetMs <= 0) timeBudgetMs = 1;
             if (maxSlicesPerLogicFrame <= 0) maxSlicesPerLogicFrame = 1;
 
@@ -126,6 +138,24 @@ namespace Ludots.Core.Engine.Pacemaker
             _stepInProgress = false;
             _slicesInCurrentStep = 0;
             _budgetFused = false;
+        }
+
+        private void ClampAccumulatorBacklog()
+        {
+            if (_accumulator <= MaxAccumulatedSeconds)
+            {
+                return;
+            }
+
+            _accumulator = MaxAccumulatedSeconds;
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            if (now - _lastClampWarnTimestamp >= System.Diagnostics.Stopwatch.Frequency)
+            {
+                _lastClampWarnTimestamp = now;
+                Log.Warn(
+                    in LogChannels.Engine,
+                    $"Pacemaker accumulator exceeded {MaxAccumulatedSeconds:0.###}s; dropped the backlog (slow motion instead of a positional teleport).");
+            }
         }
     }
 

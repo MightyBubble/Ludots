@@ -144,7 +144,7 @@ namespace Ludots.Core.Input.Interaction
             }
 
             InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(PointerInteractionSnapshotReader));
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
 
             PointerActionSnapshot confirm = TryReadActionSnapshot(globals, bindings.ConfirmActionId, pointer, out PointerActionSnapshot confirmSnapshot)
                 ? confirmSnapshot

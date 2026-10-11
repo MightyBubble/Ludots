@@ -29,18 +29,18 @@
 - `artifacts/acceptance/presentation-hotpath-harness/path.mmd`
 
 ## Timeline
-- [T+006] baseline_hotpath_defaults | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.23ms | HudProj=0.96ms | OverlayBuild=10.49ms | OverlayDraw=120.55ms | Dirty=2 | Rebuilt=0
-- [T+007] steady_state_same_view | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.30ms | HudProj=0.89ms | OverlayBuild=8.67ms | OverlayDraw=99.87ms | Dirty=0 | Rebuilt=0
-- [T+009] diag_hud_off | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=OFF | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.70ms | HudProj=0.99ms | OverlayBuild=7.11ms | OverlayDraw=83.03ms | Dirty=0 | Rebuilt=0
-- [T+013] selection_labels_off | Crowd=10240/3136 | Bars=3136->1303 | Text=3136->1317 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.31ms | HudProj=0.92ms | OverlayBuild=6.12ms | OverlayDraw=69.13ms | Dirty=1 | Rebuilt=0
-- [T+015] bars_off | Crowd=10240/3136 | Bars=0->0 | Text=3136->1317 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.54ms | HudProj=0.92ms | OverlayBuild=5.06ms | OverlayDraw=57.37ms | Dirty=1 | Rebuilt=0
-- [T+017] hud_text_off | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.38ms | HudProj=0.62ms | OverlayBuild=4.18ms | OverlayDraw=47.10ms | Dirty=1 | Rebuilt=0
-- [T+019] terrain_on | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=OFF | Prims=ON | Cull=1.35ms | HudProj=0.42ms | OverlayBuild=3.43ms | OverlayDraw=38.68ms | Dirty=0 | Rebuilt=0
-- [T+021] guides_on | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=ON | Cull=1.33ms | HudProj=0.29ms | OverlayBuild=2.81ms | OverlayDraw=31.78ms | Dirty=0 | Rebuilt=0
-- [T+023] primitives_off | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=OFF | Cull=1.52ms | HudProj=0.19ms | OverlayBuild=2.31ms | OverlayDraw=26.12ms | Dirty=0 | Rebuilt=0
-- [T+027] cull_crowd_off | Crowd=0/0 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=OFF | Cull=0.73ms | HudProj=0.04ms | OverlayBuild=1.89ms | OverlayDraw=21.48ms | Dirty=0 | Rebuilt=0
-- [T+029] panel_off | Crowd=0/0 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=OFF | HUD=OFF | Terr=ON | Guides=ON | Prims=OFF | Cull=0.63ms | HudProj=0.03ms | OverlayBuild=1.55ms | OverlayDraw=17.66ms | Dirty=0 | Rebuilt=0
-- [T+049] restored_hotpath_defaults | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.40ms | HudProj=0.66ms | OverlayBuild=1.64ms | OverlayDraw=16.91ms | Dirty=2 | Rebuilt=0
+- [T+006] baseline_hotpath_defaults | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.65ms | HudProj=0.12ms | OverlayBuild=9.26ms | OverlayDraw=68.79ms | Dirty=2 | Rebuilt=0
+- [T+007] steady_state_same_view | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.71ms | HudProj=0.07ms | OverlayBuild=7.66ms | OverlayDraw=57.45ms | Dirty=0 | Rebuilt=0
+- [T+009] diag_hud_off | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=OFF | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.80ms | HudProj=0.05ms | OverlayBuild=6.28ms | OverlayDraw=47.87ms | Dirty=0 | Rebuilt=0
+- [T+013] selection_labels_off | Crowd=10240/3136 | Bars=3136->1303 | Text=3136->1317 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.75ms | HudProj=0.22ms | OverlayBuild=5.44ms | OverlayDraw=39.98ms | Dirty=1 | Rebuilt=0
+- [T+015] bars_off | Crowd=10240/3136 | Bars=0->0 | Text=3136->1317 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.71ms | HudProj=0.39ms | OverlayBuild=4.51ms | OverlayDraw=33.17ms | Dirty=1 | Rebuilt=0
+- [T+017] hud_text_off | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=0.70ms | HudProj=0.35ms | OverlayBuild=3.78ms | OverlayDraw=27.37ms | Dirty=0 | Rebuilt=0
+- [T+019] terrain_on | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=OFF | Prims=ON | Cull=0.65ms | HudProj=0.23ms | OverlayBuild=3.10ms | OverlayDraw=22.60ms | Dirty=0 | Rebuilt=0
+- [T+021] guides_on | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=ON | Cull=0.84ms | HudProj=0.16ms | OverlayBuild=2.54ms | OverlayDraw=18.65ms | Dirty=0 | Rebuilt=0
+- [T+023] primitives_off | Crowd=10240/3136 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=OFF | Cull=0.70ms | HudProj=0.11ms | OverlayBuild=2.09ms | OverlayDraw=15.44ms | Dirty=0 | Rebuilt=0
+- [T+027] cull_crowd_off | Crowd=0/0 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=ON | HUD=ON | Terr=ON | Guides=ON | Prims=OFF | Cull=0.19ms | HudProj=0.02ms | OverlayBuild=1.71ms | OverlayDraw=12.78ms | Dirty=0 | Rebuilt=0
+- [T+029] panel_off | Crowd=0/0 | Bars=0->0 | Text=0->0 | Labels=0 | Panel=OFF | HUD=OFF | Terr=ON | Guides=ON | Prims=OFF | Cull=0.17ms | HudProj=0.02ms | OverlayBuild=1.40ms | OverlayDraw=10.62ms | Dirty=0 | Rebuilt=0
+- [T+049] restored_hotpath_defaults | Crowd=10240/3136 | Bars=3136->1303 | Text=3152->1333 | Labels=16 | Panel=ON | HUD=ON | Terr=OFF | Guides=OFF | Prims=ON | Cull=1.09ms | HudProj=0.07ms | OverlayBuild=1.46ms | OverlayDraw=9.96ms | Dirty=2 | Rebuilt=0
 
 ## Outcome
 - success: yes
@@ -52,9 +52,9 @@
 - baseline visible crowd: `3136`
 - baseline world bars/text: `3136` / `3152`
 - restored world bars/text: `3136` / `3152`
-- max culling sample: `1.70` ms
-- max HUD projection sample: `0.99` ms
-- max native overlay build sample: `10.49` ms
-- max native overlay draw sample: `120.55` ms
+- max culling sample: `1.09` ms
+- max HUD projection sample: `0.39` ms
+- max native overlay build sample: `9.26` ms
+- max native overlay draw sample: `68.79` ms
 - baseline/reused dirty lanes: `2` -> `0`
 - reusable wiring: `CameraAcceptanceHotpathLaneSystem`, `CameraAcceptancePanelController`, `CameraAcceptanceSelectionOverlaySystem`, `WorldHudToScreenSystem`, `PresentationTimingDiagnostics`

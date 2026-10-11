@@ -130,31 +130,9 @@ namespace CoreInputMod.Systems
             return GetSolePossessedRepOrNull();
         }
 
-        internal static string RequireActiveActorCollectionKey(World world, Dictionary<string, object> globals, Entity owner)
-        {
-            if (!globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var storeValue) ||
-                storeValue is not EntityCollectionStore collections)
-            {
-                throw new InvalidOperationException("Active actor collection requires EntityCollectionStore.");
-            }
-
-            int keyId;
-            if (world.IsAlive(owner) && world.TryGet(owner, out InteractionContextInstance context))            {
-                keyId = context.ActiveCollectionKeyId;
-            }
-            else
-            {
-                if (!globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var profilesValue) ||
-                    profilesValue is not InteractionContextProfileRegistry profiles ||
-                    !profiles.TryGetSteadyStateRouting(out keyId, out _))
-                {
-                    throw new InvalidOperationException("Active actor collection requires steady-state interaction routing.");
-                }
-            }
-
-            return collections.KeyRegistry.GetName(keyId)
-                ?? throw new InvalidOperationException($"Active actor collection key {keyId} is not registered.");
-        }
+        /// <summary>Presentation-side convention for the command-actor roster collection (v2:
+        /// the key is this surface's own declaration; contexts no longer route collections).</summary>
+        internal const string CommandActorCollectionKey = "collection.command.source";
 
         public Entity GetSolePossessedRepOrNull()
         {
@@ -390,6 +368,12 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
+            if (!_globals.TryGetValue(CoreServiceKeys.TeamRelationQuery.Name, out var teamRelationsObj) ||
+                teamRelationsObj is not Ludots.Core.Gameplay.Teams.TeamRelationQuery teamRelations)
+            {
+                throw new InvalidOperationException("Ability aim presentation requires CoreServiceKeys.TeamRelationQuery.");
+            }
+
             GameSession? session = _globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
                                    sessionObj is GameSession resolvedSession
                 ? resolvedSession
@@ -431,6 +415,7 @@ namespace CoreInputMod.Systems
                 inputCollectionKeys.AbilityAimAffectedKeyId,
                 spatialQueries,
                 events,
+                teamRelations,
                 session,
                 graphPrograms,
                 graphApi,

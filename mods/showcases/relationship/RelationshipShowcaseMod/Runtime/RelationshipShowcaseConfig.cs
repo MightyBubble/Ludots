@@ -29,7 +29,6 @@ namespace RelationshipShowcaseMod.Runtime
         public RelationshipBehaviorConfig Behaviors { get; set; } = new();
         public RelationshipUiConfig Ui { get; set; } = new();
         public RelationshipPresentationConfig Presentation { get; set; } = new();
-        public TeamRelationConfig[] TeamRelations { get; set; } = Array.Empty<TeamRelationConfig>();
         public RelationshipLogConfig Logs { get; set; } = new();
 
         public static RelationshipShowcaseConfig Load(Stream stream)
@@ -514,13 +513,6 @@ namespace RelationshipShowcaseMod.Runtime
     {
         public string SourceName { get; set; } = string.Empty;
         public string TargetName { get; set; } = string.Empty;
-    }
-
-    public sealed class TeamRelationConfig
-    {
-        public int TeamA { get; set; }
-        public int TeamB { get; set; }
-        public string Relationship { get; set; } = string.Empty;
     }
 
     public sealed class RelationshipLogConfig

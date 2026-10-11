@@ -1,0 +1,51 @@
+[
+  {
+    "id": "Camera.Profile.WasdSandboxTps",
+    "displayName": "Wasd Sandbox TPS",
+    "priority": 100,
+    "distanceCm": 500,
+    "pitch": 18,
+    "facingMode": "followTarget",
+    "fovYDeg": 60,
+    "yaw": 0,
+    "minDistanceCm": 200,
+    "maxDistanceCm": 1200,
+    "minPitchDeg": -20,
+    "maxPitchDeg": 45,
+    "panMode": "None",
+    "rotateMode": "DragRotate",
+    "rotateDegPerPixel": 0.18,
+    "rotateRequiresHold": false,
+    "enableZoom": true,
+    "zoomCmPerWheel": 120,
+    "followMode": "AlwaysFollow",
+    "followTargetKind": "SolePossessedRep",
+    "allowUserInput": true
+  },
+  {
+    "id": "Camera.Profile.WasdSandboxTopdown",
+    "displayName": "Wasd Sandbox Topdown TwinStick",
+    "priority": 100,
+    "distanceCm": 1600,
+    "pitch": 62,
+    "facingMode": "none",
+    "fovYDeg": 50,
+    "yaw": 0,
+    "minDistanceCm": 800,
+    "maxDistanceCm": 3000,
+    "minPitchDeg": 62,
+    "maxPitchDeg": 62,
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 150,
+    "followMode": "None",
+    "followTargetKind": "None",
+    "allowUserInput": true,
+    "targetSource": "Fixed",
+    "fixedTargetCm": {
+      "x": 1200,
+      "y": 0
+    }
+  }
+]

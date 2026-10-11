@@ -1,0 +1,90 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.moba_demo.battle",
+      "commandIntentId": "intent.command.default",
+      "bindings": [
+        "Command",
+        "Stop",
+        "QueueModifier",
+        "SkillW"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.moba.move"
+        },
+        {
+          "trigger": "graph.moba.stop"
+        },
+        {
+          "trigger": "graph.moba.cast_w"
+        }
+      ],
+      "onActivated": [
+        "graph.moba.enter_smart_cast"
+      ]
+    },
+    {
+      "id": "interaction.context.moba_demo.smart_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillE",
+        "SkillR",
+        "ModeSC2"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.moba.smart_cast_q"
+        },
+        {
+          "trigger": "graph.moba.smart_cast_e"
+        },
+        {
+          "trigger": "graph.moba.smart_cast_r"
+        },
+        {
+          "trigger": "graph.moba.switch_to_aim_cast"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.moba_demo.aim_cast",
+      "bindings": [
+        "SkillQ",
+        "SkillE",
+        "SkillR",
+        "ModeLoL"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.moba.aim_q"
+        },
+        {
+          "trigger": "graph.moba.aim_e"
+        },
+        {
+          "trigger": "graph.moba.aim_r"
+        },
+        {
+          "trigger": "graph.moba.switch_to_smart_cast"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.moba_demo.aiming",
+      "foreground": true,
+      "bindings": [
+        "Moba.AimConfirm",
+        "Moba.AimCancel"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.moba.aim_confirm"
+        },
+        {
+          "trigger": "graph.moba.aim_cancel"
+        }
+      ]
+    }
+  ]
+}

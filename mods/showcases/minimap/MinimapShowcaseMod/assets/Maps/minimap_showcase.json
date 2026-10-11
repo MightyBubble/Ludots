@@ -21,7 +21,25 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "minimap-imperial-capital",
+          "Type": "Friendly"
+        },
+        {
+          "To": "minimap-federation-prime",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-horde-nest",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-nomad-enclave",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "ironforge_colony",
@@ -88,7 +106,25 @@
             "Y": -600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "minimap-federation-prime",
+          "Type": "Friendly"
+        },
+        {
+          "To": "minimap-imperial-capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-horde-nest",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-nomad-enclave",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "federation_carrier_group",
@@ -122,7 +158,25 @@
             "Y": 7600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "minimap-horde-nest",
+          "Type": "Friendly"
+        },
+        {
+          "To": "minimap-imperial-capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-federation-prime",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-nomad-enclave",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "horde_warpack",
@@ -156,7 +210,25 @@
             "Y": -11800
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "minimap-nomad-enclave",
+          "Type": "Friendly"
+        },
+        {
+          "To": "minimap-imperial-capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-federation-prime",
+          "Type": "Hostile"
+        },
+        {
+          "To": "minimap-horde-nest",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "nomad_caravan",

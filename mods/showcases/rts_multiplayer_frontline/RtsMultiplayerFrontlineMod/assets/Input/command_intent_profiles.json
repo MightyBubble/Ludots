@@ -13,7 +13,7 @@
         {
           "priority": 90,
           "actor": { "allTags": ["Unit.Rts.Frontline.Infantry"] },
-          "target": { "hasEntity": true, "stance": ["Hostile"] },
+          "target": { "hasEntity": true, "relation": ["Hostile"] },
           "route": { "orderTypeKey": "attackTarget", "targetShape": "WorldPositionAndEntity" }
         },
         {

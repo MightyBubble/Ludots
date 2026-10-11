@@ -28,7 +28,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
-using MobaDemoMod.Systems;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Features.InputRouting
@@ -410,11 +409,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             string repoRoot = FindRepoRoot();
             string inputPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "default_input.json");
-            string mappingPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "input_order_mappings.json");
+            string contextPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "interaction_context_profiles.json");
             string gamePath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "game.json");
 
             Assert.That(File.Exists(inputPath), Is.True, $"Missing RTS input config: {inputPath}");
-            Assert.That(File.Exists(mappingPath), Is.True, $"Missing RTS mapping config: {mappingPath}");
+            Assert.That(File.Exists(contextPath), Is.True, $"Missing RTS interaction contexts: {contextPath}");
             Assert.That(File.Exists(gamePath), Is.True, $"Missing RTS game config: {gamePath}");
 
             var jsonOptions = new JsonSerializerOptions
@@ -429,23 +428,23 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Is.True,
                 "RtsDemoMod must register its gameplay context explicitly.");
 
-            using var mappingStream = File.OpenRead(mappingPath);
-            var mappingConfig = InputOrderMappingLoader.LoadFromStream(mappingStream);
-            var actionIds = inputConfig.Actions.Select(action => action.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var mapping in mappingConfig.Mappings)
-            {
-                Assert.That(actionIds.Contains(mapping.ActionId), Is.True, $"RTS mapping action '{mapping.ActionId}' is not declared in default_input.json.");
-            }
-
-            Assert.That(mappingConfig.Mappings.Any(ReferencesOrderTypeKey("moveTo")),
-                Is.True,
-                "RTS local command path must resolve to an explicit move order.");
+            var actionIds = inputConfig.Actions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
+            using var contextDoc = JsonDocument.Parse(File.ReadAllText(contextPath));
+            JsonElement battle = contextDoc.RootElement.GetProperty("profiles").EnumerateArray()
+                .Single(profile => profile.GetProperty("id").GetString() == "interaction.context.rts.battle");
+            string[] bindings = battle.GetProperty("bindings").EnumerateArray().Select(element => element.GetString()!).ToArray();
+            string[] triggers = battle.GetProperty("triggers").EnumerateArray()
+                .Select(element => element.GetProperty("trigger").GetString()!)
+                .ToArray();
             Assert.Multiple(() =>
             {
-                Assert.That(mappingConfig.GroupMoveTargetLayout.Mode, Is.EqualTo(GroupMoveTargetLayoutMode.Grid));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.Assignment, Is.EqualTo(GroupMoveTargetAssignmentMode.PreserveRelative));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.SpacingCm, Is.EqualTo(140));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo", "attackTarget" }));
+                Assert.That(battle.GetProperty("commandIntentId").GetString(), Is.EqualTo("intent.command.default"));
+                Assert.That(bindings, Does.Contain("Command").And.Contain("Stop").And.Contain("QueueModifier"));
+                Assert.That(triggers, Does.Contain("graph.rts.command_commit").And.Contain("graph.rts.stop"));
+                foreach (string binding in bindings)
+                {
+                    Assert.That(actionIds, Does.Contain(binding), $"RTS battle binding '{binding}' is not declared in default_input.json.");
+                }
             });
 
             using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
@@ -529,9 +528,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "requireTarget": false,
                       "targetType": "Position",
                       "isSkillMapping": true,
-                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRelation": "Hostile",
                       "autoTargetRangeCm": 600,
                       "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRelation": "Hostile",
                       "cursorTargetRangeCm": 320
                     }
                   ]
@@ -560,6 +561,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "targetType": "Entity",
                       "isSkillMapping": true,
                       "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRelation": "Hostile",
                       "cursorTargetRangeCm": 320
                     }
                   ]
@@ -569,6 +571,34 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
 
             Assert.That(ex!.Message, Does.Contain("cursorTargetPolicy requires targetType Position or Direction"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAutoTargetPolicyWithoutRelation()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": true,
+                      "targetType": "Entity",
+                      "isSkillMapping": true,
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRangeCm": 600
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("autoTargetRelation must name 'All' or a relationship type"));
         }
 
         [Test]
@@ -587,7 +617,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "requireTarget": false,
                       "targetType": "Direction",
                       "isSkillMapping": true,
-                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetPolicy": "NearestInRange",
+                      "autoTargetRelation": "Hostile",
                       "autoTargetRangeCm": 760
                     }
                   ]
@@ -713,7 +744,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Direction,
                         RequireTarget = false,
                         IsSkillMapping = true,
-                        CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        CursorTargetRelation = "Hostile",
                         CursorTargetRangeCm = 320
                     }
                 }
@@ -738,11 +770,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 entity = hovered;
                 return true;
             });
-            system.SetCursorTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, Vector3 cursorWorldCm, out Entity target) =>
+            system.SetCursorTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, Vector3 cursorWorldCm, out Entity target) =>
             {
                 target = enemy;
                 return resolvedActor == actor &&
-                       policy == AutoTargetPolicy.NearestEnemyInRange &&
+                       policy == AutoTargetPolicy.NearestInRange &&
+                       relation == "Hostile" &&
                        rangeCm == 320 &&
                        cursorWorldCm == new Vector3(1960f, 0f, 413f);
             });
@@ -779,7 +812,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -797,7 +831,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 entity = hovered;
                 return true;
             });
-            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target) =>
             {
                 target = default;
                 return false;
@@ -832,7 +866,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500,
                     },
                 },
@@ -843,7 +878,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
-            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, out Entity target) =>
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, string _, out Entity target) =>
             {
                 target = default;
                 return true;
@@ -1093,7 +1128,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        CursorTargetRelation = "Hostile",
                         CursorTargetRangeCm = 320
                     }
                 }
@@ -1776,7 +1812,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
                         CastModeOverride = CastModeType.AimCast,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 640,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -1831,7 +1868,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
                 Assert.That(remapped.CastModeOverride, Is.EqualTo(CastModeType.AimCast));
-                Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+                Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
                 Assert.That(remapped.ActorOrderRouting!.Candidates.Count, Is.EqualTo(1));
@@ -1945,7 +1982,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             world.Add(localPlayer, new InteractionContextInstance
             {
                 ContextEntity = localPlayer,
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
                 CommandIntentProfileId = 0,
             });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
@@ -1970,6 +2006,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandIntents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2087,7 +2124,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.capacity"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(
@@ -2105,6 +2141,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2244,7 +2281,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.parallel_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2259,6 +2295,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2317,9 +2354,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity localPlayer = commandHarness.CreatePlayerRep(1);
+            Entity targetOwner = commandHarness.CreatePlayerRep(2);
             Entity firstMoveActor = commandHarness.CreateActor(localPlayer);
             Entity attackActor = commandHarness.CreateActor(localPlayer, 2);
             Entity secondMoveActor = commandHarness.CreateActor(localPlayer);
@@ -2432,7 +2469,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.mixed_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2451,6 +2487,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2575,7 +2612,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.programmatic"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2590,6 +2626,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2696,7 +2733,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.none_target"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
@@ -2710,6 +2746,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -2869,7 +2906,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_batch"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -2884,6 +2920,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3011,7 +3048,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.routed_only"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
@@ -3026,6 +3062,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3128,7 +3165,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_authorization"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
@@ -3143,6 +3179,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3189,9 +3226,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity localPlayer = commandHarness.CreatePlayerRep(1);
+            Entity targetOwner = commandHarness.CreatePlayerRep(2);
             Entity commandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity secondCommandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
@@ -3258,7 +3295,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.test"),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
@@ -3273,6 +3309,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3324,11 +3361,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             using var world = World.Create();
-            Entity localPlayer = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 });
-            Entity hostileOwner = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 3 });
             var profileHarness = CommandIntentProfileTests.Harness.Create(world);
             profileHarness.InstallStandardProfile();
-            profileHarness.Relationships.EnsureLink(localPlayer, hostileOwner, profileHarness.HostileTypeId);
+            Entity localPlayer = profileHarness.CreatePlayerRep(1);
+            Entity hostileOwner = profileHarness.CreatePlayerRep(5);
+            profileHarness.TeamRelations.Link(1, 5, profileHarness.TeamRelations.HostileTypeId);
 
             // Actor: slot 0 is a category-less filler, slot 1 carries the weapon ability —
             // slot landing must find slot 1, not slot 0.
@@ -3364,7 +3401,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = actor,
                 CommandIntentProfileId = profileHarness.ProfileId(CommandIntentProfileTests.TestProfileId),
-                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var dispatch = new CastDispatchProfileRegistry(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
@@ -3387,6 +3423,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 profileHarness.Intents,
                 dispatch,
                 collections,
+                "collection.command.source",
                 NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
@@ -3469,7 +3506,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new()
                     {
                         Id = InteractionContextIds.Default,
-                        ActiveCollectionKey = "collection.command.source",
                     },
                 },
             }, collectionKeys,
@@ -4297,7 +4333,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -4318,7 +4355,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 return true;
             });
             system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
-            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, string relation, out Entity target) =>
             {
                 autoTargetActor = resolvedActor;
                 target = enemy;
@@ -4369,7 +4406,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         TargetType = OrderTargetType.Entity,
                         RequireTarget = true,
                         IsSkillMapping = true,
-                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        AutoTargetRelation = "Hostile",
                         AutoTargetRangeCm = 500
                     }
                 }
@@ -4381,7 +4419,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetSolePossessedActor(actor, 1);
             system.SetOrderTypeKeyResolver(_ => 101);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 55);
-            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, out Entity target) =>
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, string ____, out Entity target) =>
             {
                 target = default;
                 return false;

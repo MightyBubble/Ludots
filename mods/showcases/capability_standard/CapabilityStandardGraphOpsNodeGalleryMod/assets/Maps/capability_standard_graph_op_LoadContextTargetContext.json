@@ -55,7 +55,17 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "target",
+          "Type": "Friendly"
+        },
+        {
+          "To": "context",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "context",
@@ -75,7 +85,17 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "context",
+          "Type": "Friendly"
+        },
+        {
+          "To": "target",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [

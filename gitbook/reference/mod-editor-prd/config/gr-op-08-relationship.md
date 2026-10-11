@@ -47,9 +47,9 @@ kind 缩写同 gr-op-01，另 TG=TriggerGraph。关系类型/度量/旗标符号
 |---|---|---|---|---|
 | RelationshipEnsureLink | E+SC+TG | source target + 类型 | — | 建链（幂等） |
 | RelationshipRemoveLink | E+SC+TG | source target + 类型 | — | 断链 |
-| RelationshipSetMetric | E | source target value + 类型/度量 | — | 度量置值（reason 记账） |
+| RelationshipSetMetric | E | source target value + 类型/度量 | — | 度量置值 |
 | RelationshipAddMetric | E | source target value + 类型/度量 | — | 度量加值 |
-| RelationshipSetFlag | E | source target value + 类型/旗标 | — | 旗标开关（reason 记账） |
+| RelationshipSetFlag | E | source target value + 类型/旗标 | — | 旗标开关 |
 | RelationshipGetMetric | L+SC+TG | source target + 类型/度量 | Int | 读度量 |
 | RelationshipHasFlag | L+Q+SC+TG | source target + 类型/旗标 | Bool | 问旗标 |
 | RelationshipHasLink | L+Q+SC+TG | source target + 类型 | Bool | 问链路 |
@@ -69,7 +69,6 @@ kind 缩写同 gr-op-01，另 TG=TriggerGraph。关系类型/度量/旗标符号
 - **建边与断边**：Effect、Script、TriggerGraph 都能写。效果图里先记在这场效果上，成功才落库，失败就撤回。
 - **改度量与改旗标**：只进 Effect 图。效果计划收下它们，提交和撤回与建边、断边同一套。
 - 度量聚合出 Int 不出 Float：关系度量是整数世界，与属性（Float）不同。
-- SetMetric/AddMetric/SetFlag 带 reason 记账目的位（dst=reason）：语义是"为什么改"，外部观察可追溯。
 - 管线 list+source 双输入：source 是判关系的基准实体，list 是被筛的集合——别把两者接反。
 
 ## 3. 文件结构

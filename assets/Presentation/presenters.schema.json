@@ -127,7 +127,6 @@
             "GlobalDayNight", "GlobalRegionChanged", "GlobalWeather",
             "AttributeValueChanged",
             "AbilityAimBegun", "AbilityAimUpdated", "AbilityAimEnded", "AbilityAimSlotAdvanced",
-            "MovePathBegun", "MovePathUpdated", "MovePathEnded",
             "EntityCollectionMemberAdded", "EntityCollectionMemberRemoved",
             "WorldOverlayUpdated", "WorldOverlayEnded",
             "WorldHudUpdated", "WorldHudEnded",

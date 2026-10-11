@@ -3,7 +3,6 @@
     {
       "id": "interaction.context.arpg.battle",
       "inputContextId": "Arpg_Gameplay",
-      "activeCollectionKey": "arpg.active",
       "bindings": [
         "Arpg.Skill1",
         "Arpg.Skill2",

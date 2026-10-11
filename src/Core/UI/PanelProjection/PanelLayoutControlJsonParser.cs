@@ -10,7 +10,7 @@ internal sealed class PanelLayoutControlJsonContext
     {
         "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
         "viewportHeight", "itemExtent", "virtualize", "overscan", "present",
-        "columns", "aggregate", "src", "width", "height"
+        "columns", "aggregate", "src", "width", "height", "control", "payload", "tip"
     };
 
     private static readonly HashSet<string> LayoutTemplateFields = new(StringComparer.Ordinal)
@@ -18,7 +18,8 @@ internal sealed class PanelLayoutControlJsonContext
         "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
         "children", "gap", "align", "justify", "width", "height", "widthBind", "heightBind",
         "fontSize", "bold", "textRunsBind", "objectFit", "visibleWhenNotEmpty", "classBind",
-        "colorBind", "backgroundBind", "viewportHeight", "itemExtent", "virtualize", "overscan"
+        "colorBind", "backgroundBind", "viewportHeight", "itemExtent", "virtualize", "overscan",
+        "control", "payload", "tip"
     };
 
     private static readonly HashSet<PanelLayoutControlType> PanelTypes = new()
@@ -27,7 +28,8 @@ internal sealed class PanelLayoutControlJsonContext
         PanelLayoutControlType.ProgressBar,
         PanelLayoutControlType.Badge,
         PanelLayoutControlType.List,
-        PanelLayoutControlType.Image
+        PanelLayoutControlType.Image,
+        PanelLayoutControlType.Button
     };
 
     private static readonly HashSet<PanelLayoutControlType> LayoutTemplateTypes = new()
@@ -39,7 +41,8 @@ internal sealed class PanelLayoutControlJsonContext
         PanelLayoutControlType.Column,
         PanelLayoutControlType.Image,
         PanelLayoutControlType.RichText,
-        PanelLayoutControlType.Repeater
+        PanelLayoutControlType.Repeater,
+        PanelLayoutControlType.Button
     };
 
     private PanelLayoutControlJsonContext(
@@ -226,7 +229,111 @@ internal static class PanelLayoutControlJsonParser
             visibleWhenNotEmpty,
             classBind,
             colorBind,
-            backgroundBind);
+            backgroundBind,
+            ParseControlName(control, type, context),
+            ParseEventPayload(control, type, context),
+            ParseTip(control, context));
+    }
+
+    private static readonly HashSet<string> TipFields = new(StringComparer.Ordinal)
+    {
+        "title", "text", "titleBind", "textBind"
+    };
+
+    private static PanelControlTipSpec? ParseTip(JsonObject control, PanelLayoutControlJsonContext context)
+    {
+        if (control["tip"] is null)
+        {
+            return null;
+        }
+
+        if (control["tip"] is not JsonObject tipObject)
+        {
+            throw new InvalidOperationException($"{context.Description} 'tip' must be an object.");
+        }
+
+        RejectUnknownFields(tipObject, TipFields, $"{context.Description} tip");
+        string? title = OptionalString(tipObject, "title", context);
+        string? text = OptionalString(tipObject, "text", context);
+        string? titleBind = OptionalString(tipObject, "titleBind", context);
+        string? textBind = OptionalString(tipObject, "textBind", context);
+        context.ValidateBinding("tip.titleBind", titleBind, PanelLayoutControlType.Label);
+        context.ValidateBinding("tip.textBind", textBind, PanelLayoutControlType.Label);
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(text) &&
+            string.IsNullOrWhiteSpace(titleBind) && string.IsNullOrWhiteSpace(textBind))
+        {
+            throw new InvalidOperationException(
+                $"{context.Description} tip declares no content — at least one of title/text/titleBind/textBind is required.");
+        }
+
+        return new PanelControlTipSpec(title, text, titleBind, textBind);
+    }
+
+    private static string? ParseControlName(JsonObject control, PanelLayoutControlType type, PanelLayoutControlJsonContext context)
+    {
+        string? controlName = OptionalString(control, "control", context);
+        if (type != PanelLayoutControlType.Button)
+        {
+            if (controlName != null)
+            {
+                throw new InvalidOperationException(
+                    $"{context.Description} declares 'control' but only button controls carry a control name.");
+            }
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(controlName))
+        {
+            throw new InvalidOperationException(
+                $"{context.Description} button requires 'control' — the name a template event references.");
+        }
+        return controlName;
+    }
+
+    private static IReadOnlyDictionary<string, string> ParseEventPayload(
+        JsonObject control,
+        PanelLayoutControlType type,
+        PanelLayoutControlJsonContext context)
+    {
+        if (control["payload"] is null)
+        {
+            if (type == PanelLayoutControlType.Button)
+            {
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        if (type != PanelLayoutControlType.Button)
+        {
+            throw new InvalidOperationException(
+                $"{context.Description} declares 'payload' but only button controls carry event payload sources.");
+        }
+
+        if (control["payload"] is not JsonObject payloadObject)
+        {
+            throw new InvalidOperationException($"{context.Description} button 'payload' must be an object.");
+        }
+
+        var payload = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, JsonNode?> field in payloadObject)
+        {
+            if (string.IsNullOrWhiteSpace(field.Key))
+            {
+                throw new InvalidOperationException($"{context.Description} button payload field name cannot be empty.");
+            }
+            if (field.Value is not JsonValue value || value.TryGetValue<string>(out string? source) == false || string.IsNullOrWhiteSpace(source))
+            {
+                throw new InvalidOperationException(
+                    $"{context.Description} button payload field '{field.Key}' must be a non-empty string (bind expression or literal).");
+            }
+            if (!payload.TryAdd(field.Key, source))
+            {
+                throw new InvalidOperationException(
+                    $"{context.Description} button payload field '{field.Key}' is declared twice.");
+            }
+        }
+        return payload;
     }
 
     private static PanelLayoutControlType ParseType(
@@ -244,6 +351,7 @@ internal static class PanelLayoutControlJsonParser
             "column" => PanelLayoutControlType.Column,
             "richText" => PanelLayoutControlType.RichText,
             "repeater" => PanelLayoutControlType.Repeater,
+            "button" => PanelLayoutControlType.Button,
             _ => throw new InvalidOperationException(
                 $"{context.Description} type '{typeText}' is unknown.")
         };
@@ -333,6 +441,12 @@ internal static class PanelLayoutControlJsonParser
         {
             throw new InvalidOperationException(
                 $"{context.Description} repeater control requires bind.");
+        }
+
+        if (type == PanelLayoutControlType.Button && string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(bind))
+        {
+            throw new InvalidOperationException(
+                $"{context.Description} button requires a label: text (literal) or bind (panel variable).");
         }
 
         if (type == PanelLayoutControlType.ProgressBar)

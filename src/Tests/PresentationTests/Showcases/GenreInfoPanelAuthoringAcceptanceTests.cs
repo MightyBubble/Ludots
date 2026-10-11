@@ -25,8 +25,9 @@ public sealed class GenreInfoPanelAuthoringAcceptanceTests
         string assetsRoot = Path.Combine(repoRoot, "assets");
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "FourXDemoMod", "EntityInfoPanelsMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod", "FourXDemoMod", "EntityInfoPanelsMod" }),
             assetsRoot);
+        PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);
         try
         {
             engine.Start();
@@ -38,8 +39,8 @@ public sealed class GenreInfoPanelAuthoringAcceptanceTests
 
             PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
                 ?? throw new InvalidOperationException("PanelHost service missing.");
-            Assert.That(panelHost.Count, Is.EqualTo(1),
-                "MapLoaded trigger graph must open the authored governor card with zero C#.");
+            Assert.That(panelHost.Count, Is.EqualTo(2),
+                "MapLoaded trigger graphs must open the authored governor card and ability bar with zero C#.");
             PanelInstanceHandle panel = FindPanel(panelHost, "panel.fourx.governorCard");
 
             Assert.That(panelHost.TryGetValues(panel, out PanelVariableSet values), Is.True);

@@ -48,6 +48,7 @@ internal sealed class InstallUxPrototypeOnGameStartTrigger : Trigger
 
         panelSources.Register(UxPrototypeEntityCommandPanelSource.SourceId, new UxPrototypeEntityCommandPanelSource(engine, _runtime.State));
 
+        engine.RegisterSystem(new UxPrototypeModePollSystem(engine, _runtime), SystemGroup.LocalInput);
         engine.RegisterSystem(new UxPrototypeSimulationSystem(engine, _runtime), SystemGroup.InputCollection);
         engine.RegisterPresentationSystem(new UxPrototypePanelPresentationSystem(engine, _runtime));
         _context.Log("[UxPrototypeMod] Prototype order source, simulation state, and HUD presentation registered.");

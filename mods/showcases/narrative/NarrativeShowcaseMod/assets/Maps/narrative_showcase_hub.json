@@ -77,7 +77,21 @@
             "Y": 960
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "narrative_arcweaver",
+          "Type": "Friendly"
+        },
+        {
+          "To": "narrative_beast_clan_anchor",
+          "Type": "Hostile"
+        },
+        {
+          "To": "narrative_warden_mirelle",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "narrative_warden",
@@ -95,7 +109,21 @@
             "Y": 960
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "narrative_warden_mirelle",
+          "Type": "Friendly"
+        },
+        {
+          "To": "narrative_arcweaver",
+          "Type": "Friendly"
+        },
+        {
+          "To": "narrative_beast_clan_anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "narrative_shrine",
@@ -128,7 +156,21 @@
             "Y": 960
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "narrative_beast_clan_anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "narrative_arcweaver",
+          "Type": "Hostile"
+        },
+        {
+          "To": "narrative_warden_mirelle",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -156,73 +198,5 @@
       "TeamId": 3,
       "RepresentativeInstanceId": "narrative_warden_mirelle"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 3,
-        "TypeId": "NarrativeShowcase.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

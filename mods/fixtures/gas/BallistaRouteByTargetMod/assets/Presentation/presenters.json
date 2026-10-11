@@ -1,0 +1,81 @@
+[
+  {
+    "id": "ballista.unit.crew",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "ballista.unit.knight",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.62,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ballista.hud.health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "ballista.hud.health_text",
+        "scopeTag": "hud-text"
+      }
+    ]
+  },
+  {
+    "id": "ballista.unit.crew_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ballista_crew"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ballista.unit.crew",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ballista_crew"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

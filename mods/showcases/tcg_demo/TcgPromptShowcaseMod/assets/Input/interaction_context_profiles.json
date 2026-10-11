@@ -1,0 +1,34 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.tcg_prompt.duel",
+      "inputContextId": "TcgPrompt.Controls",
+      "bindings": [
+        "TcgPrompt.EndTurn"
+      ],
+      "triggers": [
+        { "trigger": "graph.tcg_prompt.end_turn" }
+      ]
+    },
+    {
+      "id": "interaction.context.tcg_prompt.prompt",
+      "foreground": true,
+      "bindings": [
+        "TcgPrompt.Pass",
+        "TcgPrompt.Negate",
+        "TcgPrompt.Activate"
+      ],
+      "triggers": [
+        { "trigger": "graph.tcg_prompt.answer_pass" },
+        { "trigger": "graph.tcg_prompt.answer_negate" },
+        { "trigger": "graph.tcg_prompt.answer_activate" }
+      ],
+      "onActivated": [
+        "graph.tcg_prompt.show_prompt"
+      ],
+      "onDeactivated": [
+        "graph.tcg_prompt.hide_prompt"
+      ]
+    }
+  ]
+}

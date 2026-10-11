@@ -353,7 +353,7 @@ namespace Ludots.Tests.GAS.Production
                 owner.Version);
         }
 
-        private static void AssertActiveProfileProjection(GameEngine engine, Entity owner, string activeCollectionKey)
+        private static void AssertActiveProfileProjection(GameEngine engine, Entity owner, string projectedKey)
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
@@ -361,7 +361,7 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < ProfileProjectionCollectionKeys.Length; i++)
             {
                 string key = ProfileProjectionCollectionKeys[i];
-                int expectedCount = string.Equals(key, activeCollectionKey, StringComparison.Ordinal)
+                int expectedCount = string.Equals(key, projectedKey, StringComparison.Ordinal)
                     ? EntityCommandPanelShowcaseIds.ExpectedSourceActorCount
                     : 0;
                 AssertProjectionCollection(collections, owner, key, expectedCount);

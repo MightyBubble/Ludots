@@ -29,6 +29,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Registry;
 using Ludots.Core.Spatial;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
 
@@ -77,7 +78,8 @@ namespace Ludots.Tests.GAS
                 _aimHoverKeyId,
                 _aimAffectedKeyId,
                 _spatialQueries,
-                _events);
+                _events,
+                TeamRelationTestHarness.Create(_world).Query);
         }
 
         [TearDown]
@@ -372,6 +374,7 @@ namespace Ludots.Tests.GAS
                 _aimAffectedKeyId,
                 _spatialQueries,
                 _events,
+                TeamRelationTestHarness.Create(_world).Query,
                 session: null,
                 graphPrograms,
                 graphSetup.Api,
@@ -540,11 +543,15 @@ namespace Ludots.Tests.GAS
         [Test]
         public void PresenterRules_ConsumeCollectionRows_AsEntityAttachedHighlights()
         {
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.PresentTeamRelationClassifier.Name] = TeamRelationTestHarness.Create(_world).CreatePresentClassifier(),
+            };
             Entity actor = _world.Create();
             Entity first = _world.Create(WorldPositionCm.FromCm(100, 200), new VisualTransform { Position = new Vector3(1f, 0f, 2f) });
             Entity second = _world.Create(WorldPositionCm.FromCm(300, 400), new VisualTransform { Position = new Vector3(3f, 0f, 4f) });
             var collectionEvents = new EntityCollectionPresentationEventSystem(_world, _collections, _events);
-            var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry);
+            var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry, globals);
 
             Span<Entity> rows = stackalloc Entity[] { first, second };
             Span<int> roleIds = stackalloc int[] { 1, 0 };
@@ -644,56 +651,52 @@ namespace Ludots.Tests.GAS
         [Test]
         public void PresenterRules_PreserveViewerContext_AndResolveRelationshipColor()
         {
-            TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
-            try
+            var relations = TeamRelationTestHarness.Create(_world);
+            relations.LinkSymmetric(1, 2, relations.HostileTypeId);
+            relations.LinkSymmetric(3, 2, relations.FriendlyTypeId);
+            var globals = new Dictionary<string, object>
             {
-                TeamManager.Clear();
-                TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-                TeamManager.SetRelationshipSymmetric(3, 2, TeamRelationship.Friendly);
+                [CoreServiceKeys.PresentTeamRelationClassifier.Name] = relations.CreatePresentClassifier(),
+            };
 
-                Entity actor = _world.Create();
-                Entity hostileViewer = _world.Create(new Ludots.Core.Gameplay.Components.Team { Id = 1 });
-                Entity friendlyViewer = _world.Create(new Ludots.Core.Gameplay.Components.Team { Id = 3 });
-                Entity target = _world.Create(
-                    WorldPositionCm.FromCm(100, 200),
-                    new VisualTransform { Position = new Vector3(1f, 0f, 2f) },
-                    new Ludots.Core.Gameplay.Components.Team { Id = 2 });
-                var collectionEvents = new EntityCollectionPresentationEventSystem(_world, _collections, _events);
-                var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry);
+            Entity actor = _world.Create();
+            Entity hostileViewer = _world.Create(new Ludots.Core.Gameplay.Components.Team { Id = 1 });
+            Entity friendlyViewer = _world.Create(new Ludots.Core.Gameplay.Components.Team { Id = 3 });
+            Entity target = _world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new VisualTransform { Position = new Vector3(1f, 0f, 2f) },
+                new Ludots.Core.Gameplay.Components.Team { Id = 2 });
+            var collectionEvents = new EntityCollectionPresentationEventSystem(_world, _collections, _events);
+            var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry, globals);
 
-                _world.Add(actor, new AbilityAimSessionState { Actor = actor, Viewer = hostileViewer, IsAiming = true });
-                ReplaceSingleAffected(actor, target);
-                collectionEvents.Update(0.016f);
-                fixture.Tick();
+            _world.Add(actor, new AbilityAimSessionState { Actor = actor, Viewer = hostileViewer, IsAiming = true });
+            ReplaceSingleAffected(actor, target);
+            collectionEvents.Update(0.016f);
+            fixture.Tick();
 
-                Entity hostileHighlight = fixture.FindPresenter("test.collection.highlight", target);
-                Assert.That(_world.Has<PresenterRelationContext>(hostileHighlight), Is.True);
-                Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Viewer, Is.EqualTo(hostileViewer));
-                Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Target, Is.EqualTo(actor));
-                Assert.That(
-                    fixture.Runtime.ResolveVector(hostileHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
-                    Is.EqualTo(TeamColorResolver.Team2Color));
+            Entity hostileHighlight = fixture.FindPresenter("test.collection.highlight", target);
+            Assert.That(_world.Has<PresenterRelationContext>(hostileHighlight), Is.True);
+            Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Viewer, Is.EqualTo(hostileViewer));
+            Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Target, Is.EqualTo(actor));
+            Assert.That(
+                fixture.Runtime.ResolveVector(hostileHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
+                Is.EqualTo(TeamColorResolver.Team2Color));
 
-                _events.Clear();
-                _world.Set(actor, new AbilityAimSessionState { Actor = actor, Viewer = friendlyViewer, IsAiming = true });
-                _collections.Remove(actor, "collection.ability.aim.affected");
-                collectionEvents.Update(0.016f);
-                fixture.Tick();
+            _events.Clear();
+            _world.Set(actor, new AbilityAimSessionState { Actor = actor, Viewer = friendlyViewer, IsAiming = true });
+            _collections.Remove(actor, "collection.ability.aim.affected");
+            collectionEvents.Update(0.016f);
+            fixture.Tick();
 
-                ReplaceSingleAffected(actor, target);
-                collectionEvents.Update(0.016f);
-                fixture.Tick();
+            ReplaceSingleAffected(actor, target);
+            collectionEvents.Update(0.016f);
+            fixture.Tick();
 
-                Entity friendlyHighlight = fixture.FindPresenter("test.collection.highlight", target);
-                Assert.That(_world.Get<PresenterRelationContext>(friendlyHighlight).Viewer, Is.EqualTo(friendlyViewer));
-                Assert.That(
-                    fixture.Runtime.ResolveVector(friendlyHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
-                    Is.EqualTo(TeamColorResolver.Team1Color));
-            }
-            finally
-            {
-                TeamManager.RestoreSnapshot(relationships);
-            }
+            Entity friendlyHighlight = fixture.FindPresenter("test.collection.highlight", target);
+            Assert.That(_world.Get<PresenterRelationContext>(friendlyHighlight).Viewer, Is.EqualTo(friendlyViewer));
+            Assert.That(
+                fixture.Runtime.ResolveVector(friendlyHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
+                Is.EqualTo(TeamColorResolver.Team1Color));
         }
 
         private void ReplaceSingleAffected(Entity actor, Entity target)
@@ -789,7 +792,7 @@ namespace Ludots.Tests.GAS
                 },
                 TargetFilter = new TargetFilterDescriptor
                 {
-                    RelationFilter = RelationshipFilter.All,
+                    RelationFilter = RelationFilter.All,
                 },
                 TargetDispatch = new TargetDispatchDescriptor
                 {
@@ -815,7 +818,7 @@ namespace Ludots.Tests.GAS
                 changeBuffer,
                 new RelationshipReverseIndex(_world));
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
-            var entityQueries = new EntitySetQueryRuntime(_world, tagOps, relationships);
+            var entityQueries = new EntitySetQueryRuntime(_world, tagOps, relationships, TeamRelationTestHarness.Over(_world, relationships).Query);
             int assistTypeId = typeRegistry.Register("Assist");
             int priorityMetricId = metricRegistry.Register("Priority", 0, 100, 0);
             var api = new GasGraphRuntimeApi(
@@ -866,7 +869,8 @@ namespace Ludots.Tests.GAS
             public PresenterFixture(
                 World world,
                 PresentationEventStream events,
-                StringIntRegistry entityCollectionKeyRegistry)
+                StringIntRegistry entityCollectionKeyRegistry,
+                Dictionary<string, object>? globals = null)
             {
                 _world = world;
                 Definitions = new PresenterDefinitionRegistry();
@@ -900,7 +904,8 @@ namespace Ludots.Tests.GAS
                     Definitions,
                     _events,
                     new PresentationOwnerChangeBuffer(64),
-                    new SoundRequestBuffer());
+                    new SoundRequestBuffer(),
+                    globals: globals);
             }
 
             public void Tick()

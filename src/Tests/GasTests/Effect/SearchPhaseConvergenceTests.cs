@@ -54,13 +54,13 @@ namespace Ludots.Tests.GAS
                     {
                         Shape = SpatialShape.Circle,
                         RadiusCm = 500,
-                        RelationFilter = RelationshipFilter.All,
+                        RelationFilter = RelationFilter.All,
                         MaxTargets = 0,
                     }
                 },
                 TargetFilter = new TargetFilterDescriptor
                 {
-                    RelationFilter = RelationshipFilter.All,
+                    RelationFilter = RelationFilter.All,
                     MaxTargets = 0,
                 },
                 TargetDispatch = new TargetDispatchDescriptor
@@ -130,13 +130,13 @@ namespace Ludots.Tests.GAS
                     {
                         Shape = SpatialShape.Circle,
                         RadiusCm = 500,
-                        RelationFilter = RelationshipFilter.All,
+                        RelationFilter = RelationFilter.All,
                         MaxTargets = 0,
                     }
                 },
                 TargetFilter = new TargetFilterDescriptor
                 {
-                    RelationFilter = RelationshipFilter.All,
+                    RelationFilter = RelationFilter.All,
                     MaxTargets = 0,
                 },
                 TargetDispatch = new TargetDispatchDescriptor
@@ -204,7 +204,7 @@ namespace Ludots.Tests.GAS
                     Kind = TargetResolverKind.BuiltinSpatial,
                     Spatial = new BuiltinSpatialDescriptor { Shape = SpatialShape.Circle, RadiusCm = 500 },
                 },
-                TargetFilter = new TargetFilterDescriptor { RelationFilter = RelationshipFilter.All },
+                TargetFilter = new TargetFilterDescriptor { RelationFilter = RelationFilter.All },
                 TargetDispatch = new TargetDispatchDescriptor
                 {
                     PayloadEffectTemplateId = 903,
@@ -254,165 +254,151 @@ namespace Ludots.Tests.GAS
         [Test]
         public void SearchHandler_HostileFilter_SkipsCandidatesWithoutTeam()
         {
-            TeamManager.Clear();
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
 
-            try
+            var source = world.Create(WorldPositionCm.FromCm(0, 0), new Team { Id = 1 });
+            var center = world.Create(WorldPositionCm.FromCm(0, 0));
+            var nonTeamSpatial = world.Create(WorldPositionCm.FromCm(100, 0));
+            var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
+            var relations = TeamRelationTestHarness.Create(world);
+            relations.LinkSymmetric(1, 2, relations.HostileTypeId);
+
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+            presetTypes.Register(in preset);
+
+            const int templateId = 202;
+            templates.Register(templateId, new EffectTemplateData
             {
-                using var world = World.Create();
-                var programs = new GraphProgramRegistry();
-                var presetTypes = new PresetTypeRegistry();
-                var builtinHandlers = new BuiltinHandlerRegistry();
-                BuiltinHandlers.RegisterAll(builtinHandlers);
-                var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
-                var api = new GasGraphRuntimeApi(world, null, null, null);
-
-                var source = world.Create(WorldPositionCm.FromCm(0, 0), new Team { Id = 1 });
-                var center = world.Create(WorldPositionCm.FromCm(0, 0));
-                var nonTeamSpatial = world.Create(WorldPositionCm.FromCm(100, 0));
-                var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
-
-                var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
-                presetTypes.Register(in preset);
-
-                const int templateId = 202;
-                templates.Register(templateId, new EffectTemplateData
+                PresetType = EffectPresetType.Search,
+                TargetQuery = new TargetQueryDescriptor
                 {
-                    PresetType = EffectPresetType.Search,
-                    TargetQuery = new TargetQueryDescriptor
+                    Kind = TargetResolverKind.BuiltinSpatial,
+                    Spatial = new BuiltinSpatialDescriptor
                     {
-                        Kind = TargetResolverKind.BuiltinSpatial,
-                        Spatial = new BuiltinSpatialDescriptor
-                        {
-                            Shape = SpatialShape.Circle,
-                            RadiusCm = 500,
-                        }
-                    },
-                    TargetFilter = new TargetFilterDescriptor
-                    {
-                        RelationFilter = RelationshipFilter.Hostile,
-                        ExcludeSource = true,
-                        MaxTargets = 1,
-                    },
-                    TargetDispatch = new TargetDispatchDescriptor
-                    {
-                        PayloadEffectTemplateId = 903,
-                        ContextMapping = TargetResolverContextMapping.Default,
-                    },
-                });
-                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
-                    templates,
-                    presetTypes,
-                    builtinHandlers,
-                    programs,
-                    "Test/SearchPhaseConvergenceTests.HostileFilterSkips.json");
-
-                var runtime = new BuiltinHandlerExecutionContext
+                        Shape = SpatialShape.Circle,
+                        RadiusCm = 500,
+                    }
+                },
+                TargetFilter = new TargetFilterDescriptor
                 {
-                    SpatialQueries = new StubSpatialQueryService(nonTeamSpatial, hostile),
-                    FanOutBudget = new RootBudgetTable(16),
-                    FanOutCommands = new FanOutCommandBuffer(4),
-                    ResolverBuffer = new Entity[8],
-                };
-                runtime.ResetPerEffect();
+                    RelationFilter = relations.Hostile,
+                    ExcludeSource = true,
+                    MaxTargets = 1,
+                },
+                TargetDispatch = new TargetDispatchDescriptor
+                {
+                    PayloadEffectTemplateId = 903,
+                    ContextMapping = TargetResolverContextMapping.Default,
+                },
+            });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.HostileFilterSkips.json");
 
-                var behavior = new EffectPhaseGraphBindings();
-                executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-                executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-
-                That(runtime.FanOutCommands, Has.Count.EqualTo(1));
-                That(runtime.FanOutCommands![0].ResolvedEntity, Is.EqualTo(hostile));
-            }
-            finally
+            var runtime = new BuiltinHandlerExecutionContext
             {
-                TeamManager.Clear();
-            }
+                SpatialQueries = new StubSpatialQueryService(nonTeamSpatial, hostile),
+                FanOutBudget = new RootBudgetTable(16),
+                FanOutCommands = new FanOutCommandBuffer(4),
+                ResolverBuffer = new Entity[8],
+                TeamRelations = relations.Query,
+            };
+            runtime.ResetPerEffect();
+
+            var behavior = new EffectPhaseGraphBindings();
+            executor.ExecutePhase(world, api, source, center, default, default,
+                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+            executor.ExecutePhase(world, api, source, center, default, default,
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+
+            That(runtime.FanOutCommands, Has.Count.EqualTo(1));
+            That(runtime.FanOutCommands![0].ResolvedEntity, Is.EqualTo(hostile));
         }
 
         [Test]
         public void SearchHandler_HostileFilter_RejectsWhenSourceHasNoTeam()
         {
-            TeamManager.Clear();
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
 
-            try
+            var sourceWithoutTeam = world.Create(WorldPositionCm.FromCm(0, 0));
+            var center = world.Create(WorldPositionCm.FromCm(0, 0));
+            var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
+            var relations = TeamRelationTestHarness.Create(world);
+            relations.LinkSymmetric(1, 2, relations.HostileTypeId);
+
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+            presetTypes.Register(in preset);
+
+            const int templateId = 203;
+            templates.Register(templateId, new EffectTemplateData
             {
-                using var world = World.Create();
-                var programs = new GraphProgramRegistry();
-                var presetTypes = new PresetTypeRegistry();
-                var builtinHandlers = new BuiltinHandlerRegistry();
-                BuiltinHandlers.RegisterAll(builtinHandlers);
-                var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
-                var api = new GasGraphRuntimeApi(world, null, null, null);
-
-                var sourceWithoutTeam = world.Create(WorldPositionCm.FromCm(0, 0));
-                var center = world.Create(WorldPositionCm.FromCm(0, 0));
-                var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
-
-                var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
-                presetTypes.Register(in preset);
-
-                const int templateId = 203;
-                templates.Register(templateId, new EffectTemplateData
+                PresetType = EffectPresetType.Search,
+                TargetQuery = new TargetQueryDescriptor
                 {
-                    PresetType = EffectPresetType.Search,
-                    TargetQuery = new TargetQueryDescriptor
+                    Kind = TargetResolverKind.BuiltinSpatial,
+                    Spatial = new BuiltinSpatialDescriptor
                     {
-                        Kind = TargetResolverKind.BuiltinSpatial,
-                        Spatial = new BuiltinSpatialDescriptor
-                        {
-                            Shape = SpatialShape.Circle,
-                            RadiusCm = 500,
-                        }
-                    },
-                    TargetFilter = new TargetFilterDescriptor
-                    {
-                        RelationFilter = RelationshipFilter.Hostile,
-                        ExcludeSource = true,
-                        MaxTargets = 1,
-                    },
-                    TargetDispatch = new TargetDispatchDescriptor
-                    {
-                        PayloadEffectTemplateId = 904,
-                        ContextMapping = TargetResolverContextMapping.Default,
-                    },
-                });
-                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
-                    templates,
-                    presetTypes,
-                    builtinHandlers,
-                    programs,
-                    "Test/SearchPhaseConvergenceTests.HostileFilterNoTeam.json");
-
-                var runtime = new BuiltinHandlerExecutionContext
+                        Shape = SpatialShape.Circle,
+                        RadiusCm = 500,
+                    }
+                },
+                TargetFilter = new TargetFilterDescriptor
                 {
-                    SpatialQueries = new StubSpatialQueryService(hostile),
-                    FanOutBudget = new RootBudgetTable(16),
-                    FanOutCommands = new FanOutCommandBuffer(4),
-                    ResolverBuffer = new Entity[8],
-                };
-                runtime.ResetPerEffect();
+                    RelationFilter = relations.Hostile,
+                    ExcludeSource = true,
+                    MaxTargets = 1,
+                },
+                TargetDispatch = new TargetDispatchDescriptor
+                {
+                    PayloadEffectTemplateId = 904,
+                    ContextMapping = TargetResolverContextMapping.Default,
+                },
+            });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.HostileFilterNoTeam.json");
 
-                var behavior = new EffectPhaseGraphBindings();
-                executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-                executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-
-                That(runtime.FanOutCommands, Is.Empty);
-            }
-            finally
+            var runtime = new BuiltinHandlerExecutionContext
             {
-                TeamManager.Clear();
-            }
+                SpatialQueries = new StubSpatialQueryService(hostile),
+                FanOutBudget = new RootBudgetTable(16),
+                FanOutCommands = new FanOutCommandBuffer(4),
+                ResolverBuffer = new Entity[8],
+                TeamRelations = relations.Query,
+            };
+            runtime.ResetPerEffect();
+
+            var behavior = new EffectPhaseGraphBindings();
+            executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
+                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+            executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+
+            That(runtime.FanOutCommands, Is.Empty);
         }
 
         private sealed class StubSpatialQueryService : ISpatialQueryService

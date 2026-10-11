@@ -33,12 +33,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         // ── Gates (pause until condition) ──
 
-        /// <summary>Wait for player input confirmation.</summary>
-        InputGate = 20,
         /// <summary>Wait for a specific GameplayEvent.</summary>
         EventGate = 21,
-        /// <summary>Wait for an externally provided target collection response.</summary>
-        TargetCollectionGate = 22,
 
         // ── Control ──
 
@@ -212,14 +208,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public int GateDeadline;
         /// <summary>Tag ID the EventGate is waiting for.</summary>
         public int WaitTagId;
-        /// <summary>Request ID for InputGate/TargetCollectionGate.</summary>
-        public int WaitRequestId;
         /// <summary>Active clock for this execution.</summary>
         public GasClockId ActiveClockId;
         /// <summary>True when this instance is executing a toggle ability's deactivate timeline.</summary>
         public bool IsToggleDeactivating;
-        /// <summary>Progression Use requirement needs target context from a later input or target collection gate.</summary>
-        public byte PendingProgressionUseRequirement;
-        public int PendingProgressionRequirementId;
     }
 }

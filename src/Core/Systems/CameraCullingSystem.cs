@@ -691,7 +691,6 @@ namespace Ludots.Core.Systems
                    MathF.Abs(last.Pitch - state.Pitch) > scalarEpsilon ||
                    MathF.Abs(last.DistanceCm - state.DistanceCm) > scalarEpsilon ||
                    MathF.Abs(last.FovYDeg - state.FovYDeg) > scalarEpsilon ||
-                   last.RigKind != state.RigKind ||
                    last.ZoomLevel != state.ZoomLevel ||
                    last.IsFollowing != state.IsFollowing;
         }
@@ -716,7 +715,6 @@ namespace Ludots.Core.Systems
                    MathF.Abs(last.Pitch - state.Pitch) > scalarEpsilon ||
                    MathF.Abs(last.DistanceCm - state.DistanceCm) > scalarEpsilon ||
                    MathF.Abs(last.FovYDeg - state.FovYDeg) > scalarEpsilon ||
-                   last.RigKind != state.RigKind ||
                    last.ZoomLevel != state.ZoomLevel ||
                    last.IsFollowing != state.IsFollowing;
         }

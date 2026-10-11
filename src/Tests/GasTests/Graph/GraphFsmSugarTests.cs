@@ -656,7 +656,6 @@ namespace Ludots.Tests.Gas.Graph
                         "minimap": {
                           "initialZoomNormalized": 1.0,
                           "wheelZoomNormalizedStep": 0.1,
-                          "buttonZoomNormalizedStep": 0.2,
                           "zoomSliderEnabled": true,
                           "modeToggleEnabled": true,
                           "rotateToggleEnabled": true,

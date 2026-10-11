@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.InteractionInput
 {
     /// <summary>
-    /// CollectionWrite primitive (graph-side owned-collection write): the op semantics
+    /// CollectionApplier.Apply (graph-side owned-collection write): the op semantics
     /// replace/add/subtract execute here over the store; membership semantics match the
     /// retired pass-through writer's behavior.
     /// </summary>

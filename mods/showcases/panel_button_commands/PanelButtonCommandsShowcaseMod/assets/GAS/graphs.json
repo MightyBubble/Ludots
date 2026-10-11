@@ -1,0 +1,365 @@
+[
+  {
+    "id": "Graph.ButtonCommands.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.buttonCommands.strip",
+        "panelAnchor": "screen.bottomCenter"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.buttonCommands.strip"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.ButtonCommands.Strip",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slots",
+        "op": "QueryCollectAbilitySlots"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "enemyTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "targetTmpl",
+        "op": "QueryFilterTemplate",
+        "template": "panel_button_commands_ally_target"
+      },
+      {
+        "id": "count",
+        "op": "AggCount"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slots"
+      },
+      {
+        "from": "slots",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "enemyTeam"
+      },
+      {
+        "from": "enemyTeam",
+        "fromPort": "next",
+        "to": "targetTmpl"
+      },
+      {
+        "from": "targetTmpl",
+        "fromPort": "next",
+        "to": "count"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "slots",
+        "toPort": "source"
+      },
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "enemyTeam",
+        "toPort": "list"
+      },
+      {
+        "from": "enemyTeam",
+        "fromPort": "list",
+        "to": "targetTmpl",
+        "toPort": "list"
+      },
+      {
+        "from": "targetTmpl",
+        "fromPort": "list",
+        "to": "count",
+        "toPort": "list"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "slots",
+        "destination": "AbilitySlotCollection",
+        "type": "IntIdList",
+        "collectionKey": "panel.buttonCommands.slots",
+        "role": "Display",
+        "title": "技能格",
+        "summary": "施法者身上按图规则聚合出的有效技能槽"
+      },
+      {
+        "id": "count",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "count",
+        "key": "panel.buttonCommands.targetCount"
+      }
+    ]
+  },
+  {
+    "id": "Graph.ButtonCommands.Chip",
+    "kind": "Query",
+    "entry": "ready",
+    "nodes": [
+      {
+        "id": "ready",
+        "op": "ConstFloat",
+        "floatValue": 1
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "panel.buttonCommands.chip.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.ButtonCommands.Cast",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_panel_cast",
+        "event": "panel.ButtonCommands.Cast",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Panel.Slot"
+      },
+      {
+        "id": "tAll",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "tTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 2
+      },
+      {
+        "id": "tTmpl",
+        "op": "QueryFilterTemplate",
+        "template": "fireball_target"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "get0",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "aAll",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "aTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "aTmpl",
+        "op": "QueryFilterTemplate",
+        "template": "panel_button_commands_caster"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "tAll"
+      },
+      {
+        "from": "tAll",
+        "fromPort": "next",
+        "to": "tTeam"
+      },
+      {
+        "from": "tTeam",
+        "fromPort": "next",
+        "to": "tTmpl"
+      },
+      {
+        "from": "tTmpl",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "get0"
+      },
+      {
+        "from": "get0",
+        "fromPort": "next",
+        "to": "aAll"
+      },
+      {
+        "from": "aAll",
+        "fromPort": "next",
+        "to": "aTeam"
+      },
+      {
+        "from": "aTeam",
+        "fromPort": "next",
+        "to": "aTmpl"
+      },
+      {
+        "from": "aTmpl",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "get0",
+        "toPort": "value"
+      },
+      {
+        "from": "get0",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

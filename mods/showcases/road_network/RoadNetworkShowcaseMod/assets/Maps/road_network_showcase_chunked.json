@@ -46,7 +46,17 @@
             "Y": 25600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "road.team.red",
+          "Type": "Hostile"
+        },
+        {
+          "To": "road.team.blue",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "road_fort_blue",
@@ -103,7 +113,17 @@
             "Y": 25600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "road.team.blue",
+          "Type": "Hostile"
+        },
+        {
+          "To": "road.team.red",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "road_fort_neutral",
@@ -309,18 +329,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "road.player.blue"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "RoadNetwork.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  }
+  ]
 }

@@ -1,0 +1,24 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.east_asia.battle",
+      "commandIntentId": "intent.command.default",
+      "inputContextId": "CaseE.Controls",
+      "bindings": [
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelectEnd",
+        "CaseE.Command",
+        "QueueModifier",
+        "ModifierSubtract"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.east_asia.box_begin"
+        },
+        {
+          "trigger": "graph.east_asia.command_commit"
+        }
+      ]
+    }
+  ]
+}

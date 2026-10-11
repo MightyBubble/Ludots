@@ -10,7 +10,7 @@ public sealed class FireballSharedModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        context.Log("[FireballSharedMod] Loaded - fireball arena uses GAS abilities/effects and presenter rules; local order input installs via CoreInputMod auto assembly");
+        context.Log("[FireballSharedMod] Loaded - fireball arena uses GAS abilities/effects and presenter rules; Q casts through the fireball battle interaction context");
     }
 
     public void OnUnload() { }

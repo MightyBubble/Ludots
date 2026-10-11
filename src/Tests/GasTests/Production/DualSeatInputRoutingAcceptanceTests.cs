@@ -95,7 +95,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(orderOne.PlayerId, Is.EqualTo(1));
             Assert.That(orderOne.Args.Spatial.WorldCm.X, Is.EqualTo(startOne.X + stepDistanceCm).Within(0.001f),
                 "seat.0's +X axis input drives its own rep's order.");
-            Assert.That(orderOne.Args.Spatial.WorldCm.Y, Is.EqualTo(startOne.Y).Within(0.001f),
+            Assert.That(orderOne.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.001f),
+                "the height slot stays zero for a ground-plane move target.");
+            Assert.That(orderOne.Args.Spatial.WorldCm.Z, Is.EqualTo(startOne.Y).Within(0.001f),
                 "seat.1's +Y input running on the same frame never leaks into seat.0's order — no last-writer-wins.");
             Assert.That(engine.World.TryGet(repOne, out OrderBuffer bufferOne) && bufferOne.QueuedCount == 0,
                 "seat.0's rep receives exactly one order for the frame; the other seat's input is not merged onto it.");

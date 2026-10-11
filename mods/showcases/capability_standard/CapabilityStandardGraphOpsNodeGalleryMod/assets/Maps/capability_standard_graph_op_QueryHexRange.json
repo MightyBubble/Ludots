@@ -38,7 +38,17 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ring1a",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "ring1a",
@@ -61,7 +71,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ring1a",
+          "Type": "Friendly"
+        },
+        {
+          "To": "caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "ring1b",

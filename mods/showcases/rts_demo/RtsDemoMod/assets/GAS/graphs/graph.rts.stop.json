@@ -1,0 +1,166 @@
+[
+  {
+    "id": "graph.rts.stop",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_stop",
+        "action": "Stop",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "count",
+        "op": "AggCount"
+      },
+      {
+        "id": "count_f",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "has_members",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "stop"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "count"
+      },
+      {
+        "from": "count",
+        "fromPort": "next",
+        "to": "count_f"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "has_members"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "slot"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "count",
+        "fromPort": "value",
+        "to": "count_f",
+        "toPort": "a"
+      },
+      {
+        "from": "count_f",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "a"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "has_members",
+        "toPort": "b"
+      },
+      {
+        "from": "has_members",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

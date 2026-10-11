@@ -110,6 +110,29 @@ def list_csproj_dirs(repo: Path, scan_root: str) -> list:
     return sorted(dirs)
 
 
+def list_mod_manifest_dirs(repo: Path, scan_root: str) -> list:
+    """列出 scan_root 下所有含 mod.json 的目录（git 树相对路径）。
+
+    与 csproj 扫描互补：纯数据 mod（零 C#）没有 csproj，若无此对账，
+    未注册的 0 码 showcase 会静默逃逸（ui_command_panels 前科）。
+    """
+    ok, out = git(repo, ["ls-tree", "-r", "--name-only", "HEAD", "--", scan_root])
+    if not ok:
+        root = repo / scan_root
+        if not root.is_dir():
+            return []
+        return sorted(
+            norm(p.parent.relative_to(repo).as_posix())
+            for p in root.rglob("mod.json")
+        )
+    dirs = {
+        norm(line.rsplit("/", 1)[0])
+        for line in out.splitlines()
+        if line.endswith("/mod.json") or line == "mod.json"
+    }
+    return sorted(dirs)
+
+
 def load_json(path: Path, label: str, errors: list):
     if not path.is_file():
         errors.append(f"{label} 不存在: {path}")
@@ -268,8 +291,10 @@ def main() -> int:
             f"（需修正 binding 名或加入 exemptions: kind=binding）"
         )
 
-    # ---------- ⑤ csproj 覆盖 ----------
-    for d in list_csproj_dirs(repo, scan_root):
+    # ---------- ⑤ csproj / mod.json 覆盖 ----------
+    csproj_dirs = list_csproj_dirs(repo, scan_root)
+    mod_manifest_dirs = [d for d in list_mod_manifest_dirs(repo, scan_root) if d not in csproj_dirs]
+    for d in csproj_dirs + mod_manifest_dirs:
         if d in covered_dirs:
             continue
         # 豁免可按 csproj 文件路径或目录路径声明
@@ -279,10 +304,16 @@ def main() -> int:
         )
         if csproj_hit:
             continue
-        errors.append(
-            f"{scan_root} 下目录 '{d}' 含 csproj 但无注册表条目"
-            f"（需新增条目或加入 exemptions: kind=csproj）"
-        )
+        if d in csproj_dirs:
+            errors.append(
+                f"{scan_root} 下目录 '{d}' 含 csproj 但无注册表条目"
+                f"（需新增条目或加入 exemptions: kind=csproj）"
+            )
+        else:
+            errors.append(
+                f"{scan_root} 下目录 '{d}' 含 mod.json 但无注册表条目"
+                f"（纯数据 mod 也必须注册或列入 exemptions: kind=csproj）"
+            )
 
     # ---------- 汇总 ----------
     for w in warnings:

@@ -20,10 +20,6 @@
     "IdField": "id"
   },
   {
-    "Path": "Input/input_order_mappings.json",
-    "Policy": "DeepObject"
-  },
-  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"

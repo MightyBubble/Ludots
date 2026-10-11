@@ -28,7 +28,6 @@ public class MassNavigationIdleHoldContractTests
     public void IdleAnchoredAgents_StepWithoutOrders_HoldSpawnPosition()
     {
         using var world = World.Create();
-        LoadFriendlyTeamConfig();
         MassNavigationFlowSolverState flow = CreateFlow();
         var navGroups = CreateGroupRuntime(flow);
         float[] spawnX = { 4_950f, 5_050f };
@@ -54,7 +53,6 @@ public class MassNavigationIdleHoldContractTests
     public void IdleAnchoredAgent_PushedPastWakeThreshold_WalksBackToAnchor()
     {
         using var world = World.Create();
-        LoadFriendlyTeamConfig();
         MassNavigationFlowSolverState flow = CreateFlow();
         var navGroups = CreateGroupRuntime(flow);
         float[] spawnX = { 4_950f, 5_050f };
@@ -170,15 +168,6 @@ public class MassNavigationIdleHoldContractTests
         float dx = flow.GetPositionX(index) - xCm;
         float dy = flow.GetPositionY(index) - yCm;
         return MathF.Sqrt((dx * dx) + (dy * dy));
-    }
-
-    private static void LoadFriendlyTeamConfig()
-    {
-        TeamManager.LoadConfig(new TeamConfig
-        {
-            DefaultRelationship = "Friendly",
-            Relationships = new System.Collections.Generic.List<RelationshipEntry>(),
-        });
     }
 
     private static MassNavigationGroupRuntime CreateGroupRuntime(MassNavigationFlowSolverState flow)

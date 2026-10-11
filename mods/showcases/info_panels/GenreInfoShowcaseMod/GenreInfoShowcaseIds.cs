@@ -6,7 +6,7 @@ namespace GenreInfoShowcaseMod
         public const string InsightHandleKey = "GenreInfoShowcaseMod.EntityInfo.PrimaryInsight";
         public const string SeededMapKey = "GenreInfoShowcaseMod.SeededMap";
         public const string ActiveControlGroupKey = "GenreInfoShowcaseMod.ActiveControlGroup";
-        public const string ActiveCollectionKey = "GenreInfoShowcaseMod.ActiveCollection";
+        public const string RosterKeyChannel = "GenreInfoShowcaseMod.ActiveCollection";
         public const string FormationCollectionKey = "collection.genreinfo.formation";
         public const string ControlGroupCollectionPrefix = "collection.genreinfo.group.";
         public const string SelectionGridHostId = "genre-info-selection-grid";

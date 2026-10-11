@@ -42,8 +42,6 @@ namespace Ludots.Core.Scripting
         public const string GasController = "GasController";
         public const string GasConditionRegistry = "GasConditionRegistry";
         public const string TagOps = "TagOps";
-        public const string InputRequestQueue = "InputRequestQueue";
-        public const string InputResponseBuffer = "InputResponseBuffer";
         public const string RuntimeEntitySpawnQueue = "RuntimeEntitySpawnQueue";
         public const string InteractionActionBindings = "InteractionActionBindings";
         public const string ActiveInputOrderMapping = "ActiveInputOrderMapping";
@@ -88,8 +86,6 @@ namespace Ludots.Core.Scripting
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string ClientLocalSeatRegistry = "ClientLocalSeatRegistry";
         public const string LogicViewRegistry = "LogicViewRegistry";
-        public const string TabTargetEntity = "TabTargetEntity";
-        public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";

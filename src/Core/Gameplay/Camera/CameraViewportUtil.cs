@@ -183,7 +183,7 @@ namespace Ludots.Core.Gameplay.Camera
 
             Vector3 targetToCameraOffset = WorldPlane2D.VisualCameraTargetToCameraOffset(yawDeg, pitchDeg, distanceM);
             Vector3 desiredPos = targetPos + targetToCameraOffset;
-            bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
+            bool firstPerson = Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
             Vector3 basisForward = firstPerson
                 ? WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(yawDeg, pitchDeg)
                 : Vector3.Normalize(targetPos - desiredPos);

@@ -1,0 +1,13 @@
+{
+  "startupMapId": "panel_button_commands_arena",
+  "windowTitle": "Ludots - 面板按钮下令",
+  "windowWidth": 1280,
+  "windowHeight": 720,
+  "targetFps": 0,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

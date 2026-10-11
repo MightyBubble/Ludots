@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Arch.Core;
+using Ludots.Core.EntityQueries;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
@@ -28,21 +29,25 @@ namespace Ludots.Tests.GAS
             new TagRuleRegistry());
 
         [Test]
-        public void RelationshipFilter_Parse_RejectsAliasesCasingWhitespaceAndNumericValues()
+        public void RelationFilter_Parse_RejectsCasingWhitespaceUndeclaredAndNumericValues()
         {
-            That(RelationshipFilterUtil.Parse("Hostile"), Is.EqualTo(RelationshipFilter.Hostile));
+            var types = new RelationshipTypeRegistry();
+            int hostile = types.Register("Hostile");
 
-            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse("hostile"));
-            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse(" Hostile"));
-            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse("1"));
-            Throws<ArgumentException>(() => RelationshipFilterUtil.Parse(null!));
+            That(RelationFilter.Parse("Hostile", types), Is.EqualTo(RelationFilter.Require(hostile)));
+            That(RelationFilter.Parse(RelationFilter.AllKeyword, types).IsAll, Is.True);
+
+            Throws<InvalidOperationException>(() => RelationFilter.Parse("hostile", types));
+            Throws<InvalidOperationException>(() => RelationFilter.Parse(" Hostile", types));
+            Throws<InvalidOperationException>(() => RelationFilter.Parse("1", types));
+            Throws<InvalidOperationException>(() => RelationFilter.Parse("NotHostile", types));
+            Throws<ArgumentException>(() => RelationFilter.Parse(null!, types));
         }
 
         [Test]
-        public void RelationshipFilter_Passes_RejectsUnsupportedEnumValue()
+        public void RelationFilter_All_CarriesNoRelationshipType()
         {
-            Throws<ArgumentOutOfRangeException>(() =>
-                RelationshipFilterUtil.Passes((RelationshipFilter)255, sourceTeamId: 1, targetTeamId: 2));
+            Throws<InvalidOperationException>(() => _ = RelationFilter.All.RelationTypeId);
         }
 
         [Test]
@@ -110,11 +115,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphTargetList_FilterRelationship_RejectsUnsupportedModeBeforeApiUse()
+        public void GraphTargetList_FilterRelationship_RejectsUnregisteredRelationshipType()
         {
             using var world = World.Create();
 
-            Throws<ArgumentOutOfRangeException>(() => ExecuteInvalidRelationshipFilterMode(world));
+            Throws<ArgumentOutOfRangeException>(() => ExecuteUnregisteredRelationshipTypeFilter(world));
         }
 
         [TestCase(
@@ -319,7 +324,7 @@ namespace Ludots.Tests.GAS
             Throws<InvalidOperationException>(() => presets.GetId("sourcetoresolved"));
         }
 
-        private static void ExecuteInvalidRelationshipFilterMode(World world)
+        private static void ExecuteUnregisteredRelationshipTypeFilter(World world)
         {
             var typeRegistry = new RelationshipTypeRegistry();
             var metricRegistry = new RelationshipMetricRegistry();
@@ -327,7 +332,9 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), relationshipRuntime: relationships);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships, TeamRelationTestHarness.Over(world, relationships).Query);
+            var api = new GasGraphRuntimeApi(world, tagOps: tagOps, relationshipRuntime: relationships, entityQueries: entityQueries);
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -339,7 +346,7 @@ namespace Ludots.Tests.GAS
             {
                 Op = (ushort)GraphNodeOp.QueryFilterRelationship,
                 A = 0,
-                Imm = 255,
+                Dst = 255,
             };
 
             var targetList = new GraphTargetList(targets);

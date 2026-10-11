@@ -259,8 +259,6 @@ namespace Ludots.Tests.GAS
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 4096,
                 defs,

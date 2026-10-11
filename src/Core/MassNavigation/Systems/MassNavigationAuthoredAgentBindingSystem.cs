@@ -32,7 +32,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly List<bool> _controllableFlags;
     private readonly int _agentCapacity;
     private readonly ControlDomainQuery _controlDomains;
-    private readonly DomainStanceQuery _stances;
+    private readonly RelationshipRuntime _relationships;
+    private readonly int _memberOfTypeId;
     private readonly Entity[] _projectedEntitiesByAgentIndex;
     private readonly Entity[] _projectedDomainsByAgentIndex;
     private readonly byte[] _projectedDomainValidByAgentIndex;
@@ -72,8 +73,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             ?? throw new InvalidOperationException("MassNavigation authored binding requires the PoseAuthorityArbiter service.");
         _controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires ControlDomainQuery.");
-        _stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
-            ?? throw new InvalidOperationException("MassNavigation authored binding requires DomainStanceQuery.");
+        _relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires RelationshipRuntime.");
+        _memberOfTypeId = _relationships.TypeRegistry.GetId("MemberOf");
         _entities = new List<Entity>(_agentCapacity);
         _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
         _controllableFlags = new List<bool>(_agentCapacity);
@@ -670,27 +672,22 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return controlDomain;
         }
 
-        if (_stances.TryResolveStanceDomain(entity, out Entity stanceDomain))
+        if (_engine.World.Has<TeamIdentity>(entity))
         {
-            return stanceDomain;
+            return entity;
+        }
+
+        Span<Entity> teams = stackalloc Entity[1];
+        if (_relationships.CollectOutgoing(entity, _memberOfTypeId, teams) > 0)
+        {
+            return teams[0];
         }
 
         throw new InvalidOperationException(
             $"MassNavigationAgent entity {entity.Id} requires an authored control-domain or member-of relationship.");
     }
 
-    private uint ResolveRelationshipRevision()
-    {
-        uint controlRevision = _controlDomains.Revision;
-        uint stanceRevision = _stances.Revision;
-        if (controlRevision != stanceRevision)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation relationship projection requires one committed relationship revision, but control-domain is {controlRevision} and stance-domain is {stanceRevision}.");
-        }
-
-        return controlRevision;
-    }
+    private uint ResolveRelationshipRevision() => _relationships.ReverseIndex.Revision;
 
     private Entity ResolveAndStoreProjectedDomain(Entity entity, int agentIndex, out bool changed)
     {

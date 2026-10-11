@@ -456,7 +456,7 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
             else
             {
                 bool keeps = byRelationship
-                    ? IsHostileToCaster(ctx, _units[i])
+                    ? KeepsByRelation(ctx, _units[i])
                     : IsEnemyLayerUnit(ctx, _units[i]);
                 GraphShowcaseStagePresenter.DrawBadge(
                     debugDraw, x, y + BadgeYOffset, badgeKind,
@@ -502,16 +502,12 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
         return count;
     }
 
-    private static bool IsHostileToCaster(GraphOpsNodeDriverContext ctx, Entity unit)
+    private static bool KeepsByRelation(GraphOpsNodeDriverContext ctx, Entity unit)
     {
-        if (!ctx.SimWorld.Has<Team>(ctx.Caster) || !ctx.SimWorld.Has<Team>(unit))
-        {
-            return false;
-        }
-
-        return TeamManager.GetRelationship(
-            ctx.SimWorld.Get<Team>(ctx.Caster).Id,
-            ctx.SimWorld.Get<Team>(unit).Id) == TeamRelationship.Hostile;
+        TeamRelationQuery teamRelations = ctx.TeamRelations
+            ?? throw new InvalidOperationException("QueryFilterRelationship vignette requires TeamRelationQuery.");
+        // The patched QueryFilterRelationship instruction carries its relationship type id in Dst.
+        return teamRelations.Has(ctx.Caster, unit, ctx.FeaturedDest);
     }
 
     private static bool IsEnemyLayerUnit(GraphOpsNodeDriverContext ctx, Entity unit)

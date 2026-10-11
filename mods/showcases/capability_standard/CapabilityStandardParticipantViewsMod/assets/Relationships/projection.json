@@ -2,7 +2,7 @@
   "knowledgeGrants": [
     {
       "id": "participant-view.ally-share",
-      "typeId": "Participant",
+      "typeId": "ParticipantViews.KnowledgeShare",
       "collectionKey": "participant_view.ally.share",
       "presence": "HiddenWithSource",
       "position": "LastKnown",
@@ -10,13 +10,13 @@
         "Health"
       ],
       "relationshipTypes": [
-        "Participant"
+        "ParticipantViews.KnowledgeShare"
       ],
       "confidencePermille": 760
     },
     {
       "id": "participant-view.neutral-rumor",
-      "typeId": "Participant",
+      "typeId": "ParticipantViews.KnowledgeShare",
       "collectionKey": "participant_view.neutral.rumor",
       "presence": "HiddenWithSource",
       "position": "LastKnown",

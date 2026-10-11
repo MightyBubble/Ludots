@@ -1,7 +1,7 @@
 {
   "name": "CameraProfilesMod",
   "version": "1.0.0",
-  "description": "Shared camera presets, view modes, and input bindings for camera capability mods.",
+  "description": "Shared camera presets for camera capability mods.",
   "main": "bin/net9.0/CameraProfilesMod.dll",
   "priority": 0,
   "dependencies": {

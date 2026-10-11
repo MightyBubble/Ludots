@@ -8,10 +8,7 @@
   "commandSource": {
     "acquisition": {
       "enabled": false
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "massNavigationMove"
-    ]
+    }
   },
   "presentation": {
     "presenterInstanceCapacity": 131072,

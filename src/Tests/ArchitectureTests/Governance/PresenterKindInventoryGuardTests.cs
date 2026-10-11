@@ -69,6 +69,7 @@ namespace Ludots.Tests.Architecture.Governance
                 nameof(BehaviorKind.InstancedBatch),
                 nameof(BehaviorKind.TrailMesh),
                 nameof(BehaviorKind.ScreenRect),
+                nameof(BehaviorKind.InteractionContextBinding),
                 nameof(BehaviorKind.Extension),
             };
 

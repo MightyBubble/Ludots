@@ -55,7 +55,12 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = new FixedPointerActionReader(
                 new Vector2(PinnedPointerPx, PinnedPointerPx)),
-            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+            {
+                ConfirmActionId = "GraphOpsGallery.Confirm",
+                CommandActionId = "GraphOpsGallery.Command",
+                CancelActionId = "GraphOpsGallery.Cancel",
+            },
         };
         ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, globals));
     }
@@ -68,7 +73,7 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
 
         public T ReadAction<T>(string actionId) where T : struct
         {
-            if (string.Equals(actionId, InteractionActionBindings.DefaultPointerPositionActionId, StringComparison.Ordinal)
+            if (string.Equals(actionId, ReservedInputActionIds.PointerPos, StringComparison.Ordinal)
                 && typeof(T) == typeof(Vector2))
             {
                 return (T)(object)_pointer;

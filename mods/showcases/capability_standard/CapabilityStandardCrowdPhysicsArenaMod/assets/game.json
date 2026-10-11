@@ -15,10 +15,7 @@
   "commandSource": {
     "targetFilter": {
       "relationFilter": "Friendly"
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "massNavigationMove"
-    ]
+    }
   },
   "presentation": {
     "presenterInstanceCapacity": 16384,
@@ -46,7 +43,6 @@
     "minimap": {
       "initialZoomNormalized": 0.12,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,

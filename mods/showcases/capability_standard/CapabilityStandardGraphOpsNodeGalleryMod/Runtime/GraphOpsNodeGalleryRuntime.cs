@@ -149,12 +149,14 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
 
     private void SettlePendingEffectRequests()
     {
-        if (_ctx!.EffectRequests is not { Count: > 0 })
+        bool forced = _ctx!.EffectSettlementRequested;
+        _ctx.EffectSettlementRequested = false;
+        if (!forced && _ctx.EffectRequests is not { Count: > 0 })
         {
             return;
         }
 
-        _host!.SettleEffectRequests();
+        _host!.SettleEffectRequests(forceTick: forced);
         GraphOpsNodeActorBinding.SyncActorHealthFromWorld(_ctx);
     }
 

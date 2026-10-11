@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static readonly QueryDescription Query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
         private readonly EffectRequestQueue _effectRequests;
         private readonly ISpatialQueryService _spatialQueries;
+        private readonly TeamRelationQuery _teamRelations;
         private readonly Entity[] _collisionCandidates;
         private readonly Entity[] _toDestroy;
         private readonly HashSet<Entity> _toDestroySet;
@@ -41,7 +42,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectRequestQueue effectRequests,
             ISpatialQueryService spatialQueries,
             int collisionCandidateCapacity,
-            int runtimeEntityCapacity) : base(world)
+            int runtimeEntityCapacity,
+            TeamRelationQuery teamRelations) : base(world)
         {
             if (collisionCandidateCapacity <= 0)
             {
@@ -60,6 +62,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _effectRequests = effectRequests;
             _spatialQueries = spatialQueries;
+            _teamRelations = teamRelations ?? throw new ArgumentNullException(nameof(teamRelations));
             _collisionCandidates = new Entity[collisionCandidateCapacity];
             _toDestroy = new Entity[runtimeEntityCapacity];
             _toDestroySet = new HashSet<Entity>(runtimeEntityCapacity);
@@ -206,7 +209,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (completed)
             {
-                PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
+                // The completion publish applies to the stored cast target directly, so
+                // it must honor the same collision contract as travel hits: a target the
+                // relation filter rejects (or the excluded source) never takes the
+                // impact — the projectile fizzles at its landing point instead.
+                Entity completionTarget = World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null;
+                if (completionTarget != Entity.Null &&
+                    !IsValidCollisionTarget(entity, in projectile, completionTarget, TryGetTeamId(projectile.Source)))
+                {
+                    completionTarget = Entity.Null;
+                }
+
+                PublishEffect(projectile.ImpactEffectTemplateId, in projectile, completionTarget, position.Value);
                 QueueDestroy(entity);
             }
         }
@@ -395,7 +409,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return false;
             }
 
-            if (projectile.CollisionRelationFilter == RelationshipFilter.All)
+            if (projectile.CollisionRelationFilter.IsAll)
             {
                 return true;
             }
@@ -406,7 +420,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             int targetTeamId = World.Get<Team>(candidate).Id;
-            return RelationshipFilterUtil.Passes(projectile.CollisionRelationFilter, sourceTeamId, targetTeamId);
+            return _teamRelations.Passes(in projectile.CollisionRelationFilter, sourceTeamId, targetTeamId);
         }
 
         private int TryGetTeamId(Entity entity)

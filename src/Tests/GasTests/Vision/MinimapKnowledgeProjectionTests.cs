@@ -226,7 +226,6 @@ public sealed class MinimapKnowledgeProjectionTests
         {
             InitialZoomNormalized = 1f,
             WheelZoomNormalizedStep = 0.08f,
-            ButtonZoomNormalizedStep = 0.18f,
             ZoomSliderEnabled = true,
             ModeToggleEnabled = true,
             RotateToggleEnabled = true,
@@ -235,6 +234,7 @@ public sealed class MinimapKnowledgeProjectionTests
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
             MaxZoomExplicitHalfExtentCm = 5000f,
+            Actions = Ludots.Tests.Presentation.MinimapTestActions.Create(),
         });
     }
 

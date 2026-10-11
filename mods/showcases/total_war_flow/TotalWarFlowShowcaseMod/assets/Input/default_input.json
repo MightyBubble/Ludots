@@ -1,0 +1,74 @@
+{
+  "actions": [
+    {
+      "id": "Tw.Campaign.Command",
+      "name": "Tw_Campaign_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Tw.Deploy.Command",
+      "name": "Tw_Deploy_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Tw.Rts.Command",
+      "name": "Tw_Rts_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Tw.Tps.Fire",
+      "name": "Tw_Tps_Fire",
+      "type": "Button"
+    },
+    {
+      "id": "Tw.Advance",
+      "name": "Tw_Advance",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Tw.Controls",
+      "name": "Total War Flow Controls",
+      "priority": 60,
+      "bindings": [
+        {
+          "actionId": "Tw.Campaign.Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "Tw.Deploy.Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "Tw.Rts.Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "Tw.Tps.Fire",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "Tw.Advance",
+          "path": "<Keyboard>/enter"
+        },
+        {
+          "actionId": "CaseE.BoxSelectBegin",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "CaseE.BoxSelectEnd",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "PointerMoved",
+          "path": "<Mouse>/Pos"
+        }
+      ]
+    }
+  ]
+}

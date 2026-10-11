@@ -1,0 +1,412 @@
+[
+  {
+    "id": "tw.rts.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Rts.Command",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "gnd",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "gok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "first",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "none",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "weapon_slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "siege_slot",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "beast_near",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "beast_kind",
+        "op": "QueryFilterTagAny",
+        "tag": "Unit.Biological"
+      },
+      {
+        "id": "beast_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "beast_any",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "beast_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "beast_pick",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "beast_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "building_near",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "building_kind",
+        "op": "QueryFilterTagAny",
+        "tag": "Structure.Building"
+      },
+      {
+        "id": "building_count",
+        "op": "AggCount"
+      },
+      {
+        "id": "building_any",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "building_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "building_pick",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "building_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "move_members",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "shoot",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "siege",
+        "op": "SubmitEngageBatch",
+        "engageProfile": "engage.siege.ring.navmesh",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "move",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "gnd"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "next",
+        "to": "gok"
+      },
+      {
+        "from": "gok",
+        "fromPort": "true",
+        "to": "first"
+      },
+      {
+        "from": "gok",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "none"
+      },
+      {
+        "from": "none",
+        "fromPort": "next",
+        "to": "weapon_slot"
+      },
+      {
+        "from": "weapon_slot",
+        "fromPort": "next",
+        "to": "siege_slot"
+      },
+      {
+        "from": "siege_slot",
+        "fromPort": "next",
+        "to": "beast_near"
+      },
+      {
+        "from": "beast_kind",
+        "fromPort": "next",
+        "to": "beast_count"
+      },
+      {
+        "from": "beast_count",
+        "fromPort": "next",
+        "to": "beast_any"
+      },
+      {
+        "from": "beast_any",
+        "fromPort": "next",
+        "to": "beast_br"
+      },
+      {
+        "from": "beast_br",
+        "fromPort": "true",
+        "to": "beast_pick"
+      },
+      {
+        "from": "beast_pick",
+        "fromPort": "next",
+        "to": "beast_members"
+      },
+      {
+        "from": "building_kind",
+        "fromPort": "next",
+        "to": "building_count"
+      },
+      {
+        "from": "building_count",
+        "fromPort": "next",
+        "to": "building_any"
+      },
+      {
+        "from": "building_any",
+        "fromPort": "next",
+        "to": "building_br"
+      },
+      {
+        "from": "building_br",
+        "fromPort": "true",
+        "to": "building_pick"
+      },
+      {
+        "from": "building_pick",
+        "fromPort": "next",
+        "to": "building_members"
+      },
+      {
+        "from": "beast_br",
+        "fromPort": "false",
+        "to": "building_near"
+      },
+      {
+        "from": "building_br",
+        "fromPort": "false",
+        "to": "move_members"
+      },
+      {
+        "from": "beast_members",
+        "fromPort": "next",
+        "to": "shoot"
+      },
+      {
+        "from": "shoot",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "building_members",
+        "fromPort": "next",
+        "to": "siege"
+      },
+      {
+        "from": "siege",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "move_members",
+        "fromPort": "next",
+        "to": "move"
+      },
+      {
+        "from": "move",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "beast_near",
+        "fromPort": "next",
+        "to": "beast_kind"
+      },
+      {
+        "from": "building_near",
+        "fromPort": "next",
+        "to": "building_kind"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "beast_count",
+        "fromPort": "value",
+        "to": "beast_any",
+        "toPort": "b"
+      },
+      {
+        "from": "none",
+        "fromPort": "value",
+        "to": "beast_any",
+        "toPort": "a"
+      },
+      {
+        "from": "beast_any",
+        "fromPort": "value",
+        "to": "beast_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "beast_pick",
+        "toPort": "value"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "beast_members",
+        "toPort": "source"
+      },
+      {
+        "from": "building_count",
+        "fromPort": "value",
+        "to": "building_any",
+        "toPort": "b"
+      },
+      {
+        "from": "none",
+        "fromPort": "value",
+        "to": "building_any",
+        "toPort": "a"
+      },
+      {
+        "from": "building_any",
+        "fromPort": "value",
+        "to": "building_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "building_pick",
+        "toPort": "value"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "building_members",
+        "toPort": "source"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "b"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "gok",
+        "toPort": "condition"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "condition"
+      },
+      {
+        "from": "weapon_slot",
+        "fromPort": "value",
+        "to": "shoot",
+        "toPort": "value"
+      },
+      {
+        "from": "beast_pick",
+        "fromPort": "value",
+        "to": "shoot",
+        "toPort": "target"
+      },
+      {
+        "from": "siege_slot",
+        "fromPort": "value",
+        "to": "siege",
+        "toPort": "value"
+      },
+      {
+        "from": "building_pick",
+        "fromPort": "value",
+        "to": "siege",
+        "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "move_members",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -28,7 +28,7 @@ namespace Ludots.Tests.GAS.Production
             try
             {
                 engine.InitializeWithConfigPipeline(
-                    RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }),
+                    RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }),
                     assetsRoot);
 
                 engine.Start();

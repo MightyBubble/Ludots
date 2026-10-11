@@ -12,16 +12,11 @@ namespace CameraShowcaseMod
         public const string InspectProfileId = "Camera.Profile.Inspect";
         public const string CommandSourceFollowProfileId = "Camera.Showcase.Profile.CommandSourceFollow";
 
-        public const string TacticalModeId = "Camera.Mode.Tactical";
-        public const string FollowModeId = "Camera.Mode.Follow";
-        public const string InspectModeId = "Camera.Mode.Inspect";
-
         public const string RevealShotId = "Camera.Showcase.Shot.CommandReveal";
-        public const string CommandSourceLockShotId = "Camera.Shot.CommandSourceLock";
-        public const string InspectSweepShotId = "Camera.Shot.InspectSweep";
-
-        public const string CommandSourceFollowModeId = "Camera.Mode.CommandSourceFollow";
         public const string CommandSourceFollowModeActionId = "CameraModeCommandSourceFollow";
+        public const string TacticalModeActionId = "CameraModeTactical";
+        public const string FollowModeActionId = "CameraModeFollow";
+        public const string InspectModeActionId = "CameraModeInspect";
 
         public const string HeroName = "CameraShowcaseHero";
         public const string ScoutName = "CameraShowcaseScout";

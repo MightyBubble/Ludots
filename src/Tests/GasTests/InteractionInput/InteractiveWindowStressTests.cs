@@ -66,19 +66,11 @@ namespace Ludots.Tests.GAS
                     new GraphProgramRegistry(),
                     "Test/InteractiveWindowStressTests.Stress.json");
 
-                var listenerEntity = world.Create();
-                unsafe
-                {
-                    var listener = new ResponseChainListener();
-                    listener.Add(tagOpen, ResponseType.PromptInput, priority: 100, effectTemplateId: inputRequestTag);
-                    world.Add(listenerEntity, listener);
-                }
-
                 var clock = new DiscreteClock();
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue(capacity: 4096);
+                var promptState = new ResponseChainPromptState();
                 var orderReq = new OrderRequestQueue(capacity: 4096);
                 var admissionResults = new OrderAdmissionResultBuffer(6, 6);
                 var chainOrders = new OrderQueue(64, admissionResults);
@@ -92,7 +84,7 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    inputReq,
+                    promptState,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     orderReq,
@@ -103,6 +95,12 @@ namespace Ludots.Tests.GAS
                 };
 
                 var source = world.Create(new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 });
+                unsafe
+                {
+                    var listener = new ResponseChainListener();
+                    listener.Add(tagOpen, ResponseType.PromptInput, priority: 100, effectTemplateId: inputRequestTag);
+                    world.Add(source, listener);
+                }
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(attrHealth, 1000f);
@@ -112,14 +110,10 @@ namespace Ludots.Tests.GAS
                     admissionResults.BeginLogicStep();
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     processing.Update(1f);
-                    That(inputReq.TryDequeue(out _), Is.True);
+                    That(promptState.IsOpen, Is.True);
                     That(orderReq.TryDequeue(out _), Is.True);
                     var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
-                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
-                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
                     That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
-                    That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
-                    That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
                     processing.Update(1f);
                     admissionResults.EndEntityIntake();
                     admissionResults.EndLogicStep();
@@ -139,7 +133,7 @@ namespace Ludots.Tests.GAS
                 long ticksWait = 0;
                 long ticksResolve = 0;
                 long ticksOther = 0;
-                int failedInputDequeues = 0;
+                int promptsNotOpened = 0;
                 int failedOrderDequeues = 0;
                 int failedSubmissions = 0;
                 int maxAdmissionCount = 0;
@@ -161,14 +155,10 @@ namespace Ludots.Tests.GAS
                         default: ticksOther += dt; break;
                     }
 
-                    if (!inputReq.TryDequeue(out _)) failedInputDequeues++;
+                    if (!promptState.IsOpen) promptsNotOpened++;
                     if (!orderReq.TryDequeue(out _)) failedOrderDequeues++;
                     var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
-                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
-                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
                     if (chainOrders.SubmitAssigned(ref activate) != OrderSubmitResult.Queued) failedSubmissions++;
-                    if (chainOrders.SubmitAssigned(ref pass1) != OrderSubmitResult.Queued) failedSubmissions++;
-                    if (chainOrders.SubmitAssigned(ref pass2) != OrderSubmitResult.Queued) failedSubmissions++;
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     phase0 = processing.DebugProposalWindowPhase;
@@ -207,7 +197,7 @@ namespace Ludots.Tests.GAS
                 Console.WriteLine($"[MUD][WINDOW][STRESS] GC Collections Δ: Gen0={gen0_1 - gen0_0} Gen1={gen1_1 - gen1_0} Gen2={gen2_1 - gen2_0}");
 
                 That(alloc1 - alloc0, Is.Zero);
-                That(failedInputDequeues, Is.Zero);
+                That(promptsNotOpened, Is.Zero);
                 That(failedOrderDequeues, Is.Zero);
                 That(failedSubmissions, Is.Zero);
                 That(maxAdmissionCount, Is.LessThanOrEqualTo(admissionResults.GenerationCapacity));

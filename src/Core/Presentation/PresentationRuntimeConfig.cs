@@ -40,6 +40,7 @@ namespace Ludots.Core.Presentation
         private int? _runtimeEntityLifecycleReceiptQueueCapacity;
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
+        private PresentationTeamRelationColorsConfig? _teamRelationColors;
 
         public int PresenterInstanceCapacity { get => _presenterInstanceCapacity ?? 0; set => _presenterInstanceCapacity = value; }
         public int GasPresentationEventCapacity { get => _gasPresentationEventCapacity ?? 0; set => _gasPresentationEventCapacity = value; }
@@ -85,6 +86,12 @@ namespace Ludots.Core.Presentation
         {
             get => _minimap ?? throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
             set => _minimap = value;
+        }
+
+        public PresentationTeamRelationColorsConfig TeamRelationColors
+        {
+            get => _teamRelationColors ?? throw new InvalidOperationException("presentation.teamRelationColors must be explicitly configured.");
+            set => _teamRelationColors = value;
         }
 
         public void Validate()
@@ -133,8 +140,14 @@ namespace Ludots.Core.Presentation
                 throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
             }
 
+            if (_teamRelationColors == null)
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors must be explicitly configured.");
+            }
+
             _cameraCulling.Validate();
             _minimap.Validate();
+            _teamRelationColors.Validate();
         }
 
         internal static int RequirePositive(int? value, string path)
@@ -165,6 +178,25 @@ namespace Ludots.Core.Presentation
             }
 
             return value.Value;
+        }
+    }
+
+    public sealed class PresentationTeamRelationColorsConfig
+    {
+        public string FriendlyRelation { get; set; } = string.Empty;
+        public string HostileRelation { get; set; } = string.Empty;
+
+        public void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(FriendlyRelation))
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors.friendlyRelation must name a relationship type.");
+            }
+
+            if (string.IsNullOrWhiteSpace(HostileRelation))
+            {
+                throw new InvalidOperationException("presentation.teamRelationColors.hostileRelation must name a relationship type.");
+            }
         }
     }
 
@@ -211,11 +243,32 @@ namespace Ludots.Core.Presentation
         ExplicitCm = 2,
     }
 
+    public sealed class MinimapActionsConfig
+    {
+        private string? _zoom;
+
+        public string Zoom { get => Require(_zoom, "zoom"); set => _zoom = value; }
+
+        public void Validate()
+        {
+            _ = Zoom;
+        }
+
+        private static string Require(string? value, string field)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"presentation.minimap.actions.{field} must be explicitly configured.");
+            }
+
+            return value;
+        }
+    }
+
     public sealed class MinimapRuntimeConfig
     {
         private float? _initialZoomNormalized;
         private float? _wheelZoomNormalizedStep;
-        private float? _buttonZoomNormalizedStep;
         private bool? _zoomSliderEnabled;
         private bool? _modeToggleEnabled;
         private bool? _rotateToggleEnabled;
@@ -224,10 +277,10 @@ namespace Ludots.Core.Presentation
         private MinimapZoomExtentMode? _maxZoomExtentMode;
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
+        private MinimapActionsConfig? _actions;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
-        public float ButtonZoomNormalizedStep { get => _buttonZoomNormalizedStep ?? 0f; set => _buttonZoomNormalizedStep = value; }
         public bool ZoomSliderEnabled { get => _zoomSliderEnabled ?? false; set => _zoomSliderEnabled = value; }
         public bool ModeToggleEnabled { get => _modeToggleEnabled ?? false; set => _modeToggleEnabled = value; }
         public bool RotateToggleEnabled { get => _rotateToggleEnabled ?? false; set => _rotateToggleEnabled = value; }
@@ -236,9 +289,16 @@ namespace Ludots.Core.Presentation
         public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
         public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
         public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
+        public MinimapActionsConfig Actions
+        {
+            get => _actions ?? throw new InvalidOperationException("presentation.minimap.actions must be explicitly configured.");
+            set => _actions = value;
+        }
 
         public void Validate()
         {
+            Actions.Validate();
+
             float initialZoom = PresentationRuntimeConfig.RequireFinite(_initialZoomNormalized, "presentation.minimap.initialZoomNormalized");
             if (initialZoom < 0f || initialZoom > 1f)
             {
@@ -251,13 +311,6 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.wheelZoomNormalizedStep must be > 0.");
-            }
-
-            float buttonStep = PresentationRuntimeConfig.RequireFinite(_buttonZoomNormalizedStep, "presentation.minimap.buttonZoomNormalizedStep");
-            if (buttonStep <= 0f)
-            {
-                throw new InvalidOperationException(
-                    "presentation.minimap.buttonZoomNormalizedStep must be > 0.");
             }
 
             PresentationRuntimeConfig.RequireBool(_zoomSliderEnabled, "presentation.minimap.zoomSliderEnabled");

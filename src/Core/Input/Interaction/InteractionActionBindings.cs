@@ -1,23 +1,50 @@
-﻿namespace Ludots.Core.Input.Interaction
+﻿using System;
+
+namespace Ludots.Core.Input.Interaction
 {
     public sealed class InteractionActionBindings
     {
-        // CommandSourceAcquire was retired with the acquisition system; the left button's
-        // live contract is Select.Begin (Default_Gameplay binding) — confirm rides it.
-        public const string DefaultConfirmActionId = "Select.Begin";
-        public const string DefaultCancelActionId = "Cancel";
-        public const string DefaultCommandActionId = "Command";
-        public const string DefaultPointerPositionActionId = "PointerPos";
-        public const string DefaultResponseChainPassActionId = "ResponseChainPass";
-        public const string DefaultResponseChainNegateActionId = "ResponseChainNegate";
-        public const string DefaultResponseChainActivateActionId = "ResponseChainActivate";
+        private string? _confirmActionId;
+        private string? _commandActionId;
+        private string? _cancelActionId;
 
-        public string ConfirmActionId { get; set; } = DefaultConfirmActionId;
-        public string CancelActionId { get; set; } = DefaultCancelActionId;
-        public string CommandActionId { get; set; } = DefaultCommandActionId;
-        public string PointerPositionActionId { get; set; } = DefaultPointerPositionActionId;
-        public string ResponseChainPassActionId { get; set; } = DefaultResponseChainPassActionId;
-        public string ResponseChainNegateActionId { get; set; } = DefaultResponseChainNegateActionId;
-        public string ResponseChainActivateActionId { get; set; } = DefaultResponseChainActivateActionId;
+        public string ConfirmActionId
+        {
+            get => _confirmActionId ?? throw Missing(nameof(ConfirmActionId));
+            set => _confirmActionId = value;
+        }
+
+        public string CommandActionId
+        {
+            get => _commandActionId ?? throw Missing(nameof(CommandActionId));
+            set => _commandActionId = value;
+        }
+
+        public string CancelActionId
+        {
+            get => _cancelActionId ?? throw Missing(nameof(CancelActionId));
+            set => _cancelActionId = value;
+        }
+
+        public void Validate()
+        {
+            RequireActionId(_confirmActionId, nameof(ConfirmActionId));
+            RequireActionId(_commandActionId, nameof(CommandActionId));
+            RequireActionId(_cancelActionId, nameof(CancelActionId));
+        }
+
+        private static void RequireActionId(string? value, string propertyName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw Missing(propertyName);
+            }
+        }
+
+        private static InvalidOperationException Missing(string propertyName)
+        {
+            return new InvalidOperationException(
+                $"game.json interactionActions.{char.ToLowerInvariant(propertyName[0])}{propertyName.Substring(1)} must be explicitly configured.");
+        }
     }
 }

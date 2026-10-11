@@ -1,0 +1,35 @@
+{
+  "op": "ActivateVirtualCamera",
+  "driver": "virtualCamera",
+  "title": "图里切镜头",
+  "beat": "开场是俯瞰全场的远景，图点名一台近景机位，镜头拉近到指挥和木桩身边。",
+  "detailTemplate": "镜头已切到「{camera}」。",
+  "assertDetailContains": [
+    "镜头已切到",
+    "近景机位"
+  ],
+  "featuredNodeId": "cut",
+  "graphKind": "TriggerGraph",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

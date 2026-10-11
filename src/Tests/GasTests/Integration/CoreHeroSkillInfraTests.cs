@@ -507,7 +507,7 @@ namespace Ludots.Tests.GAS
             };
             var filter = new TargetFilterDescriptor
             {
-                RelationFilter = RelationshipFilter.All,
+                RelationFilter = RelationFilter.All,
                 MaxTargets = 1,
             };
             var dispatch = new TargetDispatchDescriptor
@@ -534,7 +534,8 @@ namespace Ludots.Tests.GAS
                 service,
                 budget,
                 commands,
-                buffer);
+                buffer,
+                teamRelations: null);
 
             var queue = new EffectRequestQueue();
             TargetResolverFanOutHelper.PublishFanOutCommands(commands, queue);
@@ -558,7 +559,7 @@ namespace Ludots.Tests.GAS
             Entity secondTarget = world.Create(WorldPositionCm.FromCm(200, 0));
             var context = new EffectContext { RootId = 9, Source = source, Target = firstTarget };
             var query = new TargetQueryDescriptor();
-            var filter = new TargetFilterDescriptor { RelationFilter = RelationshipFilter.All };
+            var filter = new TargetFilterDescriptor { RelationFilter = RelationFilter.All };
             var dispatch = new TargetDispatchDescriptor
             {
                 PayloadEffectTemplateId = 777,
@@ -578,7 +579,8 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands))!;
+                    commands,
+                    teamRelations: null))!;
 
             Assert.That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
             Assert.That(commands, Has.Count.EqualTo(1));

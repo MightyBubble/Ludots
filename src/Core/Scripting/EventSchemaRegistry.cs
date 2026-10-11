@@ -141,6 +141,16 @@ namespace Ludots.Core.Scripting
                 new("oldFlags", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
                 new("newFlags", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
             }),
+            new(GameEvents.ResponseChainPromptOpened.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+            }),
+            new(GameEvents.ResponseChainPromptClosed.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+            }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
             new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]

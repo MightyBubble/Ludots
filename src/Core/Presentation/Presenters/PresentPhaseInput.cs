@@ -1,6 +1,5 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
@@ -24,10 +23,9 @@ namespace Ludots.Core.Presentation.Presenters
         public bool RequiresAttributeProjection;
         public bool HasAttributeProjection;
         public bool AllowVisibleTransientWorldText;
-        public bool HasRelationshipLink;
-        public bool HasTeamRelationship;
         public bool IsOwnedByAudience;
-        public TeamRelationship TeamRelationship;
+        public bool IsFriendlyTeam;
+        public bool IsHostileTeam;
         public PresentProjectionFacts Projection;
         public LODLevel LOD;
     }

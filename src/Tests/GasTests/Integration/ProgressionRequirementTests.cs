@@ -616,182 +616,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementWaitsForTargetCollectionGateTargetContext()
-        {
-            using var world = World.Create();
-            const int castAbilityOrderTypeId = 100;
-            const int effectTemplateId = 501;
-            int abilityId = AbilityIdRegistry.Register("Ability.RaiseCityGuard");
-            int progressionId = ProgressionIdRegistry.Register("Progression.CityGuardCharter");
-            int reqId = ProgressionRequirementIdRegistry.Register("Req.CityGuardCharter");
-
-            var requirements = new ProgressionRequirementRegistry();
-            requirements.Register(reqId, CreateSingleNodeRequirement(
-                reqId,
-                ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ScopeKey(ScopeKind.Explicit),
-                RoleSlot.ScopeHost,
-                progressionId));
-
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-            Entity city = world.Create(new ProgressionStateBuffer());
-            Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 21);
-            Entity target = world.Create();
-            Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
-
-            var spec = default(AbilityExecSpec);
-            spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
-            spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
-
-            var definitions = new AbilityDefinitionRegistry();
-            definitions.Register(abilityId, new AbilityDefinition
-            {
-                ExecSpec = spec,
-                HasUseProgressionRequirement = true,
-                UseProgressionRequirementId = reqId
-            });
-
-            var inputRequests = new InputRequestQueue();
-            var inputResponses = new InputResponseBuffer();
-            var effectRequests = new EffectRequestQueue();
-            var presentationEvents = new GasPresentationEventBuffer(16);
-            var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
-            var system = new AbilityExecSystem(
-                world,
-                new DiscreteClock(),
-                inputRequests,
-                inputResponses,
-                effectRequests,
-                4096,
-                definitions,
-                castAbilityOrderTypeId: castAbilityOrderTypeId,
-                presentationEvents: presentationEvents,
-                orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-
-            system.Update(0f);
-
-            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
-            Assert.That(inputRequests.Count, Is.EqualTo(1));
-            ref var waiting = ref world.Get<AbilityExecInstance>(actor);
-            Assert.That(waiting.State, Is.EqualTo(AbilityExecRunState.GateWaiting));
-            Assert.That(waiting.PendingProgressionUseRequirement, Is.EqualTo(1));
-            Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.False);
-
-            var response = new InputResponse
-            {
-                RequestId = 21,
-                ResponseTagId = 77,
-                Target = target,
-                TargetContext = city,
-            };
-            Assert.That(inputResponses.TryAdd(response), Is.True);
-
-            system.Update(0f);
-
-            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
-            ref var resolved = ref world.Get<AbilityExecInstance>(actor);
-            Assert.That(resolved.State, Is.EqualTo(AbilityExecRunState.Running));
-            Assert.That(resolved.PendingProgressionUseRequirement, Is.EqualTo(0));
-            Assert.That(resolved.TargetContext, Is.EqualTo(city));
-            Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.False);
-
-            system.Update(0f);
-
-            Assert.That(effectRequests.Count, Is.EqualTo(1));
-            Assert.That(effectRequests[0].Target, Is.EqualTo(target));
-            Assert.That(effectRequests[0].TargetContext, Is.EqualTo(city));
-            Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
-        }
-
-        [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementFailsAfterTargetCollectionGateWhenScopeLacksProgression()
-        {
-            using var world = World.Create();
-            const int castAbilityOrderTypeId = 100;
-            const int effectTemplateId = 502;
-            int abilityId = AbilityIdRegistry.Register("Ability.RaiseCityGuardBlocked");
-            int progressionId = ProgressionIdRegistry.Register("Progression.CityGuardCharterBlocked");
-            int reqId = ProgressionRequirementIdRegistry.Register("Req.CityGuardCharterBlocked");
-
-            var requirements = new ProgressionRequirementRegistry();
-            requirements.Register(reqId, CreateSingleNodeRequirement(
-                reqId,
-                ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ScopeKey(ScopeKind.Explicit),
-                RoleSlot.ScopeHost,
-                progressionId));
-
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-            Entity cityWithoutTech = world.Create(new ProgressionStateBuffer());
-            Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 22);
-            Entity target = world.Create();
-
-            var spec = default(AbilityExecSpec);
-            spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 78);
-            spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
-
-            var definitions = new AbilityDefinitionRegistry();
-            definitions.Register(abilityId, new AbilityDefinition
-            {
-                ExecSpec = spec,
-                HasUseProgressionRequirement = true,
-                UseProgressionRequirementId = reqId
-            });
-
-            var inputRequests = new InputRequestQueue();
-            var inputResponses = new InputResponseBuffer();
-            var effectRequests = new EffectRequestQueue();
-            var presentationEvents = new GasPresentationEventBuffer(16);
-            var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
-            var system = new AbilityExecSystem(
-                world,
-                new DiscreteClock(),
-                inputRequests,
-                inputResponses,
-                effectRequests,
-                4096,
-                definitions,
-                castAbilityOrderTypeId: castAbilityOrderTypeId,
-                presentationEvents: presentationEvents,
-                orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-
-            system.Update(0f);
-
-            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
-            Assert.That(inputRequests.Count, Is.EqualTo(1));
-            Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.False);
-
-            var response = new InputResponse
-            {
-                RequestId = 22,
-                ResponseTagId = 78,
-                Target = target,
-                TargetContext = cityWithoutTech,
-            };
-            Assert.That(inputResponses.TryAdd(response), Is.True);
-
-            system.Update(0f);
-
-            Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
-            Assert.That(effectRequests.Count, Is.EqualTo(0));
-            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
-            Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.True);
-            Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastCommitted), Is.True);
-            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
-            ref readonly var terminal = ref orderTypes.TerminalResults[0];
-            Assert.That(terminal.OrderId, Is.EqualTo(22));
-            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
-            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
-        }
-
-        [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementDoesNotDeferPastTimelineSideEffects()
+        public void AbilityExecSystem_ExplicitUseRequirementWithoutScopeFailsBeforeTimelineSideEffects()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -814,7 +639,7 @@ namespace Ludots.Tests.GAS
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
             spec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
-            spec.SetItem(1, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 79);
+            spec.SetItem(1, ExecItemKind.End, tick: 0);
 
             var definitions = new AbilityDefinitionRegistry();
             definitions.Register(abilityId, new AbilityDefinition
@@ -824,14 +649,11 @@ namespace Ludots.Tests.GAS
                 UseProgressionRequirementId = reqId
             });
 
-            var inputRequests = new InputRequestQueue();
             var effectRequests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(16);
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                inputRequests,
-                new InputResponseBuffer(),
                 effectRequests,
                 4096,
                 definitions,
@@ -844,7 +666,6 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
-            Assert.That(inputRequests.Count, Is.EqualTo(0));
             Assert.That(effectRequests.Count, Is.EqualTo(0));
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.True);
@@ -890,8 +711,6 @@ namespace Ludots.Tests.GAS
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
                 effectRequests,
                 4096,
                 definitions,

@@ -16,7 +16,17 @@
       "InstanceId": "champion-stress-team-blue-anchor",
       "Overrides": {
         "Name": { "Value": "Stress Blue Team Anchor" }
-      }
+      },
+      "Relations": [
+        {
+          "To": "champion-stress-team-blue-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "champion-stress-team-red-anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_participant_anchor",
@@ -30,7 +40,17 @@
       "InstanceId": "champion-stress-team-red-anchor",
       "Overrides": {
         "Name": { "Value": "Stress Red Team Anchor" }
-      }
+      },
+      "Relations": [
+        {
+          "To": "champion-stress-team-red-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "champion-stress-team-blue-anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_participant_anchor",
@@ -47,17 +67,5 @@
   "Players": [
     { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "champion-stress-player-blue-anchor" },
     { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "champion-stress-player-red-anchor" }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Hostile", "Symmetric": true }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false },
-      { "PlayerId": 2, "TeamId": 2, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false }
-    ]
-  }
+  ]
 }

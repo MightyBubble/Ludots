@@ -1,0 +1,12 @@
+{
+  "name": "PanelButtonCommandsShowcaseMod",
+  "version": "1.0.0",
+  "description": "面板按钮下令：施法者的技能按图规则聚合显示为技能格，点击走正式施法意图管线真施法；召唤按钮经效果在场生成实体。技能/实体/表现全部复用 FireballSharedMod，本 mod 零 C#。",
+  "priority": 50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "FireballSharedMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "panel", "button-events", "zero-code"]
+}

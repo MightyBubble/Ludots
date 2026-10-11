@@ -31,7 +31,7 @@
       {
         "id": "relFilter",
         "op": "QueryFilterRelationship",
-        "relationshipMode": "Hostile"
+        "relationshipType": "Hostile"
       }
     ],
     "controlEdges": [

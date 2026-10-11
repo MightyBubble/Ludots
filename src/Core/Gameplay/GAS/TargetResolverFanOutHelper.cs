@@ -94,6 +94,7 @@ namespace Ludots.Core.Gameplay.GAS
     public static class TargetResolverFanOutHelper
     {
         public const string CommandCapacityExceededError = "GAS.FAN_OUT.ERR.CommandCapacityExceeded";
+        public const string MissingTeamRelationsError = "GAS.FAN_OUT.ERR.MissingTeamRelations";
         public const string RootBudgetExceededError = "GAS.FAN_OUT.ERR.RootBudgetExceeded";
 
         // ── OnResolve Phase: spatial query, returns raw candidates ──
@@ -199,10 +200,11 @@ namespace Ludots.Core.Gameplay.GAS
             Entity[] buffer,
             int candidateCount,
             RootBudgetTable budget,
-            FanOutCommandBuffer commands)
+            FanOutCommandBuffer commands,
+            TeamRelationQuery? teamRelations)
         {
             EffectConfigParams mergedParams = default;
-            return ValidateAndCollect(world, in ctx, in query, in filter, in dispatch, in mergedParams, buffer, candidateCount, budget, commands);
+            return ValidateAndCollect(world, in ctx, in query, in filter, in dispatch, in mergedParams, buffer, candidateCount, budget, commands, teamRelations);
         }
 
         public static int ValidateAndCollect(
@@ -215,8 +217,14 @@ namespace Ludots.Core.Gameplay.GAS
             Entity[] buffer,
             int candidateCount,
             RootBudgetTable budget,
-            FanOutCommandBuffer commands)
+            FanOutCommandBuffer commands,
+            TeamRelationQuery? teamRelations)
         {
+            if (!filter.RelationFilter.IsAll && teamRelations == null)
+            {
+                throw new InvalidOperationException($"{MissingTeamRelationsError}: targetFilter.relationFilter={filter.RelationFilter}.");
+            }
+
             ref readonly var spatial = ref query.Spatial;
             WorldCmInt2 center = default;
             bool hasCenter = false;
@@ -240,7 +248,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             int sourceTeamId = 0;
-            if (filter.RelationFilter != RelationshipFilter.All && world.IsAlive(ctx.Source) && world.Has<Team>(ctx.Source))
+            if (!filter.RelationFilter.IsAll && world.IsAlive(ctx.Source) && world.Has<Team>(ctx.Source))
             {
                 sourceTeamId = world.Get<Team>(ctx.Source).Id;
             }
@@ -275,7 +283,7 @@ namespace Ludots.Core.Gameplay.GAS
                 }
 
                 // Relationship filter
-                if (filter.RelationFilter != RelationshipFilter.All)
+                if (!filter.RelationFilter.IsAll)
                 {
                     if (sourceTeamId == 0 || !world.Has<Team>(entity))
                     {
@@ -283,7 +291,7 @@ namespace Ludots.Core.Gameplay.GAS
                     }
 
                     int entityTeamId = world.Get<Team>(entity).Id;
-                    if (!RelationshipFilterUtil.Passes(filter.RelationFilter, sourceTeamId, entityTeamId)) continue;
+                    if (!teamRelations!.Passes(in filter.RelationFilter, sourceTeamId, entityTeamId)) continue;
                 }
 
                 if (commands.IsFull)
@@ -330,11 +338,12 @@ namespace Ludots.Core.Gameplay.GAS
             ISpatialQueryService spatialQueries,
             RootBudgetTable budget,
             FanOutCommandBuffer commands,
-            Entity[] buffer)
+            Entity[] buffer,
+            TeamRelationQuery? teamRelations)
         {
             int candidateCount = ResolveTargets(world, in ctx, in query, spatialQueries, buffer);
             if (candidateCount <= 0) return;
-            ValidateAndCollect(world, in ctx, in query, in filter, in dispatch, buffer, candidateCount, budget, commands);
+            ValidateAndCollect(world, in ctx, in query, in filter, in dispatch, buffer, candidateCount, budget, commands, teamRelations);
         }
 
         /// <summary>

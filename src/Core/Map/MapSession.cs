@@ -36,7 +36,6 @@ namespace Ludots.Core.Map
         public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
         public MapLoadEntityIndex EntityIndex { get; set; } = new MapLoadEntityIndex();
         public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; set; } = Array.Empty<ResolvedLocalSeatPossession>();
-        public TeamRelationshipSnapshot? TeamRelationships { get; set; }
         public MapLaunchContext? LaunchContext { get; set; }
 
         /// <summary>

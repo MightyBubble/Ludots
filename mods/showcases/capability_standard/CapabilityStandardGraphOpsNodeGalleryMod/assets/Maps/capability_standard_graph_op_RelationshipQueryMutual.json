@@ -38,7 +38,13 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "self",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "InstanceId": "friend1",

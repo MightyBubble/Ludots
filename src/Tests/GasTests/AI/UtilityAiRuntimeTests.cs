@@ -48,7 +48,7 @@ namespace Ludots.Tests.GAS
         public void UtilityAiDecisionSystem_FixedPrioritySelectsOnlyHostileCandidates()
         {
             using var fixture = RuntimeFixture.Create();
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Friendly);
+            fixture.Relations.LinkSymmetric(1, 3, fixture.Relations.FriendlyTypeId);
             _ = fixture.CreateTarget(teamId: 3, x: 200, y: 0);
             var hostile = fixture.CreateHostile(800, 0);
             var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102, inputKind: UtilityAiInputKind.Constant);
@@ -80,8 +80,8 @@ namespace Ludots.Tests.GAS
                 new[] { new UtilityAiTargetFilterDefinition(0, 2, 16) },
                 new[]
                 {
-                    new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 1500, 0, RelationshipFilter.All, in noTags),
-                    new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, RelationshipFilter.Hostile, in noTags)
+                    new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 1500, 0, RelationFilter.All, in noTags),
+                    new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, fixture.Relations.Hostile, in noTags)
                 },
                 new[]
                 {
@@ -421,6 +421,8 @@ namespace Ludots.Tests.GAS
                 StubGraphApi graphApi)
             {
                 World = world;
+                Relations = TeamRelationTestHarness.Create(world);
+                Relations.LinkSymmetric(1, 2, Relations.HostileTypeId);
                 Clock = clock;
                 AdmissionResults = admissionResults;
                 TerminalResults = terminalResults;
@@ -433,6 +435,7 @@ namespace Ludots.Tests.GAS
             }
 
             public World World { get; }
+            public TeamRelationTestHarness Relations { get; }
             public DiscreteClock Clock { get; }
             public OrderAdmissionResultBuffer AdmissionResults { get; }
             public OrderTerminalResultBuffer TerminalResults { get; }
@@ -452,8 +455,6 @@ namespace Ludots.Tests.GAS
                 var terminalResults = new OrderTerminalResultBuffer(orderCapacity);
                 var orders = new OrderQueue(orderCapacity, admissionResults);
                 TagRegistry.Clear();
-                TeamManager.Clear();
-                TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
                 var partition = new ChunkedGridSpatialPartitionWorld(64, initialChunkCapacity: 2048);
                 var spec = new WorldSizeSpec(new WorldAabbCm(-1000, -1000, 220000, 220000), 100);
                 var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
@@ -520,7 +521,7 @@ namespace Ludots.Tests.GAS
                 UtilityAiCompiledRuntime runtime,
                 GraphProgramRegistry? graphs = null,
                 IGraphRuntimeApi? graphApi = null)
-                => new(World, Clock, runtime, Spatial, graphs, graphApi, Orders, TerminalResults);
+                => new(World, Clock, runtime, Spatial, graphs, graphApi, Orders, TerminalResults, Relations.Query);
 
             public void RunDecision(
                 UtilityAiCompiledRuntime runtime,
@@ -570,8 +571,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiTargetFilterDefinition(0, 2, maxResults) },
                     new[]
                     {
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationshipFilter.All, in noTags),
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, RelationshipFilter.Hostile, in noTags)
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationFilter.All, in noTags),
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, Relations.Hostile, in noTags)
                     },
                     new[] { new UtilityAiInputDefinition(inputKind, inputKind == UtilityAiInputKind.Constant ? 1 : 0, 0) },
                     new[] { new UtilityAiNormalizationDefinition(inputKind == UtilityAiInputKind.Constant ? UtilityAiNormalizationKind.Identity : UtilityAiNormalizationKind.RangeInverse, 0f, 250000f) },
@@ -599,8 +600,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiTargetFilterDefinition(0, 2, 64) },
                     new[]
                     {
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationshipFilter.All, in noTags),
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, RelationshipFilter.Hostile, in noTags)
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationFilter.All, in noTags),
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, Relations.Hostile, in noTags)
                     },
                     new[] { new UtilityAiInputDefinition(UtilityAiInputKind.Constant, 1, 0) },
                     new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },
@@ -635,8 +636,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiTargetFilterDefinition(0, 2, 16) },
                     new[]
                     {
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationshipFilter.All, in noTags),
-                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, RelationshipFilter.Hostile, in noTags)
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SpatialRadius, 250000, 0, RelationFilter.All, in noTags),
+                        new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.Relationship, 0, 0, Relations.Hostile, in noTags)
                     },
                     new[] { new UtilityAiInputDefinition(UtilityAiInputKind.GraphScore, 0, graphId) },
                     new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },

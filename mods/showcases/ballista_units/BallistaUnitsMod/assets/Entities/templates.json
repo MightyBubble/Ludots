@@ -1,0 +1,84 @@
+[
+  {
+    "id": "ballista_soldier",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 400,
+          "Ballista.Armor": 50,
+          "MoveSpeed": 300
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": ["Ability.Ballista.Shot", "Ability.Ballista.SiegeBolt"]
+      },
+      "GameplayTagContainer": {
+        "tags": ["Unit.Commandable"]
+      },
+      "OrderBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "DirtyFlags": {},
+      "CommandSourceSelectableTag": {}
+    }
+  },
+  {
+    "id": "ballista_wolf",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 300,
+          "Ballista.Armor": 0
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": ["Unit.Biological"]
+      },
+      "Team": { "Id": 2 },
+      "DirtyFlags": {},
+      "CommandSourceSelectableTag": {}
+    }
+  },
+  {
+    "id": "ballista_tower",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 2000,
+          "Ballista.Armor": 300
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": ["Structure.Building"]
+      },
+      "SpatialFootprint2D": {
+        "vertices": [
+          { "x": -190, "y": -120 },
+          { "x": 190, "y": -120 },
+          { "x": 190, "y": 120 },
+          { "x": -190, "y": 120 }
+        ]
+      },
+      "Team": { "Id": 2 },
+      "DirtyFlags": {},
+      "CommandSourceSelectableTag": {},
+      "ContinuousHeightmapSampleState": {},
+      "ManifestationObstacleIntent2D": {
+        "shape": "Circle",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 500,
+        "radiusCm": 500,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  },
+  {
+    "id": "ballista_team_anchor",
+    "components": {
+      "Name": { "Value": "TeamAnchor" }
+    }
+  }
+]

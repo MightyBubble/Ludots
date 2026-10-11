@@ -38,7 +38,8 @@
       "argsTemplate": { "i0": 3 },
       "requireTarget": false,
       "targetType": "Direction",
-      "cursorTargetPolicy": "NearestEnemyInRange",
+      "cursorTargetPolicy": "NearestInRange",
+      "cursorTargetRelation": "Hostile",
       "cursorTargetRangeCm": 320,
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"

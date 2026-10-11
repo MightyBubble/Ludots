@@ -31,6 +31,11 @@
       "type": "Button"
     },
     {
+      "id": "QueueModifier",
+      "name": "Rts_QueueModifier",
+      "type": "Button"
+    },
+    {
       "id": "Rts.AimCancel",
       "name": "Rts_AimCancel",
       "type": "Button"
@@ -76,6 +81,10 @@
         {
           "actionId": "Stop",
           "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
         },
         {
           "actionId": "Rts.AimCancel",

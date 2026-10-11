@@ -24,11 +24,6 @@
   "Entities": [],
   "Teams": [],
   "Players": [],
-  "ParticipantRelationships": {
-    "Teams": [],
-    "Players": [],
-    "PlayerTeams": []
-  },
   "Boards": [
     {
       "Name": "default",

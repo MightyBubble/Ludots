@@ -21,22 +21,23 @@ public sealed class CollectionWriteComparisonTests
         var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
         int key = keys.Register("selection");
         var store = new EntityCollectionStore(keys, initialRowCapacity: count * 4);
+        var applier = new CollectionApplier(world, store);
         var entities = new Entity[count];
         for (int i = 0; i < count; i++) entities[i] = world.Create();
-        CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Replace, entities);
+        applier.Apply(owner, key, CollectionWriteOp.Replace, entities);
         ReadOnlySpan<Entity> removed = entities.AsSpan(0, count / 2);
         for (int warm = 0; warm < 3; warm++)
         {
-            CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Subtract, removed);
-            CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Add, removed);
+            applier.Apply(owner, key, CollectionWriteOp.Subtract, removed);
+            applier.Apply(owner, key, CollectionWriteOp.Add, removed);
         }
         var samples = new double[15];
         long allocated = GC.GetAllocatedBytesForCurrentThread();
         for (int run = 0; run < samples.Length; run++)
         {
             long start = Stopwatch.GetTimestamp();
-            CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Subtract, removed);
-            CollectionWrite.Apply(store, owner, key, CollectionWriteOp.Add, removed);
+            applier.Apply(owner, key, CollectionWriteOp.Subtract, removed);
+            applier.Apply(owner, key, CollectionWriteOp.Add, removed);
             samples[run] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
         }
         long bytes = GC.GetAllocatedBytesForCurrentThread() - allocated;

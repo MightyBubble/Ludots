@@ -68,11 +68,6 @@ public class MassNavigationTeamSymmetryTests
             CreateArenaProfileSet(),
             CreateAgentLayer(),
             CreateArenaSpawnLayout());
-        TeamManager.LoadConfig(new TeamConfig
-        {
-            DefaultRelationship = "Friendly",
-            Relationships = new List<RelationshipEntry>(),
-        });
         var navGroups = new MassNavigationGroupRuntime(
             CreateArenaConfig().Semantics.Group,
             CreateRuntimeCapacity(agentCapacity: flow.UnitCount, groupMemberCapacity: flow.UnitCount));
@@ -109,11 +104,6 @@ public class MassNavigationTeamSymmetryTests
             CreateArenaProfileSet(),
             CreateAgentLayer(),
             CreateArenaSpawnLayout());
-        TeamManager.LoadConfig(new TeamConfig
-        {
-            DefaultRelationship = "Friendly",
-            Relationships = new List<RelationshipEntry>(),
-        });
         var navGroups = new MassNavigationGroupRuntime(
             CreateArenaConfig().Semantics.Group,
             CreateRuntimeCapacity(agentCapacity: flow.UnitCount, groupMemberCapacity: flow.UnitCount));

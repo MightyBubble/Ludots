@@ -1,8 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
@@ -46,19 +44,16 @@ internal sealed class UxPrototypeRuntime
         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
         bool prototypeActive = UxPrototypeIds.IsPrototypeMap(activeMapId);
         var input = context.Get(CoreServiceKeys.InputHandler);
-        var viewModeManager = ResolveViewModeManager(engine);
 
         if (prototypeActive)
         {
             ActivateInputContext(input);
-            EnsureDefaultMode(viewModeManager);
             ApplyPrototypeRenderDefaults(engine);
             _state.EnsureInitialized(engine, activeMapId!);
             RefreshPanel(engine);
         }
         else
         {
-            ClearPrototypeMode(viewModeManager);
             DeactivateInputContext(input);
             RestoreRenderDebug(engine);
             ClearPanelIfOwned(context);
@@ -81,7 +76,6 @@ internal sealed class UxPrototypeRuntime
             return Task.CompletedTask;
         }
 
-        ClearPrototypeMode(ResolveViewModeManager(engine));
         DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
         RestoreRenderDebug(engine);
         ClearPanelIfOwned(context);
@@ -100,6 +94,44 @@ internal sealed class UxPrototypeRuntime
         _state.Update(engine, dt);
     }
 
+    internal void PollModeSwitch(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader input)
+        {
+            return;
+        }
+
+        string? nextModeId = null;
+        if (input.PressedThisFrame(UxPrototypeIds.PlayModeSwitchActionId))
+        {
+            nextModeId = UxPrototypeIds.PlayModeId;
+        }
+        else if (input.PressedThisFrame(UxPrototypeIds.RoadEditorModeSwitchActionId))
+        {
+            nextModeId = UxPrototypeIds.RoadEditorModeId;
+        }
+        else if (input.PressedThisFrame(UxPrototypeIds.ObstacleEditorModeSwitchActionId))
+        {
+            nextModeId = UxPrototypeIds.ObstacleEditorModeId;
+        }
+        else if (input.PressedThisFrame(UxPrototypeIds.NavmeshModeSwitchActionId))
+        {
+            nextModeId = UxPrototypeIds.NavmeshModeId;
+        }
+
+        if (nextModeId != null)
+        {
+            _state.SwitchMode(nextModeId);
+            // Every prototype mode shares the prototype tactical camera; switching re-asserts it.
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = "Camera.Profile.UxPrototypeTactical",
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
+            });
+        }
+    }
+
     public void RefreshPanel(GameEngine engine)
     {
         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
@@ -115,7 +147,7 @@ internal sealed class UxPrototypeRuntime
             return;
         }
 
-        _panelController.MountOrRefresh(root, engine, ResolveViewModeManager(engine));
+        _panelController.MountOrRefresh(root, engine);
         SyncCommandPanel(engine);
     }
 
@@ -160,32 +192,6 @@ internal sealed class UxPrototypeRuntime
         }
 
         _panelController.ClearIfOwned(root);
-    }
-
-    private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
-    {
-        return CoreInputRuntimeServices.GetViewModeManager(engine);
-    }
-
-    private static void EnsureDefaultMode(ViewModeManager? viewModeManager)
-    {
-        if (viewModeManager == null)
-        {
-            return;
-        }
-
-        if (!UxPrototypeIds.IsPrototypeMode(viewModeManager.ActiveMode?.Id))
-        {
-            viewModeManager.SwitchTo(UxPrototypeIds.PlayModeId);
-        }
-    }
-
-    private static void ClearPrototypeMode(ViewModeManager? viewModeManager)
-    {
-        if (viewModeManager != null && UxPrototypeIds.IsPrototypeMode(viewModeManager.ActiveMode?.Id))
-        {
-            viewModeManager.ClearActiveMode();
-        }
     }
 
     private static void EnsureInputSchema(PlayerInputHandler input)

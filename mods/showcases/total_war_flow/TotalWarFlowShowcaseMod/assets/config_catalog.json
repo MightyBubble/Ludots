@@ -1,0 +1,10 @@
+[
+  {
+    "Path": "MassNavigationConfig.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Maps/total_war_flow_field.json",
+    "Policy": "DeepObject"
+  }
+]

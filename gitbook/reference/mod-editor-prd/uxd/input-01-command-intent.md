@@ -12,7 +12,7 @@
 ┌─ 命令意图编辑器：intent.command.combat ──────────────────────────────┐
 ├─ 左：档案清单 ────────┬─ 中：规则梯 ─────────────────────────────────┤
 │ ▸ …command.default ⚡2│ #30 ▸ actor[hasAbilityWithCategory: Attack]       │
-│ ▸ …command.combat ●  │      target[stance: Aggressive]              │
+│ ▸ …command.combat ●  │      target[relation: Hostile]               │
 │                      │      → route[orderTypeKey: attackTarget]  ↕ │
 │ ▸ ＋新建档案         │ #20 → route[slot: contextGroup:…] ]  ↕      │
 ├─ 右：模拟面板 ────────┴───────────────────────────────────────────────┤
@@ -34,7 +34,7 @@
 ## 4. 关键交互流：让带攻击能力的单位右键敌目标时攻击
 
 1. 打开默认档案，规则梯顶部＋一层，priority 30。
-2. 演员条件选 `hasAbilityWithCategory: Ability.Attack`；目标条件 `stance: Aggressive`。
+2. 演员条件选 `hasAbilityWithCategory: Ability.Attack`；目标条件 `relation: [Hostile]`。
 3. 路由落 `attackTarget`。
 4. 模拟面板选"坦克×敌实体"▶ → 显示坦克→attackTarget；兵营落入下层兜底。
 5. 保存 → 档案表落盘。

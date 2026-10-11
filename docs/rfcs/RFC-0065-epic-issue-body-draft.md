@@ -22,7 +22,7 @@
 [L3 Ctx]    InteractionContextStack：frame 决定 activeCollectionKey/activeViewKey/inputContextId/commandIntentId
 [L4 Cast]   InputCastSpec（box/polygon/ray/lasso × screen/world/minimap）→ raw hits collection
 [L5 Filter] FilterProfile（association query DSL）→ filtered
-[L6 Coll]   CollectionWrite → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
+[L6 Coll]   CollectionApplier → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
 [L7 Panel]  EntityView + PanelRouter + AggregationProfile → HUD 投影
 [L8 Commit] 施法键：CastCommitProfile（激活 ops：pushFrame/popFrame/submitOrder）+ ClientCastPreference
             pointer 命令：CommandIntentProfile（actor 谓词 × target 事实 → route，显式全序，DEC-14）
@@ -56,7 +56,7 @@
 - **DEC-1** `controls` = 查询期视图（owns ∪ 显式 grant），只物化代理 grant 边。
 - **DEC-2** Relationship 反向邻接索引先行（现状 `CollectIncoming` 全表扫描不可用于 provenance）。
 - **DEC-3** `DomainStanceQuery` 是删 unit `Team` 的硬前置（GAS targeting 热路径）；stance key（hostile/friendly/…）全部是 relationship catalog 数据，Core 零 "hostile"/"enemy" 字面分支（早期名 HostilityQuery 因携带业务语义废弃）。
-- **DEC-4** 控制平面 = 拓扑投影：CollectionWrite 按所属域路由（队友单位写队友域，writerDomain 追踪）；「我的选中」= ControlPlaneView（controls 可达域组合只读视图）；边消失即"归还"，无 handback 概念，无 policy 枚举；掉线/心控/演出只是 mod trigger，association 层零感知。路由策略（byControlDomain / toContextOwner）是 collection profile 的声明字段——技能目标类 key（选的是目标而非"我维护的域"）写 context owner 域。
+- **DEC-4** 控制平面 = 拓扑投影：CollectionApplier 按所属域路由（队友单位写队友域，writerDomain 追踪）；「我的选中」= ControlPlaneView（controls 可达域组合只读视图）；边消失即"归还"，无 handback 概念，无 policy 枚举；掉线/心控/演出只是 mod trigger，association 层零感知。路由策略（byControlDomain / toContextOwner）是 collection profile 的声明字段——技能目标类 key（选的是目标而非"我维护的域"）写 context owner 域。
 - **DEC-5** Provenance 由地址承载：controlDomain 即 row 所在域；relationKind（owns/controls）由 viewer→域拓扑现算，不写入行——陈旧 marker 问题不存在；写时仅记 writerDomain。
 - **DEC-6** 并发等待确认（tag）的 exec 各持 frame，Tab 在 frame 间循环。
 - **DEC-7** InteractionContextStack 与 IMC 同事务联动。
@@ -507,7 +507,7 @@ Feature: P9 控制方案与改键偏好
 - [ ] CTRL-1b `controls` 为查询期视图（owns ∪ grant）
 - [ ] CTRL-3b 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PresentPhaseResolver / lifecycle snapshot / #499 publisher / `SelectionEligibility.CanAcquire` 的 Team+RelationshipFilter 直读 / CoreInputMod NearestEnemyInRange resolver）
 - [ ] CTRL-4b AssociationControlProfile = 通用「谓词 → 边增删」规则引擎（复用 condition DSL，schema 零业务词汇，无 handback/policy 字段）
-- [ ] CTRL-4c CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain
+- [ ] CTRL-4c CollectionApplier 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain
 - [ ] CTRL-4d ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图
 
 **Phase 4 — Provenance & Presenter（继承 PROV-1..8）**

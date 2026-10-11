@@ -34,10 +34,16 @@ namespace CameraAcceptanceMod.Systems
 
         public void Consume(GameEngine engine, PlayerInputHandler input, float deltaTime)
         {
-            if (!string.Equals(
-                    engine.CurrentMapSession?.MapId.Value,
-                    CameraAcceptanceIds.ProjectionMapId,
-                    StringComparison.OrdinalIgnoreCase))
+            string? mapId = engine.CurrentMapSession?.MapId.Value;
+            bool isProjectionMap = string.Equals(
+                mapId,
+                CameraAcceptanceIds.ProjectionMapId,
+                StringComparison.OrdinalIgnoreCase);
+            bool isBlendMap = string.Equals(
+                mapId,
+                CameraAcceptanceIds.BlendMapId,
+                StringComparison.OrdinalIgnoreCase);
+            if (!isProjectionMap && !isBlendMap)
             {
                 return;
             }
@@ -50,11 +56,18 @@ namespace CameraAcceptanceMod.Systems
                 return;
             }
 
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
+            Vector2 pointer = input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos);
             if (!TryResolveProjectionGround(engine, pointer, out WorldCmInt2 worldCm))
             {
                 throw new InvalidOperationException(
                     "Camera projection acceptance requires a resolvable ground point for the confirm click.");
+            }
+
+            if (isBlendMap)
+            {
+                // Blend map switches camera on any ground confirm; no seat or selection needed.
+                _runtime.HandleSelectionConfirmed(engine, worldCm, Entity.Null, Entity.Null);
+                return;
             }
 
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity owner) ||

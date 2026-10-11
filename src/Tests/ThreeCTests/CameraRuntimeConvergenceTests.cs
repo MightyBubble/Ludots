@@ -226,7 +226,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "FollowCamera",
                 Priority = 0,
-                RigKind = CameraRigKind.ThirdPerson,
+                FacingMode = CameraFacingMode.FollowTarget,
                 DistanceCm = 400f,
                 Pitch = 15f,
                 Yaw = 180f,
@@ -247,6 +247,64 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.IsFollowing, Is.True);
             Assert.That(manager.State.TargetCm, Is.EqualTo(target.PositionCm.Value));
             Assert.That(manager.FollowTargetPositionCm, Is.EqualTo(target.PositionCm.Value));
+        }
+
+        [Test]
+        public void ConfigureRuntime_FirstConfiguration_SnapsPreviousToState()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "FollowCamera",
+                Priority = 0,
+                FacingMode = CameraFacingMode.FollowTarget,
+                DistanceCm = 400f,
+                Pitch = 15f,
+                Yaw = 180f,
+                FollowMode = CameraFollowMode.AlwaysFollow,
+                FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
+            });
+            manager.State.TargetCm = new Vector2(1234f, -567f);
+
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+
+            Assert.That(manager.PreviousState.TargetCm, Is.EqualTo(manager.State.TargetCm));
+        }
+
+        // 合同:重配置只重绑 provider,不得触碰 Previous/State 插值对;
+        // 宿主每渲染帧会经 EnsureCameraRuntimeConfigured 重调本方法。
+        [Test]
+        public void ConfigureRuntime_Reconfiguration_PreservesInterpolationPair()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "FollowCamera",
+                Priority = 0,
+                FacingMode = CameraFacingMode.FollowTarget,
+                DistanceCm = 400f,
+                Pitch = 15f,
+                Yaw = 180f,
+                FollowMode = CameraFollowMode.AlwaysFollow,
+                FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
+            });
+            var target = new StaticFollowTarget { PositionCm = new Vector2(1000f, 2000f) };
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+            manager.ActivateVirtualCamera("FollowCamera", blendDurationSeconds: 0f, followTarget: target);
+
+            manager.Update(0.05f);
+            target.PositionCm = new Vector2(1030f, 2000f);
+            manager.Update(0.05f);
+
+            Vector2 previousBeforeReconfigure = manager.PreviousState.TargetCm;
+            Vector2 stateBeforeReconfigure = manager.State.TargetCm;
+            Assert.That(previousBeforeReconfigure, Is.Not.EqualTo(stateBeforeReconfigure));
+
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+
+            Assert.That(manager.PreviousState.TargetCm, Is.EqualTo(previousBeforeReconfigure));
+            Assert.That(manager.State.TargetCm, Is.EqualTo(stateBeforeReconfigure));
+
+            Vector2 midpoint = manager.GetInterpolatedState(0.5f).TargetCm;
+            Assert.That(midpoint, Is.EqualTo((previousBeforeReconfigure + stateBeforeReconfigure) * 0.5f));
         }
 
         [Test]
@@ -303,7 +361,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "Base",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     DistanceCm = 5000f,
                     Pitch = 45f,
                     Yaw = 180f,
@@ -313,7 +371,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "FocusEnemy",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(2000f, 1000f),
                     Yaw = 225f,
@@ -340,7 +398,7 @@ namespace Ludots.Tests.ThreeC
 
             Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(2000f, 1000f)));
             Assert.That(manager.State.DistanceCm, Is.EqualTo(12000f));
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+            Assert.That(manager.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("FocusEnemy"));
 
             manager.ClearVirtualCamera();
             manager.Update(0.016f);
@@ -353,7 +411,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.TargetCm, Is.EqualTo(baseTarget));
             Assert.That(manager.State.DistanceCm, Is.EqualTo(baseDistance));
             Assert.That(manager.State.Pitch, Is.EqualTo(basePitch));
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.Orbit));
+            Assert.That(manager.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Base"));
         }
 
         [Test]
@@ -364,7 +422,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "Base",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     DistanceCm = 4200f,
                     Pitch = 40f,
                     Yaw = 135f,
@@ -374,7 +432,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "LockFocus",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(8000f, 1200f),
                     Yaw = 200f,
@@ -414,7 +472,7 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.Yaw, Is.EqualTo(baseYaw));
             Assert.That(manager.State.Pitch, Is.EqualTo(basePitch));
             Assert.That(manager.State.DistanceCm, Is.EqualTo(baseDistance));
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.Orbit));
+            Assert.That(manager.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Base"));
         }
 
         [Test]
@@ -425,7 +483,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BaseA",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     DistanceCm = 3000f,
                     Pitch = 35f,
                     Yaw = 180f,
@@ -435,7 +493,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BaseB",
                     Priority = 100,
-                    RigKind = CameraRigKind.ThirdPerson,
+                    FacingMode = CameraFacingMode.FollowTarget,
                     DistanceCm = 600f,
                     Pitch = 20f,
                     Yaw = 160f,
@@ -445,7 +503,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "TacticalLock",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(6400f, 3200f),
                     Yaw = 210f,
@@ -477,7 +535,6 @@ namespace Ludots.Tests.ThreeC
 
             manager.Update(0.25f);
 
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(manager.State.DistanceCm, Is.EqualTo(600f));
             Assert.That(manager.State.Pitch, Is.EqualTo(20f));
             Assert.That(manager.State.Yaw, Is.EqualTo(160f));
@@ -492,7 +549,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "FollowBase",
                     Priority = 0,
-                    RigKind = CameraRigKind.ThirdPerson,
+                    FacingMode = CameraFacingMode.FollowTarget,
                     DistanceCm = 400f,
                     Pitch = 15f,
                     Yaw = 180f,
@@ -504,7 +561,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "IntroFocus",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(6400f, 3200f),
                     Yaw = 210f,
@@ -524,7 +581,7 @@ namespace Ludots.Tests.ThreeC
             manager.Update(0.016f);
 
             Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(6400f, 3200f)));
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+            Assert.That(manager.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("IntroFocus"));
 
             manager.ClearVirtualCamera();
             manager.Update(0.016f);
@@ -535,7 +592,6 @@ namespace Ludots.Tests.ThreeC
             manager.Update(0.25f);
 
             Assert.That(manager.State.TargetCm, Is.EqualTo(target.PositionCm.Value));
-            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(manager.State.DistanceCm, Is.EqualTo(400f));
             Assert.That(manager.State.IsFollowing, Is.True);
         }
@@ -548,7 +604,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "Base",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     DistanceCm = 3000f,
                     Pitch = 40f,
                     Yaw = 180f,
@@ -558,7 +614,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BlendFocus",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(2000f, 1000f),
                     Yaw = 270f,
@@ -604,7 +660,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "HeightmapCamera",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(2000f, 1000f),
                 TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
@@ -637,7 +693,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BaseHeight",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = Vector2.Zero,
                     TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
@@ -650,7 +706,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BlendHeight",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(2000f, 1000f),
                     TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
@@ -697,7 +753,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "InputHeight",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 DistanceCm = 5000f,
                 Pitch = 45f,
@@ -732,7 +788,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "VisualLookClamp",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(2500f, 1200f),
                 TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
@@ -785,7 +841,7 @@ namespace Ludots.Tests.ThreeC
             {
                 Id = "BoundedHeightmapLookClamp",
                 Priority = 0,
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(5000f, 5000f),
                 TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
@@ -830,7 +886,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BaseConfine",
                     Priority = 0,
-                    RigKind = CameraRigKind.Orbit,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = Vector2.Zero,
                     DistanceCm = 3000f,
@@ -843,7 +899,7 @@ namespace Ludots.Tests.ThreeC
                 {
                     Id = "BlendConfine",
                     Priority = 1000,
-                    RigKind = CameraRigKind.TopDown,
+                    FacingMode = CameraFacingMode.None,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(5000f, -5000f),
                     DistanceCm = 9000f,
@@ -919,7 +975,6 @@ namespace Ludots.Tests.ThreeC
         {
             var state = new CameraState
             {
-                RigKind = CameraRigKind.FirstPerson,
                 TargetCm = new Vector2(1500f, -300f),
                 DistanceCm = 0f,
                 Pitch = 0f,
@@ -943,7 +998,6 @@ namespace Ludots.Tests.ThreeC
         {
             var baseState = new CameraState
             {
-                RigKind = CameraRigKind.ThirdPerson,
                 TargetCm = new Vector2(1000f, 2000f),
                 TargetHeightCm = 150f,
                 DistanceCm = 900f,
@@ -956,7 +1010,6 @@ namespace Ludots.Tests.ThreeC
 
             var shoulderState = new CameraState
             {
-                RigKind = baseState.RigKind,
                 TargetCm = baseState.TargetCm,
                 TargetHeightCm = baseState.TargetHeightCm,
                 DistanceCm = baseState.DistanceCm,
@@ -1034,7 +1087,7 @@ namespace Ludots.Tests.ThreeC
             var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
             {
                 Id = "ImpulseCamera",
-                RigKind = CameraRigKind.Orbit,
+                FacingMode = CameraFacingMode.None,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(500f, 0f),
                 DistanceCm = 1200f,

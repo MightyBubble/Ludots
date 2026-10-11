@@ -34,8 +34,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GameplayEventBus? _eventBus;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
-        private readonly InputRequestQueue _inputRequests;
-        private readonly InputResponseBuffer _inputResponses;
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasPresentationEventBuffer? _presentationEvents;
         private readonly GraphProgramRegistry? _graphPrograms;
@@ -69,8 +67,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public AbilityExecSystem(
             World world,
             IClock clock,
-            InputRequestQueue inputRequests,
-            InputResponseBuffer inputResponses,
             EffectRequestQueue effectRequests,
             int snapshotCapacity,
             AbilityDefinitionRegistry? abilityDefinitions = null,
@@ -93,8 +89,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _execEntities = new Entity[snapshotCapacity];
             _clock = clock;
-            _inputRequests = inputRequests;
-            _inputResponses = inputResponses;
             _effectRequests = effectRequests;
             _abilityDefinitions = abilityDefinitions;
             _eventBus = eventBus;
@@ -281,21 +275,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
                     int useRequirementId = ResolveUseProgressionRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
-                    bool pendingProgressionUseRequirement = false;
-                    if (useRequirementId > 0)
+                    if (useRequirementId > 0 &&
+                        !EvaluateProgressionRequirement(actor, targetEntity, targetContext, useRequirementId))
                     {
-                        bool requiresExplicitScope = RequiresExplicitScope(useRequirementId);
-                        if (requiresExplicitScope &&
-                            !World.IsAlive(targetContext) &&
-                            AbilityCanResolveTargetContextBeforeSideEffects(in startSpec))
-                        {
-                            pendingProgressionUseRequirement = true;
-                        }
-                        else if (!EvaluateProgressionRequirement(actor, targetEntity, targetContext, useRequirementId))
-                        {
-                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
-                            continue;
-                        }
+                        CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
+                        continue;
                     }
 
                     Fix64Vec2 targetOriginPosCm = default;
@@ -379,11 +363,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         NextItemIndex = 0,
                         GateDeadline = 0,
                         WaitTagId = 0,
-                        WaitRequestId = 0,
                         ActiveClockId = defaultClockId,
                         IsToggleDeactivating = false,
-                        PendingProgressionUseRequirement = (byte)(pendingProgressionUseRequirement ? 1 : 0),
-                        PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0,
                     };
                     _structuralCommands.Add(actor, exec);
 
@@ -660,16 +641,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return 0;
         }
 
-        private bool RequiresExplicitScope(int requirementId)
-        {
-            if (_progressionRequirements == null)
-            {
-                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
-            }
-
-            return _progressionRequirements.RequiresExplicitScope(requirementId);
-        }
-
         private bool EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
         {
             if (requirementId <= 0)
@@ -691,63 +662,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 subject: resolvedSubject,
                 explicitScopeHost: resolvedExplicitScopeHost);
             return _progressionRequirements.Evaluate(requirementId, in context);
-        }
-
-        private static bool AbilityCanResolveTargetContextBeforeSideEffects(in AbilityExecSpec spec)
-        {
-            for (int i = 0; i < spec.ItemCount; i++)
-            {
-                ExecItemKind kind = spec.GetKind(i);
-                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.TargetCollectionGate)
-                {
-                    return true;
-                }
-
-                if (kind == ExecItemKind.None)
-                {
-                    continue;
-                }
-
-                return false;
-            }
-
-            return false;
-        }
-
-        private bool TrySatisfyPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
-        {
-            if (inst.PendingProgressionUseRequirement == 0)
-            {
-                return true;
-            }
-
-            if (EvaluateProgressionRequirement(actor, inst.Target, inst.TargetContext, inst.PendingProgressionRequirementId))
-            {
-                inst.PendingProgressionUseRequirement = 0;
-                inst.PendingProgressionRequirementId = 0;
-                return true;
-            }
-
-            FailPendingProgressionUseRequirement(actor, ref inst);
-            return false;
-        }
-
-        private void FailPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
-        {
-            EnsureTerminalTransitionCapacity(actor, in inst, OrderTerminalState.Failed, GasPresentationEventKind.CastFailed);
-            inst.State = AbilityExecRunState.Failed;
-            inst.TerminalFailureReason = OrderFailureReason.PreconditionFailed;
-            inst.PendingProgressionUseRequirement = 0;
-            inst.PendingProgressionRequirementId = 0;
-            _presentationEvents?.Publish(new GasPresentationEvent
-            {
-                Kind = GasPresentationEventKind.CastFailed,
-                Actor = actor,
-                Target = inst.Target,
-                AbilitySlot = inst.AbilitySlot,
-                AbilityId = inst.AbilityId,
-                FailReason = AbilityCastFailReason.PreconditionFailed
-            });
         }
 
         private void CancelAbilityStart(Entity actor, Entity targetEntity, int slotIndex, int abilityId, AbilityCastFailReason reason)
@@ -895,13 +809,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 // Not yet time for this item
                 if (itemTick > inst.CurrentTick) return;
 
-                if (inst.PendingProgressionUseRequirement != 0 &&
-                    kind != ExecItemKind.InputGate &&
-                    kind != ExecItemKind.TargetCollectionGate)
-                {
-                    FailPendingProgressionUseRequirement(actor, ref inst);
-                    return;
-                }
 
                 switch (kind)
                 {
@@ -974,9 +881,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
 
                     // Gates
-                    case ExecItemKind.InputGate:
                     case ExecItemKind.EventGate:
-                    case ExecItemKind.TargetCollectionGate:
                         if (!EnterGate(actor, ref spec, idx, ref inst))
                         {
                             return;
@@ -1012,13 +917,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExecItemKind kind = spec.GetKind(index);
                 if (spec.GetTick(index) > inst.CurrentTick ||
                     kind == ExecItemKind.End ||
-                    kind == ExecItemKind.InputGate ||
-                    kind == ExecItemKind.EventGate ||
-                    kind == ExecItemKind.TargetCollectionGate)
-                {
-                    break;
-                }
-                if (inst.PendingProgressionUseRequirement != 0)
+                    kind == ExecItemKind.EventGate)
                 {
                     break;
                 }
@@ -1358,68 +1257,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             switch (kind)
             {
-                case ExecItemKind.InputGate:
-                    {
-                        int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
-                        var request = new InputRequest
-                        {
-                            RequestId = requestId,
-                            RequestTagId = spec.GetTagId(idx),
-                            Source = actor,
-                            Target = inst.Target,
-                            Context = inst.TargetContext,
-                        };
-                        if (_inputRequests == null)
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        if (_inputRequests.Count >= _inputRequests.Capacity)
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        inst.State = AbilityExecRunState.GateWaiting;
-                        inst.WaitRequestId = requestId;
-                        if (!_inputRequests.TryEnqueue(in request))
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        break;
-                    }
-
-                case ExecItemKind.TargetCollectionGate:
-                    {
-                        int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
-                        var request = new InputRequest
-                        {
-                            RequestId = requestId,
-                            RequestTagId = spec.GetTagId(idx),
-                            Source = actor,
-                            Target = inst.Target,
-                            Context = inst.TargetContext,
-                        };
-                        if (_inputRequests == null)
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        if (_inputRequests.Count >= _inputRequests.Capacity)
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        inst.State = AbilityExecRunState.GateWaiting;
-                        inst.WaitRequestId = requestId;
-                        if (!_inputRequests.TryEnqueue(in request))
-                        {
-                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
-                            return false;
-                        }
-                        break;
-                    }
-
                 case ExecItemKind.EventGate:
                     {
                         inst.State = AbilityExecRunState.GateWaiting;
@@ -1449,64 +1286,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             switch (kind)
             {
-                case ExecItemKind.InputGate:
-                    {
-                        if (_inputResponses == null)
-                        {
-                            MarkActiveExecutionFailed(
-                                actor,
-                                ref inst,
-                                AbilityCastFailReason.PreconditionFailed,
-                                OrderFailureReason.SubmissionQueueFull);
-                            return;
-                        }
-                        if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))
-                        {
-                            if (World.IsAlive(resp.Target)) inst.Target = resp.Target;
-                            if (World.IsAlive(resp.TargetContext)) inst.TargetContext = resp.TargetContext;
-                            if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
-                            {
-                                return;
-                            }
-                            inst.WaitRequestId = 0;
-                            inst.NextItemIndex++;
-                            inst.State = AbilityExecRunState.Running;
-                        }
-                        break;
-                    }
-
-                case ExecItemKind.TargetCollectionGate:
-                    {
-                        if (_inputResponses == null)
-                        {
-                            MarkActiveExecutionFailed(
-                                actor,
-                                ref inst,
-                                AbilityCastFailReason.PreconditionFailed,
-                                OrderFailureReason.SubmissionQueueFull);
-                            return;
-                        }
-                        if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))
-                        {
-                            if (World.IsAlive(resp.Target))
-                            {
-                                inst.Target = resp.Target;
-                            }
-                            if (World.IsAlive(resp.TargetContext))
-                            {
-                                inst.TargetContext = resp.TargetContext;
-                            }
-                            if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
-                            {
-                                return;
-                            }
-                            inst.WaitRequestId = 0;
-                            inst.NextItemIndex++;
-                            inst.State = AbilityExecRunState.Running;
-                        }
-                        break;
-                    }
-
                 case ExecItemKind.EventGate:
                     {
                         if (_eventBus == null)
@@ -1665,11 +1444,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     NextItemIndex = 0,
                     GateDeadline = 0,
                     WaitTagId = 0,
-                    WaitRequestId = 0,
                     ActiveClockId = toggleSpec.DeactivateExecSpec.ClockId,
                     IsToggleDeactivating = true,
-                    PendingProgressionUseRequirement = 0,
-                    PendingProgressionRequirementId = 0,
                 };
                 _structuralCommands.Add(actor, exec);
 

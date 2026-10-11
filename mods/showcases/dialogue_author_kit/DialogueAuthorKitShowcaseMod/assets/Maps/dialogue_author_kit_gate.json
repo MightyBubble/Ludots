@@ -53,7 +53,13 @@
             "Y": 900
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "author_kit_traveler_1",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [

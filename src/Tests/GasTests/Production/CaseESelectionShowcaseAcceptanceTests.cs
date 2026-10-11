@@ -221,16 +221,6 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
         int caseEControlsId = profiles.InputContextIdRegistry.GetId("CaseE.Controls");
         Assert.That(baseContext.InputContextId, Is.EqualTo(caseEControlsId),
             "battle 档案 inputContextId=CaseE.Controls 应写入挂载实例");
-        Assert.That(profiles.TryGetDefinition(battleProfileId, out InteractionContextProfileDefinition battleDefinition), Is.True);
-        Assert.That(battleDefinition.ActiveCollectionKey, Is.Empty,
-            "Case E 战斗档案不声明集合字段");
-        Assert.That(profiles.TryGetDefinition(boxingProfileId, out InteractionContextProfileDefinition boxingDefinition), Is.True);
-        Assert.That(boxingDefinition.ActiveCollectionKey, Is.Empty,
-            "Case E 框选档案不声明集合字段");
-        var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-        Assert.That(baseContext.ActiveCollectionKeyId, Is.EqualTo(collections.KeyRegistry.GetId(SelectedKey)),
-            "提交图声明的 selected 记在指挥官的交互实例上");
         var inputHandler = engine.GetService(CoreServiceKeys.InputHandler)
             ?? throw new InvalidOperationException("InputHandler service is missing.");
         TickUntil(engine, 10, () => inputHandler.HasContext("CaseE.Controls"));

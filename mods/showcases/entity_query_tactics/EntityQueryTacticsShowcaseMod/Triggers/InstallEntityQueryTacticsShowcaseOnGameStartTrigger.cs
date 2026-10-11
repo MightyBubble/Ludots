@@ -50,7 +50,6 @@ namespace EntityQueryTacticsShowcaseMod.Triggers
                 ?? throw new InvalidOperationException("TeamEntityLookup is missing.");
             RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, lookup, config.Scenario.PlayerTeamId, config.Scenario.PlayerTeamName);
             RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, lookup, config.Scenario.EnemyTeamId, config.Scenario.EnemyTeamName);
-            TeamManager.SetRelationshipSymmetric(config.Scenario.PlayerTeamId, config.Scenario.EnemyTeamId, TeamRelationship.Hostile);
 
             engine.RegisterSystem(new EntityQueryTacticsSelectionBindingSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterSystem(new EntityQueryTacticsSimulationSystem(engine, state), SystemGroup.PostMovement);

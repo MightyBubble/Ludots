@@ -241,7 +241,7 @@ namespace Ludots.Tests.GAS
                 new RelationshipBandRegistry(),
                 new RelationshipChangeBuffer(),
                 new RelationshipReverseIndex(world));
-            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationshipRuntime);
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationshipRuntime, new Ludots.Core.Gameplay.Teams.TeamRelationQuery(relationshipRuntime, new Ludots.Core.Gameplay.Teams.TeamEntityLookup()));
             var api = new GasGraphRuntimeApi(
                 world,
                 spatial,

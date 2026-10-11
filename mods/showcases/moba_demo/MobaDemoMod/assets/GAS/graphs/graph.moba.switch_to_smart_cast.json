@@ -1,0 +1,83 @@
+[
+  {
+    "id": "graph.moba.switch_to_smart_cast",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_modelol",
+        "action": "ModeLoL",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "leave",
+        "op": "DeactivateContext",
+        "context": "interaction.context.moba_demo.aim_cast"
+      },
+      {
+        "id": "enter",
+        "op": "ActivateContext",
+        "context": "interaction.context.moba_demo.smart_cast",
+        "parentContext": "interaction.context.moba_demo.battle"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "leave"
+      },
+      {
+        "from": "leave",
+        "fromPort": "next",
+        "to": "enter"
+      },
+      {
+        "from": "enter",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "leave",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "enter",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

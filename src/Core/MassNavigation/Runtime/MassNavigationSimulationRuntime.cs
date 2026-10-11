@@ -96,7 +96,7 @@ public sealed class MassNavigationSimulationRuntime
 {
     public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
 
-    private MassNavigationDomainStanceProjection? _domainStanceProjection;
+    private MassNavigationDomainRelationProjection? _domainRelationProjection;
     private int[] _teamIds = Array.Empty<int>();
     private int _frameIndex;
     private WorldGridLoadedChunks? _loadedChunks;
@@ -386,9 +386,9 @@ public sealed class MassNavigationSimulationRuntime
         AdvanceCommandFocus();
     }
 
-    internal void SetDomainRelationshipProjection(MassNavigationDomainStanceProjection projection)
+    internal void SetDomainRelationshipProjection(MassNavigationDomainRelationProjection projection)
     {
-        _domainStanceProjection = projection ?? throw new ArgumentNullException(nameof(projection));
+        _domainRelationProjection = projection ?? throw new ArgumentNullException(nameof(projection));
         MassNavigationFlow.SetDomainRelationshipProjection(projection);
     }
 
@@ -609,7 +609,7 @@ public sealed class MassNavigationSimulationRuntime
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
-        _domainStanceProjection?.ResetDomains(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
+        _domainRelationProjection?.ResetDomains(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
         MarkAuthoredRuntimeBindingChanged();
     }
 
@@ -640,9 +640,9 @@ public sealed class MassNavigationSimulationRuntime
             allowExistingRuntimeBinding: true);
 
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
-        _domainStanceProjection?.ValidateResetDomains(agentSeeds);
+        _domainRelationProjection?.ValidateResetDomains(agentSeeds);
         ClearAuthoredRuntimeBindings(world);
-        _domainStanceProjection?.ResetDomains(agentSeeds);
+        _domainRelationProjection?.ResetDomains(agentSeeds);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
         {
@@ -686,8 +686,8 @@ public sealed class MassNavigationSimulationRuntime
             unitCountAfterCommit: checked(startIndex + newAgentSeeds.Length),
             allowExistingRuntimeBinding: false);
 
-        _domainStanceProjection?.ValidateAppendDomains(newAgentSeeds);
-        _domainStanceProjection?.AppendDomains(newAgentSeeds);
+        _domainRelationProjection?.ValidateAppendDomains(newAgentSeeds);
+        _domainRelationProjection?.AppendDomains(newAgentSeeds);
         MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
         for (int i = 0; i < newEntities.Length; i++)
         {

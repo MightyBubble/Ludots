@@ -1,0 +1,14 @@
+[
+  {
+    "id": "panel.ButtonCommands.Cast",
+    "description": "面板技能格点击的载荷伴随事件：slot=被点格子的槽位索引（AbilitySlot item 的 slotIndex 字段烘焙）。消费图读 slot 后经 SubmitCast 走与键盘同一条施法意图管线。",
+    "scope": "map",
+    "params": [
+      {
+        "name": "slot",
+        "type": "int",
+        "key": "Panel.Slot"
+      }
+    ]
+  }
+]

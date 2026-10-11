@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Relationships;
@@ -7,6 +8,14 @@ using Ludots.Core.Input.Interaction;
 
 namespace Ludots.Core.EntityCollections
 {
+    /// <summary>How a WriteCollection op combines the incoming entity set with the current members.</summary>
+    public enum CollectionWriteOp : byte
+    {
+        Replace = 0,
+        Add = 1,
+        Subtract = 2,
+    }
+
     /// <summary>
     /// Caller-selected semantics for routed batch entries whose control domain cannot be resolved
     /// (RFC-0065 DEC-4). There is no default value on purpose: the writing side must state its
@@ -50,6 +59,10 @@ namespace Ludots.Core.EntityCollections
         private Entity[] _previousDomainPool = new Entity[64];
         private int _previousDomainCursor;
 
+        private readonly List<Entity> _writeMembers = new(256);
+        private readonly HashSet<Entity> _writeMembership = new(256);
+        private Entity[] _writeCurrent = new Entity[256];
+
         public CollectionApplier(World world, EntityCollectionStore store)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -83,7 +96,84 @@ namespace Ludots.Core.EntityCollections
         /// </summary>
         public void Apply(Entity owner, int collectionKeyId, CollectionWriteOp op, ReadOnlySpan<Entity> entities)
         {
-            CollectionWrite.Apply(_store, owner, collectionKeyId, op, entities);
+            if (owner == Entity.Null || owner == default)
+            {
+                throw new InvalidOperationException(
+                    "COLLECTION.APPLY.OwnerMissing: WriteCollection requires a live owner entity (the writing rep).");
+            }
+
+            if (string.IsNullOrEmpty(_store.KeyRegistry.GetName(collectionKeyId)))
+            {
+                throw new InvalidOperationException(
+                    $"COLLECTION.APPLY.KeyUnknown: collection key id {collectionKeyId} is not registered in the EntityCollectionStore key space.");
+            }
+
+            switch (op)
+            {
+                case CollectionWriteOp.Replace:
+                    WriteOwned(owner, collectionKeyId, entities);
+                    return;
+                case CollectionWriteOp.Add:
+                case CollectionWriteOp.Subtract:
+                    _writeMembers.Clear();
+                    _writeMembership.Clear();
+                    if (op == CollectionWriteOp.Subtract)
+                    {
+                        foreach (Entity entity in entities)
+                        {
+                            _writeMembership.Add(entity);
+                        }
+                    }
+
+                    if (_store.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) &&
+                        _store.TryGetView(handle, out EntityCollectionView view))
+                    {
+                        if (view.Count > _writeCurrent.Length)
+                        {
+                            Array.Resize(ref _writeCurrent, checked(view.Count * 2));
+                        }
+
+                        int currentCount = _store.CopyEntities(handle, 0, _writeCurrent);
+                        foreach (Entity entity in _writeCurrent.AsSpan(0, currentCount))
+                        {
+                            if (op == CollectionWriteOp.Add
+                                ? _writeMembership.Add(entity)
+                                : !_writeMembership.Contains(entity))
+                            {
+                                _writeMembers.Add(entity);
+                            }
+                        }
+                    }
+
+                    if (op == CollectionWriteOp.Add)
+                    {
+                        foreach (Entity entity in entities)
+                        {
+                            if (_writeMembership.Add(entity))
+                            {
+                                _writeMembers.Add(entity);
+                            }
+                        }
+                    }
+
+                    WriteOwned(owner, collectionKeyId, CollectionsMarshal.AsSpan(_writeMembers));
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"COLLECTION.APPLY.OpInvalid: op {(int)op}; expected replace(0)/add(1)/subtract(2).");
+            }
+        }
+
+        private void WriteOwned(Entity owner, int collectionKeyId, ReadOnlySpan<Entity> entities)
+        {
+            string keyName = _store.KeyRegistry.GetName(collectionKeyId)
+                ?? throw new InvalidOperationException(
+                    $"COLLECTION.APPLY.KeyUnknown: collection key id {collectionKeyId} is not registered.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                keyName,
+                EntityCollectionSourceKind.GasGraphResult,
+                EntityCollectionRoleKind.CommandSource);
+            _store.Replace(owner, collectionKeyId, in descriptor, entities, owner);
         }
 
         /// <summary>
@@ -175,15 +265,14 @@ namespace Ludots.Core.EntityCollections
         /// <summary>
         /// Commit one cast batch for the local anchor (constitution §12 cast commit): store the raw
         /// hits verbatim under the data-declared cast-raw key, evaluate the anchor's active
-        /// context's filter profile, and domain-route the survivors into the active collection key.
-        /// The anchor's active interaction context must declare activeCollectionKey — there is no
-        /// steady-state fallback. Routed writes use
+        /// context's filter profile, and domain-route the survivors into the caller-supplied collection key.
+        /// Routed writes use
         /// <see cref="DomainRoutingUnresolvedPolicy.Reject"/>: an entity without a control domain
         /// reaching the routed command source is a pipeline error. Contexts with
         /// <c>FilterProfileId == 0</c> pass the raw hits through unfiltered, so their configurers
         /// must guarantee the cast result is routable (RFC-0065 DEC-4).
         /// </summary>
-        public void CommitCast(Entity localAnchorRep, ReadOnlySpan<Entity> rawHits, EntityCollectionSourceKind sourceKind)
+        public void CommitCast(Entity localAnchorRep, int collectionKeyId, ReadOnlySpan<Entity> rawHits, EntityCollectionSourceKind sourceKind)
         {
             RequireRoutedBound();
             if (localAnchorRep == Entity.Null)
@@ -199,15 +288,9 @@ namespace Ludots.Core.EntityCollections
                 EntityCollectionRoleKind.AcquisitionPreview);
             _store.Replace(localAnchorRep, _castRawCollectionKeyId, in rawDescriptor, rawHits, localAnchorRep);
 
-            if (!_world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context) ||
-                context.ActiveCollectionKeyId == 0)
-            {
-                throw new InvalidOperationException(
-                    "COLLECTION.COMMIT_CAST.ActiveKeyMissing: the anchor rep's active interaction context must declare activeCollectionKey (constitution §12: no steady-state fallback).");
-            }
-
-            int filterProfileId = context.FilterProfileId;
-            int collectionKeyId = context.ActiveCollectionKeyId;
+            int filterProfileId = _world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context)
+                ? context.FilterProfileId
+                : 0;
 
             ReadOnlySpan<Entity> routed = rawHits;
             if (filterProfileId != 0)

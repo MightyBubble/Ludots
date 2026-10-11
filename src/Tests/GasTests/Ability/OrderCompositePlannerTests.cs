@@ -137,7 +137,7 @@ namespace Ludots.Tests.GAS
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
-                CreateAbilityRegistry(rangeCm: 500f, autoTargetPolicy: AutoTargetPolicy.NearestEnemyInRange),
+                CreateAbilityRegistry(rangeCm: 500f, autoTargetPolicy: AutoTargetPolicy.NearestInRange),
                 CastAbilityOrderTypeId,
                 MoveToOrderTypeId);
 
@@ -825,7 +825,8 @@ namespace Ludots.Tests.GAS
                 definition.InputBindingOverride = new AbilityInputBindingOverride
                 {
                     HasAutoTargetPolicy = true,
-                    AutoTargetPolicy = autoTargetPolicy
+                    AutoTargetPolicy = autoTargetPolicy,
+                    AutoTargetRelation = "Hostile",
                 };
             }
 

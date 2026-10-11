@@ -51,7 +51,17 @@
             "Y": 600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera_team_1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera_team_2",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "camera_team_2",
@@ -66,7 +76,17 @@
             "Y": 4600
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "camera_team_2",
+          "Type": "Friendly"
+        },
+        {
+          "To": "camera_team_1",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [

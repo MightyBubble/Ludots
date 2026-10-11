@@ -1,8 +1,7 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
   "startupInputContexts": [
-    "Default_Gameplay",
-    "CapabilityStandard.VirtualCamera.Controls"
+    "Default_Gameplay"
   ],
   "windowTitle": "Ludots Engine - Capability Standard Virtual Camera",
   "targetFps": 0,

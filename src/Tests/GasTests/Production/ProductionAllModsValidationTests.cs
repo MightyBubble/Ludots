@@ -33,7 +33,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "MobaDemoMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" },
+                    new[] { "LudotsCoreMod", "MobaDemoMod" },
                     true))
                 .SetName("ProdModSmoke_MobaDemoMod");
 
@@ -147,7 +147,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "FourXDemoMod",
-                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "FourXDemoMod" },
+                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" },
                     true))
                 .SetName("ProdModSmoke_FourXDemoMod");
 

@@ -12,6 +12,7 @@
     "Raylib.Background:Deep",
     "Raylib.DebugGuides:Off"
   ],
+  "ContinuousHeightmapAsset": "assets/terrain/ux_prototype_flat.height",
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.UxPrototypeTactical",
     "TargetXCm": 3840,
@@ -31,7 +32,17 @@
             "Y": 2400
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ux-blue-city",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ux-enemy-raider-a",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "ux_barracks",
@@ -368,7 +379,17 @@
             "Y": 2480
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "ux-enemy-raider-a",
+          "Type": "Friendly"
+        },
+        {
+          "To": "ux-blue-city",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "ux_enemy_raider",
@@ -401,32 +422,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "ux-blue-city"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "UxPrototype.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "UxPrototype.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "UxPrototype.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  }
+  ]
 }

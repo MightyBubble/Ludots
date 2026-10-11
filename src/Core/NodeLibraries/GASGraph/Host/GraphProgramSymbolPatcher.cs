@@ -44,24 +44,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.SubmitAssignedOrder:
                     case GraphNodeOp.LoadOrderTypeId:
+                    case GraphNodeOp.SubmitResponseChainOrder:
                         ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.StartDialogue:
-                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.SubmitCommandIntent:
-                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: true);
-                        break;
                     case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
-                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: false);
                         break;
                     case GraphNodeOp.SubmitEngageBatch:
                         ins.Imm = Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.Pack(
                             symbolResolver.ResolveEqsQuery(ResolveSymbol(symbols, ins.Imm)),
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
                         ins.Dst = 0;
-                        PatchAuthoredCollectionKey(ref ins, symbols, entityCollections, inImmediate: false);
                         break;
                     case GraphNodeOp.OfferActivity:
                     case GraphNodeOp.OfferTask:
@@ -176,6 +170,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DeactivateContext:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateVirtualCamera:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
 
                     case GraphNodeOp.WriteCollection:
                         // The collection key resolves in the EntityCollectionStore key space,
@@ -269,11 +266,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ins.Imm = symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
                         }
 
-                        if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
-                            ins.Dst != byte.MaxValue)
-                        {
-                        }
-
                         if (ins.Flags != byte.MaxValue)
                         {
                             ins.Flags = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
@@ -299,10 +291,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ins.Imm = symbolResolver.ResolveRelationshipFlag(ResolveSymbol(symbols, ins.Imm));
                         }
 
-                        if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
-                        {
-                        }
-
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)
                         {
                             if (ins.Flags != byte.MaxValue)
@@ -323,6 +311,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.RelationshipEnsureLink:
                     case GraphNodeOp.RelationshipRemoveLink:
+                    case GraphNodeOp.QueryFilterRelationship:
+                        ins.Dst = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        break;
                     case GraphNodeOp.RelationshipQueryOutgoing:
                     case GraphNodeOp.RelationshipQueryIncoming:
                     case GraphNodeOp.RelationshipQueryMutual:
@@ -385,31 +376,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return symbols[symbolIndex] ?? string.Empty;
-        }
-
-        private static void PatchAuthoredCollectionKey(
-            ref GraphInstruction ins,
-            string[] symbols,
-            EntityCollectionStore? entityCollections,
-            bool inImmediate)
-        {
-            if ((ins.Flags & GraphInstructionFlags.CollectionKeyAuthored) == 0)
-            {
-                return;
-            }
-
-            int symbolIndex = inImmediate ? ins.Imm : BitConverter.SingleToInt32Bits(ins.ImmF);
-            int keyId = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, symbolIndex));
-            if (inImmediate)
-            {
-                ins.Imm = keyId;
-            }
-            else
-            {
-                ins.ImmF = BitConverter.Int32BitsToSingle(keyId);
-            }
-
-            ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.CollectionKeyAuthored);
         }
 
         private static int ResolveEntityCollectionKey(EntityCollectionStore? entityCollections, string key)

@@ -317,7 +317,6 @@ public sealed class NativeSkiaOverlayTests
         {
             InitialZoomNormalized = 1f,
             WheelZoomNormalizedStep = 0.08f,
-            ButtonZoomNormalizedStep = 0.18f,
             ZoomSliderEnabled = true,
             ModeToggleEnabled = true,
             RotateToggleEnabled = true,
@@ -326,6 +325,7 @@ public sealed class NativeSkiaOverlayTests
             MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExplicitHalfExtentCm = 0f,
+            Actions = MinimapTestActions.Create(),
         });
         var overlay = new ScreenOverlayBuffer();
 

@@ -11,7 +11,8 @@
         "actionId": "Move",
         "orderTypeKey": "moveTo",
         "throttleTicks": 6,
-        "stepDistanceCm": 400
+        "stepDistanceCm": 400,
+        "directionMode": "cameraRelative"
       }
     }
   ],

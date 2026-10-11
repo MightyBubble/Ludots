@@ -1,4 +1,3 @@
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
@@ -18,9 +17,7 @@ namespace Ludots.Core.Presentation.Presenters
         public bool RequiresAttributeProjection;
         public bool HasAttributeProjection;
         public LODLevel LOD;
-        public TeamRelationship TeamRelationship;
         public bool IsOwnedByAudience;
-        public bool HasRelationshipLink;
         public bool IsFriendly;
         public bool IsHostile;
     }

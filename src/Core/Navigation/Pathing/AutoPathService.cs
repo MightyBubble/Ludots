@@ -21,6 +21,7 @@ namespace Ludots.Core.Navigation.Pathing
         private readonly NavMeshProfileRegistry? _navProfiles;
         private readonly AgentProfileRegistry _agentProfiles;
         private readonly PathStore _store;
+        private readonly DirectPathService _directPathService;
         private readonly GraphEdgeCostOverlay? _edgeOverlay;
         private readonly bool _navMeshAvailable;
 
@@ -41,6 +42,7 @@ namespace Ludots.Core.Navigation.Pathing
             _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
             _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -69,6 +71,36 @@ namespace Ludots.Core.Navigation.Pathing
             _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
             _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _directPathService = new DirectPathService(_store);
+            _edgeOverlay = edgeOverlay;
+            _navMeshAvailable = true;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                _agents[compiled.Id] = compiled;
+                if (i == 0) _defaultAgent = compiled;
+            }
+
+            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        }
+
+        public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        {
+            _graphRuntime = null;
+            _graph = null;
+            _graphIndex = null;
+            _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -97,6 +129,7 @@ namespace Ludots.Core.Navigation.Pathing
             _navProfiles = null;
             _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -125,6 +158,7 @@ namespace Ludots.Core.Navigation.Pathing
             _navProfiles = null;
             _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _directPathService = new DirectPathService(_store);
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -146,6 +180,13 @@ namespace Ludots.Core.Navigation.Pathing
 
         public bool TrySolve(in PathRequest request, out PathResult result)
         {
+            if (request.Domain == PathDomain.NavMesh)
+            {
+                var meshAgent = ResolveAgent(request.AgentTypeId);
+                TrySolveMesh(in request, in meshAgent, out result, out _);
+                return true;
+            }
+
             if (request.Domain != PathDomain.Auto)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, 0, errorCode: 2);
@@ -153,6 +194,11 @@ namespace Ludots.Core.Navigation.Pathing
             }
 
             var agent = ResolveAgent(request.AgentTypeId);
+            if (agent.Selection.Mode == PathSelectionMode.Direct)
+            {
+                return _directPathService.TrySolve(in request, out result);
+            }
+
             if (agent.Selection.Mode == PathSelectionMode.PreferGraph)
             {
                 TrySolveGraph(in request, in agent, out result, out _);
@@ -194,6 +240,24 @@ namespace Ludots.Core.Navigation.Pathing
         public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
         {
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
+        }
+
+        public bool TrySnapToNavigationSurface(string agentTypeId, int worldXcm, int worldZcm, out int snappedXcm, out int snappedZcm)
+        {
+            snappedXcm = worldXcm;
+            snappedZcm = worldZcm;
+            if (!_navMeshAvailable || _navRegistry == null)
+            {
+                return false;
+            }
+
+            CompiledAgentType agent = ResolveAgent(agentTypeId);
+            if (!_navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            {
+                return false;
+            }
+
+            return query.TrySnapToSurface(worldXcm, worldZcm, out snappedXcm, out snappedZcm);
         }
 
         private CompiledAgentType ResolveAgent(string agentTypeId)
@@ -343,7 +407,8 @@ namespace Ludots.Core.Navigation.Pathing
             int maxPortals = Math.Max(0, maxPoints - 2);
 
             var r = query.TryFindPath(request.Start.Xcm, request.Start.Ycm, request.Goal.Xcm, request.Goal.Ycm, maxPortals);
-            if (r.Status != NavPathStatus.Ok)
+            bool partial = r.Status == NavPathStatus.Partial;
+            if (r.Status != NavPathStatus.Ok && !partial)
             {
                 var status = r.Status switch
                 {
@@ -368,11 +433,14 @@ namespace Ludots.Core.Navigation.Pathing
             result = new PathResult(
                 request.RequestId,
                 request.Actor,
-                PathStatus.Found,
+                partial ? PathStatus.Partial : PathStatus.Found,
                 handle,
                 expanded: 0,
-                errorCode: 0,
-                resolvedDomain: PathDomain.NavMesh);
+                errorCode: partial ? (int)NavPathStatus.Partial : 0,
+                resolvedDomain: PathDomain.NavMesh,
+                resolvedGoal: partial
+                    ? new WorldCmInt2(r.ResolvedGoalXcm, r.ResolvedGoalZcm)
+                    : new WorldCmInt2(request.Goal.Xcm, request.Goal.Ycm));
             return true;
         }
 

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "panel.cmdcard.abilityChip",
+    "subject": "AbilitySlot",
+    "graph": "Graph.EntityCommand.AbilityChip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.cmdcard.abilityChip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "cmdcard-ability-name",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.cmdcard.abilityBar",
+    "graph": "Graph.EntityCommand.AbilityBar",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.cmdcard.abilityBar.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "slots",
+        "source": "selfGraph",
+        "collectionKey": "panel.cmdcard.abilityBar.slots",
+        "template": "panel.cmdcard.abilityChip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "cmdcard-title",
+          "text": "指令卡"
+        },
+        {
+          "type": "list",
+          "class": "cmdcard-ability-list",
+          "bind": "slots",
+          "viewportHeight": 168,
+          "itemExtent": 42
+        }
+      ]
+    }
+  }
+]

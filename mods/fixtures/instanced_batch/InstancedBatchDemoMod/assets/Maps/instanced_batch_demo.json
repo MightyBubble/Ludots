@@ -35,7 +35,13 @@
   "Entities": [
     {
       "Template": "instanced_batch_demo_anchor",
-      "InstanceId": "instanced-batch-demo-anchor"
+      "InstanceId": "instanced-batch-demo-anchor",
+      "Relations": [
+        {
+          "To": "instanced-batch-demo-anchor",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [

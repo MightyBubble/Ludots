@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
@@ -38,17 +37,6 @@ internal sealed class CapabilityStandardVirtualCameraShowcaseRuntime
         {
             throw new InvalidOperationException("CapabilityStandardVirtualCameraShowcaseMod requires VirtualCameraBrain.");
         }
-
-        if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) ||
-            managerObj is not ViewModeManager manager)
-        {
-            throw new InvalidOperationException("CapabilityStandardVirtualCameraShowcaseMod requires ViewModeManager.");
-        }
-
-        RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitModeId);
-        RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId);
-        RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.TpsModeId);
-        RequireViewMode(manager, CapabilityStandardVirtualCameraShowcaseIds.FpsModeId);
 
         engine.GlobalContext[CapabilityStandardVirtualCameraShowcaseIds.RuntimeStateKey] =
             new CapabilityStandardVirtualCameraShowcaseState(
@@ -96,19 +84,6 @@ internal sealed class CapabilityStandardVirtualCameraShowcaseRuntime
         }
     }
 
-    private static void RequireViewMode(ViewModeManager manager, string modeId)
-    {
-        for (int i = 0; i < manager.Modes.Count; i++)
-        {
-            if (string.Equals(manager.Modes[i].Id, modeId, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Capability standard virtual camera showcase requires view mode '{modeId}'.");
-    }
 }
 
 public sealed record CapabilityStandardVirtualCameraShowcaseState(

@@ -1,0 +1,207 @@
+[
+  {
+    "id": "graph.moba.smart_cast_r",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_skillr",
+        "action": "SkillR",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "candidates",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hostile",
+        "op": "QueryFilterRelationship",
+        "relationshipType": "Hostile"
+      },
+      {
+        "id": "pick",
+        "op": "ScreenPointToEntity",
+        "pickRadiusPx": 48
+      },
+      {
+        "id": "pick_valid",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "pick_branch",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "all_entities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "champions",
+        "op": "QueryFilterTemplate",
+        "template": "moba_hero"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "pointer_x"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "candidates"
+      },
+      {
+        "from": "candidates",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "hostile",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "pick_valid"
+      },
+      {
+        "from": "all_entities",
+        "fromPort": "next",
+        "to": "champions"
+      },
+      {
+        "from": "champions",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "next",
+        "to": "pick_branch"
+      },
+      {
+        "from": "pick_branch",
+        "fromPort": "true",
+        "to": "all_entities"
+      },
+      {
+        "from": "pick_branch",
+        "fromPort": "false",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pick_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "pick_valid",
+        "fromPort": "value",
+        "to": "pick_branch",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

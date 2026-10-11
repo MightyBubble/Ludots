@@ -15,6 +15,16 @@ namespace Ludots.Core.Physics2D.Navigation;
 
 public static class NavObstacleAuthoringAdapter
 {
+    private static readonly HashSet<string> NavigationAuthoringComponents =
+        new(StringComparer.Ordinal)
+        {
+            "WorldPositionCm",
+            "FacingDirection",
+            "ManifestationObstacleIntent2D",
+            "ManifestationObstaclePolygon2D",
+            "CompoundObstacle2D",
+        };
+
     public static NavObstacleSet BuildFromMapAuthoring(
         MapConfig map,
         IReadOnlyDictionary<string, EntityTemplate> templates,
@@ -32,7 +42,7 @@ public static class NavObstacleAuthoringAdapter
         var authoringContext = new ComponentAuthoringContext();
         authoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
         using World world = World.Create();
-        var builder = new EntityBuilder(world, SnapshotTemplates(templates), authoringContext);
+        var builder = new EntityBuilder(world, SnapshotObstacleTemplates(templates), authoringContext);
         var sourceNames = new Dictionary<int, string>();
 
         for (int i = 0; i < map.Entities.Count; i++)
@@ -51,13 +61,51 @@ public static class NavObstacleAuthoringAdapter
                     $"Map '{map.Id}' entity[{i}] references unknown template '{entityData.Template}'.");
             }
 
-            builder.UseTemplate(entityData.Template);
+            EntityTemplate template = templates[entityData.Template];
+            bool hasNavigationAuthoring =
+                HasNavigationAuthoringComponent(template.Components) ||
+                HasNavigationAuthoringComponent(entityData.Overrides);
+            if (!hasNavigationAuthoring)
+            {
+                continue;
+            }
+
+            builder
+                .UseTemplate(entityData.Template)
+                .WithEntityContext(
+                    $"Map '{map.Id}' entity '{ResolveEntityContextId(entityData, i)}'");
             if (entityData.Overrides != null)
             {
                 foreach (KeyValuePair<string, JsonNode> kvp in entityData.Overrides)
                 {
-                    builder.WithOverride(kvp.Key, kvp.Value);
+                    if (NavigationAuthoringComponents.Contains(kvp.Key))
+                    {
+                        builder.WithOverride(kvp.Key, kvp.Value);
+                    }
                 }
+            }
+
+            if (entityData.PositionXCm.HasValue != entityData.PositionYCm.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{map.Id}' entity '{ResolveEntityContextId(entityData, i)}' authors PositionXCm/PositionYCm partially; set both or neither.");
+            }
+
+            bool hasAuthoredWorldPosition =
+                template.Components.ContainsKey("WorldPositionCm") ||
+                (entityData.Overrides != null && entityData.Overrides.ContainsKey("WorldPositionCm"));
+            if (entityData.PositionXCm.HasValue && !hasAuthoredWorldPosition)
+            {
+                builder.WithOverride(
+                    "WorldPositionCm",
+                    new JsonObject
+                    {
+                        ["Value"] = new JsonObject
+                        {
+                            ["X"] = entityData.PositionXCm.Value,
+                            ["Y"] = entityData.PositionYCm!.Value,
+                        },
+                    });
             }
 
             Entity entity = builder.Build();
@@ -68,6 +116,58 @@ public static class NavObstacleAuthoringAdapter
 
         new ManifestationObstacleBridge2DSystem(world, shapeStorage).Update(0f);
         return BuildFromMaterializedWorld(world, shapeStorage, sourceNames, layerId);
+    }
+
+    private static Dictionary<string, EntityTemplate> SnapshotObstacleTemplates(
+        IReadOnlyDictionary<string, EntityTemplate> templates)
+    {
+        var snapshot = new Dictionary<string, EntityTemplate>(templates.Count, StringComparer.Ordinal);
+        foreach (KeyValuePair<string, EntityTemplate> kvp in templates)
+        {
+            var filtered = new EntityTemplate
+            {
+                Id = kvp.Value.Id,
+                Components = new Dictionary<string, JsonNode>(StringComparer.Ordinal),
+            };
+
+            foreach (KeyValuePair<string, JsonNode> component in kvp.Value.Components)
+            {
+                if (NavigationAuthoringComponents.Contains(component.Key))
+                {
+                    filtered.Components[component.Key] = component.Value.DeepClone();
+                }
+            }
+
+            snapshot[kvp.Key] = filtered;
+        }
+
+        return snapshot;
+    }
+
+    private static bool HasNavigationAuthoringComponent(
+        IReadOnlyDictionary<string, JsonNode>? components)
+    {
+        if (components == null)
+        {
+            return false;
+        }
+
+        foreach (string componentName in components.Keys)
+        {
+            if (NavigationAuthoringComponents.Contains(componentName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ResolveEntityContextId(EntitySpawnData entityData, int index)
+    {
+        return string.IsNullOrWhiteSpace(entityData.InstanceId)
+            ? $"{entityData.Template}@{index}"
+            : entityData.InstanceId;
     }
 
     private static NavObstacleSet BuildFromMaterializedWorld(
@@ -234,17 +334,6 @@ public static class NavObstacleAuthoringAdapter
         }
 
         return obstacle;
-    }
-
-    private static Dictionary<string, EntityTemplate> SnapshotTemplates(IReadOnlyDictionary<string, EntityTemplate> templates)
-    {
-        var snapshot = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, EntityTemplate> kvp in templates)
-        {
-            snapshot[kvp.Key] = kvp.Value;
-        }
-
-        return snapshot;
     }
 
     private static string ResolveId(IReadOnlyDictionary<int, string> sourceNames, int entityId, string prefix)

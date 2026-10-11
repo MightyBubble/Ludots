@@ -1,0 +1,30 @@
+[
+  {
+    "id": "panel_button_commands_caster",
+    "extends": "fireball_hero",
+    "initialInteractionContext": "interaction.context.panelButtons.demo",
+    "components": {
+      "Name": {
+        "Value": "施法者"
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Fireball.Cast",
+          "Ability.PanelButtons.SpawnTarget"
+        ]
+      }
+    }
+  },
+  {
+    "id": "panel_button_commands_ally_target",
+    "extends": "fireball_target",
+    "components": {
+      "Name": {
+        "Value": "陪练靶子"
+      },
+      "Team": {
+        "Id": 1
+      }
+    }
+  }
+]

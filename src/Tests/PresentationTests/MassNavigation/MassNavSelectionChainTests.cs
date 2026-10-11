@@ -7,6 +7,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
@@ -31,7 +32,7 @@ namespace Ludots.Tests.Presentation
 
         private static readonly string[] Mods =
         {
-            "LudotsCoreMod", "CoreInputMod", "SelectionInteractionMod",
+            "LudotsCoreMod", "SelectionInteractionMod",
             "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod"
         };
 
@@ -119,6 +120,86 @@ namespace Ludots.Tests.Presentation
             Console.WriteLine($"selected collection count: {selected}");
             Assert.That(boxingActive, Is.True, "pressing must activate the boxing context (box_begin graph mount)");
             Assert.That(selected, Is.GreaterThan(0), "releasing must commit the rectangle hits into the selected collection");
+        }
+
+        [Test]
+        public void RightClickOrdersTheControllableSelectionThroughTheCommandGraph()
+        {
+            var backend = new TestInputBackend();
+            using GameEngine engine = CreateEngine(backend);
+            engine.LoadMap(new MapLoadRequest(new MapId("mass_navigation"),
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
+            Tick(engine, 60);
+
+            Entity player = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            var handler = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler missing.");
+            var controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
+                ?? throw new InvalidOperationException("ControlDomainQuery missing.");
+            var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
+                ?? throw new InvalidOperationException("CommandIntentBufferDrain missing.");
+
+            var controllable = new List<Entity>();
+            var agentQuery = new QueryDescription().WithAll<CommandSourceSelectableTag>();
+            engine.World.Query(in agentQuery, (Entity e) =>
+            {
+                if (controlDomains.IsControllableBy(player, e))
+                {
+                    controllable.Add(e);
+                }
+            });
+            Assert.That(controllable, Is.Not.Empty, "the local seat must control one scenario team");
+            ReplaceSelection(engine, player, controllable.ToArray());
+
+            Vector2 resolution = engine.GetService(CoreServiceKeys.ViewController)!.Resolution;
+            backend.SetMousePosition(resolution * 0.5f);
+            string drainReport = "no command intent drained";
+            backend.SetButton("<Mouse>/rightButton", true);
+            for (int frame = 0; frame < 9; frame++)
+            {
+                if (frame == 3)
+                {
+                    Assert.That(handler.IsDown("CaseE.Command"), Is.True, "right mouse must drive the battle context command action");
+                    backend.SetButton("<Mouse>/rightButton", false);
+                }
+
+                Tick(engine, 1);
+                if (drain.LastDrainedCount > 0)
+                {
+                    drainReport = $"drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} " +
+                                  $"rejected={drain.LastRejectedCount} reason={drain.LastRejectionReason ?? "<none>"}";
+                }
+            }
+
+            int ordered = 0;
+            for (int i = 0; i < controllable.Count; i++)
+            {
+                if (engine.World.IsAlive(controllable[i]) &&
+                    engine.World.TryGet(controllable[i], out OrderBuffer orders) &&
+                    orders.HasActive)
+                {
+                    ordered++;
+                }
+            }
+
+            Console.WriteLine($"selected actors with an active order after right click: {ordered}/{controllable.Count}; {drainReport}");
+            Assert.That(ordered, Is.EqualTo(controllable.Count),
+                $"right click on ground must order every selected agent through the case E command graph; {drainReport}");
+        }
+
+        private static void ReplaceSelection(GameEngine engine, Entity owner, Entity[] members)
+        {
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                SelectedKey,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                members[0],
+                "Selection",
+                $"{members.Length} entity(s)");
+            store.Replace(owner, descriptor, members, owner);
         }
 
         private static int CollectionCount(GameEngine engine, Entity owner, string key)

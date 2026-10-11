@@ -110,4 +110,14 @@ namespace Ludots.Core.Components
     {
         public string Value;
     }
+
+    /// <summary>
+    /// 该角色被操控（跟随）时采用的虚拟相机 profile——相机 3C 的 SSOT 在角色实体身上。
+    /// 切换持有角色，相机随绑定切换 profile；未声明绑定的角色不表达视角偏好，保持现状。
+    /// ProfileId 必须能在 VirtualCameraRegistry 解析，空值/未知 id 在采用系统处 fail-fast。
+    /// </summary>
+    public struct CameraProfileBinding
+    {
+        public string ProfileId;
+    }
 }

@@ -274,8 +274,6 @@ public sealed class TagStateInstallationContractTests
         var system = new AbilityExecSystem(
             world,
             new DiscreteClock(),
-            new InputRequestQueue(),
-            new InputResponseBuffer(),
             new EffectRequestQueue(),
             snapshotCapacity: 8,
             abilityDefinitions: definitions,

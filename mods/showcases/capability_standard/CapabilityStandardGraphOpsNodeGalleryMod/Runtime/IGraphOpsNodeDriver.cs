@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
@@ -39,10 +40,20 @@ public sealed class GraphOpsNodeDriverContext
     public EffectRequestQueue? EffectRequests { get; set; }
     public RelationshipRuntime? Relationships { get; set; }
     public RelationshipTypeRegistry? RelationshipTypes { get; set; }
+    public TeamRelationQuery? TeamRelations { get; set; }
     public RelationshipMetricRegistry? RelationshipMetrics { get; set; }
     public RelationshipFlagRegistry? RelationshipFlags { get; set; }
     public EntityCollectionStore? Collections { get; set; }
     public Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? CommandIntents { get; set; }
+    public Ludots.Core.Gameplay.GAS.Input.ResponseChainPromptState? ResponseChainPrompt { get; set; }
+    public Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? VirtualCameras { get; set; }
+    public Dictionary<string, object>? Globals { get; set; }
+
+    /// <summary>
+    /// Set by drivers whose wave leaves engine-side work that is not an EffectRequest (e.g. queued
+    /// response-chain answers); the headless host then ticks the engine at least once.
+    /// </summary>
+    public bool EffectSettlementRequested { get; set; }
     public TagOps? TagOps { get; set; }
     public GameplayEventBus? EventBus { get; set; }
     public GraphCallbackService? GraphCallbacks { get; set; }

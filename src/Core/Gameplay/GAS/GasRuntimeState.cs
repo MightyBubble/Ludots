@@ -12,7 +12,6 @@ namespace Ludots.Core.Gameplay.GAS
         public bool ProposalWaitingInput;
 
         public int EffectRequestCount;
-        public int InputRequestCount;
         public int ChainOrderCount;
         public int OrderRequestCount;
 

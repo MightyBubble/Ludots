@@ -1,8 +1,10 @@
 {
   "name": "BallistaRouteByTargetMod",
   "version": "1.0.0",
-  "description": "Slice-3 acceptance fixture: one right-click Command, route graph resolves hit-target kind via lookup table, submits cast or move intent per route.",
+  "description": "弩车按目标路由的测试夹具：右键点狼用武器、点塔用攻城、点地面就移动。兵种来自 BallistaUnitsMod。",
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
-  }
+    "LudotsCoreMod": "^1.0.0",
+    "BallistaUnitsMod": "^1.0.0"
+  },
+  "priority": 1000
 }

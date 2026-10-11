@@ -13,7 +13,6 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
-using CoreInputMod.ViewMode;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
@@ -28,7 +27,6 @@ namespace RoadNetworkShowcaseMod.Runtime
             .WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private const string PrimaryPlayerColumnName = "Blue Vanguard";
-        private const string TacticalCameraModeId = "Camera.Mode.Tactical";
         private const string TacticalCameraId = "Camera.Profile.Tactical";
         private string? _activeMapId;
         private readonly RoadNetworkShowcasePanelController _panelController;
@@ -217,18 +215,8 @@ namespace RoadNetworkShowcaseMod.Runtime
             return new RoadNetworkShowcasePanelStateBuilder(engine, this).Build();
         }
 
-        private static void ActivateTacticalViewMode(GameEngine engine)
-        {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out object? managerObj) &&
-                managerObj is ViewModeManager viewModeManager)
-            {
-                viewModeManager.SwitchTo(TacticalCameraModeId);
-            }
-        }
-
         private static void RequestTacticalCameraTarget(GameEngine engine, Vector2 targetCm)
         {
-            ActivateTacticalViewMode(engine);
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
             {
                 Id = TacticalCameraId,

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-09-21T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "BallistaUnitsMod",
+    "BallistaRouteByTargetMod",
+    "AgentBridgeMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "BallistaUnitsMod",
+      "rootPath": "../../../../../../../mods/showcases/ballista_units/BallistaUnitsMod"
+    },
+    {
+      "id": "BallistaRouteByTargetMod",
+      "rootPath": "../../../../../../../mods/fixtures/gas/BallistaRouteByTargetMod"
+    },
+    {
+      "id": "AgentBridgeMod",
+      "rootPath": "../../../../../../../mods/AgentBridgeMod"
+    }
+  ]
+}

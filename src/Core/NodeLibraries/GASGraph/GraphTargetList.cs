@@ -34,12 +34,4 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 
-    public enum GraphRelationshipFilterMode : int
-    {
-        Hostile = 1,
-        Friendly = 2,
-        Neutral = 3,
-        NotFriendly = 4,
-        NotHostile = 5
-    }
 }

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "Effect.PanelButtons.SpawnTarget",
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "panel_button_commands_ally_target",
+      "placementPattern": "Scatter",
+      "count": 1
+    },
+    "categories": [
+      "Effect.PanelButtons"
+    ]
+  }
+]

@@ -22,36 +22,7 @@
     "IdField": "id"
   },
   {
-    "Path": "Entities/templates.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/abilities.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/effects.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/graphs.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
     "Path": "GAS/graphs/*.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "GAS/attribute_constraints.json",
-    "Policy": "DeepObject"
-  },
-  {
-    "Path": "GAS/tag_rules.json",
     "Policy": "ArrayById",
     "IdField": "id"
   },
@@ -64,5 +35,9 @@
     "Policy": "ArrayById",
     "IdField": "id",
     "AllowEmpty": true
+  },
+  {
+    "Path": "Maps/ballista_engage_field.json",
+    "Policy": "DeepObject"
   }
 ]

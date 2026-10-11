@@ -230,7 +230,7 @@ namespace Ludots.Core.Gameplay.Relationships
                         source: default,
                         config.ObservedTick,
                         config.ExpiryTick,
-                        config.ConfidencePermille <= 0 ? 1000 : config.ConfidencePermille,
+                        RequireConfidencePermille(config.ConfidencePermille, $"relationship catalog knowledgeGrants[{i}].confidencePermille"),
                         revision: 0));
             }
 
@@ -278,6 +278,16 @@ namespace Ludots.Core.Gameplay.Relationships
         private static int ResolveTagId(string name)
         {
             return TagRegistry.Register(name);
+        }
+
+        private static int RequireConfidencePermille(int value, string context)
+        {
+            if (value < 1 || value > 1000)
+            {
+                throw new InvalidOperationException($"{context} must be within 1..1000.");
+            }
+
+            return value;
         }
 
         private static string RequireNonEmpty(string? value, string context)

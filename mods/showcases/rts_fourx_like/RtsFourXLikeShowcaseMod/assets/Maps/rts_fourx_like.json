@@ -63,7 +63,21 @@
             "Food": 120
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "aurora_capital",
+          "Type": "Friendly"
+        },
+        {
+          "To": "boreal_capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "cygnus_capital",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_peasant",
@@ -126,7 +140,21 @@
             "Food": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "boreal_capital",
+          "Type": "Friendly"
+        },
+        {
+          "To": "aurora_capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "cygnus_capital",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_footman",
@@ -171,7 +199,21 @@
             "Food": 90
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "cygnus_capital",
+          "Type": "Friendly"
+        },
+        {
+          "To": "aurora_capital",
+          "Type": "Hostile"
+        },
+        {
+          "To": "boreal_capital",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_peasant",
@@ -222,91 +264,5 @@
       "TeamId": 3,
       "RepresentativeInstanceId": "cygnus_capital"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 1,
-        "PlayerB": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 2,
-        "PlayerB": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 3,
-        "TypeId": "RtsFourXLike.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

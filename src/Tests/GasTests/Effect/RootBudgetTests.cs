@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ludots.Core.Gameplay.GAS.Input;
+using System;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -142,7 +143,8 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands));
+                    commands,
+                    teamRelations: null));
 
             That(error!.Message, Does.StartWith(TargetResolverFanOutHelper.RootBudgetExceededError));
             That(commands.Count, Is.Zero);
@@ -380,7 +382,7 @@ namespace Ludots.Tests.GAS
                 fanOutCommandCapacity: TestFanOutCommandCapacity,
                 budget: null,
                 templates: templates,
-                inputRequests: null,
+                promptState: null,
                 chainOrders: null,
                 telemetry: new ResponseChainTelemetryBuffer(),
                 orderRequests: new OrderRequestQueue(),

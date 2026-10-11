@@ -281,7 +281,6 @@ namespace Ludots.Tests.GAS
             => new()
             {
                 Id = ProfileId,
-                ActiveCollectionKey = "test.context.collection",
                 Bindings = Bindings,
                 Triggers = Triggers,
                 OnActivated = OnActivated,

@@ -1,10 +1,6 @@
 {
   "types": [
     {
-      "id": "RelationshipShowcase.Participant",
-      "isSymmetric": false
-    },
-    {
       "id": "SocialBond",
       "isSymmetric": false
     },

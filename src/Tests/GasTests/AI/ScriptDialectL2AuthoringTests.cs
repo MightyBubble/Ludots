@@ -235,7 +235,6 @@ namespace Ludots.Tests.Gas.AI
             public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer) => default;
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => 0;
-            public int GetRelationship(int teamA, int teamB) => GraphRelationship.Neutral;
             public void ApplyEffectTemplate(Entity caster, Entity target, int templateId) { }
             public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
             public void RemoveEffectTemplate(Entity target, int templateId) { }

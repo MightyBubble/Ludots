@@ -55,7 +55,13 @@
             "Health": 50
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "target",
+          "Type": "Friendly"
+        }
+      ]
     }
   ],
   "Teams": [

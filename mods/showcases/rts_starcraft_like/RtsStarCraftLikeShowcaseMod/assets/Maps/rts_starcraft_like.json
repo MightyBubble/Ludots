@@ -54,7 +54,21 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "terran_scv",
+          "Type": "Friendly"
+        },
+        {
+          "To": "zerg_drone",
+          "Type": "Hostile"
+        },
+        {
+          "To": "protoss_probe",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_war3_barracks",
@@ -108,7 +122,21 @@
         "Team": {
           "Id": 3
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "protoss_probe",
+          "Type": "Friendly"
+        },
+        {
+          "To": "terran_scv",
+          "Type": "Hostile"
+        },
+        {
+          "To": "zerg_drone",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_sc2_zealot",
@@ -144,7 +172,21 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "zerg_drone",
+          "Type": "Friendly"
+        },
+        {
+          "To": "terran_scv",
+          "Type": "Hostile"
+        },
+        {
+          "To": "protoss_probe",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "rts_zerg_spawning_pool",
@@ -195,91 +237,5 @@
       "TeamId": 3,
       "RepresentativeInstanceId": "protoss_probe"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [
-      {
-        "PlayerA": 1,
-        "PlayerB": 2,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 1,
-        "PlayerB": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": true
-      },
-      {
-        "PlayerA": 2,
-        "PlayerB": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": true
-      }
-    ],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 2,
-        "TeamId": 2,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": false
-      },
-      {
-        "PlayerId": 3,
-        "TeamId": 3,
-        "TypeId": "RtsStarCraftLike.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

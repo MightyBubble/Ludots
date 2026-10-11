@@ -7,7 +7,6 @@ namespace Ludots.Core.EntityCollections
 {
     public sealed class EntityCollectionStore
     {
-        internal readonly CollectionWrite.Scratch WriteScratch = new();
         public IEntityCollectionSource RequireSource(Entity owner, int keyId) =>
             _sources.TryGetValue((owner, keyId), out SourceBinding? binding) ? binding.Source :
                 throw new InvalidOperationException("COLLECTION.ERR.DerivedSourceRequired");

@@ -10,7 +10,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
     /// M3 live demo of domain-routed writes (RFC-0065 DEC-4 / CTRL-4c): whenever P1Rep's command
-    /// source changes, the source set is replayed through DomainRoutedCollectionWriter so each
+    /// source changes, the source set is replayed through CollectionApplier.ReplaceRouted so each
     /// entity lands in its own control domain's (domainRep, CommandSource) collection.
     /// </summary>
     internal sealed class ControlPlaneRoutedSelectionSystem : ISystem<float>

@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.Pathing
 {
@@ -17,7 +18,15 @@ namespace Ludots.Core.Navigation.Pathing
         BudgetExceeded = 2,
         NotReady = 3,
         InvalidRequest = 4,
-        Error = 5
+        Error = 5,
+
+        /// <summary>
+        /// A walkable prefix of the route was solved, but the requested goal is not reachable.
+        /// A usable path exists; its end point is the nearest legal stand point toward the goal
+        /// and is reported as <see cref="PathResult.ResolvedGoal"/>. Consumers decide policy
+        /// (walk there, or reject the order) from configuration, not from an exception.
+        /// </summary>
+        Partial = 6
     }
 
     public enum PathEndpointKind : byte
@@ -115,6 +124,14 @@ namespace Ludots.Core.Navigation.Pathing
         public readonly int ErrorCode;
         public readonly PathDomain ResolvedDomain;
 
+        /// <summary>
+        /// The point the returned path actually ends at. Equals the requested goal when
+        /// <see cref="Status"/> is <see cref="PathStatus.Found"/>; differs from it when the status
+        /// is <see cref="PathStatus.Partial"/>, where it is the nearest legal stand point toward
+        /// the goal. Undefined when no path was produced.
+        /// </summary>
+        public readonly WorldCmInt2 ResolvedGoal;
+
         public PathResult(
             int requestId,
             Entity actor,
@@ -123,6 +140,19 @@ namespace Ludots.Core.Navigation.Pathing
             int expanded,
             int errorCode,
             PathDomain resolvedDomain = PathDomain.None)
+            : this(requestId, actor, status, handle, expanded, errorCode, resolvedDomain, default)
+        {
+        }
+
+        public PathResult(
+            int requestId,
+            Entity actor,
+            PathStatus status,
+            PathHandle handle,
+            int expanded,
+            int errorCode,
+            PathDomain resolvedDomain,
+            WorldCmInt2 resolvedGoal)
         {
             RequestId = requestId;
             Actor = actor;
@@ -131,6 +161,7 @@ namespace Ludots.Core.Navigation.Pathing
             Expanded = expanded;
             ErrorCode = errorCode;
             ResolvedDomain = resolvedDomain;
+            ResolvedGoal = resolvedGoal;
         }
     }
 }

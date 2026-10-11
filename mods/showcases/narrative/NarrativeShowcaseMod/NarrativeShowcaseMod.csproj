@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
-    <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
   </ItemGroup>

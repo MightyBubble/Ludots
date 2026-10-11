@@ -2,6 +2,7 @@ using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
@@ -161,12 +162,12 @@ public sealed class MassNavigationRuntime
         }
 
         var simulation = new MassNavigationSimulationRuntime(config);
-        DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires DomainStanceQuery.");
-        simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
-            stances,
+        TeamRelationQuery teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires TeamRelationQuery.");
+        simulation.SetDomainRelationshipProjection(new MassNavigationDomainRelationProjection(
+            teamRelations,
             config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
-            config.RelationshipPolicy.CooperativeStance));
+            config.RelationshipPolicy.CooperativeRelation));
         _simulation = simulation;
         return simulation;
     }

@@ -31,16 +31,6 @@
       "type": "Button"
     },
     {
-      "id": "Cancel",
-      "name": "Gameplay_Cancel",
-      "type": "Button"
-    },
-    {
-      "id": "ModeWoW",
-      "name": "Gameplay_ModeWoW",
-      "type": "Button"
-    },
-    {
       "id": "ModeLoL",
       "name": "Gameplay_ModeLoL",
       "type": "Button"
@@ -51,8 +41,19 @@
       "type": "Button"
     },
     {
-      "id": "ModeIndicator",
-      "name": "Gameplay_ModeIndicator",
+      "id": "Moba.AimConfirm",
+      "name": "Gameplay_MobaAimConfirm",
+      "type": "Button"
+    },
+    {
+      "id": "Moba.AimCancel",
+      "name": "Gameplay_MobaAimCancel",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "Gameplay_QueueModifier",
       "type": "Button"
     }
   ],
@@ -87,14 +88,6 @@
           "path": "<Keyboard>/s"
         },
         {
-          "actionId": "Cancel",
-          "path": "<Keyboard>/Escape"
-        },
-        {
-          "actionId": "ModeWoW",
-          "path": "<Keyboard>/F1"
-        },
-        {
           "actionId": "ModeLoL",
           "path": "<Keyboard>/F2"
         },
@@ -103,8 +96,20 @@
           "path": "<Keyboard>/F3"
         },
         {
-          "actionId": "ModeIndicator",
-          "path": "<Keyboard>/F4"
+          "actionId": "Moba.AimConfirm",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Moba.AimCancel",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Moba.AimCancel",
+          "path": "<Keyboard>/Escape"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
         }
       ]
     }

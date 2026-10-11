@@ -5,5 +5,14 @@
   "main": "bin/net9.0/EntityInfoPanelsMod.dll",
   "priority": -100,
   "author": "OpenAI Codex",
-  "tags": ["entity-info", "ui", "overlay", "gas", "capability"]
+  "tags": [
+    "entity-info",
+    "ui",
+    "overlay",
+    "gas",
+    "capability"
+  ],
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
 }

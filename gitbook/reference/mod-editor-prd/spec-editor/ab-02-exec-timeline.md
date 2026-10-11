@@ -9,8 +9,8 @@
 ## 2. 设计
 
 - **轨道视图模型**：items 投影为 (kind, tick, duration) 图元；拖动写回 tick，Clip 拖尾写回 duration；不重排数组（消费按数组序，乱序仅警示）。
-- **调色板**：11 种 kind 四组分类，拖入生成带必填字段的骨架并立即置为选中。
-- **payloadA 语义化**：TagSignal→加/删开关；InputGate/TargetCollectionGate→请求 id（0 显示"用订单 id"）；EventGate→超时 tick（0 显示"无限等"）。
+- **调色板**：9 种 kind 四组分类，拖入生成带必填字段的骨架并立即置为选中。
+- **payloadA 语义化**：TagSignal→加/删开关；EventGate→超时 tick（0 显示"无限等"）。
 - **试播**：消费引擎干跑接口逐 tick 推进，与真实执行同一路径。
 
 ## 3. 精确语义与不变量

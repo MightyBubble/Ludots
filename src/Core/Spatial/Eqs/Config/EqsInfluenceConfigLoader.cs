@@ -329,7 +329,8 @@ namespace Ludots.Core.Spatial.Eqs.Config
                 fieldKey,
                 shape,
                 TryInt(obj, "extentCm", out int extentCm) ? extentCm : 0,
-                reference);
+                reference,
+                TryString(obj, "agentTypeId", out string agentTypeId) ? agentTypeId : null);
         }
 
         private static EqsSelectionConfig ParseSelection(JsonObject obj, string path)
@@ -385,6 +386,16 @@ namespace Ludots.Core.Spatial.Eqs.Config
             if (string.Equals(cfg.Kind, "Overlap", StringComparison.OrdinalIgnoreCase))
             {
                 return new OverlapTest(cfg.OverlapShape, cfg.ExtentCm, cfg.PreferMore, cfg.Weight, cfg.NormalizeCount);
+            }
+
+            if (string.Equals(cfg.Kind, "PathReachable", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(cfg.AgentTypeId))
+                {
+                    throw Fail(path, "PathReachable test requires agentTypeId.");
+                }
+
+                return new PathReachableTest(cfg.AgentTypeId);
             }
 
             throw Fail(path, $"Unknown EQS test kind '{cfg.Kind}'.");

@@ -3,7 +3,6 @@ using System.IO;
 using System.Numerics;
 using CapabilityStandardVirtualCameraShowcaseMod;
 using CoreInputMod;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -86,12 +85,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(behaviorOrbit!.RotateRequiresHold, Is.True);
             Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.ContinuousHeightmap));
             Assert.That(heightmapOrbit.RotateRequiresHold, Is.True);
-            Assert.That(tps!.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
+            Assert.That(tps!.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(tps.RigPivotOffsetCm, Is.EqualTo(new Vector3(65f, 35f, 90f)));
             Assert.That(tps.RigCameraOffsetCm, Is.EqualTo(new Vector3(70f, 10f, -20f)));
             Assert.That(tps.RotateRequiresHold, Is.False);
-            Assert.That(fps!.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
+            Assert.That(fps!.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(fps.DistanceCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(fps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(fps.RotateRequiresHold, Is.False);
@@ -125,7 +124,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(brain, Is.Not.Null);
             Assert.That(brain!.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId));
             Assert.That(brain.IsActive(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId), Is.True);
-            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4200f, 2600f)));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(9180f).Within(0.001f));
 
@@ -138,7 +136,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void Showcase_ViewModeSwitchActivatesBehaviorCameraAndZoomBehavior()
+        public void Showcase_CameraModeSwitchActivatesBehaviorCameraAndZoomBehavior()
         {
             using var engine = CreateEngine(ShowcaseMods);
             engine.LoadStartupMap();
@@ -147,9 +145,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Clear = true });
             Tick(engine, BlendSettleFrames);
 
-            var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
-                ?? throw new InvalidOperationException("ViewModeManager is required.");
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitModeId), Is.True);
+            RequestCameraStack(engine, CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitCameraId);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.AuthorityCamera().VirtualCameraBrain;
@@ -185,7 +181,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void Showcase_ViewModeSwitchesCoverHeightmapTpsAndFps()
+        public void Showcase_CameraModeSwitchesCoverHeightmapTpsAndFps()
         {
             using var engine = CreateEngine(ShowcaseMods);
             engine.LoadStartupMap();
@@ -196,8 +192,6 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Clear = true });
             Tick(engine, BlendSettleFrames);
 
-            var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
-                ?? throw new InvalidOperationException("ViewModeManager is required.");
             var heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
                 ?? throw new InvalidOperationException("ContinuousHeightmap is required.");
             var input = engine.GetService(CoreServiceKeys.InputHandler)
@@ -215,7 +209,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(input.HasAction(CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveActionId), Is.True);
             var backend = (TestInputBackend)engine.GlobalContext[TestInputBackendKey];
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f6",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.AuthorityCamera().VirtualCameraBrain
@@ -227,11 +225,14 @@ namespace Ludots.Tests.GAS.Production
                 engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(terrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.TpsModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f7",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId);
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(localPlayerPositionCm));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(localPlayerPositionCm));
@@ -273,11 +274,15 @@ namespace Ludots.Tests.GAS.Production
                 engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(localTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
-            Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.FpsModeId), Is.True);
+            PressKeyUntil(
+                engine,
+                backend,
+                "<Keyboard>/f8",
+                () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId);
             Tick(engine, BlendSettleFrames);
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
+            Assert.That(brain.ActiveDefinition?.FacingMode, Is.EqualTo(CameraFacingMode.FollowTarget));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedLocalPlayerPositionCm));
             Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(0f).Within(0.001f));
@@ -324,9 +329,6 @@ namespace Ludots.Tests.GAS.Production
                 "<Keyboard>/f6",
                 () => brain.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId);
 
-            Assert.That(
-                engine.GlobalContext[CoreInputMod.ViewMode.ViewModeManager.ActiveModeIdKey],
-                Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId));
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId));
 
             PressKeyUntil(
@@ -335,11 +337,7 @@ namespace Ludots.Tests.GAS.Production
                 "<Keyboard>/f7",
                 () => brain.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId);
 
-            Assert.That(
-                engine.GlobalContext[CoreInputMod.ViewMode.ViewModeManager.ActiveModeIdKey],
-                Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsModeId));
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
-            Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
         }
 
         [Test]
@@ -433,6 +431,16 @@ namespace Ludots.Tests.GAS.Production
                 () => engine.WorldSizeSpec.Bounds,
                 () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             return engine;
+        }
+
+        private static void RequestCameraStack(GameEngine engine, string cameraId)
+        {
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+            {
+                Id = cameraId,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
+            });
         }
 
         private static void AssertCameraActionBinding(GameEngine engine, string actionId, string attributeName)

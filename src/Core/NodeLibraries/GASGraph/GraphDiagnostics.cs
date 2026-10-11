@@ -36,6 +36,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string InvalidPanelAnchor = "GASG0026";
         public const string InvalidEntryHook = "GASG0027";
         public const string DuplicateAnchor = "GASG0028";
+        public const string InvalidSubmitQueue = "GASG0029";
+        public const string InvalidSubmitGroundLayout = "GASG0030";
     }
 }
 

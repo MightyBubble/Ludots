@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -35,7 +34,6 @@ namespace ArpgDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
             _ctx.Log("[ArpgDemoMod] Ability definitions loaded via GAS/abilities.json");
 
-            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "TPS");
 
             return Task.CompletedTask;
         }

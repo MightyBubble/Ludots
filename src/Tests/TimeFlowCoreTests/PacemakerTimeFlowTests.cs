@@ -117,6 +117,83 @@ public sealed class PacemakerTimeFlowTests
         }
     }
 
+    [Test]
+    public void RealtimePacemaker_DtSpike_ConsumesAtMostClampedTicks()
+    {
+        float previousFixedDeltaTime = Time.FixedDeltaTime;
+        try
+        {
+            Time.FixedDeltaTime = 0.02f;
+            var pacemaker = new RealtimePacemaker { MaxAccumulatedSeconds = 0.1 };
+            var system = new CountingSystem();
+
+            pacemaker.Update(1f, system);
+
+            Assert.That(system.Updates, Is.EqualTo(5),
+                "a 1s spike must consume at most MaxAccumulatedSeconds/fdt ticks (5 at 50ms fdt, 100ms clamp).");
+
+            pacemaker.Update(0.02f, system);
+            Assert.That(system.Updates, Is.EqualTo(6),
+                "after the clamp the leftover backlog is bounded, not a second spike.");
+        }
+        finally
+        {
+            Time.FixedDeltaTime = previousFixedDeltaTime;
+        }
+    }
+
+    [Test]
+    public void RealtimePacemaker_SteadyFrameStream_UnaffectedByClamp()
+    {
+        float previousFixedDeltaTime = Time.FixedDeltaTime;
+        try
+        {
+            Time.FixedDeltaTime = 0.02f;
+            var pacemaker = new RealtimePacemaker { MaxAccumulatedSeconds = 0.1 };
+            var system = new CountingSystem();
+
+            for (int i = 0; i < 60; i++)
+            {
+                pacemaker.Update(1f / 60f, system);
+            }
+
+            Assert.That(system.Updates, Is.EqualTo(50),
+                "60 frames of 16.67ms = 1s = exactly 50 ticks at 20ms fdt; the clamp never engages.");
+        }
+        finally
+        {
+            Time.FixedDeltaTime = previousFixedDeltaTime;
+        }
+    }
+
+    [Test]
+    public void RealtimePacemaker_ClampDuringInFlightCooperativeStep_StepStillCompletes()
+    {
+        float previousFixedDeltaTime = Time.FixedDeltaTime;
+        try
+        {
+            Time.FixedDeltaTime = 0.05f;
+            var pacemaker = new RealtimePacemaker { MaxAccumulatedSeconds = 0.1 };
+            var simulation = new YieldThenCompleteCooperativeSimulation();
+
+            pacemaker.Update(0.05f, simulation, timeBudgetMs: 10, maxSlicesPerLogicFrame: 10);
+            Assert.That(simulation.Steps, Is.EqualTo(1));
+            Assert.That(pacemaker.IsBudgetFused, Is.False);
+
+            // Host stall while the first step is still in flight: the clamp must keep enough
+            // backlog for the in-flight step to complete instead of starving it.
+            pacemaker.Update(1f, simulation, timeBudgetMs: 10, maxSlicesPerLogicFrame: 10);
+
+            Assert.That(simulation.Steps, Is.EqualTo(2),
+                "the in-flight step must complete on the next frame despite the clamp.");
+            Assert.That(pacemaker.IsBudgetFused, Is.False);
+        }
+        finally
+        {
+            Time.FixedDeltaTime = previousFixedDeltaTime;
+        }
+    }
+
     private sealed class CountingSystem : ISystem<float>
     {
         public int Updates { get; private set; }

@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests: null,
+                    promptState: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
@@ -165,7 +165,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests: null,
+                    promptState: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests: null,
+                    promptState: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
@@ -261,49 +261,19 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ProposalProcessing_PromptInputWithoutInputQueue_ThrowsBeforeWaiting()
+        public void ProposalProcessing_PromptInputWithoutPromptState_ThrowsBeforeWaiting()
         {
             var world = World.Create();
             try
             {
-                var sys = CreatePromptInputSystem(world, inputRequests: null, orderRequests: null, out var queue);
+                var sys = CreatePromptInputSystem(world, promptState: null, orderRequests: null, out var queue);
 
                 var error = Throws<InvalidOperationException>(() =>
                 {
                     while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
                 });
 
-                That(error!.Message, Does.StartWith(EffectProposalProcessingSystem.InputRequestQueueMissingError));
-                That(queue.Count, Is.EqualTo(1));
-            }
-            finally
-            {
-                world.Dispose();
-            }
-        }
-
-        [Test]
-        public void ProposalProcessing_PromptInputRequestQueueFull_ThrowsBeforeWaiting()
-        {
-            var world = World.Create();
-            try
-            {
-                var inputRequests = new InputRequestQueue(capacity: 16);
-                for (int i = 0; i < inputRequests.Capacity; i++)
-                {
-                    var request = new InputRequest { RequestId = 100 + i, RequestTagId = 900 };
-                    That(inputRequests.TryEnqueue(in request), Is.True);
-                }
-
-                var sys = CreatePromptInputSystem(world, inputRequests, orderRequests: null, out var queue);
-
-                var error = Throws<InvalidOperationException>(() =>
-                {
-                    while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
-                });
-
-                That(error!.Message, Does.StartWith(EffectProposalProcessingSystem.InputRequestQueueFullError));
-                That(inputRequests.Count, Is.EqualTo(inputRequests.Capacity));
+                That(error!.Message, Does.StartWith(EffectProposalProcessingSystem.PromptStateMissingError));
                 That(queue.Count, Is.EqualTo(1));
             }
             finally
@@ -318,7 +288,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var inputRequests = new InputRequestQueue(capacity: 16);
+                var promptState = new ResponseChainPromptState();
                 var orderRequests = new OrderRequestQueue(capacity: 16);
                 for (int i = 0; i < orderRequests.Capacity; i++)
                 {
@@ -326,7 +296,7 @@ namespace Ludots.Tests.GAS
                     That(orderRequests.TryEnqueue(in request), Is.True);
                 }
 
-                var sys = CreatePromptInputSystem(world, inputRequests, orderRequests, out var queue);
+                var sys = CreatePromptInputSystem(world, promptState, orderRequests, out var queue);
 
                 var error = Throws<InvalidOperationException>(() =>
                 {
@@ -334,7 +304,7 @@ namespace Ludots.Tests.GAS
                 });
 
                 That(error!.Message, Does.StartWith(EffectProposalProcessingSystem.OrderRequestQueueFullError));
-                That(inputRequests.Count, Is.EqualTo(0), "OrderRequest queue full must not leave an orphan visible prompt.");
+                That(promptState.IsOpen, Is.False, "OrderRequest queue full must not leave an orphan visible prompt.");
                 That(orderRequests.Count, Is.EqualTo(orderRequests.Capacity));
                 That(queue.Count, Is.EqualTo(1));
                 That(sys.DebugWindowPhase, Is.EqualTo((byte)2), "WaitInput phase must remain retryable without marking the prompt sent.");
@@ -390,7 +360,7 @@ namespace Ludots.Tests.GAS
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
-                var inputRequests = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var orderRequests = new OrderRequestQueue();
                 var target = world.Create(new PlayerOwner { PlayerId = 1 });
                 var rootListener = default(ResponseChainListener);
@@ -412,7 +382,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
-                    inputRequests,
+                    promptState,
                     chainOrders,
                     orderRequests: orderRequests,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -472,7 +442,7 @@ namespace Ludots.Tests.GAS
                 admissionResults.BeginLogicStep();
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var queue = new EffectRequestQueue();
-                var inputRequests = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var orderRequests = new OrderRequestQueue();
                 var target = world.Create(
                     new PlayerOwner { PlayerId = 1 },
@@ -496,7 +466,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     new GasBudget(),
                     templates,
-                    inputRequests,
+                    promptState,
                     chainOrders,
                     orderRequests: orderRequests,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -561,7 +531,7 @@ namespace Ludots.Tests.GAS
                 admissionResults.BeginLogicStep();
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var queue = new EffectRequestQueue();
-                var inputRequests = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var orderRequests = new OrderRequestQueue();
                 var target = world.Create(
                     new PlayerOwner { PlayerId = 1 },
@@ -585,7 +555,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     new GasBudget(),
                     templates,
-                    inputRequests,
+                    promptState,
                     chainOrders,
                     orderRequests: orderRequests,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -649,7 +619,7 @@ namespace Ludots.Tests.GAS
                 admissionResults.BeginLogicStep();
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var queue = new EffectRequestQueue();
-                var inputRequests = new InputRequestQueue();
+                var promptState = new ResponseChainPromptState();
                 var orderRequests = new OrderRequestQueue();
                 var target = world.Create(
                     new PlayerOwner { PlayerId = 1 },
@@ -673,7 +643,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Engine.DiscreteClock(),
                     new GasBudget(),
                     templates,
-                    inputRequests,
+                    promptState,
                     chainOrders,
                     orderRequests: orderRequests,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -750,7 +720,7 @@ namespace Ludots.Tests.GAS
 
         private static EffectProposalProcessingSystem CreatePromptInputSystem(
             World world,
-            InputRequestQueue inputRequests,
+            ResponseChainPromptState promptState,
             OrderRequestQueue orderRequests,
             out EffectRequestQueue queue)
         {
@@ -796,7 +766,7 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 new GasBudget(),
                 templates,
-                inputRequests,
+                promptState,
                 chainOrders: null,
                 orderRequests: orderRequests,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,

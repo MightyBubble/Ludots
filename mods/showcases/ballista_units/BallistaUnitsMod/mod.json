@@ -1,0 +1,10 @@
+{
+  "name": "BallistaUnitsMod",
+  "version": "1.0.0",
+  "description": "弩车兵种包：我方步兵、狼、敌塔，两种弩箭技能，以及它们的外观和血条。只有兵种，没有地图和操作。",
+  "priority": 900,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": ["units", "ballista"]
+}

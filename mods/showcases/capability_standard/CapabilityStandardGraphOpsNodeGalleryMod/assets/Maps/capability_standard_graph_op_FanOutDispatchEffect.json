@@ -55,7 +55,17 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "target",
+          "Type": "Friendly"
+        },
+        {
+          "To": "allyA",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "allyA",
@@ -75,7 +85,17 @@
             "Health": 100
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "allyA",
+          "Type": "Friendly"
+        },
+        {
+          "To": "target",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "allyB",

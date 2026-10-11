@@ -1,0 +1,26 @@
+[
+  {
+    "id": "panel.tw.hud",
+    "graph": "tw.panel.values",
+    "pins": [
+      {
+        "name": "phase",
+        "key": "tw.panel.phase",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "selectedCount",
+        "key": "tw.panel.selectedCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "kills",
+        "key": "tw.panel.kills",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

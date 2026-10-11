@@ -24,8 +24,8 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException($"{AlreadyRegisteredError}: entity={owner.Id}.");
             }
 
+            queue.TrackResponseChainListenerLifecycle(world);
             world.Add(owner, listener);
-            queue.NotifyResponseChainListenersChanged();
         }
 
         public static void Remove(World world, Entity owner, EffectRequestQueue queue)
@@ -37,8 +37,8 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException($"{MissingListenerError}: entity={owner.Id}.");
             }
 
+            queue.TrackResponseChainListenerLifecycle(world);
             world.Remove<ResponseChainListener>(owner);
-            queue.NotifyResponseChainListenersChanged();
         }
 
         private static void RequireQueue(EffectRequestQueue queue)

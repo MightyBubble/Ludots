@@ -42,7 +42,13 @@
           }
         }
       },
-      "InstanceId": "camera-acceptance-local-player"
+      "InstanceId": "camera-acceptance-local-player",
+      "Relations": [
+        {
+          "To": "camera-acceptance-local-player",
+          "Type": "Friendly"
+        }
+      ]
     },
     {
       "Template": "moba_dummy",

@@ -10,7 +10,7 @@ namespace Ludots.Core.Gameplay.Camera
         public int Priority { get; set; }
         public VirtualCameraControlMode ControlMode { get; set; } = VirtualCameraControlMode.BuiltIn;
         public string PlatformDriverId { get; set; } = string.Empty;
-        public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
+        public CameraFacingMode FacingMode { get; set; } = CameraFacingMode.None;
         public VirtualCameraTargetSource TargetSource { get; set; } = VirtualCameraTargetSource.CurrentState;
         public Vector2 FixedTargetCm { get; set; } = Vector2.Zero;
         public VirtualCameraTargetHeightMode TargetHeightMode { get; set; } = VirtualCameraTargetHeightMode.Flat;

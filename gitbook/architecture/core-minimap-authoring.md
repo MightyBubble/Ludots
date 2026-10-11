@@ -131,18 +131,13 @@ Core runtime 类型：`MinimapRuntime`。
 - `JumpCameraTo(GameEngine engine, Vector2 worldCm)`: RTS 点击/拖拽跳转相机。
 - `TryScreenToWorld` / `TryScreenToWorldClamped`: 小地图屏幕点到世界坐标。
 
-统一输入 action 常量在 `MinimapInputActions`：
+小地图没有键盘操作。开关、切模式、旋转由 showcase 自己决定：要显示小地图的 showcase 在自己的代码或配置里设 `Visible`，模式和旋转用小地图上的两个按钮切。
 
-- `Minimap.Toggle`
-- `Minimap.TogglePreset`
-- `Minimap.ToggleRotateWithCamera`
-- `Minimap.Zoom`
-- `Minimap.ZoomIn`
-- `Minimap.ZoomOut`
-- `Minimap.Pan`
-- `Minimap.CenterOnSelection`
+小地图上的滚轮缩放读 `presentation.minimap.actions.zoom` 这个动作（LudotsCoreMod 的 `game.json` 默认写 `Minimap.Zoom`），没写启动就报错。这个动作绑哪个键，由用到小地图的 showcase 在自己的 `default_input.json` 里声明。
 
-输入必须走统一 input 基建。滚轮、点击、拖拽、缩放条和 toggle 都通过 `MinimapInputConsumer` 消费，并在命中小地图交互区域时设置 pointer capture，防止穿透到相机或世界交互。
+点击、拖拽用的确认键和命令键来自 `game.json` 的 `interactionActions`，鼠标位置用引擎保留的 `PointerPos` 动作。
+
+输入必须走统一 input 基建。滚轮、点击、拖拽、缩放条和两个切换按钮都通过 `MinimapInputConsumer` 消费，并在命中小地图交互区域时设置 pointer capture，防止穿透到相机或世界交互。
 
 ## 7. 缩放配置
 
@@ -154,7 +149,6 @@ Core runtime 类型：`MinimapRuntime`。
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,
@@ -162,7 +156,10 @@ Core runtime 类型：`MinimapRuntime`。
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "actions": {
+        "zoom": "Minimap.Zoom"
+      }
     }
   }
 }

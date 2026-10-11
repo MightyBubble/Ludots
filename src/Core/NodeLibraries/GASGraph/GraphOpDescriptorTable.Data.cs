@@ -144,7 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryLine, LinearAll, GraphValueType.Void, portAB, flags: GraphOperandRole.SpatialCapacityFlags);
             Add(rows, GraphNodeOp.QueryFilterNotEntity, LinearAll, GraphValueType.Void, portSource);
             Add(rows, GraphNodeOp.QueryFilterLayer, LinearAll, GraphValueType.Void, imm: GraphOperandRole.Immediate);
-            Add(rows, GraphNodeOp.QueryFilterRelationship, LinearAll, GraphValueType.Void, portSource, imm: GraphOperandRole.Immediate);
+            Add(rows, GraphNodeOp.QueryFilterRelationship, LinearAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.AggCount, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, queryPorts: portList, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.AggMinByDistance, LinearQueryScript, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portList, scriptOut: GraphValueType.Entity);
             Add(rows, GraphNodeOp.TargetListGet, LinearAndScript, GraphValueType.Entity, portValue, scriptPorts: portValue, scriptOut: GraphValueType.Entity, flags: GraphOperandRole.BoolScratchFlags);
@@ -191,12 +191,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.WriteCollection, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // Input-edge order bridge (constitution §12): TriggerGraph-only — the submit op is
             // the graph side of the intent buffer and never routes inline.
-            Add(rows, GraphNodeOp.SubmitCommandIntent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portTargetCondition, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SubmitCommandIntent, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portTargetCondition, imm: GraphOperandRole.Immediate, worldSideEffect: true);
             string[] portSlotTargetGround = { GraphControlFlowPorts.Value, GraphControlFlowPorts.Target, GraphControlFlowPorts.Condition };
             string[] portSlotTarget = { GraphControlFlowPorts.Value, GraphControlFlowPorts.Target };
             // Cast side of the §12 order bridge: slot lands as Args.I0 on each active-set member.
             Add(rows, GraphNodeOp.SubmitCast, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTargetGround, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             Add(rows, GraphNodeOp.SubmitEngageBatch, TriggerGraphOnly, GraphValueType.Void, scriptPorts: portSlotTarget, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SubmitResponseChainOrder, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
+            Add(rows, GraphNodeOp.ActivateVirtualCamera, TriggerGraphOnly, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // to the caller; GraphReturnWriter must not steal collection writes). Optional source
             // resolves the owner entity (defaults to caster) — map-domain observers writing another
             // rep's collection declare it explicitly.

@@ -41,7 +41,7 @@ namespace Ludots.Core.Input.Runtime
                 return;
             }
 
-            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(bindings.PointerPositionActionId), out WorldCmInt2 worldCm))
+            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos), out WorldCmInt2 worldCm))
             {
                 accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
                 return;

@@ -1,0 +1,49 @@
+[
+  {
+    "id": "tw.death.burst.expire",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "spent",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Ballista.Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "spent"
+      },
+      {
+        "from": "spent",
+        "fromPort": "next",
+        "to": "set"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "spent",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      }
+    ]
+  }
+]

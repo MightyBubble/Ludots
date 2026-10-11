@@ -1,0 +1,12 @@
+{
+  "name": "TcgPromptShowcaseMod",
+  "version": "1.0.0",
+  "description": "TCG 响应窗新手演示：结束回合后敌方法师朝你放火球，牌桌停下来问你要不要接招——空格让过、N 无效、1 发动陷阱【反击】。监听、按键、提示面板全部由本 mod 数据声明。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "TcgDemoMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "tcg", "response-chain", "interaction", "panel"]
+}

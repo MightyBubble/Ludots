@@ -201,6 +201,150 @@
     ],
     "lifecycle": {
       "persistence": "Scoped"
+    },
+    "rules": [
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.moba_demo.aiming"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "moba_ability_range",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.moba_demo.aiming"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "moba_ability_range",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
+  },
+  {
+    "id": "moba_cast_style_smart",
+    "rules": [
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.moba_demo.smart_cast"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "moba_cast_style_smart",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.moba_demo.smart_cast"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "moba_cast_style_smart",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "moba_demo.cast_style.smart",
+          "mode": "None",
+          "fontSize": 16
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            0.6,
+            1
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        2.2,
+        0
+      ]
+    }
+  },
+  {
+    "id": "moba_cast_style_aim",
+    "rules": [
+      {
+        "event": {
+          "kind": "ContextActivated",
+          "key": "interaction.context.moba_demo.aim_cast"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "moba_cast_style_aim",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "ContextDeactivated",
+          "key": "interaction.context.moba_demo.aim_cast"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "moba_cast_style_aim",
+          "scopeSource": "SourceStableId",
+          "ownerSource": "EventSource"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "moba_demo.cast_style.aim",
+          "mode": "None",
+          "fontSize": 16
+        },
+        "style": {
+          "color": [
+            0.78,
+            0.92,
+            1,
+            1
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        2.2,
+        0
+      ]
     }
   }
 ]

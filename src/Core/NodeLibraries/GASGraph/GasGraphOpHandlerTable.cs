@@ -372,6 +372,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitCommandIntent or
                 GraphNodeOp.SubmitCast or
                 GraphNodeOp.SubmitEngageBatch or
+                GraphNodeOp.SubmitResponseChainOrder or
+                GraphNodeOp.ActivateVirtualCamera or
                 GraphNodeOp.BindQueryCollection or
                 GraphNodeOp.ReadCalendarEnabled or
                 GraphNodeOp.ReadCalendarDayIndex or
@@ -972,6 +974,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
             Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
+            Register(GraphNodeOp.SubmitResponseChainOrder, HandleSubmitResponseChainOrder, "SubmitResponseChainOrder graph opcode.");
+            Register(GraphNodeOp.ActivateVirtualCamera, HandleActivateVirtualCamera, "ActivateVirtualCamera graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
@@ -1837,7 +1841,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.Caster,
                 hasTarget ? s.E[ins.A] : Entity.Null,
                 hasTarget,
-                s.TargetPosCm);
+                s.TargetPosCm,
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitCommandIntent)),
+                SubmitGroundLayout.Decode(ins.C, ins.Imm),
+                s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleSubmitCast(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1857,7 +1864,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasTarget,
                 hasGround,
                 s.TargetPosCm,
-                ins.Imm);
+                ins.Imm,
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitCast)),
+                s.Targets.Slice(0, s.TargetList.Count));
+        }
+
+        private static void HandleSubmitResponseChainOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SubmitResponseChainOrder(s.Caster, ins.Imm);
+        }
+
+        private static void HandleActivateVirtualCamera(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ActivateVirtualCamera(s.Caster, ins.Imm);
         }
 
         private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1879,7 +1898,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.I[ins.A],
                 s.E[ins.B],
                 Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackQueryKeyId(ins.Imm),
-                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm));
+                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm),
+                SubmitQueueFlags.Resolve(ins.Flags, s.EntryPayload, nameof(GraphNodeOp.SubmitEngageBatch)),
+                s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2096,7 +2117,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.Targets,
                 s.TargetList.Count,
                 s.E[ins.A],
-                ParseRelationshipFilterMode(ins.Imm)));
+                ins.Dst));
         }
 
         // ── Aggregation ──
@@ -2799,19 +2820,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static int ResolveQueryTypeId(byte encoded)
         {
             return encoded == byte.MaxValue ? RelationshipTypeRegistry.AnyTypeId : encoded;
-        }
-
-        private static RelationshipFilter ParseRelationshipFilterMode(int mode)
-        {
-            return mode switch
-            {
-                1 => RelationshipFilter.Hostile,
-                2 => RelationshipFilter.Friendly,
-                3 => RelationshipFilter.Neutral,
-                4 => RelationshipFilter.NotFriendly,
-                5 => RelationshipFilter.NotHostile,
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported graph relationship filter mode.")
-            };
         }
 
         private static void HandleAddInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

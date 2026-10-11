@@ -47,7 +47,17 @@
             "Armor": 4
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "lsw-ezreal",
+          "Type": "Friendly"
+        },
+        {
+          "To": "lsw-dummy-garen",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_garen",
@@ -76,7 +86,17 @@
             "Armor": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "lsw-dummy-garen",
+          "Type": "Friendly"
+        },
+        {
+          "To": "lsw-ezreal",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [

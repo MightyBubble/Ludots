@@ -103,9 +103,6 @@ namespace Ludots.Tests.GAS.Production
                 Is.EqualTo(InteractionContextInstanceSource.ExecLifecycle));
             Assert.That(mountedContext.ContextEntity, Is.EqualTo(state.Commander));
             Assert.That(
-                store.KeyRegistry.GetName(mountedContext.ActiveCollectionKeyId),
-                Is.EqualTo(SuperweaponContextShowcaseIds.TargetsCollectionKey));
-            Assert.That(
                 filters.ProfileIdRegistry.GetName(mountedContext.FilterProfileId),
                 Is.EqualTo(SuperweaponContextShowcaseIds.FilterProfileId));
             Assert.That(
@@ -157,7 +154,7 @@ namespace Ludots.Tests.GAS.Production
 
             var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
                 ?? throw new InvalidOperationException("CollectionApplier service is missing.");
-            writer.CommitCast(state.SolePossessedRep, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(state.SolePossessedRep, commandSourceKey, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
             Entity[] commandSource = CopyCollection(store, state.Commander, commandSourceKey);
             Assert.That(commandSource, Is.EqualTo(new[] { state.Commander }));
 

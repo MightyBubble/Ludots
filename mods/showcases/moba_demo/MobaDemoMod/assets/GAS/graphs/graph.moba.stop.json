@@ -1,0 +1,85 @@
+[
+  {
+    "id": "graph.moba.stop",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_stop",
+        "action": "Stop",
+        "start": "all_entities",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all_entities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "champions",
+        "op": "QueryFilterTemplate",
+        "template": "moba_hero"
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "stop"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all_entities",
+        "fromPort": "next",
+        "to": "champions"
+      },
+      {
+        "from": "champions",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

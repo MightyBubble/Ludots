@@ -62,7 +62,7 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
 
         _triggerManager.EventSchemas = _schemas;
         _triggerManager.RegisterMapTriggers(CasterMapId(ctx), new Trigger[] { _dispatchProbe });
-        ctx.Api.BindTriggerManager(_triggerManager);
+        ctx.Api.BindTriggerManager(_triggerManager, static () => new ScriptContext());
 
         RegisterCallee();
         RegisterCaller(ctx);

@@ -1,0 +1,139 @@
+[
+  {
+    "id": "tw.campaign.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Campaign.Command",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "gnd",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "gok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "selq",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "gnd"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "next",
+        "to": "gok"
+      },
+      {
+        "from": "gok",
+        "fromPort": "true",
+        "to": "selq"
+      },
+      {
+        "from": "gok",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "selq",
+        "fromPort": "next",
+        "to": "submit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "b"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "gok",
+        "toPort": "condition"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selq",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

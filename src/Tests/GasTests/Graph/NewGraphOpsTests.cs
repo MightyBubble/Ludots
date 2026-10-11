@@ -907,7 +907,7 @@ namespace Ludots.Tests.GAS
             int supportMetricId = metricRegistry.Register("Support", -100, 100, 0);
             int threatMetricId = metricRegistry.Register("Threat", 0, 200, 0);
             int trustedFlagId = flagRegistry.Register("Trusted");
-            var entityQueries = new EntitySetQueryRuntime(world, tagOps, runtime);
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, runtime, new Ludots.Core.Gameplay.Teams.TeamRelationQuery(runtime, new Ludots.Core.Gameplay.Teams.TeamEntityLookup()));
 
             var api = new GasGraphRuntimeApi(
                 world,

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -18,7 +17,6 @@ internal sealed class UxPrototypePanelController
     private readonly UxPrototypeScenarioState _state;
     private ReactivePage<UxPrototypePanelState>? _page;
     private GameEngine? _engine;
-    private ViewModeManager? _viewModeManager;
     private UiSurfaceLeaseHandle _lease;
 
     public UxPrototypePanelController(UxPrototypeScenarioState state)
@@ -26,7 +24,7 @@ internal sealed class UxPrototypePanelController
         _state = state;
     }
 
-    public void MountOrRefresh(UIRoot root, GameEngine engine, ViewModeManager? viewModeManager)
+    public void MountOrRefresh(UIRoot root, GameEngine engine)
     {
         if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
         {
@@ -34,8 +32,7 @@ internal sealed class UxPrototypePanelController
         }
 
         _engine = engine;
-        _viewModeManager = viewModeManager;
-        UxPrototypePanelState nextState = _state.BuildSnapshot(engine, viewModeManager);
+        UxPrototypePanelState nextState = _state.BuildSnapshot(engine);
         if (_page == null)
         {
             var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
@@ -62,7 +59,6 @@ internal sealed class UxPrototypePanelController
         }
 
         _engine = null;
-        _viewModeManager = null;
     }
 
     private UiElementBuilder BuildRoot(ReactiveContext<UxPrototypePanelState> context)
@@ -985,7 +981,6 @@ internal sealed class UxPrototypePanelController
     private void SwitchMode(string modeId)
     {
         _state.SwitchMode(modeId);
-        _viewModeManager?.SwitchTo(modeId);
     }
 
     private void HandleGlobalAction(string tab, string actionId)

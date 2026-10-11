@@ -41,3 +41,28 @@
 .control-image {
   flex-shrink: 0;
 }
+
+.control-button {
+  padding: 4px 10px;
+  border-radius: 5px;
+  background-color: rgb(56, 62, 84);
+  color: rgb(235, 235, 240);
+  font-size: 13px;
+}
+
+.ui-tip {
+  background-color: rgb(24, 27, 38);
+  border: 1px solid rgb(80, 88, 116);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.ui-tip-title {
+  color: rgb(240, 240, 245);
+  font-size: 12px;
+}
+
+.ui-tip-text {
+  color: rgb(190, 196, 210);
+  font-size: 11px;
+}

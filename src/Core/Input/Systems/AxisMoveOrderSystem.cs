@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Client;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 
@@ -110,7 +111,7 @@ namespace Ludots.Core.Input.Systems
 
                 Entity actor = seat.PossessedRep;
                 Vector2 current = _world.Get<WorldPositionCm>(actor).Value.ToVector2();
-                Vector2 direction = Vector2.Normalize(axis);
+                Vector2 direction = ResolveMoveDirection(seat, axis, binding.DirectionMode);
                 Vector2 target = current + (direction * binding.StepDistanceCm);
 
                 var order = new Order
@@ -122,7 +123,7 @@ namespace Ludots.Core.Input.Systems
                 };
                 order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
                 order.Args.Spatial.Mode = OrderCollectionMode.Single;
-                order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
+                order.Args.Spatial.WorldCm = new Vector3(target.X, 0f, target.Y);
 
                 if (_orderQueue.TryEnqueue(in order))
                 {
@@ -179,7 +180,7 @@ namespace Ludots.Core.Input.Systems
             int playerId = soleSeat.PossessedPlayerId;
 
             Vector2 current = _world.Get<WorldPositionCm>(local).Value.ToVector2();
-            Vector2 direction = Vector2.Normalize(axis);
+            Vector2 direction = ResolveMoveDirection(soleSeat, axis, _binding.DirectionMode);
             Vector2 target = current + (direction * _binding.StepDistanceCm);
 
             var order = new Order
@@ -191,7 +192,7 @@ namespace Ludots.Core.Input.Systems
             };
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
-            order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
+            order.Args.Spatial.WorldCm = new Vector3(target.X, 0f, target.Y);
 
             bool submitted;
             if (IsReplicatedClient())
@@ -214,6 +215,28 @@ namespace Ludots.Core.Input.Systems
             {
                 _throttleTicksRemaining = _binding.ThrottleTicks - 1;
             }
+        }
+
+        /// <summary>
+        /// Camera-relative declarations rotate the axis by the seat's view camera yaw (W stays
+        /// screen-up while the camera turns); world-absolute passes the axis through. The seat's
+        /// PresentBinding view is the camera authority — possession may switch to a rep that owns
+        /// no view of its own.
+        /// </summary>
+        private Vector2 ResolveMoveDirection(ClientLocalSeat seat, Vector2 axis, ControlSchemeAxisMoveDirectionMode mode)
+        {
+            if (mode == ControlSchemeAxisMoveDirectionMode.WorldAbsolute)
+            {
+                return Vector2.Normalize(axis);
+            }
+
+            PresentBinding binding = seat.PresentBinding
+                ?? throw new InvalidOperationException(
+                    "axisMove.directionMode=cameraRelative requires the seat's PresentBinding (logic view id).");
+
+            LogicViewRegistry views = ClientLocalSeatAccess.RequireLogicViews(_globals);
+            LogicViewEntry entry = views.Require(binding.LogicViewId);
+            return OrbitCameraDirectionUtil.MoveInputToDirection(entry.Camera.State.Yaw, axis);
         }
 
         private bool IsReplicatedClient() =>

@@ -1,0 +1,15 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.fireball.battle",
+      "bindings": [
+        "SkillQ"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.fireball.cast_q"
+        }
+      ]
+    }
+  ]
+}

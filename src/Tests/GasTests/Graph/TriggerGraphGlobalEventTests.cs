@@ -314,7 +314,7 @@ namespace Ludots.Tests.Gas.Graph
 
             var manager = new TriggerManager { EventSchemas = BuildRegistry() };
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
 
             var globalListener = new RecordingTrigger(new EventKey(GlobalEventName));
             manager.RegisterGlobalTriggers(mapId, new Trigger[] { globalListener });

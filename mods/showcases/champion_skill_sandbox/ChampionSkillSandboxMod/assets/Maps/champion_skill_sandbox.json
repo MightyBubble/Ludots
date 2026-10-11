@@ -26,7 +26,17 @@
         "Name": {
           "Value": "Blue Team Anchor"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "champion-sandbox-team-blue-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "champion-sandbox-team-red-anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_participant_anchor",
@@ -44,7 +54,17 @@
         "Name": {
           "Value": "Red Team Anchor"
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "champion-sandbox-team-red-anchor",
+          "Type": "Friendly"
+        },
+        {
+          "To": "champion-sandbox-team-blue-anchor",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "champion_skill_sandbox_ezreal",
@@ -313,39 +333,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "champion-sandbox-player-blue-anchor"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": [
-      {
-        "PlayerId": 1,
-        "TeamId": 1,
-        "TypeId": "ChampionSkillSandbox.Participant",
-        "Symmetric": false
-      }
-    ]
-  }
+  ]
 }

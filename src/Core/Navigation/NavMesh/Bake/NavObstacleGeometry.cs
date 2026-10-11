@@ -123,6 +123,60 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return false;
         }
 
+        public static bool IsPointBlockedByObstacles(int xcm, int zcm, NavObstacleSet obstacles, string layerId)
+        {
+            if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0)
+            {
+                return false;
+            }
+
+            RequireLayerId(layerId);
+            for (int i = 0; i < obstacles.Obstacles.Count; i++)
+            {
+                NavObstacle obstacle = obstacles.Obstacles[i]
+                    ?? throw new InvalidOperationException($"NavObstacleSet.obstacles[{i}] is null.");
+                if (!obstacle.Enabled)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(obstacle.LayerId, layerId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                switch (obstacle.Kind)
+                {
+                    case NavObstacleKind.Circle:
+                        if (obstacle.RadiusCm <= 0)
+                        {
+                            throw new InvalidOperationException("Circle nav obstacle radiusCm must be > 0.");
+                        }
+
+                        if (DistanceSq(xcm, zcm, obstacle.Center.Xcm, obstacle.Center.Zcm) <= (long)obstacle.RadiusCm * obstacle.RadiusCm)
+                        {
+                            return true;
+                        }
+                        break;
+                    case NavObstacleKind.Polygon:
+                        if (obstacle.Points == null || obstacle.Points.Count < 3)
+                        {
+                            throw new InvalidOperationException("Polygon nav obstacle requires at least 3 points.");
+                        }
+
+                        if (PointInPolygon(xcm, zcm, obstacle.Points))
+                        {
+                            return true;
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Nav obstacle '{obstacle.Id}' kind '{obstacle.Kind}' is not supported by navmesh bake.");
+                }
+            }
+
+            return false;
+        }
+
         private static bool TriangleIntersectsCircle(
             int ax,
             int az,

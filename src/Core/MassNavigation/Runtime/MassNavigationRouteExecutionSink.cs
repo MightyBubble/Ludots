@@ -29,6 +29,8 @@ public readonly struct MassNavigationRouteSinkResult
         Vector2 waypointWorldCm,
         int waypointCount,
         int errorCode,
+        Vector2 startWorldCm = default,
+        Vector2 destinationWorldCm = default,
         int orderToken = 0,
         int agentIndex = -1)
     {
@@ -38,6 +40,8 @@ public readonly struct MassNavigationRouteSinkResult
         WaypointWorldCm = waypointWorldCm;
         WaypointCount = waypointCount;
         ErrorCode = errorCode;
+        StartWorldCm = startWorldCm;
+        DestinationWorldCm = destinationWorldCm;
         OrderToken = orderToken;
         AgentIndex = agentIndex;
     }
@@ -48,6 +52,8 @@ public readonly struct MassNavigationRouteSinkResult
     public Vector2 WaypointWorldCm { get; }
     public int WaypointCount { get; }
     public int ErrorCode { get; }
+    public Vector2 StartWorldCm { get; }
+    public Vector2 DestinationWorldCm { get; }
     public int OrderToken { get; }
     public int AgentIndex { get; }
     public bool Applied => Status == MassNavigationRouteSinkStatus.Applied;
@@ -69,6 +75,7 @@ public sealed class MassNavigationRouteExecutionSink
     private readonly RouteState[] _applyRoutes;
     private readonly Vector2[] _applyWaypoints;
     private readonly bool[] _applyResetRecovery;
+    private readonly bool[] _applyCorridorCorrected;
     private readonly int[] _snapshotProfileIds;
     private readonly string?[] _snapshotAgentTypeIds;
     private readonly int[] _snapshotPointCounts;
@@ -110,6 +117,7 @@ public sealed class MassNavigationRouteExecutionSink
         _applyRoutes = new RouteState[routeStateCapacity];
         _applyWaypoints = new Vector2[routeStateCapacity];
         _applyResetRecovery = new bool[routeStateCapacity];
+        _applyCorridorCorrected = new bool[routeStateCapacity];
         _snapshotProfileIds = new int[routeStateCapacity];
         _snapshotAgentTypeIds = new string?[routeStateCapacity];
         _snapshotPointCounts = new int[routeStateCapacity];
@@ -477,6 +485,13 @@ public sealed class MassNavigationRouteExecutionSink
                 return result;
             }
 
+            // Corridor correction: the solver integrates position freely (it owns local steering and
+            // avoidance, and must not know about navigation surfaces), so an agent can drift off the
+            // walkable surface between route applies. Pull it back onto the surface here, before the
+            // next waypoint is committed. This is the same constraint Detour's DtPathCorridor imposes
+            // through MovePosition -> MoveAlongSurface.
+            _applyCorridorCorrected[i] = System.Environment.GetEnvironmentVariable("LUDOTS_DISABLE_CORRIDOR") == "1" ? false : TryCorrectAgentToCorridor(simulation, state);
+
             _applyWaypoints[i] = waypoint;
             _applyResetRecovery[i] = resetRecovery;
             lastPrepared = result;
@@ -640,6 +655,49 @@ public sealed class MassNavigationRouteExecutionSink
         state.ForceResetNextApply = false;
     }
 
+    /// <summary>
+    /// Pulls an agent back onto the walkable navigation surface when local steering has carried it
+    /// off. The displacement goes through the solver's external-displacement path so the arrival
+    /// anchors move with the body; otherwise the agent would be treated as having been pushed away
+    /// from its anchor and immediately re-target or snap back.
+    /// </summary>
+    /// <returns>True when the agent was moved.</returns>
+    private bool TryCorrectAgentToCorridor(
+        MassNavigationSimulationRuntime simulation,
+        RouteState state)
+    {
+        if (string.IsNullOrWhiteSpace(state.AgentTypeId))
+        {
+            return false;
+        }
+
+        Vector2 position = simulation.GetAgentWorldPositionCm(state.AgentIndex);
+        int worldXcm = (int)MathF.Round(position.X);
+        int worldZcm = (int)MathF.Round(position.Y);
+
+        if (!_pathService.TrySnapToNavigationSurface(
+                state.AgentTypeId,
+                worldXcm,
+                worldZcm,
+                out int snappedXcm,
+                out int snappedZcm))
+        {
+            return false;
+        }
+
+        float deltaXcm = snappedXcm - position.X;
+        float deltaYcm = snappedZcm - position.Y;
+        if (deltaXcm == 0f && deltaYcm == 0f)
+        {
+            return false;
+        }
+
+        Span<int> indices = stackalloc int[1];
+        indices[0] = state.AgentIndex;
+        simulation.MassNavigationFlow.ApplyExternalDisplacement(indices, deltaXcm, deltaYcm);
+        return true;
+    }
+
     private MassNavigationRouteSinkResult TrySolveRoute(
         MassNavigationSimulationRuntime simulation,
         RouteState state)
@@ -653,6 +711,7 @@ public sealed class MassNavigationRouteExecutionSink
                 default,
                 waypointCount: 0,
                 errorCode: 2,
+                destinationWorldCm: state.DestinationWorldCm,
                 orderToken: state.OrderToken,
                 agentIndex: state.AgentIndex);
         }
@@ -667,9 +726,7 @@ public sealed class MassNavigationRouteExecutionSink
             PathEndpoint.FromWorldCm((int)MathF.Round(state.DestinationWorldCm.X), (int)MathF.Round(state.DestinationWorldCm.Y)),
             new PathBudget(state.MaxExpanded, state.MaxPoints));
 
-        if (!_pathService.TrySolve(in request, out PathResult path) ||
-            path.Status != PathStatus.Found ||
-            !path.Handle.IsValid)
+        if (!_pathService.TrySolve(in request, out PathResult path))
         {
             return new MassNavigationRouteSinkResult(
                 MassNavigationRouteSinkStatus.SolveFailed,
@@ -678,9 +735,48 @@ public sealed class MassNavigationRouteExecutionSink
                 default,
                 waypointCount: 0,
                 path.ErrorCode,
+                startWorldCm,
+                state.DestinationWorldCm,
                 orderToken: state.OrderToken,
                 agentIndex: state.AgentIndex);
         }
+
+        // A Partial result carries a real walkable prefix whose end point is the nearest legal
+        // stand point toward the goal. Execute it rather than treating the order as a failure.
+        bool partial = path.Status == PathStatus.Partial;
+        if (!partial && path.Status != PathStatus.Found)
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.SolveFailed,
+                path.Status,
+                path.ResolvedDomain,
+                default,
+                waypointCount: 0,
+                path.ErrorCode,
+                startWorldCm,
+                state.DestinationWorldCm,
+                orderToken: state.OrderToken,
+                agentIndex: state.AgentIndex);
+        }
+
+        if (!path.Handle.IsValid)
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.SolveFailed,
+                path.Status,
+                path.ResolvedDomain,
+                default,
+                waypointCount: 0,
+                path.ErrorCode,
+                startWorldCm,
+                state.DestinationWorldCm,
+                orderToken: state.OrderToken,
+                agentIndex: state.AgentIndex);
+        }
+
+        Vector2 resolvedGoalWorldCm = partial
+            ? new Vector2(path.ResolvedGoal.X, path.ResolvedGoal.Y)
+            : state.DestinationWorldCm;
 
         EnsureScratch(state.MaxPoints > 0 ? state.MaxPoints : 1);
         bool copied = _pathService.TryCopyPath(in path.Handle, _xScratch, _yScratch, out int count);
@@ -694,6 +790,8 @@ public sealed class MassNavigationRouteExecutionSink
                 default,
                 waypointCount: 0,
                 errorCode: 3,
+                startWorldCm,
+                state.DestinationWorldCm,
                 orderToken: state.OrderToken,
                 agentIndex: state.AgentIndex);
         }
@@ -707,6 +805,8 @@ public sealed class MassNavigationRouteExecutionSink
                 default,
                 waypointCount: 0,
                 errorCode: 4,
+                startWorldCm,
+                state.DestinationWorldCm,
                 orderToken: state.OrderToken,
                 agentIndex: state.AgentIndex);
         }
@@ -722,16 +822,20 @@ public sealed class MassNavigationRouteExecutionSink
         state.CurrentWaypointIndex = 0;
         state.LastAppliedWaypointIndex = -1;
         state.ResolvedDomain = path.ResolvedDomain;
+        state.ResolvedGoalWorldCm = resolvedGoalWorldCm;
+        state.IsPartialRoute = partial;
         state.RouteReady = true;
         state.ForceResetNextApply = true;
         AdvanceWaypointCursor(simulation, state);
         return new MassNavigationRouteSinkResult(
             MassNavigationRouteSinkStatus.Applied,
-            path.Status,
+            partial ? PathStatus.Partial : path.Status,
             path.ResolvedDomain,
             state.CurrentWaypointWorldCm,
             count,
-            errorCode: 0,
+            errorCode: partial ? path.ErrorCode : 0,
+            startWorldCm,
+            resolvedGoalWorldCm,
             orderToken: state.OrderToken,
             agentIndex: state.AgentIndex);
     }
@@ -919,6 +1023,14 @@ public sealed class MassNavigationRouteExecutionSink
         public int ProfileId { get; set; }
         public string? AgentTypeId { get; set; }
         public Vector2 DestinationWorldCm { get; set; }
+
+        /// <summary>
+        /// Where the active route will actually end: equal to <see cref="DestinationWorldCm"/> for a
+        /// fully reachable goal, or the nearest legal stand point for a partial route.
+        /// </summary>
+        public Vector2 ResolvedGoalWorldCm { get; set; }
+
+        public bool IsPartialRoute { get; set; }
         public int MaxExpanded { get; set; }
         public int MaxPoints { get; set; }
         public int[] PointXCm;

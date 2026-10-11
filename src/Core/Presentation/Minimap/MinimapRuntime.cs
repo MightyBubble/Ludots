@@ -630,22 +630,6 @@ namespace Ludots.Core.Presentation.Minimap
             _viewportInitialized = true;
         }
 
-        public void CenterOnEntity(GameEngine engine, Entity entity)
-        {
-            ArgumentNullException.ThrowIfNull(engine);
-            if (entity == Entity.Null)
-            {
-                return;
-            }
-
-            if (TryResolveFollowPosition(engine, entity, out float worldXcm, out float worldYcm))
-            {
-                _centerXcm = worldXcm;
-                _centerYcm = worldYcm;
-                _viewportInitialized = true;
-            }
-        }
-
         public void ApplyWheelZoom(float wheelDelta)
         {
             ApplyWheelZoom(wheelDelta, default, useAnchor: false);
@@ -702,30 +686,6 @@ namespace Ludots.Core.Presentation.Minimap
                 _rtsZoomResetPending = false;
             }
 
-            _viewportInitialized = true;
-        }
-
-        public void CycleZoom(int delta)
-        {
-            if (delta == 0)
-            {
-                return;
-            }
-
-            SetZoomNormalized(_zoomNormalized + (delta * _config.ButtonZoomNormalizedStep));
-        }
-
-        public void PanNormalized(float dx, float dy)
-        {
-            if (dx == 0f && dy == 0f)
-            {
-                return;
-            }
-
-            float step = _halfExtentCm * 1.1f;
-            Vector2 delta = (_mapRight * (dx * step)) + (_mapUp * (dy * step));
-            _centerXcm += delta.X;
-            _centerYcm += delta.Y;
             _viewportInitialized = true;
         }
 

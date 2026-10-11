@@ -110,17 +110,16 @@ internal static class MassNavigationScenarioBootstrap
             ?? throw new InvalidOperationException("MassNavigation scenario requires RelationshipRuntime.");
         RelationshipTypeRegistry types = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
             ?? throw new InvalidOperationException("MassNavigation scenario requires RelationshipTypeRegistry.");
-        for (int a = 0; a < teamIds.Length; a++)
+        for (int i = 0; i < config.TeamRelationships.Count; i++)
         {
-            for (int b = 0; b < teamIds.Length; b++)
+            MassNavigationTeamRelationConfig relation = config.TeamRelationships[i];
+            Entity teamA = teamDomains[RequireScenarioTeamIndex(teamIds, relation.TeamA)];
+            Entity teamB = teamDomains[RequireScenarioTeamIndex(teamIds, relation.TeamB)];
+            int relationTypeId = types.GetId(relation.Relation);
+            relationships.EnsureLink(teamA, teamB, relationTypeId);
+            if (relation.Symmetric && teamA != teamB)
             {
-                if (a == b)
-                {
-                    continue;
-                }
-
-                string stance = ResolveConfiguredStance(config.TeamRelationships, teamIds[a], teamIds[b]);
-                relationships.EnsureLink(teamDomains[a], teamDomains[b], types.GetId(stance));
+                relationships.EnsureLink(teamB, teamA, relationTypeId);
             }
         }
     }
@@ -198,19 +197,16 @@ internal static class MassNavigationScenarioBootstrap
         return resolved;
     }
 
-    private static string ResolveConfiguredStance(TeamConfig config, int sourceTeamId, int targetTeamId)
+    private static int RequireScenarioTeamIndex(ReadOnlySpan<int> scenarioTeamIds, int teamId)
     {
-        for (int i = 0; i < config.Relationships.Count; i++)
+        int index = IndexOfScenarioTeam(scenarioTeamIds, teamId);
+        if (index < 0)
         {
-            RelationshipEntry relation = config.Relationships[i];
-            if (relation.TeamA == sourceTeamId && relation.TeamB == targetTeamId ||
-                relation.Symmetric && relation.TeamA == targetTeamId && relation.TeamB == sourceTeamId)
-            {
-                return relation.Attitude;
-            }
+            throw new InvalidOperationException(
+                $"MassNavigation teamRelationships references team {teamId}, which is not a scenario team.");
         }
 
-        return config.DefaultRelationship;
+        return index;
     }
 
     private static int IndexOfScenarioTeam(ReadOnlySpan<int> scenarioTeamIds, int teamId)

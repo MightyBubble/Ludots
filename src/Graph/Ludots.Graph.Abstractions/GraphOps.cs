@@ -374,7 +374,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Direct owned-collection write: owner = caster (the writing rep), entity list = the
         /// graph's current query result set (s.Targets), I[B] = op (0=replace, 1=add,
         /// 2=subtract, computed in-graph), Imm = collection key symbol patched to its key id.
-        /// Set semantics execute in the CollectionWrite primitive; membership change events
+        /// Set semantics execute in CollectionApplier; membership change events
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
@@ -427,9 +427,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// run — a false condition fails closed by name. E[A] (target port, optional) carries a
         /// picked entity for entity-target facts; absent or null means ground-only facts. The
         /// order kernel drains the buffer in its own system-group phase: the op never routes,
-        /// reads collections, or touches the OrderQueue. Optional collectionKey is not read
-        /// here; context install copies it onto the rep's interaction instance, and the drain
-        /// reads that instance.
+        /// reads collections, or touches the OrderQueue.
         /// </summary>
         SubmitCommandIntent = 483,
 
@@ -440,8 +438,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// resolved this run and carries the ground point. Imm = the cast order-type key symbol
         /// (e.g. "castAbility"), resolved by the drain through the OrderTypeRegistry. Actors are
         /// the rep's active-context-declared active collection members — same §12 resolution as
-        /// command intents. Optional collectionKey (ImmF after patch) is copied onto the
-        /// interaction instance at context install; the op does not read it.
+        /// command intents.
         /// </summary>
         SubmitCast = 484,
 
@@ -516,6 +513,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ReadCalendarDaysUntilPhase = 527,
         /// <summary>I[Dst] = I[A] - I[B].</summary>
         SubInt = 528,
+
+        /// <summary>
+        /// Answer the response-chain prompt waiting on the caster's player (Caster = the rep the
+        /// prompt context is mounted on). Imm = response-chain order type id (semantic key
+        /// resolved at patch time). Actor / target / context and the offered effect come from
+        /// the open prompt, never from graph registers.
+        /// </summary>
+        SubmitResponseChainOrder = 529,
+
+        /// <summary>
+        /// Replace the local camera stack with the virtual camera named by Imm (config key id of
+        /// a <c>Camera/virtual_cameras.json</c> entry). Follow kind and collection come from that
+        /// definition; a collection follow reads the caster's collection.
+        /// </summary>
+        ActivateVirtualCamera = 530,
 
     }
 

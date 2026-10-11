@@ -24,6 +24,10 @@ public sealed class CapabilityStandardVirtualCameraShowcaseModEntry : IMod
                 new CapabilityStandardVirtualCameraAvatarMoveSystem(engine),
                 SystemGroup.InputCollection);
 
+            engine.RegisterSystem(
+                new CapabilityStandardVirtualCameraModeSystem(engine.World, engine.GlobalContext),
+                SystemGroup.LocalInput);
+
             return Task.CompletedTask;
         });
 

@@ -496,7 +496,7 @@ namespace Ludots.Tests.Gas.Graph
             using var world = World.Create();
             Entity caster = world.Create();
             var api = new GasGraphRuntimeApi(world);
-            api.BindTriggerManager(manager);
+            api.BindTriggerManager(manager, static () => new ScriptContext());
             int graphId = GraphIdRegistry.GetId(TargetGraphId);
             ExecuteGraph(programs, graphId, world, caster, api, mapId);
             return probe;

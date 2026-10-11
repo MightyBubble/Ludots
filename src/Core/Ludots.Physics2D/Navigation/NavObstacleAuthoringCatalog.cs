@@ -431,11 +431,6 @@ public static class NavObstacleAuthoringCatalog
         {
             target.ContinuousHeightmap = source.ContinuousHeightmap;
         }
-
-        if (source.ParticipantRelationships != null)
-        {
-            target.ParticipantRelationships = source.ParticipantRelationships;
-        }
     }
 
     private static bool MapFileExists(string rootPath, string mapId)

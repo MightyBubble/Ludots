@@ -291,7 +291,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         RequireInputAction(bindings.ConfirmActionId);
         RequireInputAction(bindings.CommandActionId);
-        RequireInputAction(bindings.PointerPositionActionId);
+        RequireInputAction(ReservedInputActionIds.PointerPos);
         RequireInputAction(_frontline.ReadyActionId);
         RequireInputAction("SkillQ");
         RequireInputAction(CommandSourceModifierActionIds.Additive);
@@ -1647,7 +1647,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         if (screen.HasValue)
         {
             RequireFiniteScreenPoint(screen.Value, actionName);
-            _input!.InjectAction(_bindings!.PointerPositionActionId, new Vector3(screen.Value.X, screen.Value.Y, 0f));
+            _input!.InjectAction(ReservedInputActionIds.PointerPos, new Vector3(screen.Value.X, screen.Value.Y, 0f));
         }
         if (additive)
         {
@@ -1702,7 +1702,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             if (_gesture.Screen.HasValue)
             {
                 Vector2 screen = _gesture.Screen.Value;
-                _input.InjectAction(_bindings!.PointerPositionActionId, new Vector3(screen.X, screen.Y, 0f));
+                _input.InjectAction(ReservedInputActionIds.PointerPos, new Vector3(screen.X, screen.Y, 0f));
             }
             _input.InjectButtonRelease(_gesture.ActionId);
             if (_gesture.Additive)

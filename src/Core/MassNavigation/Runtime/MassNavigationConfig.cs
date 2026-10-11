@@ -20,7 +20,7 @@ public sealed class MassNavigationConfig
     public MassNavigationScenarioRuntimeConfig ScenarioRuntime { get; set; } = new();
     public MassNavigationCadenceConfig Cadence { get; set; } = new();
     public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
-    public TeamConfig TeamRelationships { get; set; } = new();
+    public List<MassNavigationTeamRelationConfig> TeamRelationships { get; set; } = new();
     public MassNavigationRelationshipPolicyConfig RelationshipPolicy { get; set; } = new();
     public MassNavigationFlowTuning Flow { get; set; } = new();
     public MassNavigationFlowArrivalTuning Arrival { get; set; } = new();
@@ -203,9 +203,17 @@ public sealed class MassNavigationConfig
         }
 
         JsonElement relationships = RequireProperty(root, "teamRelationships");
-        RequireProperty(relationships, "defaultRelationship");
-        RequireProperty(relationships, "relationships");
-        RequireProperties(RequireProperty(root, "relationshipPolicy"), "cooperativeStance");
+        if (relationships.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("MassNavigation config teamRelationships must be an explicit array of team relation edges.");
+        }
+
+        foreach (JsonElement relation in relationships.EnumerateArray())
+        {
+            RequireProperties(relation, "teamA", "teamB", "relation", "symmetric");
+        }
+
+        RequireProperties(RequireProperty(root, "relationshipPolicy"), "cooperativeRelation");
         RequireProperties(
             RequireProperty(root, "streaming"),
             "retainSeconds",
@@ -393,7 +401,10 @@ public sealed class MassNavigationConfig
         World.Validate(Solver);
         ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, Streaming);
 
-        ValidateRelationships();
+        if (TeamRelationships == null)
+        {
+            throw new InvalidOperationException("MassNavigation config requires an explicit teamRelationships array.");
+        }
 
         var knownTeams = new HashSet<int>(Scenario.Teams.Length);
         for (int i = 0; i < Scenario.Teams.Length; i++)
@@ -401,52 +412,42 @@ public sealed class MassNavigationConfig
             knownTeams.Add(Scenario.Teams[i].Id);
         }
 
-        for (int i = 0; i < TeamRelationships.Relationships.Count; i++)
+        for (int i = 0; i < TeamRelationships.Count; i++)
         {
-            RelationshipEntry relation = TeamRelationships.Relationships[i];
+            MassNavigationTeamRelationConfig relation = TeamRelationships[i]
+                ?? throw new InvalidOperationException($"MassNavigation config teamRelationships[{i}] is null.");
             if (!knownTeams.Contains(relation.TeamA) || !knownTeams.Contains(relation.TeamB))
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] references an unknown team.");
+                    $"MassNavigation config teamRelationships[{i}] [{relation.TeamA},{relation.TeamB}] references an unknown team.");
             }
 
-            if (string.IsNullOrWhiteSpace(relation.Attitude))
+            if (string.IsNullOrWhiteSpace(relation.Relation))
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] requires a stance key.");
+                    $"MassNavigation config teamRelationships[{i}] [{relation.TeamA},{relation.TeamB}] requires a relationship type name.");
             }
-        }
-    }
-
-    private void ValidateRelationships()
-    {
-        if (TeamRelationships == null)
-        {
-            throw new InvalidOperationException("MassNavigation config requires an explicit teamRelationships section.");
-        }
-
-        if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship))
-        {
-            throw new InvalidOperationException(
-                "MassNavigation config teamRelationships.defaultRelationship requires a stance key.");
-        }
-
-        if (TeamRelationships.Relationships == null)
-        {
-            throw new InvalidOperationException("MassNavigation config requires teamRelationships.relationships as an explicit array.");
         }
     }
 }
 
+public sealed class MassNavigationTeamRelationConfig
+{
+    public int TeamA { get; set; }
+    public int TeamB { get; set; }
+    public string Relation { get; set; } = string.Empty;
+    public bool Symmetric { get; set; }
+}
+
 public sealed class MassNavigationRelationshipPolicyConfig
 {
-    public string CooperativeStance { get; set; } = string.Empty;
+    public string CooperativeRelation { get; set; } = string.Empty;
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(CooperativeStance))
+        if (string.IsNullOrWhiteSpace(CooperativeRelation))
         {
-            throw new InvalidOperationException("MassNavigation relationshipPolicy.cooperativeStance must be explicit.");
+            throw new InvalidOperationException("MassNavigation relationshipPolicy.cooperativeRelation must be explicit.");
         }
     }
 }

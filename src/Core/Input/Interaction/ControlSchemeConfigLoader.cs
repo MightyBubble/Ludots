@@ -137,6 +137,13 @@ namespace Ludots.Core.Input.Interaction
                     {
                         throw new InvalidOperationException($"{path}.axisMove.stepDistanceCm must be positive.");
                     }
+
+                    if (scheme.AxisMove.DirectionMode == ControlSchemeAxisMoveDirectionMode.None)
+                    {
+                        throw new InvalidOperationException(
+                            $"{path}.axisMove.directionMode must be explicitly declared (worldAbsolute | cameraRelative); " +
+                            "an unstated reference frame is authoring debt, not a default.");
+                    }
                 }
             }
 

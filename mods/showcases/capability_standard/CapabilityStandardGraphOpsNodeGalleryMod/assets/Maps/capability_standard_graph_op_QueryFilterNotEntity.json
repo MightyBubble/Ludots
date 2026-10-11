@@ -38,7 +38,17 @@
         "Team": {
           "Id": 1
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "caster",
+          "Type": "Friendly"
+        },
+        {
+          "To": "north",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "ally",
@@ -84,7 +94,17 @@
         "Team": {
           "Id": 2
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "north",
+          "Type": "Friendly"
+        },
+        {
+          "To": "caster",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "hexN",

@@ -8,10 +8,7 @@
   "commandSource": {
     "targetFilter": {
       "relationFilter": "All"
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "massNavigationMove"
-    ]
+    }
   },
   "presentation": {
     "cameraCulling": {
@@ -39,7 +36,6 @@
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,

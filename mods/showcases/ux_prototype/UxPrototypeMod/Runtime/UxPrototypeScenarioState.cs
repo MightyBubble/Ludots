@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Arch.Core;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -421,12 +420,11 @@ internal sealed class UxPrototypeScenarioState
         AddEvent($"Faction operation focus switched to {CultureName(_factionTab)}.");
     }
 
-    public UxPrototypePanelState BuildSnapshot(GameEngine engine, ViewModeManager? viewModeManager)
+    public UxPrototypePanelState BuildSnapshot(GameEngine engine)
     {
-        string activeModeId = viewModeManager?.ActiveMode?.Id ?? _modeId;
-        if (UxPrototypeIds.IsPrototypeMode(activeModeId))
+        if (!UxPrototypeIds.IsPrototypeMode(_modeId))
         {
-            _modeId = activeModeId;
+            _modeId = UxPrototypeIds.PlayModeId;
         }
 
         Entity selectedEntity = ResolveSelectedEntity(engine);

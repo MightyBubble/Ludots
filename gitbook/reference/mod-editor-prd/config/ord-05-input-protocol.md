@@ -4,7 +4,7 @@
 
 ## 1. 示例配置
 
-协议无独立配置文件，门声明在能力执行时间轴（真实例，`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/abilities.json`）：
+没有单独的配置文件，门写在能力执行时间轴里（真实例，`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/abilities.json`）：
 
 ```json
 { "id": "Ability.Champion.SpellEngineer.CataclysmRing",
@@ -15,40 +15,31 @@
     { "kind": "End", "tick": 0 } ] } }
 ```
 
-输入门教学骨架（仓库尚无真实用例）：
-
-```json
-{ "kind": "InputGate", "tick": 0, "payloadA": 7 }
-```
-
 ## 2. 字段与行为
 
 | 字段 | 这样配会产生什么效果 |
 |---|---|
-| `kind: "InputGate"` | 等待输入响应；命中且目标存活则回填实例目标与目标上下文 |
-| `kind: "EventGate"` | 等待事件标记命中或到期放行 |
-| `kind: "TargetCollectionGate"` | 第三种门位，与上述共用等待状态机 |
-| `payloadA`（InputGate） | 请求号来源，**必填**；缺省即启动失败 |
-| `payloadA`（EventGate） | 等待的事件标记 id |
+| `kind: "EventGate"` | 走到这一步就停下，等事件标记出现或超时 |
+| `tag`（EventGate） | 要等的事件标记 |
+| `payloadA`（EventGate） | 超时 tick 数；0 表示一直等 |
 | `tick` | 门在时间轴上的开启点 |
 
-响应生产者为确认类输入动作（`Confirm` 按下帧回填），由输入系统自动完成。
+玩家选目标、确认这类输入不写在时间轴里，写在交互上下文的图里（见 ord-06），图算完再下施法命令，目标随命令进来。
 
 ## 3. 文件结构
 
-门是能力表 `GAS/abilities.json`（分片目录 `GAS/abilities/`）exec 时间轴的 item（能力卷见 ab-02）；请求/响应队列容量为引擎常量（见 reference）。
+门是能力表 `GAS/abilities.json`（分片目录 `GAS/abilities/`）exec 时间轴的一步（能力卷见 ab-02）。
 
 ## 4. 运行时加载效果
 
-能力加载时校验 InputGate 的 `payloadA` 显式存在；运行期进门构造请求（请求号 = payloadA，非零优先于订单号）入队置等待。
+加载时逐步检查步骤类型，不认识的类型直接报错；运行期走到事件门进入等待，放行后继续后面的步骤。
 
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
 |---|---|
-| InputGate 缺 `payloadA` | 启动失败，指明能力与 item 序号 |
-| 应答目标已消亡 | 不回填，等待继续 |
-| 响应请求号与等待号不符 | 忽略该响应，不误配 |
+| 写了 `InputGate` / `TargetCollectionGate` 或其他未知类型 | 启动失败，指明能力与步骤序号 |
+| 等待期间一直没有事件、也没配超时 | 一直等，直到订单被打断或替换 |
 
 ## 6. 实例
 

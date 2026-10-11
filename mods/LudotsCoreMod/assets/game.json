@@ -14,6 +14,10 @@
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
+    "teamRelationColors": {
+      "friendlyRelation": "Friendly",
+      "hostileRelation": "Hostile"
+    },
     "gpuSkinned": {
       "maxBatches": 64,
       "maxUniquePoses": 128,
@@ -46,7 +50,6 @@
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
-      "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "modeToggleEnabled": true,
       "rotateToggleEnabled": true,
@@ -54,7 +57,10 @@
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "actions": {
+        "zoom": "Minimap.Zoom"
+      }
     }
   },
   "constants": {
@@ -73,6 +79,11 @@
       "health": "Health"
     }
   },
+  "interactionActions": {
+    "confirmActionId": "Select.Begin",
+    "commandActionId": "Command",
+    "cancelActionId": "Cancel"
+  },
   "commandSource": {
     "targetFilter": {
       "relationFilter": "All"
@@ -80,9 +91,6 @@
     "acquisition": {
       "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
-    },
-    "movePathPreviewOrderTypeKeys": [
-      "moveTo"
-    ]
+    }
   }
 }

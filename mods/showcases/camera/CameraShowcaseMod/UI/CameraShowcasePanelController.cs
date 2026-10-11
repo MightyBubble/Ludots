@@ -1,5 +1,4 @@
-using CoreInputMod;
-using CoreInputMod.ViewMode;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
@@ -15,13 +14,13 @@ namespace CameraShowcaseMod.UI
     {
         private UiSurfaceLeaseHandle _lease;
 
-        public void PublishOrRefresh(GameEngine engine, string mapId, ViewModeManager? viewModeManager, IUiSurfaceHost surfaceHost)
+        public void PublishOrRefresh(GameEngine engine, string mapId, IUiSurfaceHost surfaceHost)
         {
             surfaceHost.Publish(
                 surfaceHost.EnsureLease(
                     ref _lease,
                     new UiSurfaceLeaseRequest("Showcase.Camera.Panel", UiSurfaceSegment.Overlay, priority: 40)),
-                UiSurfaceContribution.FromBuilder(() => BuildRoot(engine, mapId, viewModeManager)));
+                UiSurfaceContribution.FromBuilder(() => BuildRoot(engine, mapId)));
         }
 
         public void ClearIfOwned(IUiSurfaceHost surfaceHost)
@@ -32,15 +31,16 @@ namespace CameraShowcaseMod.UI
             }
         }
 
-        private UiElementBuilder BuildRoot(GameEngine engine, string mapId, ViewModeManager? viewModeManager)
+        private UiElementBuilder BuildRoot(GameEngine engine, string mapId)
         {
-            string activeMode = CoreInputRuntimeServices.GetActiveViewModeId(engine) ?? "map-default";
+            var brain = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain;
+            string activeMode = brain != null && brain.HasActiveCamera ? brain.ActiveCameraId : "map-default";
 
             return Ui.Card(
                 Ui.Text("Camera Showcase").FontSize(22f).Bold().Color("#F7FAFF"),
                 Ui.Text(CameraShowcaseIds.DescribeMap(mapId)).FontSize(14f).Color("#D0D8E6").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Map: {mapId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Mode: {activeMode}").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Camera: {activeMode}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text("Maps").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                     BuildMapButton("Hub", mapId == CameraShowcaseIds.HubMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.HubMapId)),
@@ -48,12 +48,12 @@ namespace CameraShowcaseMod.UI
                     BuildMapButton("Command", mapId == CameraShowcaseIds.CommandSourceFollowMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.CommandSourceFollowMapId)),
                     BuildMapButton("Bootstrap", mapId == CameraShowcaseIds.BootstrapMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.BootstrapMapId))
                 ).Wrap().Gap(8f),
-                Ui.Text("View Modes").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text("Cameras").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
-                    BuildActionButton("Tactical", activeMode == CameraShowcaseIds.TacticalModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.TacticalModeId)),
-                    BuildActionButton("Follow", activeMode == CameraShowcaseIds.FollowModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.FollowModeId)),
-                    BuildActionButton("Inspect", activeMode == CameraShowcaseIds.InspectModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.InspectModeId)),
-                    BuildActionButton("Command", activeMode == CameraShowcaseIds.CommandSourceFollowModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.CommandSourceFollowModeId))
+                    BuildActionButton("Tactical", activeMode == CameraShowcaseIds.TacticalProfileId, ctx => Runtime.CameraShowcaseCameras.SwitchToProfile(engine, CameraShowcaseIds.TacticalProfileId)),
+                    BuildActionButton("Follow", activeMode == CameraShowcaseIds.FollowProfileId, ctx => Runtime.CameraShowcaseCameras.SwitchToProfile(engine, CameraShowcaseIds.FollowProfileId)),
+                    BuildActionButton("Inspect", activeMode == CameraShowcaseIds.InspectProfileId, ctx => Runtime.CameraShowcaseCameras.SwitchToProfile(engine, CameraShowcaseIds.InspectProfileId)),
+                    BuildActionButton("Command", activeMode == CameraShowcaseIds.CommandSourceFollowProfileId, ctx => RequestCommandSourceFollow(engine))
                 ).Wrap().Gap(8f),
                 Ui.Text("Runtime").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
@@ -104,6 +104,15 @@ namespace CameraShowcaseMod.UI
             }
 
             engine.LoadMap(mapId);
+        }
+
+        private static void RequestCommandSourceFollow(GameEngine engine)
+        {
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out var owner) && owner != Arch.Core.Entity.Null)
+            {
+                Runtime.CameraShowcaseCameras.RequestCollectionFollowCamera(
+                    engine, CameraShowcaseIds.CommandSourceFollowProfileId, owner);
+            }
         }
 
         private static void ActivateVirtualCamera(GameEngine engine, string virtualCameraId)

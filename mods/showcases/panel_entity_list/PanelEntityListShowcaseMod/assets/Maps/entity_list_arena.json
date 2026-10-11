@@ -19,7 +19,17 @@
   "Entities": [
     {
       "InstanceId": "roster-commander",
-      "Template": "roster_commander"
+      "Template": "roster_commander",
+      "Relations": [
+        {
+          "To": "roster-commander",
+          "Type": "Friendly"
+        },
+        {
+          "To": "roster-enemy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "InstanceId": "roster-medic",
@@ -39,7 +49,17 @@
     },
     {
       "InstanceId": "roster-enemy",
-      "Template": "roster_enemy"
+      "Template": "roster_enemy",
+      "Relations": [
+        {
+          "To": "roster-enemy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "roster-commander",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -59,33 +79,6 @@
       "RepresentativeInstanceId": "roster-commander"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  },
   "DefaultCamera": {
     "TargetXCm": 0,
     "TargetYCm": 0,

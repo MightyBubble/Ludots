@@ -11,7 +11,17 @@
   "Entities": [
     {
       "Template": "tcg_hero",
-      "InstanceId": "tcg-modify-hero"
+      "InstanceId": "tcg-modify-hero",
+      "Relations": [
+        {
+          "To": "tcg-modify-hero",
+          "Type": "Friendly"
+        },
+        {
+          "To": "tcg-modify-enemy",
+          "Type": "Hostile"
+        }
+      ]
     },
     {
       "Template": "tcg_enemy",
@@ -23,7 +33,17 @@
             "Y": 0
           }
         }
-      }
+      },
+      "Relations": [
+        {
+          "To": "tcg-modify-enemy",
+          "Type": "Friendly"
+        },
+        {
+          "To": "tcg-modify-hero",
+          "Type": "Hostile"
+        }
+      ]
     }
   ],
   "Teams": [
@@ -35,32 +55,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "tcg-modify-enemy"
     }
-  ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 1,
-        "TypeId": "TcgDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 2,
-        "TypeId": "TcgDemo.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "TcgDemo.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ],
-    "Players": [],
-    "PlayerTeams": []
-  }
+  ]
 }

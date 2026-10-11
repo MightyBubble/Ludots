@@ -1,0 +1,9 @@
+{
+  "actions": [
+    {
+      "id": "ButtonCommands.Cast",
+      "type": "Button"
+    }
+  ],
+  "contexts": []
+}
