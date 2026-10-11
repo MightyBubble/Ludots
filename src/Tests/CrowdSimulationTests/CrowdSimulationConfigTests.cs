@@ -19,7 +19,7 @@ public class CrowdSimulationConfigTests
     {
         var runtime = TestDefaults.Assemble();
 
-        Assert.That(runtime.Version, Is.EqualTo(7));
+        Assert.That(runtime.Sim.SimSecondsPerTickSecond, Is.EqualTo(Fix64.FromInt(10)));
         Assert.That(runtime.NavCellsPerSide, Is.EqualTo(256));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
         Assert.That(runtime.FixedHz, Is.EqualTo(30));
@@ -189,13 +189,13 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void VersionMismatch_IsRejected()
+    public void RetiredVersionKey_IsRejected()
     {
         var json = TestDefaults.DefaultConfigJson();
         json["version"] = 6;
-        var config = CrowdSimulationConfig.Load(json);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("无迁移"));
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain("已删除 version"));
+        Assert.That(ex.Message, Does.Contain("配置不再带版本号，由严格 schema 与 mod.json semver 管理"));
     }
 
     [Test]
@@ -282,18 +282,18 @@ public class CrowdSimulationConfigTests
     {
         var runtime = TestDefaults.Assemble();
         var templates = runtime.Structures.Templates;
-        // 与参考端默认表同序同 id(S7 真值脚本按 id 引用,追加模板在表尾)
         Assert.That(templates.Select(t => t.Id).ToArray(), Is.EqualTo(
-            new[] { "building", "bridge", "road", "flood", "fire", "s7barrier" }));
-        Assert.That(templates[0].Blocker, Is.True);
-        Assert.That(templates[0].AreaIndex, Is.Null);
-        Assert.That(templates[1].Layered, Is.True);
-        Assert.That(templates[1].AreaIndex, Is.Not.Null);
-        Assert.That(templates[2].Priority, Is.EqualTo(10));
-        Assert.That(templates[4].LifetimeSec, Is.Not.Null);
-        Assert.That(templates[5].Blocker, Is.True);
-        Assert.That(templates[5].LifetimeSec, Is.EqualTo(Fix64.FromDouble(4)));
-        Assert.That(templates[5].LifetimeSecRaw, Is.EqualTo(4.0));
+            new[] { "bridge", "building", "fire", "flood", "road", "s7barrier" }));
+        var byId = templates.ToDictionary(t => t.Id);
+        Assert.That(byId["building"].Blocker, Is.True);
+        Assert.That(byId["building"].AreaIndex, Is.Null);
+        Assert.That(byId["bridge"].Layered, Is.True);
+        Assert.That(byId["bridge"].AreaIndex, Is.Not.Null);
+        Assert.That(byId["road"].Priority, Is.EqualTo(10));
+        Assert.That(byId["fire"].LifetimeSec, Is.Not.Null);
+        Assert.That(byId["s7barrier"].Blocker, Is.True);
+        Assert.That(byId["s7barrier"].LifetimeSec, Is.EqualTo(Fix64.FromDouble(4)));
+        Assert.That(byId["s7barrier"].LifetimeSecRaw, Is.EqualTo(4.0));
     }
 
     [Test]
@@ -301,9 +301,9 @@ public class CrowdSimulationConfigTests
     {
         // blocker 只支持 rect
         var json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonArray
+        json["structures"]!["templates"] = new JsonObject
         {
-            JsonNode.Parse("""{"id":"x","name":"X","footprint":"disc","blocker":true}""")!,
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"disc","blocker":true}""")!,
         };
         var ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
@@ -311,9 +311,9 @@ public class CrowdSimulationConfigTests
 
         // area 与 priority 同进同出
         json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonArray
+        json["structures"]!["templates"] = new JsonObject
         {
-            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","area":"road"}""")!,
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"road"}""")!,
         };
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
@@ -321,9 +321,9 @@ public class CrowdSimulationConfigTests
 
         // 未知区域
         json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonArray
+        json["structures"]!["templates"] = new JsonObject
         {
-            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","area":"nowhere","priority":1}""")!,
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","area":"nowhere","priority":1}""")!,
         };
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
@@ -331,9 +331,9 @@ public class CrowdSimulationConfigTests
 
         // 非阻挡且无 area = 无效实体
         json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonArray
+        json["structures"]!["templates"] = new JsonObject
         {
-            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect"}""")!,
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect"}""")!,
         };
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
@@ -341,9 +341,9 @@ public class CrowdSimulationConfigTests
 
         // lifetimeSec 需 > 0
         json = TestDefaults.DefaultConfigJson();
-        json["structures"]!["templates"] = new JsonArray
+        json["structures"]!["templates"] = new JsonObject
         {
-            JsonNode.Parse("""{"id":"x","name":"X","footprint":"rect","blocker":true,"lifetimeSec":0}""")!,
+            ["x"] = JsonNode.Parse("""{"name":"X","footprint":"rect","blocker":true,"lifetimeSec":0}""")!,
         };
         ex = Assert.Throws<InvalidOperationException>(
             () => CrowdSimulationConfigValidator.Validate(CrowdSimulationConfig.Load(json)));
@@ -376,40 +376,10 @@ public class CrowdSimulationConfigTests
         }
     }
 
-    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
-    [
-        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
-        ("deploy.spreadCells", "deploy.spreadCm"),
-        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
-        ("fog.cellCells", "fog.cellSizeCm"),
-        ("formation.goalArriveCells", "formation.goalArriveCm"),
-        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
-        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
-        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
-        ("formation.minClumpCells", "formation.minClumpCm"),
-        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
-        ("formation.slotArriveCells", "formation.slotArriveCm"),
-        ("formation.slotSightCells", "formation.slotSightCm"),
-        ("formations[].spacing", "formations[].spacingDiameterScale"),
-        ("hpa.clusterSize", "navtile.sizeCm"),
-        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
-        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
-        ("movement.maxStepCells", "movement.maxStepNavCells"),
-        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
-        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
-        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
-        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
-        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
-        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
-        ("spawn.cellInset", "spawn.navCellInsetFraction"),
-        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
-        ("structures.portalCells", "structures.portalReachNavCells"),
-    ];
-
     [Test]
     public void RetiredSpatialKeys_NameTheReplacement()
     {
-        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        foreach (var (oldPath, newKey) in CrowdSimulationConfig.RetiredSpatialKeys)
         {
             var json = TestDefaults.DefaultConfigJson();
             string concrete = PlaceRetiredKey(json, oldPath);
@@ -420,12 +390,29 @@ public class CrowdSimulationConfigTests
         }
     }
 
+    [Test]
+    public void RetiredSpatialKeys_AreNotEmptied()
+    {
+        var old = new HashSet<string>(CrowdSimulationConfig.RetiredSpatialKeys.Select(entry => entry.OldPath));
+        Assert.That(old, Does.Contain("formation.settleTime"));
+        Assert.That(old, Does.Contain("movement.slotTimeConstant"));
+        Assert.That(old, Does.Contain("sim.timeScale"));
+        Assert.That(old, Does.Contain("formations[].spacing"));
+        Assert.That(old, Does.Contain("fog.cellCells"));
+        Assert.That(old, Does.Contain("movement.blendRate"));
+        Assert.That(old, Does.Contain("movement.unitTurnRate"));
+        Assert.That(old, Does.Contain("movement.stallDecay"));
+        Assert.That(old, Does.Contain("movement.slotCheckInterval"));
+        Assert.That(old, Does.Contain("formation.leaderTurnRate"));
+        Assert.That(old, Does.Contain("avoidance.acceleration"));
+    }
+
     private static string PlaceRetiredKey(JsonObject root, string oldPath)
     {
         if (oldPath == "formations[].spacing")
         {
-            root["formations"]![0]!["spacing"] = 1;
-            return "formations[0].spacing";
+            root["formations"]!["box"]!["spacing"] = 1;
+            return "formations.box.spacing";
         }
 
         if (oldPath == "navProfiles[].jump.rangeCells")
@@ -584,5 +571,40 @@ public class CrowdSimulationConfigTests
         map.Boards[0].WidthCm = widthCm;
         map.Boards[0].HeightCm = widthCm;
         return (CrowdSimulationConfig.Load(json), map);
+    }
+
+    [Test]
+    public void IdKeyedSections_RejectArrayAndNull()
+    {
+        var asArray = TestDefaults.DefaultConfigJson();
+        asArray["formations"] = new JsonArray
+        {
+            JsonNode.Parse("""{"id":"box","label":"方阵","spacingDiameterScale":1,"aspect":1,"wedge":false}""")!,
+        };
+        var arrayEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(asArray));
+        Assert.That(arrayEx!.Message, Does.Contain("以 id 为键的对象，不再使用数组"));
+
+        var nulled = TestDefaults.DefaultConfigJson();
+        nulled["formations"]!["box"] = null;
+        var nullEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(nulled));
+        Assert.That(nullEx!.Message, Does.Contain("formations.box"));
+        Assert.That(nullEx.Message, Does.Contain("为 null"));
+
+        var sectionNull = TestDefaults.DefaultConfigJson();
+        sectionNull["formations"] = null;
+        var sectionEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(sectionNull));
+        Assert.That(sectionEx!.Message, Does.Contain("formations"));
+        Assert.That(sectionEx.Message, Does.Contain("不接受 null"));
+    }
+
+    [Test]
+    public void FormationOverride_MergesOneKey()
+    {
+        var merged = TestDefaults.DefaultConfigJson();
+        ConfigPipeline.DeepMerge(merged, JsonNode.Parse("""{ "formations": { "wedge": { "aspect": 3.5 } } }""")!.AsObject());
+        var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(merged));
+        var wedge = runtime.Formations.Single(f => f.Id == "wedge");
+        Assert.That(wedge.Aspect, Is.EqualTo(Fix64.FromDouble(3.5)));
+        Assert.That(runtime.Formations[0].Id, Is.EqualTo("box"));
     }
 }

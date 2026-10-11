@@ -85,19 +85,35 @@ public sealed class CrowdStructuresStore
         ReachCm = maxRadius;
     }
 
-    /// <summary>建仓:静态地图阻挡物先按模板 0(rect 阻挡)入仓获得实体 id,初始栅格取
-    /// SurfaceGrid 的既算结果(与其覆盖公式逐格同源)。</summary>
+    /// <summary>建仓:静态地图阻挡物按模板 id <c>building</c>(rect 阻挡)入仓获得实体 id。
+    /// 下标随模板表按 id 排序变化,不能再写死 0。初始栅格取 SurfaceGrid 的既算结果。</summary>
     public static CrowdStructuresStore Build(
         CrowdSimulationRuntimeConfig config,
         SurfaceGrid grid,
         IReadOnlyList<BlockerFootprint> blockers)
     {
         var store = new CrowdStructuresStore(config, grid);
+        int buildingTemplate = -1;
+        var templates = config.Structures.Templates;
+        for (int i = 0; i < templates.Count; i++)
+        {
+            if (templates[i].Id == "building")
+            {
+                buildingTemplate = i;
+                break;
+            }
+        }
+
+        if (blockers.Count > 0 && buildingTemplate < 0)
+        {
+            throw new InvalidOperationException("地图阻挡物需要结构模板 building（rect 阻挡）。");
+        }
+
         foreach (var b in blockers)
         {
             int id = store._nextId++;
             store._ids.Add(id);
-            store._tpl[id] = 0;
+            store._tpl[id] = buildingTemplate;
             store._footprint[id] = new CrowdStructureFootprint
             {
                 Shape = CrowdStructureShape.Rect,
@@ -270,13 +286,24 @@ public sealed class CrowdStructuresStore
         JumpCandidates = _jumpCandidates,
     };
 
-    /// <summary>寿命到期 tick:placeTick + ceil(lifetimeSec / (timeScale/fixedHz)),按参考端的
-    /// 原始 double 公式逐位同值(整数 tick 契约,不走 Fix64——Fix64 simDt 的下取整会把
-    /// 恰好整除的商推过线,首个分歧:4 秒寿命在 simDt=1/3 时 12 变 13)。</summary>
+    /// <summary>寿命到期 tick:placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。
+    /// decimal 做精确有理数。30 Hz、simSecondsPerTickSecond = 10 时 4 秒仍是 12 tick、900 秒仍是 2700 tick。</summary>
     public int ExpireTickOf(RuntimeStructureTemplate tpl, int placeTick)
     {
         if (tpl.LifetimeSecRaw is not { } life) return -1;
-        return placeTick + (int)Math.Ceiling(life / (_config.Sim.TimeScaleRaw / _config.FixedHz));
+        return placeTick + LifetimeTicks(life, _config.FixedHz, _config.Sim.SimSecondsPerTickSecondRaw);
+    }
+
+    public static int LifetimeTicks(double lifetimeSec, int fixedHz, double simSecondsPerTickSecond)
+    {
+        decimal ticks = decimal.Ceiling((decimal)lifetimeSec * fixedHz / (decimal)simSecondsPerTickSecond);
+        if (ticks > int.MaxValue)
+        {
+            throw new InvalidOperationException(
+                $"结构寿命 {lifetimeSec.ToString(System.Globalization.CultureInfo.InvariantCulture)} 秒换算超过 int（fixedHz={fixedHz}，simSecondsPerTickSecond={simSecondsPerTickSecond.ToString(System.Globalization.CultureInfo.InvariantCulture)}）。");
+        }
+
+        return (int)ticks;
     }
 
     private (int Id, (int X0, int Y0, int X1, int Y1) Rect) Commit(int id, CrowdStructureFootprint fp)

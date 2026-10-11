@@ -16,6 +16,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
+const FIXED_HZ = 30;
+const stamp = (obj) => ({ fixedHz: FIXED_HZ, ...obj });
 const seed = +arg('seed', 1337);
 const mapId = arg('map-id', `crowd_simulation_s${seed}`);
 const outRoot = arg('out', join('exports', mapId));
@@ -188,10 +190,23 @@ const mapJson = {
 writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));
 
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
+const cmPart = (num, den) => Math.round(worldCm * num / den);
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
-  version: 7,
   mapId,
   world: { seed, surfaceAsset: `terrain/${mapId}.navsurface` },
+  deploy: {
+    bases: [
+      { playerId: 1, xCm: cmPart(3, 10), yCm: cmPart(7, 20), color: '#4DB2FF' },
+      { playerId: 2, xCm: cmPart(7, 10), yCm: cmPart(13, 20), color: '#7ED957' },
+      { playerId: 3, xCm: cmPart(7, 10), yCm: cmPart(3, 10), color: '#FFC53D' },
+      { playerId: 4, xCm: cmPart(3, 10), yCm: cmPart(7, 10), color: '#C792FF' },
+    ],
+  },
+  structures: {
+    templates: {
+      s7barrier: { name: '路障', footprint: 'rect', blocker: true, lifetimeSec: 4 },
+    },
+  },
 }, null, 2));
 
 // ───────────────────────────── S1 对拍摘要（FNV-1a 32） ─────────────────────────────
@@ -226,11 +241,11 @@ function fnv1a(buf) {
     w.f32(world.jumps.len[k]);
   }
   const bytes = w.build();
-  writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify({
+  writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify(stamp({
     mapId, seed, navCellsPerSide: N, navCellSizeCm: cellSizeCm,
     blockers: blockers.length, bridges: bridges.length, jumpCandidates: world.jumps.count,
     fnv1a: fnv1a(bytes),
-  }, null, 2));
+  }), null, 2));
 }
 
 console.log(`[export] ${mapId} seed=${seed} cells=${N}x${N} blockers=${blockers.length} bridges=${bridges.length} jumps=${world.jumps.count} → ${outRoot}`);
@@ -326,9 +341,9 @@ function canonComp(comp, n2) {
     });
   }
   const bytes = w.build();
-  writeFileSync(join(outRoot, 'parity', 's2-nav-truth.json'), JSON.stringify({
+  writeFileSync(join(outRoot, 'parity', 's2-nav-truth.json'), JSON.stringify(stamp({
     mapId, seed, contexts: summary, fnv1a: fnv1a(bytes),
-  }, null, 2));
+  }), null, 2));
   // 逐上下文可走栅格转储(分歧定位用;真相摘要是权威,本文件只做调试)
   const dbgDir = join(outRoot, 'parity', 's2');
   mkdirSync(dbgDir, { recursive: true });
@@ -375,11 +390,11 @@ function canonComp(comp, n2) {
     }
     w2.i32(tileCache.bakes); w2.i32(tileCache.hits); w2.i32(tileCache.misses);
     const bytes2 = w2.build();
-    writeFileSync(join(outRoot, 'parity', 's3-tile-truth.json'), JSON.stringify({
+    writeFileSync(join(outRoot, 'parity', 's3-tile-truth.json'), JSON.stringify(stamp({
       mapId, seed, navTileEntries: entries.length, bakes: tileCache.bakes, hits: tileCache.hits, misses: tileCache.misses, fnv1a: fnv1a(bytes2),
       // 键指纹 → 条目哈希(键 = tile 精确内容,跨端按内容对齐,不靠位置序)
       entryHashes: Object.fromEntries(entries.map(([k, ], i) => [fnv1a(Buffer.from([...k].flatMap((c) => { const cc = c.charCodeAt(0); return [cc & 0xff, cc >> 8]; }))), perEntry[i]])),
-    }, null, 2));
+    }), null, 2));
     console.log(`[export] ${mapId} s3 tiles=${entries.length} bakes=${tileCache.bakes} fnv=${fnv1a(bytes2)}`);
 
     // ───────────────────────────── S3-b:拼装网格 + HPA* 抽象图真相 ─────────────────────────────
@@ -417,9 +432,9 @@ function canonComp(comp, n2) {
       }
       const truthBytes = wq.build();
       writeFileSync(join(outRoot, 'parity', 's3b-topology.bin'), truthBytes);
-      writeFileSync(join(outRoot, 'parity', 's3b-graph-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's3b-graph-truth.json'), JSON.stringify(stamp({
         mapId, seed, contexts: perCtx, fnv1a: fnv1a(truthBytes),
-      }, null, 2));
+      }), null, 2));
       writeFileSync(join(outRoot, 'parity', 's3b-costs.bin'), wc.build());
       console.log(`[export] ${mapId} s3b fnv=${fnv1a(truthBytes)}`);
     }
@@ -519,9 +534,9 @@ function canonComp(comp, n2) {
       writeFileSync(join(outRoot, 'parity', 's3c-detail.bin'), wd.build());
       writeFileSync(join(outRoot, 'parity', 's3c-wp.bin'), ww.build());
       writeFileSync(join(outRoot, 'parity', 's3c-floats.bin'), wf.build());
-      writeFileSync(join(outRoot, 'parity', 's3c-query-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's3c-query-truth.json'), JSON.stringify(stamp({
         mapId, seed, pairs, contexts: perCtxQ, fnv1a: fnv1a(queryBytes),
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s3c pairs=${pairs.length} fnv=${fnv1a(queryBytes)}`);
     }
 
@@ -614,14 +629,14 @@ function canonComp(comp, n2) {
           if (d < minEdge) minEdge = d;
         }
       }
-      writeFileSync(join(outRoot, 'parity', 's4-deploy-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's4-deploy-truth.json'), JSON.stringify(stamp({
         mapId, seed,
         note: 'S4 规范校验码以 Fix64 原始值为口径(甲方体系);生成位置经镜像侧 S4 归一补丁按 Fix64 语义逐 op 求值。运动字段按原始 int64 低→高两词混入(L02;部署会话无运动栈恒零)。脚本玩家编号 1..P 为 Ludots 约定。',
         script, frames,
         unitCount: sim.units.count,
         spawnSeq: sim.spawnSeq,
         selectEdgeMinDistCm: Math.round(minEdge * 1000) / 10,
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s4 units=${sim.units.count} frames=${frames.length} edge=${minEdge.toFixed(2)}m`);
     }
 
@@ -677,11 +692,11 @@ function canonComp(comp, n2) {
         }
       }
       writeFileSync(join(outRoot, 'parity', 's5-trajectory.bin'), w.build());
-      writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's5-trajectory-truth.json'), JSON.stringify(stamp({
         mapId, seed,
         note: 'S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。每单位记录后附 u16 接触计数(L12-④ 硬门:每 tick 清零、求解行累加,跳过行为 0,两端同构逐位可比)。',
         ticks: TICKS, script,
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s5 ticks=${TICKS} units=${sim.units.count}`);
     }
 
@@ -785,11 +800,11 @@ function canonComp(comp, n2) {
         for (const tile of op.union) wo.i32(tile);
       });
       writeFileSync(join(outRoot, 'parity', 's7-ops.bin'), wo.build());
-      writeFileSync(join(outRoot, 'parity', 's7-rebake-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's7-rebake-truth.json'), JSON.stringify(stamp({
         mapId, seed,
         note: 'S7 结构动态化:逐 tick 真值与 S5 块同构(位置带宽 + 状态机逐位 + contacts 双容忍);s7-ops.bin 为每次结构 op 的重烘焙报告(执行 tick / 类别 / 报告 tick / tiles/contexts/costOnly/hits/misses/orders/refreshes/evicted/stuck / 受影响 tile 并集升序),逐字段硬门。frames 为参考端自身 unitChecksum(f32 口径,诊断列,不跨引擎比对);gate 走 bin。口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾(S7-a 内核无迷雾,F02 另单),组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;重烘报告在 job 完结 tick 采样,执行 tick 由脚本序 + 寿命公式推出(C# 同构)。s7barrier 为 S7 追加的 4 秒寿命模板,C# mod 配置同位序同 id。格距 62.5m:足迹尺寸取静态图同档(35–140m)、中心落在格心,覆盖份额无骑线。',
         ticks: TICKS, script, opExecTicks, frames,
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s7 ticks=${TICKS} units=${sim.units.count} ops=${ops.length} rebakes=${sim.stats.rebakes}`);
     }
 
@@ -944,11 +959,11 @@ function canonComp(comp, n2) {
         for (const tile of op.union) wo.i32(tile);
       });
       writeFileSync(join(outRoot, 'parity', 's7fog-ops.bin'), wo.build());
-      writeFileSync(join(outRoot, 'parity', 's7fog-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's7fog-truth.json'), JSON.stringify(stamp({
         mapId, seed,
         note: 'S7-b 迷雾/认知(F02):迷雾开启口径(不置 __S7_TRUTH_NAV__,与 S7 块并存)。单位记录与 S5/S7 同构(位置带宽 + 状态机逐位 + contacts 双容忍);迷雾 digest 每组每 tick(visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev)+ 全局槽账(seq/switches/entry/dormant/beliefCount),整数集合态逐位硬门。s7fog-ops.bin 为结构 op 报告(place@5 挡路改道、remove@90 残影语义),逐字段硬门。脚本含 reveal/obscure/forget/fogShare 与 order 的 fogTerrain 开关(乐观迷雾)。C# 侧 CrowdFog/CrowdBeliefState 字段一一对应。',
         ticks: TICKS, visionGroupCount: G, script, opExecTicks,
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s7fog ticks=${TICKS} units=${sim.units.count} ops=${ops.length} switches=${seenSwitches} beliefCount=${sim.fog.beliefCount()}`);
     }
 
@@ -1111,11 +1126,11 @@ function canonComp(comp, n2) {
         for (const tile of op.union) wo2.i32(tile);
       });
       writeFileSync(join(outRoot, 'parity', 's7crecycle-ops.bin'), wo2.build());
-      writeFileSync(join(outRoot, 'parity', 's7crecycle-truth.json'), JSON.stringify({
+      writeFileSync(join(outRoot, 'parity', 's7crecycle-truth.json'), JSON.stringify(stamp({
         mapId, seed,
         note: 'S7-c 认知槽回收复用:迷雾开启口径。11 轮放置→发现→拆除(残影)→再见地面 + 重建 S1/S2/S3;休眠槽超 slotCacheCapacity(8) 触发最旧淘汰,重建命中已淘汰认知集 = 容量回收复用。digest(槽号/槽账)逐位硬门——淘汰次序(注册序)是隐含合同。',
         ticks: TICKS2, visionGroupCount: G2, script: script2, opExecTicks: opExecTicks2,
-      }, null, 2));
+      }), null, 2));
       console.log(`[export] ${mapId} s7crecycle ticks=${TICKS2} units=${sim2.units.count} ops=${ops2.length} seq=${sim2.belief.seq} dormant=${sim2.belief.dormant.length}`);
     }
 
@@ -1150,7 +1165,7 @@ function canonComp(comp, n2) {
         const r = areaCells(F, fcsM, { kind: c.kind, value: c.value });
         areaOut.cases.push({ name: c.name, kind: c.kind, value: cmValue(c.value), cells: [...r.cells], box: [...r.box] });
       }
-      writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(areaOut, null, 2));
+      writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(stamp(areaOut), null, 2));
       console.log(`[export] ${mapId} s7area cases=${areaOut.cases.length} F=${F} fcsM=${fcsM}`);
     }
 
@@ -1193,7 +1208,7 @@ function canonComp(comp, n2) {
         losOut.cases.push({ name: c.name, hMaxRaw: c.hMaxRaw, opaque: c.opaque ?? 0, expect: c.expect, got });
         if (got !== c.expect) throw new Error(`L52 LOS case ${c.name}: got ${got} ≠ 预期 ${c.expect}`);
       }
-      writeFileSync(join(outRoot, 'parity', 's7los-truth.json'), JSON.stringify(losOut, null, 2));
+      writeFileSync(join(outRoot, 'parity', 's7los-truth.json'), JSON.stringify(stamp(losOut), null, 2));
       console.log(`[export] ${mapId} s7los cases=${losOut.cases.length}`);
     }
 

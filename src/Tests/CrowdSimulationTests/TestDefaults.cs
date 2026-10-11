@@ -11,8 +11,8 @@ using Ludots.Core.Navigation.AgentProfiles;
 namespace CrowdSimulationTests;
 
 /// <summary>
-/// S0 测试夹具：CrowdSimulationMod 自带的全量默认配置（单一事实源 = Mod 资产文件）、
-/// 16 km 演示地图与 5 移动类型 × 4 半径级的代理体型注册表。
+/// S0 测试夹具：标准参数 Mod 的全量参数，叠上无头演示图的地图事实
+/// （mapId、地表、出生点、s7barrier）。体型档案仍在能力 Mod。
 /// </summary>
 public static class TestDefaults
 {
@@ -20,7 +20,12 @@ public static class TestDefaults
     public const int WorldCm = 16000 * 100;
 
     public static JsonObject DefaultConfigJson()
-        => (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "CrowdSimulationConfig.json")))!;
+    {
+        var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("assets", "CrowdSimulationConfig.json")))!;
+        var facts = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine("fixtures", "demo-map-facts.json")))!;
+        ConfigPipeline.DeepMerge(merged, facts);
+        return merged;
+    }
 
     public static CrowdSimulationConfig DefaultConfig()
         => CrowdSimulationConfig.Load(DefaultConfigJson());
@@ -49,7 +54,7 @@ public static class TestDefaults
         };
     }
 
-    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读 CrowdSimulationMod 的默认文件）。</summary>
+    /// <summary>20 个体型：foot / hull / climber / amphib / leaper × R100–R400（读能力 Mod 的档案文件）。</summary>
     public static AgentProfileRegistry DemoProfiles()
     {
         var list = JsonSerializer.Deserialize<List<AgentProfileConfig>>(

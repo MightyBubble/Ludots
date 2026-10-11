@@ -148,6 +148,7 @@ public readonly record struct CrowdSimCommand
                     Player = RequireInt(cmd, type, "player"),
                     XCm = RequireInt(cmd, type, "xCm"),
                     YCm = RequireInt(cmd, type, "yCm"),
+                    // 没写 shape 是指令缺省，与参考端一样用 box。表里没有这个 id 时入队校验即拒收。
                     ShapeId = cmd["shape"]?.GetValue<string>() ?? "box",
                     HasAuto = cmd["auto"] is { },
                     Auto = OptionalBool(cmd, type, "auto", false),

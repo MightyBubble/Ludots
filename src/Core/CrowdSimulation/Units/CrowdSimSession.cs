@@ -39,7 +39,7 @@ public sealed class CrowdSimSession
         // 子步数:单步位移不超过 maxStepCells 格(封顶 maxSubSteps)——与参考实现同推导
         Fix64 maxSpeed = Fix64.Zero;
         foreach (var a in config.AgentTypes) maxSpeed = Fix64.Max(maxSpeed, a.SpeedCmPerSecond);
-        Fix64 simDt = config.Sim.TimeScale / Fix64.FromInt(config.FixedHz);
+        Fix64 simDt = config.Sim.SimSecondsPerTickSecond / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
         int needed = (int)Fix64.Ceiling(maxSpeed * config.Movement.SpeedCapRatio * simDt /
             (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepNavCells)).ToLong();
@@ -84,7 +84,7 @@ public sealed class CrowdSimSession
     public int EvictStuck { get; set; }
     /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(DB-03;对拍免谈,验收必跑)。</summary>
     public bool VerifyIncrementalNav { get; set; }
-    /// <summary>每 tick 的仿真秒数(timeScale/FixedHz)与子步进。</summary>
+    /// <summary>每 tick 的仿真秒数(simSecondsPerTickSecond/FixedHz)与子步进。</summary>
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }

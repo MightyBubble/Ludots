@@ -1,4 +1,5 @@
 {
+  "fixedHz": 30,
   "mapId": "crowd_simulation_s1337",
   "seed": 1337,
   "fogCellsPerSide": 64,

@@ -256,6 +256,7 @@ namespace Ludots.Core.Engine
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
         private readonly MassNavigationRuntime _massNavigationRuntime = new();
         private readonly CrowdSimulation.Runtime.CrowdSimulationRuntime _crowdSimulationRuntime = new();
+        internal CrowdSimulation.Runtime.CrowdSimulationRuntime CrowdRuntime => _crowdSimulationRuntime;
         private readonly Dictionary<MapId, TransportNetworkMapRuntime> _transportNetworkRuntimes = new();
 
         // Multithreading

@@ -7,7 +7,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
-/// 阵型槽位(formation.js 移植,Fix64 厘米域;阵型形状是数据formations[],未知 id 回退第一项)。
+/// 阵型槽位(formation.js 移植,Fix64 厘米域;阵型形状是数据,未知 id 在下单时抛错)。
 /// 槽位在领队局部系(横向,后向):单位按当前前向/侧向投影排序保相对位置(不交叉穿插);
 /// 混体型:每个单位占自己 footprint(半径×2×spacingScale×shape.spacing),按小到大排序,
 /// 每行同构、行按自身深度堆叠。拖线 width 覆盖行宽。mirror = 反转后原地掉头(大行先排)。
@@ -21,7 +21,10 @@ public static class CrowdFormations
             if (shapes[i].Id == id) return shapes[i];
         }
 
-        return shapes[0];
+        var known = new string[shapes.Count];
+        for (int i = 0; i < shapes.Count; i++) known[i] = shapes[i].Id;
+        string list = known.Length == 0 ? "（无）" : string.Join(", ", known);
+        throw new InvalidOperationException($"未知阵型 \"{id}\"。已知 id：{list}。");
     }
 
     /// <summary>在领队系(fx,fy 前向)给成员排槽位;返回最宽行宽(厘米)。</summary>

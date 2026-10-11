@@ -14,7 +14,7 @@ public sealed class SpatialVocabularyContractTests
     [
         "CmPerSecond", "NavCellArea", "NavCells", "NavTiles", "Fraction",
         "Capacity", "Count", "Scale", "Ratio", "Ticks", "Tries", "Rings", "Slices",
-        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec",
+        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec", "SubSteps",
     ];
 
     private static readonly string[] BareLengthWords = ["Len", "Width", "Padding", "Spacing", "Error", "Area", "LookAhead"];
@@ -24,12 +24,12 @@ public sealed class SpatialVocabularyContractTests
         "Version", "Seed", "WorldSeed", "Cost", "Layer", "PushPriority", "NavProfileIndex",
         "CostByArea", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
         "NavCellsPerTile", "NavCellsPerSide", "NavCellsPerFogCell", "FogCellsPerSide",
-        "MaxRebuildsPerTick", "MaxRefreshesPerTick", "LeaderSpeed", "LeaderTurnRate",
-        "CatchUp", "SettleTime", "ClumpSlack", "Aspect", "MaxSubSteps", "SlotTimeConstant",
-        "BlendRate", "BlendCommit", "SlotCheckInterval", "SightHysteresis", "StallDecay",
-        "UnitTurnRate", "MaxNeighbors", "MaxScan", "SeparationWeight", "Acceleration",
+        "MaxRebuildsPerTick", "MaxRefreshesPerTick", "LeaderSpeed",
+        "CatchUp", "ClumpSlack", "Aspect", "MaxSubSteps", "SimSecondsPerTickSecond", "SimSecondsPerTickSecondRaw",
+        "BlendCommit", "SightHysteresis",
+        "MaxNeighbors", "MaxScan", "SeparationWeight",
         "RestDeadband", "MaxPush", "Smoothing", "MovingBonus", "DominantShare",
-        "PlayerA", "PlayerB", "MaxUnits", "TimeScaleRaw", "BlockCoverage", "AreaIndex",
+        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "AreaIndex",
         "Priority", "LifetimeSecRaw", "InitialUnits", "CentersPerGroup", "PlayerId", "Ema",
         "IndexByPlayerId", "PlayerCount",
     };
@@ -168,7 +168,7 @@ public sealed class SpatialVocabularyContractTests
         string repoRoot = FindRepoRoot();
         string configPath = Path.Combine(
             repoRoot,
-            "mods/capabilities/navigation/CrowdSimulationMod/assets/CrowdSimulationConfig.json");
+            "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json");
         var root = JsonNode.Parse(File.ReadAllText(configPath))!.AsObject();
         var keys = new List<string>();
         CollectSizeCmPaths(root, "", keys);

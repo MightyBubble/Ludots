@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Nodes;
 using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -37,11 +36,6 @@ public sealed partial class CrowdSimulationRuntime
     }
 
     private string? PresentationKindName => _presentation?.Kind;
-
-    internal void ParsePresentation(JsonObject debug)
-    {
-        _presentation = CrowdPresentationConfig.ParseOptional(debug);
-    }
 
     public bool ReleasePathPresentation(GameEngine engine, MapId mapId)
     {
@@ -120,7 +114,7 @@ public sealed partial class CrowdSimulationRuntime
             CycleView = path.Actions.CycleView,
         };
         var (routes, slot) = RequireVisualServices(engine);
-        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, path.TruthAsset);
+        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, path.TruthAsset, RequirePlanTimeout());
         demo.UseViewLabels(presentation.ViewLabels);
         var flow = new CrowdFlowFieldVisualSource
         {

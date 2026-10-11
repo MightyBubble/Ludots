@@ -159,6 +159,6 @@ public sealed class S7ModeFlipInjectionTests
         deltas.Sort();
         return new Stats(
             maxCm, finalMaxCm, deltas[deltas.Count / 2], modeFlips, injections, persistent.Count, structural,
-            deltas.Count, session.Config.Movement.SlotCheckInterval, firstCross);
+            deltas.Count, session.Config.Movement.SlotCheckIntervalSubSteps, firstCross);
     }
 }

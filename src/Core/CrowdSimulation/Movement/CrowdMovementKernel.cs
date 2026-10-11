@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Threading;
 using Arch.Core;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.CrowdSimulation.Units;
 using Schedulers;
@@ -420,8 +422,31 @@ public sealed class CrowdMovementKernel
         Tick++;
     }
 
-    /// <summary>从运行时配置装配内核(参数包 = formation + movement + slotGain=1/slotTimeConstant + avoidance 局部;空间哈希按体型上限定尺寸)。
-    /// sep 是无量纲公式值(restDeadband/maxPush 阈值与参考逐字同数);降频 stride 按参考 setRates 推导:stepHz/min(avoidHz, stepHz) 四舍五入。</summary>
+    /// <summary>避让降频步长:max(1, round(stepHz / rateHz))。rateHz 用 double,超过步进频率报错,不再截断或钳位。</summary>
+    internal static int AvoidanceStride(int stepHz, double rateHz)
+    {
+        if (stepHz < 1)
+        {
+            throw new InvalidOperationException($"避让降频需要步进频率 ≥ 1 Hz（当前 {stepHz}）。");
+        }
+
+        if (!(rateHz > 0))
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: avoidance.rateHz = {rateHz.ToString(CultureInfo.InvariantCulture)}，需为 > 0。");
+        }
+
+        if (rateHz > stepHz)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: avoidance.rateHz = {rateHz.ToString(CultureInfo.InvariantCulture)} 超过步进频率 {stepHz} Hz。");
+        }
+
+        return Math.Max(1, (int)Math.Floor(stepHz / rateHz + 0.5));
+    }
+
+    /// <summary>从运行时配置装配内核(参数包 = formation + movement + slotGain=1/slotTimeConstantSec + avoidance 局部;空间哈希按体型上限定尺寸)。
+    /// sep 是无量纲公式值(restDeadband/maxPush 阈值与参考逐字同数);降频 stride 按参考 setRates 四舍五入,rateHz 超过步进频率即报错。</summary>
     public static CrowdMovementKernel Create(CrowdSimSession session, CrowdWalls.OpenCellCache? openCache = null)
     {
         var cfg = session.Config;
@@ -435,8 +460,11 @@ public sealed class CrowdMovementKernel
         Fix64 hashCellCm = Fix64.Max(Fix64.OneValue, maxRadiusCm * 2 / Fix64.FromInt(Math.Max(1, av.HashRings)));
         var hash = new CrowdSpatialHash(cfg.NavCellsPerSide * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
         int stepHz = cfg.FixedHz * session.SubSteps;
-        int avoidHz = (int)av.RateHz.ToDouble();
-        int stride = Math.Max(1, (int)(stepHz / Math.Min(avoidHz, (double)stepHz) + 0.5));
+        double avoidHz = av.RateHz.ToDouble();
+        int stride = AvoidanceStride(stepHz, avoidHz);
+        double actualHz = stepHz / (double)stride;
+        Log.Info(in LogChannels.Engine,
+            $"CrowdSimulation avoidance: configured {avoidHz.ToString(CultureInfo.InvariantCulture)} Hz, stride {stride} substeps, actual {actualHz.ToString("0.###", CultureInfo.InvariantCulture)} Hz.");
         int hashCells = hash.CellsPerSide * hash.CellsPerSide;
         return new CrowdMovementKernel
         {
@@ -445,22 +473,22 @@ public sealed class CrowdMovementKernel
             Awake = new byte[hashCells],
             Stride = stride,
             OpenCache = openCache ?? new CrowdWalls.OpenCellCache(),
-            BlendRate = mv.BlendRate,
+            BlendRate = mv.BlendRatePerSec,
             BlendCommit = mv.BlendCommit,
-            SlotCheckInterval = mv.SlotCheckInterval,
+            SlotCheckInterval = mv.SlotCheckIntervalSubSteps,
             WakeDistanceNavCells = mv.WakeDistanceNavCells,
             SlotArriveNavCells = fc.SlotArriveNavCells,
             SettleRadiusNavCells = fc.SettleRadiusNavCells,
             StallSpeedRatio = mv.StallSpeedRatio,
-            StallDecay = mv.StallDecay,
-            SettleTimeSeconds = fc.SettleTime,
+            StallDecay = mv.StallDecayPerSec,
+            SettleTimeSeconds = fc.SettleTimeSec,
             SlotSightNavCells = fc.SlotSightNavCells,
             SightHysteresis = mv.SightHysteresis,
             LaneSpreadSpeedRatio = mv.LaneSpreadSpeedRatio,
             GoalArriveNavCells = fc.GoalArriveNavCells,
-            SlotGain = Fix64.OneValue / mv.SlotTimeConstant,
+            SlotGain = Fix64.OneValue / mv.SlotTimeConstantSec,
             CatchUp = fc.CatchUp,
-            Accel = av.Acceleration,
+            Accel = av.AccelerationPerSec,
             RestAccelScale = mv.RestAccelScale,
             RestSeparationScale = mv.RestSeparationScale,
             SeparationWeight = av.SeparationWeight,
@@ -471,12 +499,12 @@ public sealed class CrowdMovementKernel
             Smoothing = av.Smoothing,
             MovingBonus = cfg.Push.MovingBonus,
             DominantShare = cfg.Push.DominantShare,
-            UnitTurnRate = mv.UnitTurnRate,
+            UnitTurnRate = mv.UnitTurnRateRadPerSec,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,
             JumpSpeedRatio = mv.JumpSpeedRatio,
             LeaderSpeed = fc.LeaderSpeed,
-            LeaderTurnRate = fc.LeaderTurnRate,
+            LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,
             TurnEpsRad = cfg.Telemetry.TurnEpsRad,
         };

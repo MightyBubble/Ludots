@@ -1,0 +1,44 @@
+{
+  "mapId": "crowd_simulation_demo",
+  "world": {
+    "surfaceAsset": "terrain/crowd_simulation_demo.navsurface"
+  },
+  "deploy": {
+    "bases": [
+      {
+        "playerId": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "color": "#4DB2FF"
+      },
+      {
+        "playerId": 2,
+        "xCm": 1120000,
+        "yCm": 1040000,
+        "color": "#7ED957"
+      },
+      {
+        "playerId": 3,
+        "xCm": 1120000,
+        "yCm": 480000,
+        "color": "#FFC53D"
+      },
+      {
+        "playerId": 4,
+        "xCm": 480000,
+        "yCm": 1120000,
+        "color": "#C792FF"
+      }
+    ]
+  },
+  "structures": {
+    "templates": {
+      "s7barrier": {
+        "name": "路障",
+        "footprint": "rect",
+        "blocker": true,
+        "lifetimeSec": 4
+      }
+    }
+  }
+}

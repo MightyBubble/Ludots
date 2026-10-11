@@ -1,4 +1,5 @@
 {
+  "fixedHz": 30,
   "mapId": "crowd_simulation_s7",
   "seed": 7,
   "navTileEntries": 883,

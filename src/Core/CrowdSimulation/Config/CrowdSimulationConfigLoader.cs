@@ -10,16 +10,13 @@ namespace Ludots.Core.CrowdSimulation.Config;
 
 /// <summary>
 /// CrowdSimulation 配置装载入口。
-/// 管线侧负责 config_catalog 合并（DeepObject）与版本门禁；<see cref="Load"/> 按
+/// 管线侧负责 config_catalog 合并（DeepObject）；<see cref="Load"/> 按
 /// LU-20 的契约把合并结果、地图、代理体型与固定时钟组装成只读运行时配置——
 /// 内核不读文件、不读全局单例。世界距离在组装层用 double 做厘米 ÷ 导航格长，再
 /// <c>Fix64.FromDouble</c> 成交格数；其余长度仍是厘米 Fix64。内核坐标保持厘米。
 /// </summary>
 public sealed class CrowdSimulationConfigLoader
 {
-    /// <summary>结构版本与 CrowdSimulation 参考实现配置版本同步；不等于当前版本一律拒绝，不做迁移。</summary>
-    public const int CurrentConfigVersion = 7;
-
     public const string RelativePath = "CrowdSimulationConfig.json";
 
     /// <summary>迷雾格长下限(厘米),即 fog.cellSizeCm。
@@ -44,15 +41,10 @@ public sealed class CrowdSimulationConfigLoader
         JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
         if (merged == null)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（CrowdSimulationMod 应提供全量默认）。");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 没有任何来源提供该文件（标准参数在 CrowdSimulationStandardMod，地图事实在地图 Mod）。");
         }
 
         var config = CrowdSimulationConfig.Load(merged);
-        if (config.Version != CurrentConfigVersion)
-        {
-            throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: version = {config.Version}，不是当前版本 v{CurrentConfigVersion}（无迁移，需按当前 Schema 重写）。");
-        }
 
         // 一张地图只能启用一种求解器：两份配置指向同一 mapId 才算冲突，磁盘上并存默认值不算。
         if (catalog != null && catalog.TryGet(MassNavigationRelativePath, out var massEntry))
@@ -90,11 +82,10 @@ public sealed class CrowdSimulationConfigLoader
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(profiles);
-
-        if (config.Version != CurrentConfigVersion)
+        if (fixedHz < 1)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: version = {config.Version}，不是当前版本 v{CurrentConfigVersion}（无迁移）。");
+                $"{CrowdSimulationConfigValidator.FileName}: fixedHz = {fixedHz}，需为 ≥ 1 的整数（步进频率只由 Engine/clock.json 规定）。");
         }
 
         CrowdSimulationConfigValidator.Validate(config);
@@ -104,11 +95,6 @@ public sealed class CrowdSimulationConfigLoader
         {
             throw new InvalidOperationException(
                 $"{CrowdSimulationConfigValidator.FileName}: mapId = \"{config.MapId}\"，与当前地图 \"{map.Id}\" 不一致（CrowdSimulationConfig 按 mapId 绑定地图）。");
-        }
-
-        if (fixedHz < 10 || fixedHz > 240)
-        {
-            throw new InvalidOperationException($"Engine/clock.json: FixedHz = {fixedHz}，需为 ≥ 10、≤ 240 的数值");
         }
 
         if (map.Boards.Count == 0)
@@ -242,12 +228,18 @@ public sealed class CrowdSimulationConfigLoader
         // 原型推挤优先级(参考 core/archetypes.js)= agentTypes[].pushPriority + 半径级份额(authored 数据,
         // 参考端 radiusClasses[].pushPriority);份额按半径厘米查表,每个派生半径级必须有条目。
         var radiusShareByRadiusCm = new Dictionary<int, double>();
-        foreach (var rc in config.Agents.RadiusClasses)
+        foreach (var (key, rc) in config.Agents.RadiusClasses)
         {
-            if (!radiusShareByRadiusCm.TryAdd(rc.RadiusCm, rc.PushPriority))
+            if (!TryParseCanonicalRadiusCm(key, out int radiusCm))
             {
                 throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 半径 {rc.RadiusCm} 重复");
+                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 的键 \"{key}\" 必须是半径厘米的十进制整数。");
+            }
+
+            if (!radiusShareByRadiusCm.TryAdd(radiusCm, rc.PushPriority))
+            {
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: agents.radiusClasses 半径 {radiusCm} 重复");
             }
         }
 
@@ -358,7 +350,6 @@ public sealed class CrowdSimulationConfigLoader
 
         return new CrowdSimulationRuntimeConfig
         {
-            Version = config.Version,
             MapId = config.MapId,
             FixedHz = fixedHz,
             NavCellsPerSide = navCellCount,
@@ -433,11 +424,11 @@ public sealed class CrowdSimulationConfigLoader
             {
                 SpacingScale = Fix64.FromDouble(config.Formation.SpacingScale),
                 LeaderSpeed = Fix64.FromDouble(config.Formation.LeaderSpeed),
-                LeaderTurnRate = Fix64.FromDouble(config.Formation.LeaderTurnRate),
+                LeaderTurnRatePerSec = Fix64.FromDouble(config.Formation.LeaderTurnRatePerSec),
                 FaceTurnScale = Fix64.FromDouble(config.Formation.FaceTurnScale),
                 CatchUp = Fix64.FromDouble(config.Formation.CatchUp),
                 SlotSightNavCells = NavCellsFromCm(config.Formation.SlotSightCm),
-                SettleTime = Fix64.FromDouble(config.Formation.SettleTime),
+                SettleTimeSec = Fix64.FromDouble(config.Formation.SettleTimeSec),
                 LeaderLookAheadNavCells = NavCellsFromCm(config.Formation.LeaderLookAheadCm),
                 MagicBoxMaxSpreadCm = Fix64.FromDouble(config.Formation.MagicBoxMaxSpreadCm),
                 MagicBoxPadCm = Fix64.FromDouble(config.Formation.MagicBoxPadCm),
@@ -449,9 +440,9 @@ public sealed class CrowdSimulationConfigLoader
                 HeadingInheritDot = Fix64.FromDouble(config.Formation.HeadingInheritDot),
                 MirrorFlipDot = Fix64.FromDouble(config.Formation.MirrorFlipDot),
             },
-            Formations = Array.ConvertAll(config.Formations, f => new RuntimeFormationShape
+            Formations = OrderedById(config.Formations, (id, f) => new RuntimeFormationShape
             {
-                Id = f.Id,
+                Id = id,
                 Label = f.Label,
                 SpacingDiameterScale = Fix64.FromDouble(f.SpacingDiameterScale),
                 Aspect = Fix64.FromDouble(f.Aspect),
@@ -461,16 +452,16 @@ public sealed class CrowdSimulationConfigLoader
             {
                 MaxStepNavCells = Fix64.FromDouble(config.Movement.MaxStepNavCells),
                 MaxSubSteps = config.Movement.MaxSubSteps,
-                SlotTimeConstant = Fix64.FromDouble(config.Movement.SlotTimeConstant),
-                BlendRate = Fix64.FromDouble(config.Movement.BlendRate),
+                SlotTimeConstantSec = Fix64.FromDouble(config.Movement.SlotTimeConstantSec),
+                BlendRatePerSec = Fix64.FromDouble(config.Movement.BlendRatePerSec),
                 BlendCommit = Fix64.FromDouble(config.Movement.BlendCommit),
-                SlotCheckInterval = config.Movement.SlotCheckInterval,
+                SlotCheckIntervalSubSteps = config.Movement.SlotCheckIntervalSubSteps,
                 SightHysteresis = Fix64.FromDouble(config.Movement.SightHysteresis),
                 LaneSpreadSpeedRatio = Fix64.FromDouble(config.Movement.LaneSpreadSpeedRatio),
                 WakeDistanceNavCells = NavCellsFromCm(config.Movement.WakeDistanceCm),
                 StallSpeedRatio = Fix64.FromDouble(config.Movement.StallSpeedRatio),
-                StallDecay = Fix64.FromDouble(config.Movement.StallDecay),
-                UnitTurnRate = Fix64.FromDouble(config.Movement.UnitTurnRate),
+                StallDecayPerSec = Fix64.FromDouble(config.Movement.StallDecayPerSec),
+                UnitTurnRateRadPerSec = Fix64.FromDouble(config.Movement.UnitTurnRateRadPerSec),
                 StopSpeedRatio = Fix64.FromDouble(config.Movement.StopSpeedRatio),
                 SpeedCapRatio = Fix64.FromDouble(config.Movement.SpeedCapRatio),
                 RestAccelScale = Fix64.FromDouble(config.Movement.RestAccelScale),
@@ -484,7 +475,7 @@ public sealed class CrowdSimulationConfigLoader
                 MaxNeighbors = config.Avoidance.MaxNeighbors,
                 MaxScan = config.Avoidance.MaxScan,
                 SeparationWeight = Fix64.FromDouble(config.Avoidance.SeparationWeight),
-                Acceleration = Fix64.FromDouble(config.Avoidance.Acceleration),
+                AccelerationPerSec = Fix64.FromDouble(config.Avoidance.AccelerationPerSec),
                 RestDeadband = Fix64.FromDouble(config.Avoidance.RestDeadband),
                 MaxPush = Fix64.FromDouble(config.Avoidance.MaxPush),
                 Smoothing = Fix64.FromDouble(config.Avoidance.Smoothing),
@@ -502,8 +493,8 @@ public sealed class CrowdSimulationConfigLoader
             Sim = new RuntimeSimSection
             {
                 MaxUnits = config.Sim.MaxUnits,
-                TimeScale = Fix64.FromDouble(config.Sim.TimeScale),
-                TimeScaleRaw = config.Sim.TimeScale,
+                SimSecondsPerTickSecond = Fix64.FromDouble(config.Sim.SimSecondsPerTickSecond),
+                SimSecondsPerTickSecondRaw = config.Sim.SimSecondsPerTickSecond,
                 ParallelWorkerCount = config.Sim.ParallelWorkerCount,
             },
             Spawn = new RuntimeSpawnSection
@@ -541,6 +532,30 @@ public sealed class CrowdSimulationConfigLoader
         };
     }
 
+    private static TOut[] OrderedById<TIn, TOut>(Dictionary<string, TIn> table, Func<string, TIn, TOut> project)
+    {
+        var ids = new string[table.Count];
+        table.Keys.CopyTo(ids, 0);
+        Array.Sort(ids, StringComparer.Ordinal);
+        var result = new TOut[ids.Length];
+        for (int i = 0; i < ids.Length; i++)
+        {
+            result[i] = project(ids[i], table[ids[i]]);
+        }
+
+        return result;
+    }
+
+    private static bool TryParseCanonicalRadiusCm(string key, out int radiusCm)
+    {
+        if (!int.TryParse(key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out radiusCm))
+        {
+            return false;
+        }
+
+        return radiusCm > 0 && string.Equals(key, radiusCm.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+    }
+
     private static CrowdSimulationPushMode ParsePushMode(string value) => value switch
     {
         "priority" => CrowdSimulationPushMode.Priority,
@@ -549,17 +564,17 @@ public sealed class CrowdSimulationConfigLoader
     };
 
     /// <summary>结构模板表装载(参考 templates.structures):模板 area id 解析为导航区域下标,
-    /// 未知区域在装载即报错;下标 = 声明序,place 指令按 id 查本表。</summary>
+    /// 未知区域在装载即报错。表按 id 排序,place 指令按 id 查本表,不看 JSON 键顺序。</summary>
     private static RuntimeStructureTemplate[] BuildStructureTemplates(CrowdSimulationConfig config)
     {
         var entries = config.Structures.Templates;
-        if (entries == null || entries.Length == 0) return Array.Empty<RuntimeStructureTemplate>();
+        if (entries == null || entries.Count == 0) return Array.Empty<RuntimeStructureTemplate>();
         var areaIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < config.NavAreas.Length; i++) areaIndex.Add(config.NavAreas[i].Id, i);
-        return Array.ConvertAll(entries, t => new RuntimeStructureTemplate
+        return OrderedById(entries, (id, t) => new RuntimeStructureTemplate
         {
-            Id = t.Id,
-            Name = t.Name ?? t.Id,
+            Id = id,
+            Name = t.Name ?? id,
             Footprint = t.Footprint,
             Blocker = t.Blocker,
             AreaIndex = t.Area != null ? areaIndex[t.Area] : null,

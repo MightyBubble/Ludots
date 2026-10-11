@@ -136,7 +136,7 @@ Out of scope：
 | 板恒居中（无 origin 字段），以及 `OriginXCm` / `OriginYCm` | `Boards[].Anchor` | 格子角钉在作者写的点上。根板 `World` 为 `(0, 0)`。没写过原点的存量图，格子角留在 Ludots `(0, 0)` |
 | `GameConfig.WorldWidthInMacroTiles` 三件套 | map `World` 节 | 切 1：升格迁入，消灭双真相源 |
 
-群体模拟词汇（改名前 → 现行名）。配置旧键出现即失败，无别名。`version` 仍是 7。
+群体模拟词汇（改名前 → 现行名）。配置旧键出现即失败，无别名。配置不再带 `version`，版本在 `mod.json`。标准参数在 `CrowdSimulationStandardMod`。
 
 | 改名前 | 现行名 | 说明 |
 |---|---|---|
@@ -166,7 +166,7 @@ Out of scope：
 | `formation.leaderLookAhead` | `leaderLookAheadCm` | 世界距离，同上 |
 | `movement.wakeDistanceCells` | `wakeDistanceCm` | 世界距离，同上 |
 | `deploy.spreadCells` / `baseJitterCells` | `spreadCm` / `baseJitterCm` | 世界距离，同上 |
-| `formations[].spacing` / `formation.spacingScale` | `spacingDiameterScale` / `spacingScale` | 无量纲 |
+| `formations[].spacing` / `formation.spacingScale` | `formations.<id>.spacingDiameterScale` / `spacingScale` | 无量纲。阵型表以 id 为键 |
 | `movement.laneSpread` | `laneSpreadSpeedRatio` | 乘速度 |
 | 公开坐标 `X` / `Y`、足迹 `R` / `W` | `XCm` / `YCm`、`RadiusCm` / `WidthCm` | 世界厘米 |
 | 拖线阵面 `FaceWidthM` | `FaceWidthCm` | 字段存的是厘米 |
@@ -232,7 +232,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 装载时除以 `world.navCellSizeCm` 交给内核 | `CrowdSimulationConfig.json` |
 | `fog.visionCm` / `fog.eyeCm` | 视野半径 / 眼高 | cm | 视野半径相对迷雾格对角线有上限 | `CrowdSimulationConfig.json` |
 | `spawn.groupSpacingScale` | 部署团间距 | 无量纲 | 乘个人半径 | `CrowdSimulationConfig.json` |
-| `formations[].spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 乘直径或个人间距 | `CrowdSimulationConfig.json` |
+| `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 乘直径或个人间距 | `CrowdSimulationConfig.json` |
 | `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 乘速度 | `CrowdSimulationConfig.json` |
 
 阵型距离、唤醒距离和部署散布在装载器里用 double 做 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。`magicBoxPadCm` 与 `magicBoxMaxSpreadCm` 的厘米值直接 `Fix64.FromDouble`。栅格算法量保持导航格或导航 tile 计数。

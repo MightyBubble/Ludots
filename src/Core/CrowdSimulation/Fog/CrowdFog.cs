@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -191,8 +193,36 @@ public sealed class CrowdFog
         for (int c = 0; c < FogCellsPerSide * FogCellsPerSide; c++) _hAvgM[c] /= Fix64.FromInt(cnt[c]);
     }
 
-    /// <summary>当前逻辑频率下的刷新周期(tick)= max(1, round(tickRate / rateHz))。</summary>
-    public void SetPeriod(int tickHz, double rateHz) => Period = Math.Max(1, (int)Math.Floor(tickHz / rateHz + 0.5));
+    /// <summary>刷新周期(tick)= max(1, round(tickHz / rateHz))。rateHz 超过步进频率报错,不再钳位。</summary>
+    public void SetPeriod(int tickHz, double rateHz)
+    {
+        Period = PeriodTicks(tickHz, rateHz);
+        double actualHz = tickHz / (double)Period;
+        Log.Info(in LogChannels.Engine,
+            $"CrowdSimulation fog: configured {rateHz.ToString(CultureInfo.InvariantCulture)} Hz, period {Period} ticks, actual {actualHz.ToString("0.###", CultureInfo.InvariantCulture)} Hz.");
+    }
+
+    internal static int PeriodTicks(int tickHz, double rateHz)
+    {
+        if (tickHz < 1)
+        {
+            throw new InvalidOperationException($"迷雾刷新需要步进频率 ≥ 1 Hz（当前 {tickHz}）。");
+        }
+
+        if (!(rateHz > 0))
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: fog.rateHz = {rateHz.ToString(CultureInfo.InvariantCulture)}，需为 > 0。");
+        }
+
+        if (rateHz > tickHz)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: fog.rateHz = {rateHz.ToString(CultureInfo.InvariantCulture)} 超过步进频率 {tickHz} Hz。");
+        }
+
+        return Math.Max(1, (int)Math.Floor(tickHz / rateHz + 0.5));
+    }
 
     /// <summary>真值实体出现/消失(放置、拆除、寿命到期)——真相方调用。</summary>
     public void OnTruth(int id)
