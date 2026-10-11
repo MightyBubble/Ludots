@@ -9,3 +9,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("CapabilityStandardScriptFlowSandboxMod")]
 [assembly: InternalsVisibleTo("CapabilityStandardLiveSkillWorkbenchShowcaseMod")]
 [assembly: InternalsVisibleTo("CapabilityStandardGraphOpsNodeGalleryMod")]
+[assembly: InternalsVisibleTo("CrowdSimulationTests")]

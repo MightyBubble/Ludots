@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Ludots.Core.CrowdSimulation.Nav.Recast;
 
 /// <summary>
 /// 多边形算子（recast/polys.js 移植）：面积 / 反转 / 洞合并 / 耳切三角化 / 凸合并。
-/// 全部是格角点整数几何;JS 稳定排序在 C# 用 OrderBy(稳定)或显式次键复现。
+/// 全部是格角点整数几何。平局次序用输入序号作次键,与稳定排序一致。
 /// </summary>
 public static class PolygonOps
 {
@@ -57,38 +56,47 @@ public static class PolygonOps
         return false;
     }
 
-    /// <summary>洞合并:每个洞的最左顶点桥接到最近可见的外环顶点。</summary>
-    public static List<int> MergeHoles(List<int> outer, List<List<int>> holes)
+    /// <summary>洞合并:每个洞的最左顶点桥接到最近可见的外环顶点。最左 x 相同时保洞的输入序;距离相同时保顶点序。</summary>
+    public static List<int> MergeHoles(List<int> outer, List<List<int>> holes, PolygonBakeScratch scratch)
     {
-        var hs = holes.Select(h =>
+        int holeCount = holes.Count;
+        StableOrder.Ensure(ref scratch.HoleRank, holeCount);
+        StableOrder.Ensure(ref scratch.HoleVertex, holeCount);
+        for (int h = 0; h < holeCount; h++)
         {
+            var poly = holes[h];
             int hi = 0;
-            for (int i = 1; i < (h.Count >> 1); i++)
+            for (int i = 1; i < (poly.Count >> 1); i++)
             {
-                if (h[i * 2] < h[hi * 2] || (h[i * 2] == h[hi * 2] && h[i * 2 + 1] < h[hi * 2 + 1])) hi = i;
+                if (poly[i * 2] < poly[hi * 2] || (poly[i * 2] == poly[hi * 2] && poly[i * 2 + 1] < poly[hi * 2 + 1])) hi = i;
             }
 
-            return (H: h, Hi: hi);
-        }).OrderBy(e => e.H[e.Hi * 2]).ToList(); // OrderBy 稳定 = JS sort 稳定
+            scratch.HoleVertex[h] = hi;
+            scratch.HoleRank[h] = new StableInt(poly[hi * 2], h);
+        }
 
-        foreach (var (h, hi) in hs)
+        StableOrder.Sort(scratch.HoleRank, holeCount);
+        for (int ordered = 0; ordered < holeCount; ordered++)
         {
+            int hole = scratch.HoleRank[ordered].Seq;
+            var h = holes[hole];
+            int hi = scratch.HoleVertex[hole];
             int hx = h[hi * 2], hy = h[hi * 2 + 1];
             int on = outer.Count >> 1;
-            var cand = new List<(long D, int I)>();
+            StableOrder.Ensure(ref scratch.CandRank, on);
             for (int i = 0; i < on; i++)
             {
                 long dx = outer[i * 2] - hx, dy = outer[i * 2 + 1] - hy;
-                cand.Add((dx * dx + dy * dy, i));
+                scratch.CandRank[i] = new StableLong(dx * dx + dy * dy, i);
             }
 
-            cand = cand.OrderBy(c => c.D).ToList();
-            int pick = cand[0].I;
+            StableOrder.Sort(scratch.CandRank, on);
+            int pick = scratch.CandRank[0].Seq;
             var loops = new List<List<int>> { outer };
             loops.AddRange(holes);
-            for (int k = 0; k < Math.Min(16, cand.Count); k++)
+            for (int k = 0; k < Math.Min(16, on); k++)
             {
-                int i = cand[k].I;
+                int i = scratch.CandRank[k].Seq;
                 if (!Blocked(outer[i * 2], outer[i * 2 + 1], hx, hy, loops)) { pick = i; break; }
             }
 
@@ -148,11 +156,11 @@ public static class PolygonOps
     private const int KEY = 1 << 21;
 
     /// <summary>凸合并:沿最长共享边贪婪合并邻居,保持凸性与顶点数上限。</summary>
-    public static List<int[]> MergePolys(List<int[]> polys, int[] vx, int[] vy, int maxVerts)
+    public static List<int[]> MergePolys(List<int[]> polys, IReadOnlyList<int> vx, IReadOnlyList<int> vy, int maxVerts)
     {
-        bool Convex(int[] p)
+        bool Convex(List<int> p)
         {
-            int n = p.Length;
+            int n = p.Count;
             for (int i = 0; i < n; i++)
             {
                 int a = p[(i + n - 1) % n], b = p[i], c = p[(i + 1) % n];
@@ -196,7 +204,7 @@ public static class PolygonOps
                 var merged = new List<int>();
                 for (int k = 0; k < A.Length; k++) merged.Add(A[(ea + 1 + k) % A.Length]);
                 for (int k = 0; k < B.Length - 2; k++) merged.Add(B[(eb + 2 + k) % B.Length]);
-                if (!Convex(merged.ToArray())) continue;
+                if (!Convex(merged)) continue;
                 best = len; bm = merged.ToArray(); bi = pi; bj = pj;
             }
 
@@ -205,6 +213,21 @@ public static class PolygonOps
             polys[bj] = null!;
         }
 
-        return polys.Where(p => p != null).ToList()!;
+        int write = 0;
+        for (int i = 0; i < polys.Count; i++)
+        {
+            if (polys[i] != null) polys[write++] = polys[i];
+        }
+
+        if (write != polys.Count) polys.RemoveRange(write, polys.Count - write);
+        return polys;
     }
+}
+
+/// <summary>单次 tile 烘焙内复用的洞/候选排序缓冲。归 NavTileCache,不跨缓存共享。</summary>
+public sealed class PolygonBakeScratch
+{
+    internal StableInt[] HoleRank = Array.Empty<StableInt>();
+    internal int[] HoleVertex = Array.Empty<int>();
+    internal StableLong[] CandRank = Array.Empty<StableLong>();
 }

@@ -42,7 +42,7 @@ public static class NavTileBaker
 {
     private const int KEY = 1 << 21;
 
-    public static NavTileEntry Bake(ushort[] pass, int t, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly)
+    public static NavTileEntry Bake(ushort[] pass, int t, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly, PolygonBakeScratch scratch)
     {
         int tt = t * t;
         var dist = DistanceField.ComputeClearance(ToBytes(pass, tt), t);
@@ -86,7 +86,7 @@ public static class NavTileBaker
                 holes.Add(PolygonOps.Area2(ls[k]) < 0 ? ls[k] : PolygonOps.Reversed(ls[k]));
             }
 
-            var poly = holes.Count > 0 ? PolygonOps.MergeHoles(outer, holes) : outer;
+            var poly = holes.Count > 0 ? PolygonOps.MergeHoles(outer, holes, scratch) : outer;
             var tri = PolygonOps.Triangulate(poly);
             var tp = new List<int[]>();
             for (int k = 0; k < tri.Count; k += 3)
@@ -97,7 +97,7 @@ public static class NavTileBaker
                 if (a != b && b != c && a != c) tp.Add(new[] { a, b, c });
             }
 
-            foreach (var p in PolygonOps.MergePolys(tp, vx.ToArray(), vy.ToArray(), maxVertsPerPoly)) polys.Add(p);
+            foreach (var p in PolygonOps.MergePolys(tp, vx, vy, maxVertsPerPoly)) polys.Add(p);
         }
 
         int pCount = polys.Count;

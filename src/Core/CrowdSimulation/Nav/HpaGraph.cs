@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -56,6 +55,8 @@ public sealed class HpaGraph
     private int[] _localNb = Array.Empty<int>();
     private Fix64[] _localW = Array.Empty<Fix64>();
     private byte[] _localWant = Array.Empty<byte>();
+    // Update 的升序缓冲。本图独占:重烘在导航锁内,查询不碰它;变体克隆不共享。
+    private StableInt[] _ascend = Array.Empty<StableInt>();
 
     /// <summary>认知变体克隆(F02):外层容器全拷;内层数组/簇块/LinkOut 的 List 与真相(及
     /// 其他同源变体)共用,禁止原地写——写了就击穿全体共享者。一切改写只能整体替换变体自有的
@@ -179,25 +180,79 @@ public sealed class HpaGraph
             }
         }
 
-        foreach (int cl in east.OrderBy(v => v)) Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
-        foreach (int cl in south.OrderBy(v => v)) Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
-        foreach (int cl in own.OrderBy(v => v)) aff.Add(cl);
+        int eastCount = LoadAscending(east);
+        for (int i = 0; i < eastCount; i++)
+        {
+            int cl = _ascend[i].Key;
+            Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
+        }
+
+        int southCount = LoadAscending(south);
+        for (int i = 0; i < southCount; i++)
+        {
+            int cl = _ascend[i].Key;
+            Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
+        }
+
+        int ownCount = LoadAscending(own);
+        for (int i = 0; i < ownCount; i++) aff.Add(_ascend[i].Key);
         var lk = LinksByCluster(links, nav.CellCount, ClusterSize, c);
         // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
         var oldLk = LinkClusters ?? new Dictionary<int, List<int>>();
-        foreach (int cl in oldLk.Keys.OrderBy(v => v)) aff.Add(cl);
-        foreach (int cl in lk.Keys.OrderBy(v => v)) aff.Add(cl);
-        foreach (int cl in oldLk.Keys.OrderBy(v => v))
+        int oldCount = LoadAscendingKeys(oldLk);
+        for (int i = 0; i < oldCount; i++) aff.Add(_ascend[i].Key);
+        int linkCount = LoadAscendingKeys(lk);
+        for (int i = 0; i < linkCount; i++) aff.Add(_ascend[i].Key);
+        oldCount = LoadAscendingKeys(oldLk);
+        for (int i = 0; i < oldCount; i++)
         {
+            int cl = _ascend[i].Key;
             oldLk.TryGetValue(cl, out var a);
             lk.TryGetValue(cl, out var b);
             if (!SameIntLists(a, b)) rebake.Add(cl);
         }
 
         LinkClusters = lk;
-        foreach (int cl in rebake.OrderBy(v => v)) BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
-        foreach (int cl in aff.OrderBy(v => v)) Blocks[cl] = BuildBlock(this, nav, cl);
+        int rebakeCount = LoadAscending(rebake);
+        for (int i = 0; i < rebakeCount; i++)
+        {
+            int cl = _ascend[i].Key;
+            BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
+        }
+
+        int affCount = LoadAscending(aff);
+        for (int i = 0; i < affCount; i++) Blocks[_ascend[i].Key] = BuildBlock(this, nav, _ascend[i].Key);
         FinishGraph(this, links);
+    }
+
+    private int LoadAscending(HashSet<int> source)
+    {
+        int n = source.Count;
+        StableOrder.Ensure(ref _ascend, n);
+        int i = 0;
+        foreach (int v in source)
+        {
+            _ascend[i] = new StableInt(v, i);
+            i++;
+        }
+
+        StableOrder.Sort(_ascend, n);
+        return n;
+    }
+
+    private int LoadAscendingKeys(Dictionary<int, List<int>> source)
+    {
+        int n = source.Count;
+        StableOrder.Ensure(ref _ascend, n);
+        int i = 0;
+        foreach (int v in source.Keys)
+        {
+            _ascend[i] = new StableInt(v, i);
+            i++;
+        }
+
+        StableOrder.Sort(_ascend, n);
+        return n;
     }
 
     private static bool SameCells(int[]? a, int[]? b)
@@ -463,7 +518,10 @@ public sealed class HpaGraph
             }
         }
 
-        g.Cells[cl] = cells.Concat(up).ToArray();
+        var joined = new int[cells.Count + up.Count];
+        for (int i = 0; i < cells.Count; i++) joined[i] = cells[i];
+        for (int i = 0; i < up.Count; i++) joined[cells.Count + i] = up[i];
+        g.Cells[cl] = joined;
         g.Intra[cl] = intra.ToArray();
         g.IntraDist[cl] = intraDist.ToArray();
         g.CrossLayer[cl] = xl.ToArray();

@@ -452,7 +452,7 @@ public sealed class CrowdFog
     {
         foreach (int id in ids)
         {
-            if (!Store.TryGetFootprint(id, out _) && !Belief.Any(b => b.ContainsKey(id))) IndexDel(id);
+            if (!Store.TryGetFootprint(id, out _) && !BeliefHas(id)) IndexDel(id);
         }
     }
 
@@ -650,6 +650,16 @@ public sealed class CrowdFog
         }
 
         return to;
+    }
+
+    private bool BeliefHas(int id)
+    {
+        for (int g = 0; g < G; g++)
+        {
+            if (Belief[g].ContainsKey(id)) return true;
+        }
+
+        return false;
     }
 
     /// <summary>没有玩家的组(被并掉)。</summary>

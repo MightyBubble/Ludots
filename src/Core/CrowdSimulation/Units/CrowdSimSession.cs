@@ -145,6 +145,19 @@ public sealed class CrowdSimSession
     /// 带着已生效的变更从头跑必然分歧)。</summary>
     public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
+    // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
+    internal readonly List<Arch.Core.Entity> SelectionMembers = new();
+    internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new();
+    internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new();
+    internal readonly Dictionary<int, (Fix64 X, Fix64 Y, int N)> IssueLayerSums = new();
+    internal readonly CrowdOrder[] IssueBatch = new CrowdOrder[1];
+    internal Fix64[] FormationDiameter = Array.Empty<Fix64>();
+    internal Fix64[] FormationForward = Array.Empty<Fix64>();
+    internal Fix64[] FormationLateral = Array.Empty<Fix64>();
+    internal CrowdFormations.FormationRank[] FormationRanks = Array.Empty<CrowdFormations.FormationRank>();
+    internal int[] FormationOrder = Array.Empty<int>();
+    internal CrowdFormations.RowRank[] FormationRows = Array.Empty<CrowdFormations.RowRank>();
+
     public int TickCount { get; private set; }
     public int SpawnSeq { get; set; }
     public int SelectedCount { get; private set; }

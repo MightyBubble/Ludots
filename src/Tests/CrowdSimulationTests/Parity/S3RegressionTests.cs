@@ -23,7 +23,7 @@ public class S3RegressionTests
             for (int x = 0; x <= 6; x++) win[y * T + x] = 7;
         }
 
-        var entry = NavTileBaker.Bake(win, T, 12, 1.3, 12, 6);
+        var entry = NavTileBaker.Bake(win, T, 12, 1.3, 12, 6, new PolygonBakeScratch());
         Assert.That(entry.Count, Is.EqualTo(1));
         Assert.That(entry.Vx, Is.EqualTo(new[] { 0, 0, 7, 7 }));
         Assert.That(entry.Vy, Is.EqualTo(new[] { 5, 2, 2, 5 }));

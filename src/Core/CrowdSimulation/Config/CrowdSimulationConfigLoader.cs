@@ -291,6 +291,11 @@ public sealed class CrowdSimulationConfigLoader
             });
         }
 
+        var distinctRadiusSet = new SortedSet<int>();
+        foreach (var profile in runtimeProfiles) distinctRadiusSet.Add((int)profile.RadiusCm.ToInt());
+        var distinctRadiusCm = new int[distinctRadiusSet.Count];
+        distinctRadiusSet.CopyTo(distinctRadiusCm);
+
         return new CrowdSimulationRuntimeConfig
         {
             Version = config.Version,
@@ -326,6 +331,7 @@ public sealed class CrowdSimulationConfigLoader
                 TemplatesByRadiusCm = ParseTemplatesByRadiusCm(u),
             }),
             Profiles = runtimeProfiles,
+            RadiusClasses = Array.AsReadOnly(distinctRadiusCm),
             AvoidanceRadiusScale = avoidanceRadiusScale,
             Navmesh = new RuntimeNavmeshSection
             {
