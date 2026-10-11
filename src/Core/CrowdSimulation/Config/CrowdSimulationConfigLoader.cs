@@ -78,7 +78,7 @@ public sealed class CrowdSimulationConfigLoader
     /// LU-20：校验并组装只读运行时配置。输入全部来自 Ludots 已加载的数据。
     /// </summary>
     /// <param name="config">catalog 合并后的 CrowdSimulationConfig.json。</param>
-    /// <param name="map">地图（Boards / Teams / Players / ParticipantRelationships / Entities）。</param>
+    /// <param name="map">地图（Boards / Teams / Players / Entities）。</param>
     /// <param name="profiles">Navigation/agent_profiles.json 注册表。</param>
     /// <param name="fixedHz">Engine/clock.json 的 FixedHz——仿真频率的唯一来源。</param>
     public static CrowdSimulationRuntimeConfig Load(
