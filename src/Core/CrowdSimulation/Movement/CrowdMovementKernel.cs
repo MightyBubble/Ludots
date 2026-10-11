@@ -73,16 +73,16 @@ public sealed class CrowdMovementKernel
     public required Fix64 BlendRate { get; init; }
     public required Fix64 BlendCommit { get; init; }
     public required int SlotCheckInterval { get; init; }
-    public required Fix64 WakeDistanceCells { get; init; }
-    public required Fix64 SlotArriveCells { get; init; }
-    public required Fix64 SettleRadiusCells { get; init; }
+    public required Fix64 WakeDistanceNavCells { get; init; }
+    public required Fix64 SlotArriveNavCells { get; init; }
+    public required Fix64 SettleRadiusNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
     public required Fix64 StallDecay { get; init; }
     public required Fix64 SettleTimeSeconds { get; init; }
-    public required Fix64 SlotSightCells { get; init; }
+    public required Fix64 SlotSightNavCells { get; init; }
     public required Fix64 SightHysteresis { get; init; }
-    public required Fix64 LaneSpread { get; init; }
-    public required Fix64 GoalArriveCells { get; init; }
+    public required Fix64 LaneSpreadSpeedRatio { get; init; }
+    public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SlotGain { get; init; }
     public required Fix64 CatchUp { get; init; }
     public required Fix64 Accel { get; init; }
@@ -448,16 +448,16 @@ public sealed class CrowdMovementKernel
             BlendRate = mv.BlendRate,
             BlendCommit = mv.BlendCommit,
             SlotCheckInterval = mv.SlotCheckInterval,
-            WakeDistanceCells = mv.WakeDistanceCells,
-            SlotArriveCells = fc.SlotArriveCells,
-            SettleRadiusCells = fc.SettleRadiusCells,
+            WakeDistanceNavCells = mv.WakeDistanceNavCells,
+            SlotArriveNavCells = fc.SlotArriveNavCells,
+            SettleRadiusNavCells = fc.SettleRadiusNavCells,
             StallSpeedRatio = mv.StallSpeedRatio,
             StallDecay = mv.StallDecay,
             SettleTimeSeconds = fc.SettleTime,
-            SlotSightCells = fc.SlotSightCells,
+            SlotSightNavCells = fc.SlotSightNavCells,
             SightHysteresis = mv.SightHysteresis,
-            LaneSpread = mv.LaneSpread,
-            GoalArriveCells = fc.GoalArriveCells,
+            LaneSpreadSpeedRatio = mv.LaneSpreadSpeedRatio,
+            GoalArriveNavCells = fc.GoalArriveNavCells,
             SlotGain = Fix64.OneValue / mv.SlotTimeConstant,
             CatchUp = fc.CatchUp,
             Accel = av.Acceleration,

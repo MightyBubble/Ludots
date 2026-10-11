@@ -244,8 +244,8 @@ public sealed partial class CrowdSimulationRuntime
         _deck = deck;
         var cache = new NavTileCache(
             runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
-            runtimeConfig.Navmesh.MinRegionArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationError.ToDouble(),
-            runtimeConfig.Navmesh.MaxEdgeLen.ToDouble(), runtimeConfig.Navmesh.MaxVertsPerPoly);
+            runtimeConfig.Navmesh.MinRegionNavCellArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtimeConfig.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtimeConfig.Navmesh.MaxVertsPerPoly);
 
         var navs = new Dictionary<int, NavContext>();
         var navByLayerRadius = new Dictionary<(int, int), NavContext>();
@@ -478,8 +478,8 @@ public sealed partial class CrowdSimulationRuntime
             var replayNavs = new Dictionary<int, NavContext>();
             var replayCache = new NavTileCache(
                 session.Config.NavtileCacheCapacity, session.Config.Hpa.NavCellsPerTile,
-                session.Config.Navmesh.MinRegionArea.ToDouble(), session.Config.Navmesh.MaxSimplificationError.ToDouble(),
-                session.Config.Navmesh.MaxEdgeLen.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
+                session.Config.Navmesh.MinRegionNavCellArea.ToDouble(), session.Config.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+                session.Config.Navmesh.MaxEdgeLenNavCells.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
             var seenIds = new HashSet<int>();
             for (int a = 0; a < session.Config.AgentTypes.Count; a++)
             {

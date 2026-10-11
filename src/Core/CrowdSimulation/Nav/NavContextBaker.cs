@@ -213,7 +213,7 @@ public static class NavContextBaker
         {
             int a = cand.FromY * navCellsPerSide + cand.FromX;
             int b = cand.ToY * navCellsPerSide + cand.ToX;
-            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeCells || cand.DropCm > jump.DownCm)
+            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm)
             {
                 continue;
             }

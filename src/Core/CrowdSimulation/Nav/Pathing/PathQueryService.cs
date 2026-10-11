@@ -280,7 +280,7 @@ public sealed class PathQueryService : IDisposable
         if (q.CorridorMask != null)
         {
             // 同走廊刷新:场按 padMask ∪ 原掩码建,走廊不重推,领队折线不产出(领队与槽位不动)
-            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPadding);
+            var padRegion = FlowFieldBuilder.PadMask(q.CorridorMask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles);
             var region = FlowFieldBuilder.OrMask(padRegion, q.CorridorMask);
             var refreshed = FlowFieldBuilder.Build(nav, q.GoalCell, region, pool);
             return new PathResult
@@ -298,7 +298,7 @@ public sealed class PathQueryService : IDisposable
         var mask = new byte[navTilesPerSide * navTilesPerSide];
         mask[NavGridSteps.TileOf(q.GoalCell, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
         var corridor = CorridorQuery.CorridorTo(nav, _config, q.StartCell, q.GoalCell, mask, q.Level, scratch);
-        var padded = FlowFieldBuilder.PadMask(mask, navTilesPerSide, _config.Flowfield.CorridorPadding);
+        var padded = FlowFieldBuilder.PadMask(mask, navTilesPerSide, _config.Flowfield.CorridorPaddingNavTiles);
         var flow = FlowFieldBuilder.Build(nav, q.GoalCell, padded, pool);
 
         Fix64[]? points;

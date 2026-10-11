@@ -149,8 +149,8 @@ public static class Program
         // 步兵上下文(含桥面),缓存随烘焙填充
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, t,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
         var nav = NavContextBaker.Bake(runtime, bundle.Grid, heights, deck, 0, 1, cache);
 
         var px = BaseLayer(bundle.Surface, bundle.Height);
@@ -221,8 +221,8 @@ public static class Program
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, t,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         // 逐移动类型(去重上下文):0 = 步兵(地面,含桥面),最后一个 = 跳跃层
         var agentIndices = new[] { 0, runtime.AgentTypes.Count - 1 };
@@ -239,7 +239,7 @@ public static class Program
                 var mask = new byte[(navCellsPerSide / t) * (navCellsPerSide / t)];
                 mask[NavGridSteps.TileOf(goal, navCellsPerSide, t, navCellsPerSide / t)] = 1;
                 var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
-                var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navCellsPerSide / t, runtime.Flowfield.CorridorPadding), pool);
+                var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navCellsPerSide / t, runtime.Flowfield.CorridorPaddingNavTiles), pool);
                 var trace = FlowFieldBuilder.TracePath(flow, start, navCellsPerSide * navCellsPerSide);
                 if (trace[trace.Count - 1] != goal && corridor.Points == null) { pool.Give(flow); continue; }
 
@@ -320,8 +320,8 @@ public static class Program
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         var navs = new Dictionary<int, NavContext>();
         var navByLayerRadius = new Dictionary<(int, int), NavContext>();
@@ -366,8 +366,8 @@ public static class Program
                     var cs = new List<int>();
                     for (int k = 0; k < runtime.Deploy.CentersPerGroup; k++)
                     {
-                        int x = Math.Min(n0 - 1, Math.Max(0, bx + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterCells)));
-                        int y = Math.Min(n0 - 1, Math.Max(0, by + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterCells)));
+                        int x = Math.Min(n0 - 1, Math.Max(0, bx + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterNavCells)));
+                        int y = Math.Min(n0 - 1, Math.Max(0, by + CrowdDeployment.DetRound((dbgRng.Next() * 2 - Fix64.OneValue) * runtime.Deploy.BaseJitterNavCells)));
                         int c = CrowdDeployment.NearestPassable(nav, y * n0 + x);
                         if (c >= 0) cs.Add(c);
                     }

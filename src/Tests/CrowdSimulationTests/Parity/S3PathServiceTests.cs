@@ -41,8 +41,8 @@ public class S3PathServiceTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, _runtime);
         var cache = new NavTileCache(
             _runtime.NavtileCacheCapacity, _runtime.Hpa.NavCellsPerTile,
-            _runtime.Navmesh.MinRegionArea.ToDouble(), _runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            _runtime.Navmesh.MaxEdgeLen.ToDouble(), _runtime.Navmesh.MaxVertsPerPoly);
+            _runtime.Navmesh.MinRegionNavCellArea.ToDouble(), _runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            _runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), _runtime.Navmesh.MaxVertsPerPoly);
 
         _navs = new Dictionary<int, NavContext>();
         var seen = new HashSet<int>();

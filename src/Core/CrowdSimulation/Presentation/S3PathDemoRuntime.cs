@@ -88,8 +88,8 @@ public sealed class S3PathDemoRuntime : IDisposable
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         // 全部去重导航上下文(移动类型 × 净空)——Q 键巡回的对象
         var contexts = new List<NavContext>();

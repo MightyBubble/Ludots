@@ -70,7 +70,7 @@ public class HpaVariantIsolationTests
             foreach (var v in a) I64(v.RawValue);
         }
 
-        I32(g.NavCellsPerTile); I32(g.NavTilesPerSide); I32(g.NavCellTotal); I32(g.MaxEntranceWidth);
+        I32(g.NavCellsPerTile); I32(g.NavTilesPerSide); I32(g.NavCellTotal); I32(g.MaxEntranceWidthNavCells);
         I32(g.NodeCount); I32(g.EdgeCount);
         int navTilesPerSide = g.NavTilesPerSide * g.NavTilesPerSide;
         for (int cl = 0; cl < navTilesPerSide; cl++)

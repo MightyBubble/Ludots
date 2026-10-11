@@ -35,9 +35,9 @@ public static class CrowdIntents
             NavCellSizeCm = navCellSizeCm,
             WorldSizeCm = navCellCm * navCellsPerSide,
             BStep = Fix64.Min(Fix64.OneValue, k.BlendRate * dt),
-            Wake2 = Square(navCellCm * k.WakeDistanceCells),
-            ArriveSlot = navCellCm * k.SlotArriveCells,
-            Settle = navCellCm * k.SettleRadiusCells,
+            Wake2 = Square(navCellCm * k.WakeDistanceNavCells),
+            ArriveSlot = navCellCm * k.SlotArriveNavCells,
+            Settle = navCellCm * k.SettleRadiusNavCells,
             StallV2 = k.StallSpeedRatio * k.StallSpeedRatio,
             NavN = navCellsPerSide,
             N2 = navCellsPerSide * navCellsPerSide,
@@ -161,7 +161,7 @@ public static class CrowdIntents
 
         // 到达优先于跳跃——已在目标可达范围内的单位不起跳
         if (lv == 0 && flow.Lk != null && flow.Lk[cell] >= 0 &&
-            !(CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveCells))
+            !(CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveNavCells))
         {
             if (TryStartJump(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, s.NavN, session.Config.NavCellSizeCm, pos))
             {
@@ -190,7 +190,7 @@ public static class CrowdIntents
         }
         else if (g.LosAll || (int)(session.Units.HandleAt(i) + (uint)k.Tick) % s.Every == 0)
         {
-            Fix64 sightIn = Fix64.Max(k.SlotSightCells, Fix64.FromInt(order?.ReachCells ?? 1));
+            Fix64 sightIn = Fix64.Max(k.SlotSightNavCells, Fix64.FromInt(order?.ReachCells ?? 1));
             Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresis : sightIn;
             int scx = sc % s.NavN, scy = sc / s.NavN;
             bool vis = Fix64.Abs(Fix64.FromInt(scx - cx)) <= lim && Fix64.Abs(Fix64.FromInt(scy - cy)) <= lim
@@ -264,14 +264,14 @@ public static class CrowdIntents
                     dvy += (ly / ld) * spd * (Fix64.OneValue - w);
                 }
             }
-            else if (!slotOk && route <= k.GoalArriveCells && w < k.BlendCommit)
+            else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommit)
             {
                 arrived = true; // 聚拢指令:目标格就是目的地
             }
             else
             {
                 // 车道展开:沿流场垂直方向朝自己槽位车道漂移,队伍以阵型宽度行进,不收成一条线
-                Fix64 cap = spd * k.LaneSpread;
+                Fix64 cap = spd * k.LaneSpreadSpeedRatio;
                 Fix64 latDrift = converge ? Fix64.Zero : (fx * oy2 - fy * ox2) * k.SlotGain;
                 latDrift = Fix64.Min(cap, Fix64.Max(-cap, latDrift));
                 dvx += (fx * spd - fy * latDrift) * (Fix64.OneValue - w);

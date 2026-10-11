@@ -20,15 +20,15 @@ public static class CrowdSimulationConfigValidator
     {
         ArgumentNullException.ThrowIfNull(config);
 
-        // ---- 声明式数值规则（RULES 移植；world.navResolution / movement.tickRate 等在组装阶段按映射校验）----
-        Rule("hpa.clusterSize", config.Hpa.ClusterSize, intRequired: true, min: 4, max: 128);
-        Rule("hpa.maxEntranceWidth", config.Hpa.MaxEntranceWidth, intRequired: true, min: 1);
+        // ---- 声明式数值规则（RULES 移植；每边导航格数 / tile 派生格数在组装阶段按板宽校验）----
+        Rule("hpa.maxEntranceWidthNavCells", config.Hpa.MaxEntranceWidthNavCells, intRequired: true, min: 1);
+        Rule("navtile.sizeCm", config.Navtile.SizeCm, intRequired: true, gt: 0);
         Rule("navtile.cacheCapacity", config.Navtile.CacheCapacity, intRequired: true, min: 1);
         Rule("navmesh.maxVertsPerPoly", config.Navmesh.MaxVertsPerPoly, intRequired: true, min: 3, max: 12);
-        Rule("navmesh.portalInsetCells", config.Navmesh.PortalInsetCells, min: 0, lt: 1);
+        Rule("navmesh.portalInsetNavCells", config.Navmesh.PortalInsetNavCells, min: 0, lt: 1);
         Rule("flowfield.cacheCapacity", config.Flowfield.CacheCapacity, intRequired: true, min: 1);
         Rule("flowfield.poolCapacity", config.Flowfield.PoolCapacity, intRequired: true, min: 0);
-        Rule("flowfield.corridorPadding", config.Flowfield.CorridorPadding, intRequired: true, min: 0);
+        Rule("flowfield.corridorPaddingNavTiles", config.Flowfield.CorridorPaddingNavTiles, intRequired: true, min: 0);
         Rule("flowfield.maxRebuildsPerTick", config.Flowfield.MaxRebuildsPerTick, intRequired: true, min: 1);
         Rule("planning.latencyTicks", config.Planning.LatencyTicks, intRequired: true, min: 1, max: 60);
         Rule("planning.rebakeSlices", config.Planning.RebakeSlices, intRequired: true, min: 1, max: MaxRebakeSlices);
@@ -37,18 +37,18 @@ public static class CrowdSimulationConfigValidator
         Rule("push.dominantShare", config.Push.DominantShare, min: 0, max: 0.5);
         Rule("push.movingBonus", config.Push.MovingBonus, min: 0);
         Rule("agents.avoidanceRadiusScale", config.Agents.AvoidanceRadiusScale, gt: 0);
-        Rule("spawn.clusterSpacing", config.Spawn.ClusterSpacing, gt: 0);
+        Rule("spawn.groupSpacingScale", config.Spawn.GroupSpacingScale, gt: 0);
         Rule("spawn.placementTries", config.Spawn.PlacementTries, intRequired: true, min: 1);
         Rule("spawn.targetSearchTries", config.Spawn.TargetSearchTries, intRequired: true, min: 1);
-        Rule("spawn.cellInset", config.Spawn.CellInset, min: 0, lt: 0.5);
+        Rule("spawn.navCellInsetFraction", config.Spawn.NavCellInsetFraction, min: 0, lt: 0.5);
         Rule("movement.sightHysteresis", config.Movement.SightHysteresis, min: 1);
-        Rule("movement.wakeDistanceCells", config.Movement.WakeDistanceCells, min: 0);
+        Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);
         Rule("movement.stallDecay", config.Movement.StallDecay, min: 0);
         Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: 64);
         Rule("movement.restAccelScale", config.Movement.RestAccelScale, gt: 0);
         Rule("movement.restSeparationScale", config.Movement.RestSeparationScale, min: 0);
         // 墙面测试假设单个子步位移小于一格
-        Rule("movement.maxStepCells", config.Movement.MaxStepCells, gt: 0, lt: 1);
+        Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
         Rule("movement.slotTimeConstant", config.Movement.SlotTimeConstant, gt: 0);
         Rule("movement.unitTurnRate", config.Movement.UnitTurnRate, gt: 0);
         Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
@@ -57,7 +57,7 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.stopSpeedRatio", config.Movement.StopSpeedRatio, gt: 0);
         Rule("movement.stallSpeedRatio", config.Movement.StallSpeedRatio, gt: 0);
         Rule("movement.slotCheckInterval", config.Movement.SlotCheckInterval, intRequired: true, min: 1);
-        Rule("movement.laneSpread", config.Movement.LaneSpread, min: 0, max: 1);
+        Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
         // 关系种类上限 256(P×P Uint8 矩阵的编号域)。
@@ -120,23 +120,23 @@ public static class CrowdSimulationConfigValidator
         Rule("avoidance.maxScan", config.Avoidance.MaxScan, intRequired: true, min: 1);
         Rule("formation.spacingScale", config.Formation.SpacingScale, gt: 0);
         Rule("formation.catchUp", config.Formation.CatchUp, gt: 0);
-        Rule("formation.slotSightCells", config.Formation.SlotSightCells, gt: 0);
+        Rule("formation.slotSightCm", config.Formation.SlotSightCm, gt: 0);
         Rule("formation.magicBoxMaxSpreadCm", config.Formation.MagicBoxMaxSpreadCm, gt: 0);
         Rule("formation.clumpSlack", config.Formation.ClumpSlack, gt: 0);
-        Rule("formation.minClumpCells", config.Formation.MinClumpCells, gt: 0);
+        Rule("formation.minClumpCm", config.Formation.MinClumpCm, gt: 0);
         Rule("formation.settleTime", config.Formation.SettleTime, min: 0);
-        Rule("formation.magicBoxPadCells", config.Formation.MagicBoxPadCells, min: 0);
+        Rule("formation.magicBoxPadNavCells", config.Formation.MagicBoxPadNavCells, min: 0);
         Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
         Rule("formation.leaderTurnRate", config.Formation.LeaderTurnRate, gt: 0);
         Rule("formation.faceTurnScale", config.Formation.FaceTurnScale, gt: 0);
-        Rule("formation.slotArriveCells", config.Formation.SlotArriveCells, gt: 0);
-        Rule("formation.goalArriveCells", config.Formation.GoalArriveCells, gt: 0);
-        Rule("formation.settleRadiusCells", config.Formation.SettleRadiusCells, gt: 0);
-        Rule("formation.leaderLookAhead", config.Formation.LeaderLookAhead, gt: 0);
+        Rule("formation.slotArriveCm", config.Formation.SlotArriveCm, gt: 0);
+        Rule("formation.goalArriveCm", config.Formation.GoalArriveCm, gt: 0);
+        Rule("formation.settleRadiusCm", config.Formation.SettleRadiusCm, gt: 0);
+        Rule("formation.leaderLookAheadCm", config.Formation.LeaderLookAheadCm, gt: 0);
         Rule("formation.headingInheritDot", config.Formation.HeadingInheritDot, min: 0, max: 1);
         Rule("formation.mirrorFlipDot", config.Formation.MirrorFlipDot, min: -1, max: 0);
         Rule("fog.rateHz", config.Fog.RateHz, gt: 0, max: 30);
-        Rule("fog.cellCells", config.Fog.CellCells, intRequired: true, min: 1, max: 32);
+        Rule("fog.cellSizeCm", config.Fog.CellSizeCm, intRequired: true, min: CrowdSimulationConfigLoader.MinFogCellSizeCm);
         Rule("fog.visionCm", config.Fog.VisionCm, gt: 0);
         Rule("fog.revealTicks", config.Fog.RevealTicks, intRequired: true, min: 1);
         Rule("fog.slotCacheCapacity", config.Fog.SlotCacheCapacity, intRequired: true, min: 0, max: 256);
@@ -146,12 +146,12 @@ public static class CrowdSimulationConfigValidator
         Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: 64);
         Rule("sim.timeScale", config.Sim.TimeScale, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
-        Rule("structures.portalCells", config.Structures.PortalCells, intRequired: true, min: 1);
+        Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
         ValidateStructureTemplates(config);
         Rule("deploy.initialUnits", config.Deploy.InitialUnits, intRequired: true, min: 0);
         Rule("deploy.centersPerGroup", config.Deploy.CentersPerGroup, intRequired: true, min: 1);
-        Rule("deploy.spreadCells", config.Deploy.SpreadCells, min: 0);
-        Rule("deploy.baseJitterCells", config.Deploy.BaseJitterCells, min: 0);
+        Rule("deploy.spreadCm", config.Deploy.SpreadCm, min: 0);
+        Rule("deploy.baseJitterCm", config.Deploy.BaseJitterCm, min: 0);
 
         // ---- 结构检查（LU-19 / 参考实现 validateConfig 的关系型规则）----
         if (string.IsNullOrWhiteSpace(config.MapId))
@@ -198,9 +198,9 @@ public static class CrowdSimulationConfigValidator
                 throw Invalid($"navProfiles.{p.Id}.maxSlopeDeg", "需为 > 0、< 90");
             }
 
-            if (p.Jump is { } jump && !(jump.DownCm >= jump.UpCm && jump.RangeCells > 0 && jump.Cost > 0))
+            if (p.Jump is { } jump && !(jump.DownCm >= jump.UpCm && jump.RangeNavCells > 0 && jump.Cost > 0))
             {
-                throw Invalid($"navProfiles.{p.Id}.jump", "参数无效（downCm ≥ upCm，rangeCells / cost > 0）");
+                throw Invalid($"navProfiles.{p.Id}.jump", "参数无效（downCm ≥ upCm，rangeNavCells / cost > 0）");
             }
         }
 
@@ -272,9 +272,9 @@ public static class CrowdSimulationConfigValidator
         for (int i = 0; i < config.Formations.Length; i++)
         {
             var f = config.Formations[i];
-            if (!IsFinite(f.Spacing) || f.Spacing <= 0)
+            if (!IsFinite(f.SpacingDiameterScale) || f.SpacingDiameterScale <= 0)
             {
-                throw Invalid($"formations[{i}].spacing", "需为 > 0 的数值");
+                throw Invalid($"formations[{i}].spacingDiameterScale", "需为 > 0 的数值");
             }
 
             if (!IsFinite(f.Aspect) || f.Aspect <= 0)

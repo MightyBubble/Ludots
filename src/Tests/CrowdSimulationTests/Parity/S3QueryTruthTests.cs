@@ -40,8 +40,8 @@ public class S3QueryTruthTests
 
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         var parityDir = Path.Combine(S1Dir(seed), "CrowdSimulation", "parity");
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(parityDir, "s3c-query-truth.json")))!;
@@ -87,7 +87,7 @@ public class S3QueryTruthTests
                     var mask = new byte[navTilesPerSide * navTilesPerSide];
                     mask[NavGridSteps.TileOf(goal, navCellsPerSide, navCellsPerTile, navTilesPerSide)] = 1;
                     var corridor = CorridorQuery.CorridorTo(nav, runtime, start, goal, mask, 0, scratch);
-                    var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navTilesPerSide, runtime.Flowfield.CorridorPadding), pool);
+                    var flow = FlowFieldBuilder.Build(nav, goal, FlowFieldBuilder.PadMask(mask, navTilesPerSide, runtime.Flowfield.CorridorPaddingNavTiles), pool);
                     var trace = FlowFieldBuilder.TracePath(flow, start, navCellsPerSide * navCellsPerSide);
                     int traceOk = trace[trace.Count - 1] == goal ? 1 : 0;
                     var myCells = pool.Order.Take(flow.Reached).OrderBy(v => v).ToArray();
@@ -131,7 +131,7 @@ public class S3QueryTruthTests
                     foreach (int cl in webClusters) webMask[cl] = 1;
                     int navCellsPerTileSq = navCellsPerTile * navCellsPerTile;
                     foreach (int p in webPolys) webMask[(p / navCellsPerTileSq) >> 1] = 1;
-                    webMask = FlowFieldBuilder.PadMask(webMask, navTilesPerSide, runtime.Flowfield.CorridorPadding);
+                    webMask = FlowFieldBuilder.PadMask(webMask, navTilesPerSide, runtime.Flowfield.CorridorPaddingNavTiles);
                     var myMask = flow.Mask!;
 
                     var webCellsArr = new int[webCellCount];

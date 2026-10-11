@@ -493,7 +493,7 @@ public sealed class CrowdSimPlanner
 
             var leader = new CrowdLeader(
                 ToVec2Path(leaderResult.Points, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
-                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAhead * navCellCm);
+                o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAheadNavCells * navCellCm);
 
             // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;
@@ -576,17 +576,17 @@ public sealed class CrowdSimPlanner
         // reachCells:聚拢按触碰判到达只认这个半径;阵型单到达视野上限也用它
         if (o.Mode == CrowdOrderMode.Converge)
         {
-            o.ReachCells = (int)Fix64.Max(fc.MinClumpCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
+            o.ReachCells = (int)Fix64.Max(fc.MinClumpNavCells, (fc.ClumpSlack * Fix64Math.Sqrt(area / Fix64.Pi)) / navCellCm).ToLong();
         }
         else if (o.Mode == CrowdOrderMode.Preserve)
         {
-            o.ReachCells = (int)(ext / navCellCm + fc.SettleRadiusCells).ToLong();
+            o.ReachCells = (int)(ext / navCellCm + fc.SettleRadiusNavCells).ToLong();
         }
         else
         {
             Fix64 w2 = Fix64.Zero;
             foreach (var b in blocks) w2 += b.Width;
-            o.ReachCells = (int)((w2 / 2 + Fix64Math.Sqrt(area)) / navCellCm + fc.SettleRadiusCells).ToLong();
+            o.ReachCells = (int)((w2 / 2 + Fix64Math.Sqrt(area)) / navCellCm + fc.SettleRadiusNavCells).ToLong();
         }
     }
 

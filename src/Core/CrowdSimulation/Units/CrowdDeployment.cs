@@ -56,8 +56,8 @@ public static class CrowdDeployment
                     var centerCells = new List<int>();
                     for (int k = 0; k < dp.CentersPerGroup; k++)
                     {
-                        int x = ClampN(bx + DetRound((rng.Next() * 2 - Fix64.OneValue) * dp.BaseJitterCells), navCellsPerSide);
-                        int y = ClampN(by + DetRound((rng.Next() * 2 - Fix64.OneValue) * dp.BaseJitterCells), navCellsPerSide);
+                        int x = ClampN(bx + DetRound((rng.Next() * 2 - Fix64.OneValue) * dp.BaseJitterNavCells), navCellsPerSide);
+                        int y = ClampN(by + DetRound((rng.Next() * 2 - Fix64.OneValue) * dp.BaseJitterNavCells), navCellsPerSide);
                         int c = NearestPassable(nav, y * navCellsPerSide + x);
                         if (c >= 0) centerCells.Add(c);
                     }
@@ -88,8 +88,8 @@ public static class CrowdDeployment
             int cell = -1;
             for (int t = 0; t < tries && cell < 0; t++)
             {
-                int x = cx + DetRound((rng.Next() + rng.Next() - Fix64.OneValue) * dp.SpreadCells);
-                int y = cy + DetRound((rng.Next() + rng.Next() - Fix64.OneValue) * dp.SpreadCells);
+                int x = cx + DetRound((rng.Next() + rng.Next() - Fix64.OneValue) * dp.SpreadNavCells);
+                int y = cy + DetRound((rng.Next() + rng.Next() - Fix64.OneValue) * dp.SpreadNavCells);
                 if (x >= 0 && y >= 0 && x < navCellsPerSide && y < navCellsPerSide && sim.NavFor(g.LayerIdx, g.RIdx).Passable[y * navCellsPerSide + x] != 0) cell = y * navCellsPerSide + x;
             }
 
@@ -149,7 +149,7 @@ public static class CrowdDeployment
     {
         var cfg = sim.Config;
         int navCellsPerSide = cfg.NavCellsPerSide;
-        var e = cfg.Spawn.CellInset;
+        var e = cfg.Spawn.NavCellInsetFraction;
         var w = Fix64.OneValue - 2 * e;
         var x = (Fix64.FromInt(cell % navCellsPerSide) + e + rng.Next() * w) * cellSize;
         var y = (Fix64.FromInt(cell / navCellsPerSide) + e + rng.Next() * w) * cellSize;

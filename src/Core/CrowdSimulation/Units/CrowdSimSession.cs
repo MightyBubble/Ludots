@@ -42,7 +42,7 @@ public sealed class CrowdSimSession
         Fix64 simDt = config.Sim.TimeScale / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
         int needed = (int)Fix64.Ceiling(maxSpeed * config.Movement.SpeedCapRatio * simDt /
-            (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepCells)).ToLong();
+            (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepNavCells)).ToLong();
         SubSteps = Math.Clamp(Math.Max(1, needed), 1, config.Movement.MaxSubSteps);
         SubStepDt = simDt / SubSteps;
     }

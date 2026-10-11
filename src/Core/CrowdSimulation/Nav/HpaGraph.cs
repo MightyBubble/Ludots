@@ -17,7 +17,7 @@ public sealed class HpaGraph
     public required int NavCellsPerTile { get; init; }
     public required int NavTilesPerSide { get; init; }
     public required int NavCellTotal { get; init; }
-    public required int MaxEntranceWidth { get; init; }
+    public required int MaxEntranceWidthNavCells { get; init; }
 
     /// <summary>每 tile 的东边界入口(cellA, cellB)对列表。</summary>
     public required int[][] BorderE { get; set; }
@@ -68,7 +68,7 @@ public sealed class HpaGraph
             NavCellsPerTile = NavCellsPerTile,
             NavTilesPerSide = NavTilesPerSide,
             NavCellTotal = NavCellTotal,
-            MaxEntranceWidth = MaxEntranceWidth,
+            MaxEntranceWidthNavCells = MaxEntranceWidthNavCells,
             BorderE = (int[][])BorderE.Clone(),
             BorderS = (int[][])BorderS.Clone(),
             UpE = (int[][])UpE.Clone(),
@@ -102,7 +102,7 @@ public sealed class HpaGraph
             NavCellsPerTile = navCellsPerTile,
             NavTilesPerSide = navTilesPerSide,
             NavCellTotal = navCellsPerSide * navCellsPerSide,
-            MaxEntranceWidth = config.Hpa.MaxEntranceWidth,
+            MaxEntranceWidthNavCells = config.Hpa.MaxEntranceWidthNavCells,
             BorderE = new int[navTileCount][],
             BorderS = new int[navTileCount][],
             UpE = new int[navTileCount][],
@@ -314,7 +314,7 @@ public sealed class HpaGraph
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cx = cl % navTilesPerSide;
         if (cx >= navTilesPerSide - 1) { g.BorderE[cl] = Array.Empty<int>(); return; }
         int x0 = (cx + 1) * navCellsPerTile - 1, ys = cl / navTilesPerSide * navCellsPerTile;
-        g.BorderE[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidth, k => (ys + k) * navCellsPerSide + x0, k => (ys + k) * navCellsPerSide + x0 + 1, navCellsPerTile);
+        g.BorderE[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => (ys + k) * navCellsPerSide + x0, k => (ys + k) * navCellsPerSide + x0 + 1, navCellsPerTile);
     }
 
     private static void ScanS(HpaGraph g, NavContext nav, int cl)
@@ -322,7 +322,7 @@ public sealed class HpaGraph
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cy = cl / navTilesPerSide;
         if (cy >= navTilesPerSide - 1) { g.BorderS[cl] = Array.Empty<int>(); return; }
         int y0 = (cy + 1) * navCellsPerTile - 1, xs = cl % navTilesPerSide * navCellsPerTile;
-        g.BorderS[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidth, k => y0 * navCellsPerSide + xs + k, k => (y0 + 1) * navCellsPerSide + xs + k, navCellsPerTile);
+        g.BorderS[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => y0 * navCellsPerSide + xs + k, k => (y0 + 1) * navCellsPerSide + xs + k, navCellsPerTile);
     }
 
     // 桥面跨界入口(仅桥面↔桥面;桥头 portal 的跨层边在 BakeTile 的 xl 里)
@@ -337,7 +337,7 @@ public sealed class HpaGraph
         {
             // 与 scanBorder 同一 run 逻辑,目标格函数映射到桥面可走格
             int Ga(int k) => east ? (cy * navCellsPerTile + k) * navCellsPerSide + cx * navCellsPerTile + navCellsPerTile - 1 : (cy * navCellsPerTile + navCellsPerTile - 1) * navCellsPerSide + cx * navCellsPerTile + k;
-            var pairs = ScanBorder(nav.UpPass, g.MaxEntranceWidth, Ga, k => Ga(k) + (east ? 1 : navCellsPerSide), navCellsPerTile);
+            var pairs = ScanBorder(nav.UpPass, g.MaxEntranceWidthNavCells, Ga, k => Ga(k) + (east ? 1 : navCellsPerSide), navCellsPerTile);
             for (int p = 0; p < pairs.Length; p += 2)
             {
                 list.Add(g.NavCellTotal + pairs[p]);

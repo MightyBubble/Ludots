@@ -121,8 +121,8 @@ public class S4DeployTruthTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         var navs = new Dictionary<int, NavContext>();
         var navByLayerRadius = new Dictionary<(int, int), NavContext>();

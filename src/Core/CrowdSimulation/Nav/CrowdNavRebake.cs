@@ -359,8 +359,8 @@ public static class CrowdNavRebake
     {
         var config = sources.Config;
         var freshCache = new NavTileCache(config.NavtileCacheCapacity, config.Hpa.NavCellsPerTile,
-            config.Navmesh.MinRegionArea.ToDouble(), config.Navmesh.MaxSimplificationError.ToDouble(),
-            config.Navmesh.MaxEdgeLen.ToDouble(), config.Navmesh.MaxVertsPerPoly);
+            config.Navmesh.MinRegionNavCellArea.ToDouble(), config.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            config.Navmesh.MaxEdgeLenNavCells.ToDouble(), config.Navmesh.MaxVertsPerPoly);
         foreach (var nav in navs.Values)
         {
             var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceCells, freshCache);

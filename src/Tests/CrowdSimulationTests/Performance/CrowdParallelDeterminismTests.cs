@@ -158,7 +158,7 @@ public sealed class CrowdParallelDeterminismTests
         int navCellsPerSide = session.Config.NavCellsPerSide;
         int navCellSizeCm = session.Config.NavCellSizeCm;
         if (group.Goal < 0) throw new InvalidOperationException($"组 {group.Id} 没有目标格。");
-        var goalArrive = session.Movement!.GoalArriveCells;
+        var goalArrive = session.Movement!.GoalArriveNavCells;
         var reach = Fix64.FromInt(order.ReachCells);
         double radiusSum = (session.Units.PersonalRadiusCmAt(0) + session.Units.PersonalRadiusCmAt(1)).ToDouble();
         var found = new List<Candidate>(512);

@@ -43,7 +43,7 @@ public static class UpperLayerBake
         var tileSeen = new bool[(navCellsPerSide / config.Hpa.NavCellsPerTile) * (navCellsPerSide / config.Hpa.NavCellsPerTile)];
         var tileOrder = new List<int>();
         int tileSize = config.Hpa.NavCellsPerTile;
-        var portalReach = Fix64.FromInt(config.Structures.PortalCells * navCellSizeCm / 100); // 格 → 米
+        var portalReach = Fix64.FromInt(config.Structures.PortalReachNavCells * navCellSizeCm / 100); // 格 → 米
         foreach (var bridge in bridges)
         {
             int areaIndex = AreaIndexOf(config, bridge.AreaId);

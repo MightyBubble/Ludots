@@ -12,7 +12,7 @@ namespace Ludots.Core.CrowdSimulation.Fog;
 
 /// <summary>
 /// 迷雾 + 认知(belief),按视野组(fog/fog.js 移植):shareVision 关系双向成立的玩家并成一组,
-/// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / cellCells) 的 fog 格)上:
+/// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上:
 /// visible 每 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章);
 /// explored 粘滞;belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
 /// 实体见即知;真值已拆的实体留残影,直到其地面再被看见);key = 认知实体集的交换 XOR 哈希
@@ -73,7 +73,7 @@ public sealed class CrowdFog
         NavCellsPerSide = config.NavCellsPerSide;
         NavCellsPerFogCell = fc.NavCellsPerFogCell;
         FogCellsPerSide = (NavCellsPerSide + NavCellsPerFogCell - 1) / NavCellsPerFogCell;
-        FogCellSizeCm = config.NavCellSizeCm * NavCellsPerFogCell;
+        FogCellSizeCm = fc.FogCellSizeCm;
         Los = fc.LineOfSight;
         EyeCm = fc.EyeCm;
         _eyeM = Fix64.FromInt(EyeCm) / Fix64.FromInt(100);

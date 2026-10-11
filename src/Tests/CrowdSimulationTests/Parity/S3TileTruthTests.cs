@@ -35,9 +35,9 @@ public class S3TileTruthTests
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity,
             navCellsPerTile,
-            runtime.Navmesh.MinRegionArea.ToDouble(),
-            runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(),
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(),
+            runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(),
             runtime.Navmesh.MaxVertsPerPoly);
 
         // 与导出端同一获取序:逐(移动类型 × 净空)上下文,缓存随烘焙填充(同 buildNavContext)

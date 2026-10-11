@@ -60,7 +60,7 @@ public static class TilePathQuery
         Fix64 sx = Fix64.FromInt(startCell % navCellsPerSide) + half, sy = Fix64.FromInt(startCell / navCellsPerSide) + half;
         Fix64 gx = Fix64.FromInt(goalCell % navCellsPerSide) + half, gy = Fix64.FromInt(goalCell / navCellsPerSide) + half;
         var minCost = nav.MinCost;
-        var inset = config.Navmesh.PortalInsetCells;
+        var inset = config.Navmesh.PortalInsetNavCells;
 
         var g = s.GScore; var ex = s.Ex; var ey = s.Ey; var parent = s.Parent; var closed = s.Closed;
         g.Clear(); ex.Clear(); ey.Clear(); parent.Clear(); closed.Clear();
