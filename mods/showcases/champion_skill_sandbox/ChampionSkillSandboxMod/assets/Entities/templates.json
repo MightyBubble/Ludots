@@ -254,10 +254,6 @@
           "Ability.Champion.SpellEngineer.GuidedLaser"
         ]
       },
-      "AbilityExecAimSync": {
-        "abilitySlot": 3,
-        "syncFacing": true
-      },
       "GameplayTagContainer": {
         "tags": ["Champion.Input.HoldToChannel"]
       },
