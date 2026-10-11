@@ -20,6 +20,9 @@ namespace CrowdSimulationTests.Parity;
 /// </summary>
 public sealed class CrowdFogLosParityTests
 {
+    /// <summary>真值文件用 0 表示无不透明格，所以第 0 格无法以不透明格出现在对拍用例里。</summary>
+    private const int TruthNoOpaqueCell = 0;
+
     [Test]
     public void Sight_EngineeredHeights_MatchSandboxTruth()
     {
@@ -55,7 +58,7 @@ public sealed class CrowdFogLosParityTests
             }
 
             int oc = c["opaque"]!.GetValue<int>();
-            if (oc != 0) opaque[oc] = 1;
+            if (oc != TruthNoOpaqueCell) opaque[oc] = 1;
             hAvgField.SetValue(fog, hAvg);
             hMaxField.SetValue(fog, hMax);
             opaqueField.SetValue(fog, opaque);
