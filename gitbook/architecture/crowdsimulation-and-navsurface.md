@@ -41,8 +41,11 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
                                      NavContext / NavLinkSet（上下文产物）
   CrowdSimulationAgent.cs            单位组件 { profileId }
 mods/capabilities/navigation/CrowdSimulationMod/
-  assets/config_catalog.json         登记 CrowdSimulationConfig.json = DeepObject
-  assets/CrowdSimulationConfig.json  全量默认值（地图 Mod 只写要改的字段）
+  assets/config_catalog.json         登记配置与调试文件；调试文件 AllowEmpty
+  assets/Navigation/agent_profiles.json
+                                     体型档案。agents.profilesUri 指向这里
+mods/capabilities/navigation/CrowdSimulationStandardMod/
+  assets/CrowdSimulationConfig.json  标准参数（对拍同一份）。不含地图事实，不写时钟
 src/Tests/CrowdSimulationTests/      S0 验收测试
 ```
 
@@ -105,7 +108,29 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（6250）= 2，需为 ≥ 4、≤ 128 的整数
 ```
 
-覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。版本不等于当前 v7 一律拒绝，无迁移。例外：formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充——参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
+覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。配置文件不再带 `version`；作者再写这个键，加载直接报错。例外：formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充——参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
+
+## 作者怎么配
+
+参数、地图事实、时钟分三处写。
+
+`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、关系、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
+
+`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。`agents.profilesUri` 仍指向这份档案。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
+
+地图 Mod 写 `mapId`、`world.seed`、`world.surfaceAsset`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。`world.terrainTypes` 保持数组，下标就是 `.navsurface` 的地形编号。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
+
+覆盖走 DeepObject：后加载的 Mod 按键合并。留在群体配置里的 `formations`、`structures.templates`、`agents.radiusClasses` 以 id 为键，改一项只写那一项。值为 `null` 会拒绝。写成数组也会拒绝。`agentTypes`、`navAreas`、`navProfiles`、`unitTypes` 仍是数组，覆盖时整表替换。运行时按 id 排序，不看对象键的书写顺序。
+
+时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
+
+时间有三种写法：
+
+- 步进频率是 `FixedHz`。`fog.rateHz` 相对它，`avoidance.rateHz` 相对 `FixedHz × 子步`。两者都必须 > 0，并且不能超过对应的步进频率。周期是 `max(1, round(步进频率 / rateHz))`。实际频率打在引擎日志里。超过步进频率直接报错。
+- `sim.simSecondsPerTickSecond` 是每个 tick 秒推进多少仿真秒。旧键 `sim.timeScale` 已删除。
+- 玩法时长带 `Sec`：`formation.settleTimeSec`、`movement.slotTimeConstantSec`、结构模板的 `lifetimeSec`。调度延迟和每 tick 预算仍用 `Ticks` / `PerTick`，例如 `planning.latencyTicks`、`fog.revealTicks`、`flowfield.maxRebuildsPerTick`。寿命到期 tick 是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`。
+
+调试文件 `CrowdSimulationDebug.json` 在目录里声明了 `AllowEmpty`。没有任何 Mod 提供片段时，不装调试功能，S1 因此不用带调试文件。要开路径演示或自动会话，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
@@ -247,7 +272,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 
 ## S7-a 交付：结构动态化内核——建造/拆除/寿命 + 脏 tile 增量重烘 + HPA 增量 + 队伍反应（本次）
 
-- **结构仓**（`Structures/CrowdStructuresStore.cs` + `CrowdStructureFootprint.cs`,对照 `structures/store.js` + `footprint.js` 逐 op）：足迹三形(rect 半边长 / disc 半径 / path 带端点条带,厘米域 Fix64,`CrowdFix.Hypot`,path 端点 ε=1e-4 cm 容差)、bbox、格矩形、格心 covers;仓 = 纯组件表(模板 / 足迹 / NavArea / blocker / 寿命),id 单调递增按 id 序遍历保证确定性;**地图静态阻挡物以实体身份入仓**(与参考 mapGen 同形,动态 op 与其共用一套栅格重标);`rasterRect` 按变更格矩形重标区域(优先级高者胜、同级后放置者胜)与阻挡(逐轴覆盖份额乘积 ≥ blockCoverage,与 `SurfaceGrid.Build` 同式);blocker 集变化即整体重建碰撞 CSR(注册格矩形外扩 reach);逐点查询取最上层实体;寿命到期队列按绝对 tick(`placeTick + ceil(lifetimeSec/(timeScale/fixedHz))`——**按参考端原始 double 公式换算,不走 Fix64**:Fix64 的 simDt 下取整会把 4s@simDt=1/3 的恰好整除商推成 13,首个分歧即此)。
+- **结构仓**（`Structures/CrowdStructuresStore.cs` + `CrowdStructureFootprint.cs`,对照 `structures/store.js` + `footprint.js` 逐 op）：足迹三形(rect 半边长 / disc 半径 / path 带端点条带,厘米域 Fix64,`CrowdFix.Hypot`,path 端点 ε=1e-4 cm 容差)、bbox、格矩形、格心 covers;仓 = 纯组件表(模板 / 足迹 / NavArea / blocker / 寿命),id 单调递增按 id 序遍历保证确定性;**地图静态阻挡物以实体身份入仓**(与参考 mapGen 同形,动态 op 与其共用一套栅格重标);`rasterRect` 按变更格矩形重标区域(优先级高者胜、同级后放置者胜)与阻挡(逐轴覆盖份额乘积 ≥ blockCoverage,与 `SurfaceGrid.Build` 同式);blocker 集变化即整体重建碰撞 CSR(注册格矩形外扩 reach);逐点查询取最上层实体;寿命到期队列按绝对 tick(`placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`，decimal 有理数；30 Hz 且每 tick 秒 10 仿真秒时，4 秒仍是 12 tick)。
 - **指令面**:`placeStructure` / `removeStructureAt` 进 `CrowdSimCommands`(厘米单位,模板按 id 查配置表,指令即数据 tick 边界执行,脚本化对拍用);`structures.templates` 进配置四件套(DTO/Loader/Runtime/Validator,规则与参考 config.js 同源:footprint 枚举、blocker⇒rect、area⇔priority、area 存在性、priority ≥0、非阻挡且无 area 即无效实体、lifetimeSec>0、id 唯一);**分层实体(桥)的动态放置显式拒绝**(C# 上层动态烘焙未随本单,拒绝不是静默忽略,有测试钉住)。
 - **增量重烘**（`Nav/CrowdNavRebake.cs`,对照 `nav.js rebakeNavRects` + `finish`）:变更格矩形 → 逐上下文重分类(0 无变化 / 1 仅代价 / 2 可走位翻转)→ kind=2 时 `erodeRect`(切比雪夫可分离两遍,矩形外扩腐蚀半径)→ 脏 tile 重烘(`NavTileCache` 内容键命中即复用,条目引用相同的 tile 其 HPA tile 内距离逐位复用)→ 连通域全格重标(与全量烘焙同一份洪泛,划分等价;编号不是合同)→ 桥面合并 → 链接(跳跃候选端点触矩形才整表重建,否则按新标号重导出域图)→ `HpaGraph.Update`;kind=1 时 tile 多边形与 HPA 块代价现读重算。导航版本 cost/passable 各 +1,可达备忘随重烘失效。
 - **HPA 增量**（`HpaGraph.Update`,对照 `hpa.js updateHpa`）:脏 tile 触到的共享边界各重扫一次,入口表(含桥面跨界表)变化的 tile 重烘 tile 内边,受影响 tile 的块整体重建;**tile 内快路径即 hpaLocal**(邻接表 + 只到目标即停的 Dijkstra),keep 语义(tile 不在脏集或脏 tile 内容未变)下旧距离逐位复用;D23:重生成的跳跃链接落进干净 tile 时其端点表变化也触发重烘。等价基准 `HpaLocalEquivalenceTests`:真实 s1337 上下文上全部 tile 的全部 tile 内边,快路径距离与 `HpaQuery.TileDijkstra`(逐格推导)逐位相等 + 完备性(可达者必在表)。

@@ -98,7 +98,7 @@ flowchart TD
 
 ## 群体模拟
 
-群体模拟的格不从 `CellCm` 派生。权威定义在架构页层级表的 `NavCell`、`NavTile`（群体）、`FogCell`、`AvoidanceHashCell`。标准配置 `CrowdSimulationConfig.json` 的 `version` 仍是 7；下表的旧键出现即失败。
+群体模拟的格不从 `CellCm` 派生。权威定义在架构页层级表的 `NavCell`、`NavTile`（群体）、`FogCell`、`AvoidanceHashCell`。标准参数在 `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`，文件不再带 `version`。下表的旧键出现即失败。怎么拆 Mod、怎么覆盖、时钟写在哪，见架构页「作者怎么配」。
 
 | 配置 | 目标概念 | 单位 | 标准值 | 含义 / 约束 |
 |---|---|---:|---:|---|
@@ -120,7 +120,7 @@ flowchart TD
 | `deploy.spreadCm` / `baseJitterCm` | 部署散布 | cm | 187500 / 125000 | 装载时 `厘米 / world.navCellSizeCm`，再 `Fix64.FromDouble`。 |
 | `fog.visionCm` / `fog.eyeCm` | 视野 / 眼高 | cm | 80000 / 1000 | 视野半径相对迷雾格有上限。 |
 | `spawn.groupSpacingScale` | 团间距 | 无量纲 | 2.2 | 乘个人半径。旧键 `spawn.clusterSpacing`。 |
-| `formations[].spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。 |
+| `formations.<id>.spacingDiameterScale` / `formation.spacingScale` | 间距倍率 | 无量纲 | 1 或 1.8 / 1.1 | 乘直径或个人间距。键是阵型 id。 |
 | `movement.laneSpreadSpeedRatio` | 车道展开 | 速度比 | 0.5 | 乘速度。 |
 
 避让哈希格 `CrowdSpatialHash.CellSizeCm` / `CellsPerSide` 由半径和 `avoidance.hashRings` 派生，没有边长配置键。
