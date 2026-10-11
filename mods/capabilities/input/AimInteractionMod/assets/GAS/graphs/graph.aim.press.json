@@ -200,7 +200,9 @@
       },
       {
         "id": "pick_all",
-        "op": "QueryAllMapEntities"
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 160
       },
       {
         "id": "hostile",
@@ -209,8 +211,7 @@
       },
       {
         "id": "pick",
-        "op": "ScreenPointToEntity",
-        "pickRadiusPx": 48
+        "op": "AggMinByDistance"
       },
       {
         "id": "pick_alive",
@@ -939,24 +940,6 @@
         "fromPort": "value",
         "to": "hostile",
         "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "pick",
-        "toPort": "source"
-      },
-      {
-        "from": "px",
-        "fromPort": "value",
-        "to": "pick",
-        "toPort": "a"
-      },
-      {
-        "from": "py",
-        "fromPort": "value",
-        "to": "pick",
-        "toPort": "b"
       },
       {
         "from": "pick",
