@@ -60,8 +60,8 @@ public sealed class FogHudCountTests
             if (t == 6) entitiesAfterBarrier = session.Structures!.EntityIds.Count;
             if (t == 18) entitiesAfterExpiry = session.Structures!.EntityIds.Count;
 
-            int f2 = fog.F * fog.F;
-            for (int g = 0; g < fog.G; g++)
+            int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
+            for (int g = 0; g < fog.VisionGroupCount; g++)
             {
                 int visible = 0, explored = 0;
                 int origin = g * f2;

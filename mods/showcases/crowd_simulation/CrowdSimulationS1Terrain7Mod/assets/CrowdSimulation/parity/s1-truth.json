@@ -1,8 +1,8 @@
 {
   "mapId": "crowd_simulation_s7",
   "seed": 7,
-  "navCells": 256,
-  "cellSizeCm": 6250,
+  "navCellsPerSide": 256,
+  "navCellSizeCm": 6250,
   "blockers": 300,
   "bridges": 11,
   "jumpCandidates": 333,

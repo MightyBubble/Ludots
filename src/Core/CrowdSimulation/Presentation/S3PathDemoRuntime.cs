@@ -83,13 +83,13 @@ public sealed class S3PathDemoRuntime : IDisposable
         }
 
         var heightAsset = ContinuousHeightmapBinary.Read(CrowdSimulationRuntime.OpenAsset(engine, heightRel));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         // 全部去重导航上下文(移动类型 × 净空)——Q 键巡回的对象
         var contexts = new List<NavContext>();
@@ -97,7 +97,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         var seen = new HashSet<int>();
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;

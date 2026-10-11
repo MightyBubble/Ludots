@@ -67,7 +67,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
     public static class RecastNavTileBaker
     {
-        private const float CmPerMeter = SpatialScaleDefaults.CellCm;
+        private const float CmPerMeter = SpatialScaleDefaults.CentimetersPerMeter;
 
         /// <summary>
         /// Hard cap on the solid heightfield column count. RcHeightfield allocates one

@@ -16,8 +16,8 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 public sealed class CrowdFlowFieldVisualSource
 {
     public FlowField? Flow { get; set; }
-    public int CellCount { get; set; }
-    public int CellSizeCm { get; set; }
+    public int NavCellsPerSide { get; set; }
+    public int NavCellSizeCm { get; set; }
 }
 
 /// <summary>
@@ -40,9 +40,9 @@ public sealed class CrowdFlowFieldVisualProjector : IGlobalFieldVisualProjector
     {
         ArgumentNullException.ThrowIfNull(buffer);
         var flow = _source.Flow;
-        int n = _source.CellCount;
-        if (flow == null || n <= 0 || flow.Reached <= 0) return;
-        int n2 = n * n;
+        int navCellsPerSide = _source.NavCellsPerSide;
+        if (flow == null || navCellsPerSide <= 0 || flow.Reached <= 0) return;
+        int n2 = navCellsPerSide * navCellsPerSide;
         var inf = Fix64.MaxValue / 4;
         int count = 0;
         if (_cells.Length < flow.Reached) _cells = new GlobalFieldVisualCell[flow.Reached];
@@ -53,24 +53,24 @@ public sealed class CrowdFlowFieldVisualProjector : IGlobalFieldVisualProjector
             int w = flow.Wp[u];
             if (w < 0) continue;
             int lv = u >= n2 ? 1 : 0, c = u - lv * n2, wc = w % n2;
-            int dx = wc % n - c % n, dy = wc / n - c / n;
+            int dx = wc % navCellsPerSide - c % navCellsPerSide, dy = wc / navCellsPerSide - c / navCellsPerSide;
             if (dx == 0 && dy == 0) continue;
             float len = MathF.Sqrt(dx * dx + dy * dy);
             float taut = (float)flow.Len[u].ToDouble();
             // 强度:近终点最亮,远终点也有一个可读下限(方向图要看得见整片走廊)
             float strength = Math.Max(0.35f, 1f / (1f + taut * 0.04f));
             _cells[count++] = new GlobalFieldVisualCell(
-                new Ludots.Core.Fields.FieldCell2D(c % n, c / n),
+                new Ludots.Core.Fields.FieldCell2D(c % navCellsPerSide, c / navCellsPerSide),
                 new Vector4(dx / len, dy / len, strength, 0f));
         }
 
         if (count == 0) return;
-        _dirty[0] = new IntRect(0, 0, n, n);
+        _dirty[0] = new IntRect(0, 0, navCellsPerSide, navCellsPerSide);
         var descriptor = new GlobalFieldVisualDescriptor(
             new GlobalFieldVisualId(GlobalFieldVisualKind.Flow, scopeKeyId: 1, layerKeyId: 0, surfaceKeyId: 0),
-            _source.CellSizeCm,
+            _source.NavCellSizeCm,
             new WorldCmInt2(0, 0),
-            new IntRect(0, 0, n, n),
+            new IntRect(0, 0, navCellsPerSide, navCellsPerSide),
             GlobalFieldVisualValueKind.Vector4);
         buffer.Upsert(in descriptor, _cells.AsSpan(0, count), _dirty);
     }

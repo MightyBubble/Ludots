@@ -14,7 +14,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 public sealed class NavTileCache
 {
     private readonly int _capacity;
-    private readonly int _tileCells;
+    private readonly int _navCellsPerTile;
     private readonly double _minRegionArea;
     private readonly double _maxSimplificationError;
     private readonly double _maxEdgeLen;
@@ -38,27 +38,27 @@ public sealed class NavTileCache
     /// <summary>测试 / 对拍用:逐条目的内容键与条目。</summary>
     public IEnumerable<(string Key, NavTileEntry Entry)> Entries => _lru.Select(e => (e.Key, e.Entry));
 
-    public NavTileCache(int capacity, int tileCells, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly)
+    public NavTileCache(int capacity, int navCellsPerTile, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly)
     {
         _capacity = capacity;
-        _tileCells = tileCells;
+        _navCellsPerTile = navCellsPerTile;
         _minRegionArea = minRegionArea;
         _maxSimplificationError = maxSimplificationError;
         _maxEdgeLen = maxEdgeLen;
         _maxVertsPerPoly = maxVertsPerPoly;
-        _win = new ushort[tileCells * tileCells];
+        _win = new ushort[navCellsPerTile * navCellsPerTile];
     }
 
     /// <summary>取 tile (tx, ty) 的缓存条目,未命中即烘焙。</summary>
-    public NavTileEntry Acquire(byte[] passable, byte[] area, int n, int tx, int ty)
+    public NavTileEntry Acquire(byte[] passable, byte[] area, int navCellsPerSide, int tx, int ty)
     {
-        int t = _tileCells, ox = tx * t, oy = ty * t;
-        for (int y = 0; y < t; y++)
+        int navCellsPerTile = _navCellsPerTile, ox = tx * navCellsPerTile, oy = ty * navCellsPerTile;
+        for (int y = 0; y < navCellsPerTile; y++)
         {
-            for (int x = 0; x < t; x++)
+            for (int x = 0; x < navCellsPerTile; x++)
             {
-                int c = (oy + y) * n + ox + x;
-                _win[y * t + x] = passable[c] != 0 ? (ushort)(area[c] + 1) : (ushort)0;
+                int c = (oy + y) * navCellsPerSide + ox + x;
+                _win[y * navCellsPerTile + x] = passable[c] != 0 ? (ushort)(area[c] + 1) : (ushort)0;
             }
         }
 
@@ -77,7 +77,7 @@ public sealed class NavTileCache
         Misses++;
         Bakes++;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var entry = NavTileBaker.Bake(_win, t, _minRegionArea, _maxSimplificationError, _maxEdgeLen, _maxVertsPerPoly, _bakeScratch);
+        var entry = NavTileBaker.Bake(_win, navCellsPerTile, _minRegionArea, _maxSimplificationError, _maxEdgeLen, _maxVertsPerPoly, _bakeScratch);
         BakeMs += sw.Elapsed.TotalMilliseconds;
         entry.Uid = _uid++;
         var newNode = _lru.AddLast((key, entry));

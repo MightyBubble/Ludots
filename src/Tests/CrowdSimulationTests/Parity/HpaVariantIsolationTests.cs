@@ -31,8 +31,8 @@ public class HpaVariantIsolationTests
         var before = TruthDigests(session);
 
         // 认知槽 1:believed 实体为空(真相每个实体都是分歧)+ 前一半 tile 未探索(乐观假设)
-        int clustersPerSide = session.Navs.Values.First().Hpa!.ClustersPerSide;
-        var unknown = Enumerable.Range(0, clustersPerSide * clustersPerSide / 2).ToList();
+        int navTilesPerSide = session.Navs.Values.First().Hpa!.NavTilesPerSide;
+        var unknown = Enumerable.Range(0, navTilesPerSide * navTilesPerSide / 2).ToList();
         session.Beliefs!.Register(1, Array.Empty<(int, int, CrowdStructureFootprint)>(), unknown);
 
         var variants = session.Navs.Keys.OrderBy(v => v)
@@ -52,7 +52,7 @@ public class HpaVariantIsolationTests
         session.Navs.ToDictionary(kv => kv.Key, kv => HpaDigest(kv.Value.Hpa!));
 
     /// <summary>HPA 全量逐位摘要:标量 + 逐簇内层数组/代价 + 簇块(含 Index 迭代序)+ LinkOut/
-    /// LinkClusters 键序与内容。同对象未被改写则摘要必然相同;任何共享内层的原地写都会现形。</summary>
+    /// LinkTiles 键序与内容。同对象未被改写则摘要必然相同;任何共享内层的原地写都会现形。</summary>
     private static string HpaDigest(HpaGraph g)
     {
         var b = new List<byte>();
@@ -70,10 +70,10 @@ public class HpaVariantIsolationTests
             foreach (var v in a) I64(v.RawValue);
         }
 
-        I32(g.ClusterSize); I32(g.ClustersPerSide); I32(g.CellCount2); I32(g.MaxEntranceWidth);
+        I32(g.NavCellsPerTile); I32(g.NavTilesPerSide); I32(g.NavCellTotal); I32(g.MaxEntranceWidthNavCells);
         I32(g.NodeCount); I32(g.EdgeCount);
-        int cc = g.ClustersPerSide * g.ClustersPerSide;
-        for (int cl = 0; cl < cc; cl++)
+        int navTilesPerSide = g.NavTilesPerSide * g.NavTilesPerSide;
+        for (int cl = 0; cl < navTilesPerSide; cl++)
         {
             Arr(g.BorderE[cl]); Arr(g.BorderS[cl]);
             Arr(g.UpE[cl]); ArrF(g.UpECost[cl]); Arr(g.UpS[cl]); ArrF(g.UpSCost[cl]);
@@ -97,14 +97,14 @@ public class HpaVariantIsolationTests
             }
         }
 
-        if (g.LinkClusters == null)
+        if (g.LinkTiles == null)
         {
             I32(-1);
         }
         else
         {
-            I32(g.LinkClusters.Count);
-            foreach (var kv in g.LinkClusters.OrderBy(k => k.Key))
+            I32(g.LinkTiles.Count);
+            foreach (var kv in g.LinkTiles.OrderBy(k => k.Key))
             {
                 I32(kv.Key); I32(kv.Value.Count);
                 foreach (var v in kv.Value) I32(v);

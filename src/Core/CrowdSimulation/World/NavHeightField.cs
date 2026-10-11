@@ -12,8 +12,8 @@ namespace Ludots.Core.CrowdSimulation.World;
 /// </summary>
 public sealed class NavHeightField
 {
-    public required int CellCount { get; init; }
-    public required int CellSizeCm { get; init; }
+    public required int NavCellsPerSide { get; init; }
+    public required int NavCellSizeCm { get; init; }
     /// <summary>导航格平均高度（厘米，Fix64）。</summary>
     public required Fix64[] HeightsCm { get; init; }
     /// <summary>逐格坡度（无量纲，rise / run）。</summary>
@@ -39,7 +39,7 @@ public sealed class NavHeightField
         }
 
         var scale = asset.SampleScale;
-        int n = navCellCount;
+        int navCellsPerSide = navCellCount;
         var raw = asset.HeightSamplesRaw;
 
         // 逐样本解码先在 double 完成（asset 契约的小数cm值是实数：offset + raw × num / den;
@@ -52,15 +52,15 @@ public sealed class NavHeightField
             sampleCm[i] = scale.OffsetCm + (raw[i] * (double)scale.UnitsPerSampleNumeratorCm) / scale.UnitsPerSampleDenominator;
         }
 
-        var heights = new Fix64[n * n];
-        for (int y = 0; y < n; y++)
+        var heights = new Fix64[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            int by0 = y * b / n;
-            int by1 = Math.Max(by0 + 1, (y + 1) * b / n);
-            for (int x = 0; x < n; x++)
+            int by0 = y * b / navCellsPerSide;
+            int by1 = Math.Max(by0 + 1, (y + 1) * b / navCellsPerSide);
+            for (int x = 0; x < navCellsPerSide; x++)
             {
-                int bx0 = x * b / n;
-                int bx1 = Math.Max(bx0 + 1, (x + 1) * b / n);
+                int bx0 = x * b / navCellsPerSide;
+                int bx1 = Math.Max(bx0 + 1, (x + 1) * b / navCellsPerSide);
                 double sum = 0;
                 int cnt = 0;
                 for (int by = by0; by < by1; by++)
@@ -72,28 +72,28 @@ public sealed class NavHeightField
                     }
                 }
 
-                heights[y * n + x] = Fix64.FromDouble(sum / cnt);
+                heights[y * navCellsPerSide + x] = Fix64.FromDouble(sum / cnt);
             }
         }
 
-        var slope = new Fix64[n * n];
+        var slope = new Fix64[navCellsPerSide * navCellsPerSide];
         Fix64 k2 = Fix64.OneValue / Fix64.FromInt(2 * navCellSizeCm);
-        for (int y = 0; y < n; y++)
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            for (int x = 0; x < n; x++)
+            for (int x = 0; x < navCellsPerSide; x++)
             {
-                int xl = Math.Max(0, x - 1), xr = Math.Min(n - 1, x + 1);
-                int yu = Math.Max(0, y - 1), yd = Math.Min(n - 1, y + 1);
-                Fix64 gx = (heights[y * n + xr] - heights[y * n + xl]) * k2;
-                Fix64 gy = (heights[yd * n + x] - heights[yu * n + x]) * k2;
-                slope[y * n + x] = Fix64Math.Sqrt(gx * gx + gy * gy);
+                int xl = Math.Max(0, x - 1), xr = Math.Min(navCellsPerSide - 1, x + 1);
+                int yu = Math.Max(0, y - 1), yd = Math.Min(navCellsPerSide - 1, y + 1);
+                Fix64 gx = (heights[y * navCellsPerSide + xr] - heights[y * navCellsPerSide + xl]) * k2;
+                Fix64 gy = (heights[yd * navCellsPerSide + x] - heights[yu * navCellsPerSide + x]) * k2;
+                slope[y * navCellsPerSide + x] = Fix64Math.Sqrt(gx * gx + gy * gy);
             }
         }
 
         return new NavHeightField
         {
-            CellCount = n,
-            CellSizeCm = navCellSizeCm,
+            NavCellsPerSide = navCellsPerSide,
+            NavCellSizeCm = navCellSizeCm,
             HeightsCm = heights,
             Slope = slope,
         };

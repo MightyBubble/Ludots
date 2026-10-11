@@ -1,7 +1,7 @@
 {
   "mapId": "crowd_simulation_s1337",
   "seed": 1337,
-  "tiles": 769,
+  "navTileEntries": 769,
   "bakes": 769,
   "hits": 567,
   "misses": 769,

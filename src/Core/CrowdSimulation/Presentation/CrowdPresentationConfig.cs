@@ -156,10 +156,10 @@ internal sealed class CrowdPresentationConfig
 
 internal sealed class CrowdHudPanel
 {
-    [JsonRequired] public int X { get; set; }
-    [JsonRequired] public int Y { get; set; }
-    [JsonRequired] public int W { get; set; }
-    [JsonRequired] public int H { get; set; }
+    [JsonRequired] public int OriginXPx { get; set; }
+    [JsonRequired] public int OriginYPx { get; set; }
+    [JsonRequired] public int WidthPx { get; set; }
+    [JsonRequired] public int HeightPx { get; set; }
     [JsonRequired] public string Keys { get; set; } = string.Empty;
 }
 

@@ -65,15 +65,15 @@ public static class CrowdNavRebake
         NavTileCache cache)
     {
         var config = sources.Config;
-        int n = nav.CellCount, t = config.Hpa.ClusterSize, c = n / t;
-        int erosion = nav.ClearanceCells - 1;
+        int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
+        int erosion = nav.ClearanceNavCells - 1;
         int kind = Classify(nav, sources, store, rect);
-        var grown = Grow(rect, erosion, n);
+        var grown = Grow(rect, erosion, navCellsPerSide);
         List<int> tiles;
         if (kind == KindPassable)
         {
-            ErodeRect(nav.Walk, n, nav.ClearanceCells, grown, nav.Passable);
-            var dirty = TilesOf(grown, t, c);
+            ErodeRect(nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
+            var dirty = TilesOf(grown, navCellsPerTile, navTilesPerSide);
             // 重烘后拿到同一内容条目(缓存命中)的 tile:HPA 簇内距离逐位复用
             var prev = new NavTileEntry?[dirty.Count];
             for (int i = 0; i < dirty.Count; i++) prev[i] = nav.Tiles![dirty[i]];
@@ -97,7 +97,7 @@ public static class CrowdNavRebake
         }
         else
         {
-            var dirty = TilesOf(rect, t, c);
+            var dirty = TilesOf(rect, navCellsPerTile, navTilesPerSide);
             bool meshChanged = BakeTiles(nav, dirty, cache, store.Area);
             if (kind == KindNone && !meshChanged)
             {
@@ -126,7 +126,7 @@ public static class CrowdNavRebake
         (int X0, int Y0, int X1, int Y1) rect)
     {
         var config = sources.Config;
-        int n = nav.CellCount;
+        int navCellsPerSide = nav.NavCellsPerSide;
         var agent = config.AgentTypes[nav.LayerIndex];
         var profile = config.NavProfiles[agent.NavProfileIndex];
         Fix64 maxSlope = profile.MaxSlopeDeg is { } deg ? Fix64Math.Tan(deg * Fix64.Deg2Rad) : Fix64.MaxValue;
@@ -142,7 +142,7 @@ public static class CrowdNavRebake
         {
             for (int x = rect.X0; x < rect.X1; x++)
             {
-                int i = y * n + x;
+                int i = y * navCellsPerSide + x;
                 int a = area[i];
                 Fix64 cell = row[a];
                 if (cell > Fix64.Zero && !slopeFree[a].SlopeFree && slope[i] > maxSlope)
@@ -169,22 +169,22 @@ public static class CrowdNavRebake
     }
 
     /// <summary>格矩形外扩 k 格(夹到网格)。</summary>
-    private static (int X0, int Y0, int X1, int Y1) Grow((int X0, int Y0, int X1, int Y1) rect, int k, int n) => (
+    private static (int X0, int Y0, int X1, int Y1) Grow((int X0, int Y0, int X1, int Y1) rect, int k, int navCellsPerSide) => (
         Math.Max(0, rect.X0 - k),
         Math.Max(0, rect.Y0 - k),
-        Math.Min(n, rect.X1 + k),
-        Math.Min(n, rect.Y1 + k));
+        Math.Min(navCellsPerSide, rect.X1 + k),
+        Math.Min(navCellsPerSide, rect.Y1 + k));
 
     /// <summary>格矩形触到的 tile id(升序去重)。</summary>
-    internal static List<int> TilesOf((int X0, int Y0, int X1, int Y1) rect, int t, int c)
+    internal static List<int> TilesOf((int X0, int Y0, int X1, int Y1) rect, int navCellsPerTile, int navTilesPerSide)
     {
         var tiles = new List<int>();
         var seen = new HashSet<int>();
-        for (int ty = rect.Y0 / t; ty <= (rect.Y1 - 1) / t; ty++)
+        for (int ty = rect.Y0 / navCellsPerTile; ty <= (rect.Y1 - 1) / navCellsPerTile; ty++)
         {
-            for (int tx = rect.X0 / t; tx <= (rect.X1 - 1) / t; tx++)
+            for (int tx = rect.X0 / navCellsPerTile; tx <= (rect.X1 - 1) / navCellsPerTile; tx++)
             {
-                if (seen.Add(ty * c + tx)) tiles.Add(ty * c + tx);
+                if (seen.Add(ty * navTilesPerSide + tx)) tiles.Add(ty * navTilesPerSide + tx);
             }
         }
 
@@ -193,7 +193,7 @@ public static class CrowdNavRebake
 
     /// <summary>可走位翻转后的净空腐蚀矩形重算(erodeRect 移植):只写矩形内;
     /// 切比雪夫可分离两遍,行/列连续段计数,读入需外扩腐蚀半径。</summary>
-    internal static void ErodeRect(byte[] walk, int n, int clearance, (int X0, int Y0, int X1, int Y1) rect, byte[] output)
+    internal static void ErodeRect(byte[] walk, int navCellsPerSide, int clearance, (int X0, int Y0, int X1, int Y1) rect, byte[] output)
     {
         int r = clearance - 1;
         if (r <= 0)
@@ -202,7 +202,7 @@ public static class CrowdNavRebake
             {
                 for (int x = rect.X0; x < rect.X1; x++)
                 {
-                    output[y * n + x] = walk[y * n + x];
+                    output[y * navCellsPerSide + x] = walk[y * navCellsPerSide + x];
                 }
             }
 
@@ -210,12 +210,12 @@ public static class CrowdNavRebake
         }
 
         int need = 2 * r + 1, w = rect.X1 - rect.X0;
-        int ya = Math.Max(0, rect.Y0 - r), yb = Math.Min(n, rect.Y1 + r);
+        int ya = Math.Max(0, rect.Y0 - r), yb = Math.Min(navCellsPerSide, rect.Y1 + r);
         var row = new byte[w * (yb - ya)];
-        int xs = Math.Max(0, rect.X0 - r), xe = Math.Min(n, rect.X1 + r);
+        int xs = Math.Max(0, rect.X0 - r), xe = Math.Min(navCellsPerSide, rect.X1 + r);
         for (int y = ya; y < yb; y++)
         {
-            int @base = y * n, ro = (y - ya) * w;
+            int @base = y * navCellsPerSide, ro = (y - ya) * w;
             int run = 0;
             for (int cc = xs; cc < xe; cc++)
             {
@@ -232,22 +232,22 @@ public static class CrowdNavRebake
             {
                 run = row[(yy - ya) * w + x - rect.X0] != 0 ? run + 1 : 0;
                 int y = yy - r;
-                if (y >= rect.Y0 && y < rect.Y1) output[y * n + x] = run >= need ? (byte)1 : (byte)0;
+                if (y >= rect.Y0 && y < rect.Y1) output[y * navCellsPerSide + x] = run >= need ? (byte)1 : (byte)0;
             }
 
             // 距下边界不足腐蚀半径的格永不可通行(行缓冲没覆盖到)
-            for (int y = Math.Max(rect.Y0, yb - r); y < rect.Y1; y++) output[y * n + x] = 0;
+            for (int y = Math.Max(rect.Y0, yb - r); y < rect.Y1; y++) output[y * navCellsPerSide + x] = 0;
         }
     }
 
     /// <summary>tile 重烘(缓存优先);返回是否有条目更换。</summary>
     private static bool BakeTiles(NavContext nav, List<int> tiles, NavTileCache cache, byte[] area)
     {
-        int n = nav.CellCount, c = nav.Hpa!.ClustersPerSide;
+        int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = nav.Hpa!.NavTilesPerSide;
         bool changed = false;
         foreach (int tile in tiles)
         {
-            var entry = cache.Acquire(nav.Passable, area, n, tile % c, tile / c);
+            var entry = cache.Acquire(nav.Passable, area, navCellsPerSide, tile % navTilesPerSide, tile / navTilesPerSide);
             if (!ReferenceEquals(nav.Tiles![tile], entry))
             {
                 nav.Tiles[tile] = entry;
@@ -270,15 +270,15 @@ public static class CrowdNavRebake
         HashSet<int> sameTiles)
     {
         var config = sources.Config;
-        int n = nav.CellCount, n2 = n * n;
+        int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var comp = new int[n2];
         Array.Fill(comp, -1);
-        int compCount = NavContextBaker.Components(nav.Passable, n, comp);
+        int compCount = NavContextBaker.Components(nav.Passable, navCellsPerSide, comp);
 
         if (sources.Deck.TileOrder.Length > 0)
         {
             var merged = new int[n2];
-            compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, nav.Passable, nav.UpPass, nav.Portal, n, merged);
+            compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, nav.Passable, nav.UpPass, nav.Portal, navCellsPerSide, merged);
             comp = merged;
         }
 
@@ -288,7 +288,7 @@ public static class CrowdNavRebake
 
         // 链接:只有跳跃候选端点落在重算矩形里,可走位变化才可能改链表;否则链表保留、仅重导出域图
         var profile = config.NavProfiles[config.AgentTypes[nav.LayerIndex].NavProfileIndex];
-        if (profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, n))
+        if (profile.Jump != null && LinksTouch(sources.JumpCandidates, rect, navCellsPerSide))
         {
             nav.Links = NavContextBaker.BuildLinks(config, store.SnapshotSurface(), profile, nav.Passable, comp);
         }
@@ -297,7 +297,7 @@ public static class CrowdNavRebake
             RelinkComponents(nav.Links, comp);
         }
 
-        var (upComp, compCountTotal, reachOut) = NavContextBaker.BuildDeckReachability(n, comp, compCount, nav.Links, nav.UpPass, nav.Portal, nav.UpArea);
+        var (upComp, compCountTotal, reachOut) = NavContextBaker.BuildDeckReachability(navCellsPerSide, comp, compCount, nav.Links, nav.UpPass, nav.Portal, nav.UpArea);
         nav.UpComp = upComp;
         nav.CompCountTotal = compCountTotal;
         nav.ReachOut = reachOut;
@@ -316,7 +316,7 @@ public static class CrowdNavRebake
     }
 
     /// <summary>跳跃候选端点是否触到格矩形(linksTouch 移植)。</summary>
-    private static bool LinksTouch(NavSurfaceJumpCandidate[] candidates, (int X0, int Y0, int X1, int Y1) rect, int n)
+    private static bool LinksTouch(NavSurfaceJumpCandidate[] candidates, (int X0, int Y0, int X1, int Y1) rect, int navCellsPerSide)
     {
         foreach (var cand in candidates)
         {
@@ -358,19 +358,19 @@ public static class CrowdNavRebake
         CrowdStructuresStore store)
     {
         var config = sources.Config;
-        var freshCache = new NavTileCache(config.NavtileCacheCapacity, config.Hpa.ClusterSize,
-            config.Navmesh.MinRegionArea.ToDouble(), config.Navmesh.MaxSimplificationError.ToDouble(),
-            config.Navmesh.MaxEdgeLen.ToDouble(), config.Navmesh.MaxVertsPerPoly);
+        var freshCache = new NavTileCache(config.NavtileCacheCapacity, config.Hpa.NavCellsPerTile,
+            config.Navmesh.MinRegionNavCellArea.ToDouble(), config.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            config.Navmesh.MaxEdgeLenNavCells.ToDouble(), config.Navmesh.MaxVertsPerPoly);
         foreach (var nav in navs.Values)
         {
-            var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceCells, freshCache);
+            var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceNavCells, freshCache);
             VerifyContext(nav, full, $"nav {nav.Id}");
         }
     }
 
     private static void VerifyContext(NavContext inc, NavContext full, string what)
     {
-        int n2 = inc.CellCount * inc.CellCount;
+        int n2 = inc.NavCellsPerSide * inc.NavCellsPerSide;
         for (int i = 0; i < n2; i++)
         {
             if (inc.Cost[i] != full.Cost[i]) throw new InvalidOperationException($"{what}: 增量代价与全量不一致 @格 {i}");
@@ -436,7 +436,7 @@ public static class CrowdNavRebake
         if (a.NodeCell.Length != b.NodeCell.Length) throw new InvalidOperationException($"{what}: HPA 扁平视图节点数不一致");
         for (int i = 0; i < a.NodeCell.Length; i++)
         {
-            if (a.NodeCell[i] != b.NodeCell[i] || a.NodeLayer[i] != b.NodeLayer[i] || a.NodeCluster[i] != b.NodeCluster[i])
+            if (a.NodeCell[i] != b.NodeCell[i] || a.NodeLayer[i] != b.NodeLayer[i] || a.NodeTile[i] != b.NodeTile[i])
             {
                 throw new InvalidOperationException($"{what}: HPA 节点 {i} 与全量不一致");
             }

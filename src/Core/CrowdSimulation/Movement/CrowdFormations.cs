@@ -34,7 +34,7 @@ public static class CrowdFormations
         if (n == 0) return Fix64.Zero;
         var world = session.World;
         var units = session.Units;
-        Fix64 ks = spacingScale * shape.Spacing;
+        Fix64 ks = spacingScale * shape.SpacingDiameterScale;
         StableOrder.Ensure(ref session.FormationDiameter, n);
         StableOrder.Ensure(ref session.FormationForward, n);
         StableOrder.Ensure(ref session.FormationLateral, n);

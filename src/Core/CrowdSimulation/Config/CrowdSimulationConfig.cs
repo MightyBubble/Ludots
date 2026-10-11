@@ -11,8 +11,9 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// <summary>
 /// CrowdSimulationConfig.json 的反序列化形状（键与 JSON 一一对应，camelCase）。
 /// 显式必填：缺键 / 未知键直接拒绝（反序列化层），数值范围与跨文件引用由
-/// <see cref="CrowdSimulationConfigLoader"/> 校验。长度字段一律厘米（Cm 后缀），
-/// 以格为单位的字段带 Cells 后缀；内核在组装时统一换算成米（÷100）。
+/// <see cref="CrowdSimulationConfigLoader"/> 校验。世界距离用厘米（Cm）。
+/// 阵型距离、唤醒和部署散布装载时换成导航格 Fix64；magicBox 的外扩和最大跨度保持厘米。
+/// 栅格算法量用 NavCells / NavCellArea / NavTiles / Fraction。内核坐标保持厘米。
 /// </summary>
 public sealed class CrowdSimulationConfig
 {
@@ -46,6 +47,7 @@ public sealed class CrowdSimulationConfig
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
         ArgumentNullException.ThrowIfNull(configObject);
+        RejectRetiredSpatialKeys(configObject);
         try
         {
             return configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
@@ -67,6 +69,84 @@ public sealed class CrowdSimulationConfig
         }
 
         return Load(obj);
+    }
+
+    /// <summary>旧作者键只用于报错。命中即拒绝，不读取值。</summary>
+    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
+    [
+        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
+        ("deploy.spreadCells", "deploy.spreadCm"),
+        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
+        ("fog.cellCells", "fog.cellSizeCm"),
+        ("formation.goalArriveCells", "formation.goalArriveCm"),
+        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
+        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
+        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
+        ("formation.minClumpCells", "formation.minClumpCm"),
+        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
+        ("formation.slotArriveCells", "formation.slotArriveCm"),
+        ("formation.slotSightCells", "formation.slotSightCm"),
+        ("formations[].spacing", "formations[].spacingDiameterScale"),
+        ("hpa.clusterSize", "navtile.sizeCm"),
+        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
+        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
+        ("movement.maxStepCells", "movement.maxStepNavCells"),
+        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
+        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
+        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
+        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
+        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
+        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
+        ("spawn.cellInset", "spawn.navCellInsetFraction"),
+        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
+        ("structures.portalCells", "structures.portalReachNavCells"),
+    ];
+
+    private static void RejectRetiredSpatialKeys(JsonObject root)
+    {
+        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        {
+            RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
+        }
+    }
+
+    private static void RejectRetiredSpatialKey(JsonNode? node, string[] segments, int index, string built, string newKey)
+    {
+        if (node is not JsonObject obj || index >= segments.Length)
+        {
+            return;
+        }
+
+        string segment = segments[index];
+        bool array = segment.EndsWith("[]", StringComparison.Ordinal);
+        string name = array ? segment[..^2] : segment;
+        if (!obj.ContainsKey(name))
+        {
+            return;
+        }
+
+        if (array)
+        {
+            if (obj[name] is not JsonArray items)
+            {
+                return;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
+            }
+
+            return;
+        }
+
+        if (index == segments.Length - 1)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: 已删除 {built}{name}，改用 {newKey}。");
+        }
+
+        RejectRetiredSpatialKey(obj[name], segments, index + 1, built + name + ".", newKey);
     }
 
     public sealed class WorldSection
@@ -101,7 +181,7 @@ public sealed class CrowdSimulationConfig
     {
         public required int UpCm { get; init; }
         public required int DownCm { get; init; }
-        public required int RangeCells { get; init; }
+        public required int RangeNavCells { get; init; }
         public required double Cost { get; init; }
     }
 
@@ -147,21 +227,21 @@ public sealed class CrowdSimulationConfig
 
     public sealed class NavmeshSection
     {
-        public required double MinRegionArea { get; init; }
-        public required double MaxSimplificationError { get; init; }
-        public required double MaxEdgeLen { get; init; }
+        public required double MinRegionNavCellArea { get; init; }
+        public required double MaxSimplificationErrorNavCells { get; init; }
+        public required double MaxEdgeLenNavCells { get; init; }
         public required int MaxVertsPerPoly { get; init; }
-        public required double PortalInsetCells { get; init; }
+        public required double PortalInsetNavCells { get; init; }
     }
 
     public sealed class HpaSection
     {
-        public required int ClusterSize { get; init; }
-        public required int MaxEntranceWidth { get; init; }
+        public required int MaxEntranceWidthNavCells { get; init; }
     }
 
     public sealed class NavtileSection
     {
+        public required int SizeCm { get; init; }
         public required int CacheCapacity { get; init; }
     }
 
@@ -169,7 +249,7 @@ public sealed class CrowdSimulationConfig
     {
         public required int CacheCapacity { get; init; }
         public required int PoolCapacity { get; init; }
-        public required int CorridorPadding { get; init; }
+        public required int CorridorPaddingNavTiles { get; init; }
         public required int MaxRebuildsPerTick { get; init; }
     }
 
@@ -184,7 +264,7 @@ public sealed class CrowdSimulationConfig
     public sealed class FogSection
     {
         public required double RateHz { get; init; }
-        public required int CellCells { get; init; }
+        public required int CellSizeCm { get; init; }
         public required int VisionCm { get; init; }
         public required int RevealTicks { get; init; }
         public required int SlotCacheCapacity { get; init; }
@@ -202,16 +282,16 @@ public sealed class CrowdSimulationConfig
         public required double LeaderTurnRate { get; init; }
         public required double FaceTurnScale { get; init; }
         public required double CatchUp { get; init; }
-        public required double SlotSightCells { get; init; }
+        public required double SlotSightCm { get; init; }
         public required double SettleTime { get; init; }
-        public required double LeaderLookAhead { get; init; }
+        public required double LeaderLookAheadCm { get; init; }
         public required double MagicBoxMaxSpreadCm { get; init; }
-        public required double MagicBoxPadCells { get; init; }
-        public required double SlotArriveCells { get; init; }
-        public required double GoalArriveCells { get; init; }
-        public required double SettleRadiusCells { get; init; }
+        public required double MagicBoxPadCm { get; init; }
+        public required double SlotArriveCm { get; init; }
+        public required double GoalArriveCm { get; init; }
+        public required double SettleRadiusCm { get; init; }
         public required double ClumpSlack { get; init; }
-        public required double MinClumpCells { get; init; }
+        public required double MinClumpCm { get; init; }
         /// <summary>与上一任领队朝向的点积上限继承阈值(参考实现 planner.js 内联 0.94)。</summary>
         public required double HeadingInheritDot { get; init; }
         /// <summary>与上一任领队朝向的点积反转阈值(参考实现 planner.js 内联 -0.5)。</summary>
@@ -222,22 +302,22 @@ public sealed class CrowdSimulationConfig
     {
         public required string Id { get; init; }
         public required string Label { get; init; }
-        public required double Spacing { get; init; }
+        public required double SpacingDiameterScale { get; init; }
         public required double Aspect { get; init; }
         public required bool Wedge { get; init; }
     }
 
     public sealed class MovementSection
     {
-        public required double MaxStepCells { get; init; }
+        public required double MaxStepNavCells { get; init; }
         public required int MaxSubSteps { get; init; }
         public required double SlotTimeConstant { get; init; }
         public required double BlendRate { get; init; }
         public required double BlendCommit { get; init; }
         public required int SlotCheckInterval { get; init; }
         public required double SightHysteresis { get; init; }
-        public required double LaneSpread { get; init; }
-        public required double WakeDistanceCells { get; init; }
+        public required double LaneSpreadSpeedRatio { get; init; }
+        public required double WakeDistanceCm { get; init; }
         public required double StallSpeedRatio { get; init; }
         public required double StallDecay { get; init; }
         public required double UnitTurnRate { get; init; }
@@ -292,8 +372,8 @@ public sealed class CrowdSimulationConfig
 
     public sealed class RelationsOverrideEntry
     {
-        public required int A { get; init; }
-        public required int B { get; init; }
+        public required int PlayerA { get; init; }
+        public required int PlayerB { get; init; }
         public required string Kind { get; init; }
     }
 
@@ -320,15 +400,15 @@ public sealed class CrowdSimulationConfig
     public sealed class SpawnSection
     {
         public required int PlacementTries { get; init; }
-        public required double ClusterSpacing { get; init; }
+        public required double GroupSpacingScale { get; init; }
         public required int TargetSearchTries { get; init; }
-        public required double CellInset { get; init; }
+        public required double NavCellInsetFraction { get; init; }
     }
 
     public sealed class StructuresSection
     {
         public required double BlockCoverage { get; init; }
-        public required int PortalCells { get; init; }
+        public required int PortalReachNavCells { get; init; }
         /// <summary>结构实体模板(参考实现 templates.structures):place/remove 指令按 id 引用。</summary>
         public StructureTemplateEntry[]? Templates { get; init; }
     }
@@ -350,8 +430,8 @@ public sealed class CrowdSimulationConfig
     public sealed class DeploySection
     {
         public required int InitialUnits { get; init; }
-        public required double SpreadCells { get; init; }
-        public required double BaseJitterCells { get; init; }
+        public required double SpreadCm { get; init; }
+        public required double BaseJitterCm { get; init; }
         public required int CentersPerGroup { get; init; }
         public required DeployBaseEntry[] Bases { get; init; }
     }

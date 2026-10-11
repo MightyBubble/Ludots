@@ -29,31 +29,31 @@ public class S3TileTruthTests
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var heightAsset = Ludots.Core.Presentation.Terrain.ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
 
-        int n = runtime.NavCellCount, t = runtime.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = runtime.NavCellsPerSide, navCellsPerTile = runtime.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var cache = new NavTileCache(
             runtime.NavtileCacheCapacity,
-            t,
-            runtime.Navmesh.MinRegionArea.ToDouble(),
-            runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(),
+            navCellsPerTile,
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(),
+            runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(),
             runtime.Navmesh.MaxVertsPerPoly);
 
         // 与导出端同一获取序:逐(移动类型 × 净空)上下文,缓存随烘焙填充(同 buildNavContext)
         var seen = new HashSet<int>();
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (int clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (int clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
             }
         }
 
-        var (hash, entryCount, perEntry) = ComputeDigest(cache, n);
+        var (hash, entryCount, perEntry) = ComputeDigest(cache, navCellsPerSide);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s3-tile-truth.json")))!;
-        Assert.That(entryCount, Is.EqualTo(truth["tiles"]!.GetValue<int>()), "不同 tile 数");
+        Assert.That(entryCount, Is.EqualTo(truth["navTileEntries"]!.GetValue<int>()), "不同 tile 数");
         Assert.That(cache.Bakes, Is.EqualTo(truth["bakes"]!.GetValue<int>()), "烘焙次数");
         // 按键指纹对齐比较(内容键相同才是同一块 tile;位置序不作准)
         var truthByKey = truth["entryHashes"]!.AsObject().ToDictionary(kv => kv.Key, kv => kv.Value!.GetValue<string>());
@@ -65,7 +65,7 @@ public class S3TileTruthTests
                 string dumpDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "s3-diff", seed);
                 Directory.CreateDirectory(dumpDir);
                 File.WriteAllText(Path.Combine(dumpDir, $"key-{keyFp}.json"), System.Text.Json.JsonSerializer.Serialize(
-                    keyChars.Select(c => (int)c).ToArray()));
+                    keyChars.Select(navTilesPerSide => (int)navTilesPerSide).ToArray()));
                 Assert.Fail($"S3 tile 内容键 {keyFp} 在 Web 真相中不存在(seed {seed})——该 tile 的输入内容两端不同;键内容已转储 {dumpDir}/key-{keyFp}.json");
             }
 

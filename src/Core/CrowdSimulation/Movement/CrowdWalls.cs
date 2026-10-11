@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -28,7 +29,7 @@ public static class CrowdWalls
 
         public byte[] GridFor(NavContext nav)
         {
-            int n2 = nav.CellCount * nav.CellCount;
+            int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
             if (!_byNavId.TryGetValue(nav.Id, out var e))
             {
                 e = new Entry();
@@ -60,7 +61,7 @@ public static class CrowdWalls
             }
 
             if (e.Filled) return;
-            int n = nav.CellCount;
+            int n = nav.NavCellsPerSide;
             int n2 = n * n;
             if (grid.Length < 2 * n2)
             {
@@ -85,18 +86,18 @@ public static class CrowdWalls
         return v == 1;
     }
 
-    private static void Fill(byte[] grid, byte[] walk, int n, int levelOffset, int count)
+    private static void Fill(byte[] grid, byte[] walk, int navCellsPerSide, int levelOffset, int count)
     {
         for (int cell = 0; cell < count; cell++)
         {
             if (grid[levelOffset + cell] != 0) continue;
-            int cy = cell / n, cx = cell - cy * n;
+            int cy = cell / navCellsPerSide, cx = cell - cy * navCellsPerSide;
             int open = 1;
-            for (int y = Math.Max(0, cy - 1); open != 0 && y <= Math.Min(n - 1, cy + 1); y++)
+            for (int y = Math.Max(0, cy - 1); open != 0 && y <= Math.Min(navCellsPerSide - 1, cy + 1); y++)
             {
-                for (int x = Math.Max(0, cx - 1); x <= Math.Min(n - 1, cx + 1); x++)
+                for (int x = Math.Max(0, cx - 1); x <= Math.Min(navCellsPerSide - 1, cx + 1); x++)
                 {
-                    if (walk[y * n + x] == 0) { open = 0; break; }
+                    if (walk[y * navCellsPerSide + x] == 0) { open = 0; break; }
                 }
             }
 
@@ -106,7 +107,7 @@ public static class CrowdWalls
 
     /// <summary>把圆盘推出所有相交的被挡格;返回 true 并写出修正位置与接触法线。</summary>
     public static bool ResolveWalls(
-        byte[] walk, int n, int cellSizeCm,
+        byte[] walk, int navCellsPerSide, int navCellSizeCm,
         Fix64 pxCm, Fix64 pyCm, Fix64 radiusCm,
         out Fix64 outX, out Fix64 outY, out Fix64 normalX, out Fix64 normalY)
     {
@@ -114,11 +115,11 @@ public static class CrowdWalls
         outY = pyCm;
         normalX = Fix64.Zero;
         normalY = Fix64.Zero;
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
-        int x0 = Math.Max(0, (int)Fix64.Floor((pxCm - radiusCm) / cs).ToLong());
-        int x1 = Math.Min(n - 1, (int)Fix64.Floor((pxCm + radiusCm) / cs).ToLong());
-        int y0 = Math.Max(0, (int)Fix64.Floor((pyCm - radiusCm) / cs).ToLong());
-        int y1 = Math.Min(n - 1, (int)Fix64.Floor((pyCm + radiusCm) / cs).ToLong());
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
+        int x0 = Math.Max(0, CrowdSimulationSpace.NavCellCoord(pxCm - radiusCm, navCellSizeCm));
+        int x1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pxCm + radiusCm, navCellSizeCm));
+        int y0 = Math.Max(0, CrowdSimulationSpace.NavCellCoord(pyCm - radiusCm, navCellSizeCm));
+        int y1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pyCm + radiusCm, navCellSizeCm));
         if (x0 == x1 && y0 == y1) return false; // 圆盘整个在自格(可走)内
         bool moved = false;
         Fix64 r2 = radiusCm * radiusCm;
@@ -127,10 +128,10 @@ public static class CrowdWalls
         {
             for (int cx = x0; cx <= x1; cx++)
             {
-                if (walk[cy * n + cx] != 0) continue;
-                Fix64 bx = Fix64.FromInt(cx) * cs, by = Fix64.FromInt(cy) * cs;
-                Fix64 qx = Fix64.Min(bx + cs, Fix64.Max(bx, px));
-                Fix64 qy = Fix64.Min(by + cs, Fix64.Max(by, py));
+                if (walk[cy * navCellsPerSide + cx] != 0) continue;
+                Fix64 bx = Fix64.FromInt(cx) * navCellCm, by = Fix64.FromInt(cy) * navCellCm;
+                Fix64 qx = Fix64.Min(bx + navCellCm, Fix64.Max(bx, px));
+                Fix64 qy = Fix64.Min(by + navCellCm, Fix64.Max(by, py));
                 Fix64 dx = px - qx, dy = py - qy;
                 Fix64 d2 = dx * dx + dy * dy;
                 // 参考端 1e-12 是双精度域守卫,Q31.32 下 FromFloat(1e-12f) 截断为 0——最小正 raw 量即等价语义

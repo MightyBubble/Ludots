@@ -117,12 +117,12 @@ public class S4DeployTruthTests
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         var navs = new Dictionary<int, NavContext>();
         var navByLayerRadius = new Dictionary<(int, int), NavContext>();
@@ -130,7 +130,7 @@ public class S4DeployTruthTests
         var seen = new HashSet<int>();
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
@@ -183,7 +183,7 @@ public class S4DeployTruthTests
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
                 runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(
-                Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusM),
+                Ludots.Core.CrowdSimulation.Runtime.CrowdSimulationRuntime.Keys.UnitRadiusKey),
             SelectionOwner = Arch.Core.Entity.Null,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectionMirror.CollectionKey),
             Collections = collections,

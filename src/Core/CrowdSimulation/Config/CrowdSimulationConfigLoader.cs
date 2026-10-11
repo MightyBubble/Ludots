@@ -12,8 +12,8 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// CrowdSimulation 配置装载入口。
 /// 管线侧负责 config_catalog 合并（DeepObject）与版本门禁；<see cref="Load"/> 按
 /// LU-20 的契约把合并结果、地图、代理体型与固定时钟组装成只读运行时配置——
-/// 内核不读文件、不读全局单例。文件值（厘米 / double）在组装层一次性转 Fix64 厘米，
-/// 之后内核只走 Ludots 定点体系。
+/// 内核不读文件、不读全局单例。世界距离在组装层用 double 做厘米 ÷ 导航格长，再
+/// <c>Fix64.FromDouble</c> 成交格数；其余长度仍是厘米 Fix64。内核坐标保持厘米。
 /// </summary>
 public sealed class CrowdSimulationConfigLoader
 {
@@ -22,11 +22,11 @@ public sealed class CrowdSimulationConfigLoader
 
     public const string RelativePath = "CrowdSimulationConfig.json";
 
-    /// <summary>迷雾格长下限(厘米),即 world.navCellSizeCm × fog.cellCells。
+    /// <summary>迷雾格长下限(厘米),即 fog.cellSizeCm。
     /// 形状米坐标先被 CrowdFogArea 的 ±46340 m 守卫卡住,再除以格长(米)。圆扫描线只走包围盒,
     /// |py−圆心| ≤ 半径 + 1/2;圆心在负半轴、包围盒被夹到 0 格时 py 最小是 0.5,同样只多出半格。
     /// 格长 ≥ 1 米时被平方的量 ≤ 46340.5,平方仍小于 2^31。</summary>
-    public const int MinFogCellSizeCm = 100;
+    public const int MinFogCellSizeCm = CrowdReferenceMeters.CentimetersPerMeter;
 
     private const string MassNavigationRelativePath = "MassNavigationConfig.json";
 
@@ -117,18 +117,25 @@ public sealed class CrowdSimulationConfigLoader
         }
 
         var board = map.Boards[0];
-        int cellSizeCm = config.World.NavCellSizeCm;
-        if (cellSizeCm <= 0)
+        int navCellSizeCm = config.World.NavCellSizeCm;
+        if (navCellSizeCm <= 0)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {cellSizeCm}，需为 > 0 的整数");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm = {navCellSizeCm}，需为 > 0 的整数");
         }
 
-        // 运行时迷雾格长是 int 直乘,乘积出 int 即环绕成负数。
-        long fogCellCm = (long)cellSizeCm * config.Fog.CellCells;
-        if (fogCellCm < MinFogCellSizeCm || fogCellCm > int.MaxValue)
+        // 迷雾格长由作者写成厘米,必须整除导航格;派生倍数是栅格算法量,范围仍是 1..32。
+        int fogCellSizeCm = config.Fog.CellSizeCm;
+        if (fogCellSizeCm % navCellSizeCm != 0)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）= {fogCellCm}，需为 ≥ {MinFogCellSizeCm}、≤ {int.MaxValue}");
+                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
+        }
+
+        int navCellsPerFogCell = fogCellSizeCm / navCellSizeCm;
+        if (navCellsPerFogCell < 1 || navCellsPerFogCell > 32)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: fog.cellSizeCm（{fogCellSizeCm}）/ world.navCellSizeCm（{navCellSizeCm}）= {navCellsPerFogCell}，需为 ≥ 1、≤ 32 的整数");
         }
 
         if (board.WidthCm != board.HeightCm)
@@ -136,30 +143,60 @@ public sealed class CrowdSimulationConfigLoader
             throw new InvalidOperationException($"{mapFile}: Boards[0] 必须是正方形（WidthCm {board.WidthCm} ≠ HeightCm {board.HeightCm}）。");
         }
 
-        if (board.WidthCm % cellSizeCm != 0)
+        if (board.Anchor == null)
         {
-            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 world.navCellSizeCm（{cellSizeCm}）整除。");
+            throw new InvalidOperationException(
+                $"{mapFile}: Boards[0].Anchor 必须给出，且 LocalXCm、LocalYCm、WorldXCm、WorldYCm 均为 0。");
         }
 
-        int navCellCount = board.WidthCm / cellSizeCm;
+        if (board.Anchor.LocalXCm != 0 || board.Anchor.LocalYCm != 0
+            || board.Anchor.WorldXCm != 0 || board.Anchor.WorldYCm != 0)
+        {
+            throw new InvalidOperationException(
+                $"{mapFile}: Boards[0].Anchor 的 LocalXCm、LocalYCm、WorldXCm、WorldYCm 必须为 0（当前 {board.Anchor.LocalXCm}, {board.Anchor.LocalYCm}, {board.Anchor.WorldXCm}, {board.Anchor.WorldYCm}）。");
+        }
+
+        if (board.WidthCm % navCellSizeCm != 0)
+        {
+            throw new InvalidOperationException($"{mapFile}: Boards[0].WidthCm（{board.WidthCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
+        }
+
+        int navCellCount = board.WidthCm / navCellSizeCm;
         if (navCellCount < 16 || navCellCount > 1024)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navResolution = {navCellCount}（= Boards[0].WidthCm / world.navCellSizeCm），需为整数、≥ 16、≤ 1024");
+            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: 每边导航格数 = {navCellCount}（Boards[0].WidthCm / world.navCellSizeCm），需为 ≥ 16、≤ 1024 的整数");
         }
 
-        if (navCellCount % config.Hpa.ClusterSize != 0)
+        int navTileSizeCm = config.Navtile.SizeCm;
+        if (navTileSizeCm % navCellSizeCm != 0)
         {
-            throw new InvalidOperationException($"{CrowdSimulationConfigValidator.FileName}: world.navResolution（{navCellCount}）必须能被 hpa.clusterSize（{config.Hpa.ClusterSize}，tile 尺寸）整除");
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）必须能被 world.navCellSizeCm（{navCellSizeCm}）整除。");
         }
 
-        int fogEdge = (navCellCount + config.Fog.CellCells - 1) / config.Fog.CellCells;
-        int radiusCells = (int)Math.Ceiling(config.Fog.VisionCm / (double)fogCellCm);
+        int navCellsPerTile = navTileSizeCm / navCellSizeCm;
+        if (navCellsPerTile < 4 || navCellsPerTile > 128)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: navtile.sizeCm（{navTileSizeCm}）/ world.navCellSizeCm（{navCellSizeCm}）= {navCellsPerTile}，需为 ≥ 4、≤ 128 的整数");
+        }
+
+        if (navCellCount % navCellsPerTile != 0)
+        {
+            throw new InvalidOperationException(
+                $"{CrowdSimulationConfigValidator.FileName}: 每边导航格数（{navCellCount}）必须能被 navtile.sizeCm 派生的导航格数（{navCellsPerTile}）整除");
+        }
+
+        int fogEdge = (navCellCount + navCellsPerFogCell - 1) / navCellsPerFogCell;
+        int radiusCells = (int)Math.Ceiling(config.Fog.VisionCm / (double)fogCellSizeCm);
         int maxRadiusCells = MaxFogVisionRadiusCells(fogEdge);
         if (radiusCells > maxRadiusCells)
         {
             throw new InvalidOperationException(
-                $"{CrowdSimulationConfigValidator.FileName}: fog.visionCm（{config.Fog.VisionCm}）/ (world.navCellSizeCm（{cellSizeCm}）× fog.cellCells（{config.Fog.CellCells}）)（{fogCellCm}）向上取整 = {radiusCells}，不得超过迷雾网格 F（{fogEdge}）对角格距的向上取整 {maxRadiusCells}");
+                $"{CrowdSimulationConfigValidator.FileName}: fog.visionCm（{config.Fog.VisionCm}）/ fog.cellSizeCm（{fogCellSizeCm}）向上取整 = {radiusCells}，不得超过每边迷雾格数（{fogEdge}）对角格距的向上取整 {maxRadiusCells}");
         }
+
+        Fix64 NavCellsFromCm(double centimeters) => Fix64.FromDouble(centimeters / (double)navCellSizeCm);
 
         if (map.Players.Count < 1 || map.Players.Count > 16)
         {
@@ -225,7 +262,7 @@ public sealed class CrowdSimulationConfigLoader
             }
 
             var radiusCm = Fix64.FromDouble(p.RadiusCm);
-            int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidanceRadiusScale, cellSizeCm);
+            int clearance = CrowdSimulationSpace.ClearanceOf(radiusCm, avoidanceRadiusScale, navCellSizeCm);
             if (clearance > 255)
             {
                 throw new InvalidOperationException(
@@ -246,7 +283,7 @@ public sealed class CrowdSimulationConfigLoader
                 PersonalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidanceRadiusScale),
                 PushPriority = Fix64.FromDouble(config.AgentTypes[agentTypeIndex].PushPriority + radiusShare),
                 AgentTypeIndex = agentTypeIndex,
-                ClearanceCells = clearance,
+                ClearanceNavCells = clearance,
                 NavContextId = CrowdSimulationSpace.NavContextId(p.Layer, clearance),
             });
         }
@@ -324,8 +361,8 @@ public sealed class CrowdSimulationConfigLoader
             Version = config.Version,
             MapId = config.MapId,
             FixedHz = fixedHz,
-            NavCellCount = navCellCount,
-            NavCellSizeCm = cellSizeCm,
+            NavCellsPerSide = navCellCount,
+            NavCellSizeCm = navCellSizeCm,
             WorldSeed = config.World.Seed,
             SurfaceAsset = config.World.SurfaceAsset,
             TerrainTypeIds = Array.ConvertAll(config.World.TerrainTypes, t => t.Id),
@@ -341,7 +378,7 @@ public sealed class CrowdSimulationConfigLoader
                     {
                         UpCm = p.Jump.UpCm,
                         DownCm = p.Jump.DownCm,
-                        RangeCells = p.Jump.RangeCells,
+                        RangeNavCells = p.Jump.RangeNavCells,
                         Cost = Fix64.FromDouble(p.Jump.Cost),
                     },
             }),
@@ -358,19 +395,19 @@ public sealed class CrowdSimulationConfigLoader
             AvoidanceRadiusScale = avoidanceRadiusScale,
             Navmesh = new RuntimeNavmeshSection
             {
-                MinRegionArea = Fix64.FromDouble(config.Navmesh.MinRegionArea),
-                MaxSimplificationError = Fix64.FromDouble(config.Navmesh.MaxSimplificationError),
-                MaxEdgeLen = Fix64.FromDouble(config.Navmesh.MaxEdgeLen),
+                MinRegionNavCellArea = Fix64.FromDouble(config.Navmesh.MinRegionNavCellArea),
+                MaxSimplificationErrorNavCells = Fix64.FromDouble(config.Navmesh.MaxSimplificationErrorNavCells),
+                MaxEdgeLenNavCells = Fix64.FromDouble(config.Navmesh.MaxEdgeLenNavCells),
                 MaxVertsPerPoly = config.Navmesh.MaxVertsPerPoly,
-                PortalInsetCells = Fix64.FromDouble(config.Navmesh.PortalInsetCells),
+                PortalInsetNavCells = Fix64.FromDouble(config.Navmesh.PortalInsetNavCells),
             },
-            Hpa = new RuntimeHpaSection { ClusterSize = config.Hpa.ClusterSize, MaxEntranceWidth = config.Hpa.MaxEntranceWidth },
+            Hpa = new RuntimeHpaSection { NavCellsPerTile = navCellsPerTile, MaxEntranceWidthNavCells = config.Hpa.MaxEntranceWidthNavCells },
             NavtileCacheCapacity = config.Navtile.CacheCapacity,
             Flowfield = new RuntimeFlowfieldSection
             {
                 CacheCapacity = config.Flowfield.CacheCapacity,
                 PoolCapacity = config.Flowfield.PoolCapacity,
-                CorridorPadding = config.Flowfield.CorridorPadding,
+                CorridorPaddingNavTiles = config.Flowfield.CorridorPaddingNavTiles,
                 MaxRebuildsPerTick = config.Flowfield.MaxRebuildsPerTick,
             },
             Planning = new RuntimePlanningSection
@@ -383,7 +420,8 @@ public sealed class CrowdSimulationConfigLoader
             Fog = new RuntimeFogSection
             {
                 RateHz = Fix64.FromDouble(config.Fog.RateHz),
-                CellCells = config.Fog.CellCells,
+                FogCellSizeCm = fogCellSizeCm,
+                NavCellsPerFogCell = navCellsPerFogCell,
                 VisionCm = Fix64.FromInt(config.Fog.VisionCm),
                 RevealTicks = config.Fog.RevealTicks,
                 SlotCacheCapacity = config.Fog.SlotCacheCapacity,
@@ -398,16 +436,16 @@ public sealed class CrowdSimulationConfigLoader
                 LeaderTurnRate = Fix64.FromDouble(config.Formation.LeaderTurnRate),
                 FaceTurnScale = Fix64.FromDouble(config.Formation.FaceTurnScale),
                 CatchUp = Fix64.FromDouble(config.Formation.CatchUp),
-                SlotSightCells = Fix64.FromDouble(config.Formation.SlotSightCells),
+                SlotSightNavCells = NavCellsFromCm(config.Formation.SlotSightCm),
                 SettleTime = Fix64.FromDouble(config.Formation.SettleTime),
-                LeaderLookAhead = Fix64.FromDouble(config.Formation.LeaderLookAhead),
+                LeaderLookAheadNavCells = NavCellsFromCm(config.Formation.LeaderLookAheadCm),
                 MagicBoxMaxSpreadCm = Fix64.FromDouble(config.Formation.MagicBoxMaxSpreadCm),
-                MagicBoxPadCells = Fix64.FromDouble(config.Formation.MagicBoxPadCells),
-                SlotArriveCells = Fix64.FromDouble(config.Formation.SlotArriveCells),
-                GoalArriveCells = Fix64.FromDouble(config.Formation.GoalArriveCells),
-                SettleRadiusCells = Fix64.FromDouble(config.Formation.SettleRadiusCells),
+                MagicBoxPadCm = Fix64.FromDouble(config.Formation.MagicBoxPadCm),
+                SlotArriveNavCells = NavCellsFromCm(config.Formation.SlotArriveCm),
+                GoalArriveNavCells = NavCellsFromCm(config.Formation.GoalArriveCm),
+                SettleRadiusNavCells = NavCellsFromCm(config.Formation.SettleRadiusCm),
                 ClumpSlack = Fix64.FromDouble(config.Formation.ClumpSlack),
-                MinClumpCells = Fix64.FromDouble(config.Formation.MinClumpCells),
+                MinClumpNavCells = NavCellsFromCm(config.Formation.MinClumpCm),
                 HeadingInheritDot = Fix64.FromDouble(config.Formation.HeadingInheritDot),
                 MirrorFlipDot = Fix64.FromDouble(config.Formation.MirrorFlipDot),
             },
@@ -415,21 +453,21 @@ public sealed class CrowdSimulationConfigLoader
             {
                 Id = f.Id,
                 Label = f.Label,
-                Spacing = Fix64.FromDouble(f.Spacing),
+                SpacingDiameterScale = Fix64.FromDouble(f.SpacingDiameterScale),
                 Aspect = Fix64.FromDouble(f.Aspect),
                 Wedge = f.Wedge,
             }),
             Movement = new RuntimeMovementSection
             {
-                MaxStepCells = Fix64.FromDouble(config.Movement.MaxStepCells),
+                MaxStepNavCells = Fix64.FromDouble(config.Movement.MaxStepNavCells),
                 MaxSubSteps = config.Movement.MaxSubSteps,
                 SlotTimeConstant = Fix64.FromDouble(config.Movement.SlotTimeConstant),
                 BlendRate = Fix64.FromDouble(config.Movement.BlendRate),
                 BlendCommit = Fix64.FromDouble(config.Movement.BlendCommit),
                 SlotCheckInterval = config.Movement.SlotCheckInterval,
                 SightHysteresis = Fix64.FromDouble(config.Movement.SightHysteresis),
-                LaneSpread = Fix64.FromDouble(config.Movement.LaneSpread),
-                WakeDistanceCells = Fix64.FromDouble(config.Movement.WakeDistanceCells),
+                LaneSpreadSpeedRatio = Fix64.FromDouble(config.Movement.LaneSpreadSpeedRatio),
+                WakeDistanceNavCells = NavCellsFromCm(config.Movement.WakeDistanceCm),
                 StallSpeedRatio = Fix64.FromDouble(config.Movement.StallSpeedRatio),
                 StallDecay = Fix64.FromDouble(config.Movement.StallDecay),
                 UnitTurnRate = Fix64.FromDouble(config.Movement.UnitTurnRate),
@@ -471,21 +509,21 @@ public sealed class CrowdSimulationConfigLoader
             Spawn = new RuntimeSpawnSection
             {
                 PlacementTries = config.Spawn.PlacementTries,
-                ClusterSpacing = Fix64.FromDouble(config.Spawn.ClusterSpacing),
+                GroupSpacingScale = Fix64.FromDouble(config.Spawn.GroupSpacingScale),
                 TargetSearchTries = config.Spawn.TargetSearchTries,
-                CellInset = Fix64.FromDouble(config.Spawn.CellInset),
+                NavCellInsetFraction = Fix64.FromDouble(config.Spawn.NavCellInsetFraction),
             },
             Structures = new RuntimeStructuresSection
             {
                 BlockCoverage = Fix64.FromDouble(config.Structures.BlockCoverage),
-                PortalCells = config.Structures.PortalCells,
+                PortalReachNavCells = config.Structures.PortalReachNavCells,
                 Templates = BuildStructureTemplates(config),
             },
             Deploy = new RuntimeDeploySection
             {
                 InitialUnits = config.Deploy.InitialUnits,
-                SpreadCells = Fix64.FromDouble(config.Deploy.SpreadCells),
-                BaseJitterCells = Fix64.FromDouble(config.Deploy.BaseJitterCells),
+                SpreadNavCells = NavCellsFromCm(config.Deploy.SpreadCm),
+                BaseJitterNavCells = NavCellsFromCm(config.Deploy.BaseJitterCm),
                 CentersPerGroup = config.Deploy.CentersPerGroup,
                 Bases = Array.ConvertAll(config.Deploy.Bases, b => new RuntimeDeployBase
                 {
@@ -595,10 +633,10 @@ public sealed class CrowdSimulationConfigLoader
 
         foreach (var o in config.Relations.Overrides)
         {
-            if (!indexByPlayerIdDict.TryGetValue(o.A, out int a) || !indexByPlayerIdDict.TryGetValue(o.B, out int b))
+            if (!indexByPlayerIdDict.TryGetValue(o.PlayerA, out int a) || !indexByPlayerIdDict.TryGetValue(o.PlayerB, out int b))
             {
                 throw new InvalidOperationException(
-                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未知玩家 {o.A} / {o.B}");
+                    $"{CrowdSimulationConfigValidator.FileName}: relations.overrides 引用未知玩家 {o.PlayerA} / {o.PlayerB}");
             }
 
             if (!kindIndexByName.TryGetValue(o.Kind, out int kindIndex))

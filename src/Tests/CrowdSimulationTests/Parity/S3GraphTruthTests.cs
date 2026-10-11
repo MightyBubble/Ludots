@@ -29,13 +29,13 @@ public class S3GraphTruthTests
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine(S1Dir(seed), "terrain", $"crowd_simulation_{seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
         var cache = new NavTileCache(
-            runtime.NavtileCacheCapacity, runtime.Hpa.ClusterSize,
-            runtime.Navmesh.MinRegionArea.ToDouble(), runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            runtime.Navmesh.MaxEdgeLen.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
+            runtime.NavtileCacheCapacity, runtime.Hpa.NavCellsPerTile,
+            runtime.Navmesh.MinRegionNavCellArea.ToDouble(), runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtime.Navmesh.MaxVertsPerPoly);
 
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s3b-graph-truth.json")))!;
         var truthContexts = truth["contexts"]!.AsArray();
@@ -43,7 +43,7 @@ public class S3GraphTruthTests
 
         var topology = new List<byte>();
         topology.AddRange(Encoding.ASCII.GetBytes("LS3B"));
-        WriteI32(topology, runtime.NavCellCount);
+        WriteI32(topology, runtime.NavCellsPerSide);
         // 上下文数 = 去重后的导航上下文数(写入在循环前无法预知,先占位后补)
         topology.AddRange(new byte[4]);
         double maxCostDiff = 0;
@@ -52,12 +52,12 @@ public class S3GraphTruthTests
         int ctxIndex = 0;
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
 
-                var mesh = NavMeshAssembler.Assemble(nav.Tiles!, nav.Cost, nav.CellCount, runtime.Hpa.ClusterSize);
+                var mesh = NavMeshAssembler.Assemble(nav.Tiles!, nav.Cost, nav.NavCellsPerSide, runtime.Hpa.NavCellsPerTile);
                 var hpa = HpaGraph.Build(nav, runtime);
                 var flat = hpa.Flatten();
 
@@ -71,7 +71,7 @@ public class S3GraphTruthTests
                 WriteI32s(topology, mesh.PaX); WriteI32s(topology, mesh.PaY);
                 WriteI32s(topology, mesh.PbX); WriteI32s(topology, mesh.PbY);
                 WriteI32(topology, flat.NodeCell.Length); WriteI32(topology, hpa.EdgeCount);
-                WriteI32s(topology, flat.NodeCell); WriteU8s(topology, flat.NodeLayer); WriteI32s(topology, flat.NodeCluster);
+                WriteI32s(topology, flat.NodeCell); WriteU8s(topology, flat.NodeLayer); WriteI32s(topology, flat.NodeTile);
                 WriteI32s(topology, flat.AdjStart); WriteI32s(topology, flat.AdjTo);
 
                 // 代价带宽比较(先 polyCost 后 adjCost,与导出端 writeCosts 同序,各带长度前缀)

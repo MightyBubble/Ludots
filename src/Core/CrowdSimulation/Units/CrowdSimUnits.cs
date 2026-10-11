@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
@@ -141,17 +142,17 @@ public sealed class CrowdSimUnits
 
     private void SetRadiusBlackboard(Entity entity, in CrowdUnitSpawnRequest unit)
     {
-        float radiusMeters = (float)unit.RadiusCm.ToDouble() / 100f;
+        float radiusVisual = WorldUnits.CmToM((float)unit.RadiusCm.ToDouble());
         int keyId = _presentation.RadiusMetersBlackboardKeyId;
         if (_world.Has<BlackboardFloatBuffer>(entity))
         {
             ref var buffer = ref _world.Get<BlackboardFloatBuffer>(entity);
-            buffer.Set(keyId, radiusMeters);
+            buffer.Set(keyId, radiusVisual);
         }
         else
         {
             var buffer = new BlackboardFloatBuffer();
-            buffer.Set(keyId, radiusMeters);
+            buffer.Set(keyId, radiusVisual);
             _world.Add(entity, buffer);
         }
     }

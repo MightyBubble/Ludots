@@ -28,16 +28,16 @@ public static class NavSurfaceContract
             }
         }
 
-        if (asset.CellsX != config.NavCellCount || asset.CellsY != config.NavCellCount)
+        if (asset.NavCellsX != config.NavCellsPerSide || asset.NavCellsY != config.NavCellsPerSide)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: 尺寸 {asset.CellsX} × {asset.CellsY} 与导航网格 {config.NavCellCount} × {config.NavCellCount} 不符。");
+                $"{assetPath(config)}: 尺寸 {asset.NavCellsX} × {asset.NavCellsY} 与导航网格 {config.NavCellsPerSide} × {config.NavCellsPerSide} 不符。");
         }
 
-        if (asset.CellSizeCm != config.NavCellSizeCm)
+        if (asset.NavCellSizeCm != config.NavCellSizeCm)
         {
             throw new InvalidOperationException(
-                $"{assetPath(config)}: cellSizeCm = {asset.CellSizeCm}，与 world.navCellSizeCm = {config.NavCellSizeCm} 不符。");
+                $"{assetPath(config)}: navCellSizeCm = {asset.NavCellSizeCm}，与 world.navCellSizeCm = {config.NavCellSizeCm} 不符。");
         }
     }
 

@@ -26,7 +26,7 @@ public static class NavContextBaker
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(surface);
         ArgumentNullException.ThrowIfNull(heights);
-        if (heights.CellCount != config.NavCellCount || surface.CellCount != config.NavCellCount)
+        if (heights.NavCellsPerSide != config.NavCellsPerSide || surface.NavCellsPerSide != config.NavCellsPerSide)
         {
             throw new InvalidOperationException("NavContextBaker: 高度场 / 地表 / 配置的导航格数不一致。");
         }
@@ -37,8 +37,8 @@ public static class NavContextBaker
             ? Fix64Math.Tan(deg * Fix64.Deg2Rad)
             : Fix64.MaxValue;
 
-        int n = config.NavCellCount;
-        int n2 = n * n;
+        int navCellsPerSide = config.NavCellsPerSide;
+        int n2 = navCellsPerSide * navCellsPerSide;
 
         // classify
         var cost = new Fix64[n2];
@@ -61,7 +61,7 @@ public static class NavContextBaker
 
         // 净空腐蚀（切比雪夫,可分离两次扫描;地图边缘视为阻挡）
         var passable = new byte[n2];
-        Erode(walk, n, clearanceCells, passable);
+        Erode(walk, navCellsPerSide, clearanceCells, passable);
 
         // 升序可走格表
         var cellList = new List<int>(n2 / 2);
@@ -73,7 +73,7 @@ public static class NavContextBaker
         // 连通域:4 连通洪泛(与参考实现的 tile 局部标号 + 边界合并同划分)
         var comp = new int[n2];
         Array.Fill(comp, -1);
-        int compCount = Components(passable, n, comp);
+        int compCount = Components(passable, navCellsPerSide, comp);
 
         // 桥面层(RT-16):桥面格烘焙 + portal 合并进连通域
         var upPass = new byte[n2];
@@ -94,7 +94,7 @@ public static class NavContextBaker
             }
 
             var merged = new int[n2];
-            compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, passable, upPass, portal, n, merged);
+            compCount = UpperLayerBake.MergeDeckComponents(comp, compCount, passable, upPass, portal, navCellsPerSide, merged);
             comp = merged;
         }
 
@@ -103,36 +103,36 @@ public static class NavContextBaker
         Dictionary<int, UpperTileInfo>? upperTiles = null;
         if (tileCache != null)
         {
-            int t = config.Hpa.ClusterSize, c = n / t;
-            tiles = new NavTileEntry?[c * c];
-            for (int ty = 0; ty < c; ty++)
+            int navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
+            tiles = new NavTileEntry?[navTilesPerSide * navTilesPerSide];
+            for (int ty = 0; ty < navTilesPerSide; ty++)
             {
-                for (int tx = 0; tx < c; tx++)
+                for (int tx = 0; tx < navTilesPerSide; tx++)
                 {
-                    tiles[ty * c + tx] = tileCache.Acquire(passable, surface.Area, n, tx, ty);
+                    tiles[ty * navTilesPerSide + tx] = tileCache.Acquire(passable, surface.Area, navCellsPerSide, tx, ty);
                 }
             }
 
             foreach (int tileId in deck.TileOrder)
             {
-                int tx = tileId % c, ty = tileId / c;
+                int tx = tileId % navTilesPerSide, ty = tileId / navTilesPerSide;
                 bool any = false;
-                for (int y = ty * t; y < ty * t + t && !any; y++)
+                for (int y = ty * navCellsPerTile; y < ty * navCellsPerTile + navCellsPerTile && !any; y++)
                 {
-                    for (int x = tx * t; x < tx * t + t; x++)
+                    for (int x = tx * navCellsPerTile; x < tx * navCellsPerTile + navCellsPerTile; x++)
                     {
-                        if (upPass[y * n + x] != 0) { any = true; break; }
+                        if (upPass[y * navCellsPerSide + x] != 0) { any = true; break; }
                     }
                 }
 
                 if (!any) continue;
-                var entry = tileCache.Acquire(upPass, upArea, n, tx, ty);
+                var entry = tileCache.Acquire(upPass, upArea, navCellsPerSide, tx, ty);
                 var portals = new List<int>();
                 var pc = new Fix64[entry.Count];
                 var cnt = new int[entry.Count];
-                for (int k = 0; k < t * t; k++)
+                for (int k = 0; k < navCellsPerTile * navCellsPerTile; k++)
                 {
-                    int cell = (ty * t + k / t) * n + tx * t + k % t;
+                    int cell = (ty * navCellsPerTile + k / navCellsPerTile) * navCellsPerSide + tx * navCellsPerTile + k % navCellsPerTile;
                     if (portal[cell] != 0) portals.Add(k);
                     int p = entry.PolyOf[k];
                     if (p >= 0) { pc[p] += upCost[cell]; cnt[p]++; }
@@ -149,7 +149,7 @@ public static class NavContextBaker
         }
 
         var links = BuildLinks(config, surface, profile, passable, comp);
-        var (upComp, compCountTotal, reachOut) = BuildDeckReachability(n, comp, compCount, links, upPass, portal, upArea);
+        var (upComp, compCountTotal, reachOut) = BuildDeckReachability(navCellsPerSide, comp, compCount, links, upPass, portal, upArea);
 
         // 最便宜定价区域代价(minCostOf):A* 启发缩放,只取已定价值的行项
         Fix64 minCost = Fix64.MaxValue;
@@ -162,8 +162,8 @@ public static class NavContextBaker
         {
             Id = CrowdSimulationSpace.NavContextId(agent.Layer, clearanceCells),
             LayerIndex = agentTypeIndex,
-            ClearanceCells = clearanceCells,
-            CellCount = n,
+            ClearanceNavCells = clearanceCells,
+            NavCellsPerSide = navCellsPerSide,
             Cost = cost,
             Walk = walk,
             Passable = passable,
@@ -203,7 +203,7 @@ public static class NavContextBaker
             return null;
         }
 
-        int n = config.NavCellCount, n2 = n * n;
+        int navCellsPerSide = config.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var from = new List<int>();
         var to = new List<int>();
         var cost = new List<Fix64>();
@@ -211,9 +211,9 @@ public static class NavContextBaker
         var len = new List<float>();
         foreach (var cand in candidates)
         {
-            int a = cand.FromY * n + cand.FromX;
-            int b = cand.ToY * n + cand.ToX;
-            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeCells || cand.DropCm > jump.DownCm)
+            int a = cand.FromY * navCellsPerSide + cand.FromX;
+            int b = cand.ToY * navCellsPerSide + cand.ToX;
+            if (passable[a] == 0 || passable[b] == 0 || cand.LengthCells > jump.RangeNavCells || cand.DropCm > jump.DownCm)
             {
                 continue;
             }
@@ -281,9 +281,9 @@ public static class NavContextBaker
     /// 分配编号(确定性);桥头格双层可走 ⇒ 该格地面域 ↔ 桥面域双向互通边。可达图 = 跳跃链接边 + 互通边。
     /// </summary>
     internal static (int[] UpComp, int CompCountTotal, Dictionary<int, HashSet<int>> ReachOut) BuildDeckReachability(
-        int n, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, byte[] upArea)
+        int navCellsPerSide, int[] comp, int compCount, NavLinkSet? links, byte[] upPass, byte[] portal, byte[] upArea)
     {
-        int n2 = n * n;
+        int n2 = navCellsPerSide * navCellsPerSide;
         var reachOut = new Dictionary<int, HashSet<int>>();
         if (links != null)
         {
@@ -325,9 +325,9 @@ public static class NavContextBaker
     }
 
     /// <summary>连通域标号(4 连通洪泛,格号升序首见分配编号):全量烘焙与增量重烘共用一份划分。</summary>
-    internal static int Components(byte[] passable, int n, int[] comp)
+    internal static int Components(byte[] passable, int navCellsPerSide, int[] comp)
     {
-        int n2 = n * n, compCount = 0;
+        int n2 = navCellsPerSide * navCellsPerSide, compCount = 0;
         var queue = new int[n2];
         for (int s = 0; s < n2; s++)
         {
@@ -338,11 +338,11 @@ public static class NavContextBaker
             while (head < tail)
             {
                 int c = queue[head++];
-                int x = c % n, y = c / n;
+                int x = c % navCellsPerSide, y = c / navCellsPerSide;
                 if (x > 0 && passable[c - 1] != 0 && comp[c - 1] < 0) { comp[c - 1] = compCount; queue[tail++] = c - 1; }
-                if (x < n - 1 && passable[c + 1] != 0 && comp[c + 1] < 0) { comp[c + 1] = compCount; queue[tail++] = c + 1; }
-                if (y > 0 && passable[c - n] != 0 && comp[c - n] < 0) { comp[c - n] = compCount; queue[tail++] = c - n; }
-                if (y < n - 1 && passable[c + n] != 0 && comp[c + n] < 0) { comp[c + n] = compCount; queue[tail++] = c + n; }
+                if (x < navCellsPerSide - 1 && passable[c + 1] != 0 && comp[c + 1] < 0) { comp[c + 1] = compCount; queue[tail++] = c + 1; }
+                if (y > 0 && passable[c - navCellsPerSide] != 0 && comp[c - navCellsPerSide] < 0) { comp[c - navCellsPerSide] = compCount; queue[tail++] = c - navCellsPerSide; }
+                if (y < navCellsPerSide - 1 && passable[c + navCellsPerSide] != 0 && comp[c + navCellsPerSide] < 0) { comp[c + navCellsPerSide] = compCount; queue[tail++] = c + navCellsPerSide; }
             }
 
             compCount++;
@@ -352,7 +352,7 @@ public static class NavContextBaker
     }
 
     /// <summary>切比雪夫净空腐蚀（erodeRect 移植）:先行扫描再列扫描,两遍各计连续可走段。</summary>
-    private static void Erode(byte[] walk, int n, int clearance, byte[] output)
+    private static void Erode(byte[] walk, int navCellsPerSide, int clearance, byte[] output)
     {
         int r = clearance - 1;
         if (r <= 0)
@@ -363,12 +363,12 @@ public static class NavContextBaker
 
         int need = 2 * r + 1;
         // 行缓冲:w = 整行;边缘外永不写入,视为 0
-        var row = new byte[n * n];
-        for (int y = 0; y < n; y++)
+        var row = new byte[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            int baseIdx = y * n;
+            int baseIdx = y * navCellsPerSide;
             int run = 0;
-            for (int c = 0; c < n; c++)
+            for (int c = 0; c < navCellsPerSide; c++)
             {
                 run = walk[baseIdx + c] != 0 ? run + 1 : 0;
                 int x = c - r;
@@ -376,17 +376,17 @@ public static class NavContextBaker
             }
         }
 
-        for (int x = 0; x < n; x++)
+        for (int x = 0; x < navCellsPerSide; x++)
         {
             int run = 0;
-            for (int yy = 0; yy < n; yy++)
+            for (int yy = 0; yy < navCellsPerSide; yy++)
             {
-                run = row[yy * n + x] != 0 ? run + 1 : 0;
+                run = row[yy * navCellsPerSide + x] != 0 ? run + 1 : 0;
                 int y = yy - r;
-                if (y >= 0) output[y * n + x] = run >= need ? (byte)1 : (byte)0;
+                if (y >= 0) output[y * navCellsPerSide + x] = run >= need ? (byte)1 : (byte)0;
             }
 
-            for (int y = Math.Max(0, n - r); y < n; y++) output[y * n + x] = 0;
+            for (int y = Math.Max(0, navCellsPerSide - r); y < navCellsPerSide; y++) output[y * navCellsPerSide + x] = 0;
         }
     }
 }

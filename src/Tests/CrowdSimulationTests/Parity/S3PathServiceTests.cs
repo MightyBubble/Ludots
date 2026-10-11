@@ -37,18 +37,18 @@ public class S3PathServiceTests
         var grid = SurfaceGrid.Build(_runtime, surface, mapSurface.Blockers);
         var heightAsset = ContinuousHeightmapBinary.Read(File.OpenRead(
             Path.Combine("assets", "s1", Seed, "terrain", $"crowd_simulation_{Seed}.height")));
-        var heights = NavHeightField.FromHeightmap(heightAsset, _runtime.NavCellCount, _runtime.NavCellSizeCm);
+        var heights = NavHeightField.FromHeightmap(heightAsset, _runtime.NavCellsPerSide, _runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, _runtime);
         var cache = new NavTileCache(
-            _runtime.NavtileCacheCapacity, _runtime.Hpa.ClusterSize,
-            _runtime.Navmesh.MinRegionArea.ToDouble(), _runtime.Navmesh.MaxSimplificationError.ToDouble(),
-            _runtime.Navmesh.MaxEdgeLen.ToDouble(), _runtime.Navmesh.MaxVertsPerPoly);
+            _runtime.NavtileCacheCapacity, _runtime.Hpa.NavCellsPerTile,
+            _runtime.Navmesh.MinRegionNavCellArea.ToDouble(), _runtime.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            _runtime.Navmesh.MaxEdgeLenNavCells.ToDouble(), _runtime.Navmesh.MaxVertsPerPoly);
 
         _navs = new Dictionary<int, NavContext>();
         var seen = new HashSet<int>();
         for (int a = 0; a < _runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in _runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in _runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(_runtime, grid, heights, deck, a, clearance, cache);
                 if (seen.Add(nav.Id)) _navs[nav.Id] = nav;

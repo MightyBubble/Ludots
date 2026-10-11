@@ -73,16 +73,16 @@ public sealed class CrowdMovementKernel
     public required Fix64 BlendRate { get; init; }
     public required Fix64 BlendCommit { get; init; }
     public required int SlotCheckInterval { get; init; }
-    public required Fix64 WakeDistanceCells { get; init; }
-    public required Fix64 SlotArriveCells { get; init; }
-    public required Fix64 SettleRadiusCells { get; init; }
+    public required Fix64 WakeDistanceNavCells { get; init; }
+    public required Fix64 SlotArriveNavCells { get; init; }
+    public required Fix64 SettleRadiusNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
     public required Fix64 StallDecay { get; init; }
     public required Fix64 SettleTimeSeconds { get; init; }
-    public required Fix64 SlotSightCells { get; init; }
+    public required Fix64 SlotSightNavCells { get; init; }
     public required Fix64 SightHysteresis { get; init; }
-    public required Fix64 LaneSpread { get; init; }
-    public required Fix64 GoalArriveCells { get; init; }
+    public required Fix64 LaneSpreadSpeedRatio { get; init; }
+    public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SlotGain { get; init; }
     public required Fix64 CatchUp { get; init; }
     public required Fix64 Accel { get; init; }
@@ -264,10 +264,10 @@ public sealed class CrowdMovementKernel
     internal int RequireParallelWorkerCount()
     {
         int configured = Session.Config.Sim.ParallelWorkerCount;
-        if (configured < 1 || configured > 64)
+        if (configured < 1 || configured > CrowdSimulationLimits.MaxParallelWorkers)
         {
             throw new InvalidOperationException(
-                $"CrowdSimulationConfig.json: sim.parallelWorkerCount = {configured}，需为 1~64 的整数。");
+                $"CrowdSimulationConfig.json: sim.parallelWorkerCount = {configured}，需为 1~{CrowdSimulationLimits.MaxParallelWorkers} 的整数。");
         }
 
         return configured;
@@ -411,7 +411,7 @@ public sealed class CrowdMovementKernel
                 leaders[li].Step(
                     Session.LayerSpeedCmPerSecond(leaders[li].LayerIdx),
                     LeaderSpeed, turnK, faceStep, dt,
-                    Session.Config.NavCellSizeCm, Session.Config.NavCellCount);
+                    Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }
         }
 
@@ -433,11 +433,11 @@ public sealed class CrowdMovementKernel
         Fix64 maxRadiusCm = Fix64.Zero;
         foreach (var p in cfg.Profiles) maxRadiusCm = Fix64.Max(maxRadiusCm, p.PersonalRadiusCm);
         Fix64 hashCellCm = Fix64.Max(Fix64.OneValue, maxRadiusCm * 2 / Fix64.FromInt(Math.Max(1, av.HashRings)));
-        var hash = new CrowdSpatialHash(cfg.NavCellCount * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
+        var hash = new CrowdSpatialHash(cfg.NavCellsPerSide * cfg.NavCellSizeCm, hashCellCm, cfg.Sim.MaxUnits, av.HashRings, maxRadiusCm);
         int stepHz = cfg.FixedHz * session.SubSteps;
         int avoidHz = (int)av.RateHz.ToDouble();
         int stride = Math.Max(1, (int)(stepHz / Math.Min(avoidHz, (double)stepHz) + 0.5));
-        int hashCells = hash.Dim * hash.Dim;
+        int hashCells = hash.CellsPerSide * hash.CellsPerSide;
         return new CrowdMovementKernel
         {
             Session = session,
@@ -448,16 +448,16 @@ public sealed class CrowdMovementKernel
             BlendRate = mv.BlendRate,
             BlendCommit = mv.BlendCommit,
             SlotCheckInterval = mv.SlotCheckInterval,
-            WakeDistanceCells = mv.WakeDistanceCells,
-            SlotArriveCells = fc.SlotArriveCells,
-            SettleRadiusCells = fc.SettleRadiusCells,
+            WakeDistanceNavCells = mv.WakeDistanceNavCells,
+            SlotArriveNavCells = fc.SlotArriveNavCells,
+            SettleRadiusNavCells = fc.SettleRadiusNavCells,
             StallSpeedRatio = mv.StallSpeedRatio,
             StallDecay = mv.StallDecay,
             SettleTimeSeconds = fc.SettleTime,
-            SlotSightCells = fc.SlotSightCells,
+            SlotSightNavCells = fc.SlotSightNavCells,
             SightHysteresis = mv.SightHysteresis,
-            LaneSpread = mv.LaneSpread,
-            GoalArriveCells = fc.GoalArriveCells,
+            LaneSpreadSpeedRatio = mv.LaneSpreadSpeedRatio,
+            GoalArriveNavCells = fc.GoalArriveNavCells,
             SlotGain = Fix64.OneValue / mv.SlotTimeConstant,
             CatchUp = fc.CatchUp,
             Accel = av.Acceleration,
@@ -487,6 +487,7 @@ internal struct CrowdIntentScalars
 {
     public Fix64 Dt;
     public Fix64 Cs;
+    public int NavCellSizeCm;
     public Fix64 WorldSizeCm;
     public Fix64 BStep;
     public Fix64 Wake2;
@@ -501,7 +502,7 @@ internal struct CrowdIntentScalars
 internal struct CrowdMotorFrame
 {
     public int NavN;
-    public int CellSizeCm;
+    public int NavCellSizeCm;
     public int N2;
     public Fix64 Dt;
     public Fix64 Cs;

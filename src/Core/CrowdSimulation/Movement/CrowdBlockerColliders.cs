@@ -28,7 +28,7 @@ public sealed class CrowdBlockerColliders
     public int Count => _colliders.Length;
 
     /// <summary>阻挡足迹(方块)按覆盖格登记;格内圆盘推出在查询时精确解。</summary>
-    public static CrowdBlockerColliders Build(IReadOnlyList<BlockerFootprint> blockers, int n, int cellSizeCm)
+    public static CrowdBlockerColliders Build(IReadOnlyList<BlockerFootprint> blockers, int navCellsPerSide, int navCellSizeCm)
     {
         var boxes = new List<(Fix64, Fix64, Fix64, Fix64)>(blockers.Count);
         foreach (var b in blockers)
@@ -36,49 +36,48 @@ public sealed class CrowdBlockerColliders
             boxes.Add((Fix64.FromInt(b.XCm), Fix64.FromInt(b.YCm), Fix64.FromInt(b.HalfSizeCm), Fix64.FromInt(b.HalfSizeCm)));
         }
 
-        return BuildFromBoxes(boxes, n, cellSizeCm, Fix64.Zero);
+        return BuildFromBoxes(boxes, navCellsPerSide, navCellSizeCm, Fix64.Zero);
     }
 
     /// <summary>盒表直建(structure store 的 rebuildColliders 移植):注册格矩形按包围盒外扩
     /// reachCm(0 = S5 静态口径,只登记足迹自身触到的格)。</summary>
     public static CrowdBlockerColliders BuildFromBoxes(
-        IReadOnlyList<(Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)> boxes, int n, int cellSizeCm, Fix64 reachCm)
+        IReadOnlyList<(Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)> boxes, int navCellsPerSide, int navCellSizeCm, Fix64 reachCm)
     {
-        var perCell = new List<int>[n * n + 1];
+        var perCell = new List<int>[navCellsPerSide * navCellsPerSide + 1];
         var colliders = new (Fix64, Fix64, Fix64, Fix64)[boxes.Count];
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
         for (int id = 0; id < boxes.Count; id++)
         {
             var (x, y, hx, hy) = boxes[id];
             colliders[id] = (x, y, hx, hy);
-            int x0 = (int)Fix64.Floor((x - hx - reachCm) / cs).ToLong();
-            int y0 = (int)Fix64.Floor((y - hy - reachCm) / cs).ToLong();
-            int x1 = (int)Fix64.Floor((x + hx + reachCm) / cs).ToLong();
-            int y1 = (int)Fix64.Floor((y + hy + reachCm) / cs).ToLong();
+            int x0 = CrowdSimulationSpace.NavCellCoord(x - hx - reachCm, navCellSizeCm);
+            int y0 = CrowdSimulationSpace.NavCellCoord(y - hy - reachCm, navCellSizeCm);
+            int x1 = CrowdSimulationSpace.NavCellCoord(x + hx + reachCm, navCellSizeCm);
+            int y1 = CrowdSimulationSpace.NavCellCoord(y + hy + reachCm, navCellSizeCm);
             x0 = Math.Max(0, x0);
             y0 = Math.Max(0, y0);
-            x1 = Math.Min(n - 1, x1);
-            y1 = Math.Min(n - 1, y1);
+            x1 = Math.Min(navCellsPerSide - 1, x1);
+            y1 = Math.Min(navCellsPerSide - 1, y1);
             for (int cy = y0; cy <= y1; cy++)
             {
                 for (int cx = x0; cx <= x1; cx++)
                 {
-                    (perCell[cy * n + cx] ??= new List<int>()).Add(id);
+                    (perCell[cy * navCellsPerSide + cx] ??= new List<int>()).Add(id);
                 }
             }
         }
 
-        var cellStart = new int[n * n + 1];
+        var cellStart = new int[navCellsPerSide * navCellsPerSide + 1];
         int total = 0;
-        for (int c = 0; c < n * n; c++)
+        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
         {
             cellStart[c] = total;
             total += perCell[c]?.Count ?? 0;
         }
 
-        cellStart[n * n] = total;
+        cellStart[navCellsPerSide * navCellsPerSide] = total;
         var cellItems = new int[total];
-        for (int c = 0; c < n * n; c++)
+        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
         {
             perCell[c]?.CopyTo(cellItems, cellStart[c]);
         }

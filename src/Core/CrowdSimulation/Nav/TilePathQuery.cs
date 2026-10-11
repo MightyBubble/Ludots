@@ -8,7 +8,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// TILE 寻址的 NavMesh 查询(tileQuery.js findTilePath 移植):
 /// 多边形 A* + 漏斗,直接跑在某上下文的 tile 条目上,不经过拼装全局网格:
-///   poly 引用 = (tile × 2 + 层) × T² + 局部多边形号(层 0 地面 · 1 桥面)
+///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 地面 · 1 桥面)
 ///   同层同 tile → 条目内部邻接;同层邻 tile → 两边界的重叠缝合(带记忆化)
 ///   地面 ↔ 桥面 → 仅在桥头 portal 格,以格心点 portal 相连
 /// 侧边顺序(−y, −x, +x, +y)与拼装网格一致,地面查询的邻居展开序与 findPolyPath 相同。
@@ -21,8 +21,8 @@ public static class TilePathQuery
     /// <summary>查询暂存(RT-03:每 worker 一份,不可重入)。tile 代价备忘是条目的纯函数,跨查询保留。</summary>
     public sealed class Scratch
     {
-        public NavMinHeap Heap = new(256);
-        public Dictionary<int, Fix64> G = new();
+        public NavMinHeap Heap = new(CrowdSimulationLimits.NavMeshQueryHeapCapacity);
+        public Dictionary<int, Fix64> GScore = new();
         public Dictionary<int, Fix64> Ex = new();
         public Dictionary<int, Fix64> Ey = new();
         public Dictionary<int, int> Parent = new();
@@ -52,17 +52,17 @@ public static class TilePathQuery
         Scratch s)
     {
         ArgumentNullException.ThrowIfNull(nav.Tiles);
-        int n = nav.CellCount, t = config.Hpa.ClusterSize;
-        int sp = GroundRef(nav, t, startCell), gp = GroundRef(nav, t, goalCell);
+        int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile;
+        int sp = GroundRef(nav, navCellsPerTile, startCell), gp = GroundRef(nav, navCellsPerTile, goalCell);
         if (sp < 0 || gp < 0) return null;
 
         var half = Fix64.HalfValue;
-        Fix64 sx = Fix64.FromInt(startCell % n) + half, sy = Fix64.FromInt(startCell / n) + half;
-        Fix64 gx = Fix64.FromInt(goalCell % n) + half, gy = Fix64.FromInt(goalCell / n) + half;
+        Fix64 sx = Fix64.FromInt(startCell % navCellsPerSide) + half, sy = Fix64.FromInt(startCell / navCellsPerSide) + half;
+        Fix64 gx = Fix64.FromInt(goalCell % navCellsPerSide) + half, gy = Fix64.FromInt(goalCell / navCellsPerSide) + half;
         var minCost = nav.MinCost;
-        var inset = config.Navmesh.PortalInsetCells;
+        var inset = config.Navmesh.PortalInsetNavCells;
 
-        var g = s.G; var ex = s.Ex; var ey = s.Ey; var parent = s.Parent; var closed = s.Closed;
+        var g = s.GScore; var ex = s.Ex; var ey = s.Ey; var parent = s.Parent; var closed = s.Closed;
         g.Clear(); ex.Clear(); ey.Clear(); parent.Clear(); closed.Clear();
         var heap = s.Heap;
         heap.Clear();
@@ -74,14 +74,14 @@ public static class TilePathQuery
             int u = heap.Pop();
             if (!closed.Add(u)) continue;
             if (u == gp) { found = true; break; }
-            var gu = g[u]; var ux = ex[u]; var uy = ey[u]; var cu = PolyCost(nav, t, u, s);
-            EachNeighbor(nav, t, u, layers, s, (v, pax, pay, pbx, pby) =>
+            var gu = g[u]; var ux = ex[u]; var uy = ey[u]; var cu = PolyCost(nav, navCellsPerTile, u, s);
+            EachNeighbor(nav, navCellsPerTile, u, layers, s, (v, pax, pay, pbx, pby) =>
             {
                 if (closed.Contains(v)) return;
                 Fix64 mx = (pax + pbx) * half, my = (pay + pby) * half;
                 var h = Hypot(gx - mx, gy - my);
                 var ng = gu + Hypot(mx - ux, my - uy) * cu;
-                if (v == gp) ng += h * PolyCost(nav, t, v, s);
+                if (v == gp) ng += h * PolyCost(nav, navCellsPerTile, v, s);
                 if (!g.TryGetValue(v, out var gv) || ng < gv)
                 {
                     g[v] = ng; parent[v] = u; ex[v] = mx; ey[v] = my;
@@ -102,7 +102,7 @@ public static class TilePathQuery
         for (int i = 0; i + 1 < chain.Count; i++)
         {
             bool done = false;
-            EachNeighbor(nav, t, chain[i], layers, s, (v, pax, pay, pbx, pby) =>
+            EachNeighbor(nav, navCellsPerTile, chain[i], layers, s, (v, pax, pay, pbx, pby) =>
             {
                 if (done || v != chain[i + 1]) return;
                 done = true;
@@ -128,37 +128,37 @@ public static class TilePathQuery
     }
 
     /// <summary>把路线经过的 tile 标进走廊掩码(markTileClusters 移植)。</summary>
-    public static void MarkTileClusters(NavContext nav, CrowdSimulationRuntimeConfig config, int[] polys, byte[] mask)
+    public static void MarkNavTiles(NavContext nav, CrowdSimulationRuntimeConfig config, int[] polys, byte[] mask)
     {
-        int t = config.Hpa.ClusterSize, l = t * t;
+        int navCellsPerTile = config.Hpa.NavCellsPerTile, l = navCellsPerTile * navCellsPerTile;
         foreach (int p in polys) mask[(p / l) >> 1] = 1;
     }
 
     // 地面格的 poly 引用,-1 = 该格无多边形
-    private static int GroundRef(NavContext nav, int t, int cell)
+    private static int GroundRef(NavContext nav, int navCellsPerTile, int cell)
     {
-        int n = nav.CellCount, c = n / t;
-        int x = cell % n, y = cell / n;
-        int tile = (y / t) * c + x / t;
-        int p = nav.Tiles![tile].PolyOf[(y % t) * t + x % t];
-        return p < 0 ? -1 : tile * 2 * t * t + p;
+        int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
+        int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
+        int tile = (y / navCellsPerTile) * navTilesPerSide + x / navCellsPerTile;
+        int p = nav.Tiles![tile].PolyOf[(y % navCellsPerTile) * navCellsPerTile + x % navCellsPerTile];
+        return p < 0 ? -1 : tile * 2 * navCellsPerTile * navCellsPerTile + p;
     }
 
     // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
-    private static Fix64[] GroundCost(NavContext nav, int t, int tile, Scratch s)
+    private static Fix64[] GroundCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
     {
-        int n = nav.CellCount, c = n / t;
+        int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
         if (s.GroundCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
-        int ox = tile % c * t, oy = tile / c * t;
+        int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
         var pc = new Fix64[e.Count];
         var cnt = new int[e.Count];
-        for (int y = 0; y < t; y++)
+        for (int y = 0; y < navCellsPerTile; y++)
         {
-            for (int x = 0; x < t; x++)
+            for (int x = 0; x < navCellsPerTile; x++)
             {
-                int p = e.PolyOf[y * t + x];
-                if (p >= 0) { pc[p] += nav.Cost[(oy + y) * n + ox + x]; cnt[p]++; }
+                int p = e.PolyOf[y * navCellsPerTile + x];
+                if (p >= 0) { pc[p] += nav.Cost[(oy + y) * navCellsPerSide + ox + x]; cnt[p]++; }
             }
         }
 
@@ -167,12 +167,12 @@ public static class TilePathQuery
         return pc;
     }
 
-    private static Fix64 PolyCost(NavContext nav, int t, int refr, Scratch s)
+    private static Fix64 PolyCost(NavContext nav, int navCellsPerTile, int refr, Scratch s)
     {
-        int l = t * t, tl = refr / l;
+        int l = navCellsPerTile * navCellsPerTile, tl = refr / l;
         return (tl & 1) != 0
             ? nav.UpperTiles![tl >> 1].PolyCost[refr - tl * l]
-            : GroundCost(nav, t, tl >> 1, s)[refr - tl * l];
+            : GroundCost(nav, navCellsPerTile, tl >> 1, s)[refr - tl * l];
     }
 
     private static NavTileEntry? EntryOf(NavContext nav, int tile, int layer)
@@ -183,12 +183,12 @@ public static class TilePathQuery
     private delegate void NeighborFn(int refr, Fix64 ax, Fix64 ay, Fix64 bx, Fix64 by);
 
     // 对 ref 的每个邻居调 f(portal 端点以属主绕向给出)
-    private static void EachNeighbor(NavContext nav, int t, int refr, bool layers, Scratch s, NeighborFn f)
+    private static void EachNeighbor(NavContext nav, int navCellsPerTile, int refr, bool layers, Scratch s, NeighborFn f)
     {
-        int n = nav.CellCount, c = n / t, l = t * t;
+        int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile, l = navCellsPerTile * navCellsPerTile;
         int tl = refr / l, p = refr - tl * l, tile = tl >> 1, layer = tl & 1;
         var e = EntryOf(nav, tile, layer)!;
-        int tx = tile % c, ty = tile / c, ox = tx * t, oy = ty * t;
+        int tx = tile % navTilesPerSide, ty = tile / navTilesPerSide, ox = tx * navCellsPerTile, oy = ty * navCellsPerTile;
         for (int k = e.NeiStart[p]; k < e.NeiStart[p + 1]; k++)
         {
             int a = e.NeiA[k], b = e.NeiB[k];
@@ -199,13 +199,13 @@ public static class TilePathQuery
         {
             int sa = Sides[side, 0], sb = Sides[side, 1], dx = Sides[side, 2], dy = Sides[side, 3];
             int nx = tx + dx, ny = ty + dy;
-            if (nx < 0 || ny < 0 || nx >= c || ny >= c) continue;
-            int tb = ny * c + nx;
+            if (nx < 0 || ny < 0 || nx >= navTilesPerSide || ny >= navTilesPerSide) continue;
+            int tb = ny * navTilesPerSide + nx;
             var eb = EntryOf(nav, tb, layer);
             if (eb == null) continue;
             var pairs = NavMeshAssembler.StitchPairs(e, eb, sa, sb);
             bool vertical = dx != 0;
-            int line = vertical ? (dx > 0 ? ox + t : ox) : (dy > 0 ? oy + t : oy);
+            int line = vertical ? (dx > 0 ? ox + navCellsPerTile : ox) : (dy > 0 ? oy + navCellsPerTile : oy);
             int off = vertical ? oy : ox;
             int refBase = (tb * 2 + layer) * l;
             for (int k = 0; k < pairs.Length; k += 4)
@@ -228,8 +228,8 @@ public static class TilePathQuery
             int own = layer != 0 ? up.Entry.PolyOf[cell] : g.PolyOf[cell];
             int q = layer != 0 ? g.PolyOf[cell] : up.Entry.PolyOf[cell];
             if (own != p || q < 0 || !seen.Add(q)) continue;
-            var px = Fix64.FromInt(ox + cell % t) + Fix64.HalfValue;
-            var py = Fix64.FromInt(oy + cell / t) + Fix64.HalfValue;
+            var px = Fix64.FromInt(ox + cell % navCellsPerTile) + Fix64.HalfValue;
+            var py = Fix64.FromInt(oy + cell / navCellsPerTile) + Fix64.HalfValue;
             f((tile * 2 + (layer ^ 1)) * l + q, px, py, px, py);
         }
     }

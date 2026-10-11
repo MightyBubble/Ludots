@@ -23,19 +23,19 @@ public sealed class CrowdFogAreaParityTests
     {
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7area-truth.json")))!;
-        int f = meta["F"]!.GetValue<int>();
-        int fcsCm = FcsCm(meta["fcsM"]!.GetValue<double>());
+        int f = meta["fogCellsPerSide"]!.GetValue<int>();
+        int fogCellSizeCm = meta["fogCellSizeCm"]!.GetValue<int>();
         foreach (var c in meta["cases"]!.AsArray())
         {
             string name = c!["name"]!.GetValue<string>();
             var value = (JsonArray)c["value"]!;
             CrowdFogShape shape = c["kind"]!.GetValue<string>() switch
             {
-                "rect" => new CrowdFogShape { Rect = Cm(value) },
-                "circle" => new CrowdFogShape { Circle = Cm(value) },
-                _ => new CrowdFogShape { Poly = value.Select(p => Cm(p!.AsArray())).ToArray() },
+                "rect" => new CrowdFogShape { Rect = Numbers(value) },
+                "circle" => new CrowdFogShape { Circle = Numbers(value) },
+                _ => new CrowdFogShape { Poly = value.Select(p => Numbers(p!.AsArray())).ToArray() },
             };
-            var (cells, box) = CrowdFogArea.AreaCells(f, fcsCm, shape);
+            var (cells, box) = CrowdFogArea.AreaCells(f, fogCellSizeCm, shape);
             Assert.That(cells, Is.EqualTo(c["cells"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray()).AsCollection,
                 $"{name} 格集合与沙盒不一致");
             Assert.That(new[] { box.X0, box.Y0, box.X1, box.Y1 },
@@ -55,14 +55,10 @@ public sealed class CrowdFogAreaParityTests
             () => CrowdFogArea.AreaCells(64, 25000, farPoly), "顶点超 ±46340 m 必须显式抛错");
     }
 
-    /// <summary>真值文件的格长是米,换算到厘米取最近整数。</summary>
-    private static int FcsCm(double fcsM) => (int)Math.Round(fcsM * 100.0);
-
-    /// <summary>真值形状以米存储,C# 载荷是厘米:×100( authored 整数米,双精度精确往返)。</summary>
-    private static double[] Cm(JsonArray a)
+    private static double[] Numbers(JsonArray a)
     {
         var r = new double[a.Count];
-        for (int i = 0; i < a.Count; i++) r[i] = a[i]!.GetValue<double>() * 100.0;
+        for (int i = 0; i < a.Count; i++) r[i] = a[i]!.GetValue<double>();
         return r;
     }
 }

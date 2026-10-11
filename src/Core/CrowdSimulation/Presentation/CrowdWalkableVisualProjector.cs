@@ -33,10 +33,10 @@ public sealed class CrowdWalkableVisualProjector : IGlobalFieldVisualProjector
     {
         ArgumentNullException.ThrowIfNull(buffer);
         var nav = _navSource();
-        int n = _source.CellCount;
-        if (nav == null || n <= 0) return;
+        int navCellsPerSide = _source.NavCellsPerSide;
+        if (nav == null || navCellsPerSide <= 0) return;
 
-        int n2 = n * n;
+        int n2 = navCellsPerSide * navCellsPerSide;
         if (_cells.Length < n2) _cells = new GlobalFieldVisualCell[n2];
         int count = 0;
         for (int c = 0; c < n2; c++)
@@ -46,16 +46,16 @@ public sealed class CrowdWalkableVisualProjector : IGlobalFieldVisualProjector
             else if (nav.UpPass[c] != 0) color = DeckBrown;
             else if (nav.Passable[c] == 0) color = BlockedRed;
             else continue;
-            _cells[count++] = new GlobalFieldVisualCell(new Ludots.Core.Fields.FieldCell2D(c % n, c / n), color);
+            _cells[count++] = new GlobalFieldVisualCell(new Ludots.Core.Fields.FieldCell2D(c % navCellsPerSide, c / navCellsPerSide), color);
         }
 
         if (count == 0) return;
-        _dirty[0] = new IntRect(0, 0, n, n);
+        _dirty[0] = new IntRect(0, 0, navCellsPerSide, navCellsPerSide);
         var descriptor = new GlobalFieldVisualDescriptor(
             new GlobalFieldVisualId(GlobalFieldVisualKind.Walkable, scopeKeyId: 1, layerKeyId: 0, surfaceKeyId: 0),
-            _source.CellSizeCm,
+            _source.NavCellSizeCm,
             new Platform.Abstractions.WorldCmInt2(0, 0),
-            new IntRect(0, 0, n, n),
+            new IntRect(0, 0, navCellsPerSide, navCellsPerSide),
             GlobalFieldVisualValueKind.Vector4);
         buffer.Upsert(in descriptor, _cells.AsSpan(0, count), _dirty);
     }

@@ -33,14 +33,14 @@ internal sealed class S3PathInputSystem : ISystem<float>
     {
         if (!_runtime.Active) return;
         var actions = CrowdAuthoritativeInput.Require(_engine);
-        int n = _runtime.Nav.CellCount;
+        int navCellsPerSide = _runtime.Nav.NavCellsPerSide;
         float csCm = _runtime.Config.NavCellSizeCm;
         int hovered = -1;
-        if (CrowdPointerGround.TryPick(_engine, actions, _hud.X, _hud.Y, _hud.W, _hud.H, out double xCm, out double yCm))
+        if (CrowdPointerGround.TryPick(_engine, actions, _hud.OriginXPx, _hud.OriginYPx, _hud.WidthPx, _hud.HeightPx, out double xCm, out double yCm))
         {
             int cx = (int)MathF.Floor((float)xCm / csCm);
             int cy = (int)MathF.Floor((float)yCm / csCm);
-            if (cx >= 0 && cy >= 0 && cx < n && cy < n) hovered = cy * n + cx;
+            if (cx >= 0 && cy >= 0 && cx < navCellsPerSide && cy < navCellsPerSide) hovered = cy * navCellsPerSide + cx;
         }
 
         _runtime.HoveredCell = hovered;

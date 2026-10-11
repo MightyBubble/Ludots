@@ -21,8 +21,8 @@ public class CrowdStructuresDueExpiriesTests
         var fp = new CrowdStructureFootprint
         {
             Shape = CrowdStructureShape.Rect,
-            X = Fix64.FromInt(3000),
-            Y = Fix64.FromInt(3000),
+            CenterXCm = Fix64.FromInt(3000),
+            CenterYCm = Fix64.FromInt(3000),
             Hx = Fix64.FromInt(200),
             Hy = Fix64.FromInt(200),
         };
@@ -55,12 +55,12 @@ public class CrowdStructuresDueExpiriesTests
 
     private static CrowdStructuresStore BuildStore(CrowdSimulationRuntimeConfig config)
     {
-        int n = config.NavCellCount;
-        int n2 = n * n;
+        int navCellsPerSide = config.NavCellsPerSide;
+        int n2 = navCellsPerSide * navCellsPerSide;
         var grid = new SurfaceGrid
         {
-            CellCount = n,
-            CellSizeCm = config.NavCellSizeCm,
+            NavCellsPerSide = navCellsPerSide,
+            NavCellSizeCm = config.NavCellSizeCm,
             TerrainType = new byte[n2],
             Area = new byte[n2],
             Blocked = new byte[n2],

@@ -27,8 +27,8 @@ public static class CrowdAvoidance
     private static readonly Fix64 StackedD2GuardCm = Fix64.FromInt(10);
     /// <summary>堆叠轴的伪随机中心:((lo·16807) % 7) − 2.5,2.5 二进精确。</summary>
     private static readonly Fix64 StackedAxisCenter = Fix64.FromInt(5) / Fix64.FromInt(2);
-    /// <summary>堆叠轴的量纲:参考端轴值是米,厘米域 ×100(与 d2 的 cm² 口径一致)。</summary>
-    private static readonly Fix64 StackedAxisScaleCm = Fix64.FromInt(100);
+    /// <summary>堆叠轴的量纲:参考端轴值是米,乘每米厘米数后与 d2 的 cm² 口径一致。</summary>
+    private static readonly Fix64 StackedAxisScaleCm = Fix64.FromInt(CrowdReferenceMeters.CentimetersPerMeter);
 
     public static void Solve(CrowdMovementKernel k)
     {
@@ -80,10 +80,10 @@ public static class CrowdAvoidance
         int P = relations.PlayerCount;
         var pushMode = relations.PushModeByPair;
         var hash2 = k.Hash;
-        int dim = hash2.Dim, last = dim - 1;
+        int dim = hash2.CellsPerSide, last = dim - 1;
         int rr = hash2.Rings + 1;
         int width = hash2.Width;
-        Fix64 cellCm = hash2.CellSize;
+        Fix64 cellCm = hash2.CellSizeCm;
         Fix64 reach = hash2.Reach;
         Fix64 keep = Fix64.OneValue - k.Smoothing;
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;

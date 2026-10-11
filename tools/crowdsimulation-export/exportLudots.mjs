@@ -227,7 +227,7 @@ function fnv1a(buf) {
   }
   const bytes = w.build();
   writeFileSync(join(outRoot, 'parity', 's1-truth.json'), JSON.stringify({
-    mapId, seed, navCells: N, cellSizeCm,
+    mapId, seed, navCellsPerSide: N, navCellSizeCm: cellSizeCm,
     blockers: blockers.length, bridges: bridges.length, jumpCandidates: world.jumps.count,
     fnv1a: fnv1a(bytes),
   }, null, 2));
@@ -376,7 +376,7 @@ function canonComp(comp, n2) {
     w2.i32(tileCache.bakes); w2.i32(tileCache.hits); w2.i32(tileCache.misses);
     const bytes2 = w2.build();
     writeFileSync(join(outRoot, 'parity', 's3-tile-truth.json'), JSON.stringify({
-      mapId, seed, tiles: entries.length, bakes: tileCache.bakes, hits: tileCache.hits, misses: tileCache.misses, fnv1a: fnv1a(bytes2),
+      mapId, seed, navTileEntries: entries.length, bakes: tileCache.bakes, hits: tileCache.hits, misses: tileCache.misses, fnv1a: fnv1a(bytes2),
       // 键指纹 → 条目哈希(键 = tile 精确内容,跨端按内容对齐,不靠位置序)
       entryHashes: Object.fromEntries(entries.map(([k, ], i) => [fnv1a(Buffer.from([...k].flatMap((c) => { const cc = c.charCodeAt(0); return [cc & 0xff, cc >> 8]; }))), perEntry[i]])),
     }, null, 2));
@@ -620,7 +620,7 @@ function canonComp(comp, n2) {
         script, frames,
         unitCount: sim.units.count,
         spawnSeq: sim.spawnSeq,
-        selectEdgeMinDistM: Math.round(minEdge * 1000) / 1000,
+        selectEdgeMinDistCm: Math.round(minEdge * 1000) / 10,
       }, null, 2));
       console.log(`[export] ${mapId} s4 units=${sim.units.count} frames=${frames.length} edge=${minEdge.toFixed(2)}m`);
     }
@@ -947,7 +947,7 @@ function canonComp(comp, n2) {
       writeFileSync(join(outRoot, 'parity', 's7fog-truth.json'), JSON.stringify({
         mapId, seed,
         note: 'S7-b 迷雾/认知(F02):迷雾开启口径(不置 __S7_TRUTH_NAV__,与 S7 块并存)。单位记录与 S5/S7 同构(位置带宽 + 状态机逐位 + contacts 双容忍);迷雾 digest 每组每 tick(visible/explored/belief/tiles 计数、beliefKey、槽号、entRev/rev)+ 全局槽账(seq/switches/entry/dormant/beliefCount),整数集合态逐位硬门。s7fog-ops.bin 为结构 op 报告(place@5 挡路改道、remove@90 残影语义),逐字段硬门。脚本含 reveal/obscure/forget/fogShare 与 order 的 fogTerrain 开关(乐观迷雾)。C# 侧 CrowdFog/CrowdBeliefState 字段一一对应。',
-        ticks: TICKS, G, script, opExecTicks,
+        ticks: TICKS, visionGroupCount: G, script, opExecTicks,
       }, null, 2));
       console.log(`[export] ${mapId} s7fog ticks=${TICKS} units=${sim.units.count} ops=${ops.length} switches=${seenSwitches} beliefCount=${sim.fog.beliefCount()}`);
     }
@@ -1114,15 +1114,14 @@ function canonComp(comp, n2) {
       writeFileSync(join(outRoot, 'parity', 's7crecycle-truth.json'), JSON.stringify({
         mapId, seed,
         note: 'S7-c 认知槽回收复用:迷雾开启口径。11 轮放置→发现→拆除(残影)→再见地面 + 重建 S1/S2/S3;休眠槽超 slotCacheCapacity(8) 触发最旧淘汰,重建命中已淘汰认知集 = 容量回收复用。digest(槽号/槽账)逐位硬门——淘汰次序(注册序)是隐含合同。',
-        ticks: TICKS2, G: G2, script: script2, opExecTicks: opExecTicks2,
+        ticks: TICKS2, visionGroupCount: G2, script: script2, opExecTicks: opExecTicks2,
       }, null, 2));
       console.log(`[export] ${mapId} s7crecycle ticks=${TICKS2} units=${sim2.units.count} ops=${ops2.length} seq=${sim2.belief.seq} dormant=${sim2.belief.dormant.length}`);
     }
 
     // ───────────────────── L51:迷雾面命令格化对拍(circle/poly,格单位归一树) ─────────────────────
-    // 直接调引擎 areaCells(__L31_FIX64_LOS__ 置位走定点树),形状以米给出;C# 侧
-    // CrowdFogAreaParityTests 以同参(米×100 回厘米)对拍逐格。千米级圆/多边形在旧厘米域
-    // 树里 r·r 静默回绕,本块即其两端逐格证据。F/fcs 与 Fog 构造同式派生(cellCells×导航格)。
+    // 直接调引擎 areaCells(__L31_FIX64_LOS__ 置位走定点树)。参考端形状仍是米;
+    // 写出的对拍文件换成厘米。C# 直接读厘米。F/fcs 与 Fog 构造同式派生(cellCells×导航格)。
     {
       globalThis.__L31_FIX64_LOS__ = true;
       const { areaCells } = await import('../src/engine/fog/area.js');
@@ -1141,14 +1140,15 @@ function canonComp(comp, n2) {
         { name: 'biteCirclePyth', kind: 'circle', value: [4225, 2075, 500] },
         { name: 'bitePolyGridEdge', kind: 'poly', value: [[6000, 3000], [8000, 4000], [7500, 4600], [6500, 4800]] },
       ];
+      const cmValue = (v) => (Array.isArray(v) ? v.map(cmValue) : v * 100);
       const areaOut = {
         mapId, seed,
-        note: 'L51 面积格化对拍:格单位归一树(米输入,守卫 ±46340 m),双端同棵求值树逐格硬门。rect1km 与 s7fog 的 reveal 同参,是 rect 路径的回归钉;circle/poly 为旧厘米域树 r·r 溢出界(~463 m)之外的首批两端证据。',
-        cellCells: K, F, fcsM, cases: [],
+        note: 'L51 面积格化对拍:格单位归一树(厘米输入,守卫 ±46340 m),双端同棵求值树逐格硬门。rect1km 与 s7fog 的 reveal 同参,是 rect 路径的回归钉;circle/poly 为旧厘米域树 r·r 溢出界(~463 m)之外的首批两端证据。',
+        navCellsPerFogCell: K, fogCellsPerSide: F, fogCellSizeCm: Math.round(fcsM * 100), cases: [],
       };
       for (const c of cases) {
         const r = areaCells(F, fcsM, { kind: c.kind, value: c.value });
-        areaOut.cases.push({ ...c, cells: [...r.cells], box: [...r.box] });
+        areaOut.cases.push({ name: c.name, kind: c.kind, value: cmValue(c.value), cells: [...r.cells], box: [...r.box] });
       }
       writeFileSync(join(outRoot, 'parity', 's7area-truth.json'), JSON.stringify(areaOut, null, 2));
       console.log(`[export] ${mapId} s7area cases=${areaOut.cases.length} F=${F} fcsM=${fcsM}`);
@@ -1179,9 +1179,9 @@ function canonComp(comp, n2) {
         { name: 'opaqueMidBlocks', hMaxRaw: {}, opaque: flat(13), expect: false },
       ];
       const losOut = {
-        mapId, seed, F: fogObj.F, eyeM: fogObj.eye,
+        mapId, seed, fogCellsPerSide: fogObj.F, eyeCm: Math.round(fogObj.eye * 100),
         note: 'L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。',
-        from, to, hAvgTRaw, cases: [],
+        fromFogCell: from, toFogCell: to, hAvgTRaw, cases: [],
       };
       for (const c of cases3) {
         const hAvg = new Float64Array(64 * 64), hMax = new Float64Array(64 * 64), opaque = new Uint8Array(64 * 64);

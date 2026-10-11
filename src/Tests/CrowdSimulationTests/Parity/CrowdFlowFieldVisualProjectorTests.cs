@@ -38,7 +38,7 @@ public class CrowdFlowFieldVisualProjectorTests
         wp[u] = goal;
         var flow = new FlowField { Integ = integ, Len = len, Wp = wp, Goal = goal, Reached = 2 };
 
-        var source = new CrowdFlowFieldVisualSource { Flow = flow, CellCount = n, CellSizeCm = 100 };
+        var source = new CrowdFlowFieldVisualSource { Flow = flow, NavCellsPerSide = n, NavCellSizeCm = 100 };
         var projector = new CrowdFlowFieldVisualProjector(source);
         var buffer = new GlobalFieldVisualBuffer(2, 16, 2);
         buffer.BeginFrame();
@@ -59,7 +59,7 @@ public class CrowdFlowFieldVisualProjectorTests
     [Test]
     public void Project_NullFlow_WritesNothing()
     {
-        var source = new CrowdFlowFieldVisualSource { Flow = null, CellCount = 8, CellSizeCm = 100 };
+        var source = new CrowdFlowFieldVisualSource { Flow = null, NavCellsPerSide = 8, NavCellSizeCm = 100 };
         var projector = new CrowdFlowFieldVisualProjector(source);
         var buffer = new GlobalFieldVisualBuffer(2, 16, 2);
         buffer.BeginFrame();

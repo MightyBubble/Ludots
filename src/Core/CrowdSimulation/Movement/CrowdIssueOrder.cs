@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
@@ -20,7 +21,7 @@ public static class CrowdIssueOrder
         var world = sim.World;
         var units = sim.Units;
         bool useSel = sim.SelectedCount > 0;
-        int clickCell = CrowdDeployment.CellAt(wxCm, wyCm, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
+        int clickCell = CrowdSimulationSpace.CellAtStrict(wxCm, wyCm, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
         var key = CrowdOrderDedupKey.Create(shapeId, auto, face, widthCm);
 
         // 同玩家、同成员集、同目标格与同参数的存活指令 → 直接复用
@@ -71,7 +72,7 @@ public static class CrowdIssueOrder
             if (world.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId != player) continue;
             if (useSel && st.Selected == 0) continue;
             var old = sim.Groups.Groups[st.GroupId]!;
-            int gk = old.LayerIdx * 256 + old.RIdx;
+            int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
             if (!fresh.TryGetValue(gk, out var g))
             {
                 // F02 双句柄:新组以真相句柄落底(老组可能持变体号),规划句柄随即挂当前槽。
@@ -89,7 +90,7 @@ public static class CrowdIssueOrder
             g.Count++;
             var p = world.Get<WorldPositionCm>(entity).Value;
             if (!lsum.TryGetValue(g.LayerIdx, out var acc)) acc = (Fix64.Zero, Fix64.Zero, 0);
-            lsum[g.LayerIdx] = (acc.X + p.X, acc.Y + p.Y, acc.N + 1);
+            lsum[g.LayerIdx] = (acc.XCm + p.X, acc.YCm + p.Y, acc.Count + 1);
             sx += p.X;
             sy += p.Y;
             n++;
@@ -105,7 +106,7 @@ public static class CrowdIssueOrder
         var fc = sim.Config.Formation;
         var mode = CrowdOrderModeChooser.Choose(
             x0, y0, x1, y1, wxCm, wyCm,
-            fc.MagicBoxPadCells * Fix64.FromInt(sim.Config.NavCellSizeCm),
+            fc.MagicBoxPadCm,
             fc.MagicBoxMaxSpreadCm,
             face.HasValue, auto == false);
         var order = sim.Orders.Create(player, mode, shapeId, face, widthCm);
@@ -116,13 +117,13 @@ public static class CrowdIssueOrder
         {
             // PRESERVE:各层块按(层质心 − 指令质心)平移目标
             Fix64 tx = wxCm, ty = wyCm;
-            if (mode == CrowdOrderMode.Preserve && lsum.TryGetValue(g.LayerIdx, out var acc) && acc.N > 0)
+            if (mode == CrowdOrderMode.Preserve && lsum.TryGetValue(g.LayerIdx, out var acc) && acc.Count > 0)
             {
-                tx = wxCm + acc.X / acc.N - ccx;
-                ty = wyCm + acc.Y / acc.N - ccy;
+                tx = wxCm + acc.XCm / acc.Count - ccx;
+                ty = wyCm + acc.YCm / acc.Count - ccy;
             }
 
-            int goalCell = CrowdDeployment.CellAt(tx, ty, sim.Config.NavCellCount, sim.Config.NavCellSizeCm);
+            int goalCell = CrowdSimulationSpace.CellAtStrict(tx, ty, sim.Config.NavCellSizeCm, sim.Config.NavCellsPerSide);
             order.Groups.Add(new CrowdOrderGroupLink { GroupId = g.Id, GoalCell = goalCell });
             g.OrderId = order.Id;
         }

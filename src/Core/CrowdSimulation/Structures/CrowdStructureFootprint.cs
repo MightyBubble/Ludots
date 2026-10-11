@@ -1,6 +1,7 @@
 using System;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.CrowdSimulation.Structures;
@@ -20,32 +21,32 @@ public enum CrowdStructureShape
 public readonly struct CrowdStructureFootprint
 {
     public required CrowdStructureShape Shape { get; init; }
-    public Fix64 X { get; init; }
-    public Fix64 Y { get; init; }
+    public Fix64 CenterXCm { get; init; }
+    public Fix64 CenterYCm { get; init; }
     public Fix64 Hx { get; init; }
     public Fix64 Hy { get; init; }
-    public Fix64 R { get; init; }
+    public Fix64 RadiusCm { get; init; }
     public Fix64 X0 { get; init; }
     public Fix64 Y0 { get; init; }
     public Fix64 X1 { get; init; }
     public Fix64 Y1 { get; init; }
-    public Fix64 W { get; init; }
+    public Fix64 WidthCm { get; init; }
 
     public static CrowdStructureFootprint Make(RuntimeStructureTemplate tpl, Fix64 xCm, Fix64 yCm, Fix64 sizeCm, Fix64 toXCm, Fix64 toYCm) =>
         tpl.Footprint switch
         {
-            "rect" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Rect, X = xCm, Y = yCm, Hx = sizeCm / 2, Hy = sizeCm / 2 },
-            "disc" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Disc, X = xCm, Y = yCm, R = sizeCm },
-            "path" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Path, X0 = xCm, Y0 = yCm, X1 = toXCm, Y1 = toYCm, W = sizeCm },
+            "rect" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Rect, CenterXCm = xCm, CenterYCm = yCm, Hx = sizeCm / 2, Hy = sizeCm / 2 },
+            "disc" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Disc, CenterXCm = xCm, CenterYCm = yCm, RadiusCm = sizeCm },
+            "path" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Path, X0 = xCm, Y0 = yCm, X1 = toXCm, Y1 = toYCm, WidthCm = sizeCm },
             _ => throw new InvalidOperationException($"结构模板 {tpl.Id} 的足迹形状 \"{tpl.Footprint}\" 需为 rect / disc / path。"),
         };
 
     /// <summary>包围盒 (minX, minY, maxX, maxY),厘米。</summary>
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox() => Shape switch
     {
-        CrowdStructureShape.Rect => (X - Hx, Y - Hy, X + Hx, Y + Hy),
-        CrowdStructureShape.Disc => (X - R, Y - R, X + R, Y + R),
-        _ => (Fix64.Min(X0, X1) - W / 2, Fix64.Min(Y0, Y1) - W / 2, Fix64.Max(X0, X1) + W / 2, Fix64.Max(Y0, Y1) + W / 2),
+        CrowdStructureShape.Rect => (CenterXCm - Hx, CenterYCm - Hy, CenterXCm + Hx, CenterYCm + Hy),
+        CrowdStructureShape.Disc => (CenterXCm - RadiusCm, CenterYCm - RadiusCm, CenterXCm + RadiusCm, CenterYCm + RadiusCm),
+        _ => (Fix64.Min(X0, X1) - WidthCm / 2, Fix64.Min(Y0, Y1) - WidthCm / 2, Fix64.Max(X0, X1) + WidthCm / 2, Fix64.Max(Y0, Y1) + WidthCm / 2),
     };
 
     /// <summary>地图桥实体的仓内足迹(F02):span 即导出端从参考仓读出的 path 足迹
@@ -57,7 +58,7 @@ public readonly struct CrowdStructureFootprint
         Y0 = Fix64.FromInt(span.Y0Cm),
         X1 = Fix64.FromInt(span.X1Cm),
         Y1 = Fix64.FromInt(span.Y1Cm),
-        W = Fix64.FromInt(span.WidthCm),
+        WidthCm = Fix64.FromInt(span.WidthCm),
     };
 
     /// <summary>点是否在足迹内(path 的端上点带 ε 容差,抗浮点骑线)。</summary>
@@ -66,10 +67,10 @@ public readonly struct CrowdStructureFootprint
         switch (Shape)
         {
             case CrowdStructureShape.Rect:
-                return Fix64.Abs(px - X) <= Hx && Fix64.Abs(py - Y) <= Hy;
+                return Fix64.Abs(px - CenterXCm) <= Hx && Fix64.Abs(py - CenterYCm) <= Hy;
             case CrowdStructureShape.Disc:
-                Fix64 dx = px - X, dy = py - Y;
-                return dx * dx + dy * dy <= R * R;
+                Fix64 dx = px - CenterXCm, dy = py - CenterYCm;
+                return dx * dx + dy * dy <= RadiusCm * RadiusCm;
             default:
                 Fix64 ax = X1 - X0, ay = Y1 - Y0;
                 Fix64 length = CrowdFix.Hypot(ax, ay);
@@ -81,7 +82,7 @@ public readonly struct CrowdStructureFootprint
                 Fix64 t = vx * ux + vy * uy;
                 // 参考端 EPS = 1e-6 米 = 1e-4 厘米;raw = 1e-4 × 2^32 ≈ 429496.7,有依据取整
                 Fix64 eps = Fix64.FromRaw(429497);
-                return t >= -eps && t <= length + eps && Fix64.Abs(vx * uy - vy * ux) < W / 2;
+                return t >= -eps && t <= length + eps && Fix64.Abs(vx * uy - vy * ux) < WidthCm / 2;
         }
     }
 
@@ -97,15 +98,14 @@ public readonly struct CrowdStructureFootprint
     }
 
     /// <summary>足迹包围盒外扩 ext 厘米所触的格矩形 [x0, y0, x1, y1),夹到网格内。</summary>
-    public (int X0, int Y0, int X1, int Y1) CellRectOf(int cellSizeCm, int n, int extCm = 0)
+    public (int X0, int Y0, int X1, int Y1) CellRectOf(int navCellSizeCm, int navCellsPerSide, int extCm = 0)
     {
         var (a, b, c, d) = Bbox();
         Fix64 ext = Fix64.FromInt(extCm);
-        Fix64 cs = Fix64.FromInt(cellSizeCm);
         return (
-            Math.Max(0, (int)Fix64.Floor((a - ext) / cs).ToLong()),
-            Math.Max(0, (int)Fix64.Floor((b - ext) / cs).ToLong()),
-            Math.Min(n, (int)Fix64.Floor((c + ext) / cs).ToLong() + 1),
-            Math.Min(n, (int)Fix64.Floor((d + ext) / cs).ToLong() + 1));
+            Math.Max(0, CrowdSimulationSpace.NavCellCoord(a - ext, navCellSizeCm)),
+            Math.Max(0, CrowdSimulationSpace.NavCellCoord(b - ext, navCellSizeCm)),
+            Math.Min(navCellsPerSide, CrowdSimulationSpace.NavCellCoord(c + ext, navCellSizeCm) + 1),
+            Math.Min(navCellsPerSide, CrowdSimulationSpace.NavCellCoord(d + ext, navCellSizeCm) + 1));
     }
 }

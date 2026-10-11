@@ -15,7 +15,7 @@ public sealed class CrowdSimulationRuntimeConfig
     public required int FixedHz { get; init; }
 
     /// <summary>导航网格边长（格）。世界正方形，Boards[0].WidthCm / NavCellSizeCm。</summary>
-    public required int NavCellCount { get; init; }
+    public required int NavCellsPerSide { get; init; }
     public required int NavCellSizeCm { get; init; }
     /// <summary>世界种子(生成盐,与参考实现的 world.seed 同值;部署 / 生成的 RNG 流以此为根)。</summary>
     public required int WorldSeed { get; init; }
@@ -80,7 +80,7 @@ public sealed class RuntimeJumpCapability
 {
     public required int UpCm { get; init; }
     public required int DownCm { get; init; }
-    public required int RangeCells { get; init; }
+    public required int RangeNavCells { get; init; }
     public required Fix64 Cost { get; init; }
 }
 
@@ -116,31 +116,31 @@ public sealed class RuntimeAgentProfile
     public required Fix64 PushPriority { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
-    public required int ClearanceCells { get; init; }
-    /// <summary>导航上下文 id = layer × 256 + clearance（数值键，禁止字符串拼接）。</summary>
+    public required int ClearanceNavCells { get; init; }
+    /// <summary>导航上下文 id = layer × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
     public required int NavContextId { get; init; }
 }
 
 public sealed class RuntimeNavmeshSection
 {
-    public required Fix64 MinRegionArea { get; init; }
-    public required Fix64 MaxSimplificationError { get; init; }
-    public required Fix64 MaxEdgeLen { get; init; }
+    public required Fix64 MinRegionNavCellArea { get; init; }
+    public required Fix64 MaxSimplificationErrorNavCells { get; init; }
+    public required Fix64 MaxEdgeLenNavCells { get; init; }
     public required int MaxVertsPerPoly { get; init; }
-    public required Fix64 PortalInsetCells { get; init; }
+    public required Fix64 PortalInsetNavCells { get; init; }
 }
 
 public sealed class RuntimeHpaSection
 {
-    public required int ClusterSize { get; init; }
-    public required int MaxEntranceWidth { get; init; }
+    public required int NavCellsPerTile { get; init; }
+    public required int MaxEntranceWidthNavCells { get; init; }
 }
 
 public sealed class RuntimeFlowfieldSection
 {
     public required int CacheCapacity { get; init; }
     public required int PoolCapacity { get; init; }
-    public required int CorridorPadding { get; init; }
+    public required int CorridorPaddingNavTiles { get; init; }
     public required int MaxRebuildsPerTick { get; init; }
 }
 
@@ -155,7 +155,8 @@ public sealed class RuntimePlanningSection
 public sealed class RuntimeFogSection
 {
     public required Fix64 RateHz { get; init; }
-    public required int CellCells { get; init; }
+    public required int FogCellSizeCm { get; init; }
+    public required int NavCellsPerFogCell { get; init; }
     public required Fix64 VisionCm { get; init; }
     public required int RevealTicks { get; init; }
     public required int SlotCacheCapacity { get; init; }
@@ -173,16 +174,16 @@ public sealed class RuntimeFormationSection
     public required Fix64 LeaderTurnRate { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 CatchUp { get; init; }
-    public required Fix64 SlotSightCells { get; init; }
+    public required Fix64 SlotSightNavCells { get; init; }
     public required Fix64 SettleTime { get; init; }
-    public required Fix64 LeaderLookAhead { get; init; }
+    public required Fix64 LeaderLookAheadNavCells { get; init; }
     public required Fix64 MagicBoxMaxSpreadCm { get; init; }
-    public required Fix64 MagicBoxPadCells { get; init; }
-    public required Fix64 SlotArriveCells { get; init; }
-    public required Fix64 GoalArriveCells { get; init; }
-    public required Fix64 SettleRadiusCells { get; init; }
+    public required Fix64 MagicBoxPadCm { get; init; }
+    public required Fix64 SlotArriveNavCells { get; init; }
+    public required Fix64 GoalArriveNavCells { get; init; }
+    public required Fix64 SettleRadiusNavCells { get; init; }
     public required Fix64 ClumpSlack { get; init; }
-    public required Fix64 MinClumpCells { get; init; }
+    public required Fix64 MinClumpNavCells { get; init; }
     public required Fix64 HeadingInheritDot { get; init; }
     public required Fix64 MirrorFlipDot { get; init; }
 }
@@ -191,22 +192,22 @@ public sealed class RuntimeFormationShape
 {
     public required string Id { get; init; }
     public required string Label { get; init; }
-    public required Fix64 Spacing { get; init; }
+    public required Fix64 SpacingDiameterScale { get; init; }
     public required Fix64 Aspect { get; init; }
     public required bool Wedge { get; init; }
 }
 
 public sealed class RuntimeMovementSection
 {
-    public required Fix64 MaxStepCells { get; init; }
+    public required Fix64 MaxStepNavCells { get; init; }
     public required int MaxSubSteps { get; init; }
     public required Fix64 SlotTimeConstant { get; init; }
     public required Fix64 BlendRate { get; init; }
     public required Fix64 BlendCommit { get; init; }
     public required int SlotCheckInterval { get; init; }
     public required Fix64 SightHysteresis { get; init; }
-    public required Fix64 LaneSpread { get; init; }
-    public required Fix64 WakeDistanceCells { get; init; }
+    public required Fix64 LaneSpreadSpeedRatio { get; init; }
+    public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 StallSpeedRatio { get; init; }
     public required Fix64 StallDecay { get; init; }
     public required Fix64 UnitTurnRate { get; init; }
@@ -268,15 +269,15 @@ public sealed class RuntimeSimSection
 public sealed class RuntimeSpawnSection
 {
     public required int PlacementTries { get; init; }
-    public required Fix64 ClusterSpacing { get; init; }
+    public required Fix64 GroupSpacingScale { get; init; }
     public required int TargetSearchTries { get; init; }
-    public required Fix64 CellInset { get; init; }
+    public required Fix64 NavCellInsetFraction { get; init; }
 }
 
 public sealed class RuntimeStructuresSection
 {
     public required Fix64 BlockCoverage { get; init; }
-    public required int PortalCells { get; init; }
+    public required int PortalReachNavCells { get; init; }
     /// <summary>结构实体模板(下标即 place 指令的模板号;areaId 已解析为导航区域下标)。</summary>
     public required IReadOnlyList<RuntimeStructureTemplate> Templates { get; init; }
 }
@@ -302,8 +303,8 @@ public sealed class RuntimeStructureTemplate
 public sealed class RuntimeDeploySection
 {
     public required int InitialUnits { get; init; }
-    public required Fix64 SpreadCells { get; init; }
-    public required Fix64 BaseJitterCells { get; init; }
+    public required Fix64 SpreadNavCells { get; init; }
+    public required Fix64 BaseJitterNavCells { get; init; }
     public required int CentersPerGroup { get; init; }
     public required IReadOnlyList<RuntimeDeployBase> Bases { get; init; }
 }

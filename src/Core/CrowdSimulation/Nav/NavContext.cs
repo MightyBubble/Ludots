@@ -13,8 +13,8 @@ public sealed class NavContext
 {
     public required int Id { get; init; }
     public required int LayerIndex { get; init; }
-    public required int ClearanceCells { get; init; }
-    public required int CellCount { get; init; }
+    public required int ClearanceNavCells { get; init; }
+    public required int NavCellsPerSide { get; init; }
     /// <summary>逐格代价（0 = 不可通行）。</summary>
     public required Fix64[] Cost { get; init; }
     /// <summary>逐格可走（代价 &amp; 坡度 &amp; 非阻挡,腐蚀前）。</summary>

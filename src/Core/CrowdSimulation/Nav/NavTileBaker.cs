@@ -6,7 +6,7 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 单块 nav tile 的烘焙产物(位置无关,内容相同的 tile 共享一份)。
-/// 坐标为 tile 局部格角点(0..T);side:0 = x0,1 = xT,2 = y0,3 = yT。
+/// 坐标为 tile 局部格角点(0..navCellsPerTile);side:0 = x0,1 = x 为 navCellsPerTile,2 = y0,3 = y 为 navCellsPerTile。
 /// </summary>
 public sealed class NavTileEntry
 {
@@ -25,7 +25,7 @@ public sealed class NavTileEntry
     public required int[] BMinY { get; init; }
     public required int[] BMaxX { get; init; }
     public required int[] BMaxY { get; init; }
-    /// <summary>cell → poly(tile 内 T² 下标;点在凸多边形上 + 洪泛补齐)。</summary>
+    /// <summary>cell → poly(tile 内 navCellsPerTile² 下标;点在凸多边形上 + 洪泛补齐)。</summary>
     public required int[] PolyOf { get; init; }
     public required int[] BorderPoly { get; init; }
     public required byte[] BorderSide { get; init; }
@@ -35,26 +35,26 @@ public sealed class NavTileEntry
 }
 
 /// <summary>
-/// bakeTile 移植:tile 自身 T×T 窗口上的 2D Recast 管线
+/// bakeTile 移植:tile 自身 navCellsPerTile×navCellsPerTile 窗口上的 2D Recast 管线
 /// (距离场 → 分水岭区域 → 轮廓 → 三角化 → 凸多边形合并)。多边形永不跨导航区域。
 /// </summary>
 public static class NavTileBaker
 {
     private const int KEY = 1 << 21;
 
-    public static NavTileEntry Bake(ushort[] pass, int t, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly, PolygonBakeScratch scratch)
+    public static NavTileEntry Bake(ushort[] pass, int navCellsPerTile, double minRegionArea, double maxSimplificationError, double maxEdgeLen, int maxVertsPerPoly, PolygonBakeScratch scratch)
     {
-        int tt = t * t;
-        var dist = DistanceField.ComputeClearance(ToBytes(pass, tt), t);
-        var (reg, regionCount) = WatershedRegions.Build(ToBytes(pass, tt), dist, t, (int)minRegionArea);
-        var loops = ContourTracer.BuildContours(reg, regionCount, t, maxSimplificationError, maxEdgeLen);
+        int tt = navCellsPerTile * navCellsPerTile;
+        var dist = DistanceField.ComputeClearance(ToBytes(pass, tt), navCellsPerTile);
+        var (reg, regionCount) = WatershedRegions.Build(ToBytes(pass, tt), dist, navCellsPerTile, (int)minRegionArea);
+        var loops = ContourTracer.BuildContours(reg, regionCount, navCellsPerTile, maxSimplificationError, maxEdgeLen);
 
         var vmap = new Dictionary<int, int>();
         var vx = new List<int>();
         var vy = new List<int>();
         int Vid(int x, int y)
         {
-            int k = y * (t + 1) + x;
+            int k = y * (navCellsPerTile + 1) + x;
             if (!vmap.TryGetValue(k, out int id))
             {
                 id = vx.Count;
@@ -136,11 +136,11 @@ public static class NavTileBaker
                 if (emap.TryGetValue(b * KEY + a, out int q) && q != i) { nb.Add(q); nb.Add(a); nb.Add(b); continue; }
 
                 int ax = vxArr[a], ay = vyArr[a], bx = vxArr[b], by = vyArr[b];
-                if (ax == bx && (ax == 0 || ax == t))
+                if (ax == bx && (ax == 0 || ax == navCellsPerTile))
                 {
                     bd.Add(i); bd.Add(ax == 0 ? 0 : 1); bd.Add(Math.Min(ay, by)); bd.Add(Math.Max(ay, by)); bd.Add(ay > by ? 1 : 0);
                 }
-                else if (ay == by && (ay == 0 || ay == t))
+                else if (ay == by && (ay == 0 || ay == navCellsPerTile))
                 {
                     bd.Add(i); bd.Add(ay == 0 ? 2 : 3); bd.Add(Math.Min(ax, bx)); bd.Add(Math.Max(ax, bx)); bd.Add(ax > bx ? 1 : 0);
                 }
@@ -174,7 +174,7 @@ public static class NavTileBaker
             {
                 for (int x = bminx[p]; x < bmaxx[p]; x++)
                 {
-                    int i = y * t + x;
+                    int i = y * navCellsPerTile + x;
                     if (passBytes[i] == 0 || polyOf[i] >= 0) continue;
                     double px = x + 0.5, py = y + 0.5;
                     bool inside = true;
@@ -193,8 +193,8 @@ public static class NavTileBaker
         {
             for (int qh = 0; qh < qt; qh++)
             {
-                int c = queue[qh], x = c % t, y = c / t;
-                Span<int> ns = stackalloc int[] { x > 0 ? c - 1 : -1, x < t - 1 ? c + 1 : -1, y > 0 ? c - t : -1, y < t - 1 ? c + t : -1 };
+                int c = queue[qh], x = c % navCellsPerTile, y = c / navCellsPerTile;
+                Span<int> ns = stackalloc int[] { x > 0 ? c - 1 : -1, x < navCellsPerTile - 1 ? c + 1 : -1, y > 0 ? c - navCellsPerTile : -1, y < navCellsPerTile - 1 ? c + navCellsPerTile : -1 };
                 foreach (int ni in ns)
                 {
                     if (ni >= 0 && passBytes[ni] != 0 && polyOf[ni] < 0 && (!sameArea || passBytes[ni] == passBytes[c]))

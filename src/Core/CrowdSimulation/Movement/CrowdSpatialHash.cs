@@ -24,10 +24,10 @@ public sealed class CrowdSpatialHash
     private uint _generation;
     private int _lastN = -1;
 
-    public readonly Fix64 CellSize;
+    public readonly Fix64 CellSizeCm;
     public int Rings => _rings;
     /// <summary>网格边长(格)与查询触及距离(厘米):格剔除的矩形几何用。</summary>
-    public int Dim => _dim;
+    public int CellsPerSide => _dim;
     public Fix64 Reach => _reachCm;
     public int CellRingOf(int cell) => _cellRing[cell];
     public int StartOf(int cell) => _start[cell];
@@ -50,12 +50,12 @@ public sealed class CrowdSpatialHash
 
     /// <summary>格边长与触及距离为定点精确值(参考端 cellSize/reach 是浮点,inv=1/cellSize;
     /// 整数截断会系统性移格划分,预算裁剪下选出不同接触子集)。</summary>
-    public CrowdSpatialHash(int worldSizeCm, Fix64 cellSizeCm, int capacity, int rings, Fix64 reachCm)
+    public CrowdSpatialHash(int worldSizeCm, Fix64 navCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
-        CellSize = cellSizeCm;
+        CellSizeCm = navCellSizeCm;
         _rings = rings;
         _reachCm = reachCm;
-        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / cellSizeCm).ToLong();
+        _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / navCellSizeCm).ToLong();
         int cells = _dim * _dim;
         (Ox, Oy, RingEnd) = BuildRingOffsets(rings);
         Width = Ox.Length;
@@ -100,13 +100,13 @@ public sealed class CrowdSpatialHash
     private int CellAtCm(Fix64 vCm)
     {
         // 向零截断与参考端 (x * inv) | 0 逐字对齐
-        int c = (int)(vCm / CellSize).ToLong();
+        int c = (int)(vCm / CellSizeCm).ToLong();
         return c < 0 ? 0 : c >= _dim ? _dim - 1 : c;
     }
 
     private int RingOf(Fix64 radiusCm)
     {
-        int ring = (int)Fix64.Ceiling((radiusCm + _reachCm) / CellSize).ToLong();
+        int ring = (int)Fix64.Ceiling((radiusCm + _reachCm) / CellSizeCm).ToLong();
         return ring > _rings ? _rings : ring < 1 ? 1 : ring;
     }
 
@@ -175,13 +175,13 @@ public sealed class CrowdSpatialHash
                 {
                     int nx = cx + Ox[o], ny = cy + Oy[o];
                     if (nx < 0 || ny < 0 || nx >= _dim || ny >= _dim) continue;
-                    int cc = ny * _dim + nx;
-                    if (_stamp[cc] == generation)
+                    int cellIndex = ny * _dim + nx;
+                    if (_stamp[cellIndex] == generation)
                     {
                         int pos = baseIdx + found++;
-                        NeighborStart[pos] = _start[cc];
-                        NeighborEnd[pos] = _start[cc] + _count[cc];
-                        NeighborSlot[pos] = Slot[cc];
+                        NeighborStart[pos] = _start[cellIndex];
+                        NeighborEnd[pos] = _start[cellIndex] + _count[cellIndex];
+                        NeighborSlot[pos] = Slot[cellIndex];
                     }
                 }
 

@@ -96,7 +96,7 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>blackboard 键(呈现侧 ownerBlackboardFloat 绑定的数据契约)。</summary>
     public static class Keys
     {
-        public const string UnitRadiusM = "crowd_simulation.unit.radius_m";
+        public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
         public const string SessionTick = "crowd_simulation.session.tick";
         public const string SessionUnits = "crowd_simulation.session.units";
         public const string SessionSelected = "crowd_simulation.session.selected";
@@ -238,14 +238,14 @@ public sealed partial class CrowdSimulationRuntime
         _mapSurfaceBridges = mapSurface.Bridges;
         var heights = NavHeightField.FromHeightmap(
             ContinuousHeightmapBinary.Read(OpenAsset(engine, RequireHeightAssetPath(mapConfig, mapId))),
-            runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm);
+            runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;
         var cache = new NavTileCache(
-            runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.ClusterSize,
-            runtimeConfig.Navmesh.MinRegionArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationError.ToDouble(),
-            runtimeConfig.Navmesh.MaxEdgeLen.ToDouble(), runtimeConfig.Navmesh.MaxVertsPerPoly);
+            runtimeConfig.NavtileCacheCapacity, runtimeConfig.Hpa.NavCellsPerTile,
+            runtimeConfig.Navmesh.MinRegionNavCellArea.ToDouble(), runtimeConfig.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+            runtimeConfig.Navmesh.MaxEdgeLenNavCells.ToDouble(), runtimeConfig.Navmesh.MaxVertsPerPoly);
 
         var navs = new Dictionary<int, NavContext>();
         var navByLayerRadius = new Dictionary<(int, int), NavContext>();
@@ -253,7 +253,7 @@ public sealed partial class CrowdSimulationRuntime
         var seen = new HashSet<int>();
         for (int a = 0; a < runtimeConfig.AgentTypes.Count; a++)
         {
-            foreach (int clearance in runtimeConfig.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (int clearance in runtimeConfig.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtimeConfig, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
@@ -300,7 +300,7 @@ public sealed partial class CrowdSimulationRuntime
             StableIds = stableIds,
             TemplateRegistry = templateRegistry,
             TemplatesByUnitTypeRadius = unitTypeTemplates,
-            RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusM),
+            RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusKey),
             SelectionOwner = _sessionEntity,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
             Collections = collections,
@@ -327,7 +327,7 @@ public sealed partial class CrowdSimulationRuntime
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.EnableMovement(kernel, planner);
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
-            mapSurface.Blockers, runtimeConfig.NavCellCount, runtimeConfig.NavCellSizeCm));
+            mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
         // 玩家调色板:deploy.bases[].color 是数据;缺色玩家落到调色板外,呈现层回退默认。
         int maxPlayer = runtimeConfig.Deploy.Bases.Count == 0 ? 0 : runtimeConfig.Deploy.Bases.Max(b => b.PlayerId);
@@ -477,13 +477,13 @@ public sealed partial class CrowdSimulationRuntime
         {
             var replayNavs = new Dictionary<int, NavContext>();
             var replayCache = new NavTileCache(
-                session.Config.NavtileCacheCapacity, session.Config.Hpa.ClusterSize,
-                session.Config.Navmesh.MinRegionArea.ToDouble(), session.Config.Navmesh.MaxSimplificationError.ToDouble(),
-                session.Config.Navmesh.MaxEdgeLen.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
+                session.Config.NavtileCacheCapacity, session.Config.Hpa.NavCellsPerTile,
+                session.Config.Navmesh.MinRegionNavCellArea.ToDouble(), session.Config.Navmesh.MaxSimplificationErrorNavCells.ToDouble(),
+                session.Config.Navmesh.MaxEdgeLenNavCells.ToDouble(), session.Config.Navmesh.MaxVertsPerPoly);
             var seenIds = new HashSet<int>();
             for (int a = 0; a < session.Config.AgentTypes.Count; a++)
             {
-                foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+                foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
                 {
                     var nav = NavContextBaker.Bake(session.Config, _surfaceGrid, _heights, _deck, a, clearance, replayCache);
                     if (!seenIds.Add(nav.Id)) continue;

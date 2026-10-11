@@ -6,29 +6,29 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
-/// HPA* 抽象图(hpa.js + hpaLocal.js 移植,烘焙路径):tile = cluster,
+/// HPA* 抽象图(hpa.js + hpaLocal.js 移植,烘焙路径):
 /// 入口 = 共享边界上的开放格对(宽 run 取两端、窄 run 取中点,不超过 maxEntranceWidth),
-/// 簇内边 = 簇内 Dijkstra 距离;跳跃链接成为端点间的有向抽象边;
-/// 桥面层节点键 = N² + 格号,只在桥头 portal 与地面 0 代价相连。
-/// 抽象图按 cluster 分块(不可变),为增量重烘焙与认知变体共享做准备。
+/// tile 内边 = tile 内 Dijkstra 距离;跳跃链接成为端点间的有向抽象边;
+/// 桥面层节点键 = 导航格总数 + 格号,只在桥头 portal 与地面 0 代价相连。
+/// 抽象图按 tile 分块(不可变),为增量重烘焙与认知变体共享做准备。
 /// </summary>
 public sealed class HpaGraph
 {
-    public required int ClusterSize { get; init; }
-    public required int ClustersPerSide { get; init; }
-    public required int CellCount2 { get; init; }
-    public required int MaxEntranceWidth { get; init; }
+    public required int NavCellsPerTile { get; init; }
+    public required int NavTilesPerSide { get; init; }
+    public required int NavCellTotal { get; init; }
+    public required int MaxEntranceWidthNavCells { get; init; }
 
-    /// <summary>每 cluster 的东边界入口(cellA, cellB)对列表。</summary>
+    /// <summary>每 tile 的东边界入口(cellA, cellB)对列表。</summary>
     public required int[][] BorderE { get; set; }
-    /// <summary>每 cluster 的南边界入口对列表。</summary>
+    /// <summary>每 tile 的南边界入口对列表。</summary>
     public required int[][] BorderS { get; set; }
-    /// <summary>每 cluster 的桥面东/南跨界边(keyA, keyB, cost)三元组。</summary>
+    /// <summary>每 tile 的桥面东/南跨界边(keyA, keyB, cost)三元组。</summary>
     public required int[][] UpE { get; set; }
     public required Fix64[][] UpECost { get; set; }
     public required int[][] UpS { get; set; }
     public required Fix64[][] UpSCost { get; set; }
-    /// <summary>每 cluster 的节点格表(地面格在前,桥面节点 = N² + 格号 在后)。</summary>
+    /// <summary>每 tile 的节点格表(地面格在前,桥面节点 = 导航格总数 + 格号 在后)。</summary>
     public required int[][] Cells { get; set; }
     /// <summary>簇内边:(i, j, dist) 三元组,下标为 Cells 内序号。</summary>
     public required int[][] Intra { get; set; }
@@ -36,11 +36,11 @@ public sealed class HpaGraph
     /// <summary>跨层 0 代价边(ground cell, deck key)对。</summary>
     public required int[][] CrossLayer { get; set; }
     /// <summary>不可变簇块:节点格 + 格→局部号 + CSR 出边(目标为格号,桥面目标带层位)。</summary>
-    public required HpaClusterBlock[] Blocks { get; set; }
+    public required HpaTileBlock[] Blocks { get; set; }
     /// <summary>跳跃链接的有向出边:起点格 → (目标格, 代价) 平铺。</summary>
     public required Dictionary<int, List<(int To, Fix64 Cost)>> LinkOut { get; set; }
     /// <summary>跳跃链接端点按簇的归属表(增量:与重烘后的表比对,落在干净簇的新端点要重烘该簇)。</summary>
-    public Dictionary<int, List<int>>? LinkClusters { get; set; }
+    public Dictionary<int, List<int>>? LinkTiles { get; set; }
     public required int NodeCount { get; set; }
     public required int EdgeCount { get; set; }
 
@@ -58,17 +58,17 @@ public sealed class HpaGraph
     // Update 的升序缓冲。本图独占:重烘在导航锁内,查询不碰它;变体克隆不共享。
     private StableInt[] _ascend = Array.Empty<StableInt>();
 
-    /// <summary>认知变体克隆(F02):外层容器全拷;内层数组/簇块/LinkOut 的 List 与真相(及
+    /// <summary>认知变体克隆(F02):外层容器全拷;内层数组/tile 块/LinkOut 的 List 与真相(及
     /// 其他同源变体)共用,禁止原地写——写了就击穿全体共享者。一切改写只能整体替换变体自有的
     /// 外层槽位(增量重烘的全部写入点均如此);查询暂存全新。</summary>
     public HpaGraph CloneForVariant()
     {
         return new HpaGraph
         {
-            ClusterSize = ClusterSize,
-            ClustersPerSide = ClustersPerSide,
-            CellCount2 = CellCount2,
-            MaxEntranceWidth = MaxEntranceWidth,
+            NavCellsPerTile = NavCellsPerTile,
+            NavTilesPerSide = NavTilesPerSide,
+            NavCellTotal = NavCellTotal,
+            MaxEntranceWidthNavCells = MaxEntranceWidthNavCells,
             BorderE = (int[][])BorderE.Clone(),
             BorderS = (int[][])BorderS.Clone(),
             UpE = (int[][])UpE.Clone(),
@@ -79,57 +79,57 @@ public sealed class HpaGraph
             Intra = (int[][])Intra.Clone(),
             IntraDist = (Fix64[][])IntraDist.Clone(),
             CrossLayer = (int[][])CrossLayer.Clone(),
-            Blocks = (HpaClusterBlock[])Blocks.Clone(),
+            Blocks = (HpaTileBlock[])Blocks.Clone(),
             LinkOut = new Dictionary<int, List<(int, Fix64)>>(LinkOut),
-            LinkClusters = LinkClusters == null ? null : new Dictionary<int, List<int>>(LinkClusters),
+            LinkTiles = LinkTiles == null ? null : new Dictionary<int, List<int>>(LinkTiles),
             NodeCount = NodeCount,
             EdgeCount = EdgeCount,
             Heap = new NavMinHeap(512),
             _dist = new Fix64[_dist.Length],
             _startDist = new Fix64[_startDist.Length],
             _goalDist = new Fix64[_goalDist.Length],
-            _localNb = new int[_localNb.Length == 0 ? ClusterSize * ClusterSize * 8 : _localNb.Length],
-            _localW = new Fix64[_localW.Length == 0 ? ClusterSize * ClusterSize * 8 : _localW.Length],
-            _localWant = new byte[_localWant.Length == 0 ? ClusterSize * ClusterSize : _localWant.Length],
+            _localNb = new int[_localNb.Length == 0 ? NavCellsPerTile * NavCellsPerTile * 8 : _localNb.Length],
+            _localW = new Fix64[_localW.Length == 0 ? NavCellsPerTile * NavCellsPerTile * 8 : _localW.Length],
+            _localWant = new byte[_localWant.Length == 0 ? NavCellsPerTile * NavCellsPerTile : _localWant.Length],
         };
     }
 
     public static HpaGraph Build(NavContext nav, CrowdSimulationRuntimeConfig config)
     {
-        int n = nav.CellCount, s = config.Hpa.ClusterSize, c = n / s, cc = c * c;
+        int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile, navTileCount = navTilesPerSide * navTilesPerSide;
         var g = new HpaGraph
         {
-            ClusterSize = s,
-            ClustersPerSide = c,
-            CellCount2 = n * n,
-            MaxEntranceWidth = config.Hpa.MaxEntranceWidth,
-            BorderE = new int[cc][],
-            BorderS = new int[cc][],
-            UpE = new int[cc][],
-            UpECost = new Fix64[cc][],
-            UpS = new int[cc][],
-            UpSCost = new Fix64[cc][],
-            Cells = new int[cc][],
-            Intra = new int[cc][],
-            IntraDist = new Fix64[cc][],
-            CrossLayer = new int[cc][],
-            Blocks = new HpaClusterBlock[cc],
+            NavCellsPerTile = navCellsPerTile,
+            NavTilesPerSide = navTilesPerSide,
+            NavCellTotal = navCellsPerSide * navCellsPerSide,
+            MaxEntranceWidthNavCells = config.Hpa.MaxEntranceWidthNavCells,
+            BorderE = new int[navTileCount][],
+            BorderS = new int[navTileCount][],
+            UpE = new int[navTileCount][],
+            UpECost = new Fix64[navTileCount][],
+            UpS = new int[navTileCount][],
+            UpSCost = new Fix64[navTileCount][],
+            Cells = new int[navTileCount][],
+            Intra = new int[navTileCount][],
+            IntraDist = new Fix64[navTileCount][],
+            CrossLayer = new int[navTileCount][],
+            Blocks = new HpaTileBlock[navTileCount],
             LinkOut = new Dictionary<int, List<(int, Fix64)>>(),
             NodeCount = 0,
             EdgeCount = 0,
         };
-        g._dist = new Fix64[s * s];
-        g._startDist = new Fix64[s * s];
-        g._goalDist = new Fix64[s * s];
-        g._localNb = new int[s * s * 8];
-        g._localW = new Fix64[s * s * 8];
-        g._localWant = new byte[s * s];
+        g._dist = new Fix64[navCellsPerTile * navCellsPerTile];
+        g._startDist = new Fix64[navCellsPerTile * navCellsPerTile];
+        g._goalDist = new Fix64[navCellsPerTile * navCellsPerTile];
+        g._localNb = new int[navCellsPerTile * navCellsPerTile * 8];
+        g._localW = new Fix64[navCellsPerTile * navCellsPerTile * 8];
+        g._localWant = new byte[navCellsPerTile * navCellsPerTile];
 
-        for (int cl = 0; cl < cc; cl++) { ScanE(g, nav, cl); ScanS(g, nav, cl); UpScan(g, nav, cl, true); UpScan(g, nav, cl, false); }
-        var lk = LinksByCluster(nav.Links, n, s, c);
-        g.LinkClusters = lk;
-        for (int cl = 0; cl < cc; cl++) BakeCluster(g, nav, cl, lk, keep: false);
-        for (int cl = 0; cl < cc; cl++) g.Blocks[cl] = BuildBlock(g, nav, cl);
+        for (int cl = 0; cl < navTileCount; cl++) { ScanE(g, nav, cl); ScanS(g, nav, cl); UpScan(g, nav, cl, true); UpScan(g, nav, cl, false); }
+        var lk = LinksByTile(nav.Links, navCellsPerSide, navCellsPerTile, navTilesPerSide);
+        g.LinkTiles = lk;
+        for (int cl = 0; cl < navTileCount; cl++) BakeTile(g, nav, cl, lk, keep: false);
+        for (int cl = 0; cl < navTileCount; cl++) g.Blocks[cl] = BuildBlock(g, nav, cl);
         FinishGraph(g, nav.Links);
         return g;
     }
@@ -140,22 +140,22 @@ public sealed class HpaGraph
     /// 全量构建逐位一致。</summary>
     public void Update(NavContext nav, NavLinkSet? links, IReadOnlyCollection<int> tiles, HashSet<int>? same)
     {
-        int c = ClustersPerSide;
+        int navTilesPerSide = NavTilesPerSide;
         var own = new HashSet<int>(tiles);
         var aff = new HashSet<int>(tiles);
         var rebake = new HashSet<int>(tiles);
         var east = new HashSet<int>();
         var south = new HashSet<int>();
         // 遍历序合同:本方法对无序集合(HashSet/字典键)的枚举一律按簇号升序显式化——
-        // 各枚举只做集合并集或逐簇独立读写(Rescan 只加集,BakeCluster/BuildBlock 逐簇
+        // 各枚举只做集合并集或逐簇独立读写(Rescan 只加集,BakeTile/BuildBlock 逐簇
         // 写自有槽位),结果与序无关,升序仅为把序写成合同不依赖运行时枚举序。
         foreach (int t in tiles) // tiles 是调用方 List(CrowdNavRebake.TilesOf),有序容器
         {
-            int cx = t % c, cy = t / c;
+            int cx = t % navTilesPerSide, cy = t / navTilesPerSide;
             east.Add(t);
             south.Add(t);
             if (cx > 0) east.Add(t - 1);
-            if (cy > 0) south.Add(t - c);
+            if (cy > 0) south.Add(t - navTilesPerSide);
         }
 
         // 每条触到脏 tile 的边界只重扫一次(相邻脏 tile 共享边界);入口表未变则对面簇不重烘簇内边
@@ -184,21 +184,21 @@ public sealed class HpaGraph
         for (int i = 0; i < eastCount; i++)
         {
             int cl = _ascend[i].Key;
-            Rescan(cl, cl % c < c - 1 ? cl + 1 : -1, true);
+            Rescan(cl, cl % navTilesPerSide < navTilesPerSide - 1 ? cl + 1 : -1, true);
         }
 
         int southCount = LoadAscending(south);
         for (int i = 0; i < southCount; i++)
         {
             int cl = _ascend[i].Key;
-            Rescan(cl, cl / c < c - 1 ? cl + c : -1, false);
+            Rescan(cl, cl / navTilesPerSide < navTilesPerSide - 1 ? cl + navTilesPerSide : -1, false);
         }
 
         int ownCount = LoadAscending(own);
         for (int i = 0; i < ownCount; i++) aff.Add(_ascend[i].Key);
-        var lk = LinksByCluster(links, nav.CellCount, ClusterSize, c);
+        var lk = LinksByTile(links, nav.NavCellsPerSide, NavCellsPerTile, navTilesPerSide);
         // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
-        var oldLk = LinkClusters ?? new Dictionary<int, List<int>>();
+        var oldLk = LinkTiles ?? new Dictionary<int, List<int>>();
         int oldCount = LoadAscendingKeys(oldLk);
         for (int i = 0; i < oldCount; i++) aff.Add(_ascend[i].Key);
         int linkCount = LoadAscendingKeys(lk);
@@ -212,12 +212,12 @@ public sealed class HpaGraph
             if (!SameIntLists(a, b)) rebake.Add(cl);
         }
 
-        LinkClusters = lk;
+        LinkTiles = lk;
         int rebakeCount = LoadAscending(rebake);
         for (int i = 0; i < rebakeCount; i++)
         {
             int cl = _ascend[i].Key;
-            BakeCluster(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
+            BakeTile(this, nav, cl, lk, keep: !own.Contains(cl) || (same != null && same.Contains(cl)));
         }
 
         int affCount = LoadAscending(aff);
@@ -311,37 +311,37 @@ public sealed class HpaGraph
 
     private static void ScanE(HpaGraph g, NavContext nav, int cl)
     {
-        int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount, cx = cl % c;
-        if (cx >= c - 1) { g.BorderE[cl] = Array.Empty<int>(); return; }
-        int x0 = (cx + 1) * s - 1, ys = cl / c * s;
-        g.BorderE[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidth, k => (ys + k) * n + x0, k => (ys + k) * n + x0 + 1, s);
+        int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cx = cl % navTilesPerSide;
+        if (cx >= navTilesPerSide - 1) { g.BorderE[cl] = Array.Empty<int>(); return; }
+        int x0 = (cx + 1) * navCellsPerTile - 1, ys = cl / navTilesPerSide * navCellsPerTile;
+        g.BorderE[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => (ys + k) * navCellsPerSide + x0, k => (ys + k) * navCellsPerSide + x0 + 1, navCellsPerTile);
     }
 
     private static void ScanS(HpaGraph g, NavContext nav, int cl)
     {
-        int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount, cy = cl / c;
-        if (cy >= c - 1) { g.BorderS[cl] = Array.Empty<int>(); return; }
-        int y0 = (cy + 1) * s - 1, xs = cl % c * s;
-        g.BorderS[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidth, k => y0 * n + xs + k, k => (y0 + 1) * n + xs + k, s);
+        int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cy = cl / navTilesPerSide;
+        if (cy >= navTilesPerSide - 1) { g.BorderS[cl] = Array.Empty<int>(); return; }
+        int y0 = (cy + 1) * navCellsPerTile - 1, xs = cl % navTilesPerSide * navCellsPerTile;
+        g.BorderS[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => y0 * navCellsPerSide + xs + k, k => (y0 + 1) * navCellsPerSide + xs + k, navCellsPerTile);
     }
 
-    // 桥面跨界入口(仅桥面↔桥面;桥头 portal 的跨层边在 BakeCluster 的 xl 里)
+    // 桥面跨界入口(仅桥面↔桥面;桥头 portal 的跨层边在 BakeTile 的 xl 里)
     private static void UpScan(HpaGraph g, NavContext nav, int cl, bool east)
     {
-        int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount;
-        int cx = cl % c, cy = cl / c;
-        int nb = east ? (cx < c - 1 ? cl + 1 : -1) : (cy < c - 1 ? cl + c : -1);
+        int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide;
+        int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
+        int nb = east ? (cx < navTilesPerSide - 1 ? cl + 1 : -1) : (cy < navTilesPerSide - 1 ? cl + navTilesPerSide : -1);
         var list = new List<int>();
         var costs = new List<Fix64>();
-        if (nb >= 0 && AnyUp(nav, cl, s) && AnyUp(nav, nb, s))
+        if (nb >= 0 && AnyUp(nav, cl, navCellsPerTile) && AnyUp(nav, nb, navCellsPerTile))
         {
             // 与 scanBorder 同一 run 逻辑,目标格函数映射到桥面可走格
-            int Ga(int k) => east ? (cy * s + k) * n + cx * s + s - 1 : (cy * s + s - 1) * n + cx * s + k;
-            var pairs = ScanBorder(nav.UpPass, g.MaxEntranceWidth, Ga, k => Ga(k) + (east ? 1 : n), s);
+            int Ga(int k) => east ? (cy * navCellsPerTile + k) * navCellsPerSide + cx * navCellsPerTile + navCellsPerTile - 1 : (cy * navCellsPerTile + navCellsPerTile - 1) * navCellsPerSide + cx * navCellsPerTile + k;
+            var pairs = ScanBorder(nav.UpPass, g.MaxEntranceWidthNavCells, Ga, k => Ga(k) + (east ? 1 : navCellsPerSide), navCellsPerTile);
             for (int p = 0; p < pairs.Length; p += 2)
             {
-                list.Add(g.CellCount2 + pairs[p]);
-                list.Add(g.CellCount2 + pairs[p + 1]);
+                list.Add(g.NavCellTotal + pairs[p]);
+                list.Add(g.NavCellTotal + pairs[p + 1]);
                 costs.Add((nav.UpCost[pairs[p]] + nav.UpCost[pairs[p + 1]]) * Fix64.HalfValue);
             }
         }
@@ -350,25 +350,25 @@ public sealed class HpaGraph
         else { g.UpS[cl] = list.ToArray(); g.UpSCost[cl] = costs.ToArray(); }
     }
 
-    // 该 cluster 是否有桥面可走格
+    // 该 tile 是否有桥面可走格
     private static bool AnyUp(NavContext nav, int tileId, int tileSize)
     {
-        int n = nav.CellCount;
-        int c = n / tileSize;
+        int navCellsPerSide = nav.NavCellsPerSide;
+        int c = navCellsPerSide / tileSize;
         int ox = tileId % c * tileSize, oy = tileId / c * tileSize;
         for (int y = 0; y < tileSize; y++)
         {
             for (int x = 0; x < tileSize; x++)
             {
-                if (nav.UpPass[(oy + y) * n + ox + x] != 0) return true;
+                if (nav.UpPass[(oy + y) * navCellsPerSide + ox + x] != 0) return true;
             }
         }
 
         return false;
     }
 
-    // ── 簇烘焙 ─────────────────────────────────────────────
-    private static Dictionary<int, List<int>> LinksByCluster(NavLinkSet? links, int n, int s, int c)
+    // ── tile 烘焙 ───────────────────────────────────────────
+    private static Dictionary<int, List<int>> LinksByTile(NavLinkSet? links, int navCellsPerSide, int navCellsPerTile, int navTilesPerSide)
     {
         var m = new Dictionary<int, List<int>>();
         if (links != null)
@@ -377,7 +377,7 @@ public sealed class HpaGraph
             {
                 foreach (var cell in new[] { links.From[e], links.To[e] })
                 {
-                    int cl = NavGridSteps.ClusterOf(cell, n, s, c);
+                    int cl = NavGridSteps.TileOf(cell, navCellsPerSide, navCellsPerTile, navTilesPerSide);
                     if (!m.TryGetValue(cl, out var l)) m[cl] = l = new List<int>();
                     l.Add(cell);
                 }
@@ -387,10 +387,10 @@ public sealed class HpaGraph
         return m;
     }
 
-    private static void BakeCluster(HpaGraph g, NavContext nav, int cl, Dictionary<int, List<int>> lk, bool keep)
+    private static void BakeTile(HpaGraph g, NavContext nav, int cl, Dictionary<int, List<int>> lk, bool keep)
     {
-        int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount, n2 = n * n;
-        int cx = cl % c, cy = cl / c;
+        int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
+        int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
         var cells = new List<int>();
         var seen = new HashSet<int>();
         void Add(int cell) { if (seen.Add(cell)) cells.Add(cell); }
@@ -399,7 +399,7 @@ public sealed class HpaGraph
         Each(g.BorderE[cl], 0);
         if (cx > 0) Each(g.BorderE[cl - 1], 1);
         Each(g.BorderS[cl], 0);
-        if (cy > 0) Each(g.BorderS[cl - c], 1);
+        if (cy > 0) Each(g.BorderS[cl - navTilesPerSide], 1);
         if (lk.TryGetValue(cl, out var linkCells)) foreach (var cell in linkCells) Add(cell);
 
         // 桥面节点:跨界入口 + portal 跨层对
@@ -408,17 +408,17 @@ public sealed class HpaGraph
         var xl = new List<int>();
         void UAdd(int key) { if (uSeen.Add(key)) up.Add(key); }
         void UEach(int[] b, int side) { for (int k = side; k < b.Length; k += 2) UAdd(b[k]); }
-        if (AnyUp(nav, cl, s))
+        if (AnyUp(nav, cl, navCellsPerTile))
         {
             UEach(g.UpE[cl], 0);
             if (cx > 0) UEach(g.UpE[cl - 1], 1);
             UEach(g.UpS[cl], 0);
-            if (cy > 0) UEach(g.UpS[cl - c], 1);
+            if (cy > 0) UEach(g.UpS[cl - navTilesPerSide], 1);
             for (int i = 0; i < n2; i++)
             {
                 if (nav.Portal[i] == 0) continue;
-                int px = i % n, py = i / n;
-                if (px / s != cx || py / s != cy) continue;
+                int px = i % navCellsPerSide, py = i / navCellsPerSide;
+                if (px / navCellsPerTile != cx || py / navCellsPerTile != cy) continue;
                 if (nav.Passable[i] == 0) continue;
                 Add(i);
                 UAdd(n2 + i);
@@ -482,15 +482,15 @@ public sealed class HpaGraph
             int need = 0;
             for (int j = i + 1; j < gCount; j++)
             {
-                int l = NavGridSteps.LocalIndex(cells[j], n, s);
+                int l = NavGridSteps.LocalIndex(cells[j], navCellsPerSide, navCellsPerTile);
                 if (g._localWant[l] == 0) { g._localWant[l] = 1; need++; }
             }
 
-            if (need > 0) LocalDijkstra(g, nav, NavGridSteps.LocalIndex(cells[i], n, s), need);
-            for (int j = i + 1; j < gCount; j++) g._localWant[NavGridSteps.LocalIndex(cells[j], n, s)] = 0;
+            if (need > 0) LocalDijkstra(g, nav, NavGridSteps.LocalIndex(cells[i], navCellsPerSide, navCellsPerTile), need);
+            for (int j = i + 1; j < gCount; j++) g._localWant[NavGridSteps.LocalIndex(cells[j], navCellsPerSide, navCellsPerTile)] = 0;
             for (int j = i + 1; j < gCount; j++)
             {
-                var d = g._dist[NavGridSteps.LocalIndex(cells[j], n, s)];
+                var d = g._dist[NavGridSteps.LocalIndex(cells[j], navCellsPerSide, navCellsPerTile)];
                 if (d < Fix64.MaxValue / 4)
                 {
                     intra.Add(i);
@@ -505,10 +505,10 @@ public sealed class HpaGraph
         {
             for (int i = 0; i < up.Count; i++)
             {
-                UpperDijkstra(g, nav, cl, LocalOf(up[i] - n2, n, s));
+                UpperDijkstra(g, nav, cl, LocalOf(up[i] - n2, navCellsPerSide, navCellsPerTile));
                 for (int j = i + 1; j < up.Count; j++)
                 {
-                    var d = g._dist[LocalOf(up[j] - n2, n, s)];
+                    var d = g._dist[LocalOf(up[j] - n2, navCellsPerSide, navCellsPerTile)];
                     if (d < Fix64.MaxValue / 4)
                     {
                         intra.Add(gCount + i); intra.Add(gCount + j);
@@ -527,29 +527,29 @@ public sealed class HpaGraph
         g.CrossLayer[cl] = xl.ToArray();
     }
 
-    private static int LocalOf(int cell, int n, int s) => NavGridSteps.LocalIndex(cell, n, s);
+    private static int LocalOf(int cell, int navCellsPerSide, int navCellsPerTile) => NavGridSteps.LocalIndex(cell, navCellsPerSide, navCellsPerTile);
 
     // 簇内 8 连通图的一次性准备(目标 + 步代价)
     private static void PrepareLocal(HpaGraph g, NavContext nav, int cl)
     {
-        int s = g.ClusterSize, c = g.ClustersPerSide, n = nav.CellCount;
-        int x0 = cl % c * s, y0 = cl / c * s;
-        for (int ly = 0; ly < s; ly++)
+        int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide;
+        int x0 = cl % navTilesPerSide * navCellsPerTile, y0 = cl / navTilesPerSide * navCellsPerTile;
+        for (int ly = 0; ly < navCellsPerTile; ly++)
         {
-            for (int lx = 0; lx < s; lx++)
+            for (int lx = 0; lx < navCellsPerTile; lx++)
             {
-                int l = ly * s + lx, o = l * 8, ux = x0 + lx, uy = y0 + ly, u = uy * n + ux;
+                int l = ly * navCellsPerTile + lx, o = l * 8, ux = x0 + lx, uy = y0 + ly, u = uy * navCellsPerSide + ux;
                 for (int d = 0; d < 8; d++)
                 {
                     int nx = lx + NavGridSteps.DX[d], ny = ly + NavGridSteps.DY[d];
-                    if (nx < 0 || ny < 0 || nx >= s || ny >= s || !NavGridSteps.CanStep(nav.Passable, n, ux, uy, d))
+                    if (nx < 0 || ny < 0 || nx >= navCellsPerTile || ny >= navCellsPerTile || !NavGridSteps.CanStep(nav.Passable, navCellsPerSide, ux, uy, d))
                     {
                         g._localNb[o + d] = -1;
                         continue;
                     }
 
-                    g._localNb[o + d] = ny * s + nx;
-                    g._localW[o + d] = NavGridSteps.StepCost(nav.Cost, u, (y0 + ny) * n + x0 + nx, d);
+                    g._localNb[o + d] = ny * navCellsPerTile + nx;
+                    g._localW[o + d] = NavGridSteps.StepCost(nav.Cost, u, (y0 + ny) * navCellsPerSide + x0 + nx, d);
                 }
             }
         }
@@ -580,8 +580,8 @@ public sealed class HpaGraph
     // 桥面 tile 内的 8 连通 Dijkstra(禁切角,代价走桥面)
     private static void UpperDijkstra(HpaGraph g, NavContext nav, int cl, int start)
     {
-        int s = g.ClusterSize, n = nav.CellCount;
-        int x0 = cl % g.ClustersPerSide * s, y0 = cl / g.ClustersPerSide * s;
+        int navCellsPerTile = g.NavCellsPerTile, navCellsPerSide = nav.NavCellsPerSide;
+        int x0 = cl % g.NavTilesPerSide * navCellsPerTile, y0 = cl / g.NavTilesPerSide * navCellsPerTile;
         Array.Fill(g._dist, Fix64.MaxValue);
         g.Heap.Clear();
         g._dist[start] = Fix64.Zero;
@@ -591,17 +591,17 @@ public sealed class HpaGraph
             var k = g.Heap.PeekKey();
             int cell = g.Heap.Pop();
             if (k > g._dist[cell]) continue;
-            int x = cell % s, y = cell / s;
+            int x = cell % navCellsPerTile, y = cell / navCellsPerTile;
             for (int d = 0; d < 8; d++)
             {
                 int nx = x + NavGridSteps.DX[d], ny = y + NavGridSteps.DY[d];
-                if (nx < 0 || ny < 0 || nx >= s || ny >= s) continue;
-                int v = ny * s + nx;
-                int gCell = (y0 + y) * n + x0 + x;
-                int gCellV = (y0 + ny) * n + x0 + nx;
+                if (nx < 0 || ny < 0 || nx >= navCellsPerTile || ny >= navCellsPerTile) continue;
+                int v = ny * navCellsPerTile + nx;
+                int gCell = (y0 + y) * navCellsPerSide + x0 + x;
+                int gCellV = (y0 + ny) * navCellsPerSide + x0 + nx;
                 if (nav.UpPass[gCellV] == 0) continue;
                 bool diag = NavGridSteps.DX[d] != 0 && NavGridSteps.DY[d] != 0;
-                if (diag && (nav.UpPass[(y0 + y) * n + x0 + nx] == 0 || nav.UpPass[(y0 + ny) * n + x0 + x] == 0)) continue;
+                if (diag && (nav.UpPass[(y0 + y) * navCellsPerSide + x0 + nx] == 0 || nav.UpPass[(y0 + ny) * navCellsPerSide + x0 + x] == 0)) continue;
                 var nd = k + (nav.UpCost[gCell] + nav.UpCost[gCellV]) * Fix64.HalfValue * (diag ? NavGridSteps.Sqrt2 : Fix64.OneValue);
                 if (nd < g._dist[v]) { g._dist[v] = nd; g.Heap.Push(nd, v); }
             }
@@ -609,10 +609,10 @@ public sealed class HpaGraph
     }
 
     // ── 簇块与图收尾 ─────────────────────────────────────────────
-    private static HpaClusterBlock BuildBlock(HpaGraph g, NavContext nav, int cl)
+    private static HpaTileBlock BuildBlock(HpaGraph g, NavContext nav, int cl)
     {
-        int c = g.ClustersPerSide;
-        int cx = cl % c, cy = cl / c;
+        int navTilesPerSide = g.NavTilesPerSide;
+        int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
         var list = g.Cells[cl];
         int count = list.Length;
         var index = new Dictionary<int, int>();
@@ -630,7 +630,7 @@ public sealed class HpaGraph
         Border(g.BorderE[cl], 0);
         if (cx > 0) Border(g.BorderE[cl - 1], 1);
         Border(g.BorderS[cl], 0);
-        if (cy > 0) Border(g.BorderS[cl - c], 1);
+        if (cy > 0) Border(g.BorderS[cl - navTilesPerSide], 1);
 
         void Up(int[] b, Fix64[] costs, int own)
         {
@@ -643,7 +643,7 @@ public sealed class HpaGraph
         Up(g.UpE[cl], g.UpECost[cl], 0);
         if (cx > 0) Up(g.UpE[cl - 1], g.UpECost[cl - 1], 1);
         Up(g.UpS[cl], g.UpSCost[cl], 0);
-        if (cy > 0) Up(g.UpS[cl - c], g.UpSCost[cl - c], 1);
+        if (cy > 0) Up(g.UpS[cl - navTilesPerSide], g.UpSCost[cl - navTilesPerSide], 1);
 
         var xl = g.CrossLayer[cl];
         for (int k = 0; k < xl.Length; k += 2)
@@ -678,7 +678,7 @@ public sealed class HpaGraph
 
         int edges = g.BorderE[cl].Length / 2 + g.BorderS[cl].Length / 2 + intra.Length / 2
             + g.UpE[cl].Length / 2 + g.UpS[cl].Length / 2 + xl.Length / 2;
-        return new HpaClusterBlock
+        return new HpaTileBlock
         {
             Cells = list,
             AdjStart = adjStart,
@@ -710,11 +710,11 @@ public sealed class HpaGraph
 
     // ── 扁平视图(校验 / 叠加层 / 摘要用,不在查询路径上) ─────────────────────────────
     /// <summary>flattenHpa 移植:每节点先块内边后链接边;nodeCell 不带层位(adjTo 带)。</summary>
-    public (int[] NodeCell, byte[] NodeLayer, int[] NodeCluster, int[] AdjStart, int[] AdjTo, Fix64[] AdjCost) Flatten()
+    public (int[] NodeCell, byte[] NodeLayer, int[] NodeTile, int[] AdjStart, int[] AdjTo, Fix64[] AdjCost) Flatten()
     {
         var nodeCell = new List<int>();
         var nodeLayer = new List<byte>();
-        var nodeCluster = new List<int>();
+        var nodeTile = new List<int>();
         var adjStart = new List<int> { 0 };
         var adjTo = new List<int>();
         var adjCost = new List<Fix64>();
@@ -724,12 +724,12 @@ public sealed class HpaGraph
             for (int i = 0; i < b.Cells.Length; i++)
             {
                 int cell = b.Cells[i];
-                nodeCell.Add(cell % CellCount2);
-                nodeLayer.Add((byte)(cell >= CellCount2 ? 1 : 0));
-                nodeCluster.Add(cl);
+                nodeCell.Add(cell % NavCellTotal);
+                nodeLayer.Add((byte)(cell >= NavCellTotal ? 1 : 0));
+                nodeTile.Add(cl);
                 for (int k = b.AdjStart[i]; k < b.AdjStart[i + 1]; k++)
                 {
-                    adjTo.Add(b.AdjTo[k] % CellCount2);
+                    adjTo.Add(b.AdjTo[k] % NavCellTotal);
                     adjCost.Add(b.AdjCost[k]);
                 }
 
@@ -746,11 +746,11 @@ public sealed class HpaGraph
             }
         }
 
-        return (nodeCell.ToArray(), nodeLayer.ToArray(), nodeCluster.ToArray(), adjStart.ToArray(), adjTo.ToArray(), adjCost.ToArray());
+        return (nodeCell.ToArray(), nodeLayer.ToArray(), nodeTile.ToArray(), adjStart.ToArray(), adjTo.ToArray(), adjCost.ToArray());
     }
 }
 
-public sealed class HpaClusterBlock
+public sealed class HpaTileBlock
 {
     public required int[] Cells { get; set; }
     public required Dictionary<int, int> Index { get; set; }

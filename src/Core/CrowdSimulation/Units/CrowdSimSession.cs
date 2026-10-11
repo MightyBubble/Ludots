@@ -42,7 +42,7 @@ public sealed class CrowdSimSession
         Fix64 simDt = config.Sim.TimeScale / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
         int needed = (int)Fix64.Ceiling(maxSpeed * config.Movement.SpeedCapRatio * simDt /
-            (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepCells)).ToLong();
+            (Fix64.FromInt(config.NavCellSizeCm) * config.Movement.MaxStepNavCells)).ToLong();
         SubSteps = Math.Clamp(Math.Max(1, needed), 1, config.Movement.MaxSubSteps);
         SubStepDt = simDt / SubSteps;
     }
@@ -103,7 +103,7 @@ public sealed class CrowdSimSession
             Fog = new CrowdFog(Config, Config.Relations, Structures);
             if (Fog.Los) Fog.EnsureHeights(RebakeSources!.HeightS);
             Beliefs = new CrowdBeliefNavs(this);
-            Belief = CrowdBeliefState.Create(Fog.G);
+            Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
         }
     }
 
@@ -174,7 +174,7 @@ public sealed class CrowdSimSession
     internal readonly List<Arch.Core.Entity> SelectionMembers = new();
     internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new();
     internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new();
-    internal readonly Dictionary<int, (Fix64 X, Fix64 Y, int N)> IssueLayerSums = new();
+    internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new();
     internal readonly CrowdOrder[] IssueBatch = new CrowdOrder[1];
     internal Fix64[] FormationDiameter = Array.Empty<Fix64>();
     internal Fix64[] FormationForward = Array.Empty<Fix64>();
@@ -255,7 +255,7 @@ public sealed class CrowdSimSession
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>
     public void Advance(int ticks, List<ulong>? checksums = null)
     {
-        int guard = ticks * 64 + 64;
+        int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
         int ran = 0;
         while (ran < ticks)
         {

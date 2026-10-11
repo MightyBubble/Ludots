@@ -20,7 +20,7 @@ public class CrowdSimulationConfigTests
         var runtime = TestDefaults.Assemble();
 
         Assert.That(runtime.Version, Is.EqualTo(7));
-        Assert.That(runtime.NavCellCount, Is.EqualTo(256));
+        Assert.That(runtime.NavCellsPerSide, Is.EqualTo(256));
         Assert.That(runtime.NavCellSizeCm, Is.EqualTo(6250));
         Assert.That(runtime.FixedHz, Is.EqualTo(30));
         Assert.That(runtime.TerrainTypeIds, Is.EqualTo(new[] { "water", "shore", "land", "mountain", "cliff" }));
@@ -54,7 +54,7 @@ public class CrowdSimulationConfigTests
         Assert.That(leaper.Jump, Is.Not.Null);
         Assert.That(leaper.Jump!.UpCm, Is.EqualTo(2500));
         Assert.That(leaper.Jump.DownCm, Is.EqualTo(20000));
-        Assert.That(leaper.Jump.RangeCells, Is.EqualTo(7));
+        Assert.That(leaper.Jump.RangeNavCells, Is.EqualTo(7));
     }
 
     [Test]
@@ -65,7 +65,7 @@ public class CrowdSimulationConfigTests
         // 默认 6250 cm 格下 R100–R400 的个人半径（600–2400 cm）都不足半格，共享净空 1。
         foreach (var p in runtime.Profiles)
         {
-            Assert.That(p.ClearanceCells, Is.EqualTo(1), p.Id);
+            Assert.That(p.ClearanceNavCells, Is.EqualTo(1), p.Id);
         }
 
         var leaperR400 = runtime.Profiles.Single(p => p.Id == "leaper_r400");
@@ -115,10 +115,12 @@ public class CrowdSimulationConfigTests
     public void OutOfRangeValue_ReportsFileFieldAndRule()
     {
         var json = TestDefaults.DefaultConfigJson();
-        json["hpa"]!["clusterSize"] = 2;
+        // 6250 cm × 2 格，派生格数低于 4..128。
+        json["navtile"]!["sizeCm"] = 12500;
         var config = CrowdSimulationConfig.Load(json);
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
-        Assert.That(ex!.Message, Does.Contain("hpa.clusterSize = 2"));
+        Assert.That(ex!.Message, Does.Contain("navtile.sizeCm"));
+        Assert.That(ex.Message, Does.Contain("= 2"));
         Assert.That(ex.Message, Does.Contain("≥ 4"));
         Assert.That(ex.Message, Does.Contain("≤ 128"));
 
@@ -231,7 +233,7 @@ public class CrowdSimulationConfigTests
         var json = TestDefaults.DefaultConfigJson();
         json["relations"]!["overrides"] = new JsonArray
         {
-            new JsonObject { ["a"] = 1, ["b"] = 3, ["kind"] = "ally" },
+            new JsonObject { ["playerA"] = 1, ["playerB"] = 3, ["kind"] = "ally" },
         };
         var runtime = TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map);
 
@@ -374,77 +376,209 @@ public class CrowdSimulationConfigTests
         }
     }
 
-    [Test]
-    public void FogCellSize_BelowSquareBound_IsRejected_AtBound_Passes()
-    {
-        // 格长 = navCellSizeCm × cellCells。99 / 100 两侧各自合法(> 0、1..32);
-        // 导航边长取 16,能被默认 clusterSize 整除,且落在 16..1024。
-        var below = FogCellWorld(navCellSizeCm: 99, cellCells: 1, visionCm: 99);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map));
-        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
-        Assert.That(ex.Message, Does.Contain("world.navCellSizeCm"));
-        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
-        Assert.That(ex.Message, Does.Contain("= 99"));
-        Assert.That(ex.Message, Does.Contain("≥ 100"));
+    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
+    [
+        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
+        ("deploy.spreadCells", "deploy.spreadCm"),
+        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
+        ("fog.cellCells", "fog.cellSizeCm"),
+        ("formation.goalArriveCells", "formation.goalArriveCm"),
+        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
+        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
+        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
+        ("formation.minClumpCells", "formation.minClumpCm"),
+        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
+        ("formation.slotArriveCells", "formation.slotArriveCm"),
+        ("formation.slotSightCells", "formation.slotSightCm"),
+        ("formations[].spacing", "formations[].spacingDiameterScale"),
+        ("hpa.clusterSize", "navtile.sizeCm"),
+        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
+        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
+        ("movement.maxStepCells", "movement.maxStepNavCells"),
+        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
+        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
+        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
+        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
+        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
+        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
+        ("spawn.cellInset", "spawn.navCellInsetFraction"),
+        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
+        ("structures.portalCells", "structures.portalReachNavCells"),
+    ];
 
-        var atBound = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 100);
-        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map);
-        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+    [Test]
+    public void RetiredSpatialKeys_NameTheReplacement()
+    {
+        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        {
+            var json = TestDefaults.DefaultConfigJson();
+            string concrete = PlaceRetiredKey(json, oldPath);
+            var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json), oldPath);
+            Assert.That(ex!.Message, Does.Contain(concrete), oldPath);
+            Assert.That(ex.Message, Does.Contain(newKey), oldPath);
+            Assert.That(ex.Message, Does.Contain("已删除"), oldPath);
+        }
+    }
+
+    private static string PlaceRetiredKey(JsonObject root, string oldPath)
+    {
+        if (oldPath == "formations[].spacing")
+        {
+            root["formations"]![0]!["spacing"] = 1;
+            return "formations[0].spacing";
+        }
+
+        if (oldPath == "navProfiles[].jump.rangeCells")
+        {
+            var profiles = root["navProfiles"]!.AsArray();
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                if (profiles[i]!["jump"] is JsonObject jump)
+                {
+                    jump["rangeCells"] = 7;
+                    return $"navProfiles[{i}].jump.rangeCells";
+                }
+            }
+
+            throw new InvalidOperationException("标准配置没有 jump profile。");
+        }
+
+        var parts = oldPath.Split('.');
+        JsonObject obj = root;
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            obj = obj[parts[i]]!.AsObject();
+        }
+
+        obj[parts[^1]] = 1;
+        return oldPath;
     }
 
     [Test]
-    public void FogCellSize_IntProductWrap_IsRejected()
+    public void BoardAnchor_OffOrigin_IsRejected()
     {
-        // 134217727×16 = 2147483632 仍是合法板宽;×32 = 4294967264 超出 int,运行时直乘环绕。
-        const int cellSizeCm = 134217727;
-        const int cellCells = 32;
-        const int widthCm = 2147483632;
-        var json = TestDefaults.DefaultConfigJson();
-        json["world"]!["navCellSizeCm"] = cellSizeCm;
-        json["fog"]!["cellCells"] = cellCells;
         var map = TestDefaults.DemoMap();
+        map.Boards[0].Anchor.WorldXCm = 1;
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map));
+        Assert.That(ex!.Message, Does.Contain("Anchor"));
+        Assert.That(ex.Message, Does.Contain("必须为 0"));
+    }
+
+    [Test]
+    public void WorldDistanceCentimeters_MatchLegacyCellCountFix64Raw()
+    {
+        const int navCellSizeCm = 6250;
+        var config = TestDefaults.DefaultConfig();
+        var runtime = TestDefaults.Assemble();
+        Assert.That(config.World.NavCellSizeCm, Is.EqualTo(navCellSizeCm));
+        Assert.That(runtime.Hpa.NavCellsPerTile, Is.EqualTo(16));
+        Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(25000));
+        Assert.That(runtime.Fog.NavCellsPerFogCell, Is.EqualTo(4));
+
+        Equal(runtime.Formation.SlotSightNavCells, config.Formation.SlotSightCm, 16, navCellSizeCm);
+        Equal(runtime.Formation.LeaderLookAheadNavCells, config.Formation.LeaderLookAheadCm, 6, navCellSizeCm);
+        Equal(runtime.Formation.SlotArriveNavCells, config.Formation.SlotArriveCm, 0.35, navCellSizeCm);
+        Equal(runtime.Formation.GoalArriveNavCells, config.Formation.GoalArriveCm, 1, navCellSizeCm);
+        Equal(runtime.Formation.SettleRadiusNavCells, config.Formation.SettleRadiusCm, 2, navCellSizeCm);
+        Equal(runtime.Formation.MinClumpNavCells, config.Formation.MinClumpCm, 1.5, navCellSizeCm);
+        Equal(runtime.Movement.WakeDistanceNavCells, config.Movement.WakeDistanceCm, 2, navCellSizeCm);
+        Equal(runtime.Deploy.SpreadNavCells, config.Deploy.SpreadCm, 30, navCellSizeCm);
+        Equal(runtime.Deploy.BaseJitterNavCells, config.Deploy.BaseJitterCm, 20, navCellSizeCm);
+
+        long legacyPad = (Fix64.FromDouble(1) * navCellSizeCm).RawValue;
+        Assert.That(runtime.Formation.MagicBoxPadCm.RawValue, Is.EqualTo(legacyPad));
+        Assert.That(runtime.Formation.MagicBoxPadCm.RawValue, Is.EqualTo(Fix64.FromDouble(config.Formation.MagicBoxPadCm).RawValue));
+        Assert.That(config.Formation.MagicBoxPadCm, Is.EqualTo(navCellSizeCm));
+
+        Assert.That(runtime.Movement.MaxStepNavCells.RawValue, Is.EqualTo(Fix64.FromDouble(0.45).RawValue));
+        Assert.That(runtime.Navmesh.PortalInsetNavCells.RawValue, Is.EqualTo(Fix64.FromDouble(0.5).RawValue));
+        Assert.That(runtime.Spawn.NavCellInsetFraction.RawValue, Is.EqualTo(Fix64.FromDouble(0.02).RawValue));
+    }
+
+    private static void Equal(Fix64 actual, double authoredCm, double legacyCells, int navCellSizeCm)
+    {
+        long legacy = Fix64.FromDouble(legacyCells).RawValue;
+        long converted = Fix64.FromDouble(authoredCm / (double)navCellSizeCm).RawValue;
+        Assert.That(converted, Is.EqualTo(legacy), $"厘米 {authoredCm} / {navCellSizeCm} 与旧格数 {legacyCells} 的 Fix64 原始值不一致");
+        Assert.That(actual.RawValue, Is.EqualTo(legacy));
+    }
+
+    [Test]
+    public void FogCellSize_BelowSquareBound_IsRejected_AtBound_Passes()
+    {
+        // 99 cm 低于下限 100;导航边长取 16,tile 边长与板宽对齐。
+        var below = FogCellWorld(navCellSizeCm: 99, fogCellSizeCm: 99, visionCm: 99);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map));
+        Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
+        Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("= 99"));
+        Assert.That(ex.Message, Does.Contain("≥ 100"));
+
+        var atBound = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 100);
+        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map);
+        Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void FogCellMultiplier_Above32_IsRejected()
+    {
+        // 格长改由厘米作者面给出,不再做 navCellSizeCm × cellCells 的 int 直乘。
+        // 超过 int 的厘米值在反序列化拒绝;倍数 33 仍落在 int 内,由 1..32 拒绝。
+        var overflow = TestDefaults.DefaultConfigJson();
+        overflow["fog"]!["cellSizeCm"] = 4294967264L;
+        var overflowEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(overflow));
+        Assert.That(overflowEx!.Message, Does.Contain("cellSizeCm"));
+
+        const int navCellSizeCm = 6250;
+        var json = TestDefaults.DefaultConfigJson();
+        json["world"]!["navCellSizeCm"] = navCellSizeCm;
+        json["fog"]!["cellSizeCm"] = navCellSizeCm * 33;
+        var map = TestDefaults.DemoMap();
+        int widthCm = navCellSizeCm * 16;
         map.Boards[0].WidthCm = widthCm;
         map.Boards[0].HeightCm = widthCm;
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map));
-        Assert.That(ex!.Message, Does.Contain("world.navCellSizeCm"));
-        Assert.That(ex.Message, Does.Contain("134217727"));
-        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
-        Assert.That(ex.Message, Does.Contain("32"));
-        Assert.That(ex.Message, Does.Contain("4294967264"));
+        Assert.That(ex!.Message, Does.Contain("fog.cellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("= 33"));
+        Assert.That(ex.Message, Does.Contain("≤ 32"));
     }
 
     [Test]
     public void VisionRadiusCells_BeyondDiagonal_IsRejected_AtDiagonal_Passes()
     {
-        // 现网:visionCm 80000、格长 6250×4=25000、F=256/4=64,半径 4 格。
+        // 现网:visionCm 80000、迷雾格 25000 cm、每边迷雾格 256/4=64,半径 4 格。
         var live = TestDefaults.Assemble();
         Assert.That(live.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(80000)));
-        Assert.That(live.NavCellSizeCm * live.Fog.CellCells, Is.EqualTo(25000));
-        Assert.That((live.NavCellCount + live.Fog.CellCells - 1) / live.Fog.CellCells, Is.EqualTo(64));
+        Assert.That(live.Fog.FogCellSizeCm, Is.EqualTo(25000));
+        Assert.That(live.NavCellSizeCm * live.Fog.NavCellsPerFogCell, Is.EqualTo(25000));
+        Assert.That((live.NavCellsPerSide + live.Fog.NavCellsPerFogCell - 1) / live.Fog.NavCellsPerFogCell, Is.EqualTo(64));
 
-        // 导航 16、cellCells 1 → F=16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22 而不是 F。
+        // 导航 16、迷雾格 = 导航格 → 每边迷雾格 16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22。
         // 格长 100 cm;vision 2200 → ceil=22,2300 → ceil=23。
-        var over = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 2300);
+        var over = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2300);
         var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map));
         Assert.That(ex!.Message, Does.Contain("fog.visionCm"));
         Assert.That(ex.Message, Does.Contain("2300"));
-        Assert.That(ex.Message, Does.Contain("fog.cellCells"));
-        Assert.That(ex.Message, Does.Contain("world.navCellSizeCm"));
+        Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
         Assert.That(ex.Message, Does.Contain("向上取整 = 23"));
         Assert.That(ex.Message, Does.Contain("22"));
 
-        var atDiagonal = FogCellWorld(navCellSizeCm: 100, cellCells: 1, visionCm: 2200);
+        var atDiagonal = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2200);
         var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map);
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(2200)));
-        Assert.That(runtime.NavCellSizeCm * runtime.Fog.CellCells, Is.EqualTo(100));
+        Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
+        Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
 
-    private static (CrowdSimulationConfig Config, MapConfig Map) FogCellWorld(int navCellSizeCm, int cellCells, int visionCm)
+    private static (CrowdSimulationConfig Config, MapConfig Map) FogCellWorld(int navCellSizeCm, int fogCellSizeCm, int visionCm)
     {
         var json = TestDefaults.DefaultConfigJson();
         json["world"]!["navCellSizeCm"] = navCellSizeCm;
-        json["fog"]!["cellCells"] = cellCells;
+        json["fog"]!["cellSizeCm"] = fogCellSizeCm;
         json["fog"]!["visionCm"] = visionCm;
+        // 16 个导航格恰好一块 tile,派生格数落在 4..128。
+        json["navtile"]!["sizeCm"] = navCellSizeCm * 16;
         var map = TestDefaults.DemoMap();
         int widthCm = navCellSizeCm * 16;
         map.Boards[0].WidthCm = widthCm;

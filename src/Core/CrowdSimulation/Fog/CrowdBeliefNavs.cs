@@ -155,23 +155,23 @@ public sealed class CrowdBeliefNavs
                 else if (write != unknown.Count) unknown.RemoveRange(write, unknown.Count - write);
             }
 
-            int n = b.Field.CellCount, t = _sim.Config.Hpa.ClusterSize, side = n / t;
+            int navCellsPerSide = b.Field.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
             _revealRects.Clear();
             for (int i = 0; i < tiles.Count; i++)
             {
                 int tile = tiles[i];
-                int x = tile % side * t;
-                int y = tile / side * t;
-                _revealRects.Add((x, y, x + t, y + t));
+                int x = tile % navTilesPerSide * navCellsPerTile;
+                int y = tile / navTilesPerSide * navCellsPerTile;
+                _revealRects.Add((x, y, x + navCellsPerTile, y + navCellsPerTile));
             }
 
             foreach (var layer in b.Layers.Values)
             {
                 foreach (var (x0, y0, x1, _) in _revealRects)
                 {
-                    for (int y = y0; y < y0 + t; y++)
+                    for (int y = y0; y < y0 + navCellsPerTile; y++)
                     {
-                        Array.Copy(b.Field.Area, y * n + x0, layer.Area, y * n + x0, x1 - x0);
+                        Array.Copy(b.Field.Area, y * navCellsPerSide + x0, layer.Area, y * navCellsPerSide + x0, x1 - x0);
                     }
                 }
             }
@@ -214,7 +214,7 @@ public sealed class CrowdBeliefNavs
     {
         if (b.Unknown == null) return b.Field;
         if (b.Layers.TryGetValue(layerIdx, out var cached)) return cached;
-        int n = b.Field.CellCount, t = _sim.Config.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = b.Field.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int a = AssumedArea(layerIdx);
         var area = (byte[])b.Field.Area.Clone();
         if (a >= 0)
@@ -222,12 +222,12 @@ public sealed class CrowdBeliefNavs
             var terrain = b.Field.TerrainArea;
             foreach (int tile in b.Unknown)
             {
-                int x0 = tile % c * t, y0 = tile / c * t;
-                for (int y = y0; y < y0 + t; y++)
+                int x0 = tile % navTilesPerSide * navCellsPerTile, y0 = tile / navTilesPerSide * navCellsPerTile;
+                for (int y = y0; y < y0 + navCellsPerTile; y++)
                 {
-                    for (int x = x0; x < x0 + t; x++)
+                    for (int x = x0; x < x0 + navCellsPerTile; x++)
                     {
-                        int i = y * n + x;
+                        int i = y * navCellsPerSide + x;
                         if (area[i] == terrain[i]) area[i] = (byte)a;
                     }
                 }
@@ -247,11 +247,11 @@ public sealed class CrowdBeliefNavs
     private List<(int X0, int Y0, int X1, int Y1)> DivergenceRects(Slot b)
     {
         var truth = _sim.Structures!;
-        int n = b.Field.CellCount, cs = b.Field.CellSizeCm;
+        int navCellsPerSide = b.Field.NavCellsPerSide, navCellSizeCm = b.Field.NavCellSizeCm;
         var res = new List<(int, int, int, int)>();
         void Add(CrowdStructureFootprint fp)
         {
-            var r = fp.CellRectOf(cs, n);
+            var r = fp.CellRectOf(navCellSizeCm, navCellsPerSide);
             if (r.X1 > r.X0 && r.Y1 > r.Y0) res.Add(r);
         }
 
@@ -267,14 +267,14 @@ public sealed class CrowdBeliefNavs
 
         if (b.Unknown != null)
         {
-            int t = _sim.Config.Hpa.ClusterSize, c = n / t;
+            int navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
             for (int k = 0; k < b.Unknown.Count;)
             {
                 int s = b.Unknown[k], e = s;
-                while (k + 1 < b.Unknown.Count && b.Unknown[k + 1] == e + 1 && (e + 1) % c != 0) e = b.Unknown[++k];
+                while (k + 1 < b.Unknown.Count && b.Unknown[k + 1] == e + 1 && (e + 1) % navTilesPerSide != 0) e = b.Unknown[++k];
                 k++;
-                int y = s / c * t;
-                res.Add((s % c * t, y, e % c * t + t, y + t));
+                int y = s / navTilesPerSide * navCellsPerTile;
+                res.Add((s % navTilesPerSide * navCellsPerTile, y, e % navTilesPerSide * navCellsPerTile + navCellsPerTile, y + navCellsPerTile));
             }
         }
 
@@ -285,15 +285,15 @@ public sealed class CrowdBeliefNavs
     public List<int> DivergentTiles(int slot)
     {
         var b = SlotOf(slot);
-        int n = b.Field.CellCount, t = _sim.Config.Hpa.ClusterSize, c = n / t;
+        int navCellsPerSide = b.Field.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var s = new HashSet<int>();
         foreach (var (x0, y0, x1, y1) in DivergenceRects(b))
         {
-            for (int y = y0; y < y1; y += t)
+            for (int y = y0; y < y1; y += navCellsPerTile)
             {
-                for (int x = x0; x < x1; x += t)
+                for (int x = x0; x < x1; x += navCellsPerTile)
                 {
-                    s.Add(y / t * c + x / t);
+                    s.Add(y / navCellsPerTile * navTilesPerSide + x / navCellsPerTile);
                 }
             }
         }
@@ -308,17 +308,17 @@ public sealed class CrowdBeliefNavs
     private byte[] DivergenceMask(Slot b, int id, NavContext truth)
     {
         if (b.Masks.TryGetValue(id, out var cached) && cached.Epoch == Epoch) return cached.Mask;
-        int n = truth.CellCount, t = _sim.Config.Hpa.ClusterSize, c = n / t, r = truth.ClearanceCells;
-        var mask = new byte[c * c];
+        int navCellsPerSide = truth.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile, r = truth.ClearanceNavCells;
+        var mask = new byte[navTilesPerSide * navTilesPerSide];
         foreach (var (x0, y0, x1, y1) in DivergenceRects(b))
         {
             int gx0 = Math.Max(0, x0 - r), gy0 = Math.Max(0, y0 - r);
-            int gx1 = Math.Min(n, x1 + r), gy1 = Math.Min(n, y1 + r);
-            for (int ty = gy0 / t; ty < (gy1 + t - 1) / t; ty++)
+            int gx1 = Math.Min(navCellsPerSide, x1 + r), gy1 = Math.Min(navCellsPerSide, y1 + r);
+            for (int ty = gy0 / navCellsPerTile; ty < (gy1 + navCellsPerTile - 1) / navCellsPerTile; ty++)
             {
-                for (int tx = gx0 / t; tx < (gx1 + t - 1) / t; tx++)
+                for (int tx = gx0 / navCellsPerTile; tx < (gx1 + navCellsPerTile - 1) / navCellsPerTile; tx++)
                 {
-                    if (ty >= 0 && ty < c && tx >= 0 && tx < c) mask[ty * c + tx] = 1;
+                    if (ty >= 0 && ty < navTilesPerSide && tx >= 0 && tx < navTilesPerSide) mask[ty * navTilesPerSide + tx] = 1;
                 }
             }
         }
@@ -336,12 +336,12 @@ public sealed class CrowdBeliefNavs
         var b = SlotOf(slot);
         var truth = _sim.Navs[id % BeliefStride];
         var mask = DivergenceMask(b, id, truth);
-        int c = truth.Hpa!.ClustersPerSide;
-        int x0 = c, y0 = c, x1 = -1, y1 = -1;
+        int navTilesPerSide = truth.Hpa!.NavTilesPerSide;
+        int x0 = navTilesPerSide, y0 = navTilesPerSide, x1 = -1, y1 = -1;
         for (int t = 0; t < corridorMask.Length; t++)
         {
             if (corridorMask[t] == 0) continue;
-            int x = t % c, y = t / c;
+            int x = t % navTilesPerSide, y = t / navTilesPerSide;
             if (x < x0) x0 = x;
             if (x > x1) x1 = x;
             if (y < y0) y0 = y;
@@ -352,7 +352,7 @@ public sealed class CrowdBeliefNavs
         {
             for (int x = x0; x <= x1; x++)
             {
-                if (mask[y * c + x] != 0) return false;
+                if (mask[y * navTilesPerSide + x] != 0) return false;
             }
         }
 
@@ -393,8 +393,8 @@ public sealed class CrowdBeliefNavs
         {
             Id = id,
             LayerIndex = t.LayerIndex,
-            ClearanceCells = t.ClearanceCells,
-            CellCount = t.CellCount,
+            ClearanceNavCells = t.ClearanceNavCells,
+            NavCellsPerSide = t.NavCellsPerSide,
             Cost = (Fix64[])t.Cost.Clone(),
             Walk = (byte[])t.Walk.Clone(),
             Passable = (byte[])t.Passable.Clone(),

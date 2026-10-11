@@ -36,27 +36,27 @@ public static class UpperLayerBake
         IReadOnlyList<BridgeDeckRecord> bridges,
         CrowdSimulationRuntimeConfig config)
     {
-        int n = config.NavCellCount;
-        int cs = config.NavCellSizeCm;
-        var deckAreaIndex = new byte[n * n];
-        var portalFlag = new byte[n * n];
-        var tileSeen = new bool[(n / config.Hpa.ClusterSize) * (n / config.Hpa.ClusterSize)];
+        int navCellsPerSide = config.NavCellsPerSide;
+        int navCellSizeCm = config.NavCellSizeCm;
+        var deckAreaIndex = new byte[navCellsPerSide * navCellsPerSide];
+        var portalFlag = new byte[navCellsPerSide * navCellsPerSide];
+        var tileSeen = new bool[(navCellsPerSide / config.Hpa.NavCellsPerTile) * (navCellsPerSide / config.Hpa.NavCellsPerTile)];
         var tileOrder = new List<int>();
-        int tileSize = config.Hpa.ClusterSize;
-        var portalReach = Fix64.FromInt(config.Structures.PortalCells * cs / 100); // 格 → 米
+        int tileSize = config.Hpa.NavCellsPerTile;
+        var portalReachM = CrowdReferenceMeters.TruncatedCmToM(config.Structures.PortalReachNavCells * navCellSizeCm);
         foreach (var bridge in bridges)
         {
             int areaIndex = AreaIndexOf(config, bridge.AreaId);
             var span = bridge.Span;
             // 路径包围盒(含宽度)扫格——厘米整数域,与 cellRectOf 同语义
             int halfWCm = span.WidthCm / 2;
-            int minX = Math.Max(0, FloorDiv(Math.Min(span.X0Cm, span.X1Cm) - halfWCm, cs));
-            int minY = Math.Max(0, FloorDiv(Math.Min(span.Y0Cm, span.Y1Cm) - halfWCm, cs));
-            int maxX = Math.Min(n - 1, FloorDiv(Math.Max(span.X0Cm, span.X1Cm) + halfWCm, cs));
-            int maxY = Math.Min(n - 1, FloorDiv(Math.Max(span.Y0Cm, span.Y1Cm) + halfWCm, cs));
+            int minX = Math.Max(0, FloorDiv(Math.Min(span.X0Cm, span.X1Cm) - halfWCm, navCellSizeCm));
+            int minY = Math.Max(0, FloorDiv(Math.Min(span.Y0Cm, span.Y1Cm) - halfWCm, navCellSizeCm));
+            int maxX = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.X0Cm, span.X1Cm) + halfWCm, navCellSizeCm));
+            int maxY = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.Y0Cm, span.Y1Cm) + halfWCm, navCellSizeCm));
 
-            var x0 = Cm(span.X0Cm); var y0 = Cm(span.Y0Cm);
-            var ax = Cm(span.X1Cm) - x0; var ay = Cm(span.Y1Cm) - y0;
+            var x0 = CrowdReferenceMeters.CmToMRaw(span.X0Cm); var y0 = CrowdReferenceMeters.CmToMRaw(span.Y0Cm);
+            var ax = CrowdReferenceMeters.CmToMRaw(span.X1Cm) - x0; var ay = CrowdReferenceMeters.CmToMRaw(span.Y1Cm) - y0;
             // 桥 / 路径跨度按生成器约定是轴对齐的:轴对齐时单位向量与长度都取精确值,
             // 不走 VectorLength(定点 Sqrt 在端点格上的误差会吃掉 EPS 容差)。
             // 斜线路径(运行时道路 / 泛洪,S7)届时再按参考实现复核精度口径。
@@ -69,16 +69,16 @@ public static class UpperLayerBake
                 ux = len > Fix64.Zero ? ax / len : Fix64.OneValue;
                 uy = len > Fix64.Zero ? ay / len : Fix64.Zero;
             }
-            var halfW = Fix64.FromInt(span.WidthCm) / 200;
+            var halfW = CrowdReferenceMeters.HalfWidthM(span.WidthCm);
             var eps = Fix64.FromDouble(1e-6);
-            var csM = Fix64.FromInt(cs) / 100;
+            var navCellSizeM = CrowdReferenceMeters.CmToMRaw(navCellSizeCm);
 
             for (int y = minY; y <= maxY; y++)
             {
                 for (int x = minX; x <= maxX; x++)
                 {
-                    var px = (Fix64.FromInt(x) + Fix64.HalfValue) * csM;
-                    var py = (Fix64.FromInt(y) + Fix64.HalfValue) * csM;
+                    var px = (Fix64.FromInt(x) + Fix64.HalfValue) * navCellSizeM;
+                    var py = (Fix64.FromInt(y) + Fix64.HalfValue) * navCellSizeM;
                     var dx = px - x0; var dy = py - y0;
                     var t = dx * ux + dy * uy;
                     // covers():点在带内 = 投影在段上且横距 < 半宽
@@ -86,12 +86,12 @@ public static class UpperLayerBake
                     var cross = dx * uy - dy * ux;
                     if (Fix64.Abs(cross) >= halfW) continue;
 
-                    int cell = y * n + x;
+                    int cell = y * navCellsPerSide + x;
                     // portal:距任一端点的沿段距离 < portalCells 格
                     var endDist = t < len - t ? t : len - t;
                     deckAreaIndex[cell] = (byte)(areaIndex + 1); // 同格后放者胜( bridges 顺序即实体顺序)
-                    if (endDist < portalReach) portalFlag[cell] = 1;
-                    int tileId = (y / tileSize) * (n / tileSize) + x / tileSize;
+                    if (endDist < portalReachM) portalFlag[cell] = 1;
+                    int tileId = (y / tileSize) * (navCellsPerSide / tileSize) + x / tileSize;
                     if (!tileSeen[tileId]) { tileSeen[tileId] = true; tileOrder.Add(tileId); }
                 }
             }
@@ -99,7 +99,6 @@ public static class UpperLayerBake
 
         return new DeckSurface { AreaIndex = deckAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
 
-        static Fix64 Cm(int cm) => Fix64.FromInt(cm) / 100;
         static int FloorDiv(int value, int divisor)
         {
             int q = value / divisor;
@@ -130,7 +129,7 @@ public static class UpperLayerBake
         byte[] upPass,
         byte[] portalOut)
     {
-        int n = config.NavCellCount, n2 = n * n;
+        int navCellsPerSide = config.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         var row = config.AgentTypes[agentTypeIndex].CostByArea;
 
         // 桥面可走意图:有桥面且该类型给该区域定了价
@@ -158,21 +157,21 @@ public static class UpperLayerBake
         {
             foreach (int p in portals)
             {
-                int px = p % n, py = p / n;
+                int px = p % navCellsPerSide, py = p / navCellsPerSide;
                 for (int dy = -r; dy <= r; dy++)
                 {
                     for (int dx = -r; dx <= r; dx++)
                     {
                         int gx = px + dx, gy = py + dy;
-                        if (gx < 0 || gy < 0 || gx >= n || gy >= n) continue;
-                        if (groundWalk[gy * n + gx] != 0) win[gy * n + gx] = 1;
+                        if (gx < 0 || gy < 0 || gx >= navCellsPerSide || gy >= navCellsPerSide) continue;
+                        if (groundWalk[gy * navCellsPerSide + gx] != 0) win[gy * navCellsPerSide + gx] = 1;
                     }
                 }
             }
         }
 
         var eroded = new byte[n2];
-        ErodeFull(win, n, clearanceCells, eroded);
+        ErodeFull(win, navCellsPerSide, clearanceCells, eroded);
         for (int i = 0; i < n2; i++)
         {
             int a = deckAreaIndex[i] - 1;
@@ -192,15 +191,15 @@ public static class UpperLayerBake
         byte[] groundPassable,
         byte[] upPass,
         byte[] portal,
-        int n,
+        int navCellsPerSide,
         int[] scratchCompOut)
     {
         // 桥面 4 连通洪泛
-        var deckComp = new int[n * n];
+        var deckComp = new int[navCellsPerSide * navCellsPerSide];
         Array.Fill(deckComp, -1);
         int deckCount = 0;
-        var queue = new int[n * n];
-        for (int s = 0; s < n * n; s++)
+        var queue = new int[navCellsPerSide * navCellsPerSide];
+        for (int s = 0; s < navCellsPerSide * navCellsPerSide; s++)
         {
             if (upPass[s] == 0 || deckComp[s] >= 0) continue;
             int head = 0, tail = 0;
@@ -209,11 +208,11 @@ public static class UpperLayerBake
             while (head < tail)
             {
                 int c = queue[head++];
-                int x = c % n, y = c / n;
+                int x = c % navCellsPerSide, y = c / navCellsPerSide;
                 if (x > 0 && upPass[c - 1] != 0 && deckComp[c - 1] < 0) { deckComp[c - 1] = deckCount; queue[tail++] = c - 1; }
-                if (x < n - 1 && upPass[c + 1] != 0 && deckComp[c + 1] < 0) { deckComp[c + 1] = deckCount; queue[tail++] = c + 1; }
-                if (y > 0 && upPass[c - n] != 0 && deckComp[c - n] < 0) { deckComp[c - n] = deckCount; queue[tail++] = c - n; }
-                if (y < n - 1 && upPass[c + n] != 0 && deckComp[c + n] < 0) { deckComp[c + n] = deckCount; queue[tail++] = c + n; }
+                if (x < navCellsPerSide - 1 && upPass[c + 1] != 0 && deckComp[c + 1] < 0) { deckComp[c + 1] = deckCount; queue[tail++] = c + 1; }
+                if (y > 0 && upPass[c - navCellsPerSide] != 0 && deckComp[c - navCellsPerSide] < 0) { deckComp[c - navCellsPerSide] = deckCount; queue[tail++] = c - navCellsPerSide; }
+                if (y < navCellsPerSide - 1 && upPass[c + navCellsPerSide] != 0 && deckComp[c + navCellsPerSide] < 0) { deckComp[c + navCellsPerSide] = deckCount; queue[tail++] = c + navCellsPerSide; }
             }
 
             deckCount++;
@@ -240,7 +239,7 @@ public static class UpperLayerBake
         }
 
         // deck ↔ ground 只在桥头 portal 格合并
-        for (int c = 0; c < n * n; c++)
+        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
         {
             if (portal[c] != 0 && groundPassable[c] != 0 && upPass[c] != 0)
             {
@@ -258,7 +257,7 @@ public static class UpperLayerBake
             if (dense[root] < 0) dense[root] = count++;
         }
 
-        for (int c = 0; c < n * n; c++)
+        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
         {
             scratchCompOut[c] = groundComp[c] < 0 ? -1 : dense[Find(groundComp[c])];
         }
@@ -266,7 +265,7 @@ public static class UpperLayerBake
         return count;
     }
 
-    private static void ErodeFull(byte[] walk, int n, int clearance, byte[] output)
+    private static void ErodeFull(byte[] walk, int navCellsPerSide, int clearance, byte[] output)
     {
         // 与 NavContextBaker 同一腐蚀语义(整图)
         int r = clearance - 1;
@@ -277,11 +276,11 @@ public static class UpperLayerBake
         }
 
         int need = 2 * r + 1;
-        var row = new byte[n * n];
-        for (int y = 0; y < n; y++)
+        var row = new byte[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
         {
-            int baseIdx = y * n, run = 0;
-            for (int c = 0; c < n; c++)
+            int baseIdx = y * navCellsPerSide, run = 0;
+            for (int c = 0; c < navCellsPerSide; c++)
             {
                 run = walk[baseIdx + c] != 0 ? run + 1 : 0;
                 int x = c - r;
@@ -289,17 +288,17 @@ public static class UpperLayerBake
             }
         }
 
-        for (int x = 0; x < n; x++)
+        for (int x = 0; x < navCellsPerSide; x++)
         {
             int run = 0;
-            for (int yy = 0; yy < n; yy++)
+            for (int yy = 0; yy < navCellsPerSide; yy++)
             {
-                run = row[yy * n + x] != 0 ? run + 1 : 0;
+                run = row[yy * navCellsPerSide + x] != 0 ? run + 1 : 0;
                 int y = yy - r;
-                if (y >= 0) output[y * n + x] = run >= need ? (byte)1 : (byte)0;
+                if (y >= 0) output[y * navCellsPerSide + x] = run >= need ? (byte)1 : (byte)0;
             }
 
-            for (int y = Math.Max(0, n - r); y < n; y++) output[y * n + x] = 0;
+            for (int y = Math.Max(0, navCellsPerSide - r); y < navCellsPerSide; y++) output[y * navCellsPerSide + x] = 0;
         }
     }
 }

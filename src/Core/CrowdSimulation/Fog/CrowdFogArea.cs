@@ -118,7 +118,7 @@ public static class CrowdFogArea
     {
         foreach (double v in values)
         {
-            if (!(Math.Abs(v) / 100.0 <= MaxShapeMeters)) // 载荷是厘米,守卫以米计
+            if (!(Math.Abs(CrowdReferenceMeters.CmToM(v)) <= MaxShapeMeters)) // 载荷是厘米,守卫以米计
             {
                 throw new InvalidOperationException(
                     $"迷雾区域形状坐标超出 ±{MaxShapeMeters} 米平方安全界——拒绝静默回绕。");
@@ -126,11 +126,11 @@ public static class CrowdFogArea
         }
     }
 
-    public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fcsCm, CrowdFogShape shape)
+    public static (int[] Cells, (int X0, int Y0, int X1, int Y1) Box) AreaCells(int f, int fogCellSizeCm, CrowdFogShape shape)
     {
-        Fix64 cs = Fix64.FromDouble(fcsCm / 100.0);
+        Fix64 fogCellSizeM = CrowdReferenceMeters.CmToMFix(fogCellSizeCm);
         int ClampCell(Fix64 v) => Math.Max(0, Math.Min(f - 1, Fix64.Floor(v).ToInt()));
-        Fix64 Cell(double cm) => Fix64.FromDouble(cm / 100.0) / cs;
+        Fix64 Cell(double cm) => CrowdReferenceMeters.CmToMFix(cm) / fogCellSizeM;
         var cells = new List<int>();
         (int X0, int Y0, int X1, int Y1) box;
 
@@ -149,7 +149,7 @@ public static class CrowdFogArea
             return (cells.ToArray(), box);
         }
 
-        var xs = new Fix64[64];
+        var xs = new Fix64[CrowdSimulationLimits.FogPolygonOrdinateScratch];
         Fix64[] anchor;
         Fix64 bx0, by0, bx1, by1;
         Fix64[][]? pts = null;

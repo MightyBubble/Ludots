@@ -37,9 +37,9 @@ internal readonly struct BeliefRank : IComparable<BeliefRank>
 /// 动态 place/remove 与其共用一套重标路径。分层实体(桥面)暂不开放:见 CrowdStructureOps。</summary>
 public sealed class CrowdStructuresStore
 {
-    public int CellCount { get; }
-    public int CellSizeCm { get; }
-    public int ClusterSize { get; }
+    public int NavCellsPerSide { get; }
+    public int NavCellSizeCm { get; }
+    public int NavCellsPerTile { get; }
     public Fix64 BlockCoverage { get; }
     /// <summary>阻挡盒的电机查询半径(最大个人半径,厘米)。</summary>
     public Fix64 ReachCm { get; }
@@ -70,13 +70,13 @@ public sealed class CrowdStructuresStore
     private CrowdStructuresStore(CrowdSimulationRuntimeConfig config, SurfaceGrid grid)
     {
         _config = config;
-        CellCount = config.NavCellCount;
-        CellSizeCm = config.NavCellSizeCm;
-        ClusterSize = config.Hpa.ClusterSize;
+        NavCellsPerSide = config.NavCellsPerSide;
+        NavCellSizeCm = config.NavCellSizeCm;
+        NavCellsPerTile = config.Hpa.NavCellsPerTile;
         BlockCoverage = config.Structures.BlockCoverage;
         _terrainType = grid.TerrainType;
         _jumpCandidates = grid.JumpCandidates;
-        int n2 = CellCount * CellCount;
+        int n2 = NavCellsPerSide * NavCellsPerSide;
         _terrainArea = (byte[])grid.Area.Clone();
         Area = (byte[])grid.Area.Clone();
         Blocked = (byte[])grid.Blocked.Clone();
@@ -101,8 +101,8 @@ public sealed class CrowdStructuresStore
             store._footprint[id] = new CrowdStructureFootprint
             {
                 Shape = CrowdStructureShape.Rect,
-                X = Fix64.FromInt(b.XCm),
-                Y = Fix64.FromInt(b.YCm),
+                CenterXCm = Fix64.FromInt(b.XCm),
+                CenterYCm = Fix64.FromInt(b.YCm),
                 Hx = Fix64.FromInt(b.HalfSizeCm),
                 Hy = Fix64.FromInt(b.HalfSizeCm),
             };
@@ -175,7 +175,7 @@ public sealed class CrowdStructuresStore
 
         for (int i = 0; i < n; i++)
         {
-            store.RasterRect(ranks[i].Fp.CellRectOf(store.CellSizeCm, store.CellCount));
+            store.RasterRect(ranks[i].Fp.CellRectOf(store.NavCellSizeCm, store.NavCellsPerSide));
         }
 
         store.RebuildColliders();
@@ -262,8 +262,8 @@ public sealed class CrowdStructuresStore
     /// <summary>当前派生栅格的只读快照面(全量对拍烘焙用;Area/Blocked 引用本仓活数组)。</summary>
     public SurfaceGrid SnapshotSurface() => new()
     {
-        CellCount = CellCount,
-        CellSizeCm = CellSizeCm,
+        NavCellsPerSide = NavCellsPerSide,
+        NavCellSizeCm = NavCellSizeCm,
         TerrainType = _terrainType,
         Area = Area,
         Blocked = Blocked,
@@ -281,14 +281,14 @@ public sealed class CrowdStructuresStore
 
     private (int Id, (int X0, int Y0, int X1, int Y1) Rect) Commit(int id, CrowdStructureFootprint fp)
     {
-        var rect = RasterRect(fp.CellRectOf(CellSizeCm, CellCount));
+        var rect = RasterRect(fp.CellRectOf(NavCellSizeCm, NavCellsPerSide));
         RebuildColliders();
         return (id, rect);
     }
 
     private (int X0, int Y0, int X1, int Y1) CommitRect(int id, CrowdStructureFootprint fp, bool wasBlocker)
     {
-        var rect = RasterRect(fp.CellRectOf(CellSizeCm, CellCount));
+        var rect = RasterRect(fp.CellRectOf(NavCellSizeCm, NavCellsPerSide));
         if (wasBlocker) RebuildColliders();
         return rect;
     }
@@ -297,8 +297,8 @@ public sealed class CrowdStructuresStore
     /// 先复位为地形源,再按 id 序让 NavArea 高优先级者覆盖、blocker 足迹按覆盖份额标阻挡。</summary>
     public (int X0, int Y0, int X1, int Y1) RasterRect((int X0, int Y0, int X1, int Y1) rect)
     {
-        int n = CellCount;
-        Fix64 cs = Fix64.FromInt(CellSizeCm);
+        int navCellsPerSide = NavCellsPerSide;
+        Fix64 navCellSizeCm = Fix64.FromInt(NavCellSizeCm);
         int w = rect.X1 - rect.X0;
         if (w <= 0 || rect.Y1 <= rect.Y0) return rect;
 
@@ -306,7 +306,7 @@ public sealed class CrowdStructuresStore
         Array.Fill(prio, -1);
         for (int y = rect.Y0; y < rect.Y1; y++)
         {
-            int row = y * n;
+            int row = y * navCellsPerSide;
             for (int x = rect.X0; x < rect.X1; x++)
             {
                 Area[row + x] = _terrainArea[row + x];
@@ -321,18 +321,18 @@ public sealed class CrowdStructuresStore
             if (!_navArea.TryGetValue(id, out var navArea)) continue;
             var (areaIdx, priority) = navArea;
             var fp = _footprint[id];
-            var (a, b, c, d) = fp.CellRectOf(CellSizeCm, n);
+            var (a, b, c, d) = fp.CellRectOf(NavCellSizeCm, navCellsPerSide);
             for (int y = Math.Max(b, rect.Y0); y < Math.Min(d, rect.Y1); y++)
             {
                 for (int x = Math.Max(a, rect.X0); x < Math.Min(c, rect.X1); x++)
                 {
                     int k = (y - rect.Y0) * w + (x - rect.X0);
-                    Fix64 cx = (Fix64.FromInt(x) + Fix64.HalfValue) * cs;
-                    Fix64 cy = (Fix64.FromInt(y) + Fix64.HalfValue) * cs;
+                    Fix64 cx = (Fix64.FromInt(x) + Fix64.HalfValue) * navCellSizeCm;
+                    Fix64 cy = (Fix64.FromInt(y) + Fix64.HalfValue) * navCellSizeCm;
                     if (priority >= prio[k] && fp.Covers(cx, cy))
                     {
                         prio[k] = priority;
-                        Area[y * n + x] = (byte)areaIdx;
+                        Area[y * navCellsPerSide + x] = (byte)areaIdx;
                     }
                 }
             }
@@ -343,14 +343,14 @@ public sealed class CrowdStructuresStore
             if (!_blocker.Contains(id)) continue;
             var fp = _footprint[id];
             var (bx0, by0, bx1, by1) = fp.Bbox();
-            var (a, b, c, d) = fp.CellRectOf(CellSizeCm, n);
+            var (a, b, c, d) = fp.CellRectOf(NavCellSizeCm, navCellsPerSide);
             for (int y = Math.Max(b, rect.Y0); y < Math.Min(d, rect.Y1); y++)
             {
                 for (int x = Math.Max(a, rect.X0); x < Math.Min(c, rect.X1); x++)
                 {
-                    Fix64 coverX = CoverShare(bx0, bx1, x, cs);
-                    Fix64 coverY = CoverShare(by0, by1, y, cs);
-                    if (coverX * coverY >= BlockCoverage) Blocked[y * n + x] = 1;
+                    Fix64 coverX = CoverShare(bx0, bx1, x, navCellSizeCm);
+                    Fix64 coverY = CoverShare(by0, by1, y, navCellSizeCm);
+                    if (coverX * coverY >= BlockCoverage) Blocked[y * navCellsPerSide + x] = 1;
                 }
             }
         }
@@ -359,12 +359,12 @@ public sealed class CrowdStructuresStore
     }
 
     /// <summary>格 c 与区间 [a0,a1) 的重叠份额(轴);与 SurfaceGrid.Build 的阻挡覆盖公式同源。</summary>
-    private Fix64 CoverShare(Fix64 a0, Fix64 a1, int c, Fix64 cs)
+    private Fix64 CoverShare(Fix64 a0, Fix64 a1, int c, Fix64 navCellSizeCm)
     {
-        Fix64 cellLo = Fix64.FromInt(c) * cs;
-        Fix64 cellHi = cellLo + cs;
+        Fix64 cellLo = Fix64.FromInt(c) * navCellSizeCm;
+        Fix64 cellHi = cellLo + navCellSizeCm;
         Fix64 overlap = Fix64.Min(a1, cellHi) - Fix64.Max(a0, cellLo);
-        return overlap > Fix64.Zero ? overlap / cs : Fix64.Zero;
+        return overlap > Fix64.Zero ? overlap / navCellSizeCm : Fix64.Zero;
     }
 
     /// <summary>阻挡盒 CSR 整体重建(参考 rebuildColliders):注册格矩形按包围盒外扩 reach
@@ -376,9 +376,9 @@ public sealed class CrowdStructuresStore
         {
             if (!_blocker.Contains(id)) continue;
             var f = _footprint[id];
-            boxes.Add((f.X, f.Y, f.Hx, f.Hy));
+            boxes.Add((f.CenterXCm, f.CenterYCm, f.Hx, f.Hy));
         }
 
-        Colliders = CrowdBlockerColliders.BuildFromBoxes(boxes, CellCount, CellSizeCm, ReachCm);
+        Colliders = CrowdBlockerColliders.BuildFromBoxes(boxes, NavCellsPerSide, NavCellSizeCm, ReachCm);
     }
 }

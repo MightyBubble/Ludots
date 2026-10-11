@@ -44,8 +44,100 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 violations,
                 Is.Empty,
-                "Board, nav bake, and MassNavigationFlow spatial scale code must use SpatialScaleDefaults/owned constants instead of inline 256/64/100 literals.\n" +
+                "Board, nav bake, MassNavigationFlow, and crowd simulation spatial scale code must use named scale constants instead of inline 256/64/100 literals.\n" +
                 string.Join(Environment.NewLine, violations));
+        }
+
+        /// <summary>
+        /// 白名单实际扫到的 src/Core 一级目录。新目录必须进这里或 <see cref="UnscannedCoreDirectories"/>。
+        /// </summary>
+        private static readonly string[] CoreScanRoots =
+        [
+            "CrowdSimulation",
+            "Map",
+            "MassNavigation",
+            "Navigation",
+        ];
+
+        /// <summary>当前未纳入字面量扫描的 src/Core 一级目录；登记在这里不代表该目录不涉及空间尺度。</summary>
+        private static readonly string[] UnscannedCoreDirectories =
+        [
+            "Association",
+            "Client",
+            "Collections",
+            "Commands",
+            "Components",
+            "Config",
+            "Diagnostics",
+            "Engine",
+            "EntityCollections",
+            "EntityQueries",
+            "Fields",
+            "Gameplay",
+            "GraphRuntime",
+            "Hosting",
+            "Input",
+            "Knowledge",
+            "Layers",
+            "Ludots.Movement.Physics2DBridge",
+            "Ludots.Physics.Broadphase",
+            "Ludots.Physics2D",
+            "Maps",
+            "Math",
+            "Modding",
+            "Movement",
+            "MovePlanning",
+            "Networking",
+            "NodeLibraries",
+            "ParticipantVisibility",
+            "Persistence",
+            "Physics",
+            "Physics2D",
+            "Presentation",
+            "Properties",
+            "Registry",
+            "Scripting",
+            "Spatial",
+            "StructureCollision",
+            "Systems",
+            "TransportNetwork",
+            "Tweening",
+            "TypedCollections",
+            "UI",
+            "Vision",
+        ];
+
+        [Test]
+        public void CoreTopLevelDirectories_AreRegisteredAsScannedOrUnscanned()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] actual = Directory.GetDirectories(Path.Combine(repoRoot, "src", "Core"))
+                .Select(Path.GetFileName)
+                .Where(name => name is not null && name is not "bin" and not "obj")
+                .Select(name => name!)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+
+            string[] registered = CoreScanRoots
+                .Concat(UnscannedCoreDirectories)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+            string[] overlap = CoreScanRoots.Intersect(UnscannedCoreDirectories, StringComparer.Ordinal).ToArray();
+            string[] missing = actual.Except(registered, StringComparer.Ordinal).ToArray();
+            string[] extra = registered.Except(actual, StringComparer.Ordinal).ToArray();
+
+            Assert.That(overlap, Is.Empty, "扫描根与未纳入扫描名单重叠。\n" + string.Join(Environment.NewLine, overlap));
+            Assert.That(missing, Is.Empty, "src/Core 一级目录未登记为扫描根或未纳入扫描。\n" + string.Join(Environment.NewLine, missing));
+            Assert.That(extra, Is.Empty, "登记了不存在的 src/Core 一级目录。\n" + string.Join(Environment.NewLine, extra));
+            Assert.That(registered, Is.EqualTo(actual));
+
+            foreach (string root in CoreScanRoots)
+            {
+                string directory = Path.Combine(repoRoot, "src", "Core", root);
+                bool scanned = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
+                    .Any(file => IsSpatialScaleSensitiveSource(repoRoot, file));
+                Assert.That(scanned, Is.True, $"{root} 登记为扫描根，但白名单没有扫到其中的 .cs。");
+            }
         }
 
         private static bool IsProductionSource(string repoRoot, string file)
@@ -66,6 +158,7 @@ namespace Ludots.Tests.Architecture
         {
             string relative = ToRepoRelativePath(repoRoot, file);
             if (relative.Equals("src/Core/Spatial/SpatialScaleDefaults.cs", StringComparison.OrdinalIgnoreCase) ||
+                relative.Equals("src/Core/CrowdSimulation/CrowdSimulationLimits.cs", StringComparison.OrdinalIgnoreCase) ||
                 relative.Contains("/Ludots.Physics2D/", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
@@ -75,13 +168,16 @@ namespace Ludots.Tests.Architecture
             return relative.Contains("/Map/Board/", StringComparison.OrdinalIgnoreCase) ||
                 relative.Contains("/NavMesh/Bake/", StringComparison.OrdinalIgnoreCase) ||
                 relative.Contains("/NavBake.", StringComparison.OrdinalIgnoreCase) ||
-                relative.Contains("/Ludots.Tool/", StringComparison.OrdinalIgnoreCase) && (
+                (relative.Contains("/Ludots.Tool/", StringComparison.OrdinalIgnoreCase) && (
                     fileName.Contains("ReactMapDataBinConverter", StringComparison.OrdinalIgnoreCase) ||
                     fileName.Contains("MapVtxmGenerator", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.Contains("Program", StringComparison.OrdinalIgnoreCase)) ||
+                    fileName.Contains("Program", StringComparison.OrdinalIgnoreCase))) ||
                 fileName.Contains("NavTileBuilder", StringComparison.OrdinalIgnoreCase) ||
                 fileName.Contains("MassNavigationFlow", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Contains("FlowField", StringComparison.OrdinalIgnoreCase);
+                fileName.Contains("FlowField", StringComparison.OrdinalIgnoreCase) ||
+                relative.StartsWith("src/Core/CrowdSimulation/", StringComparison.OrdinalIgnoreCase) ||
+                relative.StartsWith("mods/capabilities/navigation/CrowdSimulationMod/", StringComparison.OrdinalIgnoreCase) ||
+                relative.StartsWith("mods/showcases/crowd_simulation/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static IEnumerable<(int LineNumber, string Code)> StripCommentsAndStrings(string source)

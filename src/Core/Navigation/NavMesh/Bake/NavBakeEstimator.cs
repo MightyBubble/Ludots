@@ -199,7 +199,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         navProfile,
                         SpatialScaleDefaults.CentimetersToMeters(cellCm),
                         decoupleFromTerrain: true);
-                    profileCellCm = Math.Max(1, (int)MathF.Round(resolvedMeters * SpatialScaleDefaults.CellCm));
+                    profileCellCm = Math.Max(1, (int)MathF.Round(resolvedMeters * SpatialScaleDefaults.CentimetersPerMeter));
                     profileTileX = 0;
                     profileTileZ = 0;
                     foreach (NavBakeTileCoord target in context.Targets)
@@ -355,8 +355,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 // dies mid-run. tileWidthVoxels/tileHeightVoxels arrive from the baker's
                 // own footprint function.
                 int borderVoxels = DotRecast.Recast.RcConfig.CalcBorder(
-                    agentProfile.RadiusCm / SpatialScaleDefaults.CellCm,
-                    recastCellSizeCm / SpatialScaleDefaults.CellCm);
+                    agentProfile.RadiusCm / SpatialScaleDefaults.CentimetersPerMeter,
+                    recastCellSizeCm / SpatialScaleDefaults.CentimetersPerMeter);
                 columnsPerAxis = tileWidthVoxels;
                 int solidX = checked(tileWidthVoxels + 2 * borderVoxels);
                 int solidZ = checked(tileHeightVoxels + 2 * borderVoxels);

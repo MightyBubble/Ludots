@@ -124,8 +124,8 @@ public sealed partial class CrowdSimulationRuntime
         demo.UseViewLabels(presentation.ViewLabels);
         var flow = new CrowdFlowFieldVisualSource
         {
-            CellCount = demo.Nav.CellCount,
-            CellSizeCm = demo.Config.NavCellSizeCm,
+            NavCellsPerSide = demo.Nav.NavCellsPerSide,
+            NavCellSizeCm = demo.Config.NavCellSizeCm,
         };
         demo.FlowVisual = flow;
         slot.Current = new DemoViewProjector(
