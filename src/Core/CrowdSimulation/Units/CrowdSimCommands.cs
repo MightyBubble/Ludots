@@ -44,7 +44,11 @@ public static class CrowdSimCommands
 
         RequirePlayer(sim, cmd.Player);
         if (cmd.Kind == CrowdSimCommandKind.FogShare) RequirePlayer(sim, cmd.With);
-        if (cmd.Kind == CrowdSimCommandKind.Order && cmd.HasFogTerrain) RequireFog(sim, "order");
+        if (cmd.Kind == CrowdSimCommandKind.Order)
+        {
+            if (cmd.HasFogTerrain) RequireFog(sim, "order");
+            _ = Movement.CrowdFormations.ShapeOf(sim.Config.Formations, cmd.ShapeId!);
+        }
     }
 
     /// <summary>迷雾启用门:迷雾面指令在无 Fog 会话(纯部署/未启用运动)上入队即拒,

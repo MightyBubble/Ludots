@@ -10,7 +10,7 @@ namespace CrowdSimulationTests;
 public sealed class CrowdFormationShapeTests
 {
     [Test]
-    public void UnknownShape_ThrowsAtOrderResolution_AndListsKnownIds()
+    public void UnknownShape_Throws_AndListsKnownIds()
     {
         var shapes = TestDefaults.Assemble().Formations;
         Assert.That(shapes[0].Id, Is.EqualTo("box"));
@@ -25,6 +25,25 @@ public sealed class CrowdFormationShapeTests
         Assert.That(ex.Message, Does.Contain("line"));
         Assert.That(ex.Message, Does.Contain("loose"));
         Assert.That(ex.Message, Does.Contain("wedge"));
+    }
+
+    [Test]
+    public void UnknownShapeOrder_IsRejectedBeforeEnteringTheLog()
+    {
+        var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        var order = CrowdSimCommand.Parse(JsonNode.Parse(
+            """{"type":"order","player":1,"xCm":620000,"yCm":620000,"shape":"aaa"}""")!);
+
+        var live = Assert.Throws<InvalidOperationException>(
+            () => session.Commands.Submit(session, order, CrowdSimCommands.Exec));
+        Assert.That(live!.Message, Does.Contain("未知阵型"));
+
+        var scripted = Assert.Throws<InvalidOperationException>(
+            () => session.Commands.Schedule(session, new[] { new CrowdCommand(3, order) }));
+        Assert.That(scripted!.Message, Does.Contain("未知阵型"));
+
+        Assert.That(session.Commands.Log, Is.Empty);
+        Assert.That(session.Commands.PendingCount, Is.Zero);
     }
 
     [Test]
