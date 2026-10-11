@@ -75,25 +75,22 @@
       "RepresentativeInstanceId": "player_4"
     }
   ],
-  "ParticipantRelationships": {
-    "Teams": [
-      {
-        "TeamA": 1,
-        "TeamB": 2,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Hostile",
-        "Symmetric": true
-      }
-    ]
-  },
   "Entities": [
     {
       "InstanceId": "team_1",
-      "Template": "crowd_simulation_team"
+      "Template": "crowd_simulation_team",
+      "Relations": [
+        { "To": "team_1", "Type": "Friendly" },
+        { "To": "team_2", "Type": "Hostile" }
+      ]
     },
     {
       "InstanceId": "team_2",
-      "Template": "crowd_simulation_team"
+      "Template": "crowd_simulation_team",
+      "Relations": [
+        { "To": "team_2", "Type": "Friendly" },
+        { "To": "team_1", "Type": "Hostile" }
+      ]
     },
     {
       "InstanceId": "player_1",
