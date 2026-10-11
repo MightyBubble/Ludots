@@ -2,7 +2,7 @@ using Arch.System;
 
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
-/// <summary>会话步进系统:系统组的每个 FixedHz tick 推会话一步(宿主空转时零开销)。</summary>
+/// <summary>会话步进系统:系统组的每个 FixedHz tick 调 Runtime.Tick。功能位修订检查在 Tick 开头，先于指令和运动。</summary>
 public sealed class CrowdSimulationSessionTickSystem : ISystem<float>
 {
     private readonly CrowdSimulationRuntime _runtime;

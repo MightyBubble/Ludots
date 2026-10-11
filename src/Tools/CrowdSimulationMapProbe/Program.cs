@@ -1,6 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
@@ -503,6 +507,61 @@ public static class Program
         return fixedHz;
     }
 
+    /// <summary>
+    /// 探针不跑引擎进图。这里只把地图上已经写好的队伍代表边交给正式投影，装载拿到的矩阵和进图同一套规则。
+    /// </summary>
+    private static CrowdPairRules ProjectSeedMap(CrowdSimulationConfig config, MapConfig map)
+    {
+        using var world = World.Create();
+        var types = new RelationshipTypeRegistry();
+        var relationships = new RelationshipRuntime(
+            world,
+            types,
+            new RelationshipMetricRegistry(),
+            new RelationshipFlagRegistry(),
+            new RelationshipBandRegistry(),
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(world));
+        var teams = new TeamEntityLookup();
+        var byInstance = new Dictionary<string, Entity>(StringComparer.Ordinal);
+        foreach (var team in map.Teams)
+        {
+            Entity entity = world.Create(new Team { Id = team.TeamId });
+            teams.Register(team.TeamId, entity);
+            byInstance[team.RepresentativeInstanceId] = entity;
+        }
+
+        foreach (var authored in map.Entities)
+        {
+            if (string.IsNullOrWhiteSpace(authored.InstanceId) || authored.Relations == null)
+            {
+                continue;
+            }
+
+            if (!byInstance.TryGetValue(authored.InstanceId, out Entity source))
+            {
+                continue;
+            }
+
+            foreach (var relation in authored.Relations)
+            {
+                if (relation.Delete == true || string.IsNullOrWhiteSpace(relation.To) || string.IsNullOrWhiteSpace(relation.Type))
+                {
+                    continue;
+                }
+
+                if (!byInstance.TryGetValue(relation.To, out Entity target))
+                {
+                    throw new InvalidOperationException($"地图 {map.Id}: {authored.InstanceId} 的关系指向未知实例 {relation.To}。");
+                }
+
+                relationships.EnsureLink(source, target, types.Register(relation.Type));
+            }
+        }
+
+        return CrowdPairRulesProjection.Project(config, map, new TeamRelationQuery(relationships, teams)).Rules;
+    }
+
     private static SeedBundle Load(string seedDir, string standardDir, string capabilityDir)
     {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
@@ -524,7 +583,8 @@ public static class Program
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
-        var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir));
+        var runtime = CrowdSimulationConfigLoader.Load(
+            config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir), ProjectSeedMap(config, map));
 
         var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);

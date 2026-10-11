@@ -11,15 +11,15 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// </summary>
 public static class CrowdSimCommands
 {
-    /// <summary>指令玩家号门禁:关系矩阵按玩家号直查(1..P),表外 id 不允许进求解器。
+    /// <summary>指令玩家号门禁:功能位矩阵按玩家号直查(1..P),表外 id 不允许进求解器。
     /// 主门在入队时(Validate);Exec 内的调用是防御断言,兜住绕过队列直呼 Exec 的路径。</summary>
     private static void RequirePlayer(CrowdSimSession sim, int player)
     {
-        int count = sim.Config.Relations.PlayerCount;
+        int count = sim.Config.PairRules.PlayerCount;
         if (player < 1 || player > count)
         {
             throw new System.InvalidOperationException(
-                $"指令 player = {player},有效范围 1..{count}(关系矩阵按玩家号直查,表外 id 不允许)。");
+                $"指令 player = {player},有效范围 1..{count}(功能位矩阵按玩家号直查,表外 id 不允许)。");
         }
     }
 
@@ -153,22 +153,22 @@ public static class CrowdSimCommands
     {
         string type = CrowdSimCommand.KindName(cmd.Kind);
         var fog = sim.Fog ?? throw new System.InvalidOperationException($"{type}: 迷雾未启用(会话没有运动内核)。");
-        var relations = sim.Config.Relations;
-        if (cmd.Player < 1 || cmd.Player > relations.PlayerCount)
+        var pairRules = sim.Config.PairRules;
+        if (cmd.Player < 1 || cmd.Player > pairRules.PlayerCount)
         {
             throw new System.InvalidOperationException($"{type}: 无效玩家 {cmd.Player}。");
         }
 
-        int g = fog.GroupOf[relations.IndexByPlayerId[cmd.Player]];
+        int g = fog.GroupOf[pairRules.IndexByPlayerId[cmd.Player]];
         if (cmd.Kind == CrowdSimCommandKind.FogShare)
         {
-            if (cmd.With < 1 || cmd.With > relations.PlayerCount)
+            if (cmd.With < 1 || cmd.With > pairRules.PlayerCount)
             {
                 throw new System.InvalidOperationException($"fogShare: 无效玩家 {cmd.With}。");
             }
 
             // on=false 的拆组在边界 Parse 拒收(坏指令不进日志);Exec 只见并组方向。
-            int to = fog.MergeGroups(g, fog.GroupOf[relations.IndexByPlayerId[cmd.With]]);
+            int to = fog.MergeGroups(g, fog.GroupOf[pairRules.IndexByPlayerId[cmd.With]]);
             if (to >= 0)
             {
                 var force = sim.Belief!.Force ??= new HashSet<int>();

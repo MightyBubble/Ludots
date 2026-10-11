@@ -13,7 +13,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Fog;
 
 /// <summary>
-/// 迷雾 + 认知(belief),按视野组(fog/fog.js 移植):shareVision 关系双向成立的玩家并成一组,
+/// 迷雾 + 认知(belief),按视野组(fog/fog.js 移植):sharesVisionWith 两个方向都成立的玩家并成一组,
 /// 迷雾与认知按组共享,不按玩家。每组在粗格(FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell) 的 fog 格)上:
 /// visible 每 fog.rateHz 重建(组按 round-robin 摊到周期各 tick,单位只在本组槽位 tick 盖章);
 /// explored 粘滞;belief = 实体 id → 末次所见快照 {tpl, fp}(地图初始实体全员已知;运行时
@@ -68,7 +68,7 @@ public sealed class CrowdFog
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
 
-    public CrowdFog(CrowdSimulationRuntimeConfig config, RuntimeRelations relations, CrowdStructuresStore store)
+    public CrowdFog(CrowdSimulationRuntimeConfig config, CrowdPairRules pairRules, CrowdStructuresStore store)
     {
         Store = store;
         var fc = config.Fog;
@@ -83,31 +83,8 @@ public sealed class CrowdFog
         NavTilesPerSide = NavCellsPerSide / NavCellsPerTile;
         SetPeriod(config.FixedHz, fc.RateHz.ToDouble());
 
-        // 视野组:shareVision 双向成立的玩家做并查集(根取小索引,组号按根的首见序)
-        int p = relations.PlayerCount;
-        var root = new int[p];
-        for (int i = 0; i < p; i++) root[i] = i;
-        for (int a = 0; a < p; a++)
-        {
-            for (int b = a + 1; b < p; b++)
-            {
-                if (relations.ShareVisionByPair[a * p + b] && relations.ShareVisionByPair[b * p + a])
-                {
-                    root[Math.Max(Find(a), Find(b))] = Math.Min(Find(a), Find(b));
-                }
-            }
-        }
-
-        var idsByRoot = new Dictionary<int, int>();
-        GroupOf = new byte[p];
-        for (int i = 0; i < p; i++)
-        {
-            int rt = Find(i);
-            if (!idsByRoot.TryGetValue(rt, out int g)) idsByRoot[rt] = g = idsByRoot.Count;
-            GroupOf[i] = (byte)g;
-        }
-
-        VisionGroupCount = idsByRoot.Count;
+        GroupOf = BuildVisionGroups(pairRules.SharesVisionByPair, pairRules.PlayerCount, out int visionGroupCount);
+        VisionGroupCount = visionGroupCount;
         int f2 = FogCellsPerSide * FogCellsPerSide;
         Visible = new byte[VisionGroupCount * f2];
         Explored = new byte[VisionGroupCount * f2];
@@ -165,6 +142,35 @@ public sealed class CrowdFog
 
         TruthKey = Key[0];
         _opaqueDirty = true;
+    }
+
+    /// <summary>两个方向都为真才连边。并查集根取小索引,组号按根的首见序,合组传递。</summary>
+    internal static byte[] BuildVisionGroups(bool[] shares, int playerCount, out int visionGroupCount)
+    {
+        var root = new int[playerCount];
+        for (int i = 0; i < playerCount; i++) root[i] = i;
+        for (int a = 0; a < playerCount; a++)
+        {
+            for (int b = a + 1; b < playerCount; b++)
+            {
+                if (shares[a * playerCount + b] && shares[b * playerCount + a])
+                {
+                    root[Math.Max(Find(a), Find(b))] = Math.Min(Find(a), Find(b));
+                }
+            }
+        }
+
+        var idsByRoot = new Dictionary<int, int>();
+        var groupOf = new byte[playerCount];
+        for (int i = 0; i < playerCount; i++)
+        {
+            int rt = Find(i);
+            if (!idsByRoot.TryGetValue(rt, out int g)) idsByRoot[rt] = g = idsByRoot.Count;
+            groupOf[i] = (byte)g;
+        }
+
+        visionGroupCount = idsByRoot.Count;
+        return groupOf;
 
         int Find(int i) => root[i] == i ? i : root[i] = Find(root[i]);
     }
@@ -298,7 +304,7 @@ public sealed class CrowdFog
 
         if (!any) return;
 
-        var indexByPlayer = sim.Config.Relations.IndexByPlayerId;
+        var indexByPlayer = sim.Config.PairRules.IndexByPlayerId;
         var units = sim.Units;
         for (int i = 0; i < units.Count; i++)
         {

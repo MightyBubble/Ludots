@@ -8,10 +8,10 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 
 /// <summary>
 /// 局部避让(avoidance.js computeSeparation 移植,Fix64 厘米域):非对称分离——
-/// 重叠对的让出份额按关系矩阵的推挤模式分摊;priority 模式有效优先级 = 兵种原型优先级
-/// +(移动中 + movingBonus),低者让(1 - dominantShare)、相等对半、高者近不动;
-/// rigid 模式优先级失效,休息单位对移动单位不可动、同状态对半;同导航组且都在移动:
-/// 对称对半,不查关系表。跳跃(JUMP)单位腾空:半径记 0,不收推也不推人。
+/// 重叠对的让出份额按玩家对功能位分摊。Yield:有效优先级 = 兵种推挤优先级
+/// +(移动中 + movingBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
+/// Hold:优先级失效,休息单位对移动单位不可动、同状态对半。同导航组且都在移动:
+/// 对称对半,不查功能位。跳跃(JUMP)单位腾空:半径记 0,不收推也不推人。
 /// 两个预算保证最坏 O(n) 而不偏袒谁被看见:maxNeighbors 只数重叠对,maxScan 数所有
 /// 读到的候选(含跳过的);查询范围 = 单位自己的哈希环。
 /// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;整片可达邻域
@@ -76,9 +76,9 @@ public static class CrowdAvoidance
     internal static void SolveRange(CrowdMovementKernel k, int start, int end)
     {
         var session = k.Session;
-        var relations = session.Config.Relations;
-        int P = relations.PlayerCount;
-        var pushMode = relations.PushModeByPair;
+        var pairRules = session.Config.PairRules;
+        int P = pairRules.PlayerCount;
+        var response = pairRules.ResponseByPair;
         var hash2 = k.Hash;
         int dim = hash2.CellsPerSide, last = dim - 1;
         int rr = hash2.Rings + 1;
@@ -153,12 +153,12 @@ public static class CrowdAvoidance
                         contacts++;
                         int mj = gm[q];
                         Fix64 share;
-                        // 同导航组且都在移动:对称对半,不查关系表
+                        // 同导航组且都在移动:对称对半,不查功能位
                         if (mi != 0 && mj != 0 && gg[q] == grp)
                         {
                             share = Fix64.HalfValue;
                         }
-                        else if (pushMode[pi * P + gp[q]] == CrowdSimulationPushMode.Rigid)
+                        else if (response[pi * P + gp[q]] == CrowdPushResponse.Hold)
                         {
                             share = mi == mj ? Fix64.HalfValue : mi != 0 ? Fix64.OneValue : Fix64.Zero;
                         }

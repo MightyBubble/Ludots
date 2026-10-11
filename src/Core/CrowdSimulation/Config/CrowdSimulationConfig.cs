@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.CrowdSimulation.Config;
@@ -36,7 +35,7 @@ public sealed class CrowdSimulationConfig
     public required MovementSection Movement { get; init; }
     public required AvoidanceSection Avoidance { get; init; }
     public required PushSection Push { get; init; }
-    public required RelationsSection Relations { get; init; }
+    public required PairRulesSection PairRules { get; init; }
     public required SimSection Sim { get; init; }
     public required SpawnSection Spawn { get; init; }
     public required StructuresSection Structures { get; init; }
@@ -109,6 +108,8 @@ public sealed class CrowdSimulationConfig
         ("movement.slotCheckInterval", "movement.slotCheckIntervalSubSteps"),
         ("formation.leaderTurnRate", "formation.leaderTurnRatePerSec"),
         ("avoidance.acceleration", "avoidance.accelerationPerSec"),
+        ("relations", "pairRules（yieldsTo / sharesVisionWith 各写 relation）"),
+        ("push.modes", "pairRules.yieldsTo"),
     ];
 
     private static readonly string[] IdKeyedObjects =
@@ -429,52 +430,26 @@ public sealed class CrowdSimulationConfig
         public required double Smoothing { get; init; }
     }
 
-    /// <summary>推挤：modes 按态度选择模式（priority = 让路 / rigid = 刚性），键固定为 samePlayer / Friendly / Neutral / Hostile。</summary>
+    /// <summary>Yield 分支的内核参数。让不让路由 pairRules.yieldsTo 投影，不在这里选。</summary>
     public sealed class PushSection
     {
         public required double MovingBonus { get; init; }
         public required double DominantShare { get; init; }
-        public required PushModesSection Modes { get; init; }
     }
 
     /// <summary>
-    /// 关系接口(参考实现 globals.relations):(玩家 a, 玩家 b) → 关系种类,一次解析进 P×P 矩阵。
-    /// 解析序 overrides > 同玩家(self) > 同队(sameTeam) > default;每种关系带推挤模式
-    /// (priority = 高优先级推低 / rigid = 刚性,休息单位挡住移动单位)。
+    /// 功能位各点名一个关系类型 id。群体模拟不解释这个 id。
+    /// 有边 / 没边在会话激活时投影成玩家对矩阵。
     /// </summary>
-    public sealed class RelationsSection
+    public sealed class PairRulesSection
     {
-        public required Dictionary<string, RelationsKindEntry> Kinds { get; init; }
-        public required string Self { get; init; }
-        public required string SameTeam { get; init; }
-        public required string Default { get; init; }
-        public RelationsOverrideEntry[] Overrides { get; init; } = Array.Empty<RelationsOverrideEntry>();
+        public required PairRuleSlot YieldsTo { get; init; }
+        public required PairRuleSlot SharesVisionWith { get; init; }
     }
 
-    public sealed class RelationsKindEntry
+    public sealed class PairRuleSlot
     {
-        public required string Push { get; init; }
-        /// <summary>该关系是否共享视野(shareVision):双向都真 → 两玩家成一个视野组(迷雾与认知共享)。</summary>
-        public required bool ShareVision { get; init; }
-    }
-
-    public sealed class RelationsOverrideEntry
-    {
-        public required int PlayerA { get; init; }
-        public required int PlayerB { get; init; }
-        public required string Kind { get; init; }
-    }
-
-    public sealed class PushModesSection
-    {
-        [JsonPropertyName("samePlayer")]
-        public required string SamePlayer { get; init; }
-        [JsonPropertyName("Friendly")]
-        public required string Friendly { get; init; }
-        [JsonPropertyName("Neutral")]
-        public required string Neutral { get; init; }
-        [JsonPropertyName("Hostile")]
-        public required string Hostile { get; init; }
+        public required string Relation { get; init; }
     }
 
     public sealed class SimSection
