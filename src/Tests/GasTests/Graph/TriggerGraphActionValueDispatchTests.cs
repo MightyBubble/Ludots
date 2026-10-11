@@ -100,6 +100,18 @@ public sealed class TriggerGraphActionValueDispatchTests
 
         Assert.That(_contexts, Has.Count.EqualTo(1));
         AssertActionValue(_contexts[0], 3f, 4f);
+
+        Present("Stick", 3f, 4f, present: false);
+        system.Update(0f);
+        Present("Stick", 3f, 4f, present: true);
+        system.Update(0f);
+        Assert.That(_contexts, Has.Count.EqualTo(1),
+            "dropping out of the snapshot does not clear the sample, so the same vector does not dispatch again");
+
+        Present("Stick", 3f, 5f, present: true);
+        system.Update(0f);
+        Assert.That(_contexts, Has.Count.EqualTo(2));
+        AssertActionValue(_contexts[1], 3f, 5f);
     }
 
     [Test]
