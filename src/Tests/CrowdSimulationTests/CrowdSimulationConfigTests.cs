@@ -376,40 +376,10 @@ public class CrowdSimulationConfigTests
         }
     }
 
-    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
-    [
-        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
-        ("deploy.spreadCells", "deploy.spreadCm"),
-        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
-        ("fog.cellCells", "fog.cellSizeCm"),
-        ("formation.goalArriveCells", "formation.goalArriveCm"),
-        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
-        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
-        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
-        ("formation.minClumpCells", "formation.minClumpCm"),
-        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
-        ("formation.slotArriveCells", "formation.slotArriveCm"),
-        ("formation.slotSightCells", "formation.slotSightCm"),
-        ("formations[].spacing", "formations.<id>.spacingDiameterScale"),
-        ("hpa.clusterSize", "navtile.sizeCm"),
-        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
-        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
-        ("movement.maxStepCells", "movement.maxStepNavCells"),
-        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
-        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
-        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
-        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
-        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
-        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
-        ("spawn.cellInset", "spawn.navCellInsetFraction"),
-        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
-        ("structures.portalCells", "structures.portalReachNavCells"),
-    ];
-
     [Test]
     public void RetiredSpatialKeys_NameTheReplacement()
     {
-        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        foreach (var (oldPath, newKey) in CrowdSimulationConfig.RetiredSpatialKeys)
         {
             var json = TestDefaults.DefaultConfigJson();
             string concrete = PlaceRetiredKey(json, oldPath);
@@ -418,6 +388,17 @@ public class CrowdSimulationConfigTests
             Assert.That(ex.Message, Does.Contain(newKey), oldPath);
             Assert.That(ex.Message, Does.Contain("已删除"), oldPath);
         }
+    }
+
+    [Test]
+    public void RetiredSpatialKeys_AreNotEmptied()
+    {
+        var old = new HashSet<string>(CrowdSimulationConfig.RetiredSpatialKeys.Select(entry => entry.OldPath));
+        Assert.That(old, Does.Contain("formation.settleTime"));
+        Assert.That(old, Does.Contain("movement.slotTimeConstant"));
+        Assert.That(old, Does.Contain("sim.timeScale"));
+        Assert.That(old, Does.Contain("formations[].spacing"));
+        Assert.That(old, Does.Contain("fog.cellCells"));
     }
 
     private static string PlaceRetiredKey(JsonObject root, string oldPath)

@@ -72,7 +72,7 @@ public sealed class CrowdSimulationConfig
     }
 
     /// <summary>旧作者键只用于报错。命中即拒绝，不读取值。</summary>
-    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
+    internal static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
     [
         ("deploy.baseJitterCells", "deploy.baseJitterCm"),
         ("deploy.spreadCells", "deploy.spreadCm"),
