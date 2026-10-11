@@ -77,7 +77,7 @@ namespace Ludots.Core.Input.Runtime
             bool isDown,
             bool pressedThisFrame,
             bool releasedThisFrame,
-            bool present = true)
+            bool present)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {

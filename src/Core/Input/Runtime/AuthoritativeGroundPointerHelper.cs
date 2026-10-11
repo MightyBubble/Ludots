@@ -37,13 +37,20 @@ namespace Ludots.Core.Input.Runtime
                     isDown: true,
                     pressedThisFrame: false,
                     releasedThisFrame: false,
+                    boundByActiveContext: false,
                     preserveValueUntilSnapshot: true);
                 return;
             }
 
             if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(ReservedInputActionIds.PointerPos), out WorldCmInt2 worldCm))
             {
-                accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
+                accumulator.CaptureAction(
+                    ActionId,
+                    Vector3.Zero,
+                    isDown: false,
+                    pressedThisFrame: false,
+                    releasedThisFrame: false,
+                    boundByActiveContext: false);
                 return;
             }
 
@@ -52,7 +59,8 @@ namespace Ludots.Core.Input.Runtime
                 new Vector3(worldCm.X, 0f, worldCm.Y),
                 isDown: true,
                 pressedThisFrame: false,
-                releasedThisFrame: false);
+                releasedThisFrame: false,
+                boundByActiveContext: false);
         }
 
         public static bool TryConsumeOverride(

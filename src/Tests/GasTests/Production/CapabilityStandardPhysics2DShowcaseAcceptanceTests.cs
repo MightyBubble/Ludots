@@ -167,7 +167,8 @@ namespace Ludots.Tests.GAS.Production
                     new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y),
                     isDown: true,
                     pressedThisFrame: false,
-                    releasedThisFrame: false);
+                    releasedThisFrame: false,
+                    present: false);
                 frozen.SetActionValue(ReservedInputActionIds.PointerPos, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
             }
             else if (input is PlayerInputHandler playerInput)

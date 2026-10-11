@@ -28,8 +28,8 @@ namespace Ludots.Core.Input.Runtime
             bool isDown,
             bool pressedThisFrame,
             bool releasedThisFrame,
-            bool preserveValueUntilSnapshot = false,
-            bool? boundByActiveContext = null)
+            bool boundByActiveContext,
+            bool preserveValueUntilSnapshot = false)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -42,16 +42,11 @@ namespace Ludots.Core.Input.Runtime
                 _states[actionId] = state;
             }
 
-            // null leaves presence with the sample already stored, so a later
-            // writer that only refreshes the value does not invent or erase it.
             if (preserveValueUntilSnapshot || !state.PreserveValueUntilSnapshot)
             {
                 state.Value = value;
                 state.IsDown = isDown;
-                if (boundByActiveContext.HasValue)
-                {
-                    state.Present = boundByActiveContext.Value;
-                }
+                state.Present = boundByActiveContext;
             }
 
             state.PressedThisTick |= pressedThisFrame;

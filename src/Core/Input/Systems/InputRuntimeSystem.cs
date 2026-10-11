@@ -147,6 +147,7 @@ namespace Ludots.Core.Input.Systems
                     isDown,
                     pressed,
                     released,
+                    input.IsBoundByActiveContext(entry.ActionId),
                     preserveValueUntilSnapshot: true);
             }
         }

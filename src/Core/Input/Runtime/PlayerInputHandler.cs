@@ -143,6 +143,12 @@ namespace Ludots.Core.Input.Runtime
             return true;
         }
 
+        public bool IsBoundByActiveContext(string actionId)
+        {
+            return _actionIndices.TryGetValue(actionId, out int actionIndex)
+                && _actionStates[actionIndex].BoundByActiveContext;
+        }
+
         public void CaptureFrame(AuthoritativeInputAccumulator accumulator)
         {
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));

@@ -16,7 +16,7 @@ namespace Ludots.Core.Persistence
         bool IsDown,
         bool Pressed,
         bool Released,
-        bool Present = true);
+        bool Present);
 
     public sealed record AuthoritativeFrame(
         long Sequence,

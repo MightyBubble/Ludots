@@ -97,7 +97,13 @@ public sealed class ReplayPlaybackRuntime
             return;
         }
 
-        accumulator.CaptureAction(NudgeActionId, new Vector3(6400 + RandomShared(-800, 800), 0, 6400 + RandomShared(-800, 800)), true, true, false);
+        accumulator.CaptureAction(
+            NudgeActionId,
+            new Vector3(6400 + RandomShared(-800, 800), 0, 6400 + RandomShared(-800, 800)),
+            isDown: true,
+            pressedThisFrame: true,
+            releasedThisFrame: false,
+            boundByActiveContext: false);
         Log("Nudge captured as an authoritative action — it enters the frame stream and drives the hero on the next fixed step.");
     }
 

@@ -164,7 +164,8 @@ namespace Ludots.Tests.GAS
                 new Vector3(3f, 0f, 0f),
                 isDown: true,
                 pressedThisFrame: true,
-                releasedThisFrame: false);
+                releasedThisFrame: false,
+                present: true);
 
             var registry = new InputActionAttributeBindingRegistry();
             registry.Set(new[]
