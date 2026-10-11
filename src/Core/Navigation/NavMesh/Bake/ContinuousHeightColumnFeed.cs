@@ -199,7 +199,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         : $"Continuous height edge sample failed at ({clampedX},{clampedZ})cm.");
             }
 
-            return heightCm / SpatialScaleDefaults.CellCm;
+            return heightCm / SpatialScaleDefaults.CentimetersPerMeter;
         }
 
         private static void EmitSpan(RcHeightfield solid, int x, int z, float yMeters, float bminY, float ch, int mergeThreshold)
