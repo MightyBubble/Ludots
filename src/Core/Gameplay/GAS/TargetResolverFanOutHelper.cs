@@ -432,14 +432,22 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static int ComputeDirection(World world, in EffectContext ctx, in EffectConfigParams mergedParams)
         {
-            if (TryResolveExplicitVectorDirection(world, in ctx, in mergedParams, out int explicitVectorDirectionDeg))
+            if (TryResolvePreservedVectorDirection(in mergedParams, world, in ctx, out int preservedDirectionDeg))
             {
-                return explicitVectorDirectionDeg;
+                return preservedDirectionDeg;
             }
 
+            // A live Cast.Facing is the authored aim. It wins over the frozen exec point so a
+            // channel can steer from the blackboard without a per-tick writer. Preserved caller
+            // params stay first: instant shots stamp the cast point onto the effect itself.
             if (TryResolveBlackboardFacing(world, ctx.Source, out int blackboardFacingDeg))
             {
                 return blackboardFacingDeg;
+            }
+
+            if (TryResolveExecTargetDirection(world, in ctx, out int execDirectionDeg))
+            {
+                return execDirectionDeg;
             }
 
             if (world.IsAlive(ctx.Source) && world.Has<FacingDirection>(ctx.Source))
@@ -462,48 +470,50 @@ namespace Ludots.Core.Gameplay.GAS
             return 0;
         }
 
-        private static bool TryResolveExplicitVectorDirection(
+        private static bool TryResolvePreservedVectorDirection(
+            in EffectConfigParams mergedParams,
             World world,
             in EffectContext ctx,
-            in EffectConfigParams mergedParams,
             out int directionDeg)
         {
             directionDeg = 0;
-            if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTarget))
+            if (!EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTarget))
             {
-                if (EffectTargetPointResolver.TryResolvePreservedTargetOrigin(in mergedParams, out Fix64Vec2 preservedOrigin) &&
-                    TryComputeDirection(in preservedOrigin, in preservedTarget, out directionDeg))
-                {
-                    return true;
-                }
-
-                if (TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
-                    TryComputeDirection(in sourceOrigin, in preservedTarget, out directionDeg))
-                {
-                    return true;
-                }
+                return false;
             }
 
-            if (world.IsAlive(ctx.Source) && world.Has<AbilityExecInstance>(ctx.Source))
+            if (EffectTargetPointResolver.TryResolvePreservedTargetOrigin(in mergedParams, out Fix64Vec2 preservedOrigin) &&
+                TryComputeDirection(in preservedOrigin, in preservedTarget, out directionDeg))
             {
-                ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
-                if (exec.HasTargetPos != 0)
-                {
-                    if (exec.HasTargetOriginPos != 0 &&
-                        TryComputeDirection(in exec.TargetOriginPosCm, in exec.TargetPosCm, out directionDeg))
-                    {
-                        return true;
-                    }
-
-                    if (TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
-                        TryComputeDirection(in sourceOrigin, in exec.TargetPosCm, out directionDeg))
-                    {
-                        return true;
-                    }
-                }
+                return true;
             }
 
-            return false;
+            return TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
+                TryComputeDirection(in sourceOrigin, in preservedTarget, out directionDeg);
+        }
+
+        private static bool TryResolveExecTargetDirection(World world, in EffectContext ctx, out int directionDeg)
+        {
+            directionDeg = 0;
+            if (!world.IsAlive(ctx.Source) || !world.Has<AbilityExecInstance>(ctx.Source))
+            {
+                return false;
+            }
+
+            ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
+            if (exec.HasTargetPos == 0)
+            {
+                return false;
+            }
+
+            if (exec.HasTargetOriginPos != 0 &&
+                TryComputeDirection(in exec.TargetOriginPosCm, in exec.TargetPosCm, out directionDeg))
+            {
+                return true;
+            }
+
+            return TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
+                TryComputeDirection(in sourceOrigin, in exec.TargetPosCm, out directionDeg);
         }
 
         private static bool TryResolveSourceOrigin(World world, in EffectContext ctx, out Fix64Vec2 origin)

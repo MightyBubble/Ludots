@@ -30,6 +30,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private const GraphKindMask LinearAndQuery = LinearAll | GraphKindMask.Query;
 
+        // Named TriggerGraph carve-outs. The class masks stay put: only the op that
+        // an input-event graph must call gets the extra bit.
+        private const GraphKindMask LinearQueryAndTriggerGraph = LinearAndQuery | GraphKindMask.TriggerGraph;
+        private const GraphKindMask LinearAndTriggerGraph = LinearAll | GraphKindMask.TriggerGraph;
+
         private const GraphKindMask LinearAndScript = LinearAll | ScriptAndTriggerGraph;
 
         private const GraphKindMask LinearScriptAndQuery = LinearAndScript | GraphKindMask.Query;
@@ -134,7 +139,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.CompareLtInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.CompareEqInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.HasTag, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.CompareEqEntity, LinearAndQuery, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB);
+            Add(rows, GraphNodeOp.CompareEqEntity, LinearQueryAndTriggerGraph, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
             Add(rows, GraphNodeOp.SelectEntity, LinearAll, GraphValueType.Entity, portConditionAB);
             Add(rows, GraphNodeOp.QueryRadius, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.ImmediateFloat);
             Add(rows, GraphNodeOp.QuerySortStable, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, queryPorts: portList);
@@ -289,7 +294,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.InvokeBuiltin, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadTargetPosX, LinearAndScript, GraphValueType.Int);
             Add(rows, GraphNodeOp.LoadTargetPosY, LinearAndScript, GraphValueType.Int);
-            Add(rows, GraphNodeOp.ClampTargetToRange, LinearAll, GraphValueType.Bool, portAB);
+            Add(rows, GraphNodeOp.ClampTargetToRange, LinearAndTriggerGraph, GraphValueType.Bool, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
             Add(rows, GraphNodeOp.IsPointInCircle, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.SnapToNearestInCollection, LinearAll, GraphValueType.Entity, portSourceValue, flags: GraphOperandRole.BoolScratchFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SnapToNearestGraphEdge, LinearAll, GraphValueType.Bool, portValue);

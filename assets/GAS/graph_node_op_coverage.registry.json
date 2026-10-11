@@ -415,6 +415,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Validation"
       ],
@@ -437,6 +438,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Validation"

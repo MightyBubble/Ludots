@@ -854,6 +854,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 definedBools[outputRegisters[nodeIndex]] = true;
             }
 
+            // validOutput and TargetListGet's found-flag live in the bool scratch, not the
+            // value-output register. The instruction writes that scratch, so a later node may read it.
+            if (boolScratches[nodeIndex] != byte.MaxValue)
+            {
+                definedBools[boolScratches[nodeIndex]] = true;
+            }
+
             if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
             {
                 EmitRelativeJump(

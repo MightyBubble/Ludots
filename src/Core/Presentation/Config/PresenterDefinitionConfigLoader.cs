@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
@@ -2227,6 +2228,11 @@ namespace Ludots.Core.Presentation.Config
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)
         {
             string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
+            if (OrderBlackboardKeyRegistry.TryGetId(keyName, out int orderKeyId))
+            {
+                return orderKeyId;
+            }
+
             int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
             if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
             {

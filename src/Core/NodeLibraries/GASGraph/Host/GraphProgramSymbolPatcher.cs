@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 
@@ -230,6 +231,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.WriteBlackboardFloat:
                     case GraphNodeOp.WriteBlackboardInt:
                     case GraphNodeOp.WriteBlackboardEntity:
+                        ins.Imm = ResolveBlackboardKey(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.LoadConfigFloat:
                     case GraphNodeOp.LoadConfigInt:
                     case GraphNodeOp.LoadConfigEffectId:
@@ -378,6 +381,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return symbols[symbolIndex] ?? string.Empty;
+        }
+
+        private static int ResolveBlackboardKey(string key)
+        {
+            // Order keys (Cast.Facing and the other builtin order slots) live in their own
+            // id space. ConfigKeyRegistry.Register would mint a second id and the effect
+            // facing read would miss the value the graph just wrote.
+            if (OrderBlackboardKeyRegistry.TryGetId(key, out int orderKeyId))
+            {
+                return orderKeyId;
+            }
+
+            return ConfigKeyRegistry.Register(key);
         }
 
         private static int ResolveEntityCollectionKey(EntityCollectionStore? entityCollections, string key)
