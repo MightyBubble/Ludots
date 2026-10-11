@@ -602,6 +602,12 @@ public class CrowdSimulationConfigTests
         var nullEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(nulled));
         Assert.That(nullEx!.Message, Does.Contain("formations.box"));
         Assert.That(nullEx.Message, Does.Contain("为 null"));
+
+        var sectionNull = TestDefaults.DefaultConfigJson();
+        sectionNull["formations"] = null;
+        var sectionEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(sectionNull));
+        Assert.That(sectionEx!.Message, Does.Contain("formations"));
+        Assert.That(sectionEx.Message, Does.Contain("不接受 null"));
     }
 
     [Test]

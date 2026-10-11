@@ -142,8 +142,19 @@ public sealed class CrowdSimulationConfig
         }
 
         string name = segments[index];
-        if (!obj.ContainsKey(name) || obj[name] is null)
+        if (!obj.ContainsKey(name))
         {
+            return;
+        }
+
+        if (obj[name] is null)
+        {
+            if (index == segments.Length - 1)
+            {
+                throw new InvalidOperationException(
+                    $"CrowdSimulationConfig.json: {built}{name} 不接受 null。以 id 为键的对象不接受 null。");
+            }
+
             return;
         }
 
