@@ -36,9 +36,13 @@ public class EnginePipelineIntegrationTests
         try
         {
             File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
-                """{"name":"LudotsSessionStepOrderingProbeMod","version":"1.0.0","priority":0}""");
+                """{"name":"LudotsSessionStepOrderingProbeMod","version":"1.0.0","priority":0,"dependencies":{"CrowdSimulationS1Terrain1337Mod":"^0.1.0"}}""");
+            Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Engine"));
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "Engine", "clock.json"),
+                """{"FixedHz":30}""");
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationDebug.json"), """
 {
+  "worker": { "planTimeoutMs": 5000 },
   "session": {
     "autostart": true,
     "script": [
@@ -54,6 +58,7 @@ public class EnginePipelineIntegrationTests
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
                 probeModRoot,
             }, Path.Combine(repoRoot, "assets"));

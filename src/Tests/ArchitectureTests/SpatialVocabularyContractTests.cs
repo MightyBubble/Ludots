@@ -25,11 +25,11 @@ public sealed class SpatialVocabularyContractTests
         "CostByArea", "AgentTypeIndex", "NavContextId", "MaxVertsPerPoly",
         "NavCellsPerTile", "NavCellsPerSide", "NavCellsPerFogCell", "FogCellsPerSide",
         "MaxRebuildsPerTick", "MaxRefreshesPerTick", "LeaderSpeed", "LeaderTurnRate",
-        "CatchUp", "SettleTime", "ClumpSlack", "Aspect", "MaxSubSteps", "SlotTimeConstant",
+        "CatchUp", "ClumpSlack", "Aspect", "MaxSubSteps", "SimSecondsPerTickSecond", "SimSecondsPerTickSecondRaw",
         "BlendRate", "BlendCommit", "SlotCheckInterval", "SightHysteresis", "StallDecay",
         "UnitTurnRate", "MaxNeighbors", "MaxScan", "SeparationWeight", "Acceleration",
         "RestDeadband", "MaxPush", "Smoothing", "MovingBonus", "DominantShare",
-        "PlayerA", "PlayerB", "MaxUnits", "TimeScaleRaw", "BlockCoverage", "AreaIndex",
+        "PlayerA", "PlayerB", "MaxUnits", "BlockCoverage", "AreaIndex",
         "Priority", "LifetimeSecRaw", "InitialUnits", "CentersPerGroup", "PlayerId", "Ema",
         "IndexByPlayerId", "PlayerCount",
     };
@@ -168,7 +168,7 @@ public sealed class SpatialVocabularyContractTests
         string repoRoot = FindRepoRoot();
         string configPath = Path.Combine(
             repoRoot,
-            "mods/capabilities/navigation/CrowdSimulationMod/assets/CrowdSimulationConfig.json");
+            "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json");
         var root = JsonNode.Parse(File.ReadAllText(configPath))!.AsObject();
         var keys = new List<string>();
         CollectSizeCmPaths(root, "", keys);

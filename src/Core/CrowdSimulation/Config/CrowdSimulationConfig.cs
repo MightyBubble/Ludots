@@ -17,7 +17,6 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// </summary>
 public sealed class CrowdSimulationConfig
 {
-    public required int Version { get; init; }
     public required string MapId { get; init; }
     public required WorldSection World { get; init; }
     public required NavAreaEntry[] NavAreas { get; init; }
@@ -33,7 +32,7 @@ public sealed class CrowdSimulationConfig
     public required PlanningSection Planning { get; init; }
     public required FogSection Fog { get; init; }
     public required FormationSection Formation { get; init; }
-    public required FormationShapeEntry[] Formations { get; init; }
+    public required Dictionary<string, FormationShapeEntry> Formations { get; init; }
     public required MovementSection Movement { get; init; }
     public required AvoidanceSection Avoidance { get; init; }
     public required PushSection Push { get; init; }
@@ -47,7 +46,8 @@ public sealed class CrowdSimulationConfig
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
         ArgumentNullException.ThrowIfNull(configObject);
-        RejectRetiredSpatialKeys(configObject);
+        RejectRetiredKeys(configObject);
+        RejectIdKeyedNulls(configObject);
         try
         {
             return configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
@@ -86,7 +86,7 @@ public sealed class CrowdSimulationConfig
         ("formation.settleRadiusCells", "formation.settleRadiusCm"),
         ("formation.slotArriveCells", "formation.slotArriveCm"),
         ("formation.slotSightCells", "formation.slotSightCm"),
-        ("formations[].spacing", "formations[].spacingDiameterScale"),
+        ("formations[].spacing", "formations.<id>.spacingDiameterScale"),
         ("hpa.clusterSize", "navtile.sizeCm"),
         ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
         ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
@@ -100,13 +100,78 @@ public sealed class CrowdSimulationConfig
         ("spawn.cellInset", "spawn.navCellInsetFraction"),
         ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
         ("structures.portalCells", "structures.portalReachNavCells"),
+        ("formation.settleTime", "formation.settleTimeSec"),
+        ("movement.slotTimeConstant", "movement.slotTimeConstantSec"),
+        ("sim.timeScale", "sim.simSecondsPerTickSecond"),
     ];
 
-    private static void RejectRetiredSpatialKeys(JsonObject root)
+    private static readonly string[] IdKeyedObjects =
+    [
+        "formations",
+        "agents.radiusClasses",
+        "structures.templates",
+    ];
+
+    private static void RejectRetiredKeys(JsonObject root)
     {
+        if (root.ContainsKey("version"))
+        {
+            throw new InvalidOperationException(
+                "CrowdSimulationConfig.json: 已删除 version。配置不再带版本号，由严格 schema 与 mod.json semver 管理。");
+        }
+
         foreach (var (oldPath, newKey) in RetiredSpatialKeys)
         {
             RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
+        }
+    }
+
+    private static void RejectIdKeyedNulls(JsonObject root)
+    {
+        foreach (string path in IdKeyedObjects)
+        {
+            RejectIdKeyedNull(root, path.Split('.'), 0, "");
+        }
+    }
+
+    private static void RejectIdKeyedNull(JsonNode? node, string[] segments, int index, string built)
+    {
+        if (node is not JsonObject obj || index >= segments.Length)
+        {
+            return;
+        }
+
+        string name = segments[index];
+        if (!obj.ContainsKey(name) || obj[name] is null)
+        {
+            return;
+        }
+
+        if (index < segments.Length - 1)
+        {
+            RejectIdKeyedNull(obj[name], segments, index + 1, built + name + ".");
+            return;
+        }
+
+        if (obj[name] is JsonArray)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: {built}{name} 以 id 为键的对象，不再使用数组。");
+        }
+
+        if (obj[name] is not JsonObject table)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: {built}{name} 必须是以 id 为键的对象。");
+        }
+
+        foreach (var (key, value) in table)
+        {
+            if (value is null)
+            {
+                throw new InvalidOperationException(
+                    $"CrowdSimulationConfig.json: {built}{name}.{key} 为 null。以 id 为键的对象不接受 null。");
+            }
         }
     }
 
@@ -127,14 +192,22 @@ public sealed class CrowdSimulationConfig
 
         if (array)
         {
-            if (obj[name] is not JsonArray items)
+            if (obj[name] is JsonArray items)
             {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
+                }
+
                 return;
             }
 
-            for (int i = 0; i < items.Count; i++)
+            if (obj[name] is JsonObject children)
             {
-                RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
+                foreach (var (key, child) in children)
+                {
+                    RejectRetiredSpatialKey(child, segments, index + 1, $"{built}{name}.{key}.", newKey);
+                }
             }
 
             return;
@@ -213,15 +286,14 @@ public sealed class CrowdSimulationConfig
         /// <summary>本会话的体型档案来源(mod URI,如 "CrowdSimulationMod:assets/Navigation/agent_profiles.json")。
         /// 缺失 = 用引擎全局档案注册表(与别的特性共享,半径级会并集——只对明确接受这一点的场景)。</summary>
         public string? ProfilesUri { get; init; }
-        /// <summary>半径级表(参考实现 templates.radiusClasses):半径级厘米 + 该级的推挤优先级份额,
-        /// 与 agentTypes[].pushPriority 合成原型优先级(参考 core/archetypes.js)。</summary>
-        public required RadiusClassEntry[] RadiusClasses { get; init; }
+        /// <summary>半径级表(参考实现 templates.radiusClasses):键是半径厘米，值是该级的推挤优先级份额,
+        /// 与 agentTypes[].pushPriority 合成原型优先级(参考 core/archetypes.js)。键按数值升序消费，不看对象键顺序。</summary>
+        public required Dictionary<string, RadiusClassEntry> RadiusClasses { get; init; }
     }
 
-    /// <summary>半径级(参考实现 templates.radiusClasses 条目):净空与推挤份额的 authored 数据。</summary>
+    /// <summary>半径级(参考实现 templates.radiusClasses 条目):推挤份额。半径厘米是对象键。</summary>
     public sealed class RadiusClassEntry
     {
-        public required int RadiusCm { get; init; }
         public required double PushPriority { get; init; }
     }
 
@@ -283,7 +355,7 @@ public sealed class CrowdSimulationConfig
         public required double FaceTurnScale { get; init; }
         public required double CatchUp { get; init; }
         public required double SlotSightCm { get; init; }
-        public required double SettleTime { get; init; }
+        public required double SettleTimeSec { get; init; }
         public required double LeaderLookAheadCm { get; init; }
         public required double MagicBoxMaxSpreadCm { get; init; }
         public required double MagicBoxPadCm { get; init; }
@@ -300,7 +372,6 @@ public sealed class CrowdSimulationConfig
 
     public sealed class FormationShapeEntry
     {
-        public required string Id { get; init; }
         public required string Label { get; init; }
         public required double SpacingDiameterScale { get; init; }
         public required double Aspect { get; init; }
@@ -311,7 +382,7 @@ public sealed class CrowdSimulationConfig
     {
         public required double MaxStepNavCells { get; init; }
         public required int MaxSubSteps { get; init; }
-        public required double SlotTimeConstant { get; init; }
+        public required double SlotTimeConstantSec { get; init; }
         public required double BlendRate { get; init; }
         public required double BlendCommit { get; init; }
         public required int SlotCheckInterval { get; init; }
@@ -392,7 +463,8 @@ public sealed class CrowdSimulationConfig
     public sealed class SimSection
     {
         public required int MaxUnits { get; init; }
-        public required double TimeScale { get; init; }
+        /// <summary>每个 tick 秒推进的仿真秒数。全局变速走 TimeFlow，不走这个字段。</summary>
+        public required double SimSecondsPerTickSecond { get; init; }
         /// <summary>运动内核按单位/占格下标划分的工人数。1 = 单线程。结果与该数无关。</summary>
         public required int ParallelWorkerCount { get; init; }
     }
@@ -409,15 +481,14 @@ public sealed class CrowdSimulationConfig
     {
         public required double BlockCoverage { get; init; }
         public required int PortalReachNavCells { get; init; }
-        /// <summary>结构实体模板(参考实现 templates.structures):place/remove 指令按 id 引用。</summary>
-        public StructureTemplateEntry[]? Templates { get; init; }
+        /// <summary>结构实体模板(参考实现 templates.structures):键是模板 id，place/remove 按 id 引用。运行时按 id 排序，不看对象键顺序。</summary>
+        public Dictionary<string, StructureTemplateEntry>? Templates { get; init; }
     }
 
     /// <summary>结构实体模板条目(参考 config.js validateConfig 的结构规则):
     /// footprint 必填;blocker 只支持 rect;area 与 priority 同进同出;lifetimeSec &gt; 0。</summary>
     public sealed class StructureTemplateEntry
     {
-        public required string Id { get; init; }
         public string? Name { get; init; }
         public required string Footprint { get; init; }
         public bool Blocker { get; init; }

@@ -41,6 +41,7 @@ public sealed partial class CrowdSimulationRuntime
     private CrowdSimulationConfig? _configDto;
     private JsonObject? _debug;
     private bool _configResolved;
+    private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
     private Entity _sessionEntity;
@@ -175,11 +176,44 @@ public sealed partial class CrowdSimulationRuntime
         var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
         _configDto = CrowdSimulationConfig.Load(merged);
-        _debug = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+        var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport);
+        if (debugMerged == null)
+        {
+            // AllowEmpty：目录登记了调试文件，但没有任何 Mod 提供片段。空 = 不装调试功能，不是缺省参数。
+            if (!debugEntry.AllowEmpty)
+            {
+                throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+            }
+
+            _debug = null;
+            _planTimeout = null;
+            return true;
+        }
+
+        _debug = debugMerged;
+        _planTimeout = ReadPlanTimeout(_debug);
         ParsePresentation(_debug);
         return true;
     }
+
+    private static TimeSpan? ReadPlanTimeout(JsonObject debug)
+    {
+        if (debug["worker"]?["planTimeoutMs"] is not JsonNode node)
+        {
+            return null;
+        }
+
+        if (node is not JsonValue value || !value.TryGetValue<int>(out int ms) || ms <= 0)
+        {
+            throw new InvalidOperationException("CrowdSimulationDebug.json: worker.planTimeoutMs 需为 > 0 的整数毫秒。");
+        }
+
+        return TimeSpan.FromMilliseconds(ms);
+    }
+
+    private TimeSpan RequirePlanTimeout()
+        => _planTimeout ?? throw new InvalidOperationException(
+            "CrowdSimulationDebug.json: 路径服务需要 worker.planTimeoutMs。");
 
     private const string CrowdSimulationConfigPath = "CrowdSimulationConfig.json";
     private const string CrowdSimulationDebugPath = "CrowdSimulationDebug.json";
@@ -322,7 +356,7 @@ public sealed partial class CrowdSimulationRuntime
         // S5 移动:规划器(路径服务,固定生效帧)+ 运动内核 + 静态阻挡盒索引
         // (有结构仓时 Blockers 跟随仓的活 CSR,这里的静态索引不生效)
         _pathService?.Dispose();
-        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, TimeSpan.FromSeconds(5), _session.ResolveNavContext);
+        _pathService = new CrowdSimulation.Nav.Pathing.PathQueryService(navs, runtimeConfig, workerThreads: 1, RequirePlanTimeout(), _session.ResolveNavContext);
         var planner = new CrowdSimulation.Movement.CrowdSimPlanner(_session, _pathService);
         var kernel = CrowdSimulation.Movement.CrowdMovementKernel.Create(_session);
         _session.EnableMovement(kernel, planner);
@@ -437,7 +471,7 @@ public sealed partial class CrowdSimulationRuntime
                 $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick}.");
         }
 
-        if (session.TickCount % 30 == 0)
+        if (session.TickCount % session.Config.FixedHz == 0)
         {
             string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
@@ -503,7 +537,7 @@ public sealed partial class CrowdSimulationRuntime
         if (session.Movement != null)
         {
             using var replayService = new CrowdSimulation.Nav.Pathing.PathQueryService(
-                replay.Navs, session.Config, workerThreads: 1, TimeSpan.FromSeconds(5), replay.ResolveNavContext);
+                replay.Navs, session.Config, workerThreads: 1, RequirePlanTimeout(), replay.ResolveNavContext);
             replay.EnableMovement(
                 CrowdSimulation.Movement.CrowdMovementKernel.Create(replay),
                 new CrowdSimulation.Movement.CrowdSimPlanner(replay, replayService));

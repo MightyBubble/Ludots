@@ -16,7 +16,8 @@ namespace CrowdSimulationMapProbe;
 /// <summary>
 /// S1 地图探针：用真实 Ludots 装载路径（CrowdSimulationConfig 合并、.navsurface 读取、
 /// 地图实体提取、.height 读取）渲染三张种子图的地形类型 / 阻挡格 / 桥梁 / 跳跃候选。
-/// 用法: CrowdSimulationMapProbe &lt;modAssetsDir&gt; &lt;capabilityAssetsDir&gt; &lt;outDir&gt;
+/// 用法: CrowdSimulationMapProbe &lt;seedAssetsDir&gt; &lt;standardAssetsDir&gt; &lt;capabilityAssetsDir&gt; &lt;outDir&gt;
+/// 配置读标准参数 Mod，体型档案读能力 Mod，FixedHz 读种子目录的 Engine/clock.json。
 /// </summary>
 public static class Program
 {
@@ -30,40 +31,40 @@ public static class Program
     {
         if (args.Length >= 1 && args[0] == "--s2")
         {
-            // --s2 <seedAssetsDir> <capabilityAssetsDir> <outDir>
-            return RunS2(args[1], args[2], args[3]);
+            if (args.Length < 5) return Usage();
+            return RunS2(args[1], args[2], args[3], args[4]);
         }
 
         if (args.Length >= 1 && args[0] == "--s3")
         {
-            // --s3 <seedAssetsDir> <capabilityAssetsDir> <outDir>
-            return RunS3(args[1], args[2], args[3]);
+            if (args.Length < 5) return Usage();
+            return RunS3(args[1], args[2], args[3], args[4]);
         }
 
         if (args.Length >= 1 && args[0] == "--s3c")
         {
-            // --s3c <seedAssetsDir> <capabilityAssetsDir> <outDir>
-            return RunS3C(args[1], args[2], args[3]);
+            if (args.Length < 5) return Usage();
+            return RunS3C(args[1], args[2], args[3], args[4]);
         }
 
         if (args.Length >= 1 && args[0] == "--s4probe")
         {
-            // --s4probe <seedAssetsDir> <capabilityAssetsDir> <outDir> — 部署前 8 单位与真值比对
-            return RunS4Probe(args[1], args[2]);
+            if (args.Length < 4) return Usage();
+            return RunS4Probe(args[1], args[2], args[3]);
         }
 
-        if (args.Length < 3)
+        if (args.Length < 4)
         {
-            Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <capabilityAssetsDir> <outDir>");
-            return 2;
+            return Usage();
         }
 
         string seedDir = args[0];
-        string capabilityDir = args[1];
-        string outDir = args[2];
+        string standardDir = args[1];
+        string capabilityDir = args[2];
+        string outDir = args[3];
         Directory.CreateDirectory(outDir);
 
-        var bundle = Load(seedDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, capabilityDir);
         RenderTypes(bundle.Surface, bundle.Height, Path.Combine(outDir, $"{bundle.MapId}_types.png"));
         RenderBlocked(bundle.Surface, bundle.Height, bundle.Grid, Path.Combine(outDir, $"{bundle.MapId}_blocked.png"));
         RenderFull(bundle.Surface, bundle.Height, bundle.Grid, bundle.MapSurface, bundle.Runtime, Path.Combine(outDir, $"{bundle.MapId}_full.png"));
@@ -72,11 +73,19 @@ public static class Program
         return 0;
     }
 
+    private static int Usage()
+    {
+        Console.Error.WriteLine("usage: CrowdSimulationMapProbe <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s2|--s3|--s3c <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir> <outDir>");
+        Console.Error.WriteLine("       CrowdSimulationMapProbe --s4probe <seedAssetsDir> <standardAssetsDir> <capabilityAssetsDir>");
+        return 2;
+    }
+
     /// <summary>S2:逐代理体型的可走区域视图(不可走 = 红色遮罩;桥 portal 高亮;跳跃链接叠画)。</summary>
-    private static int RunS2(string seedDir, string capabilityDir, string outDir)
+    private static int RunS2(string seedDir, string standardDir, string capabilityDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, capabilityDir);
         var heights = NavHeightField.FromHeightmap(bundle.Height, bundle.Runtime.NavCellsPerSide, bundle.Runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, bundle.Runtime);
 
@@ -139,10 +148,10 @@ public static class Program
     }
 
     /// <summary>S3:NavMesh 多边形网格视图(地面 tile 白色描边,桥面 tile 棕色)。</summary>
-    private static int RunS3(string seedDir, string capabilityDir, string outDir)
+    private static int RunS3(string seedDir, string standardDir, string capabilityDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
         var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -209,10 +218,10 @@ public static class Program
     }
 
     /// <summary>S3-c:两点路径 + 方向图视图(前 6 组对子的流场箭头与折线;另含跳跃层 2 组)。</summary>
-    private static int RunS3C(string seedDir, string capabilityDir, string outDir)
+    private static int RunS3C(string seedDir, string standardDir, string capabilityDir, string outDir)
     {
         Directory.CreateDirectory(outDir);
-        var bundle = Load(seedDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
         var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -314,9 +323,9 @@ public static class Program
     }
 
     /// <summary>S4 部署探针:跑 spawn 12000,前 8 个单位与 s4-units.bin 逐字段比对。</summary>
-    private static int RunS4Probe(string seedDir, string capabilityDir)
+    private static int RunS4Probe(string seedDir, string standardDir, string capabilityDir)
     {
-        var bundle = Load(seedDir, capabilityDir);
+        var bundle = Load(seedDir, standardDir, capabilityDir);
         var runtime = bundle.Runtime;
         var heights = NavHeightField.FromHeightmap(bundle.Height, runtime.NavCellsPerSide, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(bundle.MapSurface.Bridges, runtime);
@@ -476,12 +485,30 @@ public static class Program
         };
     }
 
-    private static SeedBundle Load(string seedDir, string capabilityDir)
+    private static int ReadSeedFixedHz(string seedDir)
+    {
+        string path = Path.Combine(seedDir, "Engine", "clock.json");
+        if (!File.Exists(path))
+        {
+            throw new InvalidOperationException($"探针需要种子目录的 Engine/clock.json 提供 FixedHz（{path}）。");
+        }
+
+        var clock = JsonNode.Parse(File.ReadAllText(path)) as JsonObject
+            ?? throw new InvalidOperationException($"Engine/clock.json 根必须是对象（{path}）。");
+        if (clock["FixedHz"] is not JsonValue hz || !hz.TryGetValue<int>(out int fixedHz) || fixedHz < 1)
+        {
+            throw new InvalidOperationException($"Engine/clock.json: FixedHz 需为 ≥ 1 的整数（{path}）。");
+        }
+
+        return fixedHz;
+    }
+
+    private static SeedBundle Load(string seedDir, string standardDir, string capabilityDir)
     {
         string mapId = Directory.GetFiles(Path.Combine(seedDir, "Maps"), "*.json").Single()
             .Let(p => Path.GetFileNameWithoutExtension(p));
 
-        var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(capabilityDir, "CrowdSimulationConfig.json")))!;
+        var merged = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(standardDir, "CrowdSimulationConfig.json")))!;
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(seedDir, "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         var config = CrowdSimulationConfig.Load(merged);
@@ -497,7 +524,7 @@ public static class Program
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             File.ReadAllText(Path.Combine(capabilityDir, "Navigation", "agent_profiles.json")),
             StrictJsonOptions.CreateCamelCase())!;
-        var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), fixedHz: 30);
+        var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), ReadSeedFixedHz(seedDir));
 
         var surface = NavSurfaceAsset.Read(File.OpenRead(Path.Combine(seedDir, "terrain", $"{mapId}.navsurface")));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);

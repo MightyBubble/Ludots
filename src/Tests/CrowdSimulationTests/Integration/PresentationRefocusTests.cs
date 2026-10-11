@@ -19,13 +19,23 @@ public class PresentationRefocusTests
     public void PathPresentation_Refocus_DoesNotStackProjectorsOrSystems()
     {
         string repoRoot = FindRepoRoot();
+        string clockModRoot = Path.Combine(Path.GetTempPath(), "Ludots_RefocusClockMod_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(clockModRoot, "assets", "Engine"));
+        try
+        {
+        File.WriteAllText(Path.Combine(clockModRoot, "mod.json"),
+            """{"name":"LudotsRefocusClockMod","version":"1.0.0","priority":0,"dependencies":{"CrowdSimulationS3PathMod":"^0.1.0"}}""");
+        File.WriteAllText(Path.Combine(clockModRoot, "assets", "Engine", "clock.json"),
+            """{"FixedHz":30}""");
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(new List<string>
         {
             Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
+            Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS3PathMod"),
+            clockModRoot,
         }, Path.Combine(repoRoot, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController());
@@ -53,6 +63,11 @@ public class PresentationRefocusTests
         engine.LoadMap("crowd_simulation_s1337");
         AssertInstalledOnce(engine, registry, slot);
         Assert.That(slot.Current, Is.Not.Null);
+        }
+        finally
+        {
+            if (Directory.Exists(clockModRoot)) Directory.Delete(clockModRoot, recursive: true);
+        }
     }
 
     private static void AssertInstalledOnce(

@@ -1,4 +1,5 @@
 {
+  "fixedHz": 30,
   "mapId": "crowd_simulation_s2024",
   "seed": 2024,
   "navTileEntries": 700,

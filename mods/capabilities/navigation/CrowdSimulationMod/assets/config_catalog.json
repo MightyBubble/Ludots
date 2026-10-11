@@ -5,7 +5,8 @@
   },
   {
     "Path": "CrowdSimulationDebug.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "AllowEmpty": true
   },
   {
     "Path": "Entities/templates.json",

@@ -1,4 +1,7 @@
 {
+  "worker": {
+    "planTimeoutMs": 5000
+  },
   "session": {
     "autostart": false
   },

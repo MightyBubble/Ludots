@@ -57,7 +57,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     private readonly object _inputGate = new();
     private readonly Queue<Action> _inputQueue = new();
 
-    public static S3PathDemoRuntime Load(GameEngine engine, CrowdSimulationConfig configDto, MapConfig map, string truthAsset)
+    public static S3PathDemoRuntime Load(GameEngine engine, CrowdSimulationConfig configDto, MapConfig map, string truthAsset, TimeSpan planTimeout)
     {
         var profileUri = configDto.Agents.ProfilesUri;
         if (string.IsNullOrWhiteSpace(profileUri))
@@ -68,7 +68,8 @@ public sealed class S3PathDemoRuntime : IDisposable
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
             CrowdSimulationRuntime.OpenUri(engine, profileUri), StrictJsonOptions.CreateCamelCase())
             ?? throw new InvalidOperationException($"体型档案反序列化为空: {profileUri}");
-        var runtime = CrowdSimulationConfigLoader.Load(configDto, map, new AgentProfileRegistry(profileList), fixedHz: 30);
+        int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
+        var runtime = CrowdSimulationConfigLoader.Load(configDto, map, new AgentProfileRegistry(profileList), fixedHz);
         var templatesById = engine.MapLoader.TemplateRegistry.GetAll()
             .Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
@@ -115,7 +116,7 @@ public sealed class S3PathDemoRuntime : IDisposable
             Config = runtime,
             Contexts = contexts,
             ContextLabels = labels,
-            Service = new PathQueryService(navs, runtime, workerThreads: 1, TimeSpan.FromSeconds(5)),
+            Service = new PathQueryService(navs, runtime, workerThreads: 1, planTimeout),
             StartCell = firstPair[0]!.GetValue<int>(),
             GoalCell = firstPair[1]!.GetValue<int>(),
             _pathDirty = true,
@@ -145,7 +146,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         });
     }
 
-    /// <summary>仿真 tick(固定 30 Hz)。</summary>
+    /// <summary>仿真 tick。步频跟引擎 FixedHz，不在这里写死。</summary>
     public void Tick()
     {
         if (!Active) return;

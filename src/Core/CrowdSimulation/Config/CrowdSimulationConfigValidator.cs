@@ -49,7 +49,7 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.restSeparationScale", config.Movement.RestSeparationScale, min: 0);
         // 墙面测试假设单个子步位移小于一格
         Rule("movement.maxStepNavCells", config.Movement.MaxStepNavCells, gt: 0, lt: 1);
-        Rule("movement.slotTimeConstant", config.Movement.SlotTimeConstant, gt: 0);
+        Rule("movement.slotTimeConstantSec", config.Movement.SlotTimeConstantSec, gt: 0);
         Rule("movement.unitTurnRate", config.Movement.UnitTurnRate, gt: 0);
         Rule("movement.jumpSpeedRatio", config.Movement.JumpSpeedRatio, gt: 0);
         Rule("movement.blendRate", config.Movement.BlendRate, gt: 0);
@@ -96,19 +96,21 @@ public static class CrowdSimulationConfigValidator
         }
 
         var radiusSeen = new HashSet<int>();
-        foreach (var rc in config.Agents.RadiusClasses)
+        foreach (var (key, rc) in config.Agents.RadiusClasses)
         {
-            if (rc.RadiusCm <= 0)
+            if (!int.TryParse(key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int radiusCm)
+                || radiusCm <= 0
+                || !string.Equals(key, radiusCm.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal))
             {
-                throw Invalid("agents.radiusClasses.radiusCm", "需为 > 0 的整数");
+                throw Invalid("agents.radiusClasses", $"键 \"{key}\" 必须是半径厘米的十进制整数");
             }
 
-            if (!radiusSeen.Add(rc.RadiusCm))
+            if (!radiusSeen.Add(radiusCm))
             {
-                throw Invalid("agents.radiusClasses", $"半径 {rc.RadiusCm} 重复");
+                throw Invalid("agents.radiusClasses", $"半径 {radiusCm} 重复");
             }
 
-            Rule($"agents.radiusClasses[{rc.RadiusCm}].pushPriority", rc.PushPriority, min: 0);
+            Rule($"agents.radiusClasses.{radiusCm}.pushPriority", rc.PushPriority, min: 0);
         }
         Rule("avoidance.rateHz", config.Avoidance.RateHz, gt: 0);
         Rule("avoidance.acceleration", config.Avoidance.Acceleration, gt: 0);
@@ -124,7 +126,7 @@ public static class CrowdSimulationConfigValidator
         Rule("formation.magicBoxMaxSpreadCm", config.Formation.MagicBoxMaxSpreadCm, gt: 0);
         Rule("formation.clumpSlack", config.Formation.ClumpSlack, gt: 0);
         Rule("formation.minClumpCm", config.Formation.MinClumpCm, gt: 0);
-        Rule("formation.settleTime", config.Formation.SettleTime, min: 0);
+        Rule("formation.settleTimeSec", config.Formation.SettleTimeSec, min: 0);
         Rule("formation.magicBoxPadCm", config.Formation.MagicBoxPadCm, min: 0);
         Rule("formation.leaderSpeed", config.Formation.LeaderSpeed, gt: 0);
         Rule("formation.leaderTurnRate", config.Formation.LeaderTurnRate, gt: 0);
@@ -135,7 +137,7 @@ public static class CrowdSimulationConfigValidator
         Rule("formation.leaderLookAheadCm", config.Formation.LeaderLookAheadCm, gt: 0);
         Rule("formation.headingInheritDot", config.Formation.HeadingInheritDot, min: 0, max: 1);
         Rule("formation.mirrorFlipDot", config.Formation.MirrorFlipDot, min: -1, max: 0);
-        Rule("fog.rateHz", config.Fog.RateHz, gt: 0, max: 30);
+        Rule("fog.rateHz", config.Fog.RateHz, gt: 0);
         Rule("fog.cellSizeCm", config.Fog.CellSizeCm, intRequired: true, min: CrowdSimulationConfigLoader.MinFogCellSizeCm);
         Rule("fog.visionCm", config.Fog.VisionCm, gt: 0);
         Rule("fog.revealTicks", config.Fog.RevealTicks, intRequired: true, min: 1);
@@ -144,7 +146,7 @@ public static class CrowdSimulationConfigValidator
         Rule("fog.eyeCm", config.Fog.EyeCm, intRequired: true, min: 0);
         Rule("sim.maxUnits", config.Sim.MaxUnits, intRequired: true, min: 1, max: 200000);
         Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxParallelWorkers);
-        Rule("sim.timeScale", config.Sim.TimeScale, gt: 0);
+        Rule("sim.simSecondsPerTickSecond", config.Sim.SimSecondsPerTickSecond, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
         Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
         ValidateStructureTemplates(config);
@@ -264,22 +266,26 @@ public static class CrowdSimulationConfigValidator
             throw Invalid("avoidance.maxScan", "不能小于 avoidance.maxNeighbors");
         }
 
-        if (config.Formations.Length == 0)
+        if (config.Formations.Count == 0)
         {
             throw Invalid("formations", "不能为空");
         }
 
-        for (int i = 0; i < config.Formations.Length; i++)
+        foreach (var (id, f) in config.Formations)
         {
-            var f = config.Formations[i];
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw Invalid("formations", "id 需为非空字符串");
+            }
+
             if (!IsFinite(f.SpacingDiameterScale) || f.SpacingDiameterScale <= 0)
             {
-                throw Invalid($"formations[{i}].spacingDiameterScale", "需为 > 0 的数值");
+                throw Invalid($"formations.{id}.spacingDiameterScale", "需为 > 0 的数值");
             }
 
             if (!IsFinite(f.Aspect) || f.Aspect <= 0)
             {
-                throw Invalid($"formations[{i}].aspect", "需为 > 0 的数值");
+                throw Invalid($"formations.{id}.aspect", "需为 > 0 的数值");
             }
         }
 
@@ -307,15 +313,13 @@ public static class CrowdSimulationConfigValidator
         if (templates == null) return;
         var areaIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var area in config.NavAreas) areaIds.Add(area.Id);
-        var ids = new HashSet<string>(StringComparer.Ordinal);
         var footprints = new HashSet<string> { "rect", "disc", "path" };
-        for (int i = 0; i < templates.Length; i++)
+        foreach (var (id, t) in templates)
         {
-            var t = templates[i];
-            string path = $"structures.templates[{i}]";
-            if (string.IsNullOrWhiteSpace(t.Id) || !ids.Add(t.Id))
+            string path = $"structures.templates.{id}";
+            if (string.IsNullOrWhiteSpace(id))
             {
-                throw Invalid($"{path}.id", "需为非空且唯一的字符串");
+                throw Invalid(path, "id 需为非空字符串");
             }
 
             if (!footprints.Contains(t.Footprint))

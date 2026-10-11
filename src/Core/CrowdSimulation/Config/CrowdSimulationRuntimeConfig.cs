@@ -10,7 +10,6 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// </summary>
 public sealed class CrowdSimulationRuntimeConfig
 {
-    public required int Version { get; init; }
     public required string MapId { get; init; }
     public required int FixedHz { get; init; }
 
@@ -175,7 +174,7 @@ public sealed class RuntimeFormationSection
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 CatchUp { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
-    public required Fix64 SettleTime { get; init; }
+    public required Fix64 SettleTimeSec { get; init; }
     public required Fix64 LeaderLookAheadNavCells { get; init; }
     public required Fix64 MagicBoxMaxSpreadCm { get; init; }
     public required Fix64 MagicBoxPadCm { get; init; }
@@ -201,7 +200,7 @@ public sealed class RuntimeMovementSection
 {
     public required Fix64 MaxStepNavCells { get; init; }
     public required int MaxSubSteps { get; init; }
-    public required Fix64 SlotTimeConstant { get; init; }
+    public required Fix64 SlotTimeConstantSec { get; init; }
     public required Fix64 BlendRate { get; init; }
     public required Fix64 BlendCommit { get; init; }
     public required int SlotCheckInterval { get; init; }
@@ -259,9 +258,9 @@ public sealed class RuntimeRelations
 public sealed class RuntimeSimSection
 {
     public required int MaxUnits { get; init; }
-    public required Fix64 TimeScale { get; init; }
-    /// <summary>timeScale 的配置原始值(到期 tick 等整数契约按参考端 f64 公式换算,不走 Fix64)。</summary>
-    public required double TimeScaleRaw { get; init; }
+    public required Fix64 SimSecondsPerTickSecond { get; init; }
+    /// <summary>simSecondsPerTickSecond 的配置原始值。到期 tick 用有理数 ceil,不走 Fix64。</summary>
+    public required double SimSecondsPerTickSecondRaw { get; init; }
     /// <summary>运动内核工人数(1 = 单线程)。步进时读取,调用方改它必须仍落在配置校验范围内。</summary>
     public required int ParallelWorkerCount { get; set; }
 }
@@ -295,7 +294,7 @@ public sealed class RuntimeStructureTemplate
     public required int Priority { get; init; }
     /// <summary>寿命(仿真秒);null = 永久。到期 tick 换算用参考端原始 double 公式(整数 tick 不容骑线)。</summary>
     public required Fix64? LifetimeSec { get; init; }
-    /// <summary>寿命的配置原始值(到期 tick = placeTick + ceil(lifetime / (timeScale/fixedHz)),与参考端同式同值)。</summary>
+    /// <summary>寿命的配置原始值。到期 tick = placeTick + ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)。</summary>
     public double? LifetimeSecRaw { get; init; }
     public required bool Layered { get; init; }
 }

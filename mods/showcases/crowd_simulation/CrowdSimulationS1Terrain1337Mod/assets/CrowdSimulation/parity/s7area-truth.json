@@ -1,4 +1,5 @@
 {
+  "fixedHz": 30,
   "mapId": "crowd_simulation_s1337",
   "seed": 1337,
   "note": "L51 面积格化对拍:格单位归一树(厘米输入,守卫 ±46340 m),双端同棵求值树逐格硬门。rect1km 与 s7fog 的 reveal 同参,是 rect 路径的回归钉;circle/poly 为旧厘米域树 r·r 溢出界(~463 m)之外的首批两端证据。",

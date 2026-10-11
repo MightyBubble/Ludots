@@ -1,0 +1,15 @@
+{
+  "name": "CrowdSimulationStandardMod",
+  "version": "1.0.0",
+  "description": "群体模拟标准参数。纯数据，数值与对拍用的是同一份。地图事实（mapId、地表资产、出生点、某张图才有的结构模板）写在各地图 Mod。不写 Engine/clock.json。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "navigation",
+    "crowd-simulation",
+    "parameters"
+  ]
+}

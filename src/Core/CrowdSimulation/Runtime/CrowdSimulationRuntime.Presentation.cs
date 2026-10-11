@@ -120,7 +120,7 @@ public sealed partial class CrowdSimulationRuntime
             CycleView = path.Actions.CycleView,
         };
         var (routes, slot) = RequireVisualServices(engine);
-        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, path.TruthAsset);
+        var demo = S3PathDemoRuntime.Load(engine, _configDto!, mapConfig, path.TruthAsset, RequirePlanTimeout());
         demo.UseViewLabels(presentation.ViewLabels);
         var flow = new CrowdFlowFieldVisualSource
         {
