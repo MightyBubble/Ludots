@@ -38,6 +38,11 @@ namespace Ludots.Core.Scripting
         public const string Action = "MapTrigger.Action";                        // string
         public const string PointerScreenX = "MapTrigger.PointerScreenX";        // float (window px)
         public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
+        // Value-change dispatches (Axis2D firesOn change, and PointerMoved) stamp the
+        // watched vector here. PointerMoved's watched vector is the pointer, so these
+        // match PointerScreenX/Y. Button dispatches omit them.
+        public const string ActionValueX = "MapTrigger.ActionValueX";            // float
+        public const string ActionValueY = "MapTrigger.ActionValueY";            // float
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
         public const string CalendarId = "Calendar.CalendarId";                  // int (ConfigKey id)

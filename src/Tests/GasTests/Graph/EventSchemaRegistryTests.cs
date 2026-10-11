@@ -69,13 +69,25 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(registry.TryGet(GameEvents.InputAction.Value, out EventSchema input), Is.True);
             Assert.That(input.Params.Select(p => p.Name).ToArray(),
-                Is.EqualTo(new[] { "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers" }));
+                Is.EqualTo(new[]
+                {
+                    "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers",
+                    "actionValueX", "actionValueY",
+                }));
             EventParamSchema pointerX = input.Params.Single(p => p.Name == "pointerScreenX");
             EventParamSchema pointerY = input.Params.Single(p => p.Name == "pointerScreenY");
             Assert.That(pointerX.Optional, Is.False, "pointerScreenX is a required fact of every InputAction payload.");
             Assert.That(pointerY.Optional, Is.False, "pointerScreenY is a required fact of every InputAction payload.");
             Assert.That(pointerX.Type, Is.EqualTo(EventParamType.Float));
             Assert.That(pointerY.Type, Is.EqualTo(EventParamType.Float));
+            EventParamSchema actionValueX = input.Params.Single(p => p.Name == "actionValueX");
+            EventParamSchema actionValueY = input.Params.Single(p => p.Name == "actionValueY");
+            Assert.That(actionValueX.Optional, Is.True);
+            Assert.That(actionValueY.Optional, Is.True);
+            Assert.That(actionValueX.Type, Is.EqualTo(EventParamType.Float));
+            Assert.That(actionValueY.Type, Is.EqualTo(EventParamType.Float));
+            Assert.That(actionValueX.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueX));
+            Assert.That(actionValueY.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueY));
         }
 
         [Test]
