@@ -190,6 +190,7 @@ const mapJson = {
 writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));
 
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
+// 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
 const cmPart = (num, den) => Math.round(worldCm * num / den);
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
   mapId,

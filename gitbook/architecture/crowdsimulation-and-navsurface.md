@@ -114,7 +114,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
 
 参数、地图事实、时钟分三处写。
 
-`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、关系、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
+`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
 
 `CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。`agents.profilesUri` 仍指向这份档案。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
@@ -131,6 +131,42 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
 - 玩法时长带 `Sec`：`formation.settleTimeSec`、`movement.slotTimeConstantSec`、结构模板的 `lifetimeSec`。调度延迟和每 tick 预算仍用 `Ticks` / `PerTick`，例如 `planning.latencyTicks`、`fog.revealTicks`、`flowfield.maxRebuildsPerTick`。寿命到期 tick 是 `ceil(lifetimeSec × FixedHz / simSecondsPerTickSecond)`。
 - 速率同样带单位后缀。`movement.blendRatePerSec`、`movement.stallDecayPerSec`、`formation.leaderTurnRatePerSec`、`avoidance.accelerationPerSec` 是 1/仿真秒。`movement.unitTurnRateRadPerSec` 是弧度/仿真秒。`movement.slotCheckIntervalSubSteps` 是子步间隔。旧键出现即失败。
 
+### 关系功能位
+
+群体模拟只认两个功能位，写在 `pairRules`。每个功能位点名一个关系类型 id。这个 id 由标准参数 Mod 填，群体模拟不解释它。
+
+| 功能位 | 方向 | 有这条边 | 没有这条边 |
+|---|---|---|---|
+| `yieldsTo` | a → b，a 的单位碰到 b 的单位 | 按推挤优先级让路。有效优先级是兵种推挤优先级，移动中再加 `push.movingBonus`。相等对半；低的一方让出 `1 - push.dominantShare`；高的一方只让 `push.dominantShare` | 静止的一方不被推开。自己在动、对方静止时全让。双方同状态对半 |
+| `sharesVisionWith` | a → b | 这一方向共享视野 | 这一方向不共享视野 |
+
+`sharesVisionWith` 要两个方向都有才并进同一视野组，并且传递：a 与 b 共享、b 与 c 共享，a 与 c 也在同一组。只写一个方向不合组。
+
+标准参数 Mod 两个功能位都点名 `Friendly`：
+
+```json
+"pairRules": {
+  "yieldsTo": { "relation": "Friendly" },
+  "sharesVisionWith": { "relation": "Friendly" }
+}
+```
+
+`push.movingBonus` 和 `push.dominantShare` 留在标准参数 Mod，只在让路那一支生效。旧的 `relations`（kinds / self / sameTeam / default / overrides）和 `push.modes` 已删除，再写会在加载时报错，并指出改用 `pairRules`。
+
+地图上的边写在队伍代表实体的 `Relations` 里。边有方向。同队要让路、要共享视野，就在队伍代表上写一条 `To` 指向自己的 `Friendly`：
+
+```json
+{ "InstanceId": "team-red", "Template": "logical.team",
+  "Relations": [
+    { "To": "team-red", "Type": "Friendly" },
+    { "To": "team-blue", "Type": "Hostile" }
+  ] }
+```
+
+没有边就是不让路、不共享视野。群体模拟不把同一个玩家单独算成让路或共享。`deploy.bases` 点名的玩家会在批量部署里得到群体单位，这些玩家的 `TeamId` 必须大于 0，否则进图、会话激活时报错。关系类型 id 没有在 `RelationshipTypeRegistry` 里登记，同样报错。
+
+关系只在会话开始投影一次。投影用 `TeamRelationQuery` 查玩家所属队伍的代表，结果是一张玩家对矩阵。避让和视野组之后只查这张表。会话期间如果关系修订号变了，`CrowdSimulationSessionTickSystem` 调用的 `CrowdSimulationRuntime.Tick` 会在本 tick 的指令和运动之前重算一遍。矩阵和开局不同就报错，相同则不报错，并把修订号记成新的基准。修订号没变时这一步直接返回，不分配。
+
 调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，会话不自动激活。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。要开路径服务，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
@@ -145,7 +181,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S1 交付：地形与障碍物（本次）
 
-- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景（AU-07 / AU-08）按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍 / 敌对关系 / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
+- **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景（AU-07 / AU-08）按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
 - **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换（config 按 mapId 绑定地图，多地图共用一份配置的问题见缺口）。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
@@ -220,7 +256,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S5-b 交付：最小避让（本次）
 
-- **移植**（`Movement/CrowdAvoidance.cs`,对照 `avoidance.js computeSeparation` 全 13 条语义）：哈希序聚集(腾空 JUMP 半径记 0)、逐格唤醒标记与静态岛跳过、只同层相碰（LY-6）、同组双动对称对半、关系矩阵推挤模式（priority:低者让 1−dominantShare / 相等对半 / rigid:休息单位对移动单位不可动）、双预算（maxNeighbors 数重叠对,maxScan 数所有读到的候选,D07）、查询范围 = 单位自己的哈希环、格剔除（边格永不剔）、完全堆叠对的确定性伪随机反对称轴（下标对派生,绝不同向）、接触边界连续的分离式、calm 休眠、maxPush 截断 + 时间平滑、stride 行错峰降频。关系矩阵（`core/relations.js buildRelations` 移植,进 `CrowdSimulationConfigLoader`）：overrides > 同玩家 > 同队 > default 逐对解析成 P×P 推挤模式表;config 新增 `relations` 节（kinds ≤ 256 即 D36、push 枚举、self/sameTeam/default 闭包、overrides 玩家闭包）与 `agents.radiusClasses`（半径级推挤份额,原型优先级 = agentTypes[].pushPriority + 份额——此前误用 profiles 的 mass,首次真消费时按参考语义纠正）。
+- **移植**（`Movement/CrowdAvoidance.cs`,对照 `avoidance.js computeSeparation` 全 13 条语义）：哈希序聚集(腾空 JUMP 半径记 0)、逐格唤醒标记与静态岛跳过、只同层相碰（LY-6）、同组双动对称对半、功能位推挤（Yield:低者让 1−dominantShare / 相等对半 / Hold:休息单位对移动单位不可动）、双预算（maxNeighbors 数重叠对,maxScan 数所有读到的候选,D07）、查询范围 = 单位自己的哈希环、格剔除（边格永不剔）、完全堆叠对的确定性伪随机反对称轴（下标对派生,绝不同向）、接触边界连续的分离式、calm 休眠、maxPush 截断 + 时间平滑、stride 行错峰降频。玩家对矩阵现在由会话开始时的 `pairRules` 投影写入，装载函数只接收这张表；作者配置见上面的「关系功能位」。`agents.radiusClasses` 仍是半径级推挤份额,原型优先级 = agentTypes[].pushPriority + 份额。
 - **内核接线**：子步序与参考 `tick()` 一致（哈希重建 → 分离求解 + 相位前移 → 领队 → 意图 → 马达）;stride 按参考 setRates 推导（30 Hz × 1 子步 ÷ avoidHz 15 = 2,行错峰）;马达接 sepW 权重并恢复 rest∧calm∧全零 的休眠跳过;意图层补 ARRIVED∧calm∧零速 直接休眠门;spawn 清推挤与 calm（D54）。`pushPriority` 下沉为模板组件字段（与速度/半径同层,模板缺省按配置补全）。
 - **屏蔽开关摘除**：两端 `__S5_NO_AVOIDANCE__` 同步删除（导出器与沙盒引擎）,避让成为内核固有行为,会话与内核不留开关位。
 - **L02 校验码重钉**：运动字段（vx/vy/slotX/slotY/blend/stall）从"每字段混一个零词"改为按原始 int64 低 32 → 高 32 两词混入——导出端 canonChecksum（mixI64）与 `CrowdSimChecksum` 同步;部署会话无运动栈,两词恒零,真值变化来自混法本身。S4 真值三种子重导,150 帧逐字全等。
@@ -230,7 +266,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ### S5-b 整改(对抗审计 L11/L12/L13/L14)
 
-- **L11 推挤矩阵下标**：聚集缓冲改存玩家**表序下标**(`RuntimeRelations.IndexByPlayerId` 随运行时配置进求解器)——Players 不按 1..P 顺排时查表仍对齐,PlayerId 超 255 不再被 byte 截断;乱序/跳号玩家([3,1,2,4] + overrides)的矩阵对齐有测试钉住。
+- **L11 推挤矩阵下标**：聚集缓冲改存玩家**表序下标**(`CrowdPairRules.IndexByPlayerId` 随运行时配置进求解器)——Players 不按 1..P 顺排时查表仍对齐,PlayerId 超 255 不再被 byte 截断。玩家号仍须是 1..P 的排列。玩家对级 overrides 已删除，装载不再按队伍号生成矩阵。
 - **L13 哈希几何精确化**：格边长与触及距离改定点精确值传入(此前经 int 截断;参考端是浮点 inv=1/cellSize),格归属的向零截断、环数 ceil 语义与参考逐字对齐。默认配置下格距 4800 cm 本就整除,修复对演示场景是潜在正确性(非整除配置才触发),不改变现测轨迹。
 - **L12 定带证据与定位结论（L21 记档修订）**：首个分歧点:tick 11、单位 163、马达静止停车分支——n2 = 1.8916(C#)/1.8904(参考) 对 slow2 = 1.8906,差 5e-4,两侧输入(sep/pos/速度)一致到 1e-6;骑线翻转停车分支,离散事件再放大成位置尾差(与 L13 不同源:L13 是潜在正确性修复,未改变现测轨迹)。输入差来源定性为**参考端 f32 状态存储**(位置量化格 2^-10m;生成位置全精度,首次马达步即落格)。去量化实验(f64 化参考端 units 位置存储与避让聚集/输出缓冲,临时实验已还原)后首个离散分歧不消失——当时据此判"尾差不是 f32 量化噪声单独所致";L21 修订:该实验未覆盖全部 f32 路径(restX/Y、slot、blend、stall、jump*、motor.js 的显式 fround),不收敛不构成反证,此判撤回;Fix64 每运算舍入约 2^-32 cm,比观测差小约 10 个数量级,排除为主因。带值维持 500/100,不允许再放宽;结论与 2026-10-09 甲方裁决(行为对拍口径)不变。
 - **L12-④ 接触计数硬门**：真值 bin 每单位追加 u16 接触计数(每 tick 清零、求解行累加、跳过行保持 0,两端同构逐位可比;体积 +289 KB)。实测 600 tick × 241 单位不一致 10/144234 样本(0.007%,全部 ±1 骑线翻转),硬门取双容忍线:不一致样本 ≤ 0.05% 且单样本幅度 ≤ ±1——系统性求解分歧(接触集大面积错)会同时击穿两条。
@@ -290,7 +326,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 
 ## S7-b 交付：迷雾 / 视野组 / 认知变体内核(F02,本次)
 
-- **视野组与迷雾状态机**(`Fog/CrowdFog.cs`,对照 `fog/fog.js` 逐 op):shareVision 关系双向成立的玩家并成组(union-find,根取小索引);粗格（`FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell)`，s1337 上每边 64、`fog.cellSizeCm` = 25000）上 visible 按 fog.rateHz 重建(组 round-robin 摊周期、单位只在本组槽位 tick 盖章,D37 双向夹紧)、explored 粘滞;belief = 实体 id → 末次所见快照(初始地图实体全员已知、见即知、拆除留残影直到地面再见);key = 认知实体集的交换 XOR 哈希(CrowdFog.Mix,JS Math.imul = C# unchecked 同位);BV-6 计数器(entRev/rev/truthRev)做精确变更检测,哈希碰撞藏不住变更。D50 面命令 reveal / obscure / forget / fogShare(并组,拆组不支持同参考端)+ fogSight(LOS 开关);order 的 fogTerrain 选项切乐观迷雾(未探索 tile 按可通行假设)。形状解析与格化(`CrowdFogArea`,area.js 移植):rect 保守覆盖 / circle·poly 格心在内,锚点兜底,双精度同 IEEE 序列。
+- **视野组与迷雾状态机**(`Fog/CrowdFog.cs`,对照 `fog/fog.js` 逐 op):`sharesVisionWith` 双向成立的玩家并成组(union-find,根取小索引,合组传递);粗格（`FogCellsPerSide = ceil(NavCellsPerSide / NavCellsPerFogCell)`，s1337 上每边 64、`fog.cellSizeCm` = 25000）上 visible 按 fog.rateHz 重建(组 round-robin 摊周期、单位只在本组槽位 tick 盖章,D37 双向夹紧)、explored 粘滞;belief = 实体 id → 末次所见快照(初始地图实体全员已知、见即知、拆除留残影直到地面再见);key = 认知实体集的交换 XOR 哈希(CrowdFog.Mix,JS Math.imul = C# unchecked 同位);BV-6 计数器(entRev/rev/truthRev)做精确变更检测,哈希碰撞藏不住变更。D50 面命令 reveal / obscure / forget / fogShare(并组,拆组不支持同参考端)+ fogSight(LOS 开关);order 的 fogTerrain 选项切乐观迷雾(未探索 tile 按可通行假设)。形状解析与格化(`CrowdFogArea`,area.js 移植):rect 保守覆盖 / circle·poly 格心在内,锚点兜底,双精度同 IEEE 序列。
 - **认知变体导航**(`Fog/CrowdBeliefNavs.cs`,对照 beliefNav.js):变体 nav 号 = 槽号 × 65536 + 真 nav 号;belief 字段 = 结构仓形状的认知快照(`CrowdStructuresStore.BuildBeliefField`:**地形源起底 + believed 组件重标**——不能从真相活栅格起底,单侧已知实体的痕迹要靠重标擦掉);变体 = 全拷贝克隆(NavContext 逐格数组全拷、tile 条目经 NavTileCache 内容键共享、HPA 外层容器拷内层共享,裁定 2026-10-09:行为逐位优先,COW 缓行,真机实测后再评)只对分歧矩形(单侧实体 + 未探索 tile 行段)增量重烘;原位揭示(Reveal)只重烘被揭 tile,真变 tile 集与参考端 nav.changedTiles 同口径(NavContext.ChangedTiles);乐观层 fieldFor:未探索 tile 上未被实体覆写的格取 assumedArea(slopeFree 优先、代价最小);sharesFlow 判定移植(不是纯优化——settled 组保不保留旧流场影响刷新计数,是对拍面);detach/settle 全拷贝下天然成立(真相重烘写不到变体自有数组),显式免操作记档。
 - **认知同步**(`Fog/CrowdBeliefSync.cs`,对照 beliefSync.js):每 tick 运动后、tick 计数前;槽 0 = 真相(认知集 == 真值集),同认知集的组共享槽(key 桶预筛 + 集合相等确认);BV-6 计数器跳过、探索按 fog.revealTicks 批提交、原位揭示不开新槽;槽切换 → 组换规划句柄 + 领队重挂(F-3)+ 闲置槽休眠、超容量逐旧淘汰(F-4/BV-7)。**双句柄**:Group.NavId = 当前规划句柄(真相号或变体号,槽切换重挂;生成与重下令时挂当前槽),Group.BodyNavId = 真相句柄不变——**意图/领队/规划读 NavId,马达物理/挤离读 BodyNavId**(规划信认知、碰撞信真相)。路径服务的变体号经会话解析器(`ResolveNavContext`),worker 在导航互斥域内解析(Monitor 同线程可重入);认知注册表全部变更经同一互斥域串行。
 - **结构仓补桥(F02 对齐)**:地图桥实体以实体身份进认知仓(`InstallMapBridges`:span 即导出端从参考仓读出的 path 足迹,不进地面栅格/碰撞——桥面层仍由 UpperLayerBake 独立烘焙,S1–S7 地面口径零接触);导出器地图实体的写出序改为参考 id 序(不排序),两端实体 id 逐位同构——认知的逐 id 语义(残影/遗忘/共享)以此为前提。
