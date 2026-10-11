@@ -47,8 +47,7 @@ public sealed class CrowdSimulationConfig
     public static CrowdSimulationConfig Load(JsonObject configObject)
     {
         ArgumentNullException.ThrowIfNull(configObject);
-        RejectRetiredKey(configObject, "hpa", "clusterSize", "navtile.sizeCm");
-        RejectRetiredKey(configObject, "fog", "cellCells", "fog.cellSizeCm");
+        RejectRetiredSpatialKeys(configObject);
         try
         {
             return configObject.Deserialize<CrowdSimulationConfig>(StrictJsonOptions.CreateCamelCase())
@@ -72,13 +71,82 @@ public sealed class CrowdSimulationConfig
         return Load(obj);
     }
 
-    private static void RejectRetiredKey(JsonObject root, string section, string oldKey, string newKey)
+    /// <summary>旧作者键只用于报错。命中即拒绝，不读取值。</summary>
+    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
+    [
+        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
+        ("deploy.spreadCells", "deploy.spreadCm"),
+        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
+        ("fog.cellCells", "fog.cellSizeCm"),
+        ("formation.goalArriveCells", "formation.goalArriveCm"),
+        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
+        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
+        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
+        ("formation.minClumpCells", "formation.minClumpCm"),
+        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
+        ("formation.slotArriveCells", "formation.slotArriveCm"),
+        ("formation.slotSightCells", "formation.slotSightCm"),
+        ("formations[].spacing", "formations[].spacingDiameterScale"),
+        ("hpa.clusterSize", "navtile.sizeCm"),
+        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
+        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
+        ("movement.maxStepCells", "movement.maxStepNavCells"),
+        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
+        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
+        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
+        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
+        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
+        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
+        ("spawn.cellInset", "spawn.navCellInsetFraction"),
+        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
+        ("structures.portalCells", "structures.portalReachNavCells"),
+    ];
+
+    private static void RejectRetiredSpatialKeys(JsonObject root)
     {
-        if (root[section] is JsonObject parent && parent.ContainsKey(oldKey))
+        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        {
+            RejectRetiredSpatialKey(root, oldPath.Split('.'), 0, "", newKey);
+        }
+    }
+
+    private static void RejectRetiredSpatialKey(JsonNode? node, string[] segments, int index, string built, string newKey)
+    {
+        if (node is not JsonObject obj || index >= segments.Length)
+        {
+            return;
+        }
+
+        string segment = segments[index];
+        bool array = segment.EndsWith("[]", StringComparison.Ordinal);
+        string name = array ? segment[..^2] : segment;
+        if (!obj.ContainsKey(name))
+        {
+            return;
+        }
+
+        if (array)
+        {
+            if (obj[name] is not JsonArray items)
+            {
+                return;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                RejectRetiredSpatialKey(items[i], segments, index + 1, $"{built}{name}[{i}].", newKey);
+            }
+
+            return;
+        }
+
+        if (index == segments.Length - 1)
         {
             throw new InvalidOperationException(
-                $"CrowdSimulationConfig.json: 已删除 {section}.{oldKey}，改用 {newKey}。");
+                $"CrowdSimulationConfig.json: 已删除 {built}{name}，改用 {newKey}。");
         }
+
+        RejectRetiredSpatialKey(obj[name], segments, index + 1, built + name + ".", newKey);
     }
 
     public sealed class WorldSection

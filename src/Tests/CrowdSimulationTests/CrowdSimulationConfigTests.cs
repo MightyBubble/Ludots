@@ -376,20 +376,82 @@ public class CrowdSimulationConfigTests
         }
     }
 
+    private static readonly (string OldPath, string NewKey)[] RetiredSpatialKeys =
+    [
+        ("deploy.baseJitterCells", "deploy.baseJitterCm"),
+        ("deploy.spreadCells", "deploy.spreadCm"),
+        ("flowfield.corridorPadding", "flowfield.corridorPaddingNavTiles"),
+        ("fog.cellCells", "fog.cellSizeCm"),
+        ("formation.goalArriveCells", "formation.goalArriveCm"),
+        ("formation.leaderLookAhead", "formation.leaderLookAheadCm"),
+        ("formation.magicBoxPadCells", "formation.magicBoxPadCm"),
+        ("formation.magicBoxPadNavCells", "formation.magicBoxPadCm"),
+        ("formation.minClumpCells", "formation.minClumpCm"),
+        ("formation.settleRadiusCells", "formation.settleRadiusCm"),
+        ("formation.slotArriveCells", "formation.slotArriveCm"),
+        ("formation.slotSightCells", "formation.slotSightCm"),
+        ("formations[].spacing", "formations[].spacingDiameterScale"),
+        ("hpa.clusterSize", "navtile.sizeCm"),
+        ("hpa.maxEntranceWidth", "hpa.maxEntranceWidthNavCells"),
+        ("movement.laneSpread", "movement.laneSpreadSpeedRatio"),
+        ("movement.maxStepCells", "movement.maxStepNavCells"),
+        ("movement.wakeDistanceCells", "movement.wakeDistanceCm"),
+        ("navProfiles[].jump.rangeCells", "navProfiles[].jump.rangeNavCells"),
+        ("navmesh.maxEdgeLen", "navmesh.maxEdgeLenNavCells"),
+        ("navmesh.maxSimplificationError", "navmesh.maxSimplificationErrorNavCells"),
+        ("navmesh.minRegionArea", "navmesh.minRegionNavCellArea"),
+        ("navmesh.portalInsetCells", "navmesh.portalInsetNavCells"),
+        ("spawn.cellInset", "spawn.navCellInsetFraction"),
+        ("spawn.clusterSpacing", "spawn.groupSpacingScale"),
+        ("structures.portalCells", "structures.portalReachNavCells"),
+    ];
+
     [Test]
     public void RetiredSpatialKeys_NameTheReplacement()
     {
-        var hpa = TestDefaults.DefaultConfigJson();
-        hpa["hpa"]!["clusterSize"] = 16;
-        var hpaEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(hpa));
-        Assert.That(hpaEx!.Message, Does.Contain("hpa.clusterSize"));
-        Assert.That(hpaEx.Message, Does.Contain("navtile.sizeCm"));
+        foreach (var (oldPath, newKey) in RetiredSpatialKeys)
+        {
+            var json = TestDefaults.DefaultConfigJson();
+            string concrete = PlaceRetiredKey(json, oldPath);
+            var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json), oldPath);
+            Assert.That(ex!.Message, Does.Contain(concrete), oldPath);
+            Assert.That(ex.Message, Does.Contain(newKey), oldPath);
+            Assert.That(ex.Message, Does.Contain("已删除"), oldPath);
+        }
+    }
 
-        var fog = TestDefaults.DefaultConfigJson();
-        fog["fog"]!["cellCells"] = 4;
-        var fogEx = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(fog));
-        Assert.That(fogEx!.Message, Does.Contain("fog.cellCells"));
-        Assert.That(fogEx.Message, Does.Contain("fog.cellSizeCm"));
+    private static string PlaceRetiredKey(JsonObject root, string oldPath)
+    {
+        if (oldPath == "formations[].spacing")
+        {
+            root["formations"]![0]!["spacing"] = 1;
+            return "formations[0].spacing";
+        }
+
+        if (oldPath == "navProfiles[].jump.rangeCells")
+        {
+            var profiles = root["navProfiles"]!.AsArray();
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                if (profiles[i]!["jump"] is JsonObject jump)
+                {
+                    jump["rangeCells"] = 7;
+                    return $"navProfiles[{i}].jump.rangeCells";
+                }
+            }
+
+            throw new InvalidOperationException("标准配置没有 jump profile。");
+        }
+
+        var parts = oldPath.Split('.');
+        JsonObject obj = root;
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            obj = obj[parts[i]]!.AsObject();
+        }
+
+        obj[parts[^1]] = 1;
+        return oldPath;
     }
 
     [Test]
