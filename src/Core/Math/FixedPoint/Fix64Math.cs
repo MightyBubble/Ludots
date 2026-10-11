@@ -34,9 +34,8 @@ namespace Ludots.Core.Mathematics.FixedPoint
         }
 
         /// <summary>
-        /// 精确积:分段乘避免分数部分积在 long 直乘里回绕(两侧分数 ≥ √0.5 即超 2^63,
-        /// 值差 1.0),真积在表示域内即逐位正确,可被参考端 BigInt 逐位复现——与
-        /// SqrtPrecise 同一理由的跨引擎逐位合同;热路径继续用 operator*。
+        /// 精确积:负数向零截断。operator* 对负数向下取整,负结果且低 32 位余量非 0 时两者差 1 个最小单位,
+        /// 其余情况相同。结果超出 Fix64 表示域或操作数 raw 为 long.MinValue 时,结果无意义。热路径继续用 operator*。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 MulExact(Fix64 a, Fix64 b)
