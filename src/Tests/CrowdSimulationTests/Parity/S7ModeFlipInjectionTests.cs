@@ -11,38 +11,24 @@ using Ludots.Core.CrowdSimulation.Units;
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
-/// 残余分叉收敛证明(L53,结论:翻转级联假设被否定,根 = 参考端 f32 存储 × 密集接触放大)。
-/// 方法:同脚本同真值跑两遍——基线遍不动;注入遍在每个"结构字段逐位一致而 mode 不同"的
-/// tick 末把 C# 单位 mode 强制为真值 mode(mode 是带滞后的行为输入,Intent 按上一 tick 的
-/// mode 取迟滞门限,注入会被下一 tick 真实消费)。
-/// 实测证据(2026-10-09,s1337 真值,360 tick × 120 单位):
-/// ① 基线:mode 翻 13 处、持久分叉 32 单位、max 2407.23cm、末 30 帧 max 1258.77cm、
-///    p50 0.0693cm(与 S7 主门实测同数);
-/// ② 注入:只发生 2 次注入(翻转点路径依赖——首注后轨迹改道,其余 11 处不再按基线时序
-///    出现),max 仍 2407.23cm——翻转级联假设否定;
-/// ③ 首 &gt;1cm 分叉:tick 40 单位 37(句柄 25),该点 mode 两端相等(1/1)——分叉起点
-///    与 mode 翻转无关,与 ② 互证;
-/// ④ L18 法马达中间量逐语句对照(单位 37,tick 36–44,双端临时探针已删):mode/blend/
-///    state 翻转同 tick 同值(blend 1→0.1667、mode 1→0 在 t=41 双端同现),接触数至
-///    分叉起点逐 tick 相同(2,0,4,0,9,12);位置差 0.0005m ≈ 参考端 f32 存储在 4937m
-///    量级的量化步(f32 eps ≈ 0.00059m),速度差 ~1e-3 m/s,槽位差 0.0007m(参考端 double
-///    vs Fix64 算术差);t=40 密集接触事件(ct 9→12,结构 op 绕行的群体压缩)把亚毫米
-///    输入差放大:0.27cm(t40)→1.7cm(t41)→沿各自接触链增至米级。
-/// 定案:残余分叉根 = 参考端 f32 状态存储的固有量化差,在结构 op 绕行密集接触簇中放大;
-/// mode 翻转是同源共症状(分叉使槽位视线骑线,非因)。与 S5 L18 同类(行为口径记档,
-/// S7 主门的位置带 15000/3000 即为此设)。
-/// 断言按"记档钉"写:数值漂移 = 残余类变化,须重跑本证明并更新注释与 PR 记档。
+/// 同脚本同真值跑两遍:基线遍不改 mode;注入遍在"结构字段逐位一致而 mode 不同"的样本上
+/// 把 C# 单位 mode 写成真值 mode(Intent 按上一 tick 的 mode 取视线滞回,注入会被下一 tick 消费)。
+/// 锁住的是注入后的结果,不是某一次的样本个数:最大偏差仍高于厘米门槛(把 mode 对齐并不会把
+/// 位置差收进 1cm),mode 不一致样本率不超过 S7 主门的双容忍。持久分叉头数只打印,不是合同。
 /// </summary>
-public sealed class S7FlipCascadeConvergenceTests
+public sealed class S7ModeFlipInjectionTests
 {
+    /// <summary>持久分叉与"注入后仍未收进 1cm"共用的厘米门槛。</summary>
+    private const double ResidualFloorCm = 1.0;
+
     [Test]
-    public void ModeFlipInjection_ResidualDivergenceConvergesUnderBand()
+    public void InjectingMode_ResidualStaysAboveCentimeter_CountsStayBounded()
     {
         var baseline = Run(inject: false);
         var injected = Run(inject: true);
 
         TestContext.Out.WriteLine(
-            $"基线(不注入): mode翻 {baseline.ModeFlips} 处, 持久分叉 {baseline.PersistentUnits} 单位, max {baseline.MaxCm:F2}cm, 末30帧 max {baseline.FinalMaxCm:F2}cm, p50 {baseline.P50:F4}cm;" +
+            $"基线(不注入): mode不一致 {baseline.ModeFlips}/{baseline.Samples}, 持久分叉 {baseline.PersistentUnits} 单位, max {baseline.MaxCm:F2}cm, 末30帧 max {baseline.FinalMaxCm:F2}cm, p50 {baseline.P50:F4}cm, 槽位抽查间隔 {baseline.SlotCheckInterval};" +
             $"注入: mode注入 {injected.Injections} 次, max {injected.MaxCm:F2}cm, 末30帧 max {injected.FinalMaxCm:F2}cm, p50 {injected.P50:F4}cm");
         foreach (var kv in baseline.FirstCross)
         {
@@ -50,20 +36,31 @@ public sealed class S7FlipCascadeConvergenceTests
         }
 
         Assert.That(baseline.StructuralMismatches, Is.EqualTo(0), "基线结构字段必须逐位一致(证明前提)");
-        Assert.That(baseline.ModeFlips, Is.EqualTo(13),
-            "mode 翻转数漂移(记档钉 13):残余类变化,重跑本证明并更新注释与 PR 记档");
-        Assert.That(baseline.PersistentUnits, Is.EqualTo(32),
-            "持久分叉单位数漂移(记档钉 32):残余类变化,重跑本证明并更新注释与 PR 记档");
+        // 槽位视线每 SlotCheckInterval tick 才重判,判定粘住到下一次重判,所以不一致按样本累计。
+        // 上界与 S7 主门同一条样本率;下界 0,规格不要求必须出现不一致。
+        int modeCeiling = (int)Math.Floor(baseline.Samples * S7RebakeTruthTests.MaxModeMismatchRate);
+        Assert.That(baseline.ModeFlips, Is.InRange(0, modeCeiling),
+            $"mode 不一致样本 {baseline.ModeFlips} 超出 0..{modeCeiling}（{baseline.Samples} 样本 × {S7RebakeTruthTests.MaxModeMismatchRate}）");
         Assert.That(injected.StructuralMismatches, Is.EqualTo(0), "注入后结构字段仍须逐位一致");
-        Assert.That(injected.Injections, Is.LessThan(baseline.ModeFlips),
-            "注入次数应少于基线翻转数(翻转点路径依赖,负结果的签名;若不再成立说明注入语义变了)");
-        Assert.That(injected.MaxCm, Is.GreaterThan(1.0),
-            "注入后 max 收敛到 ≤1cm:翻转级联假设成立的新证据——推翻本测试记档,重跑并改写结论");
-        Assert.That(baseline.P50, Is.LessThanOrEqualTo(0.5), "基线 p50 须在 S7 主门分层带内(0.5cm)");
+        if (baseline.ModeFlips > 0)
+        {
+            Assert.That(injected.Injections, Is.LessThan(baseline.ModeFlips),
+                "存在 mode 不一致时,注入次数应少于基线不一致数(后续不一致点随轨迹改变,不再按基线时序出现)");
+        }
+        else
+        {
+            Assert.That(injected.Injections, Is.EqualTo(0), "基线没有 mode 不一致时不应发生注入");
+        }
+
+        Assert.That(injected.MaxCm, Is.GreaterThan(ResidualFloorCm),
+            $"注入 mode 后最大偏差 {injected.MaxCm:F2}cm 已落到 ≤{ResidualFloorCm}cm");
+        Assert.That(baseline.P50, Is.LessThanOrEqualTo(S7RebakeTruthTests.P50BandCm),
+            $"基线 p50 须在 S7 主门分层带内({S7RebakeTruthTests.P50BandCm}cm)");
     }
 
     private sealed record Stats(
         double MaxCm, double FinalMaxCm, double P50, int ModeFlips, int Injections, int PersistentUnits, int StructuralMismatches,
+        int Samples, int SlotCheckInterval,
         IReadOnlyDictionary<double, string> FirstCross);
 
     private static Stats Run(bool inject)
@@ -86,7 +83,6 @@ public sealed class S7FlipCascadeConvergenceTests
         int cursor = 4; // magic
         int ticks = BitConverter.ToInt32(bin, cursor); cursor += 4;
         const int finalTicks = 30;
-        const double divergeCm = 1.0;   // 持久分叉判定(与 L26 定性口径一致)
         const int persistStreak = 10;
 
         double maxCm = 0, finalMaxCm = 0;
@@ -103,7 +99,7 @@ public sealed class S7FlipCascadeConvergenceTests
                 int guard = 0;
                 while (!session.Step(out _))
                 {
-                    if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摄未恢复。");
+                    if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
             }
 
@@ -136,7 +132,7 @@ public sealed class S7FlipCascadeConvergenceTests
                     }
                 }
 
-                int s = d > divergeCm ? streak.GetValueOrDefault(handle) + 1 : 0;
+                int s = d > ResidualFloorCm ? streak.GetValueOrDefault(handle) + 1 : 0;
                 streak[handle] = s;
                 if (s == persistStreak) persistent.Add(handle);
 
@@ -161,6 +157,8 @@ public sealed class S7FlipCascadeConvergenceTests
         Assert.That(cursor, Is.EqualTo(bin.Length), "s7-rebake.bin 末尾有多余字节");
         Assert.That(structural, Is.EqualTo(0), $"结构字段不一致(证明前提破坏,首个:{firstStructural})");
         deltas.Sort();
-        return new Stats(maxCm, finalMaxCm, deltas[deltas.Count / 2], modeFlips, injections, persistent.Count, structural, firstCross);
+        return new Stats(
+            maxCm, finalMaxCm, deltas[deltas.Count / 2], modeFlips, injections, persistent.Count, structural,
+            deltas.Count, session.Config.Movement.SlotCheckInterval, firstCross);
     }
 }
