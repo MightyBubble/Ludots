@@ -162,7 +162,7 @@ public static class NavContextBaker
         {
             Id = CrowdSimulationSpace.NavContextId(agent.Layer, clearanceCells),
             LayerIndex = agentTypeIndex,
-            ClearanceCells = clearanceCells,
+            ClearanceNavCells = clearanceCells,
             NavCellsPerSide = navCellsPerSide,
             Cost = cost,
             Walk = walk,

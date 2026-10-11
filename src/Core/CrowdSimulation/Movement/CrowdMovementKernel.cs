@@ -264,10 +264,10 @@ public sealed class CrowdMovementKernel
     internal int RequireParallelWorkerCount()
     {
         int configured = Session.Config.Sim.ParallelWorkerCount;
-        if (configured < 1 || configured > 64)
+        if (configured < 1 || configured > CrowdSimulationLimits.MaxParallelWorkers)
         {
             throw new InvalidOperationException(
-                $"CrowdSimulationConfig.json: sim.parallelWorkerCount = {configured}，需为 1~64 的整数。");
+                $"CrowdSimulationConfig.json: sim.parallelWorkerCount = {configured}，需为 1~{CrowdSimulationLimits.MaxParallelWorkers} 的整数。");
         }
 
         return configured;

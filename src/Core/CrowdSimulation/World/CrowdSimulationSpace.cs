@@ -55,11 +55,11 @@ public static class CrowdSimulationSpace
         return cy * navCellsPerSide + cx;
     }
 
-    /// <summary>导航上下文 id = 移动类型下标 × 256 + 净空（数值键，禁止字符串拼接）。</summary>
+    /// <summary>导航上下文 id = 移动类型下标 × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + 净空（数值键，禁止字符串拼接）。</summary>
     public static int NavContextId(int layerIndex, int clearanceCells)
     {
         if ((uint)layerIndex > 255u) throw new ArgumentOutOfRangeException(nameof(layerIndex));
         if ((uint)(clearanceCells - 1) > 254u) throw new ArgumentOutOfRangeException(nameof(clearanceCells));
-        return layerIndex * 256 + clearanceCells;
+        return layerIndex * CrowdSimulationLimits.NavContextLayerStride + clearanceCells;
     }
 }

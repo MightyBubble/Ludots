@@ -70,7 +70,7 @@ public class S3QueryTruthTests
         var pool = new FlowPool(navCellsPerSide, runtime.Flowfield.PoolCapacity);
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;

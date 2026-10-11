@@ -87,7 +87,7 @@ public sealed class NavSurfaceAsset
             throw new InvalidDataException($".navsurface: navCellSizeCm = {navCellSizeCm}，需为 > 0。");
         }
 
-        if (terrainCount < 1 || terrainCount > 256)
+        if (terrainCount < 1 || terrainCount > CrowdSimulationLimits.MaxTerrainTypeIds)
         {
             throw new InvalidDataException($".navsurface: terrainCount = {terrainCount}，需为 1~256。");
         }
@@ -193,7 +193,7 @@ public sealed class NavSurfaceAsset
             throw new InvalidDataException($".navsurface: navCellSizeCm = {asset.NavCellSizeCm}，需为 > 0。");
         }
 
-        if (asset.TerrainTypeIds.Length < 1 || asset.TerrainTypeIds.Length > 256)
+        if (asset.TerrainTypeIds.Length < 1 || asset.TerrainTypeIds.Length > CrowdSimulationLimits.MaxTerrainTypeIds)
         {
             throw new InvalidDataException($".navsurface: terrainCount = {asset.TerrainTypeIds.Length}，需为 1~256。");
         }

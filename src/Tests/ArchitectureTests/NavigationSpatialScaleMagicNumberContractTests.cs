@@ -44,8 +44,26 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 violations,
                 Is.Empty,
-                "Board, nav bake, and MassNavigationFlow spatial scale code must use SpatialScaleDefaults/owned constants instead of inline 256/64/100 literals.\n" +
+                "Production src/ and mods/ code must use named scale constants instead of inline 256/64/100 literals.\n" +
                 string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void StockExemptionList_MayOnlyShrink_AndExcludesCrowdSimulation()
+        {
+            Assert.That(
+                NavigationSpatialScaleMagicNumberExemptions.StockFiles.Length,
+                Is.LessThanOrEqualTo(NavigationSpatialScaleMagicNumberExemptions.StockFileCeiling),
+                "存量豁免只许减少。清掉一个文件里的字面量后，从清单删掉该文件并下调 StockFileCeiling。");
+
+            var crowd = NavigationSpatialScaleMagicNumberExemptions.StockFiles
+                .Where(path =>
+                    path.Contains("/CrowdSimulation/", StringComparison.Ordinal) ||
+                    path.StartsWith("mods/showcases/crowd_simulation/", StringComparison.Ordinal) ||
+                    path.StartsWith("src/Tools/CrowdSimulationMapProbe/", StringComparison.Ordinal) ||
+                    path.Contains("/CrowdSimulationMod/", StringComparison.Ordinal))
+                .ToArray();
+            Assert.That(crowd, Is.Empty, "群体模拟不进存量豁免。\n" + string.Join(Environment.NewLine, crowd));
         }
 
         private static bool IsProductionSource(string repoRoot, string file)
@@ -71,17 +89,7 @@ namespace Ludots.Tests.Architecture
                 return false;
             }
 
-            string fileName = Path.GetFileNameWithoutExtension(file);
-            return relative.Contains("/Map/Board/", StringComparison.OrdinalIgnoreCase) ||
-                relative.Contains("/NavMesh/Bake/", StringComparison.OrdinalIgnoreCase) ||
-                relative.Contains("/NavBake.", StringComparison.OrdinalIgnoreCase) ||
-                relative.Contains("/Ludots.Tool/", StringComparison.OrdinalIgnoreCase) && (
-                    fileName.Contains("ReactMapDataBinConverter", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.Contains("MapVtxmGenerator", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.Contains("Program", StringComparison.OrdinalIgnoreCase)) ||
-                fileName.Contains("NavTileBuilder", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Contains("MassNavigationFlow", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Contains("FlowField", StringComparison.OrdinalIgnoreCase);
+            return !NavigationSpatialScaleMagicNumberExemptions.StockFiles.Contains(relative);
         }
 
         private static IEnumerable<(int LineNumber, string Code)> StripCommentsAndStrings(string source)

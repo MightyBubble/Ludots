@@ -283,7 +283,7 @@ public sealed class CrowdSimulationConfigLoader
                 PersonalRadiusCm = CrowdSimulationSpace.PersonalRadiusCm(radiusCm, avoidanceRadiusScale),
                 PushPriority = Fix64.FromDouble(config.AgentTypes[agentTypeIndex].PushPriority + radiusShare),
                 AgentTypeIndex = agentTypeIndex,
-                ClearanceCells = clearance,
+                ClearanceNavCells = clearance,
                 NavContextId = CrowdSimulationSpace.NavContextId(p.Layer, clearance),
             });
         }

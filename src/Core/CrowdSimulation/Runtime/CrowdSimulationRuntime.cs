@@ -96,7 +96,7 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>blackboard 键(呈现侧 ownerBlackboardFloat 绑定的数据契约)。</summary>
     public static class Keys
     {
-        public const string UnitRadiusM = "crowd_simulation.unit.radius_m";
+        public const string UnitRadiusKey = "crowd_simulation.unit.radius_m";
         public const string SessionTick = "crowd_simulation.session.tick";
         public const string SessionUnits = "crowd_simulation.session.units";
         public const string SessionSelected = "crowd_simulation.session.selected";
@@ -253,7 +253,7 @@ public sealed partial class CrowdSimulationRuntime
         var seen = new HashSet<int>();
         for (int a = 0; a < runtimeConfig.AgentTypes.Count; a++)
         {
-            foreach (int clearance in runtimeConfig.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (int clearance in runtimeConfig.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtimeConfig, grid, heights, deck, a, clearance, cache);
                 if (!seen.Add(nav.Id)) continue;
@@ -300,7 +300,7 @@ public sealed partial class CrowdSimulationRuntime
             StableIds = stableIds,
             TemplateRegistry = templateRegistry,
             TemplatesByUnitTypeRadius = unitTypeTemplates,
-            RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusM),
+            RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusKey),
             SelectionOwner = _sessionEntity,
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
             Collections = collections,
@@ -483,7 +483,7 @@ public sealed partial class CrowdSimulationRuntime
             var seenIds = new HashSet<int>();
             for (int a = 0; a < session.Config.AgentTypes.Count; a++)
             {
-                foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+                foreach (int clearance in session.Config.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
                 {
                     var nav = NavContextBaker.Bake(session.Config, _surfaceGrid, _heights, _deck, a, clearance, replayCache);
                     if (!seenIds.Add(nav.Id)) continue;

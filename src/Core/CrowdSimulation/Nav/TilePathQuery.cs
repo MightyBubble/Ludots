@@ -21,7 +21,7 @@ public static class TilePathQuery
     /// <summary>查询暂存(RT-03:每 worker 一份,不可重入)。tile 代价备忘是条目的纯函数,跨查询保留。</summary>
     public sealed class Scratch
     {
-        public NavMinHeap Heap = new(256);
+        public NavMinHeap Heap = new(CrowdSimulationLimits.NavMeshQueryHeapCapacity);
         public Dictionary<int, Fix64> GScore = new();
         public Dictionary<int, Fix64> Ex = new();
         public Dictionary<int, Fix64> Ey = new();

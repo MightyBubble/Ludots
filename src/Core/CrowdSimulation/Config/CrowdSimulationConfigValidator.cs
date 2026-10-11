@@ -44,7 +44,7 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.sightHysteresis", config.Movement.SightHysteresis, min: 1);
         Rule("movement.wakeDistanceCm", config.Movement.WakeDistanceCm, min: 0);
         Rule("movement.stallDecay", config.Movement.StallDecay, min: 0);
-        Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: 64);
+        Rule("movement.maxSubSteps", config.Movement.MaxSubSteps, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxSubSteps);
         Rule("movement.restAccelScale", config.Movement.RestAccelScale, gt: 0);
         Rule("movement.restSeparationScale", config.Movement.RestSeparationScale, min: 0);
         // 墙面测试假设单个子步位移小于一格
@@ -60,10 +60,10 @@ public static class CrowdSimulationConfigValidator
         Rule("movement.laneSpreadSpeedRatio", config.Movement.LaneSpreadSpeedRatio, min: 0, max: 1);
         Rule("movement.blendCommit", config.Movement.BlendCommit, gt: 0, lt: 1);
         Rule("avoidance.smoothing", config.Avoidance.Smoothing, min: 0, lt: 1);
-        // 关系种类上限 256(P×P Uint8 矩阵的编号域)。
-        if (config.Relations.Kinds.Count < 1 || config.Relations.Kinds.Count > 256)
+        // 关系种类上限是一个字节的编号域（P×P Uint8 矩阵）。
+        if (config.Relations.Kinds.Count < 1 || config.Relations.Kinds.Count > CrowdSimulationLimits.MaxRelationKinds)
         {
-            throw Invalid("relations.kinds", $"需要 1~256 项（当前 {config.Relations.Kinds.Count} 项）");
+            throw Invalid("relations.kinds", $"需要 1~{CrowdSimulationLimits.MaxRelationKinds} 项（当前 {config.Relations.Kinds.Count} 项）");
         }
 
         foreach (var (name, kind) in config.Relations.Kinds)
@@ -139,11 +139,11 @@ public static class CrowdSimulationConfigValidator
         Rule("fog.cellSizeCm", config.Fog.CellSizeCm, intRequired: true, min: CrowdSimulationConfigLoader.MinFogCellSizeCm);
         Rule("fog.visionCm", config.Fog.VisionCm, gt: 0);
         Rule("fog.revealTicks", config.Fog.RevealTicks, intRequired: true, min: 1);
-        Rule("fog.slotCacheCapacity", config.Fog.SlotCacheCapacity, intRequired: true, min: 0, max: 256);
+        Rule("fog.slotCacheCapacity", config.Fog.SlotCacheCapacity, intRequired: true, min: 0, max: CrowdSimulationLimits.MaxFogSlotCacheCapacity);
         Rule("fog.variantCapacity", config.Fog.VariantCapacity, intRequired: true, min: 1);
         Rule("fog.eyeCm", config.Fog.EyeCm, intRequired: true, min: 0);
         Rule("sim.maxUnits", config.Sim.MaxUnits, intRequired: true, min: 1, max: 200000);
-        Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: 64);
+        Rule("sim.parallelWorkerCount", config.Sim.ParallelWorkerCount, intRequired: true, min: 1, max: CrowdSimulationLimits.MaxParallelWorkers);
         Rule("sim.timeScale", config.Sim.TimeScale, gt: 0);
         Rule("structures.blockCoverage", config.Structures.BlockCoverage, gt: 0, max: 1);
         Rule("structures.portalReachNavCells", config.Structures.PortalReachNavCells, intRequired: true, min: 1);
@@ -164,9 +164,9 @@ public static class CrowdSimulationConfigValidator
             throw Invalid("world.surfaceAsset", "需为非空字符串（.navsurface 资产路径）");
         }
 
-        var terrainIds = CheckIds("world.terrainTypes", TerrainIds(config.World.TerrainTypes), max: 256);
-        var areaIds = CheckIds("navAreas", AreaIds(config.NavAreas), max: 256);
-        var profileIds = CheckIds("navProfiles", NavProfileIds(config.NavProfiles), max: 256);
+        var terrainIds = CheckIds("world.terrainTypes", TerrainIds(config.World.TerrainTypes), max: CrowdSimulationLimits.MaxCatalogIds);
+        var areaIds = CheckIds("navAreas", AreaIds(config.NavAreas), max: CrowdSimulationLimits.MaxCatalogIds);
+        var profileIds = CheckIds("navProfiles", NavProfileIds(config.NavProfiles), max: CrowdSimulationLimits.MaxCatalogIds);
         var agentIds = CheckIds("agentTypes", AgentTypeIds(config.AgentTypes), max: 255);
         CheckIds("unitTypes", UnitTypeIds(config.UnitTypes), max: 255);
 

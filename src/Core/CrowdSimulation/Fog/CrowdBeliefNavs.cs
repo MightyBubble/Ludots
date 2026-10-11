@@ -308,7 +308,7 @@ public sealed class CrowdBeliefNavs
     private byte[] DivergenceMask(Slot b, int id, NavContext truth)
     {
         if (b.Masks.TryGetValue(id, out var cached) && cached.Epoch == Epoch) return cached.Mask;
-        int navCellsPerSide = truth.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile, r = truth.ClearanceCells;
+        int navCellsPerSide = truth.NavCellsPerSide, navCellsPerTile = _sim.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile, r = truth.ClearanceNavCells;
         var mask = new byte[navTilesPerSide * navTilesPerSide];
         foreach (var (x0, y0, x1, y1) in DivergenceRects(b))
         {
@@ -393,7 +393,7 @@ public sealed class CrowdBeliefNavs
         {
             Id = id,
             LayerIndex = t.LayerIndex,
-            ClearanceCells = t.ClearanceCells,
+            ClearanceNavCells = t.ClearanceNavCells,
             NavCellsPerSide = t.NavCellsPerSide,
             Cost = (Fix64[])t.Cost.Clone(),
             Walk = (byte[])t.Walk.Clone(),

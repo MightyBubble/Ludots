@@ -66,13 +66,13 @@ public static class CrowdNavRebake
     {
         var config = sources.Config;
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
-        int erosion = nav.ClearanceCells - 1;
+        int erosion = nav.ClearanceNavCells - 1;
         int kind = Classify(nav, sources, store, rect);
         var grown = Grow(rect, erosion, navCellsPerSide);
         List<int> tiles;
         if (kind == KindPassable)
         {
-            ErodeRect(nav.Walk, navCellsPerSide, nav.ClearanceCells, grown, nav.Passable);
+            ErodeRect(nav.Walk, navCellsPerSide, nav.ClearanceNavCells, grown, nav.Passable);
             var dirty = TilesOf(grown, navCellsPerTile, navTilesPerSide);
             // 重烘后拿到同一内容条目(缓存命中)的 tile:HPA 簇内距离逐位复用
             var prev = new NavTileEntry?[dirty.Count];
@@ -363,7 +363,7 @@ public static class CrowdNavRebake
             config.Navmesh.MaxEdgeLenNavCells.ToDouble(), config.Navmesh.MaxVertsPerPoly);
         foreach (var nav in navs.Values)
         {
-            var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceCells, freshCache);
+            var full = NavContextBaker.Bake(config, store.SnapshotSurface(), sources.HeightS, sources.Deck, nav.LayerIndex, nav.ClearanceNavCells, freshCache);
             VerifyContext(nav, full, $"nav {nav.Id}");
         }
     }

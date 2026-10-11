@@ -48,7 +48,7 @@ public class S3PathServiceTests
         var seen = new HashSet<int>();
         for (int a = 0; a < _runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in _runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in _runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(_runtime, grid, heights, deck, a, clearance, cache);
                 if (seen.Add(nav.Id)) _navs[nav.Id] = nav;

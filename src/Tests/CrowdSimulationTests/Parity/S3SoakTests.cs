@@ -44,7 +44,7 @@ public class S3SoakTests
         var seen = new HashSet<int>();
         for (int a = 0; a < runtime.AgentTypes.Count; a++)
         {
-            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceCells).Distinct())
+            foreach (var clearance in runtime.Profiles.Where(p => p.AgentTypeIndex == a).Select(p => p.ClearanceNavCells).Distinct())
             {
                 var nav = NavContextBaker.Bake(runtime, grid, heights, deck, a, clearance, cache);
                 if (seen.Add(nav.Id)) navs[nav.Id] = nav;

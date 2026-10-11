@@ -76,8 +76,9 @@ public static class PngWriter
 
         private static uint[] BuildTable()
         {
-            var table = new uint[256];
-            for (uint i = 0; i < 256; i++)
+            const int tableLength = 1 << 8;
+            var table = new uint[tableLength];
+            for (uint i = 0; i < tableLength; i++)
             {
                 uint c = i;
                 for (int k = 0; k < 8; k++) c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1;

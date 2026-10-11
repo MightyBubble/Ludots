@@ -255,7 +255,7 @@ public sealed class CrowdSimSession
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>
     public void Advance(int ticks, List<ulong>? checksums = null)
     {
-        int guard = ticks * 64 + 64;
+        int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
         int ran = 0;
         while (ran < ticks)
         {

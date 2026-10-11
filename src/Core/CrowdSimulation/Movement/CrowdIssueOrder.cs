@@ -72,7 +72,7 @@ public static class CrowdIssueOrder
             if (world.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId != player) continue;
             if (useSel && st.Selected == 0) continue;
             var old = sim.Groups.Groups[st.GroupId]!;
-            int gk = old.LayerIdx * 256 + old.RIdx;
+            int gk = old.LayerIdx * CrowdSimulationLimits.NavContextLayerStride + old.RIdx;
             if (!fresh.TryGetValue(gk, out var g))
             {
                 // F02 双句柄:新组以真相句柄落底(老组可能持变体号),规划句柄随即挂当前槽。

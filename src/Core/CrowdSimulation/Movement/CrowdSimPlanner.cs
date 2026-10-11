@@ -239,8 +239,8 @@ public sealed class CrowdSimPlanner
                 int strictestId = bucket[0];
                 foreach (int gid in bucket)
                 {
-                    if (session.ResolveNavContext(session.Groups.Groups[gid]!.NavId).ClearanceCells >
-                        session.ResolveNavContext(session.Groups.Groups[strictestId]!.NavId).ClearanceCells)
+                    if (session.ResolveNavContext(session.Groups.Groups[gid]!.NavId).ClearanceNavCells >
+                        session.ResolveNavContext(session.Groups.Groups[strictestId]!.NavId).ClearanceNavCells)
                     {
                         strictestId = gid;
                     }
@@ -989,8 +989,8 @@ public sealed class CrowdSimPlanner
     // 净空更大更严;同净空取更大下标(确定)
     private bool StricterNav(CrowdNavGroupSet.Group g, CrowdNavGroupSet.Group m)
     {
-        int a = _session.ResolveNavContext(g.NavId).ClearanceCells;
-        int b = _session.ResolveNavContext(m.NavId).ClearanceCells;
+        int a = _session.ResolveNavContext(g.NavId).ClearanceNavCells;
+        int b = _session.ResolveNavContext(m.NavId).ClearanceNavCells;
         return a > b || (a == b && g.RIdx > m.RIdx);
     }
 

@@ -77,7 +77,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         if (_runtime.ViewMode == 2)
         {
             EnsureWireframe(navCellsPerSide, navCellVisual);
-            var wireId = new RouteVisualId(100);
+            var wireId = new RouteVisualId(CrowdSimulationLimits.WireframeRouteVisualId);
             foreach (var (pts, thick, color) in _wireLines) _routeVisuals.AddPolylineShared(wireId, pts, thick, color);
             foreach (var (pos, shape, radius, color) in _wireMarkers) _routeVisuals.AddMarker(wireId, pos, shape, radius, 1f, color);
         }
@@ -86,7 +86,9 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         if (current?.Points != null)
         {
             int pointCount = current.Points.Length / 2;
-            Span<Vector2> pts = pointCount <= 256 ? stackalloc Vector2[pointCount] : new Vector2[pointCount];
+            Span<Vector2> pts = pointCount <= CrowdSimulationLimits.RoutePolylineStackLimit
+                ? stackalloc Vector2[pointCount]
+                : new Vector2[pointCount];
             for (int k = 0; k < pointCount; k++)
             {
                 pts[k] = new Vector2(

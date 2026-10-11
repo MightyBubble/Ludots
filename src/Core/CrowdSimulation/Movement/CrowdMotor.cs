@@ -237,7 +237,7 @@ public static class CrowdMotor
         var session = k.Session;
         int n = session.Units.Count;
         var groups = session.Groups.Groups;
-        Span<int> seen = stackalloc int[64];
+        Span<int> seen = stackalloc int[CrowdSimulationLimits.OpenCellNavIdScratch];
         int filled = 0;
         for (int i = 0; i < n; i++)
         {

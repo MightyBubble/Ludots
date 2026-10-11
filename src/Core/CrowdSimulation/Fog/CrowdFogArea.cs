@@ -149,7 +149,7 @@ public static class CrowdFogArea
             return (cells.ToArray(), box);
         }
 
-        var xs = new Fix64[64];
+        var xs = new Fix64[CrowdSimulationLimits.FogPolygonOrdinateScratch];
         Fix64[] anchor;
         Fix64 bx0, by0, bx1, by1;
         Fix64[][]? pts = null;

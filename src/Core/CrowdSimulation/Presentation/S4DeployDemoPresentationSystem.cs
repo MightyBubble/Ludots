@@ -28,7 +28,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId HoverMarker = new(2);
     private static readonly RouteVisualId PreviewOutline = new(3);
     private static readonly RouteVisualId RemoveOutline = new(4);
-    private static readonly RouteVisualId WireframeId = new(100);
+    private static readonly RouteVisualId WireframeId = new(CrowdSimulationLimits.WireframeRouteVisualId);
     private static readonly RouteVisualId FlashBase = new(200);
 
     private const long FlashMs = 2500; // 脏 tile 闪烁时长(呈现口径,与仿真无关)
@@ -207,9 +207,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         }
     }
 
-    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileVisual, float stepM, float thick, Vector4 color)
+    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileVisual, float stepVisual, float thick, Vector4 color)
     {
-        int seg = Math.Max(1, (int)Math.Ceiling(tileVisual / stepM));
+        int seg = Math.Max(1, (int)Math.Ceiling(tileVisual / stepVisual));
         var pts = new Vector2[seg * 4 + 1];
         int p = 0;
         for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual * k / seg, oy);

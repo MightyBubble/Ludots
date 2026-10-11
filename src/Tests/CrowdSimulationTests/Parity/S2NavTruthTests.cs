@@ -42,7 +42,7 @@ public class S2NavTruthTests
         {
             var clearances = runtime.Profiles
                 .Where(p => p.AgentTypeIndex == a)
-                .Select(p => p.ClearanceCells)
+                .Select(p => p.ClearanceNavCells)
                 .Distinct();
             foreach (int c in clearances)
             {
@@ -78,7 +78,7 @@ public class S2NavTruthTests
             Directory.CreateDirectory(dumpDir);
             foreach (var nav in contexts)
             {
-                File.WriteAllBytes(Path.Combine(dumpDir, $"{runtime.AgentTypes[nav.LayerIndex].Id}_c{nav.ClearanceCells}.pass"), nav.Passable);
+                File.WriteAllBytes(Path.Combine(dumpDir, $"{runtime.AgentTypes[nav.LayerIndex].Id}_c{nav.ClearanceNavCells}.pass"), nav.Passable);
             }
 
             using (var slopeStream = File.Create(Path.Combine(dumpDir, "slope.f32")))

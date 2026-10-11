@@ -65,7 +65,7 @@ public class CrowdSimulationConfigTests
         // 默认 6250 cm 格下 R100–R400 的个人半径（600–2400 cm）都不足半格，共享净空 1。
         foreach (var p in runtime.Profiles)
         {
-            Assert.That(p.ClearanceCells, Is.EqualTo(1), p.Id);
+            Assert.That(p.ClearanceNavCells, Is.EqualTo(1), p.Id);
         }
 
         var leaperR400 = runtime.Profiles.Single(p => p.Id == "leaper_r400");
