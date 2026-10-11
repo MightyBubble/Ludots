@@ -160,7 +160,7 @@ public class S1SurfaceTruthTests
         var mapJson = File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json"));
         var map = JsonSerializer.Deserialize<MapConfig>(mapJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdSimulationConfigLoader.Load(
-            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.ParityPairRules(map));
+            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.DemoPairRules());
     }
 
     internal static CrowdSimulationMapSurface LoadMapSurface(string seed)

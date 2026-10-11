@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using Arch.Core;
+using ArchWorld = Arch.Core.World;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 
@@ -8,25 +12,50 @@ namespace Ludots.Core.CrowdSimulation.Config;
 /// <summary>
 /// 会话激活时把 pairRules 点名的关系类型投影成玩家对矩阵。
 /// 查询只走 TeamRelationQuery：有边是 Yield / 共享，没边是 Hold / 不共享。
-/// 不补同玩家、同队的暗规则。
+/// 不补同玩家、同队的暗规则。地图 Players 全表 TeamId 必须 &gt; 0，与 ParticipantBindingResolver 同口径。
 /// </summary>
 public static class CrowdPairRulesProjection
 {
-    public static CrowdPairProjection Project(CrowdSimulationConfig config, MapConfig map, TeamRelationQuery teamRelations)
+    public static CrowdPairProjection Project(
+        CrowdSimulationConfig config,
+        MapConfig map,
+        TeamRelationQuery teamRelations,
+        PlayerEntityLookup players,
+        ArchWorld world)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(teamRelations);
+        ArgumentNullException.ThrowIfNull(players);
+        ArgumentNullException.ThrowIfNull(world);
 
         int yieldsTypeId = RequireRelationType(teamRelations.Types, "pairRules.yieldsTo.relation", config.PairRules.YieldsTo.Relation);
         int sharesTypeId = RequireRelationType(teamRelations.Types, "pairRules.sharesVisionWith.relation", config.PairRules.SharesVisionWith.Relation);
-        RequireDeployedPlayersHaveTeams(config, map);
+        RequireMapPlayersHaveTeams(config, map);
 
         int playerCount = map.Players.Count;
         var teamByIndex = new int[playerCount];
+        var playerIds = new int[playerCount];
+        var reps = new Entity[playerCount];
         for (int i = 0; i < playerCount; i++)
         {
-            teamByIndex[i] = map.Players[i].TeamId;
+            PlayerBindingData binding = map.Players[i];
+            if (!players.TryGet(binding.PlayerId, out Entity rep) || !world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"Maps/{map.Id}.json: 玩家 {binding.PlayerId} 没有活着的代表实体。");
+            }
+
+            int liveTeam = world.TryGet(rep, out Team team) ? team.Id : 0;
+            if (liveTeam != binding.TeamId)
+            {
+                throw new InvalidOperationException(
+                    $"Maps/{map.Id}.json: 玩家 {binding.PlayerId} 地图 TeamId = {binding.TeamId}，代表实体上的 Team = {liveTeam}。");
+            }
+
+            teamByIndex[i] = binding.TeamId;
+            playerIds[i] = binding.PlayerId;
+            reps[i] = rep;
         }
 
         var response = new CrowdPushResponse[playerCount * playerCount];
@@ -43,7 +72,8 @@ public static class CrowdPairRulesProjection
         rules.BindPlayerIndex(map);
         return new CrowdPairProjection(
             rules,
-            new CrowdPairRulesSessionGuard(teamRelations, yieldsTypeId, sharesTypeId, teamByIndex, rules, revision));
+            new CrowdPairRulesSessionGuard(
+                teamRelations, world, reps, playerIds, teamByIndex, yieldsTypeId, sharesTypeId, rules, revision));
     }
 
     public static int RequireRelationType(RelationshipTypeRegistry types, string path, string relationId)
@@ -81,23 +111,31 @@ public static class CrowdPairRulesProjection
         }
     }
 
-    private static void RequireDeployedPlayersHaveTeams(CrowdSimulationConfig config, MapConfig map)
+    private static void RequireMapPlayersHaveTeams(CrowdSimulationConfig config, MapConfig map)
     {
-        var teamByPlayerId = new System.Collections.Generic.Dictionary<int, int>(map.Players.Count);
-        foreach (var player in map.Players)
+        var knownPlayers = new HashSet<int>();
+        for (int i = 0; i < map.Players.Count; i++)
         {
-            teamByPlayerId[player.PlayerId] = player.TeamId;
-        }
-
-        foreach (var basis in config.Deploy.Bases)
-        {
-            if (!teamByPlayerId.TryGetValue(basis.PlayerId, out int teamId) || teamId > 0)
+            PlayerBindingData player = map.Players[i];
+            knownPlayers.Add(player.PlayerId);
+            if (player.TeamId > 0)
             {
                 continue;
             }
 
             throw new InvalidOperationException(
-                $"Maps/{map.Id}.json: 玩家 {basis.PlayerId} 出现在 deploy.bases，TeamId = {teamId}。有群体单位的玩家必须有队伍（TeamId > 0）。");
+                $"Maps/{map.Id}.json: Players[{i}] 玩家 {player.PlayerId} TeamId = {player.TeamId}。玩家必须有队伍（TeamId > 0）。");
+        }
+
+        foreach (var basis in config.Deploy.Bases)
+        {
+            if (knownPlayers.Contains(basis.PlayerId))
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"Maps/{map.Id}.json: deploy.bases 指向玩家 {basis.PlayerId}，地图 Players 里没有这个玩家。");
         }
     }
 }

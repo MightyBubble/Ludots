@@ -72,7 +72,9 @@ public sealed class S3PathDemoRuntime : IDisposable
         int fixedHz = (int)MathF.Round(1f / Time.FixedDeltaTime);
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
             ?? throw new InvalidOperationException("S3 路径演示需要 TeamRelationQuery。");
-        var projected = CrowdPairRulesProjection.Project(configDto, map, teamRelations);
+        var players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("S3 路径演示需要 PlayerEntityLookup。");
+        var projected = CrowdPairRulesProjection.Project(configDto, map, teamRelations, players, engine.World);
         var runtime = CrowdSimulationConfigLoader.Load(
             configDto, map, new AgentProfileRegistry(profileList), fixedHz, projected.Rules);
         var templatesById = engine.MapLoader.TemplateRegistry.GetAll()

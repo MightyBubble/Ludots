@@ -64,26 +64,35 @@ public static class TestDefaults
     }
 
     /// <summary>
-    /// 演示图喂给装载的矩阵：队伍号相同（含自己对自己）为 Yield 并共享，不同为 Hold 且不共享。
-    /// 对拍直接喂这张表。它等于种子图投影结果：队伍代表之间有 pairRules 点名的自指边，跨队没有这条边。不是内核规则。
+    /// 演示图 / 三张种子图的字面 4×4。表序是玩家 1..4，队伍 1/2/1/2。
+    /// 不按 TeamId 推导。种子图投影要对上这张表，不能再写一套“同队即让路”。
     /// </summary>
-    public static CrowdPairRules ParityPairRules(MapConfig map)
+    public static readonly CrowdPushResponse[] DemoResponse =
     {
-        int playerCount = map.Players.Count;
-        var response = new CrowdPushResponse[playerCount * playerCount];
-        var shares = new bool[playerCount * playerCount];
-        for (int a = 0; a < playerCount; a++)
-        {
-            int teamA = map.Players[a].TeamId;
-            for (int b = 0; b < playerCount; b++)
-            {
-                bool linked = teamA > 0 && teamA == map.Players[b].TeamId;
-                response[a * playerCount + b] = linked ? CrowdPushResponse.Yield : CrowdPushResponse.Hold;
-                shares[a * playerCount + b] = linked;
-            }
-        }
+        CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold,
+        CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield,
+        CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold,
+        CrowdPushResponse.Hold, CrowdPushResponse.Yield, CrowdPushResponse.Hold, CrowdPushResponse.Yield,
+    };
 
-        return CrowdPairRules.Matrices(playerCount, response, shares);
+    public static readonly bool[] DemoShares =
+    {
+        true, false, true, false,
+        false, true, false, true,
+        true, false, true, false,
+        false, true, false, true,
+    };
+
+    /// <summary>上表两个方向都共享之后的视野组。下标是玩家表序。</summary>
+    public static readonly byte[] DemoVisionGroups = { 0, 1, 0, 1 };
+
+    public static CrowdPairRules DemoPairRules()
+    {
+        var response = new CrowdPushResponse[DemoResponse.Length];
+        var shares = new bool[DemoShares.Length];
+        DemoResponse.CopyTo(response, 0);
+        DemoShares.CopyTo(shares, 0);
+        return CrowdPairRules.Matrices(4, response, shares);
     }
 
     public static CrowdSimulationRuntimeConfig Assemble(
@@ -92,12 +101,24 @@ public static class TestDefaults
         AgentProfileRegistry? profiles = null,
         CrowdPairRules? pairRules = null)
     {
+        bool implicitDemoMap = map == null;
         map ??= DemoMap();
+        if (pairRules == null)
+        {
+            if (!implicitDemoMap)
+            {
+                throw new InvalidOperationException(
+                    "功能位矩阵必须显式传入。演示图的字面表只在不传地图时使用，其它地图不能按队伍号推导。");
+            }
+
+            pairRules = DemoPairRules();
+        }
+
         return CrowdSimulationConfigLoader.Load(
             config ?? DefaultConfig(),
             map,
             profiles ?? DemoProfiles(),
             FixedHz,
-            pairRules ?? ParityPairRules(map));
+            pairRules);
     }
 }

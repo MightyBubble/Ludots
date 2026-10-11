@@ -120,7 +120,7 @@ public class S2NavTruthTests
             File.ReadAllText(Path.Combine(S1Dir("s1337"), "Maps", "crowd_simulation_s1337.json")),
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         var restricted = CrowdSimulationConfigLoader.Load(
-            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.ParityPairRules(map));
+            config, map, TestDefaults.DemoProfiles(), TestDefaults.FixedHz, TestDefaults.DemoPairRules());
         var narrowed = NavContextBaker.Bake(restricted, grid, heights, deck, agentTypeIndex: 4, clearanceCells: 1);
 
         Assert.That(narrowed.Links?.Count ?? 0, Is.LessThan(baselineCount), "downCm 收紧后链接必须减少");

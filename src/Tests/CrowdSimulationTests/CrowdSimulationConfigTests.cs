@@ -174,7 +174,7 @@ public class CrowdSimulationConfigTests
     {
         var map = TestDefaults.DemoMap();
         map.Boards[0].HeightCm = TestDefaults.WorldCm / 2;
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("必须是正方形"));
     }
 
@@ -368,7 +368,9 @@ public class CrowdSimulationConfigTests
                 map.Players.Add(new PlayerBindingData { PlayerId = ids[i], TeamId = 1, RepresentativeInstanceId = "player_" + i });
             }
 
-            var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map),
+            int n = ids.Length;
+            var rules = CrowdPairRules.Matrices(n, new CrowdPushResponse[n * n], new bool[n * n]);
+            var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map, pairRules: rules),
                 $"玩家号 [{string.Join(',', ids)}] 应被拒绝");
             Assert.That(ex!.Message, Does.Contain(expected), $"[{string.Join(',', ids)}] 的报错应写明规则");
         }
@@ -446,7 +448,7 @@ public class CrowdSimulationConfigTests
     {
         var map = TestDefaults.DemoMap();
         map.Boards[0].Anchor.WorldXCm = 1;
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(map: map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("Anchor"));
         Assert.That(ex.Message, Does.Contain("必须为 0"));
     }
@@ -495,14 +497,14 @@ public class CrowdSimulationConfigTests
     {
         // 99 cm 低于下限 100;导航边长取 16,tile 边长与板宽对齐。
         var below = FogCellWorld(navCellSizeCm: 99, fogCellSizeCm: 99, visionCm: 99);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(below.Config, below.Map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("CrowdSimulationConfig.json"));
         Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
         Assert.That(ex.Message, Does.Contain("= 99"));
         Assert.That(ex.Message, Does.Contain("≥ 100"));
 
         var atBound = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 100);
-        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map);
+        var runtime = TestDefaults.Assemble(atBound.Config, atBound.Map, pairRules: TestDefaults.DemoPairRules());
         Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
         Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));
     }
@@ -525,7 +527,7 @@ public class CrowdSimulationConfigTests
         int widthCm = navCellSizeCm * 16;
         map.Boards[0].WidthCm = widthCm;
         map.Boards[0].HeightCm = widthCm;
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(CrowdSimulationConfig.Load(json), map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("fog.cellSizeCm"));
         Assert.That(ex.Message, Does.Contain("= 33"));
         Assert.That(ex.Message, Does.Contain("≤ 32"));
@@ -544,7 +546,7 @@ public class CrowdSimulationConfigTests
         // 导航 16、迷雾格 = 导航格 → 每边迷雾格 16。对角 (F-1)*√2:21²=441 < 2×15²=450 ≤ 22²=484,上限 22。
         // 格长 100 cm;vision 2200 → ceil=22,2300 → ceil=23。
         var over = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2300);
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(over.Config, over.Map, pairRules: TestDefaults.DemoPairRules()));
         Assert.That(ex!.Message, Does.Contain("fog.visionCm"));
         Assert.That(ex.Message, Does.Contain("2300"));
         Assert.That(ex.Message, Does.Contain("fog.cellSizeCm"));
@@ -552,7 +554,7 @@ public class CrowdSimulationConfigTests
         Assert.That(ex.Message, Does.Contain("22"));
 
         var atDiagonal = FogCellWorld(navCellSizeCm: 100, fogCellSizeCm: 100, visionCm: 2200);
-        var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map);
+        var runtime = TestDefaults.Assemble(atDiagonal.Config, atDiagonal.Map, pairRules: TestDefaults.DemoPairRules());
         Assert.That(runtime.Fog.VisionCm, Is.EqualTo(Fix64.FromInt(2200)));
         Assert.That(runtime.Fog.FogCellSizeCm, Is.EqualTo(100));
         Assert.That(runtime.NavCellSizeCm * runtime.Fog.NavCellsPerFogCell, Is.EqualTo(100));

@@ -238,7 +238,9 @@ public sealed partial class CrowdSimulationRuntime
 
         var teamRelations = engine.GetService(CoreServiceKeys.TeamRelationQuery)
             ?? throw new InvalidOperationException("CrowdSimulation 会话需要 TeamRelationQuery。");
-        var projected = CrowdPairRulesProjection.Project(_configDto!, mapConfig, teamRelations);
+        var players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("CrowdSimulation 会话需要 PlayerEntityLookup。");
+        var projected = CrowdPairRulesProjection.Project(_configDto!, mapConfig, teamRelations, players, engine.World);
         _pairRulesGuard = projected.Guard;
         var runtimeConfig = CrowdSimulationConfigLoader.Load(
             _configDto!, mapConfig, agentProfiles, (int)MathF.Round(1f / Time.FixedDeltaTime), projected.Rules);
@@ -422,7 +424,8 @@ public sealed partial class CrowdSimulationRuntime
     {
         var session = _session;
         if (session == null) return;
-        // 系统组 FixedHz 的 tick 边界，先于本 tick 的指令和运动。修订号没变时直接返回。
+        // 系统组 FixedHz 的 tick 边界，先于本 tick 的指令和运动。
+        // 先重读玩家代表的 Team，再在修订号变化时重算矩阵。队伍没变且修订号没变时不重算、不分配。
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
