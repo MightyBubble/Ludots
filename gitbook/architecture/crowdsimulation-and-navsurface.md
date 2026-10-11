@@ -163,9 +163,11 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（625
   ] }
 ```
 
-没有边就是不让路、不共享视野。群体模拟不把同一个玩家单独算成让路或共享。`deploy.bases` 点名的玩家会在批量部署里得到群体单位，这些玩家的 `TeamId` 必须大于 0，否则进图、会话激活时报错。关系类型 id 没有在 `RelationshipTypeRegistry` 里登记，同样报错。
+没有边就是不让路、不共享视野。群体模拟不把同一个玩家单独算成让路或共享。地图 `Players` 全表的 `TeamId` 必须大于 0，和 `ParticipantBindingResolver` 同一条口径，否则进图、会话激活时报错。`deploy.bases` 指向地图上没有的玩家，同样报错。关系类型 id 没有在 `RelationshipTypeRegistry` 里登记，同样报错。
 
-关系只在会话开始投影一次。投影用 `TeamRelationQuery` 查玩家所属队伍的代表，结果是一张玩家对矩阵。避让和视野组之后只查这张表。会话期间如果关系修订号变了，`CrowdSimulationSessionTickSystem` 调用的 `CrowdSimulationRuntime.Tick` 会在本 tick 的指令和运动之前重算一遍。矩阵和开局不同就报错，相同则不报错，并把修订号记成新的基准。修订号没变时这一步直接返回，不分配。
+关系只在会话开始投影一次。投影用 `TeamRelationQuery` 查玩家所属队伍的代表，结果是一张玩家对矩阵。避让和视野组之后只查这张表。每个 FixedHz tick，`CrowdSimulationSessionTickSystem` 调用的 `CrowdSimulationRuntime.Tick` 在指令和运动之前做两件事，用的是会话开始时分好的暂存，成功时不分配。先读每个玩家代表上的 `Team` 组件，和开局队伍号不同就报错。再看关系修订号：没变就不重算矩阵；变了就按这批队伍号重算，矩阵和开局不同就报错。已投影的表保持不动。队伍号相同且矩阵相同，只把修订号记成新的基准。
+
+`Team` 是这一步读的组件。`MemberOf`（玩家代表 → 队伍代表）是主干的队伍真相。改这条边会抬修订号，`RelationshipRuntime` 随即 `SyncTeam`，把队伍号写进 `Team`。只改 `Team`、不改边，修订号不动，所以每个 tick 都读组件。
 
 调试文件 `CrowdSimulationDebug.json` 只由自己带这份文件的 Mod 登记，例如 S3、S4。能力 Mod 不登记。目录里没有这项时，正式配置照常装，会话不自动激活。登记了但合并为空，加载抛错。文件本身是严格 DTO，死键在装载时拒绝。要开路径服务，调试文件里写 `worker.planTimeoutMs`，路径服务读这个毫秒数。
 
