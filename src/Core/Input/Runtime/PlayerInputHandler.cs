@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using Ludots.Core.Input.Config;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -528,6 +529,10 @@ namespace Ludots.Core.Input.Runtime
             {
                 compiled.SourceKind = BindingSourceKind.MouseScroll;
             }
+            else if (GamepadControlPath.IsGamepadPath(compiled.Path))
+            {
+                ApplyGamepadSource(compiled);
+            }
             else if (compiled.Path.StartsWith("<Keyboard>", StringComparison.Ordinal) || compiled.Path.StartsWith("<Mouse>", StringComparison.Ordinal))
             {
                 compiled.SourceKind = BindingSourceKind.Button;
@@ -540,6 +545,31 @@ namespace Ludots.Core.Input.Runtime
             compiled.Interactions = CompileInteractions(binding.Interactions, binding.Path, compiled.SourceKind);
             compiled.ContributionKey = BuildContributionKey(compiled);
             return compiled;
+        }
+
+        // Stick Y keeps the backend sign (screen-down positive on raylib). Up-positive schemes put Invert Y on the binding.
+        // Whole sticks are read as path+"/x" and path+"/y"; a single component or a trigger is one axis.
+        private static void ApplyGamepadSource(CompiledBinding compiled)
+        {
+            GamepadControlPath parsed = GamepadControlPath.Parse(compiled.Path);
+            switch (parsed.Kind)
+            {
+                case GamepadControlKind.Stick:
+                    compiled.SourceKind = BindingSourceKind.GamepadStick;
+                    compiled.StickAxisXPath = string.Concat(compiled.Path, "/x");
+                    compiled.StickAxisYPath = string.Concat(compiled.Path, "/y");
+                    break;
+                case GamepadControlKind.Trigger:
+                case GamepadControlKind.StickAxis:
+                    compiled.SourceKind = BindingSourceKind.GamepadAxis1D;
+                    break;
+                case GamepadControlKind.Button:
+                    compiled.SourceKind = BindingSourceKind.Button;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: '{compiled.Path}' is not a gamepad control.");
+            }
         }
 
         private static string BuildContributionKey(CompiledBinding binding)
@@ -835,6 +865,10 @@ namespace Ludots.Core.Input.Runtime
                     return new Vector3(_mouseDelta.X, _mouseDelta.Y, 0f);
                 case BindingSourceKind.MouseScroll:
                     return new Vector3(_backend.GetMouseWheel(), 0f, 0f);
+                case BindingSourceKind.GamepadStick:
+                    return new Vector3(_backend.GetAxis(binding.StickAxisXPath), _backend.GetAxis(binding.StickAxisYPath), 0f);
+                case BindingSourceKind.GamepadAxis1D:
+                    return new Vector3(_backend.GetAxis(binding.Path), 0f, 0f);
                 case BindingSourceKind.Button:
                     return _backend.GetButton(binding.Path) ? Vector3.One : Vector3.Zero;
                 case BindingSourceKind.CompositeVector2:
@@ -940,6 +974,8 @@ namespace Ludots.Core.Input.Runtime
             public int ActionIndex { get; init; }
             public string Path { get; init; } = string.Empty;
             public BindingSourceKind SourceKind { get; set; }
+            public string StickAxisXPath { get; set; } = string.Empty;
+            public string StickAxisYPath { get; set; } = string.Empty;
             public string ContributionKey { get; set; } = string.Empty;
             public CompiledBinding[] CompositeParts { get; set; } = Array.Empty<CompiledBinding>();
             public CompiledProcessor[] Processors { get; init; } = Array.Empty<CompiledProcessor>();
@@ -1028,6 +1064,8 @@ namespace Ludots.Core.Input.Runtime
             Button = 4,
             CompositeVector2 = 5,
             CompositeButtonChord = 6,
+            GamepadStick = 7,
+            GamepadAxis1D = 8,
         }
 
         private enum ProcessorKind : byte
