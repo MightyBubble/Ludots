@@ -99,6 +99,24 @@ namespace Ludots.Core.Input.Runtime
             return default;
         }
 
+        public bool TryReadPresentVector2(string actionId, out Vector2 value)
+        {
+            value = default;
+            if (!_actionIndices.TryGetValue(actionId, out int actionIndex))
+            {
+                return false;
+            }
+
+            InputActionInstance state = _actionStates[actionIndex];
+            if (!state.BoundByActiveContext)
+            {
+                return false;
+            }
+
+            value = new Vector2(state.Value.X, state.Value.Y);
+            return true;
+        }
+
         public bool IsDown(string actionId)
         {
             return _actionIndices.TryGetValue(actionId, out int actionIndex) && _actionStates[actionIndex].Triggered;
@@ -137,7 +155,8 @@ namespace Ludots.Core.Input.Runtime
                     state.Value,
                     state.Triggered,
                     state.PressedThisFrame,
-                    state.ReleasedThisFrame);
+                    state.ReleasedThisFrame,
+                    boundByActiveContext: state.BoundByActiveContext);
             }
         }
 
@@ -161,6 +180,15 @@ namespace Ludots.Core.Input.Runtime
         {
             UpdateRevision++;
             RefreshPointerState();
+            // Bound is which active contexts name the action, not the sampled
+            // magnitude. A blocked frame still reports those actions present, so
+            // the suppressed zero remains a real sample.
+            for (int i = 0; i < _actionStates.Length; i++)
+            {
+                _actionStates[i].BoundByActiveContext = false;
+            }
+
+            MarkBindingsOfActiveContexts();
 
             if (InputBlocked)
             {
@@ -221,6 +249,32 @@ namespace Ludots.Core.Input.Runtime
             for (int i = 0; i < _actionStates.Length; i++)
             {
                 _actionStates[i].Update(_tempValues[i]);
+            }
+        }
+
+        private void MarkBindingsOfActiveContexts()
+        {
+            for (int contextIndex = 0; contextIndex < _activeContexts.Count; contextIndex++)
+            {
+                CompiledBinding[] bindings = _activeContexts[contextIndex].Bindings;
+                for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
+                {
+                    MarkBinding(bindings[bindingIndex]);
+                }
+            }
+        }
+
+        private void MarkBinding(CompiledBinding binding)
+        {
+            if (binding.ActionIndex >= 0)
+            {
+                _actionStates[binding.ActionIndex].BoundByActiveContext = true;
+            }
+
+            CompiledBinding[] parts = binding.CompositeParts;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                MarkBinding(parts[i]);
             }
         }
 

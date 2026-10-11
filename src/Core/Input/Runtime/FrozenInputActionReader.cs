@@ -67,10 +67,17 @@ namespace Ludots.Core.Input.Runtime
             {
                 Value = value,
                 IsDown = IsNonZero(value),
+                Present = true,
             };
         }
 
-        public void SetActionState(string actionId, Vector3 value, bool isDown, bool pressedThisFrame, bool releasedThisFrame)
+        public void SetActionState(
+            string actionId,
+            Vector3 value,
+            bool isDown,
+            bool pressedThisFrame,
+            bool releasedThisFrame,
+            bool present = true)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -83,6 +90,7 @@ namespace Ludots.Core.Input.Runtime
                 IsDown = isDown,
                 PressedThisFrame = pressedThisFrame,
                 ReleasedThisFrame = releasedThisFrame,
+                Present = present,
             };
         }
 
@@ -97,6 +105,7 @@ namespace Ludots.Core.Input.Runtime
             {
                 existing.Value += value;
                 existing.IsDown = IsNonZero(existing.Value);
+                existing.Present = true;
                 _states[actionId] = existing;
                 return;
             }
@@ -105,7 +114,22 @@ namespace Ludots.Core.Input.Runtime
             {
                 Value = value,
                 IsDown = IsNonZero(value),
+                Present = true,
             };
+        }
+
+        public bool TryReadPresentVector2(string actionId, out Vector2 value)
+        {
+            value = default;
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_states.TryGetValue(actionId, out ActionState state) ||
+                !state.Present)
+            {
+                return false;
+            }
+
+            value = new Vector2(state.Value.X, state.Value.Y);
+            return true;
         }
 
         public T ReadAction<T>(string actionId) where T : struct
@@ -169,7 +193,8 @@ namespace Ludots.Core.Input.Runtime
                     state.Value,
                     state.IsDown,
                     state.PressedThisFrame,
-                    state.ReleasedThisFrame));
+                    state.ReleasedThisFrame,
+                    state.Present));
             }
 
             destination.Sort(static (left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
@@ -186,6 +211,7 @@ namespace Ludots.Core.Input.Runtime
             public bool IsDown;
             public bool PressedThisFrame;
             public bool ReleasedThisFrame;
+            public bool Present;
         }
     }
 }

@@ -87,9 +87,10 @@ namespace Ludots.Core.Persistence
             public bool IsDown { get; set; }
             public bool Pressed { get; set; }
             public bool Released { get; set; }
+            public bool Present { get; set; } = true;
             public ActionDto() { }
-            public ActionDto(AuthoritativeAction action) { ActionId = action.ActionId; X = action.Value.X; Y = action.Value.Y; Z = action.Value.Z; IsDown = action.IsDown; Pressed = action.Pressed; Released = action.Released; }
-            public AuthoritativeAction ToAction() { return new(ActionId, new Vector3(X, Y, Z), IsDown, Pressed, Released); }
+            public ActionDto(AuthoritativeAction action) { ActionId = action.ActionId; X = action.Value.X; Y = action.Value.Y; Z = action.Value.Z; IsDown = action.IsDown; Pressed = action.Pressed; Released = action.Released; Present = action.Present; }
+            public AuthoritativeAction ToAction() { return new(ActionId, new Vector3(X, Y, Z), IsDown, Pressed, Released, Present); }
         }
     }
 }

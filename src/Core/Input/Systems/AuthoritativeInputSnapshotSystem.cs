@@ -39,7 +39,13 @@ namespace Ludots.Core.Input.Systems
                 for (int i = 0; i < replayActions!.Count; i++)
                 {
                     var action = replayActions[i];
-                    _snapshot.SetActionState(action.ActionId, action.Value, action.IsDown, action.Pressed, action.Released);
+                    _snapshot.SetActionState(
+                        action.ActionId,
+                        action.Value,
+                        action.IsDown,
+                        action.Pressed,
+                        action.Released,
+                        action.Present);
                 }
                 _seatInput?.FreezeSnapshots(discardLiveInput: true);
                 return;

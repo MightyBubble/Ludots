@@ -82,6 +82,18 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             return default;
         }
 
+        public bool TryReadPresentVector2(string actionId, out Vector2 value)
+        {
+            value = default;
+            if (!string.Equals(actionId, ReservedInputActionIds.PointerPos, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            value = _pointer;
+            return true;
+        }
+
         public bool IsDown(string actionId) => false;
         public bool PressedThisFrame(string actionId) => false;
         public bool ReleasedThisFrame(string actionId) => false;

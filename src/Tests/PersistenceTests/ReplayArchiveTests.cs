@@ -57,6 +57,31 @@ namespace PersistenceTests
         }
 
         [Test]
+        public void CodecRoundTripsActionPresence()
+        {
+            WorldSaveSnapshot checkpoint = Checkpoint();
+            var archive = new ReplayArchive(
+                new ReplayHeader(1, "mods", "registry", "map", 10, 0),
+                checkpoint,
+                new[]
+                {
+                    new AuthoritativeFrame(0, 11, new[]
+                    {
+                        new AuthoritativeAction("Move", Vector3.UnitX, true, false, false, false),
+                        new AuthoritativeAction("Stick", new Vector3(1f, 2f, 0f), false, false, false, true),
+                    }),
+                });
+
+            ReplayArchive decoded = new ReplayArchiveCodec().Decode(new ReplayArchiveCodec().Encode(archive));
+
+            Assert.That(decoded.Frames[0].Actions[0].ActionId, Is.EqualTo("Move"));
+            Assert.That(decoded.Frames[0].Actions[0].Present, Is.False);
+            Assert.That(decoded.Frames[0].Actions[1].ActionId, Is.EqualTo("Stick"));
+            Assert.That(decoded.Frames[0].Actions[1].Present, Is.True);
+            Assert.That(decoded.Frames[0].Actions[1].Value, Is.EqualTo(new Vector3(1f, 2f, 0f)));
+        }
+
+        [Test]
         public void StreamRejectsNonFiniteActionValue()
         {
             var stream = new AuthoritativeFrameStream();

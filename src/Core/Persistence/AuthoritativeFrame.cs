@@ -4,12 +4,19 @@ using System.Numerics;
 
 namespace Ludots.Core.Persistence
 {
+    /// <summary>
+    /// One action in an authoritative input sample. <see cref="Present"/> is true
+    /// only when an active input context bound the action. An unbound action may
+    /// still carry a value; replay restores the bit so value-change dispatch does
+    /// not treat that value as a sample.
+    /// </summary>
     public readonly record struct AuthoritativeAction(
         string ActionId,
         Vector3 Value,
         bool IsDown,
         bool Pressed,
-        bool Released);
+        bool Released,
+        bool Present = true);
 
     public sealed record AuthoritativeFrame(
         long Sequence,

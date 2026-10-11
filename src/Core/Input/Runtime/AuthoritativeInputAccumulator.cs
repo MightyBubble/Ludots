@@ -28,7 +28,8 @@ namespace Ludots.Core.Input.Runtime
             bool isDown,
             bool pressedThisFrame,
             bool releasedThisFrame,
-            bool preserveValueUntilSnapshot = false)
+            bool preserveValueUntilSnapshot = false,
+            bool? boundByActiveContext = null)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -41,10 +42,16 @@ namespace Ludots.Core.Input.Runtime
                 _states[actionId] = state;
             }
 
+            // null leaves presence with the sample already stored, so a later
+            // writer that only refreshes the value does not invent or erase it.
             if (preserveValueUntilSnapshot || !state.PreserveValueUntilSnapshot)
             {
                 state.Value = value;
                 state.IsDown = isDown;
+                if (boundByActiveContext.HasValue)
+                {
+                    state.Present = boundByActiveContext.Value;
+                }
             }
 
             state.PressedThisTick |= pressedThisFrame;
@@ -80,7 +87,13 @@ namespace Ludots.Core.Input.Runtime
             foreach (var pair in _states)
             {
                 var state = pair.Value;
-                snapshot.SetActionState(pair.Key, state.Value, state.IsDown, state.PressedThisTick, state.ReleasedThisTick);
+                snapshot.SetActionState(
+                    pair.Key,
+                    state.Value,
+                    state.IsDown,
+                    state.PressedThisTick,
+                    state.ReleasedThisTick,
+                    state.Present);
                 state.PressedThisTick = false;
                 state.ReleasedThisTick = false;
                 state.PreserveValueUntilSnapshot = false;
@@ -91,6 +104,7 @@ namespace Ludots.Core.Input.Runtime
         {
             public Vector3 Value;
             public bool IsDown;
+            public bool Present;
             public bool PressedThisTick;
             public bool ReleasedThisTick;
             public bool PreserveValueUntilSnapshot;
