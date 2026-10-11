@@ -107,8 +107,7 @@ namespace Ludots.Core.Input.Runtime
         }
 
         /// <summary>
-        /// Hold or release a gamepad button. Names are engine-neutral
-        /// ("ButtonSouth", "Dpad/Up", "&lt;Gamepad2&gt;/leftShoulder"); matching ignores case and separators.
+        /// Hold a gamepad button. The path is <c>&lt;Gamepad&gt;/buttonSouth</c> or <c>&lt;Gamepad2&gt;/leftShoulder</c>.
         /// </summary>
         public void GamepadButtonDown(string control)
         {
@@ -142,7 +141,7 @@ namespace Ludots.Core.Input.Runtime
         }
 
         /// <summary>
-        /// Set one stick component or trigger. "LeftStick/X" and "&lt;Gamepad&gt;/rightTrigger" are the same vocabulary as bindings.
+        /// Set one stick component or trigger, for example <c>&lt;Gamepad&gt;/leftStick/x</c> or <c>&lt;Gamepad&gt;/rightTrigger</c>.
         /// </summary>
         public void SetGamepadAxis(string axis, float value)
         {
@@ -150,7 +149,7 @@ namespace Ludots.Core.Input.Runtime
             if (parsed.Kind is not (GamepadControlKind.StickAxis or GamepadControlKind.Trigger))
             {
                 throw new InvalidOperationException(
-                    $"LUDOTS_INPUT_GAMEPAD_CONTROL_NOT_AXIS: '{axis}' is a {parsed.Kind}; set LeftStick/X, LeftStick/Y, or a trigger.");
+                    $"LUDOTS_INPUT_GAMEPAD_CONTROL_NOT_AXIS: '{axis}' is a {parsed.Kind}; set leftStick/x, leftStick/y, rightStick/x, rightStick/y, leftTrigger, or rightTrigger.");
             }
 
             _pending.Add(new PendingEvent

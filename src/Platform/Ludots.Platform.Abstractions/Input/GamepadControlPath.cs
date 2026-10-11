@@ -8,7 +8,7 @@ namespace Ludots.Platform.Abstractions
         Stick = 2,
         StickAxis = 3,
 
-        // Analog axis and the digital trigger button. A binding of the bare name reads the axis.
+        // Analog axis and the digital trigger button. The control name itself reads the axis.
         Trigger = 4,
     }
 
@@ -44,10 +44,11 @@ namespace Ludots.Platform.Abstractions
     }
 
     /// <summary>
-    /// Engine-neutral <c>&lt;Gamepad&gt;</c> / <c>&lt;GamepadN&gt;</c> path.
+    /// Engine-neutral <c>&lt;Gamepad&gt;/&lt;control&gt;</c> or <c>&lt;GamepadN&gt;/&lt;control&gt;</c> path.
     /// <c>&lt;Gamepad&gt;</c> and <c>&lt;Gamepad1&gt;</c> are slot 0; <c>&lt;Gamepad2&gt;</c>..<c>&lt;Gamepad4&gt;</c>
-    /// are slots 1..3 (the host polls four pads). An out-of-range tag or an unknown control fails.
-    /// Separators <c>/</c>, <c>_</c>, and space are ignored so <c>leftStick/x</c> and <c>left_stick_x</c> match.
+    /// are slots 1..3 (the host polls four pads). The device tag and the control name are
+    /// case-insensitive. <c>/</c> is part of the control name, so <c>leftStick/x</c> does not
+    /// match <c>left_stick_x</c>. An out-of-range tag or an unknown control fails.
     /// </summary>
     public readonly struct GamepadControlPath
     {
@@ -101,7 +102,7 @@ namespace Ludots.Platform.Abstractions
         }
 
         /// <summary>
-        /// Parses a device path (<c>&lt;Gamepad2&gt;/buttonSouth</c>) or a bare control on slot 0 (<c>buttonSouth</c>).
+        /// Parses <c>&lt;Gamepad&gt;/&lt;control&gt;</c> or <c>&lt;GamepadN&gt;/&lt;control&gt;</c>.
         /// </summary>
         public static GamepadControlPath Parse(string path)
         {
@@ -110,23 +111,12 @@ namespace Ludots.Platform.Abstractions
                 throw new ArgumentException("Gamepad path cannot be null or whitespace.", nameof(path));
             }
 
-            if (path[0] == '<')
+            if (TryParse(path, out GamepadControlPath parsed))
             {
-                if (!TryParse(path, out GamepadControlPath parsed))
-                {
-                    throw Failure(path, ParseFailure.UnknownControl);
-                }
-
                 return parsed;
             }
 
-            ParseFailure failure = Match(path.AsSpan(), pad: 0, out GamepadControlPath control);
-            if (failure != ParseFailure.None)
-            {
-                throw Failure(path, failure);
-            }
-
-            return control;
+            throw Failure(path, ParseFailure.NotAGamepadPath);
         }
 
         private static ParseFailure ParseTagged(string path, out GamepadControlPath parsed)
@@ -175,7 +165,7 @@ namespace Ludots.Platform.Abstractions
         private static ParseFailure Match(ReadOnlySpan<char> control, int pad, out GamepadControlPath parsed)
         {
             parsed = default;
-            if (IsBlank(control))
+            if (control.IsEmpty)
             {
                 return ParseFailure.MissingControl;
             }
@@ -183,7 +173,7 @@ namespace Ludots.Platform.Abstractions
             ControlName[] controls = Controls;
             for (int i = 0; i < controls.Length; i++)
             {
-                if (!EqualsLoose(control, controls[i].Name))
+                if (!control.Equals(controls[i].Name, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -196,64 +186,16 @@ namespace Ludots.Platform.Abstractions
             return ParseFailure.UnknownControl;
         }
 
-        // Canonical names are uppercase and separator-free. Input may still contain '/', '_' or spaces.
-        private static bool EqualsLoose(ReadOnlySpan<char> text, string canonical)
-        {
-            int i = 0;
-            int j = 0;
-            while (i < text.Length && j < canonical.Length)
-            {
-                char c = text[i];
-                if (c is '/' or '_' or ' ')
-                {
-                    i++;
-                    continue;
-                }
-
-                char upper = c is >= 'a' and <= 'z' ? (char)(c - 32) : c;
-                if (upper != canonical[j])
-                {
-                    return false;
-                }
-
-                i++;
-                j++;
-            }
-
-            while (i < text.Length)
-            {
-                if (text[i] is not ('/' or '_' or ' '))
-                {
-                    return false;
-                }
-
-                i++;
-            }
-
-            return j == canonical.Length;
-        }
-
-        private static bool IsBlank(ReadOnlySpan<char> control)
-        {
-            for (int i = 0; i < control.Length; i++)
-            {
-                if (control[i] is not ('/' or '_' or ' '))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         private static InvalidOperationException Failure(string raw, ParseFailure failure) => failure switch
         {
             ParseFailure.InvalidIndex => new InvalidOperationException(
                 $"LUDOTS_INPUT_GAMEPAD_INDEX_INVALID: '{raw}' is outside <Gamepad> and <Gamepad1>..<Gamepad{SlotCount}>."),
             ParseFailure.MissingControl => new InvalidOperationException(
                 $"LUDOTS_INPUT_GAMEPAD_PATH_INVALID: '{raw}' has no control."),
+            ParseFailure.NotAGamepadPath => new InvalidOperationException(
+                $"LUDOTS_INPUT_GAMEPAD_PATH_INVALID: '{raw}' is not a <Gamepad>/<control> or <GamepadN>/<control> path."),
             _ => new InvalidOperationException(
-                $"LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: '{raw}' is not a gamepad control."),
+                $"LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: '{raw}' is not a gamepad control: {CanonicalControls}"),
         };
 
         private readonly struct ControlName
@@ -281,59 +223,43 @@ namespace Ludots.Platform.Abstractions
 
         private static readonly ControlName[] Controls =
         {
-            new("LEFTSTICK", GamepadControlKind.Stick, default, GamepadAxisControl.LeftX, GamepadAxisControl.LeftY),
-            new("RIGHTSTICK", GamepadControlKind.Stick, default, GamepadAxisControl.RightX, GamepadAxisControl.RightY),
-            new("LEFTSTICKX", GamepadControlKind.StickAxis, default, GamepadAxisControl.LeftX, default),
-            new("LEFTSTICKY", GamepadControlKind.StickAxis, default, GamepadAxisControl.LeftY, default),
-            new("RIGHTSTICKX", GamepadControlKind.StickAxis, default, GamepadAxisControl.RightX, default),
-            new("RIGHTSTICKY", GamepadControlKind.StickAxis, default, GamepadAxisControl.RightY, default),
-            new("LEFTTRIGGER", GamepadControlKind.Trigger, GamepadButtonControl.LeftTrigger, GamepadAxisControl.LeftTrigger, default),
-            new("LT", GamepadControlKind.Trigger, GamepadButtonControl.LeftTrigger, GamepadAxisControl.LeftTrigger, default),
-            new("RIGHTTRIGGER", GamepadControlKind.Trigger, GamepadButtonControl.RightTrigger, GamepadAxisControl.RightTrigger, default),
-            new("RT", GamepadControlKind.Trigger, GamepadButtonControl.RightTrigger, GamepadAxisControl.RightTrigger, default),
-            new("BUTTONSOUTH", GamepadControlKind.Button, GamepadButtonControl.RightFaceDown, default, default),
-            new("BUTTONBOTTOM", GamepadControlKind.Button, GamepadButtonControl.RightFaceDown, default, default),
-            new("A", GamepadControlKind.Button, GamepadButtonControl.RightFaceDown, default, default),
-            new("BUTTONEAST", GamepadControlKind.Button, GamepadButtonControl.RightFaceRight, default, default),
-            new("BUTTONRIGHT", GamepadControlKind.Button, GamepadButtonControl.RightFaceRight, default, default),
-            new("B", GamepadControlKind.Button, GamepadButtonControl.RightFaceRight, default, default),
-            new("CANCEL", GamepadControlKind.Button, GamepadButtonControl.RightFaceRight, default, default),
-            new("BUTTONWEST", GamepadControlKind.Button, GamepadButtonControl.RightFaceLeft, default, default),
-            new("BUTTONLEFT", GamepadControlKind.Button, GamepadButtonControl.RightFaceLeft, default, default),
-            new("X", GamepadControlKind.Button, GamepadButtonControl.RightFaceLeft, default, default),
-            new("BUTTONNORTH", GamepadControlKind.Button, GamepadButtonControl.RightFaceUp, default, default),
-            new("BUTTONTOP", GamepadControlKind.Button, GamepadButtonControl.RightFaceUp, default, default),
-            new("Y", GamepadControlKind.Button, GamepadButtonControl.RightFaceUp, default, default),
-            new("DPADUP", GamepadControlKind.Button, GamepadButtonControl.LeftFaceUp, default, default),
-            new("LEFTFACEUP", GamepadControlKind.Button, GamepadButtonControl.LeftFaceUp, default, default),
-            new("DPADRIGHT", GamepadControlKind.Button, GamepadButtonControl.LeftFaceRight, default, default),
-            new("LEFTFACERIGHT", GamepadControlKind.Button, GamepadButtonControl.LeftFaceRight, default, default),
-            new("DPADDOWN", GamepadControlKind.Button, GamepadButtonControl.LeftFaceDown, default, default),
-            new("LEFTFACEDOWN", GamepadControlKind.Button, GamepadButtonControl.LeftFaceDown, default, default),
-            new("DPADLEFT", GamepadControlKind.Button, GamepadButtonControl.LeftFaceLeft, default, default),
-            new("LEFTFACELEFT", GamepadControlKind.Button, GamepadButtonControl.LeftFaceLeft, default, default),
-            new("LEFTSHOULDER", GamepadControlKind.Button, GamepadButtonControl.LeftShoulder, default, default),
-            new("LB", GamepadControlKind.Button, GamepadButtonControl.LeftShoulder, default, default),
-            new("LEFTBUMPER", GamepadControlKind.Button, GamepadButtonControl.LeftShoulder, default, default),
-            new("RIGHTSHOULDER", GamepadControlKind.Button, GamepadButtonControl.RightShoulder, default, default),
-            new("RB", GamepadControlKind.Button, GamepadButtonControl.RightShoulder, default, default),
-            new("RIGHTBUMPER", GamepadControlKind.Button, GamepadButtonControl.RightShoulder, default, default),
-            new("SELECT", GamepadControlKind.Button, GamepadButtonControl.MiddleLeft, default, default),
-            new("BACK", GamepadControlKind.Button, GamepadButtonControl.MiddleLeft, default, default),
-            new("MIDDLELEFT", GamepadControlKind.Button, GamepadButtonControl.MiddleLeft, default, default),
-            new("START", GamepadControlKind.Button, GamepadButtonControl.Middle, default, default),
-            new("MENU", GamepadControlKind.Button, GamepadButtonControl.Middle, default, default),
-            new("MIDDLE", GamepadControlKind.Button, GamepadButtonControl.Middle, default, default),
-            new("MIDDLESHOULDER", GamepadControlKind.Button, GamepadButtonControl.MiddleRight, default, default),
-            new("GUIDE", GamepadControlKind.Button, GamepadButtonControl.MiddleRight, default, default),
-            new("MIDDLERIGHT", GamepadControlKind.Button, GamepadButtonControl.MiddleRight, default, default),
-            new("LEFTSTICKPRESS", GamepadControlKind.Button, GamepadButtonControl.LeftThumb, default, default),
-            new("L3", GamepadControlKind.Button, GamepadButtonControl.LeftThumb, default, default),
-            new("LEFTTHUMB", GamepadControlKind.Button, GamepadButtonControl.LeftThumb, default, default),
-            new("RIGHTSTICKPRESS", GamepadControlKind.Button, GamepadButtonControl.RightThumb, default, default),
-            new("R3", GamepadControlKind.Button, GamepadButtonControl.RightThumb, default, default),
-            new("RIGHTTHUMB", GamepadControlKind.Button, GamepadButtonControl.RightThumb, default, default),
+            new("buttonSouth", GamepadControlKind.Button, GamepadButtonControl.RightFaceDown, default, default),
+            new("buttonEast", GamepadControlKind.Button, GamepadButtonControl.RightFaceRight, default, default),
+            new("buttonWest", GamepadControlKind.Button, GamepadButtonControl.RightFaceLeft, default, default),
+            new("buttonNorth", GamepadControlKind.Button, GamepadButtonControl.RightFaceUp, default, default),
+            new("dpadUp", GamepadControlKind.Button, GamepadButtonControl.LeftFaceUp, default, default),
+            new("dpadDown", GamepadControlKind.Button, GamepadButtonControl.LeftFaceDown, default, default),
+            new("dpadLeft", GamepadControlKind.Button, GamepadButtonControl.LeftFaceLeft, default, default),
+            new("dpadRight", GamepadControlKind.Button, GamepadButtonControl.LeftFaceRight, default, default),
+            new("leftShoulder", GamepadControlKind.Button, GamepadButtonControl.LeftShoulder, default, default),
+            new("rightShoulder", GamepadControlKind.Button, GamepadButtonControl.RightShoulder, default, default),
+            new("leftTrigger", GamepadControlKind.Trigger, GamepadButtonControl.LeftTrigger, GamepadAxisControl.LeftTrigger, default),
+            new("rightTrigger", GamepadControlKind.Trigger, GamepadButtonControl.RightTrigger, GamepadAxisControl.RightTrigger, default),
+            new("leftStick", GamepadControlKind.Stick, default, GamepadAxisControl.LeftX, GamepadAxisControl.LeftY),
+            new("rightStick", GamepadControlKind.Stick, default, GamepadAxisControl.RightX, GamepadAxisControl.RightY),
+            new("leftStick/x", GamepadControlKind.StickAxis, default, GamepadAxisControl.LeftX, default),
+            new("leftStick/y", GamepadControlKind.StickAxis, default, GamepadAxisControl.LeftY, default),
+            new("rightStick/x", GamepadControlKind.StickAxis, default, GamepadAxisControl.RightX, default),
+            new("rightStick/y", GamepadControlKind.StickAxis, default, GamepadAxisControl.RightY, default),
+            new("leftStickPress", GamepadControlKind.Button, GamepadButtonControl.LeftThumb, default, default),
+            new("rightStickPress", GamepadControlKind.Button, GamepadButtonControl.RightThumb, default, default),
+            new("select", GamepadControlKind.Button, GamepadButtonControl.MiddleLeft, default, default),
+            new("start", GamepadControlKind.Button, GamepadButtonControl.Middle, default, default),
+            new("guide", GamepadControlKind.Button, GamepadButtonControl.MiddleRight, default, default),
         };
+
+        private static readonly string CanonicalControls = JoinControls();
+
+        private static string JoinControls()
+        {
+            var names = new string[Controls.Length];
+            for (int i = 0; i < names.Length; i++)
+            {
+                names[i] = Controls[i].Name;
+            }
+
+            return string.Join(", ", names);
+        }
 
         private enum ParseFailure : byte
         {
@@ -341,6 +267,7 @@ namespace Ludots.Platform.Abstractions
             InvalidIndex = 1,
             MissingControl = 2,
             UnknownControl = 3,
+            NotAGamepadPath = 4,
         }
     }
 }

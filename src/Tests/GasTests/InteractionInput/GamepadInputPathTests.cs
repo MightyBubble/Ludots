@@ -35,11 +35,33 @@ namespace Ludots.Tests.GAS
             Assert.That(secondPad.Pad, Is.EqualTo(1));
             Assert.That(secondPad.Button, Is.EqualTo(GamepadButtonControl.RightFaceDown));
 
-            GamepadControlPath primaryAlias = GamepadControlPath.Parse("<Gamepad1>/dpad/up");
-            GamepadControlPath faceAlias = GamepadControlPath.Parse("<gamepad>/leftFaceUp");
-            Assert.That(primaryAlias.Pad, Is.EqualTo(0));
-            Assert.That(primaryAlias.Button, Is.EqualTo(GamepadButtonControl.LeftFaceUp));
-            Assert.That(faceAlias.Button, Is.EqualTo(primaryAlias.Button));
+            GamepadControlPath dpad = GamepadControlPath.Parse("<Gamepad1>/dpadUp");
+            GamepadControlPath dpadCase = GamepadControlPath.Parse("<gamepad>/DpadUp");
+            Assert.That(dpad.Pad, Is.EqualTo(0));
+            Assert.That(dpad.Button, Is.EqualTo(GamepadButtonControl.LeftFaceUp));
+            Assert.That(dpadCase.Button, Is.EqualTo(dpad.Button));
+
+            GamepadControlPath mixedCase = GamepadControlPath.Parse("<Gamepad>/leftStick/X");
+            Assert.That(mixedCase.Kind, Is.EqualTo(GamepadControlKind.StickAxis));
+            Assert.That(mixedCase.Axis, Is.EqualTo(GamepadAxisControl.LeftX));
+
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/buttonEast").Button, Is.EqualTo(GamepadButtonControl.RightFaceRight));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/buttonWest").Button, Is.EqualTo(GamepadButtonControl.RightFaceLeft));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/buttonNorth").Button, Is.EqualTo(GamepadButtonControl.RightFaceUp));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/dpadDown").Button, Is.EqualTo(GamepadButtonControl.LeftFaceDown));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/dpadLeft").Button, Is.EqualTo(GamepadButtonControl.LeftFaceLeft));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/dpadRight").Button, Is.EqualTo(GamepadButtonControl.LeftFaceRight));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/leftShoulder").Button, Is.EqualTo(GamepadButtonControl.LeftShoulder));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/rightShoulder").Button, Is.EqualTo(GamepadButtonControl.RightShoulder));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/leftStick/y").Axis, Is.EqualTo(GamepadAxisControl.LeftY));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/rightStick").Kind, Is.EqualTo(GamepadControlKind.Stick));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/rightStick/y").Axis, Is.EqualTo(GamepadAxisControl.RightY));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/leftStickPress").Button, Is.EqualTo(GamepadButtonControl.LeftThumb));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/rightStickPress").Button, Is.EqualTo(GamepadButtonControl.RightThumb));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/select").Button, Is.EqualTo(GamepadButtonControl.MiddleLeft));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/start").Button, Is.EqualTo(GamepadButtonControl.Middle));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/guide").Button, Is.EqualTo(GamepadButtonControl.MiddleRight));
+            Assert.That(GamepadControlPath.Parse("<Gamepad>/leftTrigger").Kind, Is.EqualTo(GamepadControlKind.Trigger));
 
             Assert.That(GamepadControlPath.Parse("<Gamepad4>/leftStick").Pad, Is.EqualTo(3));
             Assert.That(GamepadControlPath.TryParse("<Keyboard>/w", out _), Is.False);
@@ -50,8 +72,19 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Parse_UnknownControlOrSlot_FailsFastNamingThePath()
         {
-            AssertThrowsPath("<Gamepad>/notARealButton", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
-            AssertThrowsPath("notARealButton", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            const string canonical =
+                "buttonSouth, buttonEast, buttonWest, buttonNorth, dpadUp, dpadDown, dpadLeft, dpadRight, leftShoulder, rightShoulder, leftTrigger, rightTrigger, leftStick, rightStick, leftStick/x, leftStick/y, rightStick/x, rightStick/y, leftStickPress, rightStickPress, select, start, guide";
+            var unknown = Assert.Throws<InvalidOperationException>(() => GamepadControlPath.Parse("<Gamepad>/notARealButton"));
+            Assert.That(unknown!.Message, Is.EqualTo(
+                "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN: '<Gamepad>/notARealButton' is not a gamepad control: " + canonical));
+
+            AssertThrowsPath("<Gamepad>/A", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            AssertThrowsPath("<Gamepad>/LB", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            AssertThrowsPath("<Gamepad>/left_stick_x", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            AssertThrowsPath("<Gamepad>/CANCEL", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            AssertThrowsPath("<Gamepad>/dpad/up", "LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN");
+            AssertThrowsPath("buttonSouth", "LUDOTS_INPUT_GAMEPAD_PATH_INVALID");
+            AssertThrowsPath("notARealButton", "LUDOTS_INPUT_GAMEPAD_PATH_INVALID");
             AssertThrowsPath("<Gamepad5>/buttonSouth", "LUDOTS_INPUT_GAMEPAD_INDEX_INVALID");
             AssertThrowsPath("<Gamepad>/", "LUDOTS_INPUT_GAMEPAD_PATH_INVALID");
             Assert.Throws<ArgumentException>(() => GamepadControlPath.Parse("  "));
@@ -83,14 +116,14 @@ namespace Ludots.Tests.GAS
                     },
                 });
 
-            device.SetGamepadAxis("LeftStick/X", 0.1f);
-            device.SetGamepadAxis("LeftStick/Y", 0.1f);
+            device.SetGamepadAxis("<Gamepad>/leftStick/x", 0.1f);
+            device.SetGamepadAxis("<Gamepad>/leftStick/y", 0.1f);
             device.AdvanceFrame();
             handler.Update(1f / 60f);
             Assert.That(handler.ReadAction<Vector2>("Aim.Stick"), Is.EqualTo(Vector2.Zero));
 
             device.SetGamepadAxis("<Gamepad>/leftStick/x", 0.6f);
-            device.SetGamepadAxis("left_stick/y", 0.8f);
+            device.SetGamepadAxis("<Gamepad>/leftStick/Y", 0.8f);
             device.AdvanceFrame();
             handler.Update(1f / 60f);
             Vector2 aim = handler.ReadAction<Vector2>("Aim.Stick");
@@ -109,16 +142,16 @@ namespace Ludots.Tests.GAS
                 new InputActionDef { Id = "Aim.Yaw", Type = InputActionType.Axis1D },
                 new InputBindingDef { ActionId = "Aim.Yaw", Path = "<Gamepad>/rightStick/x" });
 
-            device.SetGamepadAxis("RightTrigger", 0.75f);
+            device.SetGamepadAxis("<Gamepad>/rightTrigger", 0.75f);
             device.SetGamepadAxis("<Gamepad2>/rightStick/x", 0.4f);
-            device.SetGamepadAxis("RightStick/X", -0.2f);
+            device.SetGamepadAxis("<Gamepad>/rightStick/x", -0.2f);
             device.AdvanceFrame();
             handler.Update(1f / 60f);
 
             Assert.That(handler.ReadAction<float>("Aim.Trigger"), Is.EqualTo(0.75f).Within(0.0001f));
             Assert.That(handler.ReadAction<float>("Aim.Yaw"), Is.EqualTo(-0.2f).Within(0.0001f));
             Assert.That(device.GetGamepadAxis("<Gamepad2>/rightStick/x"), Is.EqualTo(0.4f).Within(0.0001f));
-            Assert.That(device.IsGamepadButtonDown("RightTrigger"), Is.False, "an analog trigger write is not a digital button");
+            Assert.That(device.IsGamepadButtonDown("<Gamepad>/rightTrigger"), Is.False, "an analog trigger write is not a digital button");
         }
 
         [Test]
@@ -130,7 +163,7 @@ namespace Ludots.Tests.GAS
                 new InputActionDef { Id = "Aim.Confirm", Type = InputActionType.Button },
                 new InputBindingDef { ActionId = "Aim.Confirm", Path = "<Gamepad>/buttonSouth" });
 
-            device.GamepadButtonDown("ButtonSouth");
+            device.GamepadButtonDown("<Gamepad>/buttonSouth");
             device.AdvanceFrame();
             handler.Update(1f / 60f);
             Assert.That(handler.IsDown("Aim.Confirm"), Is.True);
@@ -141,7 +174,7 @@ namespace Ludots.Tests.GAS
             Assert.That(handler.IsDown("Aim.Confirm"), Is.True);
             Assert.That(handler.PressedThisFrame("Aim.Confirm"), Is.False);
 
-            device.GamepadButtonUp("a");
+            device.GamepadButtonUp("<Gamepad>/ButtonSouth");
             device.AdvanceFrame();
             handler.Update(1f / 60f);
             Assert.That(handler.IsDown("Aim.Confirm"), Is.False);
@@ -161,9 +194,9 @@ namespace Ludots.Tests.GAS
                 new InputActionDef { Id = "Aim.Confirm", Type = InputActionType.Button },
                 new InputBindingDef { ActionId = "Aim.Confirm", Path = "<Gamepad>/start" });
 
-            device.SetGamepadAxis("RightStick/X", 1f);
-            device.SetGamepadAxis("RightStick/Y", -1f);
-            device.SetGamepadAxis("LT", 1f);
+            device.SetGamepadAxis("<Gamepad>/rightStick/x", 1f);
+            device.SetGamepadAxis("<Gamepad>/rightStick/y", -1f);
+            device.SetGamepadAxis("<Gamepad>/leftTrigger", 1f);
             device.GamepadButtonDown("<Gamepad>/start");
             device.AdvanceFrame();
             handler.Update(1f / 60f);
@@ -171,7 +204,7 @@ namespace Ludots.Tests.GAS
             Assert.That(handler.ReadAction<float>("Aim.Trigger"), Is.EqualTo(1f).Within(0.0001f));
             Assert.That(handler.IsDown("Aim.Confirm"), Is.True);
 
-            device.SetGamepadAxis("LeftStick/X", 0f);
+            device.SetGamepadAxis("<Gamepad>/leftStick/x", 0f);
             device.AdvanceFrame();
             GamepadControlPath centered = GamepadControlPath.Parse("<Gamepad>/leftStick/x");
             Assert.That(device.TryGetGamepadAxis(centered, out float centeredValue), Is.True);
@@ -200,8 +233,13 @@ namespace Ludots.Tests.GAS
                 () => new PlayerInputHandler(new DeviceBackend(device), config),
                 Throws.InvalidOperationException.With.Message.Contains("LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN")
                     .And.Message.Contains("<Gamepad>/notARealButton"));
-            Assert.Throws<InvalidOperationException>(() => device.GamepadButtonDown("leftStick"));
-            Assert.Throws<InvalidOperationException>(() => device.SetGamepadAxis("buttonSouth", 1f));
+            var notButton = Assert.Throws<InvalidOperationException>(() => device.GamepadButtonDown("<Gamepad>/leftStick"));
+            Assert.That(notButton!.Message, Does.Contain("LUDOTS_INPUT_GAMEPAD_CONTROL_NOT_BUTTON"));
+            Assert.That(notButton.Message, Does.Contain("<Gamepad>/leftStick"));
+            var notAxis = Assert.Throws<InvalidOperationException>(() => device.SetGamepadAxis("<Gamepad>/buttonSouth", 1f));
+            Assert.That(notAxis!.Message, Does.Contain("LUDOTS_INPUT_GAMEPAD_CONTROL_NOT_AXIS"));
+            Assert.That(notAxis.Message, Does.Contain("<Gamepad>/buttonSouth"));
+            Assert.That(notAxis.Message, Does.Not.Contain("LeftStick/X"));
         }
 
         [Test]

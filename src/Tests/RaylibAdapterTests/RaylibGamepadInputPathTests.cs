@@ -16,10 +16,10 @@ public sealed class RaylibGamepadInputPathTests
             RaylibInputPathParser.ParseGamepadButton("<Gamepad>/buttonSouth"),
             Is.EqualTo(GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
         Assert.That(
-            RaylibInputPathParser.ParseGamepadButton("<Gamepad>/a"),
+            RaylibInputPathParser.ParseGamepadButton("<gamepad>/ButtonSouth"),
             Is.EqualTo(GamepadButton.GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
         Assert.That(
-            RaylibInputPathParser.ParseGamepadButton("<Gamepad>/dpad/up"),
+            RaylibInputPathParser.ParseGamepadButton("<Gamepad>/dpadUp"),
             Is.EqualTo(GamepadButton.GAMEPAD_BUTTON_LEFT_FACE_UP));
         Assert.That(
             RaylibInputPathParser.ParseGamepadButton("<Gamepad>/rightTrigger"),
@@ -48,6 +48,12 @@ public sealed class RaylibGamepadInputPathTests
         var error = Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadButton("<Gamepad>/notARealButton"));
         Assert.That(error!.Message, Does.Contain("LUDOTS_INPUT_GAMEPAD_CONTROL_UNKNOWN"));
         Assert.That(error.Message, Does.Contain("<Gamepad>/notARealButton"));
+        Assert.That(error.Message, Does.Contain("buttonSouth"));
+        Assert.That(error.Message, Does.Not.Contain("CANCEL"));
+        Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadButton("<Gamepad>/A"));
+        Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadButton("<Gamepad>/LB"));
+        Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadAxis("<Gamepad>/left_stick_x"));
+        Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadButton("<Gamepad>/CANCEL"));
         Assert.Throws<InvalidOperationException>(() => RaylibInputPathParser.ParseGamepadAxis("<Gamepad9>/leftStick/x"));
     }
 
@@ -57,7 +63,7 @@ public sealed class RaylibGamepadInputPathTests
         var device = new SyntheticInputDevice();
         device.SetGamepadAxis("<Gamepad>/leftStick/x", 0.25f);
         device.SetGamepadAxis("<Gamepad>/leftStick/y", -0.5f);
-        device.GamepadButtonDown("buttonSouth");
+        device.GamepadButtonDown("<Gamepad>/buttonSouth");
         device.AdvanceFrame();
 
         var backend = new RaylibInputBackend(device);
