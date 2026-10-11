@@ -5,7 +5,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 
-namespace CrowdSimulationS4DeployMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// S4 部署演示交互运行时(F03-b):演示态(视图/建造模式/模板选择)与现场指令
@@ -28,20 +28,35 @@ public sealed class S4DeployDemoRuntime
 
     public static readonly string[] ViewModeLabels = { "路线(流场)", "可走区域", "NavMesh+HPA" };
 
-    private readonly GameEngine _engine;
+    private readonly GameEngine? _engine;
     private readonly object _inputGate = new();
     private readonly Queue<Action> _inputQueue = new();
     private CrowdSimSession? _boundSession;
 
+    /// <summary>本帧光标地面厘米。由输入系统写入，呈现只读。</summary>
+    public (double X, double Y)? HoverCm { get; set; }
+
     /// <summary>视图模式:0 路线(主力组流场贴花+目标标记) · 1 可走区域 · 2 NavMesh+HPA 线框。</summary>
+    public bool Active { get; set; } = true;
     public int ViewMode { get; private set; }
     public bool BuildMode { get; private set; }
     public int TemplateIndex { get; private set; }
     /// <summary>现场指令已进入本次会话(自动回放停用;会话重激活时随运行时一起复位)。</summary>
     public bool InteractiveMode { get; private set; }
-    public StructureChoice Template => Templates[TemplateIndex];
+    private StructureChoice[] _choices = Templates;
+    public StructureChoice Template => _choices[TemplateIndex];
 
-    public S4DeployDemoRuntime(GameEngine engine) => _engine = engine;
+    public void UseStructures(StructureChoice[] choices)
+    {
+        if (choices.Length != Templates.Length)
+        {
+            throw new InvalidOperationException($"部署演示模板数 {choices.Length} 与动作槽 {Templates.Length} 不一致。");
+        }
+
+        _choices = choices;
+    }
+
+    public S4DeployDemoRuntime(GameEngine? engine) => _engine = engine;
 
     // ── 呈现线程入口(只入队) ─────────────────────────────
     public void EnqueueCycleView() => Enqueue(() => ViewMode = (ViewMode + 1) % ViewModeLabels.Length);
@@ -73,6 +88,7 @@ public sealed class S4DeployDemoRuntime
     /// <summary>仿真 tick 边界消费(PostMovement 组,先于 Cleanup 组的会话步进)。</summary>
     public void Tick()
     {
+        if (!Active) return;
         for (; ; )
         {
             Action? action = null;
@@ -88,6 +104,7 @@ public sealed class S4DeployDemoRuntime
 
     private void SubmitInteractive(CrowdSimCommand cmd)
     {
+        if (_engine == null) return;
         var runtime = _engine.GetService(CoreServiceKeys.CrowdSimulationRuntime);
         var session = _engine.GetService(CoreServiceKeys.CrowdSimulationSession);
         if (runtime == null || session == null) return; // 会话未激活/已卸载:丢弃过期点击

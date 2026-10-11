@@ -2,19 +2,14 @@ using System;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.CrowdSimulation.Nav;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
 
-namespace CrowdSimulationS3PathMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
-/// S3 演示交互与覆盖层(spec 演示契约):
-/// 左键 = 点起点(绿环)、右键 = 点终点(红菱),光标悬停格有提示圈;
-/// Q 巡回代理体型、T 巡回后台线程 1/2/4、G 注入 / 解除后台变慢;
-/// HUD 显示请求帧 / 生效帧 / 当前帧 / 等待次数 / 体型 / 线程数 / 分支 / 可达性。
-/// 输入只读边沿(按下沿),世界落点走 ScreenRayProvider + 高度图射线,不碰调试通道。
+/// S3 两点路径覆盖层:起点/终点/悬停标记、折线、NavMesh 线框、HUD。
+/// 键鼠由 <see cref="S3PathInputSystem"/> 写入运行时队列,这里只读状态。
 /// </summary>
 public sealed class S3PathDemoPresentationSystem : ISystem<float>
 {
@@ -28,26 +23,13 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     private static readonly RouteVisualId RouteGoal = new(3);
     private static readonly RouteVisualId RouteHover = new(4);
 
-    // 指针域走后端原值(起终点/位置);键盘键走动作层(assets/Input/default_input.json
-    // 声明,Default_Gameplay 上下文绑定),演示不解释设备路径。
-    private const string MouseLeft = "<Mouse>/LeftButton";
-    private const string MouseRight = "<Mouse>/RightButton";
-    private const string ActionCycleContext = "CrowdSimulation.S3.CycleContext";
-    private const string ActionToggleThreads = "CrowdSimulation.S3.ToggleThreads";
-    private const string ActionToggleSlow = "CrowdSimulation.S3.ToggleSlow";
-    private const string ActionCycleView = "CrowdSimulation.S3.CycleView";
-    // HUD 面板矩形(窗口像素,绘制与世界点选排除共用同一份——点在面板上不算世界点选)
-    private const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 118;
+    internal const int HudPanelX = 16, HudPanelY = 16, HudPanelW = 1568, HudPanelH = 118;
 
     private readonly S3PathDemoRuntime _runtime;
     private readonly RouteVisualBuffer _routeVisuals;
     private readonly ScreenOverlayBuffer _overlay;
-    private readonly IInputBackend _input;
-    private readonly PlayerInputHandler _actions;
-    private readonly IScreenRayProvider _rays;
-    private readonly Func<IContinuousHeightmap?> _heightmapSource;
+    private readonly string _title;
 
-    private bool _prevLeft, _prevRight, _prevContext, _prevThreads, _prevSlow, _prevView;
     private int _wireNavId = -1;
     private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
     private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
@@ -56,18 +38,12 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         S3PathDemoRuntime runtime,
         RouteVisualBuffer routeVisuals,
         ScreenOverlayBuffer overlay,
-        IInputBackend input,
-        PlayerInputHandler actions,
-        IScreenRayProvider rays,
-        Func<IContinuousHeightmap?> heightmapSource)
+        string title)
     {
         _runtime = runtime;
         _routeVisuals = routeVisuals;
         _overlay = overlay;
-        _input = input;
-        _actions = actions;
-        _rays = rays;
-        _heightmapSource = heightmapSource;
+        _title = title;
     }
 
     public void Initialize() { }
@@ -79,38 +55,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
     {
         int n = _runtime.Nav.CellCount;
         float csM = _runtime.Config.NavCellSizeCm / 100f;
-        float csCm = _runtime.Config.NavCellSizeCm;
-
-        // ── 输入边沿 → 运行时队列 ─────────────────────────────
-        bool left = _input.GetButton(MouseLeft), right = _input.GetButton(MouseRight);
-        bool keyContext = _actions.IsDown(ActionCycleContext);
-        bool keyThreads = _actions.IsDown(ActionToggleThreads);
-        bool keySlow = _actions.IsDown(ActionToggleSlow);
-        bool keyView = _actions.IsDown(ActionCycleView);
-        Vector2 mouse = _input.GetMousePosition();
-        int hoveredCell = -1;
-        // 高度图服务是地图加载后才注册的(GameStart 时还没有),必须逐帧取
-        var heightmap = _heightmapSource();
-        bool overHudPanel = mouse.X >= HudPanelX && mouse.X <= HudPanelX + HudPanelW &&
-                            mouse.Y >= HudPanelY && mouse.Y <= HudPanelY + HudPanelH;
-        if (heightmap != null && !overHudPanel)
-        {
-            var ray = _rays.GetRay(mouse);
-            if (heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
-            {
-                int cx = (int)MathF.Floor(hit.WorldXCm / csCm), cy = (int)MathF.Floor(hit.WorldYCm / csCm);
-                if (cx >= 0 && cy >= 0 && cx < n && cy < n) hoveredCell = cy * n + cx;
-            }
-        }
-
-        _runtime.HoveredCell = hoveredCell;
-        if (left && !_prevLeft && hoveredCell >= 0) _runtime.EnqueueSetStart(hoveredCell);
-        if (right && !_prevRight && hoveredCell >= 0) _runtime.EnqueueSetGoal(hoveredCell);
-        if (keyContext && !_prevContext) _runtime.EnqueueCycleContext();
-        if (keyThreads && !_prevThreads) _runtime.EnqueueCycleThreads();
-        if (keySlow && !_prevSlow) _runtime.EnqueueToggleSlow();
-        if (keyView && !_prevView) _runtime.EnqueueCycleView();
-        _prevLeft = left; _prevRight = right; _prevContext = keyContext; _prevThreads = keyThreads; _prevSlow = keySlow; _prevView = keyView;
+        int hoveredCell = _runtime.HoveredCell;
 
         // ── 覆盖层(gameplay 通道) ─────────────────────────────
         _routeVisuals.BeginFrame();
@@ -169,7 +114,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
             (_runtime.SlowInjected ? "；后台慢注入中——仿真暂停等待,绝不使用半成品" : "") +
             (_runtime.Fault != null ? $"；服务故障 {_runtime.Fault}" : "");
         DrawCaption(_overlay,
-            "CrowdSimulation S3 · 两点路径与固定生效帧",
+            _title,
             detail,
             $"左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {S3PathDemoRuntime.ViewModeLabels[_runtime.ViewMode]}");
     }

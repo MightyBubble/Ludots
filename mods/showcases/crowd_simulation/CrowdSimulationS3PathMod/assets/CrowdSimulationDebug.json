@@ -1,0 +1,18 @@
+{
+  "session": {
+    "autostart": false
+  },
+  "presentation": {
+    "kind": "path",
+    "title": "CrowdSimulation S3 · 两点路径与固定生效帧",
+    "truthAsset": "assets/CrowdSimulation/parity/s3c-query-truth.json",
+    "actions": {
+      "setStart": "CrowdSimulation.S3.SetStart",
+      "setGoal": "CrowdSimulation.S3.SetGoal",
+      "cycleContext": "CrowdSimulation.S3.CycleContext",
+      "toggleThreads": "CrowdSimulation.S3.ToggleThreads",
+      "toggleSlow": "CrowdSimulation.S3.ToggleSlow",
+      "cycleView": "CrowdSimulation.S3.CycleView"
+    }
+  }
+}

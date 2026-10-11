@@ -5,7 +5,7 @@ using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Platform.Abstractions;
 
-namespace CrowdSimulationS4DeployMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// NavMesh + HPA 线框(S3 演示同款)。缓存键是(导航号, 结构重烘序, 变体 Version):

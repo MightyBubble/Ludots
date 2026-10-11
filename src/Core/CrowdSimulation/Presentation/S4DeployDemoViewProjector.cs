@@ -6,7 +6,7 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Rendering;
 
-namespace CrowdSimulationS4DeployMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>S4 演示视图投影器:按视图模式分发(与 S3 的 DemoViewProjector 同形)——
 /// 路线 = 主力组(成员最多的带流场组)的流场方向图,可走区域 = 该组导航上下文的遮罩层,

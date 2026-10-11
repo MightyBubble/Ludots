@@ -35,7 +35,7 @@ namespace Ludots.Core.CrowdSimulation.Runtime;
 /// 地图聚焦即建会话——会话跑在引擎世界上,单位带呈现投影接线,
 /// 部署/脚本/回放都是指令流(数据),回放另起一次性世界逐帧对拍校验码。
 /// </summary>
-public sealed class CrowdSimulationRuntime
+public sealed partial class CrowdSimulationRuntime
 {
     private CrowdSimulationConfig? _configDto;
     private JsonObject? _debug;
@@ -135,16 +135,21 @@ public sealed class CrowdSimulationRuntime
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine) || _configDto == null || _debug == null) return false;
         if (!string.Equals(mapId.Value, _configDto.MapId, StringComparison.Ordinal)) return false;
-        if (!IsAutostartEnabled(_debug)) return false;
+
+        string? presentationKind = PresentationKind(_debug);
+        if (presentationKind == "path") InstallPathPresentation(engine, mapConfig);
+        if (!IsAutostartEnabled(_debug)) return presentationKind == "path";
 
         Activate(engine, mapId, mapConfig);
+        if (presentationKind == "deploy") InstallDeployPresentation(engine);
         return true;
     }
 
     public bool HandleMapUnloaded(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (_activeMapId == null || !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal)) return false;
+        bool releasedPath = ReleasePathPresentation(engine, mapId);
+        if (_activeMapId == null || !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal)) return releasedPath;
         Deactivate(engine);
         return true;
     }
@@ -561,7 +566,7 @@ public sealed class CrowdSimulationRuntime
     }
 
     /// <summary>VFS 跨 mod 解析(与 GameEngine.TryResolveSingleExistingUri 同一约定:多 mod 命中即冲突)。</summary>
-    private static Stream OpenAsset(GameEngine engine, string relPath)
+    internal static Stream OpenAsset(GameEngine engine, string relPath)
     {
         string rel = relPath.Replace('\\', '/');
         string? found = null;
@@ -580,7 +585,7 @@ public sealed class CrowdSimulationRuntime
     }
 
     /// <summary>按完整 mod URI 直开("ModId:path" 形式,配置里声明的显式来源)。</summary>
-    private static Stream OpenUri(GameEngine engine, string uri)
+    internal static Stream OpenUri(GameEngine engine, string uri)
     {
         if (!engine.VFS.TryResolveFullPath(uri, out string? full) || !File.Exists(full))
         {

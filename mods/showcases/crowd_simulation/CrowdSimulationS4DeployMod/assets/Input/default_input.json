@@ -1,5 +1,6 @@
 {
   "actions": [
+    { "id": "CrowdSimulation.S4.Place", "name": "CrowdSimulation_S4_Place", "type": "Button" },
     { "id": "CrowdSimulation.S4.CycleView", "name": "CrowdSimulation_S4_CycleView", "type": "Button" },
     { "id": "CrowdSimulation.S4.ToggleBuild", "name": "CrowdSimulation_S4_ToggleBuild", "type": "Button" },
     { "id": "CrowdSimulation.S4.RemoveStructure", "name": "CrowdSimulation_S4_RemoveStructure", "type": "Button" },
@@ -11,6 +12,7 @@
     {
       "id": "Default_Gameplay",
       "bindings": [
+        { "actionId": "CrowdSimulation.S4.Place", "path": "<Mouse>/LeftButton" },
         { "actionId": "CrowdSimulation.S4.CycleView", "path": "<Keyboard>/v" },
         { "actionId": "CrowdSimulation.S4.ToggleBuild", "path": "<Keyboard>/b" },
         { "actionId": "CrowdSimulation.S4.RemoveStructure", "path": "<Keyboard>/x" },

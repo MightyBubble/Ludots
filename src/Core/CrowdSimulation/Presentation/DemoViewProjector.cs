@@ -2,7 +2,7 @@ using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Rendering;
 
-namespace CrowdSimulationS3PathMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>按演示视图模式分发的投影器:路线 = 方向场,可走区域 = 遮罩层,NavMesh 模式不写场(线框走路线通道)。</summary>
 internal sealed class DemoViewProjector : IGlobalFieldVisualProjector

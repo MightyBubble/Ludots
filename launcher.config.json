@@ -2773,16 +2773,14 @@
       "name": "crowd_simulation_s3_path_1337",
       "target": {
         "type": "path",
-        "value": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod",
-        "projectPath": "CrowdSimulationS3PathMod.csproj"
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod"
       }
     },
     {
       "name": "crowd_simulation_s4_deploy_1337",
       "target": {
         "type": "path",
-        "value": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod",
-        "projectPath": "CrowdSimulationS4DeployMod.csproj"
+        "value": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod"
       }
     }
   ],

@@ -2,7 +2,6 @@
   "name": "CrowdSimulationS3PathMod",
   "version": "0.1.0",
   "description": "CrowdSimulation S3 两点路径演示(种子 1337,交互版):左键起点/右键终点/Q 体型/T 线程 1/2/4/G 后台变慢,显示折线 + 方向贴花 + 请求帧 / 生效帧 / 等待次数。",
-  "main": "bin/net9.0/CrowdSimulationS3PathMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

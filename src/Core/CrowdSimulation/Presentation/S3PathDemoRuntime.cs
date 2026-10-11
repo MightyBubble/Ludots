@@ -8,13 +8,13 @@ using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
-using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.World;
-using Ludots.Core.Modding;
+using Ludots.Core.Engine;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Terrain;
 
-namespace CrowdSimulationS3PathMod.Runtime;
+namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// S3 两点路径演示运行时(spec 演示契约):左键点起点、右键点终点,路线与方向图
@@ -29,6 +29,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     public required IReadOnlyList<string> ContextLabels { get; init; }
     public required PathQueryService Service { get; init; }
 
+    public bool Active { get; set; } = true;
     public int TickCounter { get; private set; }
     public int ContextIndex { get; private set; }
     /// <summary>视图模式:0 路线(方向场+折线) · 1 可走区域(不可走红罩/桥面/portal) · 2 NavMesh+HPA 线框。</summary>
@@ -54,32 +55,32 @@ public sealed class S3PathDemoRuntime : IDisposable
     private readonly object _inputGate = new();
     private readonly Queue<Action> _inputQueue = new();
 
-    public static S3PathDemoRuntime Load(IModContext context)
+    public static S3PathDemoRuntime Load(GameEngine engine, CrowdSimulationConfig configDto, MapConfig map, string truthAsset)
     {
-        Stream Res(string modId, string rel) => context.GetResource($"{modId}:{rel}");
-        const string seed = "CrowdSimulationS1Terrain1337Mod";
+        var profileUri = configDto.Agents.ProfilesUri;
+        if (string.IsNullOrWhiteSpace(profileUri))
+        {
+            throw new InvalidOperationException("S3 路径演示需要 agents.profilesUri。");
+        }
 
-        var merged = (JsonObject)JsonNode.Parse(Res("CrowdSimulationMod", "assets/CrowdSimulationConfig.json"))!;
-        var overlay = (JsonObject)JsonNode.Parse(Res(seed, "assets/CrowdSimulationConfig.json"))!;
-        ConfigPipeline.DeepMerge(merged, overlay);
-        var config = CrowdSimulationConfig.Load(merged);
-
-        var map = JsonSerializer.Deserialize<MapConfig>(
-            Res(seed, "assets/Maps/crowd_simulation_s1337.json"),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
-            Res(seed, "assets/Entities/templates.json"),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        var templatesById = templates.Where(t => !string.IsNullOrWhiteSpace(t.Id)).ToDictionary(t => t.Id, StringComparer.Ordinal);
         var profileList = JsonSerializer.Deserialize<List<AgentProfileConfig>>(
-            Res("CrowdSimulationMod", "assets/Navigation/agent_profiles.json"),
-            StrictJsonOptions.CreateCamelCase())!;
-        var runtime = CrowdSimulationConfigLoader.Load(config, map, new AgentProfileRegistry(profileList), fixedHz: 30);
+            CrowdSimulationRuntime.OpenUri(engine, profileUri), StrictJsonOptions.CreateCamelCase())
+            ?? throw new InvalidOperationException($"体型档案反序列化为空: {profileUri}");
+        var runtime = CrowdSimulationConfigLoader.Load(configDto, map, new AgentProfileRegistry(profileList), fixedHz: 30);
+        var templatesById = engine.MapLoader.TemplateRegistry.GetAll()
+            .Where(t => !string.IsNullOrWhiteSpace(t.Id))
+            .ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        var surface = NavSurfaceAsset.Read(Res(seed, "assets/terrain/crowd_simulation_s1337.navsurface"));
+        var surface = NavSurfaceAsset.Read(CrowdSimulationRuntime.OpenAsset(engine, "assets/" + runtime.SurfaceAsset));
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
         var grid = SurfaceGrid.Build(runtime, surface, mapSurface.Blockers);
-        var heightAsset = ContinuousHeightmapBinary.Read(Res(seed, "assets/terrain/crowd_simulation_s1337.height"));
+        string? heightRel = map.ContinuousHeightmap?.Asset;
+        if (string.IsNullOrWhiteSpace(heightRel))
+        {
+            throw new InvalidOperationException($"地图 '{map.Id}' 未声明 ContinuousHeightmap.Asset。");
+        }
+
+        var heightAsset = ContinuousHeightmapBinary.Read(CrowdSimulationRuntime.OpenAsset(engine, heightRel));
         var heights = NavHeightField.FromHeightmap(heightAsset, runtime.NavCellCount, runtime.NavCellSizeCm);
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtime);
 
@@ -104,7 +105,7 @@ public sealed class S3PathDemoRuntime : IDisposable
         }
 
         // 初始起终点:真值 64 对的第 0 组(与对拍同一份数据,不另造)
-        var truth = JsonNode.Parse(Res(seed, "assets/CrowdSimulation/parity/s3c-query-truth.json"))!;
+        var truth = JsonNode.Parse(CrowdSimulationRuntime.OpenAsset(engine, truthAsset))!;
         var firstPair = truth["pairs"]!.AsArray()[0]!;
         var navs = contexts.ToDictionary(n => n.Id);
         return new S3PathDemoRuntime
@@ -137,6 +138,7 @@ public sealed class S3PathDemoRuntime : IDisposable
     /// <summary>仿真 tick(固定 30 Hz)。</summary>
     public void Tick()
     {
+        if (!Active) return;
         TickCounter++;
         for (; ; )
         {
