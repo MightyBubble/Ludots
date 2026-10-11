@@ -43,7 +43,7 @@ public static class UpperLayerBake
         var tileSeen = new bool[(navCellsPerSide / config.Hpa.NavCellsPerTile) * (navCellsPerSide / config.Hpa.NavCellsPerTile)];
         var tileOrder = new List<int>();
         int tileSize = config.Hpa.NavCellsPerTile;
-        var portalReach = Fix64.FromInt(config.Structures.PortalReachNavCells * navCellSizeCm / 100); // 格 → 米
+        var portalReachM = CrowdReferenceMeters.TruncatedCmToM(config.Structures.PortalReachNavCells * navCellSizeCm);
         foreach (var bridge in bridges)
         {
             int areaIndex = AreaIndexOf(config, bridge.AreaId);
@@ -55,8 +55,8 @@ public static class UpperLayerBake
             int maxX = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.X0Cm, span.X1Cm) + halfWCm, navCellSizeCm));
             int maxY = Math.Min(navCellsPerSide - 1, FloorDiv(Math.Max(span.Y0Cm, span.Y1Cm) + halfWCm, navCellSizeCm));
 
-            var x0 = Cm(span.X0Cm); var y0 = Cm(span.Y0Cm);
-            var ax = Cm(span.X1Cm) - x0; var ay = Cm(span.Y1Cm) - y0;
+            var x0 = CrowdReferenceMeters.CmToMRaw(span.X0Cm); var y0 = CrowdReferenceMeters.CmToMRaw(span.Y0Cm);
+            var ax = CrowdReferenceMeters.CmToMRaw(span.X1Cm) - x0; var ay = CrowdReferenceMeters.CmToMRaw(span.Y1Cm) - y0;
             // 桥 / 路径跨度按生成器约定是轴对齐的:轴对齐时单位向量与长度都取精确值,
             // 不走 VectorLength(定点 Sqrt 在端点格上的误差会吃掉 EPS 容差)。
             // 斜线路径(运行时道路 / 泛洪,S7)届时再按参考实现复核精度口径。
@@ -69,16 +69,16 @@ public static class UpperLayerBake
                 ux = len > Fix64.Zero ? ax / len : Fix64.OneValue;
                 uy = len > Fix64.Zero ? ay / len : Fix64.Zero;
             }
-            var halfW = Fix64.FromInt(span.WidthCm) / 200;
+            var halfW = CrowdReferenceMeters.HalfWidthM(span.WidthCm);
             var eps = Fix64.FromDouble(1e-6);
-            var csM = Fix64.FromInt(navCellSizeCm) / 100;
+            var navCellSizeM = CrowdReferenceMeters.CmToMRaw(navCellSizeCm);
 
             for (int y = minY; y <= maxY; y++)
             {
                 for (int x = minX; x <= maxX; x++)
                 {
-                    var px = (Fix64.FromInt(x) + Fix64.HalfValue) * csM;
-                    var py = (Fix64.FromInt(y) + Fix64.HalfValue) * csM;
+                    var px = (Fix64.FromInt(x) + Fix64.HalfValue) * navCellSizeM;
+                    var py = (Fix64.FromInt(y) + Fix64.HalfValue) * navCellSizeM;
                     var dx = px - x0; var dy = py - y0;
                     var t = dx * ux + dy * uy;
                     // covers():点在带内 = 投影在段上且横距 < 半宽
@@ -90,7 +90,7 @@ public static class UpperLayerBake
                     // portal:距任一端点的沿段距离 < portalCells 格
                     var endDist = t < len - t ? t : len - t;
                     deckAreaIndex[cell] = (byte)(areaIndex + 1); // 同格后放者胜( bridges 顺序即实体顺序)
-                    if (endDist < portalReach) portalFlag[cell] = 1;
+                    if (endDist < portalReachM) portalFlag[cell] = 1;
                     int tileId = (y / tileSize) * (navCellsPerSide / tileSize) + x / tileSize;
                     if (!tileSeen[tileId]) { tileSeen[tileId] = true; tileOrder.Add(tileId); }
                 }
@@ -99,7 +99,6 @@ public static class UpperLayerBake
 
         return new DeckSurface { AreaIndex = deckAreaIndex, PortalFlag = portalFlag, TileOrder = tileOrder.ToArray() };
 
-        static Fix64 Cm(int cm) => Fix64.FromInt(cm) / 100;
         static int FloorDiv(int value, int divisor)
         {
             int q = value / divisor;

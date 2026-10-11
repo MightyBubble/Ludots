@@ -40,8 +40,8 @@ public sealed class CrowdFogLosParityTests
         long hAvgTRaw = meta["hAvgTRaw"]!.GetValue<long>();
 
         var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-        var hAvgField = typeof(CrowdFog).GetField("_hAvg", flags)!;
-        var hMaxField = typeof(CrowdFog).GetField("_hMax", flags)!;
+        var hAvgField = typeof(CrowdFog).GetField("_hAvgM", flags)!;
+        var hMaxField = typeof(CrowdFog).GetField("_hMaxM", flags)!;
         var opaqueField = typeof(CrowdFog).GetField("_opaque", flags)!;
         var sight = typeof(CrowdFog).GetMethod("Sight", flags)!;
 

@@ -79,17 +79,17 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             return;
         }
 
-        float csM = session.Config.NavCellSizeCm / 100f;
+        float navCellVisual = WorldUnits.CmToM(session.Config.NavCellSizeCm);
         if (ground is { } hover)
         {
-            _routeVisuals.AddMarker(HoverMarker, new Vector2((float)(hover.X / 100.0), (float)(hover.Y / 100.0)), RouteVisualMarkerShape.Ring, csM * 0.8f, 1f, HoverWhite);
+            _routeVisuals.AddMarker(HoverMarker, new Vector2(WorldUnits.CmToM((float)hover.X), WorldUnits.CmToM((float)hover.Y)), RouteVisualMarkerShape.Ring, navCellVisual * 0.8f, 1f, HoverWhite);
         }
 
         // 路线视图:主力组目标标记(流场贴花由视图投影器写场)
         if (_demo.ViewMode == 0 && S4DeployDemoViewProjector.DominantGroup(session) is { Goal: >= 0 } group)
         {
             int navCellsPerSide = session.Config.NavCellsPerSide;
-            _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % navCellsPerSide + 0.5f) * csM, (group.Goal / navCellsPerSide + 0.5f) * csM), RouteVisualMarkerShape.Diamond, csM * 1.2f, 1.5f, GoalCyan);
+            _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % navCellsPerSide + 0.5f) * navCellVisual, (group.Goal / navCellsPerSide + 0.5f) * navCellVisual), RouteVisualMarkerShape.Diamond, navCellVisual * 1.2f, 1.5f, GoalCyan);
         }
 
         // NavMesh + HPA 线框(视图模式 2)。变体未物化时本帧不提交,缓存键留给下一帧。
@@ -107,19 +107,19 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             int px = (int)Math.Floor(p.X), py = (int)Math.Floor(p.Y);
             previewValid = CanPlace(store, _demo.Template, px, py);
             // 足迹/拆除轮廓线宽 = 0.5 格长(31m):细线角标在丘陵远景下实测可视性不足,加粗一档
-            AddRectOutline(PreviewOutline, FootprintMeters(_demo.Template, px, py), csM * 0.5f, previewValid ? PlaceGreen : PlaceRed);
+            AddRectOutline(PreviewOutline, FootprintVisual(_demo.Template, px, py), navCellVisual * 0.5f, previewValid ? PlaceGreen : PlaceRed);
             int hoverId = store.EntityAt(Fix64.FromInt(px), Fix64.FromInt(py));
             if (hoverId >= 0)
             {
                 var fp = store.FootprintOf(hoverId).Bbox();
                 AddRectOutline(RemoveOutline, (
-                    (double)fp.MinX.ToInt() / 100, (double)fp.MinY.ToInt() / 100,
-                    (double)fp.MaxX.ToInt() / 100, (double)fp.MaxY.ToInt() / 100), csM * 0.5f, RemoveOrange);
+                    WorldUnits.CmToM(fp.MinX.ToInt()), WorldUnits.CmToM(fp.MinY.ToInt()),
+                    WorldUnits.CmToM(fp.MaxX.ToInt()), WorldUnits.CmToM(fp.MaxY.ToInt())), navCellVisual * 0.5f, RemoveOrange);
             }
         }
 
         // 重烘脏 tile 闪烁:最近一笔报告发布后短暂高亮其受影响 tile 并集
-        CurrentFlash(session, csM);
+        CurrentFlash(session, navCellVisual);
 
         // ── HUD(全部读内核现成状态) ─────────────────────────────
         DrawHud(session, runtime, (previewShown, previewValid));
@@ -130,10 +130,11 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private static bool CanPlace(CrowdStructuresStore store, S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
     {
         if (store.EntityAt(Fix64.FromInt(xCm), Fix64.FromInt(yCm)) >= 0) return false;
-        var (minX, minY, maxX, maxY) = FootprintMeters(tpl, xCm, yCm);
+        var (minX, minY, maxX, maxY) = FootprintVisual(tpl, xCm, yCm);
         int navCellsPerSide = store.NavCellsPerSide, navCellSizeCm = store.NavCellSizeCm;
-        int cx0 = Math.Clamp((int)Math.Floor(minX * 100 / navCellSizeCm), 0, navCellsPerSide - 1), cy0 = Math.Clamp((int)Math.Floor(minY * 100 / navCellSizeCm), 0, navCellsPerSide - 1);
-        int cx1 = Math.Clamp((int)Math.Floor(maxX * 100 / navCellSizeCm), 0, navCellsPerSide - 1), cy1 = Math.Clamp((int)Math.Floor(maxY * 100 / navCellSizeCm), 0, navCellsPerSide - 1);
+        float cmPerMeter = WorldUnits.CmPerMeter;
+        int cx0 = Math.Clamp((int)Math.Floor(minX * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1), cy0 = Math.Clamp((int)Math.Floor(minY * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1);
+        int cx1 = Math.Clamp((int)Math.Floor(maxX * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1), cy1 = Math.Clamp((int)Math.Floor(maxY * cmPerMeter / navCellSizeCm), 0, navCellsPerSide - 1);
         for (int cy = cy0; cy <= cy1; cy++)
         {
             int row = cy * navCellsPerSide;
@@ -146,25 +147,31 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         return true;
     }
 
-    /// <summary>足迹包围盒(米)。rect = 中心 ± size/2;道路 = 光标向 +X 的条带(宽 size,长 RoadLength)。</summary>
-    private static (double MinX, double MinY, double MaxX, double MaxY) FootprintMeters(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
+    /// <summary>足迹包围盒(视觉米)。rect = 中心 ± size/2;道路 = 光标向 +X 的条带(宽 size,长 RoadLength)。</summary>
+    private static (float MinX, float MinY, float MaxX, float MaxY) FootprintVisual(S4DeployDemoRuntime.StructureChoice tpl, int xCm, int yCm)
     {
         if (tpl.IsRoad)
         {
-            return (xCm / 100.0, (yCm - tpl.SizeCm / 2) / 100.0, (xCm + tpl.RoadLengthCm) / 100.0, (yCm + tpl.SizeCm / 2) / 100.0);
+            return (
+                WorldUnits.CmToM(xCm),
+                WorldUnits.CmToM(yCm - tpl.SizeCm / 2),
+                WorldUnits.CmToM(xCm + tpl.RoadLengthCm),
+                WorldUnits.CmToM(yCm + tpl.SizeCm / 2));
         }
 
-        double hx = tpl.SizeCm / 200.0, hy = tpl.SizeCm / 200.0;
-        return (xCm / 100.0 - hx, yCm / 100.0 - hy, xCm / 100.0 + hx, yCm / 100.0 + hy);
+        float half = WorldUnits.CmToM(tpl.SizeCm) * 0.5f;
+        float x = WorldUnits.CmToM(xCm);
+        float y = WorldUnits.CmToM(yCm);
+        return (x - half, y - half, x + half, y + half);
     }
 
-    private void AddRectOutline(RouteVisualId id, (double MinX, double MinY, double MaxX, double MaxY) rect, float thick, Vector4 color)
+    private void AddRectOutline(RouteVisualId id, (float MinX, float MinY, float MaxX, float MaxY) rect, float thick, Vector4 color)
     {
         Span<Vector2> pts = stackalloc Vector2[5];
-        pts[0] = new((float)rect.MinX, (float)rect.MinY);
-        pts[1] = new((float)rect.MaxX, (float)rect.MinY);
-        pts[2] = new((float)rect.MaxX, (float)rect.MaxY);
-        pts[3] = new((float)rect.MinX, (float)rect.MaxY);
+        pts[0] = new(rect.MinX, rect.MinY);
+        pts[1] = new(rect.MaxX, rect.MinY);
+        pts[2] = new(rect.MaxX, rect.MaxY);
+        pts[3] = new(rect.MinX, rect.MaxY);
         pts[4] = pts[0];
         _routeVisuals.AddPolyline(id, pts, thick, color);
     }
@@ -172,7 +179,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     /// <summary>脏 tile 闪烁:报告 ReportTick 变化即起闪,FlashMs 内黄色轮廓线性淡出。
     /// tile 轮廓按导航格逐格细分:路线渲染器只对折点采样地面高度,1km tile 的四角直边
     /// 在丘陵地形会整段埋进山体(视野内又见不到角点),细分后贴地才可见。</summary>
-    private void CurrentFlash(CrowdSimSession session, float csM)
+    private void CurrentFlash(CrowdSimSession session, float navCellVisual)
     {
         var report = session.LastRebakeReport;
         if (report == null) return;
@@ -187,28 +194,28 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         float alpha = 1f - elapsed / (float)FlashMs;
         int navCellsPerSide = session.Config.NavCellsPerSide, tiles = session.Config.Hpa.NavCellsPerTile;
         int perRow = Math.Max(1, navCellsPerSide / tiles);
-        float tileM = tiles * csM;
+        float tileVisual = tiles * navCellVisual;
         var color = FlashYellow with { W = alpha };
         int shown = 0;
         foreach (int tile in report.UnionTiles)
         {
             var id = new RouteVisualId(200 + shown);
-            float ox = tile % perRow * tileM, oy = tile / perRow * tileM;
+            float ox = tile % perRow * tileVisual, oy = tile / perRow * tileVisual;
             // 黄线宽 = 0.6 格长(37.5m):细线随地形起伏时实测可视性不足,加粗一档
-            AddTileOutline(id, ox, oy, tileM, csM, csM * 0.6f, color);
+            AddTileOutline(id, ox, oy, tileVisual, navCellVisual, navCellVisual * 0.6f, color);
             shown++;
         }
     }
 
-    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileM, float stepM, float thick, Vector4 color)
+    private void AddTileOutline(RouteVisualId id, float ox, float oy, float tileVisual, float stepM, float thick, Vector4 color)
     {
-        int seg = Math.Max(1, (int)Math.Ceiling(tileM / stepM));
+        int seg = Math.Max(1, (int)Math.Ceiling(tileVisual / stepM));
         var pts = new Vector2[seg * 4 + 1];
         int p = 0;
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM * k / seg, oy);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM, oy + tileM * k / seg);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileM - tileM * k / seg, oy + tileM);
-        for (int k = 0; k < seg; k++) pts[p++] = new(ox, oy + tileM - tileM * k / seg);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual * k / seg, oy);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual, oy + tileVisual * k / seg);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox + tileVisual - tileVisual * k / seg, oy + tileVisual);
+        for (int k = 0; k < seg; k++) pts[p++] = new(ox, oy + tileVisual - tileVisual * k / seg);
         pts[p] = pts[0];
         _routeVisuals.AddPolyline(id, pts, thick, color);
     }

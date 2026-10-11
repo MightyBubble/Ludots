@@ -48,9 +48,9 @@ public sealed class CrowdOrder
     public required CrowdOrderMode Mode { get; init; }
     /// <summary>阵型 id(配置 formations[].id;未知回退第一项——参考实现同)。</summary>
     public required string ShapeId { get; init; }
-    /// <summary>拖线朝向(单位向量,世界系)与线宽(米);无拖线时 face=null。</summary>
+    /// <summary>拖线朝向(单位向量,世界系)与线宽(厘米);无拖线时 face=null。</summary>
     public Fix64Vec2? Face { get; init; }
-    public Fix64 FaceWidthM { get; init; }
+    public Fix64 FaceWidthCm { get; init; }
     /// <summary>点击目标格(去重判定用,-1 表示无)。</summary>
     public int ClickCell { get; set; } = -1;
     /// <summary>落点足印半径(格,规划器按编队宽度设置,到达判定的近邻域)。</summary>
@@ -126,9 +126,9 @@ public sealed class CrowdOrderBook
 
     public IReadOnlyList<CrowdOrder> List => _list;
 
-    public CrowdOrder Create(int player, CrowdOrderMode mode, string shapeId, Fix64Vec2? face, Fix64 widthM)
+    public CrowdOrder Create(int player, CrowdOrderMode mode, string shapeId, Fix64Vec2? face, Fix64 widthCm)
     {
-        var o = new CrowdOrder { Id = ++_seq, Player = player, Mode = mode, ShapeId = shapeId, Face = face, FaceWidthM = widthM };
+        var o = new CrowdOrder { Id = ++_seq, Player = player, Mode = mode, ShapeId = shapeId, Face = face, FaceWidthCm = widthCm };
         _list.Add(o);
         return o;
     }

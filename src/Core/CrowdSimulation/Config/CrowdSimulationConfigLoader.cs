@@ -26,7 +26,7 @@ public sealed class CrowdSimulationConfigLoader
     /// 形状米坐标先被 CrowdFogArea 的 ±46340 m 守卫卡住,再除以格长(米)。圆扫描线只走包围盒,
     /// |py−圆心| ≤ 半径 + 1/2;圆心在负半轴、包围盒被夹到 0 格时 py 最小是 0.5,同样只多出半格。
     /// 格长 ≥ 1 米时被平方的量 ≤ 46340.5,平方仍小于 2^31。</summary>
-    public const int MinFogCellSizeCm = 100;
+    public const int MinFogCellSizeCm = CrowdReferenceMeters.CentimetersPerMeter;
 
     private const string MassNavigationRelativePath = "MassNavigationConfig.json";
 

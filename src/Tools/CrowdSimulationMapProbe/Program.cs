@@ -7,7 +7,9 @@ using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace CrowdSimulationMapProbe;
 
@@ -401,8 +403,8 @@ public static class Program
             Console.WriteLine(
                 $"  u{i} truth(p{player} t{unitType} r{rIdx} g{group} x={xm:F9} y={ym:F9}) | " +
                 $"mine(p{session.World.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(entity).PlayerId} g{state.GroupId} " +
-                $"x={(pos.X.RawValue / 4294967296.0 / 100):F9} y={(pos.Y.RawValue / 4294967296.0 / 100):F9}) " +
-                $"rawEq=({pos.X.RawValue == (long)(xm * 100 * 4294967296.0)},{pos.Y.RawValue == (long)(ym * 100 * 4294967296.0)})");
+                $"x={WorldUnitsFix64.WorldCmToVisualMeters(pos).X:F9} y={WorldUnitsFix64.WorldCmToVisualMeters(pos).Z:F9}) " +
+                $"rawEq=({pos.X.RawValue == (long)(xm * WorldUnits.CmPerMeter * 4294967296.0)},{pos.Y.RawValue == (long)(ym * WorldUnits.CmPerMeter * 4294967296.0)})");
         }
 
         return 0;
@@ -417,10 +419,11 @@ public static class Program
             for (int k = s; k < e; k++)
             {
                 int a = entry.PolyVerts[k], b = entry.PolyVerts[k + 1 < e ? k + 1 : s];
-                float x0 = (tx * navCellsPerTile + entry.Vx[a]) * csCm / 100f;
-                float y0 = (ty * navCellsPerTile + entry.Vy[a]) * csCm / 100f;
-                float x1 = (tx * navCellsPerTile + entry.Vx[b]) * csCm / 100f;
-                float y1 = (ty * navCellsPerTile + entry.Vy[b]) * csCm / 100f;
+                float cellVisual = WorldUnits.CmToM(csCm);
+                float x0 = (tx * navCellsPerTile + entry.Vx[a]) * cellVisual;
+                float y0 = (ty * navCellsPerTile + entry.Vy[a]) * cellVisual;
+                float x1 = (tx * navCellsPerTile + entry.Vx[b]) * cellVisual;
+                float y1 = (ty * navCellsPerTile + entry.Vy[b]) * cellVisual;
                 float worldCm = navCellsPerSide * csCm;
                 int steps = (int)(MathF.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / worldCm * RenderSize * 2) + 1;
                 for (int si = 0; si <= steps; si++)

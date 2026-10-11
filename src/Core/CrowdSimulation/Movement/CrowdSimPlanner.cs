@@ -90,6 +90,15 @@ public sealed class CrowdSimPlanner
 
     public int PendingCount => _pending.Count;
 
+    /// <summary>
+    /// 拖线线宽已经是厘米。按这一块的成员占比切开，截成整厘米。
+    /// 再乘每米厘米数会把行宽放大一百倍。
+    /// </summary>
+    internal static Fix64 FaceWidthShareCm(Fix64 faceWidthCm, int memberCount, int total)
+        => faceWidthCm > Fix64.Zero
+            ? Fix64.FromInt((int)faceWidthCm.ToLong()) * memberCount / total
+            : Fix64.Zero;
+
     /// <summary>为一批指令起规划(plan 移植):组目标/可达替代/成员标记/出发代表格,再发请求。</summary>
     public void Plan(IReadOnlyList<CrowdOrder> orders, int tick)
     {
@@ -565,9 +574,7 @@ public sealed class CrowdSimPlanner
             }
             else
             {
-                Fix64 widthShare = o.FaceWidthM > Fix64.Zero
-                    ? Fix64.FromInt((int)(o.FaceWidthM.ToLong() * 100)) * mem.Count / total
-                    : Fix64.Zero;
+                Fix64 widthShare = FaceWidthShareCm(o.FaceWidthCm, mem.Count, total);
                 blocks.Add((CrowdFormations.AssignSlots(session, mem, leader.Hx, leader.Hy, fc.SpacingScale, shape, widthShare, leader.Mirror), mem));
             }
         }

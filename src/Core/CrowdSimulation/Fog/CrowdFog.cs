@@ -60,8 +60,8 @@ public sealed class CrowdFog
     private readonly List<int> _reconcileForget = new();
     private readonly List<(int GroupIndex, int[] Cells, int Until)> _obscureKeep = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
-    private Fix64[]? _hAvg, _hMax;  // LOS:fog 格均高 / 最高高(米,Fix64)
-    private readonly Fix64 _eyeM;   // 眼高(米)= EyeCm / 100
+    private Fix64[]? _hAvgM, _hMaxM;  // LOS:fog 格均高 / 最高高(米,Fix64)
+    private readonly Fix64 _eyeM;   // 眼高(米)
     private byte[]? _opaque;
     private bool _opaqueDirty;
     public int Refreshes;           // 诊断:刷新次数
@@ -76,7 +76,7 @@ public sealed class CrowdFog
         FogCellSizeCm = fc.FogCellSizeCm;
         Los = fc.LineOfSight;
         EyeCm = fc.EyeCm;
-        _eyeM = Fix64.FromInt(EyeCm) / Fix64.FromInt(100);
+        _eyeM = CrowdReferenceMeters.CmToMPrecise(EyeCm);
         NavCellsPerTile = config.Hpa.NavCellsPerTile;
         NavTilesPerSide = NavCellsPerSide / NavCellsPerTile;
         SetPeriod(config.FixedHz, fc.RateHz.ToDouble());
@@ -172,24 +172,23 @@ public sealed class CrowdFog
     /// __L31_FIX64_LOS__ 补丁的逐 op 求值树同构。</summary>
     public void EnsureHeights(NavHeightField heights)
     {
-        if (_hAvg != null) return;
-        _hAvg = new Fix64[FogCellsPerSide * FogCellsPerSide];
-        _hMax = new Fix64[FogCellsPerSide * FogCellsPerSide];
+        if (_hAvgM != null) return;
+        _hAvgM = new Fix64[FogCellsPerSide * FogCellsPerSide];
+        _hMaxM = new Fix64[FogCellsPerSide * FogCellsPerSide];
         var cnt = new int[FogCellsPerSide * FogCellsPerSide];
-        Fix64 cmPerM = Fix64.FromInt(100);
         for (int y = 0; y < NavCellsPerSide; y++)
         {
             for (int x = 0; x < NavCellsPerSide; x++)
             {
                 int c = y / NavCellsPerFogCell * FogCellsPerSide + x / NavCellsPerFogCell;
-                Fix64 h = heights.HeightsCm[y * NavCellsPerSide + x] / cmPerM;
-                _hAvg[c] += h;
+                Fix64 h = CrowdReferenceMeters.CmToMPrecise(heights.HeightsCm[y * NavCellsPerSide + x]);
+                _hAvgM[c] += h;
                 cnt[c]++;
-                if (h > _hMax[c]) _hMax[c] = h;
+                if (h > _hMaxM[c]) _hMaxM[c] = h;
             }
         }
 
-        for (int c = 0; c < FogCellsPerSide * FogCellsPerSide; c++) _hAvg[c] /= Fix64.FromInt(cnt[c]);
+        for (int c = 0; c < FogCellsPerSide * FogCellsPerSide; c++) _hAvgM[c] /= Fix64.FromInt(cnt[c]);
     }
 
     /// <summary>当前逻辑频率下的刷新周期(tick)= max(1, round(tickRate / rateHz))。</summary>
@@ -348,14 +347,14 @@ public sealed class CrowdFog
         int n = Math.Max(Math.Abs(dx), Math.Abs(dy)) * 2;
         if (n <= 2) return true;
         int v = cy * FogCellsPerSide + cx, t = ty * FogCellsPerSide + tx;
-        Fix64 eye = _hAvg![v] + _eyeM;
-        Fix64 rise = _hAvg[t] - eye;
+        Fix64 eye = _hAvgM![v] + _eyeM;
+        Fix64 rise = _hAvgM[t] - eye;
         for (int s = 1; s < n; s++)
         {
             Fix64 f = Fix64.FromInt(s) / Fix64.FromInt(n);
             int c = (int)((Fix64.FromInt(cy) + Fix64.HalfValue + dy * f).ToLong() * FogCellsPerSide + (Fix64.FromInt(cx) + Fix64.HalfValue + dx * f).ToLong());
             if (c == v || c == t) continue;
-            if (_opaque![c] != 0 || _hMax![c] > eye + Fix64Math.MulExact(rise, f)) return false;
+            if (_opaque![c] != 0 || _hMaxM![c] > eye + Fix64Math.MulExact(rise, f)) return false;
         }
 
         return true;

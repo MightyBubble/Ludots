@@ -118,7 +118,7 @@ public static class CrowdDeployment
         int comp = nav.Comp[c0];
         var profile = ProfileOf(cfg, l, rIdx);
         var spread = Fix64.Max(Fix64.OneValue,
-            Fix64Math.Sqrt(Fix64.FromInt(count)) * profile.PersonalRadiusCm / 100 * cfg.Spawn.GroupSpacingScale / (cellSize / 100));
+            CrowdReferenceMeters.SpawnSpreadNavCells(count, profile.PersonalRadiusCm, cfg.Spawn.GroupSpacingScale, cellSize));
         int cx0 = c0 % navCellsPerSide, cy0 = c0 / navCellsPerSide, made = 0;
         for (; made < count && sim.Units.Count < sim.Units.Capacity; made++)
         {

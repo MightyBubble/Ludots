@@ -71,7 +71,7 @@ internal sealed class S4DeployNavWireframe
         List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> markers)
     {
         int navCellsPerSide = session.Config.NavCellsPerSide;
-        float csM = session.Config.NavCellSizeCm / 100f;
+        float navCellVisual = WorldUnits.CmToM(session.Config.NavCellSizeCm);
         int navCellsPerTile = session.Config.Hpa.NavCellsPerTile, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var navmeshColor = new Vector4(0.9f, 0.9f, 0.9f, 0.55f);
         var deckColor = new Vector4(1f, 0.84f, 0.31f, 0.85f);
@@ -80,17 +80,17 @@ internal sealed class S4DeployNavWireframe
             for (int tx = 0; tx < navTilesPerSide; tx++)
             {
                 int tileId = ty * navTilesPerSide + tx;
-                AddEntryWire(lines, nav.Tiles?[tileId], tx * navCellsPerTile, ty * navCellsPerTile, csM, navmeshColor);
+                AddEntryWire(lines, nav.Tiles?[tileId], tx * navCellsPerTile, ty * navCellsPerTile, navCellVisual, navmeshColor);
                 if (nav.UpperTiles != null && nav.UpperTiles.TryGetValue(tileId, out var up))
-                    AddEntryWire(lines, up.Entry, tx * navCellsPerTile, ty * navCellsPerTile, csM, deckColor);
+                    AddEntryWire(lines, up.Entry, tx * navCellsPerTile, ty * navCellsPerTile, navCellVisual, deckColor);
             }
         }
 
         var gridColor = new Vector4(1f, 1f, 1f, 0.22f);
         for (int b = 0; b <= navTilesPerSide; b++)
         {
-            lines.Add((new[] { new Vector2(b * navCellsPerTile * csM, 0f), new Vector2(b * navCellsPerTile * csM, navCellsPerSide * csM) }, csM * 0.1f, gridColor));
-            lines.Add((new[] { new Vector2(0f, b * navCellsPerTile * csM), new Vector2(navCellsPerSide * csM, b * navCellsPerTile * csM) }, csM * 0.1f, gridColor));
+            lines.Add((new[] { new Vector2(b * navCellsPerTile * navCellVisual, 0f), new Vector2(b * navCellsPerTile * navCellVisual, navCellsPerSide * navCellVisual) }, navCellVisual * 0.1f, gridColor));
+            lines.Add((new[] { new Vector2(0f, b * navCellsPerTile * navCellVisual), new Vector2(navCellsPerSide * navCellVisual, b * navCellsPerTile * navCellVisual) }, navCellVisual * 0.1f, gridColor));
         }
 
         if (nav.Hpa != null)
@@ -103,7 +103,7 @@ internal sealed class S4DeployNavWireframe
                 {
                     bool deck = cell >= n2;
                     int cc = deck ? cell - n2 : cell;
-                    markers.Add((new Vector2((cc % navCellsPerSide + 0.5f) * csM, (cc / navCellsPerSide + 0.5f) * csM), RouteVisualMarkerShape.Ring, csM * 0.4f, deck ? deckColor : entranceColor));
+                    markers.Add((new Vector2((cc % navCellsPerSide + 0.5f) * navCellVisual, (cc / navCellsPerSide + 0.5f) * navCellVisual), RouteVisualMarkerShape.Ring, navCellVisual * 0.4f, deck ? deckColor : entranceColor));
                 }
             }
         }
@@ -116,16 +116,16 @@ internal sealed class S4DeployNavWireframe
                 var col = nav.Links.TwoWay[e] != 0 ? new Vector4(0.36f, 0.42f, 0.75f, 0.9f) : new Vector4(1f, 0.7f, 0f, 0.9f);
                 lines.Add((new[]
                 {
-                    new Vector2((a % navCellsPerSide + 0.5f) * csM, (a / navCellsPerSide + 0.5f) * csM),
-                    new Vector2((b2 % navCellsPerSide + 0.5f) * csM, (b2 / navCellsPerSide + 0.5f) * csM),
-                }, csM * 0.2f, col));
+                    new Vector2((a % navCellsPerSide + 0.5f) * navCellVisual, (a / navCellsPerSide + 0.5f) * navCellVisual),
+                    new Vector2((b2 % navCellsPerSide + 0.5f) * navCellVisual, (b2 / navCellsPerSide + 0.5f) * navCellVisual),
+                }, navCellVisual * 0.2f, col));
             }
         }
     }
 
     private static void AddEntryWire(
         List<(Vector2[] Pts, float Thick, Vector4 Color)> lines,
-        NavTileEntry? e, int ox, int oy, float csM, Vector4 color)
+        NavTileEntry? e, int ox, int oy, float navCellVisual, Vector4 color)
     {
         if (e == null) return;
         for (int p = 0; p < e.Count; p++)
@@ -135,11 +135,11 @@ internal sealed class S4DeployNavWireframe
             for (int k = 0; k < count; k++)
             {
                 int v = e.PolyVerts[s + k];
-                pts[k] = new Vector2((ox + e.Vx[v]) * csM, (oy + e.Vy[v]) * csM);
+                pts[k] = new Vector2((ox + e.Vx[v]) * navCellVisual, (oy + e.Vy[v]) * navCellVisual);
             }
 
             pts[count] = pts[0];
-            lines.Add((pts, csM * 0.12f, color));
+            lines.Add((pts, navCellVisual * 0.12f, color));
         }
     }
 }
