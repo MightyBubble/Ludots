@@ -1,0 +1,389 @@
+[
+  {
+    "id": "graph.aim.resolve_submit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "resolve",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_target",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "target_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "target_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_target",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "submit_target",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "read_valid",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "valid_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "valid_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_x",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "read_y",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "set_pos",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "q_ground",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "submit_ground",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt1",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      },
+      {
+        "from": "read_target",
+        "fromPort": "next",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "target_alive"
+      },
+      {
+        "from": "target_alive",
+        "fromPort": "next",
+        "to": "target_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "read_target"
+      },
+      {
+        "from": "q_target",
+        "fromPort": "next",
+        "to": "submit_target"
+      },
+      {
+        "from": "submit_target",
+        "fromPort": "next",
+        "to": "halt1"
+      },
+      {
+        "from": "target_jump",
+        "fromPort": "true",
+        "to": "q_target"
+      },
+      {
+        "from": "read_valid",
+        "fromPort": "next",
+        "to": "valid_eq"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "next",
+        "to": "valid_jump"
+      },
+      {
+        "from": "target_jump",
+        "fromPort": "false",
+        "to": "read_valid"
+      },
+      {
+        "from": "read_x",
+        "fromPort": "next",
+        "to": "read_y"
+      },
+      {
+        "from": "read_y",
+        "fromPort": "next",
+        "to": "set_pos"
+      },
+      {
+        "from": "set_pos",
+        "fromPort": "next",
+        "to": "q_ground"
+      },
+      {
+        "from": "q_ground",
+        "fromPort": "next",
+        "to": "submit_ground"
+      },
+      {
+        "from": "submit_ground",
+        "fromPort": "next",
+        "to": "halt1"
+      },
+      {
+        "from": "valid_jump",
+        "fromPort": "true",
+        "to": "read_x"
+      },
+      {
+        "from": "valid_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt1",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_target",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "read_target",
+        "fromPort": "value",
+        "to": "target_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "target_alive",
+        "fromPort": "value",
+        "to": "target_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_target",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "submit_target",
+        "toPort": "value"
+      },
+      {
+        "from": "read_target",
+        "fromPort": "value",
+        "to": "submit_target",
+        "toPort": "target"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "read_valid",
+        "fromPort": "value",
+        "to": "valid_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "valid_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "value",
+        "to": "valid_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_x",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_y",
+        "toPort": "source"
+      },
+      {
+        "from": "read_x",
+        "fromPort": "value",
+        "to": "set_pos",
+        "toPort": "a"
+      },
+      {
+        "from": "read_y",
+        "fromPort": "value",
+        "to": "set_pos",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_ground",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "submit_ground",
+        "toPort": "value"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "value",
+        "to": "submit_ground",
+        "toPort": "condition"
+      }
+    ]
+  }
+]

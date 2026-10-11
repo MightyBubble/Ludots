@@ -1,0 +1,245 @@
+[
+  {
+    "id": "graph.aim.release_confirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.Slot1.Release",
+        "action": "Aim.Slot1.Release",
+        "start": "s0",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.Slot2.Release",
+        "action": "Aim.Slot2.Release",
+        "start": "s1",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.Slot3.Release",
+        "action": "Aim.Slot3.Release",
+        "start": "s2",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.Slot4.Release",
+        "action": "Aim.Slot4.Release",
+        "start": "s3",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "s0",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 4
+      },
+      {
+        "id": "s1",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 4
+      },
+      {
+        "id": "s2",
+        "op": "ConstInt",
+        "intValue": 2,
+        "pinRegister": 4
+      },
+      {
+        "id": "s3",
+        "op": "ConstInt",
+        "intValue": 3,
+        "pinRegister": 4
+      },
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "eq_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.resolve_submit"
+      },
+      {
+        "id": "deact",
+        "op": "DeactivateContext",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "halt_skip",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "s0",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "s1",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "s2",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "s3",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "eq"
+      },
+      {
+        "from": "eq",
+        "fromPort": "next",
+        "to": "eq_jump"
+      },
+      {
+        "from": "eq_jump",
+        "fromPort": "false",
+        "to": "halt_skip"
+      },
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "deact"
+      },
+      {
+        "from": "deact",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "eq_jump",
+        "fromPort": "true",
+        "to": "invoke"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_skip",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "a"
+      },
+      {
+        "from": "s0",
+        "fromPort": "value",
+        "to": "eq",
+        "toPort": "b"
+      },
+      {
+        "from": "eq",
+        "fromPort": "value",
+        "to": "eq_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deact",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -1,0 +1,174 @@
+{
+  "actions": [
+    {
+      "id": "Aim.Slot1",
+      "name": "Aim_Slot1",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Slot2",
+      "name": "Aim_Slot2",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Slot3",
+      "name": "Aim_Slot3",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Slot4",
+      "name": "Aim_Slot4",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Slot1.Release",
+      "name": "Aim_Slot1_Release",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Aim.Slot2.Release",
+      "name": "Aim_Slot2_Release",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Aim.Slot3.Release",
+      "name": "Aim_Slot3_Release",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Aim.Slot4.Release",
+      "name": "Aim_Slot4_Release",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Aim.Confirm",
+      "name": "Aim_Confirm",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Cancel",
+      "name": "Aim_Cancel",
+      "type": "Button"
+    },
+    {
+      "id": "Aim.Pointer",
+      "name": "Aim_Pointer",
+      "type": "Axis2D",
+      "firesOn": "change"
+    },
+    {
+      "id": "Aim.Stick",
+      "name": "Aim_Stick",
+      "type": "Axis2D",
+      "firesOn": "change"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Aim.Kbm",
+      "name": "Aim Keyboard Mouse",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Slot1",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "Aim.Slot2",
+          "path": "<Keyboard>/w"
+        },
+        {
+          "actionId": "Aim.Slot3",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "Aim.Slot4",
+          "path": "<Keyboard>/r"
+        },
+        {
+          "actionId": "Aim.Slot1.Release",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "Aim.Slot2.Release",
+          "path": "<Keyboard>/w"
+        },
+        {
+          "actionId": "Aim.Slot3.Release",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "Aim.Slot4.Release",
+          "path": "<Keyboard>/r"
+        },
+        {
+          "actionId": "Aim.Confirm",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Aim.Cancel",
+          "path": "<Keyboard>/escape"
+        },
+        {
+          "actionId": "Aim.Cancel",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Aim.Pointer",
+          "path": "<Mouse>/Pos"
+        }
+      ]
+    },
+    {
+      "id": "Aim.Gamepad",
+      "name": "Aim Gamepad",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Slot1",
+          "path": "<Gamepad>/buttonSouth"
+        },
+        {
+          "actionId": "Aim.Slot2",
+          "path": "<Gamepad>/buttonWest"
+        },
+        {
+          "actionId": "Aim.Slot3",
+          "path": "<Gamepad>/buttonEast"
+        },
+        {
+          "actionId": "Aim.Slot4",
+          "path": "<Gamepad>/buttonNorth"
+        },
+        {
+          "actionId": "Aim.Slot1.Release",
+          "path": "<Gamepad>/buttonSouth"
+        },
+        {
+          "actionId": "Aim.Slot2.Release",
+          "path": "<Gamepad>/buttonWest"
+        },
+        {
+          "actionId": "Aim.Slot3.Release",
+          "path": "<Gamepad>/buttonEast"
+        },
+        {
+          "actionId": "Aim.Slot4.Release",
+          "path": "<Gamepad>/buttonNorth"
+        },
+        {
+          "actionId": "Aim.Stick",
+          "path": "<Gamepad>/rightStick"
+        },
+        {
+          "actionId": "Aim.Cancel",
+          "path": "<Gamepad>/start"
+        }
+      ]
+    }
+  ]
+}

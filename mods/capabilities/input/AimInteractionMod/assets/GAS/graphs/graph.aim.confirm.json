@@ -1,0 +1,75 @@
+[
+  {
+    "id": "graph.aim.confirm",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.Confirm",
+        "action": "Aim.Confirm",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.resolve_submit"
+      },
+      {
+        "id": "deact",
+        "op": "DeactivateContext",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "invoke"
+      },
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "deact"
+      },
+      {
+        "from": "deact",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "deact",
+        "toPort": "source"
+      }
+    ]
+  }
+]

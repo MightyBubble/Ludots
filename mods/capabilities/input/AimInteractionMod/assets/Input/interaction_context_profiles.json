@@ -1,0 +1,66 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.aim.cast",
+      "triggers": [
+        {
+          "trigger": "graph.aim.press"
+        },
+        {
+          "trigger": "graph.aim.track_pointer"
+        },
+        {
+          "trigger": "graph.aim.track_stick"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.aim.click",
+      "foreground": true,
+      "triggers": [
+        {
+          "trigger": "graph.aim.track_pointer"
+        },
+        {
+          "trigger": "graph.aim.track_stick"
+        },
+        {
+          "trigger": "graph.aim.confirm"
+        },
+        {
+          "trigger": "graph.aim.cancel_click"
+        }
+      ],
+      "onActivated": [
+        "graph.aim.indicate"
+      ],
+      "onDeactivated": [
+        "graph.aim.clear"
+      ]
+    },
+    {
+      "id": "interaction.context.aim.release",
+      "foreground": true,
+      "triggers": [
+        {
+          "trigger": "graph.aim.track_pointer"
+        },
+        {
+          "trigger": "graph.aim.track_stick"
+        },
+        {
+          "trigger": "graph.aim.release_confirm"
+        },
+        {
+          "trigger": "graph.aim.cancel_release"
+        }
+      ],
+      "onActivated": [
+        "graph.aim.indicate"
+      ],
+      "onDeactivated": [
+        "graph.aim.clear"
+      ]
+    }
+  ]
+}

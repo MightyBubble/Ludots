@@ -1,0 +1,20 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    },
+    {
+      "id": "scheme.aim.kbm",
+      "inputContexts": [
+        "Aim.Kbm"
+      ]
+    },
+    {
+      "id": "scheme.aim.gamepad",
+      "inputContexts": [
+        "Aim.Gamepad"
+      ]
+    }
+  ]
+}

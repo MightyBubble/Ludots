@@ -1,0 +1,84 @@
+[
+  {
+    "id": "graph.aim.indicate",
+    "kind": "Script",
+    "entry": "rep",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "q",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write",
+        "op": "WriteCollection",
+        "collectionKey": "aim.indicating"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "q"
+      },
+      {
+        "from": "q",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      }
+    ]
+  }
+]
