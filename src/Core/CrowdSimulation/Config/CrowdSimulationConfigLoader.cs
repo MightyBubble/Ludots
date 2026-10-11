@@ -532,7 +532,7 @@ public sealed class CrowdSimulationConfigLoader
         });
     }
 
-    /// <summary>关系推挤矩阵(core/relations.js buildRelations 移植):解析序 overrides > 同玩家 > 同队 > default;
+    /// <summary>关系推挤矩阵:先按自身、同队、默认填格,再由 overrides 成对覆盖。
     /// overrides 的玩家号必须存在于地图 Players。矩阵下标 = Players 表序,另存玩家号 → 下标表。</summary>
     private static RuntimeRelations BuildRelations(CrowdSimulationConfig config, MapConfig map)
     {
