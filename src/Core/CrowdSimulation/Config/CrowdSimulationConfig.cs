@@ -313,6 +313,8 @@ public sealed class CrowdSimulationConfig
     {
         public required int MaxUnits { get; init; }
         public required double TimeScale { get; init; }
+        /// <summary>运动内核按单位/占格下标划分的工人数。1 = 单线程。结果与该数无关。</summary>
+        public required int ParallelWorkerCount { get; init; }
     }
 
     public sealed class SpawnSection

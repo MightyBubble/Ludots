@@ -15,25 +15,52 @@ public static class CrowdMotor
     public static void Integrate(CrowdMovementKernel k, Fix64 dt)
     {
         var session = k.Session;
-        int n = session.Units.Count;
         int navN = session.Config.NavCellCount;
         int cellSizeCm = session.Config.NavCellSizeCm;
         Fix64 cs = Fix64.FromInt(cellSizeCm);
-        Fix64 lim = cs * navN - Fix64.FromFloat(0.01f);
-        Fix64 a = Fix64.OneValue - Fix64Math.Exp(-k.Accel * dt);
-        Fix64 aRest = Fix64.OneValue - Fix64Math.Exp(-k.Accel * k.RestAccelScale * dt);
         Fix64 maxTurn = k.UnitTurnRate * dt;
-        Fix64 cosT = Fix64Math.Cos(maxTurn), sinT = Fix64Math.Sin(maxTurn);
-        Fix64 dead = k.RestDeadband;
-        Fix64 stop2 = k.StopSpeedRatio * k.StopSpeedRatio;
-        Fix64 capR = k.SpeedCapRatio;
+        k.MotorFrame = new CrowdMotorFrame
+        {
+            NavN = navN,
+            CellSizeCm = cellSizeCm,
+            N2 = navN * navN,
+            Dt = dt,
+            Cs = cs,
+            Lim = cs * navN - Fix64.FromFloat(0.01f),
+            Response = Fix64.OneValue - Fix64Math.Exp(-k.Accel * dt),
+            ResponseRest = Fix64.OneValue - Fix64Math.Exp(-k.Accel * k.RestAccelScale * dt),
+            CosT = Fix64Math.Cos(maxTurn),
+            SinT = Fix64Math.Sin(maxTurn),
+            Dead = k.RestDeadband,
+            Stop2 = k.StopSpeedRatio * k.StopSpeedRatio,
+            CapR = k.SpeedCapRatio,
+            HasObs = session.Blockers is { Count: > 0 },
+        };
+        FillOpenCells(k);
+        k.RunRanges(session.Units.Count, CrowdMovementKernel.RangePhaseMotor, dt);
+    }
+
+    internal static void IntegrateRange(CrowdMovementKernel k, int start, int end, Fix64 dt)
+    {
+        var session = k.Session;
+        var frame = k.MotorFrame;
+        int navN = frame.NavN;
+        int cellSizeCm = frame.CellSizeCm;
+        int n2 = frame.N2;
+        Fix64 cs = frame.Cs;
+        Fix64 lim = frame.Lim;
+        Fix64 a = frame.Response;
+        Fix64 aRest = frame.ResponseRest;
+        Fix64 cosT = frame.CosT, sinT = frame.SinT;
+        Fix64 dead = frame.Dead;
+        Fix64 stop2 = frame.Stop2;
+        Fix64 capR = frame.CapR;
+        bool hasObs = frame.HasObs;
         var colliders = session.Blockers;
-        bool hasObs = colliders is { Count: > 0 };
-        int n2 = navN * navN;
         Nav.NavContext? openNav = null;
         byte[]? openGrid = null;
 
-        for (int i = 0; i < n; i++)
+        for (int i = start; i < end; i++)
         {
             var state = k.States[i];
             var kin = k.Kins[i];
@@ -138,12 +165,14 @@ public static class CrowdMotor
             Fix64 nx2 = px + nvx * dt, ny2 = py + nvy * dt;
             if (nx2 < Fix64.Zero) nx2 = Fix64.Zero; else if (nx2 > lim) nx2 = lim;
             if (ny2 < Fix64.Zero) ny2 = Fix64.Zero; else if (ny2 > lim) ny2 = lim;
+            // 同一对坐标的商只除一次。贴墙把 nx2/ny2 退回 px/py 时,商就是本步开头的 cx/cy。
+            // 墙面解算改写坐标后商不再相同,必须重除。
             int ncx = (int)(nx2 / cs).ToLong(), ncy = (int)(ny2 / cs).ToLong();
             if (pass[ncy * navN + ncx] == 0)
             {
-                if (pass[cy * navN + ncx] != 0) { ny2 = py; nvy = Fix64.Zero; }
-                else if (pass[ncy * navN + cx] != 0) { nx2 = px; nvx = Fix64.Zero; }
-                else { nx2 = px; ny2 = py; nvx = Fix64.Zero; nvy = Fix64.Zero; }
+                if (pass[cy * navN + ncx] != 0) { ny2 = py; nvy = Fix64.Zero; ncy = cy; }
+                else if (pass[ncy * navN + cx] != 0) { nx2 = px; nvx = Fix64.Zero; ncx = cx; }
+                else { nx2 = px; ny2 = py; nvx = Fix64.Zero; nvy = Fix64.Zero; ncx = cx; ncy = cy; }
             }
 
             // 精确盘面接触:先净空取整剩下的亚格被挡格,再阻挡盒(仅地面层)
@@ -155,13 +184,15 @@ public static class CrowdMotor
             }
 
             bool wallFree = radiusCm <= cs &&
-                CrowdWalls.IsOpen(openGrid!, walk, navN, (int)(ny2 / cs).ToLong() * navN + (int)(nx2 / cs).ToLong(), lv * n2);
+                CrowdWalls.IsOpen(openGrid!, ncy * navN + ncx, lv * n2);
             if (!wallFree && CrowdWalls.ResolveWalls(walk, navN, cellSizeCm, nx2, ny2, radiusCm,
                     out var wx, out var wy, out var wnx, out var wny) &&
                 AcceptContact(pass, navN, cellSizeCm, lim, ref wx, ref wy))
             {
                 nx2 = wx;
                 ny2 = wy;
+                ncx = (int)(nx2 / cs).ToLong();
+                ncy = (int)(ny2 / cs).ToLong();
                 Fix64 vn = nvx * wnx + nvy * wny;
                 if (vn < Fix64.Zero)
                 {
@@ -172,7 +203,7 @@ public static class CrowdMotor
 
             if (hasObs && lv == 0)
             {
-                int cell = (int)(ny2 / cs).ToLong() * navN + (int)(nx2 / cs).ToLong();
+                int cell = ncy * navN + ncx;
                 if (colliders!.Resolve(cell, nx2, ny2, radiusCm, out var bx, out var by, out var bnx, out var bny) &&
                     AcceptContact(pass, navN, cellSizeCm, lim, ref bx, ref by))
                 {
@@ -197,6 +228,33 @@ public static class CrowdMotor
             k.Positions[i] = pos;
             k.States[i] = state;
             k.Kins[i] = kin;
+        }
+    }
+
+    private static void FillOpenCells(CrowdMovementKernel k)
+    {
+        var session = k.Session;
+        int n = session.Units.Count;
+        var groups = session.Groups.Groups;
+        Span<int> seen = stackalloc int[64];
+        int filled = 0;
+        for (int i = 0; i < n; i++)
+        {
+            int navId = groups[k.States[i].GroupId]!.BodyNavId;
+            bool known = false;
+            for (int s = 0; s < filled; s++)
+            {
+                if (seen[s] == navId) { known = true; break; }
+            }
+
+            if (known) continue;
+            if (filled == seen.Length)
+            {
+                throw new InvalidOperationException($"开放格预填的导航上下文超过 {seen.Length} 个。");
+            }
+
+            seen[filled++] = navId;
+            k.OpenCache.EnsureFilled(session.Navs[navId]);
         }
     }
 

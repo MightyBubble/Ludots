@@ -372,7 +372,8 @@
   },
   "sim": {
     "maxUnits": 50000,
-    "timeScale": 10
+    "timeScale": 10,
+    "parallelWorkerCount": 4
   },
   "spawn": {
     "placementTries": 8,

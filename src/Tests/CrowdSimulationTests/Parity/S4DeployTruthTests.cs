@@ -110,6 +110,7 @@ public class S4DeployTruthTests
 
     internal static (CrowdSimulationRuntimeConfig Runtime, CrowdSimSession Session) BuildSession(string seed)
     {
+        CrowdTestScheduler.Ensure();
         var runtime = S1SurfaceTruthTests.LoadRuntime(seed);
         var surface = S1SurfaceTruthTests.ReadSurface(seed);
         var mapSurface = S1SurfaceTruthTests.LoadMapSurface(seed);

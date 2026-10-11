@@ -1,5 +1,8 @@
+using System.Threading;
+using Arch.Core;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.CrowdSimulation.Units;
+using Schedulers;
 
 namespace Ludots.Core.CrowdSimulation.Movement;
 
@@ -54,6 +57,13 @@ public sealed class CrowdMovementKernel
     public CrowdWalls.OpenCellCache OpenCache { get; init; } = new();
     /// <summary>流场采样的本帧暂存(方向写出)。</summary>
     public int Tick;
+    internal IntentProposal[] Proposals = Array.Empty<IntentProposal>();
+    internal int[] OrderGate = Array.Empty<int>();
+    internal int[] NavGate = Array.Empty<int>();
+    internal CrowdIntentScalars IntentScalars;
+    internal CrowdMotorFrame MotorFrame;
+    private IndexRangeJob[] _rangeJobs = Array.Empty<IndexRangeJob>();
+    private JobHandle[] _rangeHandles = Array.Empty<JobHandle>();
 
     // ── 避让相位(参考 sepCtx.stride/phase):avoidHz 对子步频率的降频错峰 ──
     public required int Stride { get; set; }
@@ -102,6 +112,7 @@ public sealed class CrowdMovementKernel
     public void EnsureCapacity(int unitCapacity)
     {
         if (Intent.Length < unitCapacity) Intent = new Fix64Vec2[unitCapacity];
+        if (Proposals.Length < unitCapacity) Proposals = new IntentProposal[unitCapacity];
         if (Separation.Length < unitCapacity) Separation = new Fix64Vec2[unitCapacity];
         if (Positions.Length < unitCapacity) Positions = new Fix64Vec2[unitCapacity];
         if (Radii.Length < unitCapacity) Radii = new Fix64[unitCapacity];
@@ -145,6 +156,12 @@ public sealed class CrowdMovementKernel
             OrderStamp = new byte[gm];
             NavStamp = new byte[gm];
         }
+
+        if (OrderGate.Length < gm)
+        {
+            OrderGate = new int[gm];
+            NavGate = new int[gm];
+        }
         else if (GroupMemoEpoch == byte.MaxValue)
         {
             Array.Clear(OrderStamp, 0, gm);
@@ -173,30 +190,175 @@ public sealed class CrowdMovementKernel
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>
     internal Movement.CrowdOrder? MemoOrder(int gid, CrowdNavGroupSet.Group g)
     {
-        if (OrderStamp[gid] == GroupMemoEpoch) return OrderMemo[gid];
-        Movement.CrowdOrder? o = null;
-        if (g.OrderId != 0)
+        if ((uint)gid >= (uint)OrderGate.Length)
         {
-            var list = Session.Orders.List;
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].Id == g.OrderId) { o = list[i]; break; }
-            }
+            throw new InvalidOperationException($"导航组 {gid} 超出指令备忘容量 {OrderGate.Length}。");
         }
 
-        OrderMemo[gid] = o;
-        OrderStamp[gid] = GroupMemoEpoch;
-        return o;
+        if (Volatile.Read(ref OrderStamp[gid]) == GroupMemoEpoch) return OrderMemo[gid];
+        var spin = new SpinWait();
+        while (Interlocked.CompareExchange(ref OrderGate[gid], 1, 0) != 0)
+        {
+            spin.SpinOnce();
+            if (Volatile.Read(ref OrderStamp[gid]) == GroupMemoEpoch) return OrderMemo[gid];
+        }
+
+        try
+        {
+            if (OrderStamp[gid] != GroupMemoEpoch)
+            {
+                Movement.CrowdOrder? o = null;
+                if (g.OrderId != 0)
+                {
+                    var list = Session.Orders.List;
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        if (list[i].Id == g.OrderId) { o = list[i]; break; }
+                    }
+                }
+
+                OrderMemo[gid] = o;
+                Volatile.Write(ref OrderStamp[gid], GroupMemoEpoch);
+            }
+
+            return OrderMemo[gid];
+        }
+        finally
+        {
+            Volatile.Write(ref OrderGate[gid], 0);
+        }
     }
 
     /// <summary>组级备忘:组的认知槽导航(槽切换只在 tick 边界变)。</summary>
     internal Nav.NavContext MemoNav(int gid, CrowdNavGroupSet.Group g)
     {
-        if (NavStamp[gid] == GroupMemoEpoch) return NavMemo[gid]!;
-        var v = Session.ResolveNavContext(g.NavId);
-        NavMemo[gid] = v;
-        NavStamp[gid] = GroupMemoEpoch;
-        return v;
+        if ((uint)gid >= (uint)NavGate.Length)
+        {
+            throw new InvalidOperationException($"导航组 {gid} 超出导航备忘容量 {NavGate.Length}。");
+        }
+
+        if (Volatile.Read(ref NavStamp[gid]) == GroupMemoEpoch) return NavMemo[gid]!;
+        var spin = new SpinWait();
+        while (Interlocked.CompareExchange(ref NavGate[gid], 1, 0) != 0)
+        {
+            spin.SpinOnce();
+            if (Volatile.Read(ref NavStamp[gid]) == GroupMemoEpoch) return NavMemo[gid]!;
+        }
+
+        try
+        {
+            if (NavStamp[gid] != GroupMemoEpoch)
+            {
+                NavMemo[gid] = Session.ResolveNavContext(g.NavId);
+                Volatile.Write(ref NavStamp[gid], GroupMemoEpoch);
+            }
+
+            return NavMemo[gid]!;
+        }
+        finally
+        {
+            Volatile.Write(ref NavGate[gid], 0);
+        }
+    }
+
+    internal int RequireParallelWorkerCount()
+    {
+        int configured = Session.Config.Sim.ParallelWorkerCount;
+        if (configured < 1 || configured > 64)
+        {
+            throw new InvalidOperationException(
+                $"CrowdSimulationConfig.json: sim.parallelWorkerCount = {configured}，需为 1~64 的整数。");
+        }
+
+        return configured;
+    }
+
+    /// <summary>
+    /// 按下标切成互不重叠的区间。每个区间只写自己的槽；没有按完成先后插入的共享结构，
+    /// 所以线程数和调度顺序不改变逐位结果。工人数 1 或长度不足 2 时就地执行。
+    /// </summary>
+    internal void RunRanges(int length, int phase, Fix64 dt)
+    {
+        int configured = RequireParallelWorkerCount();
+        if (length <= 0) return;
+        if (length == 1 || configured == 1)
+        {
+            ExecuteRange(phase, 0, length, dt);
+            return;
+        }
+
+        int workerCount = Math.Min(configured, length);
+        var scheduler = Arch.Core.World.SharedJobScheduler ?? throw new InvalidOperationException(
+            $"sim.parallelWorkerCount = {configured} 需要已赋值的 World.SharedJobScheduler。");
+        if (!scheduler.IsMainThread)
+        {
+            throw new InvalidOperationException("群体运动并行步进必须在创建 World.SharedJobScheduler 的线程上调用。");
+        }
+
+        if (_rangeJobs.Length < workerCount)
+        {
+            var jobs = new IndexRangeJob[workerCount];
+            for (int i = 0; i < _rangeJobs.Length; i++) jobs[i] = _rangeJobs[i];
+            for (int i = _rangeJobs.Length; i < workerCount; i++) jobs[i] = new IndexRangeJob();
+            _rangeJobs = jobs;
+            _rangeHandles = new JobHandle[workerCount];
+        }
+
+        int baseCount = length / workerCount;
+        int remainder = length % workerCount;
+        int start = 0;
+        for (int w = 0; w < workerCount; w++)
+        {
+            int len = baseCount + (w < remainder ? 1 : 0);
+            var job = _rangeJobs[w];
+            job.Kernel = this;
+            job.Phase = phase;
+            job.Start = start;
+            job.End = start + len;
+            job.Dt = dt;
+            _rangeHandles[w] = scheduler.Schedule(job);
+            start += len;
+        }
+
+        scheduler.Flush();
+        for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
+    }
+
+    private void ExecuteRange(int phase, int start, int end, Fix64 dt)
+    {
+        switch (phase)
+        {
+            case RangePhaseAvoidGather:
+                CrowdAvoidance.GatherRange(this, start, end);
+                return;
+            case RangePhaseAvoidSolve:
+                CrowdAvoidance.SolveRange(this, start, end);
+                return;
+            case RangePhaseIntent:
+                CrowdIntents.WriteRange(this, start, end);
+                return;
+            case RangePhaseMotor:
+                CrowdMotor.IntegrateRange(this, start, end, dt);
+                return;
+            default:
+                throw new InvalidOperationException($"未知的群体并行阶段 {phase}。");
+        }
+    }
+
+    internal const int RangePhaseAvoidGather = 1;
+    internal const int RangePhaseAvoidSolve = 2;
+    internal const int RangePhaseIntent = 3;
+    internal const int RangePhaseMotor = 4;
+
+    private sealed class IndexRangeJob : IJob
+    {
+        public CrowdMovementKernel Kernel = null!;
+        public int Phase;
+        public int Start;
+        public int End;
+        public Fix64 Dt;
+
+        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Dt);
     }
 
     /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>
@@ -319,4 +481,37 @@ public sealed class CrowdMovementKernel
             TurnEpsRad = cfg.Telemetry.TurnEpsRad,
         };
     }
+}
+
+internal struct CrowdIntentScalars
+{
+    public Fix64 Dt;
+    public Fix64 Cs;
+    public Fix64 WorldSizeCm;
+    public Fix64 BStep;
+    public Fix64 Wake2;
+    public Fix64 ArriveSlot;
+    public Fix64 Settle;
+    public Fix64 StallV2;
+    public int NavN;
+    public int N2;
+    public int Every;
+}
+
+internal struct CrowdMotorFrame
+{
+    public int NavN;
+    public int CellSizeCm;
+    public int N2;
+    public Fix64 Dt;
+    public Fix64 Cs;
+    public Fix64 Lim;
+    public Fix64 Response;
+    public Fix64 ResponseRest;
+    public Fix64 CosT;
+    public Fix64 SinT;
+    public Fix64 Dead;
+    public Fix64 Stop2;
+    public Fix64 CapR;
+    public bool HasObs;
 }

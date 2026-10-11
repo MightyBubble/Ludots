@@ -84,6 +84,25 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
+    public void MissingParallelWorkerCount_IsRejected()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        ((JsonObject)json["sim"]!).Remove("parallelWorkerCount");
+        var ex = Assert.Throws<InvalidOperationException>(() => CrowdSimulationConfig.Load(json));
+        Assert.That(ex!.Message, Does.Contain("parallelWorkerCount"));
+    }
+
+    [Test]
+    public void ZeroParallelWorkerCount_IsRejected()
+    {
+        var json = TestDefaults.DefaultConfigJson();
+        json["sim"]!["parallelWorkerCount"] = 0;
+        var config = CrowdSimulationConfig.Load(json);
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(config));
+        Assert.That(ex!.Message, Does.Contain("sim.parallelWorkerCount"));
+    }
+
+    [Test]
     public void UnknownField_IsRejected()
     {
         var json = TestDefaults.DefaultConfigJson();

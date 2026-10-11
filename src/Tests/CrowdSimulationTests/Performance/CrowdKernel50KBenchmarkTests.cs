@@ -16,6 +16,10 @@ namespace CrowdSimulationTests.Performance;
 /// 逐 tick 墙钟计时,输出 平均/P50/P95/最大。数字写入 artifacts/benchmarks/
 /// crowd-kernel-50k-tick/(报告 md + trace.jsonl),供改造前后对照;场景确定(种子/脚本
 /// 固定),计时允许机器噪声——前后对照需同机同窗。
+/// 33 ms 是产品目标,用 Warn.If 标出,不当硬门。同一次运行里 4 工人对单线程的加速比:
+/// 负载约 0.7 时 19.2/36.9 ms = 1.92;4 个忙循环占满核时 56.3/43.1 ms = 0.76(并行更慢)。
+/// 加速比硬门高于 1 会在占核时红,低于 0.76 又抓不住退回单线程(加速比回到 1)。
+/// 因此这里不设墙钟或加速比硬断言。
 /// </summary>
 public sealed class CrowdKernel50KBenchmarkTests
 {
@@ -68,16 +72,20 @@ public sealed class CrowdKernel50KBenchmarkTests
         double p95 = elapsed[(int)(MeasuredTicks * 0.95)];
         double max = elapsed[^1];
 
+        bool metProductTarget = avg < 33.0;
         string dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "artifacts", "benchmarks", "crowd-kernel-50k-tick"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "trace.jsonl"),
-            $"{{\"units\":{Units},\"ticks\":{MeasuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4}}}\n");
+            $"{{\"units\":{Units},\"ticks\":{MeasuredTicks},\"avgMs\":{avg:F4},\"p50Ms\":{p50:F4},\"p95Ms\":{p95:F4},\"maxMs\":{max:F4},\"productTargetMs\":33,\"productTargetMet\":{(metProductTarget ? "true" : "false")}}}\n");
         File.WriteAllText(Path.Combine(dir, "benchmark-report.md"),
             $"# 50k 单位 tick 基准(自造场景:种子 1337,spawnAt 50000 → 远点行军,{MeasuredTicks} tick 稳态窗)\n\n" +
             $"| 指标 | 毫秒/tick |\n|---|---|\n| 平均 | {avg:F4} |\n| P50 | {p50:F4} |\n| P95 | {p95:F4} |\n| 最大 | {max:F4} |\n\n" +
             $"- 单位 {Units},预热 {WarmupTicks} tick(计时窗不含生成/下令)\n" +
-            $"- 逐 tick 墙钟(含停摆重试开销),前后对照需同机同窗\n");
+            $"- 逐 tick 墙钟(含停摆重试开销),前后对照需同机同窗\n" +
+            $"- 产品目标 33 ms: {(metProductTarget ? "达到" : "未达到")}（平均 {avg:F4} ms，P95 {p95:F4} ms）\n");
         TestContext.Out.WriteLine(
-            $"50k tick: avg={avg:F4}ms p50={p50:F4}ms p95={p95:F4}ms max={max:F4}ms (units={session.Units.Count})");
+            $"50k tick: avg={avg:F4}ms p50={p50:F4}ms p95={p95:F4}ms max={max:F4}ms product33={(metProductTarget ? "met" : "miss")} (units={session.Units.Count}, workers={session.Config.Sim.ParallelWorkerCount})");
+        Warn.If(avg, Is.GreaterThanOrEqualTo(33.0),
+            $"50k 稳态 tick 均值 {avg:F4} ms，未达到 33 ms 产品目标");
     }
 }
