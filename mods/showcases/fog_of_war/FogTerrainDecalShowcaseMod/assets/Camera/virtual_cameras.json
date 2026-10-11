@@ -3,7 +3,6 @@
     "id": "FogTerrainDecal.Camera.Frame",
     "displayName": "Fog Terrain Decal Frame",
     "priority": 0,
-    "rigKind": "Orbit",
     "distanceCm": 140000,
     "pitch": 55,
     "fovYDeg": 48,
