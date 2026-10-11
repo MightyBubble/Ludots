@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 using Arch.System;
-using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.CrowdSimulation.Units;
@@ -60,10 +60,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly Func<CrowdSimSession?> _sessionSource;
 
     private bool _prevLeft, _prevView, _prevBuild, _prevRemove, _prevT1, _prevT2, _prevT3;
-    private int _wireNavId = -1;
-    private int _wireReportTick = -1;
-    private readonly List<(Vector2[] Pts, float Thick, Vector4 Color)> _wireLines = new();
-    private readonly List<(Vector2 Pos, RouteVisualMarkerShape Shape, float Radius, Vector4 Color)> _wireMarkers = new();
+    private readonly S4DeployNavWireframe _wire = new();
     private int _flashReportTick = -1;
     private long _flashStartMs;
 
@@ -147,12 +144,11 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             _routeVisuals.AddMarker(GoalMarker, new Vector2((group.Goal % n + 0.5f) * csM, (group.Goal / n + 0.5f) * csM), RouteVisualMarkerShape.Diamond, csM * 1.2f, 1.5f, GoalCyan);
         }
 
-        // NavMesh + HPA 线框(视图模式 2;重烘换 tile 后连带着重建缓存)
-        if (_demo.ViewMode == 2)
+        // NavMesh + HPA 线框(视图模式 2)。变体未物化时本帧不提交,缓存键留给下一帧。
+        if (_demo.ViewMode == 2 && _wire.TryProject(session, out _, out _))
         {
-            EnsureWireframe(session);
-            foreach (var (pts, thick, color) in _wireLines) _routeVisuals.AddPolylineShared(WireframeId, pts, thick, color);
-            foreach (var (pos, shape, radius, color) in _wireMarkers) _routeVisuals.AddMarker(WireframeId, pos, shape, radius, 1f, color);
+            foreach (var (pts, thick, color) in _wire.Lines) _routeVisuals.AddPolylineShared(WireframeId, pts, thick, color);
+            foreach (var (pos, shape, radius, color) in _wire.Markers) _routeVisuals.AddMarker(WireframeId, pos, shape, radius, 1f, color);
         }
 
         // 建造预览(建造模式):足迹轮廓绿=可放/红=不可放;X 拆除目标高亮
@@ -284,94 +280,12 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _routeVisuals.AddPolyline(id, pts, thick, color);
     }
 
-    // NavMesh 多边形线框 + cluster 网格 + HPA 入口 + 跳跃链接(S3 演示同款,按(导航,重烘序)缓存)
-    private void EnsureWireframe(CrowdSimSession session)
+    internal static bool NavVariantPending(CrowdSimSession session, int viewMode)
     {
+        if (viewMode != 1 && viewMode != 2) return false;
         var group = S4DeployDemoViewProjector.DominantGroup(session);
-        int navId = group?.NavId ?? MinNavId(session);
-        int reportTick = session.LastRebakeReport?.ReportTick ?? -1;
-        if (_wireNavId == navId && _wireReportTick == reportTick) return;
-        _wireNavId = navId;
-        _wireReportTick = reportTick;
-        _wireLines.Clear();
-        _wireMarkers.Clear();
-        if (!session.Navs.TryGetValue(navId, out var nav)) return;
-
-        int n = session.Config.NavCellCount;
-        float csM = session.Config.NavCellSizeCm / 100f;
-        int t = session.Config.Hpa.ClusterSize, c = n / t;
-        var navmeshColor = new Vector4(0.9f, 0.9f, 0.9f, 0.55f);
-        var deckColor = new Vector4(1f, 0.84f, 0.31f, 0.85f);
-        for (int ty = 0; ty < c; ty++)
-        {
-            for (int tx = 0; tx < c; tx++)
-            {
-                int tileId = ty * c + tx;
-                AddEntryWire(nav.Tiles?[tileId], tx * t, ty * t, csM, navmeshColor);
-                if (nav.UpperTiles != null && nav.UpperTiles.TryGetValue(tileId, out var up)) AddEntryWire(up.Entry, tx * t, ty * t, csM, deckColor);
-            }
-        }
-
-        var gridColor = new Vector4(1f, 1f, 1f, 0.22f);
-        for (int b = 0; b <= c; b++)
-        {
-            _wireLines.Add((new[] { new Vector2(b * t * csM, 0f), new Vector2(b * t * csM, n * csM) }, csM * 0.1f, gridColor));
-            _wireLines.Add((new[] { new Vector2(0f, b * t * csM), new Vector2(n * csM, b * t * csM) }, csM * 0.1f, gridColor));
-        }
-
-        if (nav.Hpa != null)
-        {
-            int n2 = n * n;
-            var entranceColor = new Vector4(0.25f, 0.77f, 1f, 0.9f);
-            foreach (var block in nav.Hpa.Blocks)
-            {
-                foreach (int cell in block.Cells)
-                {
-                    bool deck = cell >= n2;
-                    int cc = deck ? cell - n2 : cell;
-                    _wireMarkers.Add((new Vector2((cc % n + 0.5f) * csM, (cc / n + 0.5f) * csM), RouteVisualMarkerShape.Ring, csM * 0.4f, deck ? deckColor : entranceColor));
-                }
-            }
-        }
-
-        if (nav.Links != null)
-        {
-            for (int e = 0; e < nav.Links.Count; e++)
-            {
-                int a = nav.Links.From[e], b2 = nav.Links.To[e];
-                var col = nav.Links.TwoWay[e] != 0 ? new Vector4(0.36f, 0.42f, 0.75f, 0.9f) : new Vector4(1f, 0.7f, 0f, 0.9f);
-                _wireLines.Add((new[]
-                {
-                    new Vector2((a % n + 0.5f) * csM, (a / n + 0.5f) * csM),
-                    new Vector2((b2 % n + 0.5f) * csM, (b2 / n + 0.5f) * csM),
-                }, csM * 0.2f, col));
-            }
-        }
-    }
-
-    private static int MinNavId(CrowdSimSession session)
-    {
-        int best = -1;
-        foreach (var id in session.Navs.Keys) best = best < 0 || id < best ? id : best;
-        return best;
-    }
-
-    private void AddEntryWire(NavTileEntry? e, int ox, int oy, float csM, Vector4 color)
-    {
-        if (e == null) return;
-        for (int p = 0; p < e.Count; p++)
-        {
-            int s = e.PolyStart[p], e2 = e.PolyStart[p + 1], count = e2 - s;
-            var pts = new Vector2[count + 1];
-            for (int k = 0; k < count; k++)
-            {
-                int v = e.PolyVerts[s + k];
-                pts[k] = new Vector2((ox + e.Vx[v]) * csM, (oy + e.Vy[v]) * csM);
-            }
-
-            pts[count] = pts[0];
-            _wireLines.Add((pts, csM * 0.12f, color));
-        }
+        if (group == null || group.NavId < CrowdBeliefNavs.BeliefStride) return false;
+        return !session.TryGetMaterializedNav(group.NavId, out _);
     }
 
     private void DrawHud(CrowdSimSession? session, CrowdSimulationRuntime? runtime, (bool Shown, bool Valid)? preview)
@@ -421,8 +335,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         string templateLine = _demo.BuildMode
             ? $"建造模式 · {_demo.Template.Label}{(preview == null ? "" : preview.Value.Shown ? (preview.Value.Valid ? "(此处可放)" : "(此处不可放)") : "(光标不在地图上)")}"
             : "观察模式";
+        string pending = session != null && NavVariantPending(session, _demo.ViewMode) ? " · 导航变体未就绪" : "";
         string keys =
-            $"V 视图 {S4DeployDemoRuntime.ViewModeLabels[_demo.ViewMode]} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{_demo.TemplateIndex + 1}] · 建造模式下左键放置 · {templateLine}";
+            $"V 视图 {S4DeployDemoRuntime.ViewModeLabels[_demo.ViewMode]} · B 建造/观察 · X 拆除光标处 · 1/2/3 模板[{_demo.TemplateIndex + 1}] · 建造模式下左键放置 · {templateLine}{pending}";
         _overlay.AddRect(HudPanelX, HudPanelY, HudPanelW, HudPanelH, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
         _overlay.AddText(32, 24, "CrowdSimulation S4 · 部署演示(种子 1337,脚本行军 + 交互建造)", 22, new Vector4(1f, 0.92f, 0.35f, 1f));
         _overlay.AddText(32, 54, status, 18, new Vector4(1f, 1f, 1f, 1f));
