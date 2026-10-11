@@ -105,13 +105,35 @@ namespace Ludots.Core.Input.Config
                         $"LUDOTS_INPUT_ACTION_ID_DUPLICATE: {path}.id duplicates input action '{action.Id}'.");
                 }
 
-                string firesOn = string.IsNullOrWhiteSpace(action.FiresOn)
-                    ? InputActionDef.FiresOnPress
-                    : action.FiresOn;
-                if (firesOn != InputActionDef.FiresOnPress && firesOn != InputActionDef.FiresOnRelease)
+                if (string.IsNullOrWhiteSpace(action.FiresOn))
+                {
+                    action.FiresOn = action.Type == InputActionType.Button
+                        ? InputActionDef.FiresOnPress
+                        : string.Empty;
+                    continue;
+                }
+
+                string firesOn = action.FiresOn;
+                if (firesOn != InputActionDef.FiresOnPress &&
+                    firesOn != InputActionDef.FiresOnRelease &&
+                    firesOn != InputActionDef.FiresOnChange)
                 {
                     throw new InvalidOperationException(
-                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path}.firesOn must be '{InputActionDef.FiresOnPress}' or '{InputActionDef.FiresOnRelease}' (got '{action.FiresOn}').");
+                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path} '{action.Id}' firesOn must be '{InputActionDef.FiresOnPress}', '{InputActionDef.FiresOnRelease}', or '{InputActionDef.FiresOnChange}' (got '{firesOn}').");
+                }
+
+                if (firesOn == InputActionDef.FiresOnChange)
+                {
+                    if (action.Type != InputActionType.Axis2D)
+                    {
+                        throw new InvalidOperationException(
+                            $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path} '{action.Id}' firesOn '{InputActionDef.FiresOnChange}' is only valid for {InputActionType.Axis2D} actions (action type is {action.Type}).");
+                    }
+                }
+                else if (action.Type != InputActionType.Button)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: {path} '{action.Id}' firesOn '{firesOn}' is only valid for {InputActionType.Button} actions (action type is {action.Type}).");
                 }
 
                 action.FiresOn = firesOn;

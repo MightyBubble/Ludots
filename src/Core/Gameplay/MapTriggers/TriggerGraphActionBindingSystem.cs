@@ -283,16 +283,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     throw new InvalidOperationException($"Input config actions[{i}] has an empty id.");
                 }
 
-                string firesOn = string.IsNullOrWhiteSpace(action.FiresOn)
-                    ? InputActionDef.FiresOnPress
-                    : action.FiresOn;
-                if (firesOn != InputActionDef.FiresOnPress && firesOn != InputActionDef.FiresOnRelease)
-                {
-                    throw new InvalidOperationException(
-                        $"LUDOTS_INPUT_ACTION_FIRES_ON_INVALID: action '{action.Id}' firesOn must be '{InputActionDef.FiresOnPress}' or '{InputActionDef.FiresOnRelease}' (got '{action.FiresOn}').");
-                }
-
-                lookup[action.Id] = firesOn;
+                lookup[action.Id] = action.FiresOn ?? string.Empty;
             }
 
             return lookup;
