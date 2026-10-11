@@ -1,21 +1,26 @@
 using System;
 using System.Numerics;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Arch.System;
-using Ludots.Core.Client;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 
 namespace Ludots.Core.Gameplay.Camera;
 
 /// <summary>
-/// 配置驱动的镜头姿态脚本:按帧在关键相位之间插值,再交给虚拟相机。
-/// 相位边界与插值通道来自 Camera/pose_script.json;没有这份目录登记时不装配。
+/// 配置驱动的镜头姿态脚本:按固定步采样有序关键帧,产出 <see cref="CameraPoseRequest"/>。
+/// 采样只看关键帧,不解释相位名。没有 Camera/pose_script.json 的目录登记时不装配。
+/// 排在 <see cref="CameraRuntimeSystem"/> 之前,由它在同一固定步消费请求。
 /// </summary>
 internal sealed class CameraPoseScriptSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly CameraPoseScript _script;
-    private int _frame;
+    private int _tick;
 
     public CameraPoseScriptSystem(GameEngine engine, CameraPoseScript script)
     {
@@ -29,7 +34,9 @@ internal sealed class CameraPoseScriptSystem : ISystem<float>
         if (catalog == null || !catalog.TryGet(CameraPoseScript.CatalogPath, out var entry)) return;
         var node = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{CameraPoseScript.CatalogPath} 存在目录登记但合并为空。");
-        engine.RegisterPresentationSystem(new CameraPoseScriptSystem(engine, CameraPoseScript.Parse(node)));
+        engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(
+            new CameraPoseScriptSystem(engine, CameraPoseScript.Parse(node)),
+            SystemGroup.AttributeCalculation);
     }
 
     public void Initialize() { }
@@ -42,112 +49,253 @@ internal sealed class CameraPoseScriptSystem : ISystem<float>
         string? mapId = _engine.CurrentMapSession?.MapId.Value;
         if (!string.Equals(mapId, _script.MapId, StringComparison.OrdinalIgnoreCase))
         {
-            _frame = 0;
+            _tick = 0;
             return;
         }
 
-        CameraManager? camera;
-        try
-        {
-            camera = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine);
-        }
-        catch (InvalidOperationException)
-        {
-            return;
-        }
-
-        int frame = _frame++;
-        _script.Resolve(frame, out float targetX, out float targetY, out float yawDeg, out float pitchDeg, out float distanceCm);
-        camera.ApplyPose(new CameraPoseRequest
+        CameraPoseSample sample = _script.Sample(_tick++);
+        _engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
             VirtualCameraId = _script.VirtualCameraId,
-            TargetCm = new Vector2(targetX, targetY),
-            Yaw = yawDeg,
-            Pitch = pitchDeg,
-            DistanceCm = distanceCm,
+            TargetCm = new Vector2(sample.X, sample.Y),
+            Yaw = sample.Yaw,
+            Pitch = sample.Pitch,
+            DistanceCm = sample.DistanceCm,
         });
-        if (_script.LogEveryFrames > 0 && frame % _script.LogEveryFrames == 0)
-        {
-            Console.WriteLine(
-                $"[TerrainLodCam] frame={frame} pose=({targetX:F0},{targetY:F0}) yaw={yawDeg:F0} pitch={pitchDeg:F0} dist={distanceCm:F0}");
-        }
     }
 }
 
+internal enum CameraChannelEase
+{
+    Linear,
+    Smoothstep,
+}
+
+internal readonly struct CameraPoseSample
+{
+    public float X { get; init; }
+    public float Y { get; init; }
+    public float Yaw { get; init; }
+    public float Pitch { get; init; }
+    public float DistanceCm { get; init; }
+}
+
+/// <summary>
+/// 关键帧左闭右闭:frame 落在 (上一帧终点, 本帧 endFrame] 内按通道插值。
+/// 第一段从 0 起。超过最后一帧后保持最后一帧的 to。各通道 ease 独立。
+/// </summary>
 internal sealed class CameraPoseScript
 {
     public const string CatalogPath = "Camera/pose_script.json";
 
     public required string MapId { get; init; }
     public required string VirtualCameraId { get; init; }
-    public int LogEveryFrames { get; init; }
-    public required Phase LinearA { get; init; }
-    public required Phase YawSweep { get; init; }
-    public required Phase Pullback { get; init; }
-    public required Phase Reentry { get; init; }
-    public required Pose Hold { get; init; }
+    public required CameraKeyframe[] Keyframes { get; init; }
 
-    public readonly record struct Pose(float X, float Y, float Yaw, float Pitch, float DistanceCm);
-
-    public readonly record struct Phase(int EndFrame, Pose From, Pose To, int EaseFrames, bool SmoothDistance);
-
-    public static CameraPoseScript Parse(JsonObject node)
+    public static CameraPoseScript Parse(JsonNode node)
     {
+        CameraPoseScriptDto dto;
+        try
+        {
+            dto = node.Deserialize<CameraPoseScriptDto>(StrictJsonOptions.CreateCamelCase())
+                ?? throw new InvalidOperationException($"{CatalogPath} 反序列化为空。");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"{CatalogPath} 严格反序列化失败: {ex.Message}", ex);
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.MapId))
+            throw new InvalidOperationException($"{CatalogPath} mapId 必填。");
+        if (string.IsNullOrWhiteSpace(dto.VirtualCameraId))
+            throw new InvalidOperationException($"{CatalogPath} virtualCameraId 必填。");
+        if (dto.Keyframes == null || dto.Keyframes.Length == 0)
+            throw new InvalidOperationException($"{CatalogPath} keyframes 至少一帧。");
+
+        var frames = new CameraKeyframe[dto.Keyframes.Length];
+        int previousEnd = 0;
+        for (int i = 0; i < dto.Keyframes.Length; i++)
+        {
+            CameraKeyframeDto frame = dto.Keyframes[i]
+                ?? throw new InvalidOperationException($"{CatalogPath} keyframes[{i}] 为空。");
+            if (frame.EndFrame <= previousEnd)
+            {
+                throw new InvalidOperationException(
+                    $"{CatalogPath} keyframes[{i}].endFrame 必须大于上一帧终点 {previousEnd}。");
+            }
+
+            frames[i] = new CameraKeyframe(
+                frame.EndFrame,
+                TargetAxis(frame.Target, 0, $"{CatalogPath} keyframes[{i}].target"),
+                TargetAxis(frame.Target, 1, $"{CatalogPath} keyframes[{i}].target"),
+                Scalar(frame.Yaw, $"{CatalogPath} keyframes[{i}].yaw"),
+                Scalar(frame.Pitch, $"{CatalogPath} keyframes[{i}].pitch"),
+                Scalar(frame.Distance, $"{CatalogPath} keyframes[{i}].distance"));
+            previousEnd = frame.EndFrame;
+        }
+
         return new CameraPoseScript
         {
-            MapId = Req(node, "mapId"),
-            VirtualCameraId = Req(node, "virtualCameraId"),
-            LogEveryFrames = node["logEveryFrames"]?.GetValue<int>() ?? 0,
-            LinearA = PhaseOf(node, "flyover", smoothDistance: false),
-            YawSweep = PhaseOf(node, "yawSweep", smoothDistance: false),
-            Pullback = PhaseOf(node, "pullback", smoothDistance: true),
-            Reentry = PhaseOf(node, "reentry", smoothDistance: true),
-            Hold = PoseOf(Obj(node, "hold")),
+            MapId = dto.MapId,
+            VirtualCameraId = dto.VirtualCameraId,
+            Keyframes = frames,
         };
     }
 
-    public void Resolve(int frame, out float x, out float y, out float yaw, out float pitch, out float distance)
+    public CameraPoseSample Sample(int frame)
     {
-        if (frame <= LinearA.EndFrame) { Sample(LinearA, frame, 0, out x, out y, out yaw, out pitch, out distance); return; }
-        if (frame <= YawSweep.EndFrame) { Sample(YawSweep, frame, LinearA.EndFrame, out x, out y, out yaw, out pitch, out distance); return; }
-        if (frame <= Pullback.EndFrame) { Sample(Pullback, frame, YawSweep.EndFrame, out x, out y, out yaw, out pitch, out distance); return; }
-        if (frame <= Reentry.EndFrame) { Sample(Reentry, frame, Pullback.EndFrame, out x, out y, out yaw, out pitch, out distance); return; }
-        x = Hold.X; y = Hold.Y; yaw = Hold.Yaw; pitch = Hold.Pitch; distance = Hold.DistanceCm;
+        int start = 0;
+        for (int i = 0; i < Keyframes.Length; i++)
+        {
+            CameraKeyframe key = Keyframes[i];
+            if (frame <= key.EndFrame)
+            {
+                float span = key.EndFrame - start;
+                float t = span <= 0 ? 1f : (frame - start) / (float)span;
+                if (t < 0f) t = 0f;
+                else if (t > 1f) t = 1f;
+                return new CameraPoseSample
+                {
+                    X = key.TargetX.Sample(t),
+                    Y = key.TargetY.Sample(t),
+                    Yaw = key.Yaw.Sample(t),
+                    Pitch = key.Pitch.Sample(t),
+                    DistanceCm = key.Distance.Sample(t),
+                };
+            }
+
+            start = key.EndFrame;
+        }
+
+        CameraKeyframe last = Keyframes[Keyframes.Length - 1];
+        return new CameraPoseSample
+        {
+            X = last.TargetX.To,
+            Y = last.TargetY.To,
+            Yaw = last.Yaw.To,
+            Pitch = last.Pitch.To,
+            DistanceCm = last.Distance.To,
+        };
     }
 
-    private static void Sample(Phase phase, int frame, int start, out float x, out float y, out float yaw, out float pitch, out float distance)
+    private static CameraScalarChannel TargetAxis(CameraTargetChannelDto? channel, int axis, string path)
     {
-        float span = phase.EaseFrames > 0 ? phase.EaseFrames : Math.Max(1, phase.EndFrame - start);
-        float t = Math.Min(1f, (frame - start) / span);
-        float move = phase.SmoothDistance ? Smooth(t) : t;
-        x = Lerp(phase.From.X, phase.To.X, t);
-        y = Lerp(phase.From.Y, phase.To.Y, t);
-        yaw = Lerp(phase.From.Yaw, phase.To.Yaw, t);
-        pitch = Lerp(phase.From.Pitch, phase.To.Pitch, t);
-        distance = Lerp(phase.From.DistanceCm, phase.To.DistanceCm, move);
+        if (channel == null) throw new InvalidOperationException($"{path} 必填。");
+        if (channel.From == null || channel.From.Length != 2 || channel.To == null || channel.To.Length != 2)
+            throw new InvalidOperationException($"{path}.from/to 需要 2 个分量。");
+        return new CameraScalarChannel(channel.From[axis], channel.To[axis], ParseEase(channel.Ease, path));
     }
 
-    private static Phase PhaseOf(JsonObject root, string name, bool smoothDistance)
+    private static CameraScalarChannel Scalar(CameraScalarChannelDto? channel, string path)
     {
-        var node = Obj(root, name);
-        int end = node["endFrame"]?.GetValue<int>() ?? throw new InvalidOperationException($"Camera/pose_script.json {name}.endFrame 必填。");
-        int ease = node["easeFrames"]?.GetValue<int>() ?? 0;
-        return new Phase(end, PoseOf(Obj(node, "from")), PoseOf(Obj(node, "to")), ease, smoothDistance);
+        if (channel == null) throw new InvalidOperationException($"{path} 必填。");
+        return new CameraScalarChannel(channel.From, channel.To, ParseEase(channel.Ease, path));
     }
 
-    private static Pose PoseOf(JsonObject node) => new(
-        Num(node, "x"), Num(node, "y"), Num(node, "yaw"), Num(node, "pitch"), Num(node, "distanceCm"));
+    private static CameraChannelEase ParseEase(string? ease, string path)
+    {
+        if (ease == "linear") return CameraChannelEase.Linear;
+        if (ease == "smoothstep") return CameraChannelEase.Smoothstep;
+        throw new InvalidOperationException($"{path}.ease \"{ease}\" 需为 linear / smoothstep。");
+    }
+}
 
-    private static JsonObject Obj(JsonObject node, string name) =>
-        node[name] as JsonObject ?? throw new InvalidOperationException($"Camera/pose_script.json {name} 必填。");
+internal readonly struct CameraKeyframe
+{
+    public CameraKeyframe(
+        int endFrame,
+        CameraScalarChannel targetX,
+        CameraScalarChannel targetY,
+        CameraScalarChannel yaw,
+        CameraScalarChannel pitch,
+        CameraScalarChannel distance)
+    {
+        EndFrame = endFrame;
+        TargetX = targetX;
+        TargetY = targetY;
+        Yaw = yaw;
+        Pitch = pitch;
+        Distance = distance;
+    }
 
-    private static string Req(JsonObject node, string name) =>
-        node[name]?.GetValue<string>() ?? throw new InvalidOperationException($"Camera/pose_script.json {name} 必填。");
+    public int EndFrame { get; }
+    public CameraScalarChannel TargetX { get; }
+    public CameraScalarChannel TargetY { get; }
+    public CameraScalarChannel Yaw { get; }
+    public CameraScalarChannel Pitch { get; }
+    public CameraScalarChannel Distance { get; }
+}
 
-    private static float Num(JsonObject node, string name) =>
-        node[name]?.GetValue<float>() ?? throw new InvalidOperationException($"Camera/pose_script.json 姿态缺少 {name}。");
+internal readonly struct CameraScalarChannel
+{
+    public CameraScalarChannel(float from, float to, CameraChannelEase ease)
+    {
+        From = from;
+        To = to;
+        Ease = ease;
+    }
 
-    private static float Lerp(float from, float to, float t) => from + ((to - from) * t);
+    public float From { get; }
+    public float To { get; }
+    public CameraChannelEase Ease { get; }
 
-    private static float Smooth(float t) => t * t * (3f - (2f * t));
+    public float Sample(float t)
+    {
+        float eased = Ease == CameraChannelEase.Smoothstep ? t * t * (3f - (2f * t)) : t;
+        return From + ((To - From) * eased);
+    }
+}
+
+internal sealed class CameraPoseScriptDto
+{
+    [JsonRequired]
+    public string MapId { get; set; } = string.Empty;
+
+    [JsonRequired]
+    public string VirtualCameraId { get; set; } = string.Empty;
+
+    [JsonRequired]
+    public CameraKeyframeDto[] Keyframes { get; set; } = Array.Empty<CameraKeyframeDto>();
+}
+
+internal sealed class CameraKeyframeDto
+{
+    [JsonRequired]
+    public int EndFrame { get; set; }
+
+    [JsonRequired]
+    public CameraTargetChannelDto Target { get; set; } = new();
+
+    [JsonRequired]
+    public CameraScalarChannelDto Yaw { get; set; } = new();
+
+    [JsonRequired]
+    public CameraScalarChannelDto Pitch { get; set; } = new();
+
+    [JsonRequired]
+    public CameraScalarChannelDto Distance { get; set; } = new();
+}
+
+internal sealed class CameraTargetChannelDto
+{
+    [JsonRequired]
+    public float[] From { get; set; } = Array.Empty<float>();
+
+    [JsonRequired]
+    public float[] To { get; set; } = Array.Empty<float>();
+
+    [JsonRequired]
+    public string Ease { get; set; } = string.Empty;
+}
+
+internal sealed class CameraScalarChannelDto
+{
+    [JsonRequired]
+    public float From { get; set; }
+
+    [JsonRequired]
+    public float To { get; set; }
+
+    [JsonRequired]
+    public string Ease { get; set; } = string.Empty;
 }
