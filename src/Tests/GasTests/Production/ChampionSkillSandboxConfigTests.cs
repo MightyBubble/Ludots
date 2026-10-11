@@ -871,6 +871,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(effects.TryGet(spellGuidedLaserPersistentId, out var spellGuidedLaserPersistent), Is.True);
             Assert.That(spellGuidedLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
             Assert.That(spellGuidedLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(spellGuidedLaserHitId));
+            Assert.That(spellGuidedLaserPersistent.TargetQuery.Spatial.DirectionSource, Is.EqualTo(SpatialQueryDirectionSource.SourceCastFacing));
         }
 
         [Test]

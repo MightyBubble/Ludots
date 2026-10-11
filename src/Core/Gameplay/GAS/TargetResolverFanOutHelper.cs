@@ -156,7 +156,7 @@ namespace Ludots.Core.Gameplay.GAS
                 return 0;
             }
 
-            int directionDeg = ComputeDirection(world, in ctx, in mergedParams);
+            int directionDeg = ComputeDirection(world, in ctx, in mergedParams, spatial.DirectionSource);
             Span<Entity> buf = buffer;
             SpatialQueryResult result;
 
@@ -424,30 +424,33 @@ namespace Ludots.Core.Gameplay.GAS
 
         // ── Shared helpers ──
 
-        private static int ComputeDirection(World world, in EffectContext ctx)
-        {
-            EffectConfigParams mergedParams = default;
-            return ComputeDirection(world, in ctx, in mergedParams);
-        }
-
-        private static int ComputeDirection(World world, in EffectContext ctx, in EffectConfigParams mergedParams)
+        private static int ComputeDirection(
+            World world,
+            in EffectContext ctx,
+            in EffectConfigParams mergedParams,
+            SpatialQueryDirectionSource directionSource)
         {
             if (TryResolvePreservedVectorDirection(in mergedParams, world, in ctx, out int preservedDirectionDeg))
             {
                 return preservedDirectionDeg;
             }
 
-            // A live Cast.Facing is the authored aim. It wins over the frozen exec point so a
-            // channel can steer from the blackboard without a per-tick writer. Preserved caller
-            // params stay first: instant shots stamp the cast point onto the effect itself.
-            if (TryResolveBlackboardFacing(world, ctx.Source, out int blackboardFacingDeg))
+            // Only a search that names SourceCastFacing steers from the live aim key.
+            // Every other query keeps the frozen exec point ahead of that key.
+            bool preferLiveCastFacing = directionSource == SpatialQueryDirectionSource.SourceCastFacing;
+            if (preferLiveCastFacing && TryResolveBlackboardFacing(world, ctx.Source, out int steeredFacingDeg))
             {
-                return blackboardFacingDeg;
+                return steeredFacingDeg;
             }
 
             if (TryResolveExecTargetDirection(world, in ctx, out int execDirectionDeg))
             {
                 return execDirectionDeg;
+            }
+
+            if (!preferLiveCastFacing && TryResolveBlackboardFacing(world, ctx.Source, out int blackboardFacingDeg))
+            {
+                return blackboardFacingDeg;
             }
 
             if (world.IsAlive(ctx.Source) && world.Has<FacingDirection>(ctx.Source))

@@ -2082,6 +2082,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 "None" => ManifestationFacingSource2D.None,
                 "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
+                "ParentCastFacing" => ManifestationFacingSource2D.ParentCastFacing,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
             };
         }

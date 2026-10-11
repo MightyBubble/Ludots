@@ -40,6 +40,7 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 {
                     ManifestationFacingSource2D.SweepVelocity => ResolveSweepFacing(entity, motion, deltaSeconds),
                     ManifestationFacingSource2D.ParentExecutionTarget => ResolveParentExecutionFacing(parent),
+                    ManifestationFacingSource2D.ParentCastFacing => ResolveParentCastFacing(parent),
                     _ => null,
                 };
 
@@ -58,17 +59,19 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
             return current + (WorldPlane2D.DegToRadValue(motion.SweepDegreesPerSecond) * deltaSeconds);
         }
 
-        private float? ResolveParentExecutionFacing(Entity parent)
+        private float? ResolveParentCastFacing(Entity parent)
         {
-            // Live Cast.Facing on the parent is the aim direction. The frozen exec point
-            // stays the fallback only while that key is absent, so a channel can steer
-            // from the blackboard the aim graphs already write.
-            if (World.TryGet(parent, out BlackboardFloatBuffer blackboard) &&
-                blackboard.TryGet(OrderBlackboardKeys.Cast_Facing, out float degrees))
+            if (!World.TryGet(parent, out BlackboardFloatBuffer blackboard) ||
+                !blackboard.TryGet(OrderBlackboardKeys.Cast_Facing, out float degrees))
             {
-                return WorldPlane2D.DegToRadValue(degrees);
+                return null;
             }
 
+            return WorldPlane2D.DegToRadValue(degrees);
+        }
+
+        private float? ResolveParentExecutionFacing(Entity parent)
+        {
             if (!World.TryGet(parent, out WorldPositionCm parentPosition) ||
                 !World.TryGet(parent, out AbilityExecInstance exec) ||
                 exec.HasTargetPos == 0)

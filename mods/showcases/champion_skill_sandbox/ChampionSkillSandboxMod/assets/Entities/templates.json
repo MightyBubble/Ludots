@@ -489,7 +489,7 @@
       "GameplayTagContainer": {},
       "ManifestationMotion2D": {
         "followParentPosition": true,
-        "facingSource": "ParentExecutionTarget",
+        "facingSource": "ParentCastFacing",
         "sweepDegreesPerSecond": 0.0,
         "forwardOffsetCm": 450
       },

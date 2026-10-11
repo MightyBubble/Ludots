@@ -1795,6 +1795,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "kind=GraphProgram");
                 RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "kind=GraphProgram");
                 RequireAbsent(cfg.Origin, effectId, path, "targetQuery.origin", "kind=GraphProgram");
+                RequireAbsent(cfg.DirectionSource, effectId, path, "targetQuery.directionSource", "kind=GraphProgram");
                 desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
                 if (desc.GraphProgramId <= 0)
                 {
@@ -1810,6 +1811,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var spatial = default(BuiltinSpatialDescriptor);
             spatial.Shape = ParseSpatialShape(RequireString(cfg.Shape, effectId, path, "targetQuery.shape"), effectId, path);
             spatial.Origin = ParseSpatialQueryOrigin(cfg.Origin, effectId, path);
+            spatial.DirectionSource = ParseSpatialQueryDirectionSource(cfg.DirectionSource, effectId, path);
 
             switch (spatial.Shape)
             {
@@ -1865,6 +1867,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return spatial;
+        }
+
+        private static SpatialQueryDirectionSource ParseSpatialQueryDirectionSource(string? rawValue, string effectId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                return SpatialQueryDirectionSource.Default;
+            }
+
+            return rawValue switch
+            {
+                "Default" => SpatialQueryDirectionSource.Default,
+                "SourceCastFacing" => SpatialQueryDirectionSource.SourceCastFacing,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetQuery.directionSource has unsupported value '{rawValue}'.")
+            };
         }
 
         private static SpatialQueryOrigin ParseSpatialQueryOrigin(string? rawValue, string effectId, string path)
