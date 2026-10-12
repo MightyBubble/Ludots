@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Schedulers;
 
@@ -386,6 +388,7 @@ public sealed class CrowdMovementKernel
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
+        long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
             int len = baseCount + (w < remainder ? 1 : 0);
@@ -401,27 +404,31 @@ public sealed class CrowdMovementKernel
 
         scheduler.Flush();
         for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
+        Session.Telemetry.AddParallelWallTicks(Stopwatch.GetTimestamp() - wall0);
     }
 
     private void ExecuteRange(int phase, int start, int end, Fix64 dt)
     {
+        long t0 = Stopwatch.GetTimestamp();
         switch (phase)
         {
             case RangePhaseAvoidGather:
                 CrowdAvoidance.GatherRange(this, start, end);
-                return;
+                break;
             case RangePhaseAvoidSolve:
                 CrowdAvoidance.SolveRange(this, start, end);
-                return;
+                break;
             case RangePhaseIntent:
                 CrowdIntents.WriteRange(this, start, end);
-                return;
+                break;
             case RangePhaseMotor:
                 CrowdMotor.IntegrateRange(this, start, end, dt);
-                return;
+                break;
             default:
                 throw new InvalidOperationException($"未知的群体并行阶段 {phase}。");
         }
+
+        Session.Telemetry.AddParallelWorkTicks(Stopwatch.GetTimestamp() - t0);
     }
 
     internal const int RangePhaseAvoidGather = 1;
@@ -479,6 +486,8 @@ public sealed class CrowdMovementKernel
     /// <summary>一个子步:领队 → 意图 → 马达(避让在 S6 才会插到领队之前)。</summary>
     public void Step(Fix64 dt)
     {
+        var telemetry = Session.Telemetry;
+        long mark = Stopwatch.GetTimestamp();
         var orders = Session.Orders.List;
         Fix64 turnK = Fix64.Min(Fix64.OneValue, dt * LeaderTurnRate);
         Fix64 faceStep = LeaderTurnRate * FaceTurnScale * dt;
@@ -494,8 +503,11 @@ public sealed class CrowdMovementKernel
             }
         }
 
+        telemetry.AddLeaderTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdIntents.Compute(this, dt);
+        telemetry.AddIntentTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdMotor.Integrate(this, dt);
+        telemetry.AddMotorTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         Tick++;
     }
 

@@ -1,10 +1,60 @@
+using System.Diagnostics;
+using System.Threading;
+
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
+/// 一个 tick 内各阶段的秒表 tick 累计。单位是 <see cref="Stopwatch.GetTimestamp"/> 的 tick,不是毫秒。
+/// 子步多次发生的阶段在本 tick 内相加。ParallelWork 是各区间执行时长之和,ParallelWall 是调度墙钟之和,两者不计入阶段合计。
+/// </summary>
+public struct CrowdSimulationPhaseTicks
+{
+    public long Command;
+    public long Rebake;
+    public long Plan;
+    public long Gather;
+    public long Hash;
+    public long Separation;
+    public long Leader;
+    public long Intent;
+    public long Motor;
+    public long Scatter;
+    public long Fog;
+    public long Belief;
+    public long Refresh;
+    public long Checksum;
+    public long ParallelWork;
+    public long ParallelWall;
+
+    public readonly long Accounted =>
+        Command + Rebake + Plan + Gather + Hash + Separation + Leader + Intent + Motor + Scatter + Fog + Belief + Refresh + Checksum;
+
+    public void Accumulate(in CrowdSimulationPhaseTicks sample)
+    {
+        Command += sample.Command;
+        Rebake += sample.Rebake;
+        Plan += sample.Plan;
+        Gather += sample.Gather;
+        Hash += sample.Hash;
+        Separation += sample.Separation;
+        Leader += sample.Leader;
+        Intent += sample.Intent;
+        Motor += sample.Motor;
+        Scatter += sample.Scatter;
+        Fog += sample.Fog;
+        Belief += sample.Belief;
+        Refresh += sample.Refresh;
+        Checksum += sample.Checksum;
+        ParallelWork += sample.ParallelWork;
+        ParallelWall += sample.ParallelWall;
+    }
+}
+
+/// <summary>
 /// 人群仿真遥测(MassNavigationTelemetry 同款 POCO,无字符串键)。
-/// 本 tick 快照(赋值覆盖):Units、Contacts、Idle/Moving/Arrived/Unreachable/Jumping、LastTickMs。
+/// 本 tick 快照(赋值覆盖):Units、Contacts、Idle/Moving/Arrived/Unreachable/Jumping、LastTickMs、LastPhaseTicks。
 /// 会话累计:Ticks、Rebakes、FogRefreshes、SubStepClamped、EvictStuck、Plans,以及 PathWaits 与 StallTicks(同一次停摆各加一,无头 Step/Advance 也计)。
-/// TickMs 是墙钟 EMA,MaxTickMs 是墙钟峰值。
+/// TickMs 是墙钟 EMA,MaxTickMs 是墙钟峰值。SumPhaseTicks 是各阶段秒表 tick 的会话累计。
 /// </summary>
 public sealed class CrowdSimulationTelemetry
 {
@@ -28,6 +78,12 @@ public sealed class CrowdSimulationTelemetry
     public double LastTickMs { get; private set; }
     public double TickMs { get; private set; }
     public double MaxTickMs { get; private set; }
+    public CrowdSimulationPhaseTicks LastPhaseTicks => _lastPhaseTicks;
+    public CrowdSimulationPhaseTicks SumPhaseTicks => _sumPhaseTicks;
+
+    private CrowdSimulationPhaseTicks _phaseFrame;
+    private CrowdSimulationPhaseTicks _lastPhaseTicks;
+    private CrowdSimulationPhaseTicks _sumPhaseTicks;
 
     /// <summary>每 tick 一次:会话步进后调用(tick 墙钟由调用方用秒表环测)。Contacts 是本 tick 读数,停摆帧传 0。</summary>
     public void BeginFrame(int units, int contacts, bool stalled, double tickMs)
@@ -68,5 +124,41 @@ public sealed class CrowdSimulationTelemetry
         SubStepClamped = EvictStuck = Plans = 0;
         Idle = Moving = Arrived = Unreachable = Jumping = 0;
         LastTickMs = TickMs = MaxTickMs = 0;
+        _phaseFrame = _lastPhaseTicks = _sumPhaseTicks = default;
+    }
+
+    internal void BeginPhaseFrame() => _phaseFrame = default;
+
+    internal void CommitPhaseFrame()
+    {
+        _lastPhaseTicks = _phaseFrame;
+        _sumPhaseTicks.Accumulate(in _phaseFrame);
+    }
+
+    internal void AddCommandTicks(long ticks) => _phaseFrame.Command += ticks;
+    internal void AddRebakeTicks(long ticks) => _phaseFrame.Rebake += ticks;
+    internal void AddPlanTicks(long ticks) => _phaseFrame.Plan += ticks;
+    internal void AddGatherTicks(long ticks) => _phaseFrame.Gather += ticks;
+    internal void AddHashTicks(long ticks) => _phaseFrame.Hash += ticks;
+    internal void AddSeparationTicks(long ticks) => _phaseFrame.Separation += ticks;
+    internal void AddLeaderTicks(long ticks) => _phaseFrame.Leader += ticks;
+    internal void AddIntentTicks(long ticks) => _phaseFrame.Intent += ticks;
+    internal void AddMotorTicks(long ticks) => _phaseFrame.Motor += ticks;
+    internal void AddScatterTicks(long ticks) => _phaseFrame.Scatter += ticks;
+    internal void AddFogTicks(long ticks) => _phaseFrame.Fog += ticks;
+    internal void AddBeliefTicks(long ticks) => _phaseFrame.Belief += ticks;
+    internal void AddRefreshTicks(long ticks) => _phaseFrame.Refresh += ticks;
+    internal void AddChecksumTicks(long ticks) => _phaseFrame.Checksum += ticks;
+    internal void AddParallelWallTicks(long ticks) => _phaseFrame.ParallelWall += ticks;
+
+    /// <summary>区间在工人线程上执行,只累加这一格。</summary>
+    internal void AddParallelWorkTicks(long ticks) => Interlocked.Add(ref _phaseFrame.ParallelWork, ticks);
+
+    internal static long TakeTicks(ref long mark)
+    {
+        long now = Stopwatch.GetTimestamp();
+        long elapsed = now - mark;
+        mark = now;
+        return elapsed;
     }
 }
