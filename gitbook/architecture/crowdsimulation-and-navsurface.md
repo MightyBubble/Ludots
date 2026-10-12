@@ -279,7 +279,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 合计仍是一条 FNV-1a 32（`CrowdSimChecksum`）。`Compute` 沿这条 Mix 记下四个断面：`position`、`motion`、`state`、`avoidance`。后一个断面从前一个的结果接着混。`Total` 等于最后一个断面 `avoidance`。四个分区按这个顺序接完，合计就是这条 Mix 的终态。`ComputeValue` 返回 `Total`。S4 真值与回放逐位一致只认这个合计，词序和以前相同。
 
-诊断断面另起三条 Mix，域词分开，不写进 `Total`。它们只把分歧指到子系统。词可以随定位需要改，不冻结成真值。`CrowdSimSession.DiagnosticDigest` 默认关，三个诊断词为 0。打开之后每个成功 tick 都算。`CrowdSimulationRuntime` 在自动回放已武装（`autoReplayAtTick` ≥ 0）时从第一 tick 打开，回放会话复制同一个开关。50k 计时门走默认关：`jump` 要再扫一遍全部单位。
+诊断断面另起三条 Mix，域词分开，不写进 `Total`。它们只把分歧指到子系统。词可以随定位需要改，不冻结成真值。开关开着和关着，同一段推进的 `Total` 与 `position` 相同。`CrowdSimSession.DiagnosticDigest` 默认关，三个诊断词为 0。打开之后每个成功 tick 都算。`CrowdSimulationRuntime` 在自动回放已武装（`autoReplayAtTick` ≥ 0）时从第一 tick 打开，回放会话复制同一个开关。50k 计时门走默认关：`jump` 要再扫一遍全部单位。
 
 合计断面里的词：
 
@@ -290,17 +290,20 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 诊断断面（开关打开时）：
 
-- `groups`：按组槽走，空槽记 0。活组记 `OrderId`、`Goal`、`GoalComp`、`Planning`、`StateSeq`、`LosAll`。领队和上一任领队记位置、朝向、路径点数、首尾路点、段号、是否走完。流场记 `NavId`、`Goal`、`Reached`，以及目标格上的长度，不扫整张积分场。后面接指令簿（id、玩家、模式、去重键、组链接）和在途规划（到期 tick、组目标、请求号、导航版本、刷新队列的组号）。
+- `groups`：按组槽走，空槽记 0。活组记 `OrderId`、`Goal`、`GoalComp`、`Planning`、`StateSeq`、`LosAll`。领队和上一任领队记位置、朝向、路径上的每个路点、当前路点下标、是否走完。流场记 `BuildRevision`（缓冲每成功构建一次加一，池内复用继续累加）、`NavId`、`Goal`、`Reached`，以及目标格上的长度。后面接指令簿（id、玩家、模式、去重键、组链接）和在途规划（到期 tick、组目标、请求号、导航版本、刷新队列的组号）。
 - `jump`：每个单位的 `RestCm`、`JumpToCm`、`JumpT`、`JumpLengthCm`。没有运动内核时读组件；缺组件则这六词为 0。
-- `commands`：未执行条数，再按队列顺序混每条的 tick、种类和载荷字段（坐标、数量、形状串、模板串、区域顶点）。
+- `commands`：未执行条数，再按队列顺序混每条的 tick、种类和载荷字段（坐标、数量、形状串、模板串、区域顶点）。`Flush` 只在执行时写日志。回放输入是已执行日志，再接上尚未到点的队列。
 
-`CrowdSimChecksum.DiffDigest` 取两边最早一个有任一断面不同的 tick。这一 tick 上合计断面有差时，`Section` 取 position、motion、state、avoidance 里的第一个，`Diagnostic` 掩码记下同时有差的诊断断面。合计断面相同、只有诊断断面有差时，`Section` 取 groups、jump、commands 里的第一个，掩码仍列出全部有差的诊断断面。后段合计接续前段，更早的词变了，后面的合计断面会跟着变，函数只报第一个合计断面。回放对拍用同一个函数。分歧日志在 `section` 后附 `diag=`；掩码为空则不附。HUD 同样。两边条数对不上、共同前缀又一致时，tick 为 -2，section 为空，掩码为 0。
+`CrowdSimChecksum.DiffDigest` 同时给出两样。合计的第一处分歧：tick 与 `Section`（position、motion、state、avoidance 的第一个）；没有则为 tick -1、断面名为空。诊断的第一处分歧：`DiagnosticTick` 与掩码；没有则为 tick -1、掩码 0。两样可以落在不同 tick。后段合计接续前段，更早的合计词变了，后面的合计断面会跟着变，函数只报第一个合计断面。共同前缀的合计一致但条数不同时，合计 tick 为 -2，section 为空。
+
+`ReplayStatus` 只看合计。1 是合计逐位一致，2 是合计分歧或条数不同。诊断断面不改这个结论。日志和 HUD 另报最早的诊断分歧，形如 `diag differs: groups`，并带上那个 tick。掩码为空则不附。
 
 开关关闭时诊断词恒为 0。对拍两边要用同一个开关，否则诊断断面会整段报差。
 
 下面这些仍会影响下一 tick，合计和诊断都不收：
 
 - 体型上的速度、个人半径、推挤优先级。生成之后不随 tick 改写。本 tick 改它们，下一 tick 的运动或避让才会露出来。
+- 流场每格的下降方向。摘要里只有构建代次、目标格、到达格数和目标格长度。
 - 迷雾格、认知槽、重烘任务、下一次生成用的随机流序号。导航格本身也不在摘要里。
 - 选中标记。它是呈现态，校验码不读。
 
