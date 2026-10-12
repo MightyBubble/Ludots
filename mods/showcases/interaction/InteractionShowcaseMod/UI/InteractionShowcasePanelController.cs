@@ -502,7 +502,7 @@ namespace InteractionShowcaseMod.UI
             EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
             Entity rep = RequireHeroRep(engine);
             var views = new EntityCommandPanelToolbarButtonView[16];
-            int written = catalog.CopyVisibleButtons(engine, rep, views, out int total);
+            int written = catalog.CopyVisibleButtons(engine, InteractionShowcaseIds.ToolbarPanelId, rep, views, out int total);
             if (written < total)
             {
                 throw new InvalidOperationException(
@@ -523,7 +523,10 @@ namespace InteractionShowcaseMod.UI
         {
             if (_engine != null)
             {
-                EntityCommandPanelToolbarCatalog.Require(_engine).Activate(_engine, modeId);
+                EntityCommandPanelToolbarCatalog.Require(_engine).Activate(
+                    _engine,
+                    InteractionShowcaseIds.ToolbarPanelId,
+                    modeId);
             }
         }
 
@@ -550,8 +553,8 @@ namespace InteractionShowcaseMod.UI
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
             EntityCommandPanelToolbarCatalog toolbar = EntityCommandPanelToolbarCatalog.Require(engine);
             Entity hero = RequireHeroRep(engine);
-            string activeModeId = toolbar.ActiveButtonId(engine, hero);
-            string activeModeName = toolbar.ButtonLabel(engine, activeModeId);
+            string activeModeId = toolbar.ActiveButtonId(engine, InteractionShowcaseIds.ToolbarPanelId, hero);
+            string activeModeName = toolbar.ButtonLabel(engine, InteractionShowcaseIds.ToolbarPanelId, activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);

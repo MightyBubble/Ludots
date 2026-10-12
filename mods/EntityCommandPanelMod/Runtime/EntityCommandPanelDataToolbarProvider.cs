@@ -25,19 +25,22 @@ namespace EntityCommandPanelMod.Runtime
     {
         private readonly GameEngine _engine;
         private readonly EntityCommandPanelToolbarCatalog _catalog;
-        private readonly IEntityCommandPanelToolbarTail? _tail;
+        private readonly string _panelId;
+        private readonly Func<string, IEntityCommandPanelToolbarTail?> _tailFor;
 
         public EntityCommandPanelDataToolbarProvider(
             GameEngine engine,
             EntityCommandPanelToolbarCatalog catalog,
-            IEntityCommandPanelToolbarTail? tail = null)
+            string panelId,
+            Func<string, IEntityCommandPanelToolbarTail?> tailFor)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            _tail = tail;
+            _panelId = panelId ?? throw new ArgumentNullException(nameof(panelId));
+            _tailFor = tailFor ?? throw new ArgumentNullException(nameof(tailFor));
         }
 
-        public bool IsVisible => _catalog.IsSingleToolbarVisible(_engine);
+        public bool IsVisible => _catalog.IsPanelVisible(_engine, _panelId);
 
         public uint Revision
         {
@@ -48,51 +51,20 @@ namespace EntityCommandPanelMod.Runtime
                     return 0;
                 }
 
-                uint revision = 1u ^ _catalog.HighlightRevision(_engine);
-                if (_tail != null)
+                uint revision = 1u ^ _catalog.HighlightRevision(_engine, _panelId);
+                IEntityCommandPanelToolbarTail? tail = VisibleTail();
+                if (tail != null)
                 {
-                    revision ^= _tail.Revision;
+                    revision ^= tail.Revision;
                 }
 
                 return revision;
             }
         }
 
-        public string Title
-        {
-            get
-            {
-                if (!IsVisible)
-                {
-                    return string.Empty;
-                }
+        public string Title => Text(title: true);
 
-                if (!string.IsNullOrEmpty(_tail?.Title))
-                {
-                    return _tail.Title;
-                }
-
-                return _catalog.VisibleTitle(_engine);
-            }
-        }
-
-        public string Subtitle
-        {
-            get
-            {
-                if (!IsVisible)
-                {
-                    return string.Empty;
-                }
-
-                if (!string.IsNullOrEmpty(_tail?.Subtitle))
-                {
-                    return _tail.Subtitle;
-                }
-
-                return _catalog.VisibleSubtitle(_engine);
-            }
-        }
+        public string Subtitle => Text(title: false);
 
         public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
         {
@@ -101,8 +73,9 @@ namespace EntityCommandPanelMod.Runtime
                 return 0;
             }
 
-            int dataWritten = _catalog.CopyVisibleButtons(_engine, destination, out int dataTotal);
-            int tailTotal = _tail?.ButtonCount ?? 0;
+            int dataWritten = _catalog.CopyVisibleButtons(_engine, _panelId, destination, out int dataTotal);
+            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            int tailTotal = tail?.ButtonCount ?? 0;
             int want = Math.Min(destination.Length, dataTotal + tailTotal);
             if (want <= dataWritten)
             {
@@ -110,7 +83,7 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             int tailWant = want - dataWritten;
-            int tailWritten = _tail!.CopyButtons(destination.Slice(dataWritten, tailWant));
+            int tailWritten = tail!.CopyButtons(destination.Slice(dataWritten, tailWant));
             if (tailWritten != tailWant)
             {
                 throw new InvalidOperationException(
@@ -127,17 +100,47 @@ namespace EntityCommandPanelMod.Runtime
                 throw new InvalidOperationException($"'{EntityCommandPanelToolbarCatalog.RelativePath}' button id is empty.");
             }
 
-            if (_catalog.TryActivate(_engine, buttonId))
+            if (_catalog.TryActivate(_engine, _panelId, buttonId))
             {
                 return;
             }
 
-            if (_tail != null && _tail.TryActivate(buttonId))
+            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            if (tail != null && tail.TryActivate(buttonId))
             {
                 return;
             }
 
             throw new InvalidOperationException($"'{EntityCommandPanelToolbarCatalog.RelativePath}' has no button '{buttonId}'.");
+        }
+
+        private string Text(bool title)
+        {
+            if (!IsVisible)
+            {
+                return string.Empty;
+            }
+
+            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            string? tailText = title ? tail?.Title : tail?.Subtitle;
+            if (!string.IsNullOrEmpty(tailText))
+            {
+                return tailText;
+            }
+
+            return title
+                ? _catalog.VisibleTitle(_engine, _panelId)
+                : _catalog.VisibleSubtitle(_engine, _panelId);
+        }
+
+        private IEntityCommandPanelToolbarTail? VisibleTail()
+        {
+            if (!IsVisible)
+            {
+                return null;
+            }
+
+            return _tailFor(_catalog.VisibleToolbarId(_engine, _panelId));
         }
     }
 }

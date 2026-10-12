@@ -1,6 +1,7 @@
 [
   {
     "id": "toolbar.interaction",
+    "panel": "interaction-showcase",
     "title": "Reference Interactions",
     "subtitle": "Same heroes, different gestures",
     "maps": ["interaction_showcase_hub", "interaction_showcase_stress"],

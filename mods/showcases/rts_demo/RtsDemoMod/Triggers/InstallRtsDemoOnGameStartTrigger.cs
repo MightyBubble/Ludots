@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
@@ -46,7 +47,10 @@ namespace RtsDemoMod.Triggers
             if (hasLocalPresentation)
             {
                 engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
-                engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, new RtsQuickSelectToolbarProvider(engine));
+                EntityCommandPanelToolbarComposer.Require(engine).RegisterContributor(
+                    EntityCommandPanelToolbarComposer.CommandPanelId,
+                    "rts.quick-select",
+                    new RtsQuickSelectToolbarProvider(engine));
             }
 
             // Run after effect/spawn processing so relation-driven garrison/build/morph state

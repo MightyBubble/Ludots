@@ -69,10 +69,9 @@ namespace ChampionSkillSandboxMod.Triggers
                 }
             }
 
-            EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
-            engine.SetService(
-                CoreServiceKeys.EntityCommandPanelToolbarProvider,
-                new EntityCommandPanelDataToolbarProvider(engine, catalog, new ChampionSkillSandboxToolbarTail(engine)));
+            EntityCommandPanelToolbarComposer.Require(engine).RegisterTail(
+                ChampionSkillSandboxToolbarTail.ToolbarId,
+                new ChampionSkillSandboxToolbarTail(engine));
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 

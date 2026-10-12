@@ -1,6 +1,7 @@
 [
   {
     "id": "toolbar.champion",
+    "panel": "entity-command-panel",
     "title": "Cast + Showcase",
     "subtitle": "Theme Classic | Cast + Camera | F1/F2/F3 Cast | RMB Move",
     "maps": ["champion_skill_sandbox", "champion_skill_stress"],

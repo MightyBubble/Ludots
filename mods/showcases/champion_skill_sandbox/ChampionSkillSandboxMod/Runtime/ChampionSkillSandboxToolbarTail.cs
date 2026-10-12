@@ -7,8 +7,13 @@ using Ludots.Core.UI.EntityCommandPanels;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
+    /// <summary>
+    /// Camera, showcase theme, stress harness, and the live subtitle. Cast-mode buttons stay in toolbar data.
+    /// </summary>
     internal sealed class ChampionSkillSandboxToolbarTail : IEntityCommandPanelToolbarTail
     {
+        public const string ToolbarId = "toolbar.champion";
+
         private readonly GameEngine _engine;
 
         public ChampionSkillSandboxToolbarTail(GameEngine engine)

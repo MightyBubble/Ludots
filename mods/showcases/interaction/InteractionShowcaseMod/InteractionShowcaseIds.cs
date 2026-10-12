@@ -2,6 +2,8 @@ namespace InteractionShowcaseMod
 {
     public static class InteractionShowcaseIds
     {
+        public const string ToolbarPanelId = "interaction-showcase";
+
         public const string HubMapId = "interaction_showcase_hub";
         public const string StressMapId = "interaction_showcase_stress";
 

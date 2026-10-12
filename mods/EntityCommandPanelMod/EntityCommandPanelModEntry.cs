@@ -85,7 +85,8 @@ namespace EntityCommandPanelMod
             });
 
             var activations = new EntityCommandPanelSlotActivations(engine, MaxPendingActivations, MaxPendingActivationMembers);
-            EntityCommandPanelToolbarCatalog.Require(engine);
+            EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
+            EntityCommandPanelToolbarComposer.Require(engine).Bind(catalog);
             var slotConfig = EntityCommandPanelSlotActionConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
             var gasSource = new GasEntityCommandPanelSource(engine, activations, slotConfig);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)

@@ -16,18 +16,23 @@ namespace EntityCommandPanelMod.Runtime
 {
     /// <summary>
     /// Buttons a mod declares in <c>UI/entity_command_panel_toolbars.json</c>.
-    /// Pressing a button injects its input action. Highlight is a preference pair or an interaction context.
+    /// Each toolbar names the panel it binds to. Pressing a button injects its input action.
+    /// Highlight is a preference pair or an interaction context.
     /// </summary>
     public sealed class EntityCommandPanelToolbarCatalog
     {
         public const string RelativePath = "UI/entity_command_panel_toolbars.json";
 
+        public const string PanelsRelativePath = "UI/entity_command_panel_toolbar_panels.json";
+
         public static readonly ServiceKey<EntityCommandPanelToolbarCatalog> ServiceKey = new("EntityCommandPanelMod.ToolbarCatalog");
 
+        private readonly FrozenSet<string> _panels;
         private readonly ToolbarDeclaration[] _toolbars;
 
-        private EntityCommandPanelToolbarCatalog(ToolbarDeclaration[] toolbars)
+        private EntityCommandPanelToolbarCatalog(FrozenSet<string> panels, ToolbarDeclaration[] toolbars)
         {
+            _panels = panels;
             _toolbars = toolbars;
         }
 
@@ -47,6 +52,7 @@ namespace EntityCommandPanelMod.Runtime
         public static EntityCommandPanelToolbarCatalog Load(GameEngine engine)
         {
             ArgumentNullException.ThrowIfNull(engine);
+            FrozenSet<string> panels = LoadPanels(engine);
             ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
                 engine.ConfigCatalog,
                 RelativePath,
@@ -63,10 +69,16 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             var toolbars = new ToolbarDeclaration[merged.Count];
+            var toolbarIds = new HashSet<string>(StringComparer.Ordinal);
             var buttonIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < merged.Count; i++)
             {
-                toolbars[i] = ParseToolbar(engine, merged[i], prefs, profiles, actionIds);
+                toolbars[i] = ParseToolbar(engine, merged[i], prefs, profiles, actionIds, panels);
+                if (!toolbarIds.Add(toolbars[i].Id))
+                {
+                    throw Error($"toolbar '{toolbars[i].Id}' is declared more than once.");
+                }
+
                 for (int b = 0; b < toolbars[i].Buttons.Length; b++)
                 {
                     string buttonId = toolbars[i].Buttons[b].Id;
@@ -77,41 +89,93 @@ namespace EntityCommandPanelMod.Runtime
                 }
             }
 
-            return new EntityCommandPanelToolbarCatalog(toolbars);
+            return new EntityCommandPanelToolbarCatalog(panels, toolbars);
         }
 
-        public bool IsSingleToolbarVisible(GameEngine engine)
+        public bool ContainsPanel(string panelId)
         {
-            return TryGetVisible(engine, out _);
+            return !string.IsNullOrEmpty(panelId) && _panels.Contains(panelId);
         }
 
-        public int VisibleButtonCount(GameEngine engine)
+        public bool ContainsToolbar(string toolbarId)
         {
-            return TryGetVisible(engine, out ToolbarDeclaration? toolbar) && toolbar != null
-                ? toolbar.Buttons.Length
-                : 0;
+            for (int i = 0; i < _toolbars.Length; i++)
+            {
+                if (string.Equals(_toolbars[i].Id, toolbarId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        public string VisibleTitle(GameEngine engine)
+        public bool HasToolbarForPanel(string panelId)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine);
+            for (int i = 0; i < _toolbars.Length; i++)
+            {
+                if (string.Equals(_toolbars[i].Panel, panelId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool PanelUsesContextVisibility(string panelId)
+        {
+            for (int i = 0; i < _toolbars.Length; i++)
+            {
+                if (string.Equals(_toolbars[i].Panel, panelId, StringComparison.Ordinal) &&
+                    _toolbars[i].ContextProfileIds.Length > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool IsPanelVisible(GameEngine engine, string panelId)
+        {
+            return TryGetVisible(engine, panelId, out _);
+        }
+
+        public string VisibleToolbarId(GameEngine engine, string panelId)
+        {
+            return RequireVisible(engine, panelId).Id;
+        }
+
+        public string VisibleTitle(GameEngine engine, string panelId)
+        {
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
             return TextFor(toolbar, engine.CurrentMapSession?.MapId.Value, title: true);
         }
 
-        public string VisibleSubtitle(GameEngine engine)
+        public string VisibleSubtitle(GameEngine engine, string panelId)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
             return TextFor(toolbar, engine.CurrentMapSession?.MapId.Value, title: false);
         }
 
-        public int CopyVisibleButtons(GameEngine engine, Span<EntityCommandPanelToolbarButtonView> destination, out int total)
+        public int CopyVisibleButtons(
+            GameEngine engine,
+            string panelId,
+            Span<EntityCommandPanelToolbarButtonView> destination,
+            out int total)
         {
-            return CopyVisibleButtons(engine, TrySoleRep(engine), destination, out total);
+            return CopyVisibleButtons(engine, panelId, TrySoleRep(engine), destination, out total);
         }
 
-        public int CopyVisibleButtons(GameEngine engine, Entity rep, Span<EntityCommandPanelToolbarButtonView> destination, out int total)
+        public int CopyVisibleButtons(
+            GameEngine engine,
+            string panelId,
+            Entity rep,
+            Span<EntityCommandPanelToolbarButtonView> destination,
+            out int total)
         {
-            if (!TryGetVisible(engine, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 total = 0;
                 return 0;
@@ -133,14 +197,19 @@ namespace EntityCommandPanelMod.Runtime
             return count;
         }
 
-        public uint HighlightRevision(GameEngine engine)
+        public uint HighlightRevision(GameEngine engine, string panelId)
         {
-            if (!TryGetVisible(engine, out ToolbarDeclaration? toolbar) || toolbar == null)
+            return HighlightRevision(engine, panelId, TrySoleRep(engine));
+        }
+
+        public uint HighlightRevision(GameEngine engine, string panelId, Entity rep)
+        {
+            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 return 0;
             }
 
-            bool[] active = Evaluate(engine, toolbar, TrySoleRep(engine));
+            bool[] active = Evaluate(engine, toolbar, rep);
             uint revision = 0;
             for (int i = 0; i < active.Length; i++)
             {
@@ -153,14 +222,14 @@ namespace EntityCommandPanelMod.Runtime
             return revision;
         }
 
-        public string ActiveButtonId(GameEngine engine)
+        public string ActiveButtonId(GameEngine engine, string panelId)
         {
-            return ActiveButtonId(engine, TrySoleRep(engine));
+            return ActiveButtonId(engine, panelId, TrySoleRep(engine));
         }
 
-        public string ActiveButtonId(GameEngine engine, Entity rep)
+        public string ActiveButtonId(GameEngine engine, string panelId, Entity rep)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
             bool[] active = Evaluate(engine, toolbar, rep);
             string? found = null;
             for (int i = 0; i < active.Length; i++)
@@ -186,9 +255,9 @@ namespace EntityCommandPanelMod.Runtime
             return found;
         }
 
-        public string ButtonLabel(GameEngine engine, string buttonId)
+        public string ButtonLabel(GameEngine engine, string panelId, string buttonId)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
             for (int i = 0; i < toolbar.Buttons.Length; i++)
             {
                 if (string.Equals(toolbar.Buttons[i].Id, buttonId, StringComparison.Ordinal))
@@ -200,9 +269,14 @@ namespace EntityCommandPanelMod.Runtime
             throw Error($"toolbar '{toolbar.Id}' has no button '{buttonId}'.");
         }
 
-        public bool TryActivate(GameEngine engine, string buttonId)
+        public bool TryActivate(GameEngine engine, string panelId, string buttonId)
         {
-            if (!TryGetVisible(engine, out ToolbarDeclaration? toolbar) || toolbar == null)
+            return TryActivate(engine, panelId, TrySoleRep(engine), buttonId);
+        }
+
+        public bool TryActivate(GameEngine engine, string panelId, Entity rep, string buttonId)
+        {
+            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 return false;
             }
@@ -214,44 +288,50 @@ namespace EntityCommandPanelMod.Runtime
                     continue;
                 }
 
-                Inject(engine, toolbar.Buttons[i].ActionId);
+                Inject(engine, rep, toolbar.Buttons[i].ActionId);
                 return true;
             }
 
             return false;
         }
 
-        public void Activate(GameEngine engine, string buttonId)
+        public void Activate(GameEngine engine, string panelId, string buttonId)
         {
-            if (!TryActivate(engine, buttonId))
+            Activate(engine, panelId, TrySoleRep(engine), buttonId);
+        }
+
+        public void Activate(GameEngine engine, string panelId, Entity rep, string buttonId)
+        {
+            if (!TryActivate(engine, panelId, rep, buttonId))
             {
-                throw Error($"has no visible button '{buttonId}'.");
+                throw Error($"panel '{panelId}' has no visible button '{buttonId}'.");
             }
         }
 
-        private ToolbarDeclaration RequireVisible(GameEngine engine)
+        private ToolbarDeclaration RequireVisible(GameEngine engine, string panelId)
         {
-            if (!TryGetVisible(engine, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
-                throw Error($"has no visible toolbar for map '{engine.CurrentMapSession?.MapId.Value ?? ""}'.");
+                throw Error($"panel '{panelId}' has no visible toolbar for map '{engine.CurrentMapSession?.MapId.Value ?? ""}'.");
             }
 
             return toolbar;
         }
 
-        private bool TryGetVisible(GameEngine engine, out ToolbarDeclaration? toolbar)
+        private bool TryGetVisible(GameEngine engine, string panelId, out ToolbarDeclaration? toolbar)
         {
             toolbar = null;
             for (int i = 0; i < _toolbars.Length; i++)
             {
-                if (!Matches(engine, _toolbars[i]))
+                if (!string.Equals(_toolbars[i].Panel, panelId, StringComparison.Ordinal) ||
+                    !Matches(engine, _toolbars[i]))
                 {
                     continue;
                 }
 
                 if (toolbar != null)
                 {
-                    throw Error($"toolbars '{toolbar.Id}' and '{_toolbars[i].Id}' are both visible.");
+                    throw Error($"toolbars '{toolbar.Id}' and '{_toolbars[i].Id}' are both visible on panel '{panelId}'.");
                 }
 
                 toolbar = _toolbars[i];
@@ -448,38 +528,55 @@ namespace EntityCommandPanelMod.Runtime
             return new EntityCommandPanelToolbarButtonView(button.Id, button.Label, active, button.Accent);
         }
 
-        // Sole-seat clients inject on the global handler. Extra seats inject on the first
-        // possessed seat channel, matching TriggerGraphActionBindingSystem.
-        private static void Inject(GameEngine engine, string actionId)
+        // A single local seat reads the global handler. When several seats exist, the press
+        // goes to the one channel whose possessed rep is the rep the caller passed.
+        private static void Inject(GameEngine engine, Entity rep, string actionId)
         {
+            if (rep == Entity.Null || !engine.World.IsAlive(rep))
+            {
+                throw Error($"action '{actionId}' requires the rep it is injecting for.");
+            }
+
             ClientLocalSeatRegistry seats = engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
                 ?? throw Error($"action '{actionId}' requires ClientLocalSeatRegistry.");
-            PlayerInputHandler? handler = null;
-            if (seats.Count > 1)
+            string? seatId = null;
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
             {
-                ClientLocalSeatInputRuntime seatInput = engine.GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)
-                    ?? throw Error($"action '{actionId}' requires ClientLocalSeatInputRuntime.");
-                IReadOnlyList<string> seatIds = seats.SeatIds;
-                for (int i = 0; i < seatIds.Count; i++)
+                ClientLocalSeat seat = seats.Require(seatIds[i]);
+                if (!seat.HasPossession || seat.PossessedRep != rep)
                 {
-                    ClientLocalSeat seat = seats.Require(seatIds[i]);
-                    if (!seat.HasPossession)
-                    {
-                        continue;
-                    }
-
-                    if (!seatInput.TryGetChannel(seat.SeatId, out ClientLocalSeatInputChannel channel))
-                    {
-                        throw Error($"action '{actionId}' cannot attribute to seat '{seat.SeatId}'.");
-                    }
-
-                    handler = channel.Handler;
-                    break;
+                    continue;
                 }
+
+                if (seatId != null)
+                {
+                    throw Error($"action '{actionId}' rep is possessed by both '{seatId}' and '{seat.SeatId}'.");
+                }
+
+                seatId = seat.SeatId;
+            }
+
+            if (seatId == null)
+            {
+                throw Error($"action '{actionId}' has no local seat possessing the rep.");
+            }
+
+            PlayerInputHandler? handler;
+            if (seats.Count <= 1)
+            {
+                handler = engine.GetService(CoreServiceKeys.InputHandler);
             }
             else
             {
-                handler = engine.GetService(CoreServiceKeys.InputHandler);
+                ClientLocalSeatInputRuntime seatInput = engine.GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)
+                    ?? throw Error($"action '{actionId}' requires ClientLocalSeatInputRuntime.");
+                if (!seatInput.TryGetChannel(seatId, out ClientLocalSeatInputChannel channel))
+                {
+                    throw Error($"action '{actionId}' cannot attribute to seat '{seatId}'.");
+                }
+
+                handler = channel.Handler;
             }
 
             if (handler == null)
@@ -495,16 +592,46 @@ namespace EntityCommandPanelMod.Runtime
             handler.InjectButtonPress(actionId);
         }
 
+        private static FrozenSet<string> LoadPanels(GameEngine engine)
+        {
+            ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
+                engine.ConfigCatalog,
+                PanelsRelativePath,
+                ConfigMergePolicy.ArrayById,
+                "id");
+            IReadOnlyList<MergedConfigEntry> merged = engine.ConfigPipeline.MergeArrayByIdFromCatalog(in entry, engine.ConfigConflictReport);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                MergedConfigEntry panel = merged[i];
+                string where = $"'{PanelsRelativePath}' fragment '{panel.SourceUri}' panel '{panel.Id}'";
+                RejectUnknown(panel.Node, where, "id");
+                string id = RequireToken(ReadString(panel.Node, "id", where), $"{where}.id");
+                if (!string.Equals(id, panel.Id, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{where}.id '{id}' does not match the merged id '{panel.Id}'.");
+                }
+
+                if (!ids.Add(id))
+                {
+                    throw new InvalidOperationException($"{where} repeats panel '{id}'.");
+                }
+            }
+
+            return ids.ToFrozenSet(StringComparer.Ordinal);
+        }
+
         private static ToolbarDeclaration ParseToolbar(
             GameEngine engine,
             MergedConfigEntry entry,
             InteractionPrefCatalog prefs,
             InteractionContextProfileRegistry profiles,
-            FrozenSet<string> actionIds)
+            FrozenSet<string> actionIds,
+            FrozenSet<string> panels)
         {
             JsonObject obj = entry.Node;
             string where = $"fragment '{entry.SourceUri}' toolbar '{entry.Id}'";
-            RejectUnknown(obj, where, "id", "title", "subtitle", "maps", "contexts", "byMap", "buttons");
+            RejectUnknown(obj, where, "id", "title", "subtitle", "panel", "maps", "contexts", "byMap", "buttons");
             string id = RequireToken(ReadString(obj, "id", where), $"{where}.id");
             if (!string.Equals(id, entry.Id, StringComparison.Ordinal))
             {
@@ -513,6 +640,11 @@ namespace EntityCommandPanelMod.Runtime
 
             string title = RequireToken(ReadString(obj, "title", where), $"{where}.title");
             string subtitle = RequireToken(ReadString(obj, "subtitle", where), $"{where}.subtitle");
+            string panel = RequireToken(ReadString(obj, "panel", where), $"{where}.panel");
+            if (!panels.Contains(panel))
+            {
+                throw Error($"{where} cannot bind to panel '{panel}'. Declare that panel in '{PanelsRelativePath}'.");
+            }
             bool hasMaps = obj.ContainsKey("maps");
             bool hasContexts = obj.ContainsKey("contexts");
             if (hasMaps == hasContexts)
@@ -559,7 +691,7 @@ namespace EntityCommandPanelMod.Runtime
 
             MapText[] byMap = ReadByMap(obj, where, seenMaps);
             ButtonDeclaration[] buttons = ReadButtons(obj, where, prefs, profiles, actionIds);
-            return new ToolbarDeclaration(id, title, subtitle, maps, contextProfileIds, byMap, buttons);
+            return new ToolbarDeclaration(id, panel, title, subtitle, maps, contextProfileIds, byMap, buttons);
         }
 
         private static MapText[] ReadByMap(JsonObject obj, string where, HashSet<string> maps)
@@ -859,6 +991,7 @@ namespace EntityCommandPanelMod.Runtime
         {
             public ToolbarDeclaration(
                 string id,
+                string panel,
                 string title,
                 string subtitle,
                 string[] maps,
@@ -867,6 +1000,7 @@ namespace EntityCommandPanelMod.Runtime
                 ButtonDeclaration[] buttons)
             {
                 Id = id;
+                Panel = panel;
                 Title = title;
                 Subtitle = subtitle;
                 Maps = maps;
@@ -876,6 +1010,7 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             public string Id { get; }
+            public string Panel { get; }
             public string Title { get; }
             public string Subtitle { get; }
             public string[] Maps { get; }

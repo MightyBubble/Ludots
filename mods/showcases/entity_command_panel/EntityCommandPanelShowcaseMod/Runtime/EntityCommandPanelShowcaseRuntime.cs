@@ -34,8 +34,9 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private const string AbilityProjectionSummary = "Ability profile projects the command owners contributing to distinct ability buttons.";
         private const string InactiveProjectionSummary = "Inactive aggregation profile projection.";
 
+        private const string AggregationToolbarContributorId = "entity-command-panel.aggregation";
+
         private readonly AggregationProfileToolbarProvider _aggregationToolbar = new();
-        private IEntityCommandPanelToolbarProvider? _previousToolbarProvider;
         private bool _toolbarInstalled;
         private int _autoProfileTimelineFrame;
 
@@ -162,13 +163,10 @@ namespace EntityCommandPanelShowcaseMod.Runtime
                 return;
             }
 
-            IEntityCommandPanelToolbarProvider? existing = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-            if (!ReferenceEquals(existing, _aggregationToolbar))
-            {
-                _previousToolbarProvider = existing;
-            }
-
-            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _aggregationToolbar);
+            EntityCommandPanelToolbarComposer.Require(engine).RegisterContributor(
+                EntityCommandPanelToolbarComposer.CommandPanelId,
+                AggregationToolbarContributorId,
+                _aggregationToolbar);
             _toolbarInstalled = true;
         }
 
@@ -180,20 +178,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
                 return;
             }
 
-            IEntityCommandPanelToolbarProvider? current = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-            if (ReferenceEquals(current, _aggregationToolbar))
-            {
-                if (_previousToolbarProvider != null)
-                {
-                    engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _previousToolbarProvider);
-                }
-                else
-                {
-                    engine.RemoveService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-                }
-            }
-
-            _previousToolbarProvider = null;
+            EntityCommandPanelToolbarComposer.Require(engine).UnregisterContributor(AggregationToolbarContributorId);
             _toolbarInstalled = false;
         }
 
