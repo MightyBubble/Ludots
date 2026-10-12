@@ -1,0 +1,9 @@
+[
+  {
+    "id": "Effect.AimSchemes.Impact",
+    "presetType": "None",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "categories": ["Effect.AimSchemes.Impact"]
+  }
+]

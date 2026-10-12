@@ -11,7 +11,8 @@
       ]
     },
     "targeting": {
-      "castRangeCm": 800
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
     }
   },
   {
@@ -26,7 +27,8 @@
       ]
     },
     "targeting": {
-      "castRangeCm": 800
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
     }
   },
   {
@@ -41,7 +43,8 @@
       ]
     },
     "targeting": {
-      "castRangeCm": 800
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
     }
   },
   {
@@ -56,7 +59,8 @@
       ]
     },
     "targeting": {
-      "castRangeCm": 800
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
     }
   }
 ]
