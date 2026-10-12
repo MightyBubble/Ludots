@@ -1,9 +1,13 @@
 using System.Collections.Generic;
+using System.Reflection;
 using Arch.Core;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Tests;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests;
@@ -38,12 +42,35 @@ public sealed class CrowdStateDigestTests
         Assert.That(both.Diverged, Is.True);
         Assert.That(both.Tick, Is.EqualTo(4));
         Assert.That(both.Section, Is.EqualTo("position"));
+        Assert.That(both.DiagnosticTick, Is.EqualTo(4));
         Assert.That(both.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups | CrowdSimDiagnosticSection.Jump));
 
         var jumpOnly = new CrowdSimStateDigest(4, 1, 1, 1, 1, jump: 8);
         CrowdSimDigestDiff jump = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { jumpOnly });
-        Assert.That(jump.Section, Is.EqualTo("jump"));
+        Assert.That(jump.Diverged, Is.False);
+        Assert.That(jump.Tick, Is.EqualTo(-1));
+        Assert.That(jump.Section, Is.EqualTo(""));
+        Assert.That(jump.DiagnosticTick, Is.EqualTo(4));
         Assert.That(jump.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Jump));
+
+        var earlyLeft = new[]
+        {
+            new CrowdSimStateDigest(1, 1, 1, 1, 1, commands: 1),
+            new CrowdSimStateDigest(2, 1, 1, 1, 1),
+        };
+        var earlyRight = new[]
+        {
+            new CrowdSimStateDigest(1, 1, 1, 1, 1, commands: 2),
+            new CrowdSimStateDigest(2, 7, 1, 1, 1),
+        };
+        CrowdSimDigestDiff split = CrowdSimChecksum.DiffDigest(earlyLeft, earlyRight);
+        TestContext.Out.WriteLine(
+            $"split diff tick={split.Tick} section={split.Section} diagTick={split.DiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(split.Diagnostic)}");
+        Assert.That(split.Diverged, Is.True);
+        Assert.That(split.Tick, Is.EqualTo(2));
+        Assert.That(split.Section, Is.EqualTo("position"));
+        Assert.That(split.DiagnosticTick, Is.EqualTo(1));
+        Assert.That(split.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Commands));
     }
 
     [Test]
@@ -135,11 +162,12 @@ public sealed class CrowdStateDigestTests
         group.Goal = group.Goal == 3 ? 4 : 3;
         CrowdSimDigestDiff diff = DiffAgainstCurrent(digestsA, digestsB, sessionB);
         TestContext.Out.WriteLine(
-            $"goal diff tick={diff.Tick} section={diff.Section} diag={CrowdSimChecksum.FormatDiagnostic(diff.Diagnostic)}");
+            $"goal diff chainedTick={diff.Tick} diagTick={diff.DiagnosticTick} section=groups diag={CrowdSimChecksum.FormatDiagnostic(diff.Diagnostic)}");
         CrowdSimStateDigest recomputed = CrowdSimChecksum.Compute(sessionB);
-        Assert.That(diff.Diverged, Is.True);
-        Assert.That(diff.Tick, Is.EqualTo(TickN));
-        Assert.That(diff.Section, Is.EqualTo("groups"));
+        Assert.That(diff.Diverged, Is.False);
+        Assert.That(diff.Tick, Is.EqualTo(-1));
+        Assert.That(diff.Section, Is.EqualTo(""));
+        Assert.That(diff.DiagnosticTick, Is.EqualTo(TickN));
         Assert.That(diff.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups));
         Assert.That(recomputed.Total, Is.EqualTo(digestsA[TickN - 1].Total));
         Assert.That(recomputed.Position, Is.EqualTo(digestsA[TickN - 1].Position));
@@ -147,6 +175,88 @@ public sealed class CrowdStateDigestTests
         Assert.That(recomputed.State, Is.EqualTo(digestsA[TickN - 1].State));
         Assert.That(recomputed.Avoidance, Is.EqualTo(digestsA[TickN - 1].Avoidance));
         Assert.That(recomputed.Groups, Is.Not.EqualTo(digestsA[TickN - 1].Groups));
+    }
+
+    [Test]
+    public void PendingFutureCommand_DoesNotFlipReplayStatus_DiagnosticLeavesTotalAndPosition()
+    {
+        const int Ticks = 20;
+        var (config, sessionOn) = Parity.S4DeployTruthTests.BuildSession("s7");
+        sessionOn.Structures = null;
+        sessionOn.DiagnosticDigest = true;
+        var sessionOff = new CrowdSimSession(
+            config, World.Create(), sessionOn.Navs, sessionOn.NavByLayerRadius, sessionOn.Presentation);
+        sessionOff.Structures = null;
+        sessionOff.DiagnosticDigest = false;
+
+        var script = new List<CrowdCommand>
+        {
+            new(0, new CrowdSimCommand
+            {
+                Kind = CrowdSimCommandKind.SpawnAt,
+                Player = 1,
+                XCm = 480000,
+                YCm = 560000,
+                Count = 8,
+                UnitType = 0,
+                RIdx = 0,
+            }),
+            new(100000, new CrowdSimCommand
+            {
+                Kind = CrowdSimCommandKind.PlaceStructure,
+                TemplateId = "s7barrier",
+                XCm = 620000,
+                YCm = 620000,
+                SizeCm = 4000,
+            }),
+        };
+        sessionOn.Commands.Schedule(sessionOn, script);
+        sessionOff.Commands.Schedule(sessionOff, script);
+
+        var hostOn = new CrowdSimulationRuntime();
+        var hostOff = new CrowdSimulationRuntime();
+        Bind(hostOn, sessionOn);
+        Bind(hostOff, sessionOff);
+        var onTotals = new ulong[Ticks];
+        var onPositions = new ulong[Ticks];
+        var offTotals = new ulong[Ticks];
+        var offPositions = new ulong[Ticks];
+        for (int i = 0; i < Ticks; i++)
+        {
+            hostOn.Tick();
+            Assert.That(sessionOn.TickCount, Is.EqualTo(i + 1));
+            onTotals[i] = sessionOn.LastDigest.Total;
+            onPositions[i] = sessionOn.LastDigest.Position;
+        }
+
+        for (int i = 0; i < Ticks; i++)
+        {
+            hostOff.Tick();
+            Assert.That(sessionOff.TickCount, Is.EqualTo(i + 1));
+            offTotals[i] = sessionOff.LastDigest.Total;
+            offPositions[i] = sessionOff.LastDigest.Position;
+        }
+
+        Assert.That(sessionOn.Units.Count, Is.EqualTo(8));
+        Assert.That(sessionOn.Commands.PendingCount, Is.EqualTo(1));
+        Assert.That(sessionOn.TickCount, Is.EqualTo(Ticks));
+        for (int i = 0; i < Ticks; i++)
+        {
+            Assert.That(offTotals[i], Is.EqualTo(onTotals[i]), $"tick {i + 1} Total");
+            Assert.That(offPositions[i], Is.EqualTo(onPositions[i]), $"tick {i + 1} position");
+        }
+
+        TestContext.Out.WriteLine($"diag on/off total+position match ticks={Ticks}");
+        hostOn.RunReplay();
+        hostOff.RunReplay();
+        TestContext.Out.WriteLine(
+            $"replay on status={hostOn.ReplayStatus} tick={hostOn.ReplayDivergenceTick} section={hostOn.ReplayDivergenceSection} diagTick={hostOn.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(hostOn.ReplayDivergenceDiagnostic)}");
+        TestContext.Out.WriteLine(
+            $"replay off status={hostOff.ReplayStatus} tick={hostOff.ReplayDivergenceTick} section={hostOff.ReplayDivergenceSection} diagTick={hostOff.ReplayDiagnosticTick} diag={CrowdSimChecksum.FormatDiagnostic(hostOff.ReplayDivergenceDiagnostic)}");
+        Assert.That(hostOn.ReplayStatus, Is.EqualTo(1));
+        Assert.That(hostOn.ReplayDivergenceDiagnostic.HasFlag(CrowdSimDiagnosticSection.Commands), Is.False);
+        Assert.That(hostOff.ReplayStatus, Is.EqualTo(1));
+        Assert.That(hostOff.ReplayDiagnosticTick, Is.EqualTo(-1));
     }
 
     private static CrowdSimDigestDiff DiffAgainstCurrent(
@@ -157,5 +267,28 @@ public sealed class CrowdStateDigestTests
         var copy = new List<CrowdSimStateDigest>(prior);
         copy[^1] = CrowdSimChecksum.Compute(mutated);
         return CrowdSimChecksum.DiffDigest(baseline, copy);
+    }
+
+    private static void Bind(CrowdSimulationRuntime host, CrowdSimSession session)
+    {
+        var relations = TeamRelationTestHarness.Create(session.World);
+        var rules = CrowdPairRules.Matrices(1, new CrowdPushResponse[1], new bool[1]);
+        var guard = new CrowdPairRulesSessionGuard(
+            relations.Query,
+            session.World,
+            System.Array.Empty<Arch.Core.Entity>(),
+            System.Array.Empty<int>(),
+            System.Array.Empty<int>(),
+            relations.HostileTypeId,
+            relations.FriendlyTypeId,
+            rules,
+            relations.Query.Revision);
+        Set(host, "_session", session);
+        Set(host, "_pairRulesGuard", guard);
+    }
+
+    private static void Set(CrowdSimulationRuntime host, string field, object value)
+    {
+        typeof(CrowdSimulationRuntime).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(host, value);
     }
 }
