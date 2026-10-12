@@ -21,11 +21,13 @@ public readonly record struct CrowdUnitSpawnRequest(
     int RadiusClass,
     int GroupId,
     int PlayerId,
-    Fix64 RadiusCm);
+    Fix64 RadiusCm,
+    int ProfileIndex,
+    int AgentTypeIndex);
 
 /// <summary>
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
-/// 带 CrowdSimulationAgent(模板写真)、CrowdSimulationUnitState(仿真身份)、
+/// 带 CrowdSimulationAgent(速度、半径、推挤优先级和下标)、CrowdSimulationUnitState(仿真身份)、
 /// WorldPositionCm、PlayerOwner。管理层只持三件东西:稠密序(创建序)、
 /// 槽位代数组与空闲槽池——与参考实现 units 的 18 位槽位 + 14 位代句柄同构,
 /// 句柄稳定且回放可复现。
@@ -68,8 +70,10 @@ public sealed class CrowdSimUnits
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
 
-    /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径(内核热路径读组件,不走字符串档案查表)。</summary>
+    /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径。</summary>
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).PersonalRadiusCm;
+
+    public int DenseOfSlot(int slot) => _sparse[slot];
 
     /// <summary>生成一个单位;满容量返回 -1(失败不留痕迹)。
     /// 实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),再由钩子
@@ -100,6 +104,16 @@ public sealed class CrowdSimUnits
             .WithEntityContext($"CrowdSimulation unit '{templateId}'")
             .Build();
 
+        if (!_world.Has<CrowdSimulationAgent>(entity))
+        {
+            throw new InvalidOperationException(
+                $"单位模板 \"{templateId}\" 没有 CrowdSimulationAgent。");
+        }
+
+        var agent = _world.Get<CrowdSimulationAgent>(entity);
+        agent.ProfileIndex = unit.ProfileIndex;
+        agent.AgentTypeIndex = unit.AgentTypeIndex;
+        _world.Set(entity, agent);
         SetOrAdd(entity, new CrowdSimulationUnitState { Slot = slot, GroupId = unit.GroupId, State = 0, Mode = 0, Level = 0, Order = 0 });
         SetOrAdd(entity, new CrowdSimulationKinematics());
         SetOrAdd(entity, new WorldPositionCm { Value = posCm });
