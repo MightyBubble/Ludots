@@ -58,6 +58,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ReadAimInt(engine, ezreal, "aim.slot"), Is.EqualTo(0));
             Assert.That(ReadAimEntity(engine, ezreal, "aim.target"), Is.EqualTo(dummyA));
             Assert.That(ReadHealth(engine.World, "Target Dummy A"), Is.LessThan(healthBeforeSmart));
+            var aimCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Not.Match("count=[1-9]"),
+                "Tracking keeps aim.target while aim.cast is up, and leaves aim.hover empty until a foreground aim context opens.");
 
             toolbar.Activate(IndicatorModeId);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
@@ -65,11 +70,11 @@ namespace Ludots.Tests.GAS.Production
             SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             float healthBeforeRelease = ReadHealth(engine.World, "Target Dummy A");
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => DescribeActiveInteractionContexts(engine).Contains("interaction.context.aim.release", StringComparison.Ordinal),
-                maxFrames: 24);
+            Assert.That(DescribeActiveInteractionContexts(engine), Does.Contain("interaction.context.aim.release"));
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Match("count=[1-9]"),
+                "Opening the indicator seeds the hover ring from the current aim target.");
             Assert.That(ReadHealth(engine.World, "Target Dummy A"), Is.EqualTo(healthBeforeRelease).Within(0.001f));
             Assert.That(engine.World.Has<AbilityExecInstance>(ezreal), Is.False);
             ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
@@ -83,31 +88,39 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetActiveModeId(engine), Is.EqualTo(PressReleaseModeId));
             Entity jayce = FindEntityByName(engine.World, "Jayce Cannon");
             SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Not.Match("count=[1-9]"),
+                "Leaving the indicator empties aim.hover, and battle tracking does not refill it.");
             float healthBeforeCancel = ReadHealth(engine.World, "Target Dummy A");
-            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => DescribeActiveInteractionContexts(engine).Contains("interaction.context.aim.click", StringComparison.Ordinal),
-                maxFrames: 24);
+            int tickBeforePress = engine.GameSession.CurrentTick;
+            backend.SetButton("<Keyboard>/q", true);
+            ApplyPendingGroundOverride(engine);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            Assert.That(engine.GameSession.CurrentTick, Is.EqualTo(tickBeforePress + 1));
+            Assert.That(
+                DescribeActiveInteractionContexts(engine),
+                Does.Contain("interaction.context.aim.click"),
+                $"triggers={DescribeTriggerErrors(engine)} || aim={DescribeAim(engine, jayce)}");
+            backend.SetButton("<Keyboard>/q", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(ReadAimInt(engine, jayce, "aim.slot"), Is.EqualTo(0));
             Assert.That(ReadAimInt(engine, jayce, "aim.point.valid"), Is.EqualTo(1));
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Match("count=[1-9]"),
+                "The press tick opens aim.click, and the following scan seeds aim.hover.");
             RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => !DescribeActiveInteractionContexts(engine).Contains("interaction.context.aim.click", StringComparison.Ordinal),
-                maxFrames: 24);
+            Assert.That(DescribeActiveInteractionContexts(engine), Does.Not.Contain("interaction.context.aim.click"));
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Not.Match("count=[1-9]"));
             Assert.That(ReadHealth(engine.World, "Target Dummy A"), Is.EqualTo(healthBeforeCancel).Within(0.001f));
             Assert.That(engine.World.Has<AbilityExecInstance>(jayce), Is.False);
             Assert.That(DescribeActiveInteractionContexts(engine), Does.Not.Contain("interaction.context.aim.click"));
 
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => DescribeActiveInteractionContexts(engine).Contains("interaction.context.aim.click", StringComparison.Ordinal),
-                maxFrames: 24);
+            Assert.That(DescribeActiveInteractionContexts(engine), Does.Contain("interaction.context.aim.click"));
             LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", healthBeforeCancel, maxFrames: 48);
             Assert.That(ReadAimInt(engine, jayce, "aim.slot"), Is.EqualTo(0));

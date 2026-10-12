@@ -41,11 +41,6 @@
         "intValue": 99
       },
       {
-        "id": "fz",
-        "op": "ConstFloat",
-        "floatValue": 0
-      },
-      {
         "id": "member",
         "op": "TargetListGet"
       },
@@ -74,23 +69,6 @@
       {
         "id": "ground_jump",
         "op": "JumpIfFalse"
-      },
-      {
-        "id": "read_range",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.range_cm"
-      },
-      {
-        "id": "range_gt",
-        "op": "CompareGtFloat"
-      },
-      {
-        "id": "range_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "clamp",
-        "op": "ClampTargetToRange"
       },
       {
         "id": "tx",
@@ -232,6 +210,36 @@
       {
         "id": "halt_ok",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "q_ind",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.indicating"
+      },
+      {
+        "id": "iget",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "ialive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "ijump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_tgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "tgt_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "tgt_jump",
+        "op": "JumpIfFalse"
       }
     ],
     "controlEdges": [
@@ -262,11 +270,6 @@
       },
       {
         "from": "c99",
-        "fromPort": "next",
-        "to": "fz"
-      },
-      {
-        "from": "fz",
         "fromPort": "next",
         "to": "member"
       },
@@ -306,33 +309,8 @@
         "to": "px"
       },
       {
-        "from": "read_range",
-        "fromPort": "next",
-        "to": "range_gt"
-      },
-      {
-        "from": "range_gt",
-        "fromPort": "next",
-        "to": "range_jump"
-      },
-      {
         "from": "ground_jump",
         "fromPort": "true",
-        "to": "read_range"
-      },
-      {
-        "from": "range_jump",
-        "fromPort": "true",
-        "to": "clamp"
-      },
-      {
-        "from": "clamp",
-        "fromPort": "next",
-        "to": "tx"
-      },
-      {
-        "from": "range_jump",
-        "fromPort": "false",
         "to": "tx"
       },
       {
@@ -448,7 +426,7 @@
       {
         "from": "set_hover_pos",
         "fromPort": "next",
-        "to": "hover_radius"
+        "to": "q_ind"
       },
       {
         "from": "hover_radius",
@@ -478,7 +456,7 @@
       {
         "from": "write_null",
         "fromPort": "next",
-        "to": "q_hover"
+        "to": "q_ind"
       },
       {
         "from": "q_hover",
@@ -494,6 +472,51 @@
         "from": "pick_jump",
         "fromPort": "false",
         "to": "null_get"
+      },
+      {
+        "from": "q_ind",
+        "fromPort": "next",
+        "to": "iget"
+      },
+      {
+        "from": "iget",
+        "fromPort": "next",
+        "to": "ialive"
+      },
+      {
+        "from": "ialive",
+        "fromPort": "next",
+        "to": "ijump"
+      },
+      {
+        "from": "ijump",
+        "fromPort": "false",
+        "to": "halt_ok"
+      },
+      {
+        "from": "ijump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "next",
+        "to": "tgt_alive"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "next",
+        "to": "tgt_jump"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "true",
+        "to": "hover_radius"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "false",
+        "to": "q_hover"
       }
     ],
     "valueEdges": [
@@ -550,42 +573,6 @@
         "fromPort": "value",
         "to": "ground_jump",
         "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "read_range",
-        "toPort": "source"
-      },
-      {
-        "from": "read_range",
-        "fromPort": "value",
-        "to": "range_gt",
-        "toPort": "a"
-      },
-      {
-        "from": "fz",
-        "fromPort": "value",
-        "to": "range_gt",
-        "toPort": "b"
-      },
-      {
-        "from": "range_gt",
-        "fromPort": "value",
-        "to": "range_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "clamp",
-        "toPort": "a"
-      },
-      {
-        "from": "read_range",
-        "fromPort": "value",
-        "to": "clamp",
-        "toPort": "b"
       },
       {
         "from": "tx",
@@ -778,6 +765,48 @@
         "fromPort": "value",
         "to": "clear_hover",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_ind",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "iget",
+        "toPort": "value"
+      },
+      {
+        "from": "iget",
+        "fromPort": "value",
+        "to": "ialive",
+        "toPort": "source"
+      },
+      {
+        "from": "ialive",
+        "fromPort": "value",
+        "to": "ijump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_tgt",
+        "toPort": "source"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "value",
+        "to": "tgt_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "value",
+        "to": "tgt_jump",
+        "toPort": "condition"
       }
     ]
   }

@@ -227,6 +227,36 @@
       {
         "id": "halt_ok",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "q_ind",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.indicating"
+      },
+      {
+        "id": "iget",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "ialive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "ijump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_tgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "tgt_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "tgt_jump",
+        "op": "JumpIfFalse"
       }
     ],
     "controlEdges": [
@@ -428,7 +458,7 @@
       {
         "from": "set_hover",
         "fromPort": "next",
-        "to": "hover_radius"
+        "to": "q_ind"
       },
       {
         "from": "hover_radius",
@@ -458,7 +488,7 @@
       {
         "from": "write_null",
         "fromPort": "next",
-        "to": "q_hover"
+        "to": "q_ind"
       },
       {
         "from": "q_hover",
@@ -474,6 +504,51 @@
         "from": "near_jump",
         "fromPort": "false",
         "to": "null_get"
+      },
+      {
+        "from": "q_ind",
+        "fromPort": "next",
+        "to": "iget"
+      },
+      {
+        "from": "iget",
+        "fromPort": "next",
+        "to": "ialive"
+      },
+      {
+        "from": "ialive",
+        "fromPort": "next",
+        "to": "ijump"
+      },
+      {
+        "from": "ijump",
+        "fromPort": "false",
+        "to": "halt_ok"
+      },
+      {
+        "from": "ijump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "next",
+        "to": "tgt_alive"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "next",
+        "to": "tgt_jump"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "true",
+        "to": "hover_radius"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "false",
+        "to": "q_hover"
       }
     ],
     "valueEdges": [
@@ -788,6 +863,48 @@
         "fromPort": "value",
         "to": "clear_hover",
         "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_ind",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "iget",
+        "toPort": "value"
+      },
+      {
+        "from": "iget",
+        "fromPort": "value",
+        "to": "ialive",
+        "toPort": "source"
+      },
+      {
+        "from": "ialive",
+        "fromPort": "value",
+        "to": "ijump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_tgt",
+        "toPort": "source"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "value",
+        "to": "tgt_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "value",
+        "to": "tgt_jump",
+        "toPort": "condition"
       }
     ]
   }

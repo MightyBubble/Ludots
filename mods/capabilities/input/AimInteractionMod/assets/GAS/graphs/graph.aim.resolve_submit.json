@@ -115,6 +115,15 @@
       {
         "id": "halt1",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "read_range",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
+      },
+      {
+        "id": "clamp",
+        "op": "ClampTargetToRange"
       }
     ],
     "controlEdges": [
@@ -216,7 +225,7 @@
       {
         "from": "set_pos",
         "fromPort": "next",
-        "to": "q_ground"
+        "to": "read_range"
       },
       {
         "from": "q_ground",
@@ -237,6 +246,16 @@
         "from": "valid_jump",
         "fromPort": "false",
         "to": "halt0"
+      },
+      {
+        "from": "read_range",
+        "fromPort": "next",
+        "to": "clamp"
+      },
+      {
+        "from": "clamp",
+        "fromPort": "next",
+        "to": "q_ground"
       }
     ],
     "valueEdges": [
@@ -383,6 +402,24 @@
         "fromPort": "value",
         "to": "submit_ground",
         "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_range",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "clamp",
+        "toPort": "a"
+      },
+      {
+        "from": "read_range",
+        "fromPort": "value",
+        "to": "clamp",
+        "toPort": "b"
       }
     ]
   }

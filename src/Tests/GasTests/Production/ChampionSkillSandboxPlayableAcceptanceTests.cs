@@ -222,7 +222,7 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
             SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeQ, maxFrames: 48);
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeQ, maxFrames: 24);
             float dummyHealthAfterQ = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterQ,
@@ -236,24 +236,27 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(IndicatorModeId);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
+            var aimCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
             FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Not.Match("count=[1-9]"),
+                "Plain battle tracking writes aim.target, and the hover ring stays empty until an aim context is open.");
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineIndicatorLines,
-                maxFrames: 36,
-                describeFailure: () => $"{BuildOverlayDiagnostics(overlays)} | aimIndicating={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "aim.indicating")} | aimHover={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "aim.hover")}");
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineIndicatorLines),
-                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot4")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} | aimIndicating={DescribeCollectionByKey(engine, aimCollections, "aim.indicating")} | aimHover={DescribeCollectionByKey(engine, aimCollections, "aim.hover")}");
+            Assert.That(
+                DescribeCollectionByKey(engine, aimCollections, "aim.hover"),
+                Does.Match("count=[1-9]"),
+                "The target ring is seeded when the indicator context opens.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_hover_target");
             timeline.Add("[T+009] Indicator hover over Target Dummy A shows an extra target marker before release");
             float dummyHealthBeforeR = ReadHealth(engine.World, "Target Dummy A");
             ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
-            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeR, maxFrames: 48);
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeR, maxFrames: 32);
             float dummyHealthAfterR = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterR,
@@ -275,31 +278,28 @@ namespace Ludots.Tests.GAS.Production
             int baselineAimLines = CountOverlays(overlays, GroundOverlayShape.Line);
             float dummyHealthBeforeCancel = ReadHealth(engine.World, "Target Dummy A");
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineAimLines,
-                maxFrames: 36,
-                describeFailure: () => $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)} || aimIndicating={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "aim.indicating")}");
+            Tick(engine, 1, frameTimesMs);
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Line),
+                Is.GreaterThan(baselineAimLines),
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##} || triggers={DescribeTriggerErrors(engine)} || aimIndicating={DescribeCollectionByKey(engine, engine.GetService(CoreServiceKeys.EntityCollectionStore)!, "aim.indicating")}");
             RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) == baselineAimLines,
-                maxFrames: 36,
-                describeFailure: () => $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildOverlayDiagnostics(overlays)}");
+            Tick(engine, 2, frameTimesMs);
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Line),
+                Is.EqualTo(baselineAimLines),
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             float dummyHealthAfterCancel = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(dummyHealthAfterCancel, Is.EqualTo(dummyHealthBeforeCancel).Within(0.001f));
 
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineAimLines,
-                maxFrames: 36,
-                describeFailure: () => $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildOverlayDiagnostics(overlays)}");
+            Tick(engine, 1, frameTimesMs);
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Line),
+                Is.GreaterThan(baselineAimLines),
+                $"{BuildInputActionDiagnostics(engine, "Aim.Slot1")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
-            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 48);
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 24);
             float dummyHealthAfterConfirm = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterConfirm,
@@ -324,7 +324,7 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthBeforeBeam = ReadHealth(engine.World, "Target Dummy C");
             SetMouseEntity(engine, backend, "Target Dummy C", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
-            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy C", dummyHealthBeforeBeam, maxFrames: 48);
+            Tick(engine, 4, frameTimesMs);
             float dummyHealthAfterBeam = ReadHealth(engine.World, "Target Dummy C");
             Assert.That(
                 dummyHealthAfterBeam,
@@ -342,7 +342,7 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => EntityExists(engine.World, "Runic Beacon"),
-                maxFrames: 36);
+                maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Runic Beacon", "Geomancer Alpha");
             Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Runic Beacon")), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Runic Beacon"));
