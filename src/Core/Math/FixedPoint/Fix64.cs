@@ -150,16 +150,11 @@ namespace Ludots.Core.Mathematics.FixedPoint
         }
 
         /// <summary>
-        /// 除以正整数。被除数非负时，商的 raw 等于被除数 raw 除以该整数，与 <see cref="operator /(Fix64, Fix64)"/> 逐位相同。
-        /// 负数仍走定点除法：整数除法向零截断，负数定点商向下取整，两者差 1。
+        /// 除以正整数。商的 raw 等于被除数 raw 除以该整数，与 <see cref="operator /(Fix64, Fix64)"/> 逐位相同（向零截断）。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 DivPositiveInt(Fix64 value, int divisor)
-        {
-            long raw = value.RawValue;
-            if (raw >= 0) return new Fix64(raw / divisor);
-            return value / FromInt(divisor);
-        }
+            => new Fix64(value.RawValue / divisor);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator %(Fix64 a, Fix64 b) => new Fix64(a.RawValue % b.RawValue);
