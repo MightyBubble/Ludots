@@ -290,6 +290,8 @@ namespace Ludots.Core.GraphRuntime
         public int Day { get; set; }
         /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
         public string? Symbol { get; set; }
+        /// <summary>Message symbol for Fail. The runtime throws GAS.GRAPH.ERR.{message} and names the running graph.</summary>
+        public string? Message { get; set; }
         /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
         public string? Domain { get; set; }
         public float RadiusCm { get; set; }

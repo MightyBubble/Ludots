@@ -3772,6 +3772,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Fail_raylib",
+      "name": "Graph Op Fail Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Fail"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

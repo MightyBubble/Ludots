@@ -397,7 +397,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.IsCastMode or
                 GraphNodeOp.SetCastMode or
                 GraphNodeOp.SetTargetPos or
-                GraphNodeOp.LoadAbilityCastRange
+                GraphNodeOp.LoadAbilityCastRange or
+                GraphNodeOp.Fail
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -977,6 +978,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SetCastMode, HandleSetCastMode, "SetCastMode graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
+            Register(GraphNodeOp.Fail, HandleFail, "Fail graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
@@ -1822,6 +1824,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadAbilityCastRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = s.Api.LoadAbilityCastRange(s.E[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleFail(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            string message = ConfigKeyRegistry.GetName(ins.Imm);
+            string graphId = ConfigKeyRegistry.GetName(s.CurrentGraphId);
+            if (string.IsNullOrEmpty(graphId))
+            {
+                graphId = s.CurrentGraphId.ToString();
+            }
+
+            throw new InvalidOperationException($"GAS.GRAPH.ERR.{message}: graphId={graphId}.");
         }
 
         private static void HandleActivateContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

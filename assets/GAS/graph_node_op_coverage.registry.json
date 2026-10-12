@@ -4479,6 +4479,28 @@
         "GraphOpsNodeGalleryCastModeAcceptanceTests.LoadAbilityCastRangeVignette_QuotesTheAuthoredCentimeters"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "Fail",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_Fail",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryFailAcceptanceTests.Fail_ThrowsGasGraphErrWithGraphId"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

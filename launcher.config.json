@@ -2779,6 +2779,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetTargetPosEntryMod",
         "projectPath": "CapabilityStandardGraphOpSetTargetPosEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_Fail",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFailEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFailEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

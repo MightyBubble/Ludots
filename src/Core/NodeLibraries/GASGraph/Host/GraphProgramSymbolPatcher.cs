@@ -131,6 +131,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.SetInteractionMode:
                     case GraphNodeOp.IsCastMode:
                     case GraphNodeOp.SetCastMode:
+                    case GraphNodeOp.Fail:
                     case GraphNodeOp.LoadEntryPayloadEntity:
                     case GraphNodeOp.LoadEntryPayloadInt:
                     case GraphNodeOp.LoadEntryPayloadFloat:

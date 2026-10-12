@@ -553,6 +553,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         LoadAbilityCastRange = 534,
 
+        /// <summary>
+        /// Throw GAS.GRAPH.ERR.{message}. symbols[Imm] is the message; the running graph id is included.
+        /// </summary>
+        Fail = 535,
+
     }
 
     public static class GraphNodeOpParser

@@ -11307,6 +11307,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SetTargetPos/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_Fail",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFailEntryMod",
+      "projectPath": "CapabilityStandardGraphOpFailEntryMod.csproj",
+      "title": "真的那条路不走失败",
+      "summary": "条件为真，失败节点留在另一支，木桩照常掉血。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "Fail"
+      ],
+      "binding": "capability_standard_graph_op_Fail",
+      "preset": "capability_standard_graph_op_Fail_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/Fail.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_Fail",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_Fail/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_Fail/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

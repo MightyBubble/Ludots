@@ -339,6 +339,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.Fail:
+                    RequireNonEmpty(node.Message, "message", node, graphId, diagnostics);
+                    break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by Query ControlFlow compiler.", node.Id));
@@ -815,6 +818,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.Fail:
+                    instruction.Imm = RequireSymbol(node.Message, "message", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.ReadTimeFlowPaused:
                 case GraphNodeOp.ReadTimeFlowScalePermille:
