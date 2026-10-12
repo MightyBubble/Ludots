@@ -364,7 +364,7 @@ public sealed class CrowdMovementKernel
         if (length <= 0) return;
         if (length == 1 || configured == 1)
         {
-            ExecuteRange(phase, 0, length, dt);
+            ExecuteRange(phase, 0, length, 1, dt);
             return;
         }
 
@@ -385,6 +385,9 @@ public sealed class CrowdMovementKernel
             _rangeHandles = new JobHandle[workerCount];
         }
 
+        // 分离隔行求解，意图里走流场的单位比已到达的贵。连续切块会把一整段密集下标交给同一个工人。
+        // 按工人号交错取值，密集段被摊开；每个下标仍只进一个区间。
+        bool spread = phase is RangePhaseAvoidSolve or RangePhaseIntent;
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
@@ -393,15 +396,26 @@ public sealed class CrowdMovementKernel
         long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
-            int len = baseCount + (w < remainder ? 1 : 0);
             var job = _rangeJobs[w];
             job.Kernel = this;
             job.Phase = phase;
-            job.Start = start;
-            job.End = start + len;
             job.Dt = dt;
+            if (spread)
+            {
+                job.Start = w;
+                job.End = length;
+                job.Step = workerCount;
+            }
+            else
+            {
+                int len = baseCount + (w < remainder ? 1 : 0);
+                job.Start = start;
+                job.End = start + len;
+                job.Step = 1;
+                start += len;
+            }
+
             _rangeHandles[w] = scheduler.Schedule(job);
-            start += len;
         }
 
         scheduler.Flush();
@@ -418,7 +432,7 @@ public sealed class CrowdMovementKernel
         }
     }
 
-    private void ExecuteRange(int phase, int start, int end, Fix64 dt)
+    private void ExecuteRange(int phase, int start, int end, int step, Fix64 dt)
     {
         long t0 = Stopwatch.GetTimestamp();
         switch (phase)
@@ -427,10 +441,10 @@ public sealed class CrowdMovementKernel
                 CrowdAvoidance.GatherRange(this, start, end);
                 break;
             case RangePhaseAvoidSolve:
-                CrowdAvoidance.SolveRange(this, start, end);
+                CrowdAvoidance.SolveRange(this, start, end, step);
                 break;
             case RangePhaseIntent:
-                CrowdIntents.WriteRange(this, start, end);
+                CrowdIntents.WriteRange(this, start, end, step);
                 break;
             case RangePhaseMotor:
                 CrowdMotor.IntegrateRange(this, start, end, dt);
@@ -453,9 +467,10 @@ public sealed class CrowdMovementKernel
         public int Phase;
         public int Start;
         public int End;
+        public int Step;
         public Fix64 Dt;
 
-        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Dt);
+        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Step, Dt);
     }
 
     /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>

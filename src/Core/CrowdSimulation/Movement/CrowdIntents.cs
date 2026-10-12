@@ -67,9 +67,9 @@ public static class CrowdIntents
         }
     }
 
-    internal static void WriteRange(CrowdMovementKernel k, int start, int end)
+    internal static void WriteRange(CrowdMovementKernel k, int start, int end, int step)
     {
-        for (int i = start; i < end; i++) WriteProposal(k, i);
+        for (int i = start; i < end; i += step) WriteProposal(k, i);
     }
 
     private static void WriteProposal(CrowdMovementKernel k, int i)
