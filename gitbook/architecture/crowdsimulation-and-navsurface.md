@@ -12,7 +12,7 @@ NavSurface（`.navsurface`）是新增的地表资产：逐导航格的地形类
 
 四个结构性原因（证据见 Web 规格 LU-12 ~ LU-15）：每个成员同步寻路且每次调用都重建网格；地图变化不会让路线失效；方向场是启发式而非沿路网积分；避让与到达规则参数无法一一对应。调参数对齐不了行为，所以内核按 CrowdSimulation 重写。
 
-并存期的纪律：**一张地图只能启用一种求解器**（加载时按 mapId 互斥检查），同一单位模板不能同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。MassNavigation 的删除不做在对拍通过之前——它仍被 GAS 下令链、Physics2D 桥、10k 性能门禁与 showcase 引用，对拍基线建立后按 S8 之后的决议退役。
+一张地图只声明一种求解器。`Navigation/navmesh.json` 的 `maps.<mapId>.solver` 取 `navmesh`、`mass-navigation`、`crowd-simulation` 之一。跑群体模拟写 `crowd-simulation`，跑大规模导航写 `mass-navigation`。这个字段只有一个值，两种求解器不会同时落在同一张图上。同一单位模板仍不能同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。MassNavigation 的删除不做在对拍通过之前——它仍被 GAS 下令链、Physics2D 桥、10k 性能门禁与 showcase 引用，对拍基线建立后按 S8 之后的决议退役。
 
 ## 数学一律走 Ludots 定点体系
 
@@ -91,7 +91,7 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 ### 并存权属
 
-- **一图一求解器互斥已在活路径**：配置门禁与实体模板合同都拒绝同一地图同时声明 MassNavigation 与 CrowdSimulation 求解器；这不是待办，是装载即拒的现行规则。
+- **一图一求解器**：`maps.<mapId>.solver` 只有一个值。实体模板合同拒绝同一模板同时带 `CrowdSimulationAgent` 与 `MassNavigationAgent`。群体会话在 `CompleteMapLoad` / `CompleteMapResume` 聚焦时创建，挂起时释放；恢复会再建一份会话。调试文件不再写 `session.autostart`。
 - **crowd 会话对自己单位的位置写权**：单位位置、运动学、仿真身份组件由会话步进独占写入，引擎侧系统（分区同步、呈现投影）只读。会话步进系统注册在 PostMovement 组、排在 `SpatialPartitionUpdateSystem` 之前——分区按 `PreviousWorldPositionCm != WorldPositionCm` 判移动，步进晚于同步会让成员格冻结。其他组件域（GAS 效果、交互上下文）不写 crowd 会话状态。
 - **GAS 下令链接入归 S8/TR-07**：现行指令从会话命令队列进入（submit 现场指令 / schedule 脚本）。S3/S4 的键鼠在固定步读取 `AuthoritativeInput` 的 `PressedThisTick`，`Submit` 在会话步进之前，呈现只画。把它改接到 GAS 施法链（CommandIntent → OrderFanout → 会话指令）是 S8 的活，不在本层加过渡桥。
 
@@ -123,7 +123,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。群体的 AgentTypeIndex 是被单位模板引用的 pathing agent type，按合并后的属性顺序编号。`maps.<mapId>.terrainAreas` 是有序数组，每项 `{ terrainId, areaId }`，数组下标就是 `.navsurface` 的地形编号。`.navsurface` 从地图的 `ContinuousHeightmap.asset` 推导：去掉 `assets/` 前缀，把 `.height` 换成 `.navsurface`。带导航标签的地图用 `maps.<mapId>.navProfiles` 列出要烘焙和装载瓦片库的能力档 id，数组顺序就是烘焙顺序。绑定了移动类型的地图写 `maps.<mapId>.navAreas`（区域 id 数组）。`terrainAreas` 的 `areaId` 必须是它的子集；结构模板会动态铺上的 `deck`、`road`、`flooded`、`burning` 也写进去。没有 nav 标签，或没有 `navProfiles`，启动时不建网格查询。查询只给 PreferMesh / AutoCheapest、且体型 `navProfileId` 在这张图 `navProfiles` 里的类型。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，地图把模板绑进会话就失败，报文带模板 id 和 agent id。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
-覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。带 `terrainAreas` 的地图按群体地图装载。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。
+覆盖走 DeepObject：后加载的 Mod 按键合并。`formations`、`structures.templates`、`navmesh.json` 的 `profiles` 和 `areas`、`pathing.json` 的 `agentTypes` 都以 id 为键，改一项只写那一项。值为 null 会拒绝。写成数组也会拒绝，报错写明要改成以 id 为键的对象。profiles 和 pathing agentTypes 的目录下标是合并后的属性顺序，不按键名重排。区域运行时按下标取值用的是作者写的 areaId。`maps.<mapId>.navProfiles` 是能力档 id 数组，按下标烘焙和装载，列出的档没有瓦片就是装载错误。`maps.<mapId>.navAreas` 写在 navmesh.json。登记进 `maps` 的地图必须写 `solver`，取值只能是 `navmesh`、`mass-navigation`、`crowd-simulation`。求解器板写在 `maps.<mapId>.boards`，而且只能有一块；不写 `boards` 时用地图的 `RootBoard`，不取板块列表的第一块。`solver` 为 `crowd-simulation` 的地图在聚焦时建群体会话。`terrainAreas` 只记地形类型到区域的对应，不决定跑哪种求解器。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。`CrowdSimulationDebug.json` 再写 `session.autostart` 会报错。`MassNavigationConfig.json` 再写 `mapId` 会报错：哪张图跑大规模导航只看 `solver`。
 
 时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
 
@@ -178,7 +178,7 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 ## .navsurface v1 格式要点
 
-小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产必须与配置的 `world.terrainTypes` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
+小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产的地形类型表必须与 `maps.<mapId>.terrainAreas` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
 
 ## 阶段路线（来自 Web 规格第三部分）
 
@@ -187,7 +187,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 ## S1 交付：地形与障碍物（本次）
 
 - **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下），把作者态测试场景（AU-07 / AU-08）按种子写成 Ludots 资产——`.height`（CHTM v2，uint16 缩放）、`.navsurface`（v1）、`Maps/<id>.json`（队伍代表 `Relations` / 300 阻挡物 / 桥实体）、配置覆盖片段与 S1 对拍摘要。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标约定：Web 的米 × 100 = Ludots 地图局部厘米，轴向沿用同一平面朝向。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换（config 按 mapId 绑定地图，多地图共用一份配置的问题见缺口）。
+- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥 / 跳跃候选清单与 Web 导出做 FNV-1a 逐格对拍，全相等；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
@@ -244,7 +244,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
 - **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自单位模板 id，按移动类型和半径级映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放传 null 接线,组件一个不挂,71/71 逐位不变。
 - **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = select 指令执行时镜像进实体集合仓的 `selected` 集合,presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中,镜像不进对拍口径。
-- **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
+- **演示 = 数据脚本**：S4 演示 mod 是纯数据（无 main）。地图聚焦后会话建立。`CrowdSimulationDebug.json` 的 `session.script` 写与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
 - **选中链的目标形态（S8 前记档）**：终态 = rep entity 挂交互上下文声明 `activeCollectionKey`、选中落在玩家本地集合、下令命令自带成员清单（不再从选中集合反查），`select` 指令随之退出指令日志——选中是本机 UI 态,不是仿真输入。当前实现是 select 指令 + 会话实体自声明键（`selected` 集合,SelectionMirror 镜像）,与输入配置宪法的自声明键口径一致,已合规;换轨在 S8 正式下令链接入时一并做。
@@ -342,7 +342,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
-- 多地图共用一份 CrowdSimulationConfig 的寻址方式未定——DeepObject 合并只产出一份配置，按 mapId 绑定意味着一张地图一个地图 Mod；14.1 协议冻结时需定案。
+- 多张地图共用标准参数 Mod 的一份 CrowdSimulationConfig。地图自己的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。聚焦哪张图，就为哪张图建会话。
 - 桥实体的桥面层导航语义（RT-16 分层）在 S2 接入，S1 只有数据与呈现。
 - Raylib 宿主内的地形类型着色 / 阻挡格叠加层还没有 presenter（当前宿主画面是高程着色的高度图地形）；阻挡物还没有呈现网格。
 - Web 侧对拍基线的定点数学适配未开工（Fix64 语义在 Ludots 侧，Web 需跟进同一套）。

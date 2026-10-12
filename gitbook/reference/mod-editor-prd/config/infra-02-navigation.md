@@ -71,7 +71,7 @@
 
 ## 3. 文件结构
 
-`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。带导航标签的地图在 `maps.<mapId>.navProfiles` 列出要烘焙的能力档。绑定了移动类型的地图写 `maps.<mapId>.navAreas`。本图绑定集上的 `areaCosts` 必须覆盖这些区域。核心 Humanoid 保持 PreferMesh，Mod 不要覆盖。能力档必写 `agentProfileId`。
+`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。跑移动求解器的地图在 `maps.<mapId>.solver` 写 `navmesh`、`mass-navigation` 或 `crowd-simulation`，缺这个键或写成别的值，加载失败。求解器板写在 `maps.<mapId>.boards`，只能有一块；不写时用地图的 `RootBoard`。带导航标签的地图在 `maps.<mapId>.navProfiles` 列出要烘焙的能力档。绑定了移动类型的地图写 `maps.<mapId>.navAreas`。本图绑定集上的 `areaCosts` 必须覆盖这些区域。核心 Humanoid 保持 PreferMesh，Mod 不要覆盖。能力档必写 `agentProfileId`。
 
 ## 4. 运行时加载效果
 
@@ -84,6 +84,8 @@
 | agent_profiles 为空 | 启动失败（至少一体型） |
 | agentTypes 为空/缺 profileId | 启动失败，指明条目 |
 | areaCosts 少了本图 navAreas 里的一行，或 areas 为 null | 启动失败 |
+| `maps.<mapId>` 缺 solver，或 solver 不是 navmesh / mass-navigation / crowd-simulation | 加载失败 |
+| `maps.<mapId>.boards` 不是恰好一块 | 加载失败 |
 | 带导航标签的地图缺 navProfiles，或列出的能力档没有瓦片 | 启动失败 |
 | 显式 maxSlopeDeg 为 0 或负数，或 Recast 要烘焙的能力档没有正坡度 | 启动失败 |
 
