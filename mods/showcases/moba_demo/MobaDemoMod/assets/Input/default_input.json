@@ -11,16 +11,6 @@
       "type": "Button"
     },
     {
-      "id": "ModeLoL",
-      "name": "Gameplay_ModeLoL",
-      "type": "Button"
-    },
-    {
-      "id": "ModeSC2",
-      "name": "Gameplay_ModeSC2",
-      "type": "Button"
-    },
-    {
       "id": "QueueModifier",
       "name": "Gameplay_QueueModifier",
       "type": "Button"
@@ -32,11 +22,26 @@
       "name": "MOBA Gameplay",
       "priority": 50,
       "bindings": [
-        { "actionId": "Command", "path": "<Mouse>/RightButton" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
-        { "actionId": "ModeSC2", "path": "<Keyboard>/F3" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" }
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/F2"
+        },
+        {
+          "actionId": "Aim.CastMode.AimClick",
+          "path": "<Keyboard>/F3"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        }
       ]
     }
   ]

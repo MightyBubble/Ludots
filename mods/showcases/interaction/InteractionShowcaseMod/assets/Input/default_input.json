@@ -1,27 +1,96 @@
 {
   "actions": [
-    { "id": "SkillZ", "name": "Interaction_SkillZ", "type": "Button" },
-    { "id": "SkillF", "name": "Interaction_SkillF", "type": "Button" },
-    { "id": "ActionAttack", "name": "Interaction_ActionAttack", "type": "Button" },
-    { "id": "RuneBurst", "name": "Interaction_RuneBurst", "type": "Button" },
-    { "id": "Command", "name": "Interaction_Command", "type": "Button" },
-    { "id": "Interaction.AimConfirm", "name": "Interaction_AimConfirm", "type": "Button" },
-    { "id": "Interaction.AimCancel", "name": "Interaction_AimCancel", "type": "Button", "firesOn": "release" },
-    { "id": "Stop", "name": "Interaction_Stop", "type": "Button" },
-    { "id": "QueueModifier", "name": "Interaction_QueueModifier", "type": "Button" },
-    { "id": "InteractionModeWoW", "name": "Interaction_Mode_WoW", "type": "Button" },
-    { "id": "InteractionModeLoL", "name": "Interaction_Mode_LoL", "type": "Button" },
-    { "id": "InteractionModeSC2", "name": "Interaction_Mode_SC2", "type": "Button" },
-    { "id": "InteractionModeIndicator", "name": "Interaction_Mode_Indicator", "type": "Button" },
-    { "id": "InteractionModeAction", "name": "Interaction_Mode_Action", "type": "Button" },
-    { "id": "SelectionGroupRecall1", "name": "Interaction_SelectionGroupRecall1", "type": "Button" },
-    { "id": "SelectionGroupRecall2", "name": "Interaction_SelectionGroupRecall2", "type": "Button" },
-    { "id": "SelectionGroupRecall3", "name": "Interaction_SelectionGroupRecall3", "type": "Button" },
-    { "id": "SelectionGroupRecall4", "name": "Interaction_SelectionGroupRecall4", "type": "Button" },
-    { "id": "SelectionGroupSave1", "name": "Interaction_SelectionGroupSave1", "type": "Button" },
-    { "id": "SelectionGroupSave2", "name": "Interaction_SelectionGroupSave2", "type": "Button" },
-    { "id": "SelectionGroupSave3", "name": "Interaction_SelectionGroupSave3", "type": "Button" },
-    { "id": "SelectionGroupSave4", "name": "Interaction_SelectionGroupSave4", "type": "Button" }
+    {
+      "id": "SkillZ",
+      "name": "Interaction_SkillZ",
+      "type": "Button"
+    },
+    {
+      "id": "SkillF",
+      "name": "Interaction_SkillF",
+      "type": "Button"
+    },
+    {
+      "id": "ActionAttack",
+      "name": "Interaction_ActionAttack",
+      "type": "Button"
+    },
+    {
+      "id": "RuneBurst",
+      "name": "Interaction_RuneBurst",
+      "type": "Button"
+    },
+    {
+      "id": "Command",
+      "name": "Interaction_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Interaction.AimConfirm",
+      "name": "Interaction_AimConfirm",
+      "type": "Button"
+    },
+    {
+      "id": "Interaction.AimCancel",
+      "name": "Interaction_AimCancel",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Stop",
+      "name": "Interaction_Stop",
+      "type": "Button"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "Interaction_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "InteractionModeAction",
+      "name": "Interaction_Mode_Action",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupRecall1",
+      "name": "Interaction_SelectionGroupRecall1",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupRecall2",
+      "name": "Interaction_SelectionGroupRecall2",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupRecall3",
+      "name": "Interaction_SelectionGroupRecall3",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupRecall4",
+      "name": "Interaction_SelectionGroupRecall4",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupSave1",
+      "name": "Interaction_SelectionGroupSave1",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupSave2",
+      "name": "Interaction_SelectionGroupSave2",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupSave3",
+      "name": "Interaction_SelectionGroupSave3",
+      "type": "Button"
+    },
+    {
+      "id": "SelectionGroupSave4",
+      "name": "Interaction_SelectionGroupSave4",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -36,66 +105,140 @@
             {
               "type": "MultiTap",
               "parameters": [
-                { "name": "TapCount", "value": 2 },
-                { "name": "TapWindowSeconds", "value": 0.28 }
+                {
+                  "name": "TapCount",
+                  "value": 2
+                },
+                {
+                  "name": "TapWindowSeconds",
+                  "value": 0.28
+                }
               ]
             }
           ]
         },
-        { "actionId": "SkillF", "path": "<Keyboard>/f" },
-        { "actionId": "ActionAttack", "path": "<Keyboard>/space" },
+        {
+          "actionId": "SkillF",
+          "path": "<Keyboard>/f"
+        },
+        {
+          "actionId": "ActionAttack",
+          "path": "<Keyboard>/space"
+        },
         {
           "actionId": "RuneBurst",
           "compositeType": "ButtonChord",
           "compositeParts": [
-            { "path": "<Keyboard>/x" },
-            { "path": "<Keyboard>/c" }
+            {
+              "path": "<Keyboard>/x"
+            },
+            {
+              "path": "<Keyboard>/c"
+            }
           ]
         },
-        { "actionId": "Command", "path": "<Mouse>/RightButton" },
-        { "actionId": "Interaction.AimConfirm", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Interaction.AimCancel", "path": "<Mouse>/RightButton" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
-        { "actionId": "InteractionModeWoW", "path": "<Keyboard>/f1" },
-        { "actionId": "InteractionModeLoL", "path": "<Keyboard>/f2" },
-        { "actionId": "InteractionModeSC2", "path": "<Keyboard>/f3" },
-        { "actionId": "InteractionModeIndicator", "path": "<Keyboard>/f4" },
-        { "actionId": "InteractionModeAction", "path": "<Keyboard>/f5" },
-        { "actionId": "SelectionGroupRecall1", "path": "<Keyboard>/1" },
-        { "actionId": "SelectionGroupRecall2", "path": "<Keyboard>/2" },
-        { "actionId": "SelectionGroupRecall3", "path": "<Keyboard>/3" },
-        { "actionId": "SelectionGroupRecall4", "path": "<Keyboard>/4" },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Interaction.AimConfirm",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Interaction.AimCancel",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "Aim.CastMode.AimClick",
+          "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "Aim.CastMode.AimRelease",
+          "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "InteractionModeAction",
+          "path": "<Keyboard>/f5"
+        },
+        {
+          "actionId": "SelectionGroupRecall1",
+          "path": "<Keyboard>/1"
+        },
+        {
+          "actionId": "SelectionGroupRecall2",
+          "path": "<Keyboard>/2"
+        },
+        {
+          "actionId": "SelectionGroupRecall3",
+          "path": "<Keyboard>/3"
+        },
+        {
+          "actionId": "SelectionGroupRecall4",
+          "path": "<Keyboard>/4"
+        },
         {
           "actionId": "SelectionGroupSave1",
           "compositeType": "ButtonChord",
           "compositeParts": [
-            { "path": "<Keyboard>/leftCtrl" },
-            { "path": "<Keyboard>/1" }
+            {
+              "path": "<Keyboard>/leftCtrl"
+            },
+            {
+              "path": "<Keyboard>/1"
+            }
           ]
         },
         {
           "actionId": "SelectionGroupSave2",
           "compositeType": "ButtonChord",
           "compositeParts": [
-            { "path": "<Keyboard>/leftCtrl" },
-            { "path": "<Keyboard>/2" }
+            {
+              "path": "<Keyboard>/leftCtrl"
+            },
+            {
+              "path": "<Keyboard>/2"
+            }
           ]
         },
         {
           "actionId": "SelectionGroupSave3",
           "compositeType": "ButtonChord",
           "compositeParts": [
-            { "path": "<Keyboard>/leftCtrl" },
-            { "path": "<Keyboard>/3" }
+            {
+              "path": "<Keyboard>/leftCtrl"
+            },
+            {
+              "path": "<Keyboard>/3"
+            }
           ]
         },
         {
           "actionId": "SelectionGroupSave4",
           "compositeType": "ButtonChord",
           "compositeParts": [
-            { "path": "<Keyboard>/leftCtrl" },
-            { "path": "<Keyboard>/4" }
+            {
+              "path": "<Keyboard>/leftCtrl"
+            },
+            {
+              "path": "<Keyboard>/4"
+            }
           ]
         }
       ]

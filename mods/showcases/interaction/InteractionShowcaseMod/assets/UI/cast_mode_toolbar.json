@@ -3,28 +3,28 @@
     {
       "buttonId": "Interaction.Mode.WoW",
       "label": "WoW / Target First",
-      "actionId": "InteractionModeWoW",
+      "actionId": "Aim.CastMode.Smart",
       "castModeId": "castMode.smart",
       "representsCastMode": false
     },
     {
       "buttonId": "Interaction.Mode.LoL",
       "label": "LoL / Smart Cast",
-      "actionId": "InteractionModeLoL",
+      "actionId": "Aim.CastMode.Smart",
       "castModeId": "castMode.smart",
       "representsCastMode": true
     },
     {
       "buttonId": "Interaction.Mode.SC2",
       "label": "SC2 / Aim Cast",
-      "actionId": "InteractionModeSC2",
+      "actionId": "Aim.CastMode.AimClick",
       "castModeId": "castMode.aim_click",
       "representsCastMode": true
     },
     {
       "buttonId": "Interaction.Mode.Indicator",
       "label": "LoL / Indicator Release",
-      "actionId": "InteractionModeIndicator",
+      "actionId": "Aim.CastMode.AimRelease",
       "castModeId": "castMode.aim_release",
       "representsCastMode": true
     },

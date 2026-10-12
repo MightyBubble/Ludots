@@ -6,15 +6,15 @@
       "bindings": [
         "Command",
         "Stop",
-        "QueueModifier",
-        "ModeLoL",
-        "ModeSC2"
+        "QueueModifier"
       ],
       "triggers": [
-        { "trigger": "graph.moba.move" },
-        { "trigger": "graph.moba.stop" },
-        { "trigger": "graph.moba.set_cast_mode_smart" },
-        { "trigger": "graph.moba.set_cast_mode_aim_click" }
+        {
+          "trigger": "graph.moba.move"
+        },
+        {
+          "trigger": "graph.moba.stop"
+        }
       ],
       "onActivated": [
         "graph.moba.enter_aim_cast"

@@ -1,11 +1,23 @@
 [
   {
-    "id": "graph.interaction.set_cast_mode_aim_release",
+    "id": "graph.interaction.cast_mode_exit",
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "InteractionModeIndicator",
-        "action": "InteractionModeIndicator",
+        "label": "Aim.CastMode.Smart",
+        "action": "Aim.CastMode.Smart",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.CastMode.AimClick",
+        "action": "Aim.CastMode.AimClick",
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.CastMode.AimRelease",
+        "action": "Aim.CastMode.AimRelease",
         "start": "rep",
         "refire": "restart"
       }
@@ -47,11 +59,6 @@
         "id": "clear_flag",
         "op": "WriteBlackboardInt",
         "blackboardKey": "interaction.action_mode"
-      },
-      {
-        "id": "set",
-        "op": "SetCastMode",
-        "mode": "castMode.aim_release"
       },
       {
         "id": "cam",
@@ -107,16 +114,11 @@
       {
         "from": "clear_flag",
         "fromPort": "next",
-        "to": "set"
+        "to": "cam"
       },
       {
         "from": "jump",
         "fromPort": "false",
-        "to": "set"
-      },
-      {
-        "from": "set",
-        "fromPort": "next",
         "to": "cam"
       },
       {
@@ -172,12 +174,6 @@
         "fromPort": "value",
         "to": "clear_flag",
         "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "set",
-        "toPort": "source"
       },
       {
         "from": "c1",

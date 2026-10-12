@@ -11,10 +11,12 @@ using Ludots.Core.Scripting;
 namespace InteractionShowcaseMod.Runtime
 {
     /// <summary>
-    /// Cast-style buttons inject the same actions as the F-keys. Graphs own
-    /// <c>SetCastMode</c>, the scored-action context, and the follow camera.
-    /// WoW and LoL share <c>castMode.smart</c>; the catalog marks LoL as the
-    /// button that represents that mode because the two styles resolve the same way.
+    /// Cast-style buttons inject the same actions as the F-keys.
+    /// <c>graph.aim.set_cast_mode</c> writes the cast mode. This showcase's
+    /// <c>graph.interaction.cast_mode_exit</c> listens on those same actions:
+    /// it leaves <c>context_scored</c> and switches to the tactical camera.
+    /// WoW and LoL both inject <c>Aim.CastMode.Smart</c>; the catalog marks LoL
+    /// as the button that represents that mode because the two styles resolve the same way.
     /// </summary>
     internal static class InteractionShowCastModes
     {

@@ -12,24 +12,39 @@
         "SkillZ",
         "SkillF",
         "RuneBurst",
-        "InteractionModeWoW",
-        "InteractionModeLoL",
-        "InteractionModeSC2",
-        "InteractionModeIndicator",
-        "InteractionModeAction"
+        "InteractionModeAction",
+        "Aim.CastMode.Smart",
+        "Aim.CastMode.AimClick",
+        "Aim.CastMode.AimRelease"
       ],
       "triggers": [
-        { "trigger": "graph.core.select_begin" },
-        { "trigger": "graph.core.hover_tick" },
-        { "trigger": "graph.interaction.move" },
-        { "trigger": "graph.interaction.stop" },
-        { "trigger": "graph.interaction.dash_z" },
-        { "trigger": "graph.interaction.toggle_f" },
-        { "trigger": "graph.interaction.rune_aim" },
-        { "trigger": "graph.interaction.set_cast_mode_smart" },
-        { "trigger": "graph.interaction.set_cast_mode_aim_click" },
-        { "trigger": "graph.interaction.set_cast_mode_aim_release" },
-        { "trigger": "graph.interaction.enter_action" }
+        {
+          "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.interaction.move"
+        },
+        {
+          "trigger": "graph.interaction.stop"
+        },
+        {
+          "trigger": "graph.interaction.dash_z"
+        },
+        {
+          "trigger": "graph.interaction.toggle_f"
+        },
+        {
+          "trigger": "graph.interaction.rune_aim"
+        },
+        {
+          "trigger": "graph.interaction.enter_action"
+        },
+        {
+          "trigger": "graph.interaction.cast_mode_exit"
+        }
       ],
       "onActivated": [
         "graph.interaction.enter_aim_cast"
@@ -41,7 +56,9 @@
         "ActionAttack"
       ],
       "triggers": [
-        { "trigger": "graph.interaction.action_attack" }
+        {
+          "trigger": "graph.interaction.action_attack"
+        }
       ]
     },
     {
@@ -52,9 +69,15 @@
         "Interaction.AimCancel"
       ],
       "triggers": [
-        { "trigger": "graph.interaction.rune_confirm" },
-        { "trigger": "graph.interaction.rune_cancel" },
-        { "trigger": "graph.interaction.aim_tick" }
+        {
+          "trigger": "graph.interaction.rune_confirm"
+        },
+        {
+          "trigger": "graph.interaction.rune_cancel"
+        },
+        {
+          "trigger": "graph.interaction.aim_tick"
+        }
       ],
       "onDeactivated": [
         "graph.interaction.aim_clear"

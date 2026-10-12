@@ -2,7 +2,7 @@
 
 同一名英雄、同一批瞄准图，四套 control scheme 只换键位。
 
-数据在 `mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod`。技能、指示器、取消和提交都是 `AimInteractionMod` 的图，本场只挂进入、三张 `SetCastMode`，以及键鼠技能方案上的左键命令图。
+数据在 `mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod`。技能、指示器、取消、提交和施法模式都是 `AimInteractionMod` 的图。本场挂进入图，把 F1 / F2 / F3 绑到 `Aim.CastMode.Smart`、`Aim.CastMode.AimRelease`、`Aim.CastMode.AimClick`，键鼠技能方案另有一张左键命令图。
 
 | 方案 | 瞄准设备 | 左键 / 摇杆 |
 |---|---|---|
