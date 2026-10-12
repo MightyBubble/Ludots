@@ -1307,7 +1307,7 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm, oceanVoidSentinelCm);
                         displayHeightCm = ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, oceanVoidSentinelCm);
                     }
                     else
@@ -1420,19 +1420,28 @@ namespace Ludots.Raylib.Render
             blue = ClampToByte(color.Z * shade);
         }
 
-        internal static float ResolveAbsoluteHeightBand(float heightCm, float seaLevelCm, float absolutePeakSpanCm)
+        internal static float ResolveAbsoluteHeightBand(
+            float heightCm,
+            float seaLevelCm,
+            float absolutePeakSpanCm,
+            float? oceanVoidSentinelCm)
         {
             float peakSpanCm = MathF.Max(1f, absolutePeakSpanCm);
             float relative = (heightCm - seaLevelCm) / peakSpanCm;
-            // Authored land peaks sit within AbsoluteColorPeakSpanCm. Continental assets may fill
-            // ocean/void with sentinel values far above that span — tint those as open water, not peaks.
-            if (relative > 1f)
+            if (heightCm <= seaLevelCm)
+            {
+                return relative;
+            }
+
+            // 负色带只留给海平面以下,以及地图声明的原码天花板哨兵。
+            // 超出色带跨度的真实山峰停在峰顶色:跨度只铺色带,不把山染成水。
+            if (oceanVoidSentinelCm is float sentinelCm && heightCm >= sentinelCm)
             {
                 float overshoot = relative - 1f;
                 return -Math.Clamp(overshoot * 0.02f, 0.01f, 0.08f);
             }
 
-            return relative;
+            return MathF.Min(relative, 1f);
         }
 
         internal static float ResolveAbsoluteDisplayHeightCm(float heightCm, float seaLevelCm, float? oceanVoidSentinelCm)
@@ -1474,6 +1483,40 @@ namespace Ludots.Raylib.Render
 
             const float SentinelFractionOfSampleCeiling = 0.88f;
             return chunk.SampleScale.Decode((ushort)MathF.Ceiling(ushort.MaxValue * SentinelFractionOfSampleCeiling));
+        }
+
+        /// <summary>
+        /// 概览样本的哨兵按它所在 chunk 的 sample scale。未声明时不查块。
+        /// 块缺失直接失败,不用 (0,0) 的缩放套到别的块上。
+        /// </summary>
+        internal static float? ResolveOceanVoidSentinelAtWorld(
+            IContinuousHeightmapRenderSource source,
+            float worldXCm,
+            float worldYCm)
+        {
+            if (!source.RenderProfile.OceanVoidFillAtSampleCeiling)
+            {
+                return null;
+            }
+
+            int chunkX = ResolveChunkIndex(worldXCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int chunkY = ResolveChunkIndex(worldYCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            if (!source.TryGetChunk(chunkX, chunkY, out ContinuousHeightmapRenderChunk chunk))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} overview sample ({worldXCm}, {worldYCm}) needs chunk ({chunkX}, {chunkY}) to resolve the ocean-void sentinel, and that chunk is missing.");
+            }
+
+            return ResolveOceanVoidSentinelCm(true, in chunk);
+        }
+
+        /// <summary>
+        /// 两侧都采到是中心差分,分母为两倍步长;只采到一侧时高度差只跨一步,分母用单侧步长。
+        /// </summary>
+        internal static float FiniteDifferenceSpanCm(float stepCm, bool leftSampled, bool rightSampled)
+        {
+            int sides = (leftSampled ? 1 : 0) + (rightSampled ? 1 : 0);
+            return MathF.Max(1f, stepCm * Math.Max(sides, 1));
         }
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -1679,15 +1722,27 @@ namespace Ludots.Raylib.Render
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             float displayHeightScale = _displayHeightScale;
-            float? oceanVoidSentinelCm = null;
-            // 细节法线步长 = 源采样步长(与近景 chunk 同频带);取不到块则退到 overview 间距/32
+            // 细节法线步长 = 源采样步长(与近景 chunk 同频带);取不到块则退到 overview 间距/32。
+            // 哨兵不跟这块走:各样本用自己所在 chunk 的 scale。
             float detailStepXCm = stepXCm / 32f;
             float detailStepZCm = stepZCm / 32f;
             if (source.TryGetChunk(0, 0, out ContinuousHeightmapRenderChunk latticeChunk))
             {
-                oceanVoidSentinelCm = ResolveOceanVoidSentinelCm(source.RenderProfile.OceanVoidFillAtSampleCeiling, in latticeChunk);
                 detailStepXCm = MathF.Max(1f, latticeChunk.SampleStepXCm);
                 detailStepZCm = MathF.Max(1f, latticeChunk.SampleStepYCm);
+            }
+
+            float DisplayHeightAt(float sampleXCm, float sampleYCm, float heightCm)
+            {
+                if (absoluteSeaCm is not float seaCm)
+                {
+                    return heightCm;
+                }
+
+                return ResolveAbsoluteDisplayHeightCm(
+                    heightCm,
+                    seaCm,
+                    ResolveOceanVoidSentinelAtWorld(source, sampleXCm, sampleYCm));
             }
 
             float minHeightCm = float.PositiveInfinity;
@@ -1706,9 +1761,7 @@ namespace Ludots.Raylib.Render
                         heightCm = absoluteSeaCm ?? 0f;
                     }
 
-                    float displayHeightCm = absoluteSeaCm is float seaForDisplay
-                        ? ResolveAbsoluteDisplayHeightCm(heightCm, seaForDisplay, oceanVoidSentinelCm)
-                        : heightCm;
+                    float displayHeightCm = DisplayHeightAt(worldXCm, worldYCm, heightCm);
                     heights[vertex] = heightCm;
                     displayHeights[vertex] = displayHeightCm;
                     minHeightCm = MathF.Min(minHeightCm, heightCm);
@@ -1744,28 +1797,32 @@ namespace Ludots.Raylib.Render
                     float hR = hL;
                     float hT = hL;
                     float hB = hL;
-                    if (heightSampleSource.TrySampleHeightCm(worldXCm - detailStepXCm, worldYCm, out float sampledL))
+                    bool sampledL = heightSampleSource.TrySampleHeightCm(worldXCm - detailStepXCm, worldYCm, out float rawL);
+                    bool sampledR = heightSampleSource.TrySampleHeightCm(worldXCm + detailStepXCm, worldYCm, out float rawR);
+                    bool sampledT = heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm - detailStepZCm, out float rawT);
+                    bool sampledB = heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm + detailStepZCm, out float rawB);
+                    if (sampledL)
                     {
-                        hL = absoluteSeaCm is float seaL ? ResolveAbsoluteDisplayHeightCm(sampledL, seaL, oceanVoidSentinelCm) : sampledL;
+                        hL = DisplayHeightAt(worldXCm - detailStepXCm, worldYCm, rawL);
                     }
 
-                    if (heightSampleSource.TrySampleHeightCm(worldXCm + detailStepXCm, worldYCm, out float sampledR))
+                    if (sampledR)
                     {
-                        hR = absoluteSeaCm is float seaR ? ResolveAbsoluteDisplayHeightCm(sampledR, seaR, oceanVoidSentinelCm) : sampledR;
+                        hR = DisplayHeightAt(worldXCm + detailStepXCm, worldYCm, rawR);
                     }
 
-                    if (heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm - detailStepZCm, out float sampledT))
+                    if (sampledT)
                     {
-                        hT = absoluteSeaCm is float seaT ? ResolveAbsoluteDisplayHeightCm(sampledT, seaT, oceanVoidSentinelCm) : sampledT;
+                        hT = DisplayHeightAt(worldXCm, worldYCm - detailStepZCm, rawT);
                     }
 
-                    if (heightSampleSource.TrySampleHeightCm(worldXCm, worldYCm + detailStepZCm, out float sampledB))
+                    if (sampledB)
                     {
-                        hB = absoluteSeaCm is float seaB ? ResolveAbsoluteDisplayHeightCm(sampledB, seaB, oceanVoidSentinelCm) : sampledB;
+                        hB = DisplayHeightAt(worldXCm, worldYCm + detailStepZCm, rawB);
                     }
 
-                    float dx = MathF.Max(1f, detailStepXCm * 2f);
-                    float dz = MathF.Max(1f, detailStepZCm * 2f);
+                    float dx = FiniteDifferenceSpanCm(detailStepXCm, sampledL, sampledR);
+                    float dz = FiniteDifferenceSpanCm(detailStepZCm, sampledT, sampledB);
                     Vector3 normal = Vector3.Normalize(
                         new Vector3(-(hR - hL) * displayHeightScale / dx, 1f, -(hB - hT) * displayHeightScale / dz));
                     if (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z))
@@ -1785,7 +1842,11 @@ namespace Ludots.Raylib.Render
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        heightBand = ResolveAbsoluteHeightBand(heightCm, seaCm, absolutePeakSpanCm);
+                        heightBand = ResolveAbsoluteHeightBand(
+                            heightCm,
+                            seaCm,
+                            absolutePeakSpanCm,
+                            ResolveOceanVoidSentinelAtWorld(source, worldXCm, worldYCm));
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
