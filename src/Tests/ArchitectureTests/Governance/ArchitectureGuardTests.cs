@@ -2920,9 +2920,7 @@ namespace Ludots.Tests.Architecture.Governance
 
                 foreach ((int lineNumber, string text) in Ludots.Tests.Architecture.SourceTextScanner.ReadCodeLines(file))
                 {
-                    if (text.Contains("nunit", StringComparison.OrdinalIgnoreCase) ||
-                        text.Contains("IsTestHost", StringComparison.Ordinal) ||
-                        text.Contains("SpecialFolder.ApplicationData", StringComparison.Ordinal))
+                    if (CoreHostProbePattern.IsMatch(text))
                     {
                         hits.Add($"{Path.GetRelativePath(coreRoot, file)}:{lineNumber}:{text.Trim()}");
                     }
@@ -2933,6 +2931,10 @@ namespace Ludots.Tests.Architecture.Governance
                 "src/Core must not detect the test host or call SpecialFolder.ApplicationData.\n" +
                 string.Join("\n", hits));
         }
+
+        private static readonly Regex CoreHostProbePattern = new(
+            @"\bnunit\b|IsTestHost|SpecialFolder\.ApplicationData",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private static string FindRepoRootForGuards()
         {
