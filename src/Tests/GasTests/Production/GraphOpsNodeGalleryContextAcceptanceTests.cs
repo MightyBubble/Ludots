@@ -126,6 +126,19 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
     }
 
     [Test]
+    public void LoadEntityFacingVignette_QuotesTheTargetFacingDegrees()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadEntityFacing");
+        runtime.EnsureWorld();
+        float before = runtime.Context.ActorHealth[1];
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.Detail, Does.Contain("90"), "the caption quotes the target facing in degrees");
+        Assert.That(runtime.Context.ActorHealth[1], Is.LessThan(before), "the facing degrees settle as damage");
+    }
+
+    [Test]
     public void LoadEntityPosXVignette_QuotesTheTargetCentimeterX()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

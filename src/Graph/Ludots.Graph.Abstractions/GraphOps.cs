@@ -565,6 +565,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         AbilityAcceptsTargetKind = 536,
 
+        /// <summary>
+        /// E[A] = source; F[Dst] = FacingDirection.AngleRad converted to degrees (atan2 convention, not wrapped to 0–360).
+        /// A dead source or a source without FacingDirection fails closed.
+        /// </summary>
+        LoadEntityFacing = 537,
+
     }
 
     public static class GraphNodeOpParser

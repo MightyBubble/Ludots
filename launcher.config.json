@@ -2802,6 +2802,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFailEntryMod",
         "projectPath": "CapabilityStandardGraphOpFailEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityFacing",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityFacingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityFacingEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

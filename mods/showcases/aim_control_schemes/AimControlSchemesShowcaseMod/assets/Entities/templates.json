@@ -19,6 +19,9 @@
           "Y": 2000
         }
       },
+      "FacingDirection": {
+        "AngleRad": 1.5707964
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.AimSchemes.Slot1",

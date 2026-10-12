@@ -52,6 +52,65 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void LoadEntityFacing_ReadsDegreesWithoutWrapping()
+        {
+            using var world = World.Create();
+            Entity north = world.Create(new Ludots.Core.Components.FacingDirection { AngleRad = MathF.PI / 2f });
+            Entity west = world.Create(new Ludots.Core.Components.FacingDirection { AngleRad = -MathF.PI / 2f });
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+
+            var northState = Execute(
+                world, api, north, north,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityFacing, A = 0, Dst = 1 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                seedEntity: (0, north));
+            var westState = Execute(
+                world, api, west, west,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityFacing, A = 0, Dst = 1 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                seedEntity: (0, west));
+
+            That(northState.F[1], Is.EqualTo(90f).Within(0.001f));
+            That(westState.F[1], Is.EqualTo(-90f).Within(0.001f));
+        }
+
+        [Test]
+        public void LoadEntityFacing_FailsClosedWhenFacingIsAbsent()
+        {
+            using var world = World.Create();
+            Entity bare = world.Create();
+            Entity dead = world.Create(new Ludots.Core.Components.FacingDirection { AngleRad = 1f });
+            world.Destroy(dead);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+
+            InvalidOperationException missing = Throws<InvalidOperationException>(() => Execute(
+                world, api, bare, bare,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityFacing, A = 0, Dst = 1 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                seedEntity: (0, bare)))!;
+            InvalidOperationException gone = Throws<InvalidOperationException>(() => Execute(
+                world, api, dead, dead,
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.LoadEntityFacing, A = 0, Dst = 1 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                seedEntity: (0, dead)))!;
+
+            That(missing.Message, Does.Contain("GAS.GRAPH.ERR.FacingMissing"));
+            That(gone.Message, Does.Contain("GAS.GRAPH.ERR.FacingMissing"));
+        }
+
+        [Test]
         public void LoadEntityPos_GuardsMissingPositionWithFlagZero()
         {
             using var world = World.Create();

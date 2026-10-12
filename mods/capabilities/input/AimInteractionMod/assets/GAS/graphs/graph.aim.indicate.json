@@ -245,6 +245,46 @@
         "id": "sk_wnull",
         "op": "WriteBlackboardEntity",
         "blackboardKey": "aim.target"
+      },
+      {
+        "id": "fc_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "fc_sv",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "fc_seq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "fc_sjump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "fc_pv",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "fc_peq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "fc_pjump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "fc_face",
+        "op": "LoadEntityFacing"
+      },
+      {
+        "id": "fc_wf",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "Cast.Facing"
       }
     ],
     "controlEdges": [
@@ -366,7 +406,7 @@
       {
         "from": "write_range",
         "fromPort": "next",
-        "to": "write"
+        "to": "fc_one"
       },
       {
         "from": "sk_one",
@@ -517,6 +557,61 @@
         "from": "sk_wnull",
         "fromPort": "next",
         "to": "read_tgt"
+      },
+      {
+        "from": "fc_one",
+        "fromPort": "next",
+        "to": "fc_sv"
+      },
+      {
+        "from": "fc_sv",
+        "fromPort": "next",
+        "to": "fc_seq"
+      },
+      {
+        "from": "fc_seq",
+        "fromPort": "next",
+        "to": "fc_sjump"
+      },
+      {
+        "from": "fc_sjump",
+        "fromPort": "true",
+        "to": "write"
+      },
+      {
+        "from": "fc_sjump",
+        "fromPort": "false",
+        "to": "fc_pv"
+      },
+      {
+        "from": "fc_pv",
+        "fromPort": "next",
+        "to": "fc_peq"
+      },
+      {
+        "from": "fc_peq",
+        "fromPort": "next",
+        "to": "fc_pjump"
+      },
+      {
+        "from": "fc_pjump",
+        "fromPort": "true",
+        "to": "write"
+      },
+      {
+        "from": "fc_pjump",
+        "fromPort": "false",
+        "to": "fc_face"
+      },
+      {
+        "from": "fc_face",
+        "fromPort": "next",
+        "to": "fc_wf"
+      },
+      {
+        "from": "fc_wf",
+        "fromPort": "next",
+        "to": "write"
       }
     ],
     "valueEdges": [
@@ -860,6 +955,60 @@
         "from": "sk_null",
         "fromPort": "value",
         "to": "sk_wnull",
+        "toPort": "value"
+      },
+      {
+        "from": "fc_one",
+        "fromPort": "value",
+        "to": "fc_seq",
+        "toPort": "b"
+      },
+      {
+        "from": "fc_sv",
+        "fromPort": "value",
+        "to": "fc_seq",
+        "toPort": "a"
+      },
+      {
+        "from": "fc_seq",
+        "fromPort": "value",
+        "to": "fc_sjump",
+        "toPort": "condition"
+      },
+      {
+        "from": "fc_one",
+        "fromPort": "value",
+        "to": "fc_peq",
+        "toPort": "b"
+      },
+      {
+        "from": "fc_pv",
+        "fromPort": "value",
+        "to": "fc_peq",
+        "toPort": "a"
+      },
+      {
+        "from": "fc_peq",
+        "fromPort": "value",
+        "to": "fc_pjump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "fc_face",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "fc_wf",
+        "toPort": "source"
+      },
+      {
+        "from": "fc_face",
+        "fromPort": "value",
+        "to": "fc_wf",
         "toPort": "value"
       }
     ]

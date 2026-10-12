@@ -14,6 +14,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests;
@@ -290,6 +291,12 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(Contexts(), Does.Contain("interaction.context.aim.release"), Diag("hold without stick"));
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("hold without stick"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("hold does not submit"));
+            Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(0), Diag("hold has no point"));
+            Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("hold has no stick"));
+            float expected = _engine.World.Get<FacingDirection>(Hero).AngleRad * (180f / MathF.PI);
+            Assert.That(expected, Is.EqualTo(90f).Within(0.5f), Diag("hero faces +Y"));
+            Assert.That(ReadFloat("Cast.Facing"), Is.EqualTo(expected).Within(0.05f), Diag("line facing blackboard"));
+            Assert.That(LineRotation(), Is.EqualTo(expected).Within(0.5f), Diag("line rotation"));
         }
 
         public void AssertSmartStickBeforeIndicate(Vector2 axis, int slot)
@@ -771,6 +778,34 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             }
 
             return 0;
+        }
+
+        private float LineRotation()
+        {
+            PresenterDefinitionRegistry definitions = _engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int lineDef = definitions.GetId("aim.line");
+            Assert.That(lineDef, Is.GreaterThan(0), Diag("aim.line definition"));
+            float rotation = float.NaN;
+            int found = 0;
+            var query = new QueryDescription().WithAll<PresenterState, PresenterFloatParams>();
+            _engine.World.Query(in query, (Entity _, ref PresenterState state, ref PresenterFloatParams floats) =>
+            {
+                if (state.DefId != lineDef || state.OwnerEntity != Hero)
+                {
+                    return;
+                }
+
+                if (!floats.TryGet(WellKnownPresenterParamKeys.OverlayRotation, out float value))
+                {
+                    return;
+                }
+
+                rotation = value;
+                found++;
+            });
+            Assert.That(found, Is.EqualTo(1), Diag("aim.line instance"));
+            return rotation;
         }
 
         private float ReadFloat(string key)

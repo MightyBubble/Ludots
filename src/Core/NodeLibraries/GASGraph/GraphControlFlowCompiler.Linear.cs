@@ -700,6 +700,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadEntityPosX:
                 case GraphNodeOp.LoadEntityPosY:
+                case GraphNodeOp.LoadEntityFacing:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
@@ -1982,6 +1983,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Flags = boolScratches[nodeIndex];
+                    break;
+
+                case GraphNodeOp.LoadEntityFacing:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.IntToFloat:

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.AimSource;
@@ -46,11 +47,36 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         }
 
         SeedCastModeStage(ctx);
+        SeedFacing(ctx);
         GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     private const string GalleryCastModeId = "castMode.gallery";
     private const string GalleryRangedAbilityId = "Ability.GraphOps.CastRange";
+
+    private static void SeedFacing(GraphOpsNodeDriverContext ctx)
+    {
+        if (!string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.LoadEntityFacing), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Entity actor = ctx.Target;
+        if (actor == Entity.Null || !ctx.SimWorld.IsAlive(actor))
+        {
+            throw new InvalidOperationException("Gallery LoadEntityFacing requires a live target actor.");
+        }
+
+        var facing = new FacingDirection { AngleRad = MathF.PI / 2f };
+        if (ctx.SimWorld.Has<FacingDirection>(actor))
+        {
+            ctx.SimWorld.Set(actor, facing);
+        }
+        else
+        {
+            ctx.SimWorld.Add(actor, facing);
+        }
+    }
 
     private static void SeedCastModeStage(GraphOpsNodeDriverContext ctx)
     {

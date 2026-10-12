@@ -3799,6 +3799,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityFacing_raylib",
+      "name": "Graph Op LoadEntityFacing Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityFacing"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -332,6 +332,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.StartDialogue, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm, worldSideEffect: true);
             // ── Order-driven graph brains (issue #1536) ──
             Add(rows, GraphNodeOp.LoadEntityPosX, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
+            Add(rows, GraphNodeOp.LoadEntityFacing, LinearQueryScript, GraphValueType.Float, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadEntityPosY, LinearQueryScript, GraphValueType.Int, portSource, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, flags: GraphOperandRole.BoolScratchFlags);
             Add(rows, GraphNodeOp.IntToFloat, LinearQueryScript, GraphValueType.Float, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.FloatToInt, LinearQueryScript, GraphValueType.Int, portA, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int);

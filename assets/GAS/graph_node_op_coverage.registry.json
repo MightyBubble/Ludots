@@ -4525,6 +4525,28 @@
         "GraphOpsNodeGalleryCastModeAcceptanceTests.AbilityAcceptsTargetKindVignette_QuotesAnAcceptedKind"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadEntityFacing",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "status": "covered",
+      "showcaseId": "capability_standard_graph_op_LoadEntityFacing",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.LoadEntityFacingVignette_QuotesTheTargetFacingDegrees"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

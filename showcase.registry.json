@@ -11385,6 +11385,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_Fail/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityFacing",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityFacingEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadEntityFacingEntryMod.csproj",
+      "title": "读出木桩的朝向",
+      "summary": "不靠眼睛看，图里直接读木桩面朝哪一度，读数顺手折成伤打出去。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadEntityFacing"
+      ],
+      "binding": "capability_standard_graph_op_LoadEntityFacing",
+      "preset": "capability_standard_graph_op_LoadEntityFacing_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEntityFacing.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEntityFacing",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEntityFacing/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadEntityFacing/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

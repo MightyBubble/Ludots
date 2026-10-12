@@ -352,6 +352,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.StartDialogue or
                 GraphNodeOp.LoadEntityPosX or
                 GraphNodeOp.LoadEntityPosY or
+                GraphNodeOp.LoadEntityFacing or
                 GraphNodeOp.IntToFloat or
                 GraphNodeOp.FloatToInt or
                 GraphNodeOp.SqrtFloat or
@@ -1011,6 +1012,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.FloatToText, HandleFloatToText, "FloatToText graph opcode.");
             Register(GraphNodeOp.LoadEntityPosX, HandleLoadEntityPosX, "LoadEntityPosX graph opcode.");
             Register(GraphNodeOp.LoadEntityPosY, HandleLoadEntityPosY, "LoadEntityPosY graph opcode.");
+            Register(GraphNodeOp.LoadEntityFacing, HandleLoadEntityFacing, "LoadEntityFacing graph opcode.");
             Register(GraphNodeOp.IntToFloat, HandleIntToFloat, "IntToFloat graph opcode.");
             Register(GraphNodeOp.FloatToInt, HandleFloatToInt, "FloatToInt graph opcode.");
             Register(GraphNodeOp.SqrtFloat, HandleSqrtFloat, "SqrtFloat graph opcode.");
@@ -2229,6 +2231,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.I[ins.Dst] = 0;
                 s.B[ins.Flags] = 0;
             }
+        }
+
+        private static void HandleLoadEntityFacing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity entity = s.E[ins.A];
+            if (s.World == null ||
+                !s.World.IsAlive(entity) ||
+                !s.World.TryGet(entity, out FacingDirection facing))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FacingMissing: entity {entity.Id} is not alive or has no FacingDirection.");
+            }
+
+            s.F[ins.Dst] = facing.AngleRad * (180f / MathF.PI);
         }
 
         private static void HandleLoadEntityPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
