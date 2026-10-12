@@ -75,7 +75,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 | `algorithm` | `recast` or `cdt` | `NavBakeContext.Algorithm` | Required, strict casing; `runtime-incremental` requires `cdt` |
 | `profiles.<id>` | capability id | `NavMeshProfileRegistry` | Id-keyed object. Catalog index is the property order after merge |
 | `profiles.<id>.maxClimbCm` | cm | NavMesh profile | Required number |
-| `profiles.<id>.maxSlopeDeg` | degrees | NavMesh profile | Omit means unlimited. `0` and negative values are rejected. Recast bake requires `> 0` and `< 90` |
+| `profiles.<id>.maxSlopeDeg` | degrees | NavMesh profile | Omit means unlimited. `0` and negative values are rejected. Recast bake requires `> 0` and `< 90`. The non-Recast estimator treats an omitted slope as an unrestricted walkable dot (`-1`); an explicit `0` throws, same as the loader |
 | `profiles.<id>.agentProfileId` | body id | bake and estimate hash | Required on every capability profile. Recast also requires a positive `maxSlopeDeg` |
 | `layers[].id` | layer id | Nav layer | Required non-empty trimmed string |
 | `layers[].layer` | int | NavTile layer | Required number |

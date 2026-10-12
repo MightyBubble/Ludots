@@ -61,7 +61,7 @@
 | agent_profiles | `mass`/`layer` | 推挤质量与导航层 |
 | pathing | `agentTypes.<id>.profileId` | 绑定体型档案 |
 | pathing | `selection.mode` + 权重 | 网格/图选路偏好（如 PreferMesh） |
-| pathing | `navMesh.areaCosts` | 面积通过代价（泥地贵、大路便宜）；每个 agent type 必须列出每一个已声明区域 |
+| pathing | `navMesh.areaCosts` | 面积通过代价（泥地贵、大路便宜）；本图绑定的移动类型必须列出 `maps.<mapId>.navAreas` |
 | pathing | `nodeGraph.*` | 图投影：projectionMaxRadiusCm、useDynamicOverlay、tag 规则 |
 | navmesh | `mode`/`algorithm` | offline + recast（现状唯一组合） |
 | navmesh | `profiles.<id>.maxClimbCm` / `maxSlopeDeg` | 能力档可爬高度；`maxSlopeDeg` 省略表示不限坡度，显式 0 或负数拒绝，Recast 烘焙要求正数 |
@@ -71,7 +71,7 @@
 
 ## 3. 文件结构
 
-`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。带导航标签的地图在 `maps.<mapId>.navProfiles` 列出要烘焙的能力档。每个 agent type 的 `areaCosts` 必须覆盖每一个已声明区域。能力档必写 `agentProfileId`。
+`assets/Navigation/` 三件：`agent_profiles.json`（ArrayById）、`pathing.json`（DeepObject，`agentTypes` 以 id 为键）、`navmesh.json`（DeepObject，`profiles` 与 `areas` 以 id 为键）。带导航标签的地图在 `maps.<mapId>.navProfiles` 列出要烘焙的能力档。绑定了移动类型的地图写 `maps.<mapId>.navAreas`。本图绑定集上的 `areaCosts` 必须覆盖这些区域。核心 Humanoid 保持 PreferMesh，Mod 不要覆盖。能力档必写 `agentProfileId`。
 
 ## 4. 运行时加载效果
 
@@ -83,7 +83,7 @@
 |---|---|
 | agent_profiles 为空 | 启动失败（至少一体型） |
 | agentTypes 为空/缺 profileId | 启动失败，指明条目 |
-| areaCosts 引用未声明 area，或少了某个已声明区域 | 启动失败 |
+| areaCosts 少了本图 navAreas 里的一行，或 areas 为 null | 启动失败 |
 | 带导航标签的地图缺 navProfiles，或列出的能力档没有瓦片 | 启动失败 |
 | 显式 maxSlopeDeg 为 0 或负数，或 Recast 要烘焙的能力档没有正坡度 | 启动失败 |
 

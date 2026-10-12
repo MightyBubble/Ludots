@@ -40,7 +40,7 @@
 
 ### 3.2 工具功能
 
-复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`agentTypes` 以 id 为键，写成数组会拒绝。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`，两者都必须大于 0。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。每个 agent type 必须列出每一个已声明区域，少一行就是装载错误。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
+复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`agentTypes` 以 id 为键，写成数组会拒绝。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`，两者都必须大于 0。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。绑定到这张图的移动类型必须列出 `maps.<mapId>.navAreas` 里的每一个区域，少一行就是装载错误。没绑定的类型不校验。`areas` 为 null 直接报错。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
 
 ```json
 {
@@ -83,7 +83,7 @@ PathRequest.AgentTypeId
   → 路径与成本
 ```
 
-- 每个生产入口都保留请求的 Agent 身份。`CreateDefaultNavMeshPathService` 要求请求写明 `AgentTypeId`，空 id 或未知 id 直接失败。
+- 每个生产入口都保留请求的 Agent 身份。网格查询只覆盖本图 `navProfiles` 里、且选择是 PreferMesh / AutoCheapest 的类型。没有 nav 标签就不建查询。向没建查询的类型要路径会抛错，报文带移动类型 id、能力档 id 和地图 id。`MassNavigationAgent.agentTypeId` 不在绑定集里时，在地图绑定模板时失败，报文带模板 id 和 agent id。
 - 两个 Agent 可共享 Detour 几何；每次查询的过滤器/代价表必须隔离。
 - 路径结果缓存包含 Agent 策略身份和版本；几何缓存不因单改 cost 而重建。
 - 静态配置重载和运行中策略修改要有明确应用时机。即时矩阵编辑是目标工具能力，不能把当前加载时编译宣称为已支持热改。
