@@ -2,6 +2,13 @@
   {
     "id": "graph.aim.resolve_submit",
     "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "resolve",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
     "nodes": [
       {
         "id": "rep",
@@ -1101,14 +1108,6 @@
         "fromPort": "value",
         "to": "write_range",
         "toPort": "value"
-      }
-    ],
-    "entry": "rep",
-    "entries": [
-      {
-        "label": "resolve",
-        "event": "AimBind",
-        "start": "rep"
       }
     ]
   }
