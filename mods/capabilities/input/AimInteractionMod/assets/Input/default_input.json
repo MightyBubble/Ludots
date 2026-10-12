@@ -71,6 +71,11 @@
       "name": "Aim_Stick",
       "type": "Axis2D",
       "firesOn": "change"
+    },
+    {
+      "id": "Aim.Primary",
+      "name": "Aim_Primary",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -173,6 +178,127 @@
         {
           "actionId": "Aim.Cancel",
           "path": "<Gamepad>/start"
+        },
+        {
+          "actionId": "Aim.Confirm",
+          "path": "<Gamepad>/rightShoulder"
+        }
+      ]
+    },
+    {
+      "id": "Aim.KbmSkills",
+      "name": "Aim Keyboard Mouse Skills",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Slot1",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "Aim.Slot2",
+          "path": "<Keyboard>/w"
+        },
+        {
+          "actionId": "Aim.Slot3",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "Aim.Slot4",
+          "path": "<Keyboard>/r"
+        },
+        {
+          "actionId": "Aim.Slot1.Release",
+          "path": "<Keyboard>/q"
+        },
+        {
+          "actionId": "Aim.Slot2.Release",
+          "path": "<Keyboard>/w"
+        },
+        {
+          "actionId": "Aim.Slot3.Release",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "Aim.Slot4.Release",
+          "path": "<Keyboard>/r"
+        },
+        {
+          "actionId": "Aim.Cancel",
+          "path": "<Keyboard>/escape"
+        },
+        {
+          "actionId": "Aim.Pointer",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "Aim.Confirm",
+          "path": "<Keyboard>/space"
+        }
+      ]
+    },
+    {
+      "id": "Aim.PrimaryClick",
+      "name": "Aim Primary Click",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Primary",
+          "path": "<Mouse>/LeftButton"
+        }
+      ]
+    },
+    {
+      "id": "Aim.GamepadLeft",
+      "name": "Aim Gamepad Left Stick",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Aim.Slot1",
+          "path": "<Gamepad>/buttonSouth"
+        },
+        {
+          "actionId": "Aim.Slot2",
+          "path": "<Gamepad>/buttonWest"
+        },
+        {
+          "actionId": "Aim.Slot3",
+          "path": "<Gamepad>/buttonEast"
+        },
+        {
+          "actionId": "Aim.Slot4",
+          "path": "<Gamepad>/buttonNorth"
+        },
+        {
+          "actionId": "Aim.Slot1.Release",
+          "path": "<Gamepad>/buttonSouth"
+        },
+        {
+          "actionId": "Aim.Slot2.Release",
+          "path": "<Gamepad>/buttonWest"
+        },
+        {
+          "actionId": "Aim.Slot3.Release",
+          "path": "<Gamepad>/buttonEast"
+        },
+        {
+          "actionId": "Aim.Slot4.Release",
+          "path": "<Gamepad>/buttonNorth"
+        },
+        {
+          "actionId": "Aim.Stick",
+          "path": "<Gamepad>/leftStick"
+        },
+        {
+          "actionId": "Move",
+          "path": "<Gamepad>/leftStick"
+        },
+        {
+          "actionId": "Aim.Cancel",
+          "path": "<Gamepad>/start"
+        },
+        {
+          "actionId": "Aim.Confirm",
+          "path": "<Gamepad>/rightShoulder"
         }
       ]
     }

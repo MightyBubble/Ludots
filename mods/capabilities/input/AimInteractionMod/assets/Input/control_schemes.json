@@ -15,6 +15,26 @@
       "inputContexts": [
         "Aim.Gamepad"
       ]
+    },
+    {
+      "id": "scheme.aim.kbm_skills",
+      "inputContexts": [
+        "Aim.KbmSkills",
+        "Aim.PrimaryClick"
+      ]
+    },
+    {
+      "id": "scheme.aim.gamepad_left",
+      "inputContexts": [
+        "Aim.GamepadLeft"
+      ],
+      "axisMove": {
+        "actionId": "Move",
+        "orderTypeKey": "moveTo",
+        "throttleTicks": 6,
+        "stepDistanceCm": 400,
+        "directionMode": "worldAbsolute"
+      }
     }
   ]
 }
