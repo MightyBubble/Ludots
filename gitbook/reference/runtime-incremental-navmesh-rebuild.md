@@ -22,6 +22,7 @@ Runtime incremental rebuild adds a production path for sparse structural changes
 - Runtime rebuild is `runtime-incremental` + `cdt`; offline Recast remains the full bake path.
 - Successful rebuilt tiles are atomically published through `NavTileStore.Replace`.
 - `NavQueryService.TryFindPath` runs under a store revision guard and returns `NotReady` instead of a mixed-revision path if a rebuild changes tiles mid-query.
+- Each `NavTileStore` keeps one resident `DtNavMesh`. An unchanged revision reuses it. `Replace` updates that mesh once for the new revision. Steady-state `FindPath` does not allocate another `DtNavMesh`.
 
 The implementation intentionally does not create `ObstacleGeometryProfile2D`, a MassNavigationFlow obstacle sidecar, a private map loader, or a fallback full-bake path.
 
