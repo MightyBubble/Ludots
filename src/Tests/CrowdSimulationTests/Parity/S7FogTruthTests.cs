@@ -55,11 +55,8 @@ public sealed class S7FogTruthTests
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7fog-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
+        session.ReferenceScript = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
-        session.Commands.Schedule(session, script);
 
         var reports = new List<CrowdRebakeReport>();
         session.RebakeReported += reports.Add;

@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Arch.Core;
 using ArchWorld = Arch.Core.World;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -51,6 +54,7 @@ public sealed class CrowdSimUnits
     private int _freeTop;
     private readonly Dictionary<string, EntityTemplate> _templateCache = new(StringComparer.Ordinal);
     private EntityBuilder? _builder;
+    private List<Entity>[]? _rosterPending;
 
     public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
@@ -72,6 +76,60 @@ public sealed class CrowdSimUnits
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
 
+    public bool TryHandleOf(Entity entity, out uint handle)
+    {
+        if (!_world.IsAlive(entity) || !_world.Has<CrowdSimulationUnitState>(entity))
+        {
+            handle = 0;
+            return false;
+        }
+
+        int slot = _world.Get<CrowdSimulationUnitState>(entity).Slot;
+        if ((uint)slot >= (uint)Capacity || _sparse[slot] < 0 || _dense[_sparse[slot]] != entity)
+        {
+            handle = 0;
+            return false;
+        }
+
+        handle = (uint)(((_gen[slot] & GenMask) << SlotBits) | slot);
+        return true;
+    }
+
+    public bool TryResolveHandle(uint handle, out int dense)
+    {
+        int slot = (int)(handle & SlotMask);
+        int gen = (int)(handle >> SlotBits);
+        if ((uint)slot >= (uint)Capacity || _gen[slot] != gen)
+        {
+            dense = -1;
+            return false;
+        }
+
+        dense = _sparse[slot];
+        return dense >= 0;
+    }
+
+    /// <summary>本方、且模板键不在隐藏集里的单位句柄。隐藏集默认空。</summary>
+    public int CopyOwnHandles(int playerId, Span<uint> destination)
+    {
+        var hidden = _presentation.HiddenTemplateKeyIds;
+        int n = 0;
+        for (int i = 0; i < _dense.Count; i++)
+        {
+            var entity = _dense[i];
+            if (_world.Get<PlayerOwner>(entity).PlayerId != playerId) continue;
+            if (hidden.Count > 0 && hidden.Contains(_world.Get<EntityTemplateKeyRef>(entity).TemplateKeyId)) continue;
+            if (n >= destination.Length)
+            {
+                throw new InvalidOperationException("order: 成员缓冲装不下本方花名册。");
+            }
+
+            destination[n++] = HandleAt(i);
+        }
+
+        return n;
+    }
+
     /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径(内核热路径读组件,不走字符串档案查表)。</summary>
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).ResolvedPersonalRadiusCm;
 
@@ -87,6 +145,8 @@ public sealed class CrowdSimUnits
         Entity entity = AddViaTemplate(in unit, slot);
         _dense.Add(entity);
         _slotOfDense.Add(slot);
+        NoteRoster(entity, unit.PlayerId, _world.Get<EntityTemplateKeyRef>(entity).TemplateKeyId);
+        NoteOwnership(entity, unit.PlayerId);
         return dense;
     }
 
@@ -175,18 +235,15 @@ public sealed class CrowdSimUnits
     /// <summary>清空(代 bump:旧句柄全部失效;槽池回到初始 LIFO 序,回放可复现)。</summary>
     public void Clear()
     {
-        // 先摘选中集合再毁实体:集合成员是实体引用,销毁后留着只会指到死实体。
-        // 空选中属主(回放派生接线)跳过镜像——活集合仓不可被回放触碰。
-        if (_presentation.SelectionOwner != Entity.Null)
+        // 活接线才清集合:回放派生接线没有 CollectionApplier,不能动正在显示的选中与花名册。
+        ClearOwnedCollections();
+        if (_rosterPending != null)
         {
-            _presentation.Collections.Replace(
-                _presentation.SelectionOwner,
-                _presentation.SelectedCollectionKeyId,
-                SelectionMirror.Descriptor,
-                ReadOnlySpan<Entity>.Empty);
+            for (int i = 0; i < _rosterPending.Length; i++) _rosterPending[i]?.Clear();
         }
         for (int i = 0; i < _dense.Count; i++)
         {
+            ReleaseOwnership(_dense[i]);
             _world.Destroy(_dense[i]);
             _gen[_slotOfDense[i]] = (ushort)((_gen[_slotOfDense[i]] + 1) & GenMask);
         }
@@ -196,6 +253,79 @@ public sealed class CrowdSimUnits
         Array.Fill(_sparse, -1);
         for (int k = 0; k < Capacity; k++) _freeSlots[k] = Capacity - 1 - k;
         _freeTop = Capacity;
+    }
+
+    /// <summary>把本段生成积下的本方单位一次写入花名册。按单位调用 Apply 会把集合整表重写到二次方。</summary>
+    public void CommitRoster()
+    {
+        var applier = _presentation.CollectionApplier;
+        var reps = _presentation.PlayerReps;
+        if (applier == null || reps == null || _rosterPending == null) return;
+        int key = _presentation.RosterCollectionKeyId;
+        int n = Math.Min(_rosterPending.Length, reps.Length);
+        for (int player = 1; player < n; player++)
+        {
+            var pending = _rosterPending[player];
+            if (pending == null || pending.Count == 0) continue;
+            var rep = reps[player];
+            if (rep != Entity.Null && _world.IsAlive(rep))
+            {
+                applier.Apply(rep, key, CollectionWriteOp.Add, CollectionsMarshal.AsSpan(pending));
+            }
+
+            pending.Clear();
+        }
+    }
+
+    private void NoteRoster(Entity entity, int playerId, int templateKeyId)
+    {
+        if (_presentation.CollectionApplier == null || _presentation.PlayerReps == null) return;
+        if (_presentation.HiddenTemplateKeyIds.Contains(templateKeyId)) return;
+        _rosterPending ??= new List<Entity>[Math.Max(playerId + 1, 8)];
+        if (playerId >= _rosterPending.Length)
+        {
+            Array.Resize(ref _rosterPending, playerId + 1);
+        }
+
+        (_rosterPending[playerId] ??= new List<Entity>()).Add(entity);
+    }
+
+    private void NoteOwnership(Entity entity, int playerId)
+    {
+        OwnershipResolver? ownership = _presentation.Ownership;
+        Entity[]? reps = _presentation.PlayerReps;
+        if (ownership == null || reps == null || (uint)playerId >= (uint)reps.Length) return;
+        Entity rep = reps[playerId];
+        if (rep == Entity.Null || !_world.IsAlive(rep) || !_world.Has<PlayerIdentity>(rep))
+        {
+            throw new InvalidOperationException(
+                $"crowd 单位的玩家 {playerId} 代表没有 PlayerIdentity,无法建立 owns 边。");
+        }
+
+        ownership.EnsureOwnership(rep, entity);
+    }
+
+    private void ReleaseOwnership(Entity entity)
+    {
+        if (_presentation.Ownership == null || entity == Entity.Null || !_world.IsAlive(entity)) return;
+        _presentation.Ownership.ClearOwnership(entity);
+    }
+
+    private void ClearOwnedCollections()
+    {
+        var applier = _presentation.CollectionApplier;
+        var reps = _presentation.PlayerReps;
+        if (applier == null || reps == null) return;
+        for (int player = 1; player < reps.Length; player++)
+        {
+            var rep = reps[player];
+            if (rep == Entity.Null || !_world.IsAlive(rep)) continue;
+            applier.Apply(rep, _presentation.SelectedCollectionKeyId, CollectionWriteOp.Replace, ReadOnlySpan<Entity>.Empty);
+            if (_presentation.RosterCollectionKeyId > 0)
+            {
+                applier.Apply(rep, _presentation.RosterCollectionKeyId, CollectionWriteOp.Replace, ReadOnlySpan<Entity>.Empty);
+            }
+        }
     }
 
     /// <summary>逐单位读位置与身份的视图(校验 / 遍历用,不复制)。</summary>

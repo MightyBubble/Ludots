@@ -15,6 +15,4 @@ public struct CrowdSimulationUnitState
     public byte Mode;
     public byte Level;
     public uint Order;
-    /// <summary>选中标记(交互态,不进校验)。</summary>
-    public byte Selected;
 }

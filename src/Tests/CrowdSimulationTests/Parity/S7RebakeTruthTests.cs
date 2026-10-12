@@ -70,20 +70,18 @@ public sealed class S7RebakeTruthTests
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7-rebake-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
+        var scriptJson = meta["script"]!.AsArray();
+        session.ReferenceScript = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
-        session.Commands.Schedule(session, script);
 
         var reports = new List<CrowdRebakeReport>();
         session.RebakeReported += reports.Add;
 
         // 阻挡格停留门的豁免集:放置 op 落格当帧,仓内单位要等下一 tick 的重烘
         // 阶段 1 才被挤离(evicted/stuck 由 ops 报告硬门钉住)
-        var placeExecTicks = script
-            .Where(c => c.Cmd.Kind == CrowdSimCommandKind.PlaceStructure)
-            .Select(c => c.Tick).ToHashSet();
+        var placeExecTicks = scriptJson
+            .Where(e => e!["cmd"]!["type"]!.GetValue<string>() == "placeStructure")
+            .Select(e => e!["tick"]!.GetValue<int>()).ToHashSet();
         var store = session.Structures!;
         int gridN = store.NavCellsPerSide, cellSize = store.NavCellSizeCm;
         byte[] blockedGrid = store.Blocked;

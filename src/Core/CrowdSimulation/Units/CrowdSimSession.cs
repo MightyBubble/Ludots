@@ -35,6 +35,8 @@ public sealed class CrowdSimSession
         Groups = new CrowdNavGroupSet();
         Commands = new CrowdCommandQueue();
         Orders = new CrowdOrderBook();
+        MemberStamp = new int[Units.Capacity];
+        MemberCapture = new uint[Units.Capacity];
 
         // 子步数:单步位移不超过 maxStepCells 格(封顶 maxSubSteps)——与参考实现同推导
         Fix64 maxSpeed = Fix64.Zero;
@@ -54,7 +56,7 @@ public sealed class CrowdSimSession
     public CrowdCommandQueue Commands { get; }
     /// <summary>指令簿(S5):移动指令聚合与虚拟领队。</summary>
     public CrowdOrderBook Orders { get; }
-    /// <summary>呈现/交互接线(空选中属主的派生接线 = 回放:不投影、不镜像选中集合)。</summary>
+    /// <summary>呈现/交互接线。回放派生接线不持有集合写者,不改活集合。</summary>
     public CrowdSimPresentationWiring Presentation { get; }
     /// <summary>运动内核与规划器(S5;null = 纯部署会话,S4 形状)。</summary>
     public CrowdMovementKernel? Movement { get; private set; }
@@ -170,8 +172,11 @@ public sealed class CrowdSimSession
     /// 带着已生效的变更从头跑必然分歧)。</summary>
     public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
 
-    // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
-    internal readonly List<Arch.Core.Entity> SelectionMembers = new();
+    // 下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
+    // MemberStamp 用世代标记本条指令的成员槽,热路径不分配。
+    internal readonly int[] MemberStamp;
+    internal readonly uint[] MemberCapture;
+    internal int MemberEpoch;
     internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new();
     internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new();
     internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new();
@@ -185,8 +190,9 @@ public sealed class CrowdSimSession
 
     public int TickCount { get; private set; }
     public int SpawnSeq { get; set; }
-    public int SelectedCount { get; private set; }
     public int SpawnSkippedTotal { get; private set; }
+    /// <summary>参考脚本(select/无成员 order)的翻译器。Step 在冲刷队列前把它译成带成员的指令再入日志。</summary>
+    public CrowdReferenceScript? ReferenceScript { get; set; }
 
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
     public event Action<string>? Notified;
@@ -215,6 +221,7 @@ public sealed class CrowdSimSession
     /// </summary>
     public bool Step(out ulong checksum)
     {
+        ReferenceScript?.ApplyDue(this);
         Commands.Flush(this, CrowdSimCommands.Exec);
         if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
@@ -277,8 +284,62 @@ public sealed class CrowdSimSession
         RebakeJob = null;
         TickCount = 0;
         SpawnSeq = 0;
-        SelectedCount = 0;
         SpawnSkippedTotal = 0;
+        ReferenceScript?.Rewind();
+    }
+
+    /// <summary>单位被整表清空后,参考选中影子里的句柄代已经作废。</summary>
+    public void NoteUnitsCleared() => ReferenceScript?.InvalidateShadow();
+
+    /// <summary>
+    /// 把成员句柄收成槽位世代标记。空集、失效句柄、重复句柄、玩家不符都在这里拒收,不改写成员集。
+    /// </summary>
+    internal void BindMemberSet(ReadOnlySpan<uint> members, int player)
+    {
+        if (members.IsEmpty)
+        {
+            throw new InvalidOperationException("order: 成员集为空。");
+        }
+
+        if (MemberEpoch == int.MaxValue)
+        {
+            Array.Clear(MemberStamp);
+            MemberEpoch = 0;
+        }
+
+        int epoch = ++MemberEpoch;
+        for (int i = 0; i < members.Length; i++)
+        {
+            if (!Units.TryResolveHandle(members[i], out int dense))
+            {
+                throw new InvalidOperationException("order: 成员句柄无效。");
+            }
+
+            var entity = Units.EntityAt(dense);
+            if (World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId != player)
+            {
+                throw new InvalidOperationException("order: 成员不属于该玩家。");
+            }
+
+            int slot = Units.SlotAt(dense);
+            if (MemberStamp[slot] == epoch)
+            {
+                throw new InvalidOperationException("order: 成员句柄重复。");
+            }
+
+            MemberStamp[slot] = epoch;
+        }
+    }
+
+    /// <summary>玩家代表 selected 集合的成员数。没有接线或还没写过集合时为 0,不扫描单位。</summary>
+    public int SelectedCollectionCount(int playerId)
+    {
+        var reps = Presentation.PlayerReps;
+        if (reps == null || (uint)playerId >= (uint)reps.Length) return 0;
+        var rep = reps[playerId];
+        if (rep == Arch.Core.Entity.Null || !World.IsAlive(rep)) return 0;
+        if (!Presentation.Collections.TryGet(rep, Presentation.SelectedCollectionKeyId, out var handle)) return 0;
+        return Presentation.Collections.TryGetView(handle, out var view) ? view.Count : 0;
     }
 
     public void NotifySpawnSkip(int skipped, int requested)
@@ -286,6 +347,4 @@ public sealed class CrowdSimSession
         SpawnSkippedTotal += skipped;
         Notified?.Invoke($"spawnSkip: 请求 {requested} 个,容量不足跳过 {skipped} 个(上限 {Config.Sim.MaxUnits})");
     }
-
-    public void SetSelectedCount(int count) => SelectedCount = count;
 }

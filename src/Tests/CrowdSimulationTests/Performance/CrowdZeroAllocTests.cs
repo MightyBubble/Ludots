@@ -33,13 +33,7 @@ public sealed class CrowdZeroAllocTests
             new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = Units, ["unitType"] = 0, ["rIdx"] = 0 } },
             new JsonObject { ["tick"] = 2, ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 900000, ["yCm"] = 800000, ["shape"] = "box" } },
         };
-        var commands = new List<CrowdCommand>();
-        foreach (var e in script)
-        {
-            commands.Add(new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)));
-        }
-
-        session.Commands.Schedule(session, commands);
+        session.ReferenceScript = CrowdReferenceScript.Load(script, session.Units.Capacity);
         int guard = 64 * (WarmupTicks + SteadyTicks) + 64;
         int ran = 0;
         while (ran < WarmupTicks)

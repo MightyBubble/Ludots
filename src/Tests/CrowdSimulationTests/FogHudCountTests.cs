@@ -30,18 +30,24 @@ public sealed class FogHudCountTests
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7fog-truth.json")))!;
         int ticks = meta["ticks"]!.GetValue<int>();
         Assert.That(ticks, Is.GreaterThanOrEqualTo(300));
-        var script = new List<CrowdCommand>();
+        var rows = new List<(int Tick, JsonNode Cmd)>();
         foreach (var entry in meta["script"]!.AsArray())
         {
-            script.Add(new CrowdCommand(entry!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(entry["cmd"]!)));
+            rows.Add((entry!["tick"]!.GetValue<int>(), entry["cmd"]!.DeepClone()));
         }
 
-        script.Add(new CrowdCommand(6, CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}""")!)));
-        script.Add(new CrowdCommand(7, CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"reveal","player":1,"rect":[610000,610000,630000,630000]}""")!)));
-        script.Sort((a, b) => a.Tick.CompareTo(b.Tick));
-        session.Commands.Schedule(session, script);
+        rows.Add((6, JsonNode.Parse(
+            """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}""")!));
+        rows.Add((7, JsonNode.Parse(
+            """{"type":"reveal","player":1,"rect":[610000,610000,630000,630000]}""")!));
+        rows.Sort((a, b) => a.Tick.CompareTo(b.Tick));
+        var script = new JsonArray();
+        foreach (var row in rows)
+        {
+            script.Add(new JsonObject { ["tick"] = row.Tick, ["cmd"] = row.Cmd });
+        }
+
+        session.ReferenceScript = CrowdReferenceScript.Load(script, session.Units.Capacity);
 
         var fog = session.Fog;
         int sawVisible = 0, sawExplored = 0, sawGhost = 0;

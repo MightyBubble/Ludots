@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Nodes;
 using NUnit.Framework;
 using Ludots.Core.CrowdSimulation.Movement;
@@ -41,13 +42,16 @@ public sealed class S5MovementSmokeTests
         }
 
         var before = Centroid();
-        session.Commands.Submit(session, new JsonObject
+        var members = new uint[session.Units.Count];
+        int memberCount = session.Units.CopyOwnHandles(1, members);
+        session.Commands.Submit(session, new CrowdSimCommand
         {
-            ["type"] = "order",
-            ["player"] = 1,
-            ["xCm"] = 800000,
-            ["yCm"] = 800000,
-            ["shape"] = "box",
+            Kind = CrowdSimCommandKind.Order,
+            Player = 1,
+            XCm = 800000,
+            YCm = 800000,
+            ShapeId = "box",
+            Members = members.AsSpan(0, memberCount).ToArray(),
         }, CrowdSimCommands.Exec);
 
         // 路径答复落地后读组的(可能可达替代的)目标格
@@ -91,20 +95,23 @@ public sealed class S5MovementSmokeTests
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
 
-        var script = new List<CrowdCommand>
+        var script = new JsonArray
         {
-            new(0, CrowdSimCommand.Parse(new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 })),
-            new(10, CrowdSimCommand.Parse(new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" })),
+            new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 } },
+            new JsonObject { ["tick"] = 10, ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" } },
         };
-        session.Commands.Schedule(session, script);
+        session.ReferenceScript = CrowdReferenceScript.Load(script, session.Units.Capacity);
         var live = new List<ulong>();
         session.Advance(200, live);
+        var log = session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray();
+        Assert.That(log.Count(e => e.Cmd.Kind == CrowdSimCommandKind.Order), Is.EqualTo(1));
+        Assert.That(log.Single(e => e.Cmd.Kind == CrowdSimCommandKind.Order).Cmd.Members, Has.Length.EqualTo(120));
 
         var (runtime2, replay) = S4DeployTruthTests.BuildSession("s1337");
         using var service2 = new PathQueryService(replay.Navs, runtime2, 1, TimeSpan.FromSeconds(10), replay.ResolveNavContext);
         replay.EnableMovement(CrowdMovementKernel.Create(replay), new CrowdSimPlanner(replay, service2));
         replay.BlockOnDueReplies = true;
-        replay.Commands.Schedule(replay, script);
+        replay.Commands.Schedule(replay, log);
         var reHashes = new List<ulong>();
         replay.Advance(200, reHashes);
 

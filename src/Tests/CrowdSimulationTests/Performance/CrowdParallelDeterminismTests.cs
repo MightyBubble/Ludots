@@ -65,10 +65,7 @@ public sealed class CrowdParallelDeterminismTests
         var session = scope.Session;
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
-        session.Commands.Schedule(session, script);
+        session.ReferenceScript = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
 
         var checksums = new List<ulong>(ticks);
         session.Advance(ticks, checksums);
@@ -85,18 +82,26 @@ public sealed class CrowdParallelDeterminismTests
     {
         using var scope = Open(workerCount);
         var session = scope.Session;
-        session.Commands.Schedule(session, new[]
+        session.ReferenceScript = CrowdReferenceScript.Load(new JsonArray
         {
-            new CrowdCommand(0, CrowdSimCommand.Parse(new JsonObject
+            new JsonObject
             {
-                ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
-                ["count"] = 220, ["unitType"] = 0, ["rIdx"] = 0,
-            })),
-            new CrowdCommand(2, CrowdSimCommand.Parse(new JsonObject
+                ["tick"] = 0,
+                ["cmd"] = new JsonObject
+                {
+                    ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000,
+                    ["count"] = 220, ["unitType"] = 0, ["rIdx"] = 0,
+                },
+            },
+            new JsonObject
             {
-                ["type"] = "order", ["player"] = 1, ["xCm"] = 486250, ["yCm"] = 560000, ["shape"] = "box",
-            })),
-        });
+                ["tick"] = 2,
+                ["cmd"] = new JsonObject
+                {
+                    ["type"] = "order", ["player"] = 1, ["xCm"] = 486250, ["yCm"] = 560000, ["shape"] = "box",
+                },
+            },
+        }, session.Units.Capacity);
 
         var checksums = new List<ulong>(80);
         CrowdNavGroupSet.Group? group = null;

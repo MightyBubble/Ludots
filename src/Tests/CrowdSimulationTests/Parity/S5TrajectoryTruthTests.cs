@@ -56,10 +56,7 @@ public sealed class S5TrajectoryTruthTests
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
-        session.Commands.Schedule(session, script);
+        session.ReferenceScript = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
 
         var bin = File.ReadAllBytes(Path.Combine(dir, "s5-trajectory.bin"));
         int cursor = 4; // magic

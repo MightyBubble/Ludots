@@ -23,9 +23,16 @@ public sealed class S5EngineStallProbe
         session.BlockOnDueReplies = false;
 
         CrowdDeployment.SpawnAt(session, Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(480000), Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(560000), 100, 1, 0, 0);
-        session.Commands.Submit(session, new JsonObject
+        var members = new uint[session.Units.Count];
+        int memberCount = session.Units.CopyOwnHandles(1, members);
+        session.Commands.Submit(session, new CrowdSimCommand
         {
-            ["type"] = "order", ["player"] = 1, ["xCm"] = 1200000, ["yCm"] = 800000, ["shape"] = "box",
+            Kind = CrowdSimCommandKind.Order,
+            Player = 1,
+            XCm = 1200000,
+            YCm = 800000,
+            ShapeId = "box",
+            Members = members.AsSpan(0, memberCount).ToArray(),
         }, CrowdSimCommands.Exec);
 
         int ran = 0, stalls = 0;
