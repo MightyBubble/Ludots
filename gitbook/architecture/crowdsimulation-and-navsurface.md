@@ -16,7 +16,7 @@ NavSurface（`.navsurface`）是新增的地表资产：逐导航格的地形类
 
 ## 数学一律走 Ludots 定点体系
 
-不引入第二套数学：内核全部使用 `src/Core/Math/FixedPoint` 的 Fix64 / Fix64Math（Q31.32 与其确定性超越函数），长度单位为厘米，与 `WorldPositionCm` 同单位制。配置文件维持 Ludots 约定（厘米、`Cm` 后缀），世界距离在组装层按 `厘米 / world.navCellSizeCm` 转成导航格 Fix64，内核不再做单位换算。四种格的名字、单位和配置键以 [空间尺度 SSOT](spatial-scale-and-resolution-ssot.md) 为准：导航格 `NavCell`、导航 tile `NavTile`、迷雾格 `FogCell`、避让哈希格 `AvoidanceHashCell`。HPA 的一块就叫 tile。Web 侧的 `DetMath` 计划由此废止——对拍时以 Ludots 定点语义为准生成基线，Web 参考实现如需对拍要适配同一套定点算法。
+不引入第二套数学：内核全部使用 `src/Core/Math/FixedPoint` 的 Fix64 / Fix64Math（Q31.32 与其确定性超越函数），长度单位为厘米，与 `WorldPositionCm` 同单位制。配置文件维持 Ludots 约定（厘米、`Cm` 后缀），世界距离在组装层按 `厘米 / profiles.cellSizeCm` 转成导航格 Fix64，内核不再做单位换算。四种格的名字、单位和配置键以 [空间尺度 SSOT](spatial-scale-and-resolution-ssot.md) 为准：导航格 `NavCell`、导航 tile `NavTile`、迷雾格 `FogCell`、避让哈希格 `AvoidanceHashCell`。HPA 的一块就叫 tile。Web 侧的 `DetMath` 计划由此废止——对拍时以 Ludots 定点语义为准生成基线，Web 参考实现如需对拍要适配同一套定点算法。
 
 **甲方定案（2026-10-09）：要的是行为对拍，不是数值逐位。** 不为对齐参考端的 f32 存储量化格而在 C# 侧做二次量化（L18 证据链证明逐位一致在双数值系下不可达，量化对齐 = 拿甲方数系迁就参考端的存储层）。验收口径定格为：结构性字段（生成位置、状态机 state/level/order、重烘焙报告、指令序）逐位；派生量（轨迹位置、mode、接触计数骑线）按实测带宽与容忍线，口径一旦写明不接受"再收紧"诉求——系统性分歧（接触集大面积错、状态机翻字、重烘报告字段差）才是这道门要拦的东西。
 
@@ -39,13 +39,16 @@ src/Core/CrowdSimulation/            内核（命名空间 Ludots.Core.CrowdSimu
   Nav/                               NavContextBaker（分类 / 腐蚀 / 连通域 / 链接）
                                      UpperLayerBake（桥面层栅格化与烘焙、portal 合并）
                                      NavContext / NavLinkSet（上下文产物）
-  CrowdSimulationAgent.cs            单位组件 { profileId }
+  CrowdSimulationAgent.cs            单位组件：profileId、agentTypeId、speedCmPerSecond、personalRadiusCm、pushPriority、special
 mods/capabilities/navigation/CrowdSimulationMod/
   assets/config_catalog.json         登记正式配置。调试文件由提供它的 Mod 自己登记
   assets/Navigation/agent_profiles.json
-                                     体型档案。agents.profilesUri 指向这里
+                                     体型档案。layer 是 NavTile 层，navProfileId 指向能力档
+  assets/Entities/templates.json     CrowdSimulationAgent 写速度、个人半径、推挤优先级
 mods/capabilities/navigation/CrowdSimulationStandardMod/
   assets/CrowdSimulationConfig.json  标准参数（对拍同一份）。不含地图事实，不写时钟
+  assets/Navigation/navmesh.json     能力档、区域、坡度。群体地图的地形事实在 maps.<mapId>
+  assets/Navigation/pathing.json     移动类型和区域代价。selection / nodeGraph 可省略
 src/Tests/CrowdSimulationTests/      S0 验收测试
 ```
 
@@ -105,22 +108,22 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 加载在进入地图时进行，错误消息写明文件、字段路径与规则，例如：
 
 ```
-CrowdSimulationConfig.json: navtile.sizeCm（12500）/ world.navCellSizeCm（6250）= 2，需为 ≥ 4、≤ 128 的整数
+CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（6250）= 2，需为 ≥ 4、≤ 128 的整数
 ```
 
-覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（areaCost / profile / agentType / deploy.bases.playerId / CrowdSimulationAgent.profileId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。配置文件不再带 `version`；作者再写这个键，加载直接报错。例外：formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充——参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
+覆盖的规则：声明式数值范围（与参考实现 schema.js 的 RULES 同源，路径已按 Ludots 文件归属换算）、id 唯一性与容量上限（区域 ≤ 256、移动类型 / 单位模板 ≤ 255、组合 ≤ 255）、引用闭包（pathing 的 areaId、档案、模板的 agentTypeId、deploy.bases.playerId）、地图正方形与格数整除、1–16 个玩家、双求解器互斥、阻挡物只能是正方形 Box（不禁止圆形非阻挡区域实体）。配置文件不再带 `version`。作者再写这个键，加载直接报错。formation.headingInheritDot / formation.mirrorFlipDot 是 Ludots 侧的配置化补充。参考实现里是 planner.js 的内联字面量（0.94 / -0.5），默认值与字面量同值，规则是点积阈值域 [-1, 1] 的两半（mirrorFlipDot ≤ 0 ≤ headingInheritDot）。
 
 ## 作者怎么配
 
 参数、地图事实、时钟分三处写。
 
-`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：格长、导航、阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的 `mapId`、地表、出生点。
+`CrowdSimulationStandardMod` 是纯数据，路径 `mods/capabilities/navigation/CrowdSimulationStandardMod`。它依赖能力 Mod `CrowdSimulationMod` `^1.0.0`。它装对拍用的全量标准参数：阵型、运动、避让、迷雾、`pairRules`、`sim.simSecondsPerTickSecond`。导航格边长、能力档、区域和移动类型写在同目录的 `Navigation/navmesh.json` 与 `Navigation/pathing.json`。没有工程文件，没有入口，不写 `Engine/clock.json`，也不写某一张图的地表和出生点。
 
-`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。`agents.profilesUri` 仍指向这份档案。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
+`CrowdSimulationMod` 登记 `config_catalog.json`、单位模板和 presenter，并提供 `assets/Navigation/agent_profiles.json`。单位模板上的 `CrowdSimulationAgent` 写 `profileId`、`agentTypeId`、`speedCmPerSecond`、`personalRadiusCm`、`pushPriority`。模板速度是起步速度。移动类型和地形区域的组合写在 `pathing.json` 的 `areaCosts`：`cost` 管寻路，`speedDivisor` 管这一格把速度除掉多少，不写时与 `cost` 相同；`passable` 为 false 时这一格不可进。`special` 为 true 的模板不参与批量部署。同一移动类型的模板必须速度相同、`special` 相同。它不再带参数默认值。只加载它、不加载标准参数 Mod 时，严格反序列化因缺字段失败。
 
-地图 Mod 写 `mapId`、`world.seed`、`world.surfaceAsset`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。`world.terrainTypes` 保持数组，下标就是 `.navsurface` 的地形编号。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
+地图 Mod 写 `world.seed`、`deploy.bases`，以及这张图才有的结构模板，例如 `structures.templates.s7barrier`。地形类型到导航区域、`.navsurface` 路径写在 `Navigation/navmesh.json` 的 `maps.<mapId>`：`terrainAreas` 的键顺序就是 `.navsurface` 的地形编号，`surfaceAsset` 是这份栅格。用到群体模拟的地图 Mod 在 `mod.json` 里同时依赖 `CrowdSimulationMod` 和 `CrowdSimulationStandardMod`（`^1.0.0`）。
 
-覆盖走 DeepObject：后加载的 Mod 按键合并。留在群体配置里的 `formations`、`structures.templates`、`agents.radiusClasses` 以 id 为键，改一项只写那一项。值为 `null` 会拒绝。写成数组也会拒绝。`agentTypes`、`navAreas`、`navProfiles`、`unitTypes` 仍是数组，覆盖时整表替换。运行时按 id 排序，不看对象键的书写顺序。
+覆盖走 DeepObject：后加载的 Mod 按键合并。留在群体配置里的 `formations`、`structures.templates` 以 id 为键，改一项只写那一项。值为 `null` 会拒绝。写成数组也会拒绝。`navmesh.json` 的 `profiles`、`areas` 和 `pathing.json` 的 `agentTypes` 是数组，覆盖时整表替换。`maps` 按地图 id 合并。再把 `agentTypes`、`navAreas`、`navProfiles`、`unitTypes`、`agents.radiusClasses`、`agents.profilesUri`、`world.navCellSizeCm`、`world.surfaceAsset`、`world.terrainTypes`、`mapId` 写进群体配置，加载直接报错，并指出改去哪份主线文件。
 
 时钟由各地图 Mod 的 `assets/Engine/clock.json` 写 `FixedHz`。引擎要求这个值 ≥ 1。群体配置不再另设 10 到 240 的范围。全局变速走 TimeFlow，不走群体配置。
 
@@ -227,22 +230,22 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
-- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真 + 配置补全的仿真参数：profileId / agentType / radiusClassCm / speedCmPerSecond / radiusCm / personalRadiusCm）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
-- **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数下沉为模板组件,config 的 unitTypes[].templates（半径级厘米 → 模板 id）声明实例化映射,模板组件缺省字段在生成后钩子按 config 默认值补全（配置分层:unitTypes/agentTypes 是默认值层）。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板自身声明 profile（`templates.json` 的 CrowdSimulationAgent.profileId）,激活时按（兵种 × 半径级）预解析并校验闭包,不再按 profile 反查模板——两兵种共用体型时各拿各的模板键。无头对拍与回放没有模板资产,保持最小组件集直接创建,组件值与演示路径逐位相同。出生算法（盐流/环形搜索/编组/散布）留在内核,只换了实体创建机制;S4/S5 真值测试原样全绿。
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真：profileId / agentTypeId / speedCmPerSecond / personalRadiusCm / pushPriority / special）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有模板资产,保持最小组件集直接创建,组件值与演示路径逐位相同。出生算法（盐流/环形搜索/编组/散布）留在内核,只换了实体创建机制;S4/S5 真值测试原样全绿。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
 - **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
 - **指令队列与回放**（core/commands.js CommandQueue 移植）：指令是数据,tick 边界执行;日志 = 完整输入,回放 = 新会话 + 同一日志。会话的 tick 就是 `Engine/clock.json` 的 FixedHz,不存在第二个频率。
 - **对拍（`S4DeployTruthTests`,3 种子）**：同一份脚本（spawn 12000 → 框选 → 点名生成 20 → 全选 → 清空）逐帧校验码与沙盒一致（150 帧 × 3）;12020 个单位逐条（玩家 / 模板 / 半径级 / 组 / 位置原始值）一致;同一份记录回放两次校验码相同。
 - **踩过的坑（已固化）**：S0 配置的 `deploy.bases` 玩家 4 出生点 y 写成了玩家 2 的值（0.65 → 0.7 份额,部署差 416 格才发现;组号全对上但中心全错,按"组-中心-RNG 值"三层对拍才定位）;镜像侧量化函数把位置乘法也取整,奇数半档比 Ludots 少 50 个原始单位;参考实现玩家 0 基与 Ludots 玩家号 1..P 的换算只在 `PlayerOwner` 与脚本数据边界做一次,内部编号序不受影响。
-- **配置增量**：`world.seed`（生成盐,进覆盖配置）、`unitTypes[].special`（特殊单位不参与批量部署）。
+- **配置增量**：`world.seed`（生成盐,进覆盖配置）。`CrowdSimulationAgent.special` 为 true 的模板不参与批量部署。
 
 ## S4-b 交付：部署演示纯数据化——单位进 presenter 管线（本次）
 
 - **会话宿主下沉 Core**：`CrowdSimulationRuntime`（`src/Core/CrowdSimulation/Runtime/`,MassNavigationRuntime 同款形态）在地图聚焦时按配置目录合并出的 CrowdSimulationConfig + CrowdSimulationDebug 建会话——会话跑在**引擎世界**上（此前演示 mod 在侧世界 `ArchWorld.Create()` 起会话,呈现管线根本看不见单位,这是 S4 演示最初看不到单位的根因）,tick 由系统组的 FixedHz 驱动,会话与运行时注册成服务。S1/S3 演示 mod 的同款 Load 样板后续都往这里收。
-- **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自 `agent_profiles.json` 新增的 `templateId`,按体型族映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放传 null 接线,组件一个不挂,71/71 逐位不变。
+- **单位接入呈现投影（不造第二条路）**：`CrowdSimUnits.Add` 在接线存在时给单位挂齐呈现预置件——`PresentationStableId` + `EntityTemplateKeyRef`（模板键来自单位模板 id，按移动类型和半径级映射）+ `PreviousWorldPositionCm` + `VisualTransform` + `CullState` + `ContinuousHeightmapSampleState` + 半径黑板。之后 `PresentationEntityLifecycleSystem` 按 presenters.json 规则数据驱动地建/毁 presenter,与生成队列出生的实体同一条路。无头对拍与回放传 null 接线,组件一个不挂,71/71 逐位不变。
 - **呈现全部声明式**：形状 = 体型模板键（步兵=方/水军=圆/山地=三角/两栖=菱形(立方体 localRotation 45°)/跳跃=十字(body+orientation 双槽位十字梁),前二用内置原语,三角形是新增的 `unit_triangle.gltf` 数据资产,走 mesh_assets + host_assets 的正式宿主绑定）;玩家色 = presenter `entityColorVector` 绑定 + 新增的 `TeamColorPalette` 服务（`deploy.bases[].color` 是配置数据;`PresenterBehaviorSystem` 优先读调色板,未注册回退原双色解析,旧场景零影响）;选中环 = select 指令执行时镜像进实体集合仓的 `selected` 集合,presenter 监听 `EntityCollectionMemberAdded/Removed` 建/毁选中环（GroundOverlay Ring,`scaleParamKey` 绑单位半径黑板随体型缩放）。校验码不含选中,镜像不进对拍口径。
 - **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
-- **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——crowd 会话的档案来源改由 `agents.profilesUri` 显式声明,默认才回退全局注册表;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
+- **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——会话只物化单位模板点名的档案，不把注册表里其余体型当成半径级;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
 - **选中链的目标形态（S8 前记档）**：终态 = rep entity 挂交互上下文声明 `activeCollectionKey`、选中落在玩家本地集合、下令命令自带成员清单（不再从选中集合反查），`select` 指令随之退出指令日志——选中是本机 UI 态,不是仿真输入。当前实现是 select 指令 + 会话实体自声明键（`selected` 集合,SelectionMirror 镜像）,与输入配置宪法的自声明键口径一致,已合规;换轨在 S8 正式下令链接入时一并做。
 
@@ -258,8 +261,8 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S5-b 交付：最小避让（本次）
 
-- **移植**（`Movement/CrowdAvoidance.cs`,对照 `avoidance.js computeSeparation` 全 13 条语义）：哈希序聚集(腾空 JUMP 半径记 0)、逐格唤醒标记与静态岛跳过、只同层相碰（LY-6）、同组双动对称对半、功能位推挤（Yield:低者让 1−dominantShare / 相等对半 / Hold:休息单位对移动单位不可动）、双预算（maxNeighbors 数重叠对,maxScan 数所有读到的候选,D07）、查询范围 = 单位自己的哈希环、格剔除（边格永不剔）、完全堆叠对的确定性伪随机反对称轴（下标对派生,绝不同向）、接触边界连续的分离式、calm 休眠、maxPush 截断 + 时间平滑、stride 行错峰降频。玩家对矩阵现在由会话开始时的 `pairRules` 投影写入，装载函数只接收这张表；作者配置见上面的「关系功能位」。`agents.radiusClasses` 仍是半径级推挤份额,原型优先级 = agentTypes[].pushPriority + 份额。
-- **内核接线**：子步序与参考 `tick()` 一致（哈希重建 → 分离求解 + 相位前移 → 领队 → 意图 → 马达）;stride 按参考 setRates 推导（30 Hz × 1 子步 ÷ avoidHz 15 = 2,行错峰）;马达接 sepW 权重并恢复 rest∧calm∧全零 的休眠跳过;意图层补 ARRIVED∧calm∧零速 直接休眠门;spawn 清推挤与 calm（D54）。`pushPriority` 下沉为模板组件字段（与速度/半径同层,模板缺省按配置补全）。
+- **移植**（`Movement/CrowdAvoidance.cs`,对照 `avoidance.js computeSeparation` 全 13 条语义）：哈希序聚集(腾空 JUMP 半径记 0)、逐格唤醒标记与静态岛跳过、只同层相碰（LY-6）、同组双动对称对半、功能位推挤（Yield:低者让 1−dominantShare / 相等对半 / Hold:休息单位对移动单位不可动）、双预算（maxNeighbors 数重叠对,maxScan 数所有读到的候选,D07）、查询范围 = 单位自己的哈希环、格剔除（边格永不剔）、完全堆叠对的确定性伪随机反对称轴（下标对派生,绝不同向）、接触边界连续的分离式、calm 休眠、maxPush 截断 + 时间平滑、stride 行错峰降频。玩家对矩阵现在由会话开始时的 `pairRules` 投影写入，装载函数只接收这张表；作者配置见上面的「关系功能位」。推挤优先级写在单位模板的 `CrowdSimulationAgent.pushPriority`，装载原样使用。
+- **内核接线**：子步序与参考 `tick()` 一致（哈希重建 → 分离求解 + 相位前移 → 领队 → 意图 → 马达）;stride 按参考 setRates 推导（30 Hz × 1 子步 ÷ avoidHz 15 = 2,行错峰）;马达接 sepW 权重并恢复 rest∧calm∧全零 的休眠跳过;意图层补 ARRIVED∧calm∧零速 直接休眠门;spawn 清推挤与 calm（D54）。
 - **屏蔽开关摘除**：两端 `__S5_NO_AVOIDANCE__` 同步删除（导出器与沙盒引擎）,避让成为内核固有行为,会话与内核不留开关位。
 - **L02 校验码重钉**：运动字段（vx/vy/slotX/slotY/blend/stall）从"每字段混一个零词"改为按原始 int64 低 32 → 高 32 两词混入——导出端 canonChecksum（mixI64）与 `CrowdSimChecksum` 同步;部署会话无运动栈,两词恒零,真值变化来自混法本身。S4 真值三种子重导,150 帧逐字全等。
 - **对拍（`S5TrajectoryTruthTests`,600 tick × 241 单位,种子 1337,crowd 全量 77/77）**：状态机字段全程逐位全等（0 处不一致）;位置带宽按避让开启口径实测——p50 = 0.07 cm、p99 = 17.3 cm、max = 136.1 cm、末 30 tick max = 35.2 cm,带值定 `MaxTrajectoryBandCm = 500` / `FinalBandCm = 100`（3.7× / 2.9× 余量;结构级分歧照常以米-公里级偏差触警）。**L24 分层门**:p50 ≤ 0.5 / p99 ≤ 50 / p99.9 ≤ 100 cm(实测 0.07 / 17.3 / 35.1,余量 7.3× / 2.9× / 2.9×)+ 沿航向有符号均值 ≤ 0.1 cm(实测 0.0224,余量 4.5×;系统性偏置探测门——全体单位同向漂移时 max 抓不到、均值抓得到,航向基 = 参考端逐 tick 位移);max/末态维持 500/100。位置尾差定性见下方整改小节(L21 修订):来源记档为参考端 f32 存储。

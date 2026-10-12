@@ -40,7 +40,7 @@
 
 ### 3.2 工具功能
 
-复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系；完整文件还需 selection、nodeGraph 等必填字段，见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
+复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
 
 ```json
 {
@@ -85,7 +85,7 @@ PathRequest.AgentTypeId
   → 路径与成本
 ```
 
-- 每个生产入口都必须保留请求的 Agent 身份，不能统一绑定 `AgentTypes[0]`。
+- 每个生产入口都保留请求的 Agent 身份。`CreateDefaultNavMeshPathService` 要求请求写明 `AgentTypeId`，空 id 或未知 id 直接失败。
 - 两个 Agent 可共享 Detour 几何；每次查询的过滤器/代价表必须隔离。
 - 路径结果缓存包含 Agent 策略身份和版本；几何缓存不因单改 cost 而重建。
 - 静态配置重载和运行中策略修改要有明确应用时机。即时矩阵编辑是目标工具能力，不能把当前加载时编译宣称为已支持热改。
@@ -206,8 +206,8 @@ Feature: 区域分类与 Agent 通行代价正交
 | #372 | open，明确 cost = f(area, agent)，分类层无 cost | 继续作为规则来源，不能新建平行矩阵需求 |
 | #412 | closed，已并入 #372/#1342/#1345 | 关闭表示范围整合，不代表全部代码已进 main |
 | 主线 PathingConfig / AutoPathService | 已有每 Agent 的 areaCosts 与编译/查询消费 | 复用，不能列为从零开发 |
-| 主线 LogicTerrainCell / NavMeshBakeConfig.Areas | 仍含 Cost 字段 | 现有残留，不是目标 schema；按 #372 清理 |
-| 主线 GameEngine 纯 NavMesh 入口 | CreateDefaultNavMeshPathService 取 AgentTypes[0]，注册单 query adapter | 补逐请求 AgentTypeId 选择，不能宣称所有入口已正交 |
+| 主线 LogicTerrainCell / NavMeshBakeConfig.Areas | `Cost` 已删除。区域写 `id`、`areaId`、`slopeFree` | 分类层不再带代价 |
+| 主线 GameEngine 纯 NavMesh 入口 | `CreateDefaultNavMeshPathService` 要求请求带 `AgentTypeId` | 空 id 或未知 id 失败，不再取 `AgentTypes[0]` |
 | 本地 codex/issue-1402-route-init，5bd22c9e4e；codex/issue-1402，1d2eb4a2ec | 已有纯 NavMesh Auto 请求按 AgentTypeId 选择的代码与回归，未在 main | 按当前 API 提取；现有分支测试不等于双 Agent 成本实机验收 |
 | 本地/远端 codex/terr-399-merge-main，f81f2b240d / PR #1006 | 分支 Map/Fields/LogicTerrainField.cs 已去 Cost，80ddd77b7a 有分类投影；PR closed 且未合并 | 只提取分类/去 Cost 合同，旧持久化和 CDT 整包不回迁 |
 | codex/nav-bake-policy | 仍保留 LogicTerrainCell.Cost | 不能把它当作 cost 正交已完成的分支 |
