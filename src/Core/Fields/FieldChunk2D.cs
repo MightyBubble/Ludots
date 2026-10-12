@@ -48,6 +48,8 @@ namespace Ludots.Core.Fields
             return _codec.Read(_channels, localIndex);
         }
 
+        internal T[] StructLane => (T[])_channels[0];
+
         public void Set(int localIndex, T value)
         {
             ValidateLocalIndex(localIndex);
