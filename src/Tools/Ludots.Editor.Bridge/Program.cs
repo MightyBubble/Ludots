@@ -2,6 +2,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Hosting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
@@ -319,7 +320,7 @@ app.MapGet("/api/mods/{modId}/config-provenance", (string modId) =>
     try
     {
         ConfigProvenanceSnapshot snapshot = EditorRepo.LoadConfigProvenance(repoRoot, modId);
-        return Results.Ok(new { ok = true, files = snapshot.Files });
+        return Results.Ok(new { ok = true, files = snapshot.Files, error = snapshot.Error });
     }
     catch (Exception ex)
     {
@@ -4776,12 +4777,11 @@ static class EditorRepo
 
     public static ConfigProvenanceSnapshot LoadConfigProvenance(string repoRoot, string targetModId)
     {
-        ModContext ctx = CreateContext(repoRoot, targetModId);
-        var mounts = new List<ConfigModMount>(ctx.LoadOrder.Count);
-        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        IReadOnlyList<ResolvedModLoadEntry> plan = NavMeshBakeConfigLoader.ResolveModLoadPlan(repoRoot, targetModId);
+        var mounts = new List<ConfigModMount>(plan.Count);
+        for (int i = 0; i < plan.Count; i++)
         {
-            ModInfo mod = ctx.ModsById[ctx.LoadOrder[i]];
-            mounts.Add(new ConfigModMount(mod.Id, mod.RootPath));
+            mounts.Add(new ConfigModMount(plan[i].Id, plan[i].RootPath));
         }
 
         return ConfigMergeProvenance.Capture(Path.Combine(repoRoot, "assets"), mounts);

@@ -9,7 +9,7 @@
 - 每个 mod 对每个 relativePath 从唯一根 `assets/{path}` 收集片段（单一根约定）；分片表先主文件后同根分片目录。
 - 路径构造与收集集中于 ConfigSourcePaths 与 ConfigPipeline（单根 + 分片目录枚举）。
 - 引擎默认片段来自仓库 仓库 `assets/` 根（引擎默认）；catalog 文件自身也按 Path 同 id 跨源合并。
-- 冲突报告记录片段列表、文件级赢家（DeepObject / Replace / ArrayReplace 记最后一份片段）、id 级赢家、删除、重复 id 与模板组件覆盖链；无字段级溯源。严格装载失败时，异常文本追加配置路径、合并顺序里的片段地址和胜出。作者工作室读取 `GET /api/mods/{modId}/config-provenance`。
+- 冲突报告记录片段列表、文件级赢家、id 级赢家、删除（含删除者地址，不把该片段再记一遍）、重复 id 与模板组件覆盖链；无字段级溯源。DeepObject / Replace 的文件级赢家是最后一份实际并入的对象，更早的键仍可能来自更早的片段，跳过的非对象不是赢家。ArrayReplace 的赢家是实际采用的那份数组所在片段。严格装载失败抛 `ConfigLoadException`，原文留在 InnerException。会附来源的装载只有：`CrowdSimulationConfigLoader`、`CrowdSimulationRuntime` 的 `CrowdSimulationDebug.json`、`NavMeshBakeConfigLoader`、`PathingConfigLoader`、`AgentProfileConfigLoader`、`DataRegistry`（`Entities/templates.json`）。作者工作室读取 `GET /api/mods/{modId}/config-provenance`，mod 顺序与 `NavMeshBakeConfigLoader.ResolveModLoadPlan` 交给 `LoadResolvedPlan` 的清单一致；模板展开失败时仍返回已合并的溯源和错误文本。
 - 文件缺失静默跳过；JSON 解析错误、条目缺 id、路径未登记、依赖问题均启动失败。
 - 配置重载机制存在但不可达：重载入口支持按组重建（AI、Narrative、Quests，忽略大小写，空组=全部），唯一入口是触发器 `Config.Reload`，全仓（src/mods/tools/web）无任何发射方；重进地图走地图资产管线，不触发配置重载。
 

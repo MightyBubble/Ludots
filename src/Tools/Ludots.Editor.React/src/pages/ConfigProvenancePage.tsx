@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 type ModInfo = { id: string; name?: string };
 
 type IdWinner = { id: string; sourceUri: string };
-type Deletion = { id: string };
+type Deletion = { id: string; sourceUri: string };
 type Duplicate = { id: string; firstSource: string; secondSource: string };
 type ComponentChain = { templateId: string; component: string; writerChain: string };
 
@@ -12,6 +12,7 @@ type ProvenanceFile = {
   relativePath: string;
   fragments: string[];
   fileWinner: string | null;
+  fileWinnerKind: string | null;
   winners: IdWinner[];
   deletions: Deletion[];
   duplicates: Duplicate[];
@@ -71,12 +72,11 @@ export function ConfigProvenancePage() {
         const res = await fetch(`/api/mods/${encodeURIComponent(modId)}/config-provenance`);
         const json = (await res.json()) as { ok?: boolean; error?: string; files?: ProvenanceFile[] };
         if (cancelled) return;
-        if (!res.ok || json.ok === false) {
-          setFiles([]);
+        setFiles(json.files ?? []);
+        if (!res.ok || json.ok === false || json.error) {
           setError(json.error || '合并溯源没有算出来');
           return;
         }
-        setFiles(json.files ?? []);
       } catch (err) {
         if (!cancelled) {
           setFiles([]);
@@ -114,7 +114,7 @@ export function ConfigProvenancePage() {
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-semibold">合并溯源</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-studio-secondary">
-          每个文件按合并顺序列出来源。DeepObject 把数组整段换掉，胜出记在文件上。带 id 的表按 id 标胜出。这一页不画逐字段时间线。
+          每个文件按合并顺序列出来源。DeepObject 的标记是最后一份片段，更早的键仍可能来自更早的片段，数组整段替换。带 id 的表按 id 标胜出。这一页不画逐字段时间线。
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -171,7 +171,9 @@ export function ConfigProvenancePage() {
                       <span className="text-studio-muted">{index + 1}.</span>
                       <span data-fragment-uri={uri}>{uri}</span>
                       {winsFile ? (
-                        <span className="rounded bg-studio-blue/20 px-1.5 py-0.5 text-[10px] text-studio-blue">胜出</span>
+                        <span className="rounded bg-studio-blue/20 px-1.5 py-0.5 text-[10px] text-studio-blue">
+                          {file.fileWinnerKind === 'applied-array' ? '采用的数组' : '最后一份片段'}
+                        </span>
                       ) : null}
                     </li>
                   );
@@ -179,7 +181,11 @@ export function ConfigProvenancePage() {
               </ol>
               {file.fileWinner ? (
                 <p className="mt-2 text-sm" data-file-winner={file.fileWinner}>
-                  胜出：<span className="font-mono text-xs">{file.fileWinner}</span>
+                  {file.fileWinnerKind === 'applied-array' ? '采用的数组' : '最后一份片段'}
+                  ：<span className="font-mono text-xs">{file.fileWinner}</span>
+                  {file.fileWinnerKind === 'last-fragment' ? (
+                    <span className="mt-1 block text-xs text-studio-secondary">更早的键仍可能来自更早的片段。</span>
+                  ) : null}
                 </p>
               ) : null}
 
@@ -206,7 +212,7 @@ export function ConfigProvenancePage() {
 
               {file.deletions.length > 0 ? (
                 <p className="mt-2 text-xs text-studio-secondary">
-                  删除：{file.deletions.map((item) => item.id).join('、')}
+                  删除：{file.deletions.map((item) => `${item.id}（${item.sourceUri}）`).join('、')}
                 </p>
               ) : null}
               {file.duplicates.length > 0 ? (

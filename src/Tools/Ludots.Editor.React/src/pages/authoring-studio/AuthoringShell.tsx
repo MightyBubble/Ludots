@@ -55,15 +55,6 @@ export function AuthoringShell() {
             );
           })}
         </nav>
-        <Link
-          to="/config-provenance"
-          data-authoring-tool="config-provenance"
-          className={
-            location.pathname === '/config-provenance' ? STUDIO_CHROME.navOn : STUDIO_CHROME.navOff
-          }
-        >
-          合并溯源
-        </Link>
         <span
           data-bridge-state={bridge}
           className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] ${
