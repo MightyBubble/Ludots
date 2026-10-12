@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Systems
@@ -18,6 +19,7 @@ namespace Ludots.Core.Presentation.Systems
         public PresentationEntityFinalizeDestroySystem(World world)
             : base(world)
         {
+            PresentationLifecycleConsumption.InstallConsumer(world);
         }
 
         public override void Update(in float dt)

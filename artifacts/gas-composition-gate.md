@@ -20,7 +20,7 @@
 | 批组件准入 | 0 | 生成器实例上的 TemplateBatchComponentAdmission；探针在临时世界，经 ComponentRegistry.Apply |
 | 逐实例写入 | 0 | IRuntimeSpawnInstanceInitializer，挂在生成系统实例上，WriteChunk 不 Add |
 | 行序 | 0 | 物化之后只交换已创建行；原型不是稠密集则抛错 |
-| 销毁 | 0 | ConsumeEntity。不声明时一帧后收尾；DeclareNoConsumer 的世界同一次调用走 FinalizePublished |
+| 销毁 | 0 | ConsumeEntity。不声明时一帧后收尾；DeclareNoConsumer 的世界同一次调用走 FinalizePublished。声明与生命周期系统互斥，不能撤销 |
 | 人群占槽与回执绑定 | 2 | CrowdSimUnits 只组请求、调 Materialize、读回执、维护稠密表 |
 
 ### 3. Reuse list

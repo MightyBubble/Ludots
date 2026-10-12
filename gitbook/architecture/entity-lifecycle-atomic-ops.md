@@ -39,7 +39,7 @@ Layer 3  Preset           DeployConsumeSource 等封装名（给人抄）
 
 `ConsumeEntity` 调用 `PresentationEntityLifecycle.RequestDestroy`：挂 `PresentationDestroyPending`，并去掉已有的 `PresentationDestroyEventPublished`。引擎世界有呈现消费者时，下一帧 `PresentationEntityLifecycleSystem` 发布销毁事件，`PresentationEntityFinalizeDestroySystem` 看到 Pending 和 Published 之后才 `World.Destroy`。
 
-世界没有呈现生命周期消费者时，在该 `World` 上调用 `PresentationLifecycleConsumption.DeclareNoConsumer`。此后同一次 `ConsumeEntity` 在 RequestDestroy 之后走 `PresentationEntityFinalizeDestroySystem.FinalizeWithoutConsumer`：补上 Published，再进同一段 `FinalizePublished`。不声明的世界保持一帧后销毁。人群无头会话和回放会话在构造单位表时声明；引擎会话不声明。
+世界没有呈现生命周期消费者时，在该 `World` 上调用 `PresentationLifecycleConsumption.DeclareNoConsumer`。此后同一次 `ConsumeEntity` 在 RequestDestroy 之后走 `PresentationEntityFinalizeDestroySystem.FinalizeWithoutConsumer`：补上 Published，再进同一段 `FinalizePublished`。不声明的世界保持一帧后销毁。人群无头会话和回放会话在构造单位表时声明；引擎会话不声明。声明和安装互斥，没有撤销：这个世界上已经有 `PresentationEntityLifecycleSystem` 或 `PresentationEntityFinalizeDestroySystem` 时，`DeclareNoConsumer` 抛 `LIFECYCLE.ERR.ConsumerAlreadyInstalled`；已经声明没有消费者时，再构造这两个系统抛 `LIFECYCLE.ERR.NoConsumerDeclared`。系统 Dispose 不清除已安装标记。
 
 ## 4 Layer 1 — 事务壳
 
