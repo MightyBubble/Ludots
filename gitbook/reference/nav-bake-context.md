@@ -73,10 +73,10 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 |---|---|---|---|
 | `mode` | `offline` or `runtime-incremental` | `NavBakeContext.Mode` | Required, strict casing |
 | `algorithm` | `recast` or `cdt` | `NavBakeContext.Algorithm` | Required, strict casing; `runtime-incremental` requires `cdt` |
-| `profiles.<id>` | capability id | `NavMeshProfileRegistry` | Id-keyed object. Catalog index is the ordinal sort of the keys |
+| `profiles.<id>` | capability id | `NavMeshProfileRegistry` | Id-keyed object. Catalog index is the property order after merge |
 | `profiles.<id>.maxClimbCm` | cm | NavMesh profile | Required number |
 | `profiles.<id>.maxSlopeDeg` | degrees | NavMesh profile | Omit means unlimited. `0` and negative values are rejected. Recast bake requires `> 0` and `< 90` |
-| `profiles.<id>.agentProfileId` | body id | Recast bake | Required when Recast bakes the profile. Crowd capabilities that are not Recast-baked may omit it |
+| `profiles.<id>.agentProfileId` | body id | bake and estimate hash | Required on every capability profile. Recast also requires a positive `maxSlopeDeg` |
 | `layers[].id` | layer id | Nav layer | Required non-empty trimmed string |
 | `layers[].layer` | int | NavTile layer | Required number |
 | `areas.<id>` | `areaId` 0..255 and `slopeFree` | NavMesh area | Id-keyed object. Runtime indexes use the authored `areaId`. No `cost` on the area |

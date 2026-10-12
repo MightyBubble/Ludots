@@ -40,7 +40,7 @@
 
 ### 3.2 工具功能
 
-复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`agentTypes` 以 id 为键，写成数组会拒绝。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`，两者都必须大于 0。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。没列出的区域代价是 1，可通行。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
+复用当前 `PathingConfig` 与严格 loader。以下片段摘取现有字段说明矩阵关系。`agentTypes` 以 id 为键，写成数组会拒绝。`selection` 和 `nodeGraph` 可以省略；省略 `selection` 时，AutoPath 编译这个 agentType 会报错。`areaCosts[]` 可以写 `speedDivisor`，不写时等于 `cost`，两者都必须大于 0。`passable` 不写表示可通行；`false` 表示这个 agent 进不了该区域。每个 agent type 必须列出每一个已声明区域，少一行就是装载错误。见 [作者工具链现有配置示例](../reference/navmesh-authoring-bake-toolchain.md)。
 
 ```json
 {

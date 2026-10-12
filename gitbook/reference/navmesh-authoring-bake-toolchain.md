@@ -138,7 +138,7 @@ Terrain classification and traversal cost are separate:
 | Concept | Source | Rule |
 |---|---|---|
 | `areaId` / tags | terrain SSOT | Stored on terrain/polygons/cells and propagated into `NavTile.TriAreaIds` |
-| per-agent cost | `Navigation/pathing.json` | `agentTypes.<id>.navMesh.areaCosts[]` maps `areaId` to `cost`. `agentTypes` is id-keyed. Optional `speedDivisor` equals `cost` when omitted; both must be `> 0`. Optional `passable: false` excludes the area. An unlisted area costs 1 and stays passable |
+| per-agent cost | `Navigation/pathing.json` | `agentTypes.<id>.navMesh.areaCosts[]` maps `areaId` to `cost`. `agentTypes` is id-keyed. Optional `speedDivisor` equals `cost` when omitted; both must be `> 0`. Optional `passable: false` excludes the area. Every agent type must list every declared area; a missing row is a load error |
 | impassable terrain | explicit block policy | Prefer explicit blocked/forbidden rule over fake infinite cost |
 | obstacle layer | authored obstacle sink + nav layer | Obstacles block only matching configured layer id |
 
