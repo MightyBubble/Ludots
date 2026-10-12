@@ -8,6 +8,12 @@
         "action": "Aim.Cancel",
         "start": "rep",
         "refire": "restart"
+      },
+      {
+        "label": "Aim.CancelRelease",
+        "action": "Aim.CancelRelease",
+        "start": "rep",
+        "refire": "restart"
       }
     ],
     "nodes": [

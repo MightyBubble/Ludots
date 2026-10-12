@@ -55,6 +55,12 @@
       "type": "Button"
     },
     {
+      "id": "Aim.CancelRelease",
+      "name": "Aim_CancelRelease",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
       "id": "Aim.Pointer",
       "name": "Aim_Pointer",
       "type": "Axis2D",
@@ -114,7 +120,7 @@
           "path": "<Keyboard>/escape"
         },
         {
-          "actionId": "Aim.Cancel",
+          "actionId": "Aim.CancelRelease",
           "path": "<Mouse>/RightButton"
         },
         {

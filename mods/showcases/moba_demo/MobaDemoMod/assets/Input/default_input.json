@@ -1,26 +1,6 @@
 {
   "actions": [
     {
-      "id": "SkillQ",
-      "name": "Gameplay_SkillQ",
-      "type": "Button"
-    },
-    {
-      "id": "SkillW",
-      "name": "Gameplay_SkillW",
-      "type": "Button"
-    },
-    {
-      "id": "SkillE",
-      "name": "Gameplay_SkillE",
-      "type": "Button"
-    },
-    {
-      "id": "SkillR",
-      "name": "Gameplay_SkillR",
-      "type": "Button"
-    },
-    {
       "id": "Command",
       "name": "Gameplay_Command",
       "type": "Button"
@@ -41,17 +21,6 @@
       "type": "Button"
     },
     {
-      "id": "Moba.AimConfirm",
-      "name": "Gameplay_MobaAimConfirm",
-      "type": "Button"
-    },
-    {
-      "id": "Moba.AimCancel",
-      "name": "Gameplay_MobaAimCancel",
-      "type": "Button",
-      "firesOn": "release"
-    },
-    {
       "id": "QueueModifier",
       "name": "Gameplay_QueueModifier",
       "type": "Button"
@@ -63,54 +32,11 @@
       "name": "MOBA Gameplay",
       "priority": 50,
       "bindings": [
-        {
-          "actionId": "SkillQ",
-          "path": "<Keyboard>/q"
-        },
-        {
-          "actionId": "SkillW",
-          "path": "<Keyboard>/w"
-        },
-        {
-          "actionId": "SkillE",
-          "path": "<Keyboard>/e"
-        },
-        {
-          "actionId": "SkillR",
-          "path": "<Keyboard>/r"
-        },
-        {
-          "actionId": "Command",
-          "path": "<Mouse>/RightButton"
-        },
-        {
-          "actionId": "Stop",
-          "path": "<Keyboard>/s"
-        },
-        {
-          "actionId": "ModeLoL",
-          "path": "<Keyboard>/F2"
-        },
-        {
-          "actionId": "ModeSC2",
-          "path": "<Keyboard>/F3"
-        },
-        {
-          "actionId": "Moba.AimConfirm",
-          "path": "<Mouse>/LeftButton"
-        },
-        {
-          "actionId": "Moba.AimCancel",
-          "path": "<Mouse>/RightButton"
-        },
-        {
-          "actionId": "Moba.AimCancel",
-          "path": "<Keyboard>/Escape"
-        },
-        {
-          "actionId": "QueueModifier",
-          "path": "<Keyboard>/leftShift"
-        }
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "Stop", "path": "<Keyboard>/s" },
+        { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
+        { "actionId": "ModeSC2", "path": "<Keyboard>/F3" },
+        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" }
       ]
     }
   ]

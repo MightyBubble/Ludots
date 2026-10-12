@@ -40,6 +40,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         "FourXDemoMod",
         "EntityCommandPanelMod",
         "RtsDemoMod",
+        "AimInteractionMod",
         "MobaDemoMod",
         "EntityInfoPanelsMod",
         "GenreInfoShowcaseMod"

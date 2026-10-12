@@ -19,9 +19,10 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 /// <summary>
-/// MOBA demo, played through its own interaction contexts and graphs: smart cast hits the
-/// enemy under the cursor, F3 switches to aim-first (Q opens a range state, left-click an
-/// enemy casts, right-click cancels), and right-click on the ground walks the champion.
+/// MOBA demo, played through AimInteractionMod: smart cast hits the enemy under the
+/// cursor and does not order on empty ground, F3 switches to aim-click (Q opens the aim
+/// context, left-click an enemy casts, right-click cancels), and right-click on the ground
+/// walks the champion.
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -29,9 +30,10 @@ namespace Ludots.Tests.GAS.Production;
 public sealed class MobaDemoCastStyleAcceptanceTests
 {
     private const float DeltaTime = 1f / 60f;
-    private const string SmartCastContext = "interaction.context.moba_demo.smart_cast";
-    private const string AimCastContext = "interaction.context.moba_demo.aim_cast";
-    private const string AimingContext = "interaction.context.moba_demo.aiming";
+    private const string AimCastContext = "interaction.context.aim.cast";
+    private const string AimingContext = "interaction.context.aim.click";
+    private const string SmartCastMode = "castMode.smart";
+    private const string AimClickMode = "castMode.aim_click";
 
     [Test]
     public void SmartCast_QHitsTheEnemyUnderTheCursor_EmptyGroundCastsNothing()
@@ -40,8 +42,10 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         Entity hero = FindEntity(engine.World, "Hero");
         Entity enemy1 = FindEntity(engine.World, "Enemy1");
         Entity enemy2 = FindEntity(engine.World, "Enemy2");
-        Assert.That(IsDerivedContextActive(engine, hero, SmartCastContext), Is.True,
+        Assert.That(ReadCastMode(engine, hero), Is.EqualTo(SmartCastMode),
             "The champion starts in smart cast.");
+        Assert.That(IsDerivedContextActive(engine, hero, AimCastContext), Is.True,
+            "Battle entry opens the aim cast context.");
 
         AimPointerAtWorldCm(engine, input, new Vector2(300f, 900f));
         Press(engine, input, "<Keyboard>/q");
@@ -68,13 +72,10 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         using GameEngine engine = CreateEngine(out TestInputBackend input);
         Entity hero = FindEntity(engine.World, "Hero");
         Entity enemy1 = FindEntity(engine.World, "Enemy1");
+        Entity enemy2 = FindEntity(engine.World, "Enemy2");
 
         Press(engine, input, "<Keyboard>/F3");
-        Assert.Multiple(() =>
-        {
-            Assert.That(IsDerivedContextActive(engine, hero, AimCastContext), Is.True, Diagnostics(engine));
-            Assert.That(IsDerivedContextActive(engine, hero, SmartCastContext), Is.False);
-        });
+        Assert.That(ReadCastMode(engine, hero), Is.EqualTo(AimClickMode), Diagnostics(engine));
 
         AimPointerAt(engine, input, enemy1);
         Press(engine, input, "<Keyboard>/q");
@@ -110,15 +111,18 @@ public sealed class MobaDemoCastStyleAcceptanceTests
 
         Press(engine, input, "<Keyboard>/r");
         Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.True);
-        Press(engine, input, "<Keyboard>/Escape");
+        Press(engine, input, "<Keyboard>/escape");
         Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.False, "Esc also cancels aiming.");
 
         Press(engine, input, "<Keyboard>/F2");
-        Assert.Multiple(() =>
-        {
-            Assert.That(IsDerivedContextActive(engine, hero, SmartCastContext), Is.True);
-            Assert.That(IsDerivedContextActive(engine, hero, AimCastContext), Is.False);
-        });
+        Assert.That(ReadCastMode(engine, hero), Is.EqualTo(SmartCastMode));
+        Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.False);
+        Tick(engine, 2000);
+        AimPointerAt(engine, input, enemy2);
+        Press(engine, input, "<Keyboard>/q");
+        Tick(engine, 20);
+        Assert.That(ReadHealth(engine.World, enemy2), Is.EqualTo(80f).Within(0.001f),
+            "F2 restores smart cast: Q on an enemy orders without a confirm click. " + Diagnostics(engine));
     }
 
     [Test]
@@ -145,7 +149,7 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }),
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }),
             Path.Combine(repoRoot, "assets"));
 
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
@@ -190,6 +194,19 @@ public sealed class MobaDemoCastStyleAcceptanceTests
             ?? throw new InvalidOperationException("ScreenProjector missing.");
         backend.MousePosition = projector.WorldToScreen(
             WorldUnitsFix64.WorldCmToVisualMeters(Fix64Vec2.FromFloat(worldCm.X, worldCm.Y)));
+        Tick(engine, 2);
+    }
+
+    private static string ReadCastMode(GameEngine engine, Entity rep)
+    {
+        var registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+            ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
+        if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+        {
+            return "<none>";
+        }
+
+        return registry.GetName(pref.DefaultCastModeId);
     }
 
     private static void Press(GameEngine engine, TestInputBackend backend, string path)
