@@ -57,7 +57,7 @@ public sealed class L76FogBaselineHarness
         TestContext.Out.WriteLine(doc["perf"]!.ToJsonString());
     }
 
-    private static JsonObject SampleTruth(string truthName)
+    internal static JsonObject SampleTruth(string truthName)
     {
         var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
@@ -94,7 +94,7 @@ public sealed class L76FogBaselineHarness
         };
     }
 
-    private static JsonObject SampleShare()
+    internal static JsonObject SampleShare()
     {
         var demo = RunShare(TestDefaults.DemoPairRules());
         var oneWay = RunShare(OneWayShares());
@@ -177,7 +177,7 @@ public sealed class L76FogBaselineHarness
         return doc;
     }
 
-    private static JsonObject SamplePerf()
+    internal static JsonObject SamplePerf()
     {
         var tick12 = new double[PerfRepeats];
         var tick50 = new double[PerfRepeats];
