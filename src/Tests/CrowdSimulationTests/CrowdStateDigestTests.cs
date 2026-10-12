@@ -24,6 +24,26 @@ public sealed class CrowdStateDigestTests
         Assert.That(diff.Diverged, Is.True);
         Assert.That(diff.Tick, Is.EqualTo(-2));
         Assert.That(diff.Section, Is.EqualTo(""));
+        Assert.That(diff.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.None));
+    }
+
+    [Test]
+    public void DiffDigest_ChainedAndDiagnostic_NamesChainedFirst()
+    {
+        var left = new CrowdSimStateDigest(4, 1, 1, 1, 1);
+        var right = new CrowdSimStateDigest(4, 2, 1, 1, 1, groups: 9, jump: 8);
+        CrowdSimDigestDiff both = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { right });
+        TestContext.Out.WriteLine(
+            $"both diff tick={both.Tick} section={both.Section} diag={CrowdSimChecksum.FormatDiagnostic(both.Diagnostic)}");
+        Assert.That(both.Diverged, Is.True);
+        Assert.That(both.Tick, Is.EqualTo(4));
+        Assert.That(both.Section, Is.EqualTo("position"));
+        Assert.That(both.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups | CrowdSimDiagnosticSection.Jump));
+
+        var jumpOnly = new CrowdSimStateDigest(4, 1, 1, 1, 1, jump: 8);
+        CrowdSimDigestDiff jump = CrowdSimChecksum.DiffDigest(new[] { left }, new[] { jumpOnly });
+        Assert.That(jump.Section, Is.EqualTo("jump"));
+        Assert.That(jump.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Jump));
     }
 
     [Test]
@@ -81,6 +101,52 @@ public sealed class CrowdStateDigestTests
         Assert.That(position.Tick, Is.EqualTo(TickN));
         Assert.That(position.Section, Is.EqualTo("position"));
         Assert.That(CrowdSimChecksum.Compute(sessionB).Position, Is.Not.EqualTo(digestsA[TickN - 1].Position));
+    }
+
+    [Test]
+    public void GoalPerturbation_ReportsGroups_BeforeChainedSections()
+    {
+        var (runtime, sessionA) = Parity.S4DeployTruthTests.BuildSession("s7");
+        sessionA.Structures = null;
+        sessionA.DiagnosticDigest = true;
+        var sessionB = new CrowdSimSession(
+            runtime, World.Create(), sessionA.Navs, sessionA.NavByLayerRadius, sessionA.Presentation);
+        sessionB.DiagnosticDigest = true;
+        using var serviceA = new PathQueryService(sessionA.Navs, runtime, 1, TimeSpan.FromSeconds(30), sessionA.ResolveNavContext);
+        using var serviceB = new PathQueryService(sessionB.Navs, runtime, 1, TimeSpan.FromSeconds(30), sessionB.ResolveNavContext);
+        sessionA.EnableMovement(CrowdMovementKernel.Create(sessionA), new CrowdSimPlanner(sessionA, serviceA));
+        sessionB.EnableMovement(CrowdMovementKernel.Create(sessionB), new CrowdSimPlanner(sessionB, serviceB));
+        sessionA.BlockOnDueReplies = true;
+        sessionB.BlockOnDueReplies = true;
+
+        var origin = Fix64.FromInt(480000);
+        var originY = Fix64.FromInt(560000);
+        Assert.That(CrowdDeployment.SpawnAt(sessionA, origin, originY, 4, 1, 0, 0), Is.EqualTo(4));
+        Assert.That(CrowdDeployment.SpawnAt(sessionB, origin, originY, 4, 1, 0, 0), Is.EqualTo(4));
+
+        var digestsA = new List<CrowdSimStateDigest>(TickN);
+        var digestsB = new List<CrowdSimStateDigest>(TickN);
+        sessionA.Advance(TickN, digests: digestsA);
+        sessionB.Advance(TickN, digests: digestsB);
+        Assert.That(CrowdSimChecksum.DiffDigest(digestsA, digestsB).Diverged, Is.False);
+
+        int groupId = sessionB.Movement!.States[0].GroupId;
+        Assert.That(sessionB.Groups.TryGet(groupId, out var group), Is.True);
+        group.Goal = group.Goal == 3 ? 4 : 3;
+        CrowdSimDigestDiff diff = DiffAgainstCurrent(digestsA, digestsB, sessionB);
+        TestContext.Out.WriteLine(
+            $"goal diff tick={diff.Tick} section={diff.Section} diag={CrowdSimChecksum.FormatDiagnostic(diff.Diagnostic)}");
+        CrowdSimStateDigest recomputed = CrowdSimChecksum.Compute(sessionB);
+        Assert.That(diff.Diverged, Is.True);
+        Assert.That(diff.Tick, Is.EqualTo(TickN));
+        Assert.That(diff.Section, Is.EqualTo("groups"));
+        Assert.That(diff.Diagnostic, Is.EqualTo(CrowdSimDiagnosticSection.Groups));
+        Assert.That(recomputed.Total, Is.EqualTo(digestsA[TickN - 1].Total));
+        Assert.That(recomputed.Position, Is.EqualTo(digestsA[TickN - 1].Position));
+        Assert.That(recomputed.Motion, Is.EqualTo(digestsA[TickN - 1].Motion));
+        Assert.That(recomputed.State, Is.EqualTo(digestsA[TickN - 1].State));
+        Assert.That(recomputed.Avoidance, Is.EqualTo(digestsA[TickN - 1].Avoidance));
+        Assert.That(recomputed.Groups, Is.Not.EqualTo(digestsA[TickN - 1].Groups));
     }
 
     private static CrowdSimDigestDiff DiffAgainstCurrent(
