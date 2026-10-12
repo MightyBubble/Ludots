@@ -78,6 +78,37 @@ namespace Ludots.Core.Vision
             where TFilter : struct, IVisionStampFilter
         {
             PrepareMask(field, side, visibleMask);
+            FillOpen(side, occupied, dxdy, obscured, visibleMask);
+            field.CommitVisibleMask(visibleMask, side, ref filter);
+        }
+
+        private static void PrepareMask(FogField field, int side, Span<byte> visibleMask)
+        {
+            if (field == null)
+            {
+                throw new ArgumentNullException(nameof(field));
+            }
+
+            if (side <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(side));
+            }
+
+            if (visibleMask.Length != side * side)
+            {
+                throw new ArgumentException("Visible mask must cover the fog block.", nameof(visibleMask));
+            }
+
+            visibleMask.Clear();
+        }
+
+        private static void FillOpen(
+            int side,
+            ReadOnlySpan<int> occupied,
+            ReadOnlySpan<int> dxdy,
+            ReadOnlySpan<ushort> obscured,
+            Span<byte> visibleMask)
+        {
             bool gate = obscured.Length != 0;
             for (int i = 0; i < occupied.Length; i++)
             {
@@ -102,28 +133,6 @@ namespace Ludots.Core.Vision
                     visibleMask[index] = 1;
                 }
             }
-
-            field.CommitVisibleMask(visibleMask, side, ref filter);
-        }
-
-        private static void PrepareMask(FogField field, int side, Span<byte> visibleMask)
-        {
-            if (field == null)
-            {
-                throw new ArgumentNullException(nameof(field));
-            }
-
-            if (side <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(side));
-            }
-
-            if (visibleMask.Length != side * side)
-            {
-                throw new ArgumentException("Visible mask must cover the fog block.", nameof(visibleMask));
-            }
-
-            visibleMask.Clear();
         }
 
         private static void Fill<TFilter>(
