@@ -53,13 +53,13 @@
       },
       {
         "id": "px",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.sample.x"
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueX"
       },
       {
         "id": "py",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.sample.y"
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueY"
       },
       {
         "id": "ground",
@@ -919,18 +919,6 @@
         "fromPort": "value",
         "to": "hover_hostile",
         "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "px",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "py",
-        "toPort": "source"
       }
     ]
   }

@@ -53,13 +53,13 @@
       },
       {
         "id": "sx",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.sample.x"
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueX"
       },
       {
         "id": "sy",
-        "op": "ReadBlackboardFloat",
-        "blackboardKey": "aim.sample.y"
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueY"
       },
       {
         "id": "stick",
@@ -1254,18 +1254,6 @@
         "fromPort": "value",
         "to": "hover_hostile",
         "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "sx",
-        "toPort": "source"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "sy",
-        "toPort": "source"
       }
     ]
   }

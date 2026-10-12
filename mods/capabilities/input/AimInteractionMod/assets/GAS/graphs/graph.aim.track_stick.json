@@ -6,16 +6,12 @@
       {
         "label": "Aim.Stick",
         "action": "Aim.Stick",
-        "start": "rep",
+        "start": "px",
         "refire": "restart",
         "budget": "single-slice"
       }
     ],
     "nodes": [
-      {
-        "id": "rep",
-        "op": "LoadCaster"
-      },
       {
         "id": "px",
         "op": "LoadEntryPayloadFloat",
@@ -27,14 +23,14 @@
         "payloadKey": "MapTrigger.ActionValueY"
       },
       {
-        "id": "wx",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.sample.x"
+        "id": "sx",
+        "op": "StoreArgFloat",
+        "argKey": "MapTrigger.ActionValueX"
       },
       {
-        "id": "wy",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.sample.y"
+        "id": "sy",
+        "op": "StoreArgFloat",
+        "argKey": "MapTrigger.ActionValueY"
       },
       {
         "id": "body",
@@ -53,11 +49,6 @@
     ],
     "controlEdges": [
       {
-        "from": "rep",
-        "fromPort": "next",
-        "to": "px"
-      },
-      {
         "from": "px",
         "fromPort": "next",
         "to": "py"
@@ -65,15 +56,15 @@
       {
         "from": "py",
         "fromPort": "next",
-        "to": "wx"
+        "to": "sx"
       },
       {
-        "from": "wx",
+        "from": "sx",
         "fromPort": "next",
-        "to": "wy"
+        "to": "sy"
       },
       {
-        "from": "wy",
+        "from": "sy",
         "fromPort": "next",
         "to": "body"
       },
@@ -90,27 +81,15 @@
     ],
     "valueEdges": [
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "wx",
-        "toPort": "source"
-      },
-      {
         "from": "px",
         "fromPort": "value",
-        "to": "wx",
+        "to": "sx",
         "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "wy",
-        "toPort": "source"
       },
       {
         "from": "py",
         "fromPort": "value",
-        "to": "wy",
+        "to": "sy",
         "toPort": "value"
       }
     ]
