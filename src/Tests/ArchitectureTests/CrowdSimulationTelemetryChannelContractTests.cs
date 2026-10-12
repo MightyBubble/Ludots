@@ -33,6 +33,23 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(source, Does.Contain("session.Telemetry"));
     }
 
+    [Test]
+    public void RuntimeTick_DoesNotScanPlayerFogGrid()
+    {
+        string root = FindRepoRoot();
+        string runtime = File.ReadAllText(Path.Combine(root, "src", "Core", "CrowdSimulation", "Runtime", "CrowdSimulationRuntime.cs"));
+        string tick = SliceMethod(runtime, "public void Tick()");
+        Assert.That(tick, Does.Not.Contain("FogCellsPerSide"));
+        Assert.That(tick, Does.Not.Contain("Visible["));
+        Assert.That(tick, Does.Not.Contain("Explored["));
+        Assert.That(tick, Does.Not.Contain(".Belief"));
+        Assert.That(runtime, Does.Not.Contain("FogCellsPerSide"));
+        string fog = File.ReadAllText(Path.Combine(root, "src", "Core", "CrowdSimulation", "Fog", "CrowdFog.cs"));
+        Assert.That(fog, Does.Contain("VisibleCount[g] = visible"));
+        Assert.That(fog, Does.Contain("ExploredCount[g]++"));
+        Assert.That(fog, Does.Contain("GhostCount[g]"));
+    }
+
     private static string SliceMethod(string source, string signature)
     {
         int start = source.IndexOf(signature, StringComparison.Ordinal);
