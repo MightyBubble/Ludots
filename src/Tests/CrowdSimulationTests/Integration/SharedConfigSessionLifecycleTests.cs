@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -142,6 +143,96 @@ public sealed class SharedConfigSessionLifecycleTests
         }
 
         Assert.That(sessionA.TickCount, Is.EqualTo(frozen));
+    }
+
+    [Test]
+    public void CrowdSolver_WithoutConfigEntry_Throws()
+    {
+        InvalidOperationException ex = FocusProbe("crowd_missing", "crowd-simulation", includeCrowdMod: false);
+        AssertMissingCrowdConfig(ex, "crowd_missing");
+    }
+
+    [Test]
+    public void CrowdSolver_WhenConfigMergesNull_Throws()
+    {
+        InvalidOperationException ex = FocusProbe("crowd_empty", "crowd-simulation", includeCrowdMod: true);
+        AssertMissingCrowdConfig(ex, "crowd_empty");
+    }
+
+    [Test]
+    public void OtherSolver_WithoutCrowdConfig_DoesNotActivate()
+    {
+        string repoRoot = FindRepoRoot();
+        string probeModRoot = WriteProbeMod("nav_hold", "navmesh");
+        try
+        {
+            using var engine = Start(new List<string>
+            {
+                Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                probeModRoot,
+            }, repoRoot);
+            Assert.DoesNotThrow(() => engine.LoadMap("nav_hold"));
+            Assert.That(engine.GetService(CoreServiceKeys.CrowdSimulationSession), Is.Null);
+        }
+        finally
+        {
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
+        }
+    }
+
+    private static InvalidOperationException FocusProbe(string mapId, string solver, bool includeCrowdMod)
+    {
+        string repoRoot = FindRepoRoot();
+        string probeModRoot = WriteProbeMod(mapId, solver);
+        try
+        {
+            var mods = new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") };
+            if (includeCrowdMod)
+            {
+                mods.Add(Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"));
+            }
+
+            mods.Add(probeModRoot);
+            using var engine = Start(mods, repoRoot);
+            return Assert.Throws<InvalidOperationException>(() => engine.LoadMap(mapId))!;
+        }
+        finally
+        {
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
+        }
+    }
+
+    private static void AssertMissingCrowdConfig(InvalidOperationException ex, string mapId)
+    {
+        Assert.That(ex.Message, Does.Contain(mapId));
+        Assert.That(ex.Message, Does.Contain(NavSolverDeclaration.CrowdSimulation));
+        Assert.That(ex.Message, Does.Contain("CrowdSimulationConfig.json"));
+    }
+
+    private static string WriteProbeMod(string mapId, string solver)
+    {
+        string probeModRoot = Path.Combine(Path.GetTempPath(), "Ludots_CrowdSolverProbe_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Maps"));
+        Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Navigation"));
+        File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
+            """{"name":"LudotsCrowdSolverProbe","version":"1.0.0","priority":0,"dependencies":{"LudotsCoreMod":"^1.0.0"}}""");
+        File.WriteAllText(Path.Combine(probeModRoot, "assets", "Navigation", "navmesh.json"),
+            $$"""
+{
+  "maps": {
+    "{{mapId}}": { "solver": "{{solver}}" }
+  }
+}
+""");
+        File.WriteAllText(Path.Combine(probeModRoot, "assets", "Maps", mapId + ".json"), $$"""
+{
+  "Id": "{{mapId}}",
+  "Boards": [
+    { "Name": "default", "SpatialType": "Grid", "WidthCm": 6400, "HeightCm": 6400, "Grid": { "CellSizeCm": 100 } }
+  ]
+}
+""");
+        return probeModRoot;
     }
 
     private static List<string> CrowdMods(string repoRoot) =>

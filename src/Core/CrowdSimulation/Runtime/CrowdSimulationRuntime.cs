@@ -35,9 +35,8 @@ namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
 /// CrowdSimulation 会话宿主(引擎持有,MassNavigationRuntime 同款形态):
-/// 配置目录带 CrowdSimulationConfig.json 时,地图聚焦装正式配置。
+/// maps.&lt;mapId&gt;.solver 为 crowd-simulation 的地图在聚焦时必须合并出 CrowdSimulationConfig.json,然后建会话;挂起时释放。
 /// 调试目录项由提供 CrowdSimulationDebug.json 的 Mod 登记,只带脚本、相机和演示呈现。
-/// maps.&lt;mapId&gt;.solver 为 crowd-simulation 的地图在聚焦时建会话,挂起时释放。
 /// 会话跑在引擎世界上,单位带呈现投影接线;部署/脚本/回放都是指令流(数据),
 /// 回放另起一次性世界逐帧对拍校验码。
 /// </summary>
@@ -49,7 +48,6 @@ public sealed partial class CrowdSimulationRuntime
     private string? _focusedCrowdMapId;
     internal string? FormalConfigMapId => _focusedCrowdMapId;
     internal bool HasDebugConfig => _debug != null;
-    private bool _configResolved;
     private TimeSpan? _planTimeout;
 
     private CrowdSimSession? _session;
@@ -145,8 +143,8 @@ public sealed partial class CrowdSimulationRuntime
     public bool HandleMapFocused(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine) || _configDto == null) return false;
         if (!IsCrowdMap(engine, mapId.Value)) return false;
+        RequireConfig(engine, mapId.Value);
         if (_session != null && !string.Equals(_activeMapId, mapId.Value, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
@@ -204,34 +202,40 @@ public sealed partial class CrowdSimulationRuntime
     private bool IsCrowdMap(GameEngine engine, string mapId)
         => NavSolverDeclaration.Is(RequireLoadedNavmesh(engine), mapId, NavSolverDeclaration.CrowdSimulation);
 
-    private bool TryEnsureConfig(GameEngine engine)
+    private void RequireConfig(GameEngine engine, string mapId)
     {
-        if (_configResolved) return _configDto != null;
-        _configResolved = true;
-
-        var catalog = engine.ConfigCatalog;
-        if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out var configEntry))
+        if (_configDto != null)
         {
-            return false;
+            return;
         }
 
-        var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
+        var catalog = engine.ConfigCatalog;
+        JsonObject? merged = null;
+        if (catalog != null && catalog.TryGet(CrowdSimulationConfigPath, out var configEntry))
+        {
+            merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, engine.ConfigConflictReport);
+        }
+
+        if (merged == null)
+        {
+            throw new InvalidOperationException(
+                $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.CrowdSimulation}，但 {CrowdSimulationConfigPath} 缺失或合并为空。");
+        }
+
         _configDto = CrowdSimulationConfig.Load(merged);
 
         _planTimeout = TimeSpan.FromMilliseconds(_configDto.Worker.PlanTimeoutMs);
 
-        if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
+        if (!catalog!.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
             _debug = null;
-            return true;
+            return;
         }
 
         var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
         _debug = CrowdSimulationDebugConfig.Load(debugMerged);
         _presentation = _debug.Presentation;
-        return true;
     }
 
     private TimeSpan RequirePlanTimeout()

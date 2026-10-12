@@ -4,6 +4,7 @@ using System.IO;
 using Ludots.Core.Engine;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -89,6 +90,109 @@ public sealed class MassNavigationMapFocusTests
         {
             if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
         }
+    }
+
+    [Test]
+    public void MassSolver_WithoutConfigEntry_Throws()
+    {
+        InvalidOperationException ex = FocusProbe("mass_missing", "mass-navigation", registerConfig: false);
+        AssertMissingMassConfig(ex, "mass_missing");
+    }
+
+    [Test]
+    public void MassSolver_WhenConfigMergesNull_Throws()
+    {
+        InvalidOperationException ex = FocusProbe("mass_empty", "mass-navigation", registerConfig: true);
+        AssertMissingMassConfig(ex, "mass_empty");
+    }
+
+    [Test]
+    public void OtherSolver_WithoutMassConfig_DoesNotActivate()
+    {
+        string repoRoot = FindRepoRoot();
+        string probeModRoot = WriteProbe("nav_hold", "navmesh", registerConfig: false);
+        try
+        {
+            using GameEngine engine = Start(repoRoot, probeModRoot);
+            Assert.DoesNotThrow(() => engine.LoadMap("nav_hold"));
+            Assert.That(engine.TryGetService(MassNavigationKeys.RuntimeBinding, out MassNavigationRuntimeBinding? binding), Is.False);
+            Assert.That(binding, Is.Null);
+        }
+        finally
+        {
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
+        }
+    }
+
+    private static InvalidOperationException FocusProbe(string mapId, string solver, bool registerConfig)
+    {
+        string repoRoot = FindRepoRoot();
+        string probeModRoot = WriteProbe(mapId, solver, registerConfig);
+        try
+        {
+            using GameEngine engine = Start(repoRoot, probeModRoot);
+            return Assert.Throws<InvalidOperationException>(() => engine.LoadMap(mapId))!;
+        }
+        finally
+        {
+            if (Directory.Exists(probeModRoot)) Directory.Delete(probeModRoot, recursive: true);
+        }
+    }
+
+    private static void AssertMissingMassConfig(InvalidOperationException ex, string mapId)
+    {
+        Assert.That(ex.Message, Does.Contain(mapId));
+        Assert.That(ex.Message, Does.Contain(NavSolverDeclaration.MassNavigation));
+        Assert.That(ex.Message, Does.Contain("MassNavigationConfig.json"));
+    }
+
+    private static GameEngine Start(string repoRoot, string probeModRoot)
+    {
+        var engine = new GameEngine();
+        engine.InitializeWithConfigPipeline(new List<string>
+        {
+            Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+            probeModRoot,
+        }, Path.Combine(repoRoot, "assets"));
+        engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
+        engine.SetService(CoreServiceKeys.ViewController, new StubView());
+        engine.Start();
+        return engine;
+    }
+
+    private static string WriteProbe(string mapId, string solver, bool registerConfig)
+    {
+        string probeModRoot = Path.Combine(Path.GetTempPath(), "Ludots_MassSolverProbe_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Maps"));
+        Directory.CreateDirectory(Path.Combine(probeModRoot, "assets", "Navigation"));
+        File.WriteAllText(Path.Combine(probeModRoot, "mod.json"),
+            """{"name":"LudotsMassSolverProbe","version":"1.0.0","priority":0,"dependencies":{"LudotsCoreMod":"^1.0.0"}}""");
+        if (registerConfig)
+        {
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "config_catalog.json"), """
+[
+  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" }
+]
+""");
+        }
+
+        File.WriteAllText(Path.Combine(probeModRoot, "assets", "Navigation", "navmesh.json"),
+            $$"""
+{
+  "maps": {
+    "{{mapId}}": { "solver": "{{solver}}" }
+  }
+}
+""");
+        File.WriteAllText(Path.Combine(probeModRoot, "assets", "Maps", mapId + ".json"), $$"""
+{
+  "Id": "{{mapId}}",
+  "Boards": [
+    { "Name": "default", "SpatialType": "Grid", "WidthCm": 6400, "HeightCm": 6400, "Grid": { "CellSizeCm": 100 } }
+  ]
+}
+""");
+        return probeModRoot;
     }
 
     private static string ProbeMap(string mapId, int sizeCm) => $$"""

@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using Arch.System;
+using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
@@ -21,7 +23,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public sealed class MassNavigationRuntime
 {
     private MassNavigationConfig? _config;
-    private bool _configResolved;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private MassNavigationSimulationRuntime? _simulation;
@@ -33,11 +34,12 @@ public sealed class MassNavigationRuntime
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !NavSolverDeclaration.Is(RequireNavmesh(engine), mapId.Value, NavSolverDeclaration.MassNavigation))
+        if (!NavSolverDeclaration.Is(RequireNavmesh(engine), mapId.Value, NavSolverDeclaration.MassNavigation))
         {
             return false;
         }
+
+        MassNavigationConfig config = RequireConfig(engine, mapId.Value);
 
         if (_activeMapId != null && !string.Equals(_activeMapId, mapId.Value, StringComparison.Ordinal))
         {
@@ -120,7 +122,7 @@ public sealed class MassNavigationRuntime
     private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
+        if (_config is null ||
             _activeMapId == null ||
             !string.Equals(mapId.Value, _activeMapId, StringComparison.Ordinal))
         {
@@ -215,18 +217,11 @@ public sealed class MassNavigationRuntime
         return simulation;
     }
 
-    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig? config)
+    private MassNavigationConfig RequireConfig(GameEngine engine, string mapId)
     {
         if (_config != null)
         {
-            config = _config;
-            return true;
-        }
-
-        if (_configResolved)
-        {
-            config = null;
-            return false;
+            return _config;
         }
 
         if (engine.ConfigPipeline == null)
@@ -234,22 +229,32 @@ public sealed class MassNavigationRuntime
             throw new InvalidOperationException("MassNavigation runtime requires ConfigPipeline before loading MassNavigationConfig.");
         }
 
-        var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
-        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded) ||
-            loaded is null)
+        const string relativePath = MassNavigationConfigLoader.DefaultRelativePath;
+        ConfigCatalog? catalog = engine.ConfigCatalog;
+        JsonObject? merged = null;
+        if (catalog != null && catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            _configResolved = true;
-            config = null;
-            return false;
+            if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation runtime config '{relativePath}' must use DeepObject merge policy.");
+            }
+
+            merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport);
         }
 
+        if (merged == null)
+        {
+            throw new InvalidOperationException(
+                $"地图 \"{mapId}\" 的 solver 是 {NavSolverDeclaration.MassNavigation}，但 {relativePath} 缺失或合并为空。");
+        }
+
+        MassNavigationConfig loaded = MassNavigationConfig.Load(merged);
         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
         loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
         _config = loaded;
-        _configResolved = true;
-        config = loaded;
-        return true;
+        return loaded;
     }
 
     private void EnsureScenario(GameEngine engine)

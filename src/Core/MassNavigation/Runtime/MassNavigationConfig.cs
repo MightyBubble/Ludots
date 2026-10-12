@@ -673,7 +673,8 @@ public sealed class MassNavigationConfigLoader
 
         if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            return false;
+            throw new InvalidOperationException(
+                $"MassNavigation runtime config '{relativePath}' must be registered in config_catalog.json.");
         }
 
         if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
