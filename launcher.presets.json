@@ -3738,14 +3738,14 @@
       "buildMode": "auto"
     },
     {
-          "id": "aim_control_schemes_raylib",
-          "name": "Aim Control Schemes Raylib",
-          "selectors": [
-            "$aim_control_schemes"
-          ],
-          "adapterId": "raylib",
-          "buildMode": "auto"
-        },
+      "id": "aim_control_schemes_raylib",
+      "name": "Aim Control Schemes Raylib",
+      "selectors": [
+        "$aim_control_schemes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
     {
       "id": "capability_standard_graph_op_IsCastMode_raylib",
       "name": "Graph Op IsCastMode Raylib",
@@ -3805,6 +3805,24 @@
       "name": "Graph Op LoadEntityFacing Raylib",
       "selectors": [
         "$capability_standard_graph_op_LoadEntityFacing"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IsContextActive_raylib",
+      "name": "Graph Op IsContextActive Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IsContextActive"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadSlotAbilityId_raylib",
+      "name": "Graph Op LoadSlotAbilityId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadSlotAbilityId"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

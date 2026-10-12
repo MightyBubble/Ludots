@@ -399,8 +399,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SetCastMode or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
+                GraphNodeOp.LoadSlotAbilityId or
                 GraphNodeOp.Fail or
-                GraphNodeOp.AbilityAcceptsTargetKind
+                GraphNodeOp.AbilityAcceptsTargetKind or
+                GraphNodeOp.IsContextActive
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -980,6 +982,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SetCastMode, HandleSetCastMode, "SetCastMode graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
+            Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
+            Register(GraphNodeOp.IsContextActive, HandleIsContextActive, "IsContextActive graph opcode.");
             Register(GraphNodeOp.Fail, HandleFail, "Fail graph opcode.");
             Register(GraphNodeOp.AbilityAcceptsTargetKind, HandleAbilityAcceptsTargetKind, "AbilityAcceptsTargetKind graph opcode.");
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
@@ -1679,8 +1683,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleDispatchMapEvent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            bool selfScope = (ins.Flags & 1) != 0;
-            bool globalScope = (ins.Flags & 2) != 0;
+            bool selfScope = (ins.Flags & DispatchMapEventFlags.SelfScope) != 0;
+            bool globalScope = (ins.Flags & DispatchMapEventFlags.GlobalScope) != 0;
+            bool abilityRoute = (ins.Flags & DispatchMapEventFlags.AbilityRoute) != 0;
+            if (globalScope && abilityRoute)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchMapEventAbilityRouteGlobal: DispatchMapEvent (event key id {ins.Imm}) ability route is map-scoped; global dispatch has no ability mounts.");
+            }
+
             MapId mapId = globalScope
                 ? (s.MapScope ?? ResolveMapOfEntity(ref s, s.Caster))
                 : selfScope || s.MapScope is null
@@ -1707,8 +1718,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"GAS.GRAPH.ERR.DispatchMapEventNoMapScope: DispatchMapEvent (event key id {ins.Imm}) requires a map-bound host (MapScope) or a caster that anchors a map.");
             }
 
+            int abilityId = 0;
             Entity selfSource = selfScope ? s.Caster : Entity.Null;
-            s.Api.FireMapEventPayload(ins.Imm, mapId, selfSource, s.InvokeArgs);
+            if (abilityRoute)
+            {
+                abilityId = s.I[ins.A];
+                if (abilityId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.DispatchMapEventAbilityRouteEmpty: DispatchMapEvent (event key id {ins.Imm}) ability route requires a positive ability id.");
+                }
+
+                selfSource = s.Caster;
+            }
+
+            s.Api.FireMapEventPayload(ins.Imm, mapId, selfSource, s.InvokeArgs, abilityId);
             s.InvokeArgs?.Clear();
         }
 
@@ -1828,6 +1852,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleLoadAbilityCastRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.F[ins.Dst] = s.Api.LoadAbilityCastRange(s.E[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleLoadSlotAbilityId(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.LoadSlotAbilityId(s.E[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleIsContextActive(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity subject = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.B[ins.Dst] = (byte)(s.Api.IsContextActive(subject, ins.Imm) ? 1 : 0);
         }
 
         private static void HandleAbilityAcceptsTargetKind(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

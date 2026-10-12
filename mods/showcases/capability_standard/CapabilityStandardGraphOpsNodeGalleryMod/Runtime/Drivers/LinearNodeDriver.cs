@@ -84,8 +84,9 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         bool isCastMode = string.Equals(op, nameof(GraphNodeOp.IsCastMode), StringComparison.Ordinal);
         bool setCastMode = string.Equals(op, nameof(GraphNodeOp.SetCastMode), StringComparison.Ordinal);
         bool loadRange = string.Equals(op, nameof(GraphNodeOp.LoadAbilityCastRange), StringComparison.Ordinal);
+        bool loadSlot = string.Equals(op, nameof(GraphNodeOp.LoadSlotAbilityId), StringComparison.Ordinal);
         bool acceptsKind = string.Equals(op, nameof(GraphNodeOp.AbilityAcceptsTargetKind), StringComparison.Ordinal);
-        if (!isCastMode && !setCastMode && !loadRange && !acceptsKind)
+        if (!isCastMode && !setCastMode && !loadRange && !acceptsKind && !loadSlot)
         {
             return;
         }
@@ -115,7 +116,7 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             }
         }
 
-        if (isCastMode || loadRange || acceptsKind)
+        if (isCastMode || loadRange || acceptsKind || loadSlot)
         {
             SeedRangedAbilitySlot(ctx, actor);
         }

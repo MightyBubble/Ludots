@@ -571,6 +571,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         LoadEntityFacing = 537,
 
+        /// <summary>
+        /// I[Dst] = the ability id resolved for actor E[A] at slot I[B]
+        /// (transient grant, item grant, form, then the base slot).
+        /// A dead actor or an empty slot fails closed. The id is the slot's ability id;
+        /// this op does not read the ability definition.
+        /// </summary>
+        LoadSlotAbilityId = 538,
+
+        /// <summary>
+        /// B[Dst] = 1 when subject E[A] carries the interaction context named by symbols[Imm]
+        /// (base mount or derived instance). A omitted (A = 0xFF) reads the caster.
+        /// A dead subject or an unknown profile fails closed; a known inactive profile returns 0.
+        /// </summary>
+        IsContextActive = 539,
+
+    }
+
+    /// <summary>
+    /// DispatchMapEvent instruction flags. Bit 2 is the ability-id route: I[A] is the ability id,
+    /// stamped as transport metadata so ability-scoped mounts can filter, and the graph caster
+    /// is stamped as SourceEntity so the mount's LoadCaster is that caster.
+    /// </summary>
+    public static class DispatchMapEventFlags
+    {
+        public const byte SelfScope = 1;
+        public const byte GlobalScope = 2;
+        public const byte AbilityRoute = 4;
     }
 
     public static class GraphNodeOpParser

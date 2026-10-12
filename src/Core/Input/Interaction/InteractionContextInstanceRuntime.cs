@@ -97,6 +97,18 @@ namespace Ludots.Core.Input.Interaction
             return count;
         }
 
+        /// <summary>
+        /// True when the subject carries the context named by <paramref name="contextKeyId"/>
+        /// as its base mount or an active instance. A dead subject or an unknown profile fails
+        /// closed; a known profile that is not mounted returns false.
+        /// </summary>
+        public bool IsContextActive(Entity subject, int contextKeyId)
+        {
+            RequireAliveSubject(subject, nameof(IsContextActive));
+            int profileId = RequireProfileId(contextKeyId, nameof(IsContextActive));
+            return IsActive(subject, profileId);
+        }
+
         /// <summary>True when the subject carries the context as its base mount or an active instance.</summary>
         public bool IsActive(Entity subject, int profileId)
         {

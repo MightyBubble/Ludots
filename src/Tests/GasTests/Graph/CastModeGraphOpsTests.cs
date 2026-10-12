@@ -361,6 +361,32 @@ namespace Ludots.Tests.GasTests.Graph
             return doc;
         }
 
+        private static GraphControlFlowDocument LoadSlotAbilityDoc(string kind)
+        {
+            return new GraphControlFlowDocument
+            {
+                Id = "tests.graph.load-slot-ability." + kind,
+                Kind = kind,
+                Entry = "slot",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "slot", Op = "ConstInt", IntValue = 0 },
+                    new GraphControlFlowNode { Id = "actor", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "ability", Op = "LoadSlotAbilityId" },
+                },
+                ControlEdges =
+                {
+                    new GraphControlFlowEdge("slot", "next", "actor"),
+                    new GraphControlFlowEdge("actor", "next", "ability"),
+                },
+                ValueEdges =
+                {
+                    new GraphControlFlowValueEdge("actor", "value", "ability", "source"),
+                    new GraphControlFlowValueEdge("slot", "value", "ability", "value"),
+                },
+            };
+        }
+
         private static GraphControlFlowDocument LoadRangeDoc(string kind)
         {
             return new GraphControlFlowDocument
@@ -423,7 +449,7 @@ namespace Ludots.Tests.GasTests.Graph
                 new int[GraphVmLimits.MaxIntIds],
                 new int[GraphVmLimits.MaxCallStackDepth]);
             GraphExecutor.Execute(ref frame, package.Program, programAlreadyValidated: false);
-            return new Run(featuredDst, frame.B.ToArray(), frame.F.ToArray(), frame.TargetPosCm);
+            return new Run(featuredDst, frame.B.ToArray(), frame.F.ToArray(), frame.I.ToArray(), frame.TargetPosCm);
         }
 
         private static byte RequireFeaturedDst(GraphControlFlowCompileResult compiled, string featuredNodeId)
@@ -442,7 +468,24 @@ namespace Ludots.Tests.GasTests.Graph
             return 0;
         }
 
-        private readonly record struct Run(byte FeaturedDst, byte[] Bools, float[] Floats, IntVector2 TargetPosCm);
+        private readonly record struct Run(byte FeaturedDst, byte[] Bools, float[] Floats, int[] Ints, IntVector2 TargetPosCm);
+
+        [Test]
+        public void LoadSlotAbilityId_ReadsTheResolvedIdAndRejectsAnEmptySlot([Values("Effect", "Query")] string kind)
+        {
+            using var world = World.Create();
+            Fixture fixture = Fixture.Create(world, withTargeting: false);
+            Entity actor = fixture.Unit(defaultMode: null, pinAbility: 0, pinMode: null, withSlot: true);
+
+            Run run = CompileAndRun(LoadSlotAbilityDoc(kind), world, fixture.Api, "ability", actor, actor);
+            Assert.That(run.Ints[run.FeaturedDst], Is.EqualTo(fixture.AbilityId));
+
+            Entity empty = world.Create();
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                CompileAndRun(LoadSlotAbilityDoc(kind), world, fixture.Api, "ability", empty, empty));
+            Assert.That(error!.Message, Does.Contain("GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty"));
+            Assert.That(error.Message, Does.Contain("slot 0"));
+        }
 
         [Test]
         public void AimPress_NoneCheck_WithChampionBindHook_StaysInsideTheSlice()

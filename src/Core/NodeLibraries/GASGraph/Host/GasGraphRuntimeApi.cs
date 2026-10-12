@@ -896,7 +896,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// ValidateFirePayload backstops missing required params, type mismatches, and
         /// undeclared MapTrigger.* keys.
         /// </summary>
-        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs, int abilityId)
         {
             RejectDerivedAttributeSideEffect(nameof(FireMapEventPayload));
             var triggerManager = _triggerManager
@@ -912,7 +912,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             ScriptContext context = BuildDispatchContext(schema, mapId, stagedArgs);
 
-            if (selfSource != Entity.Null && selfSource != default &&
+            if (abilityId > 0)
+            {
+                context.Set(MapTriggerEventPayloadKeys.AbilityId, abilityId);
+                if (selfSource != Entity.Null && selfSource != default)
+                {
+                    context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
+                }
+            }
+            else if (selfSource != Entity.Null && selfSource != default &&
                 schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.SourceEntity))
             {
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
@@ -1193,6 +1201,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <inheritdoc />
+        public int LoadSlotAbilityId(Entity actor, int slot)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdActorDead: actor {actor} is not alive.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            return slotState.AbilityId;
+        }
+
+        /// <inheritdoc />
         public bool AbilityAcceptsTargetKind(Entity actor, int slot, int kindKeyId)
         {
             if (_world == null || !_world.IsAlive(actor))
@@ -1278,6 +1304,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var contextInstances = _contextInstances
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
             contextInstances.Deactivate(subject, contextKeyId);
+        }
+
+        /// <inheritdoc />
+        public bool IsContextActive(Entity subject, int contextKeyId)
+        {
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            return contextInstances.IsContextActive(subject, contextKeyId);
         }
 
         /// <summary>

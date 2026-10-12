@@ -759,6 +759,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     for (int i = 0; i < schema.Params.Count; i++)
                     {
                         Ludots.Core.Scripting.EventParamSchema param = schema.Params[i];
+                        if (string.Equals(param.Name, GraphControlFlowPorts.Ability, StringComparison.Ordinal))
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                                $"DispatchMapEvent node '{node.Id}' parameter '{param.Name}' is reserved for the ability-id route and cannot be a schema parameter.",
+                                node.Id));
+                            continue;
+                        }
+
                         if (param.Type == Ludots.Core.Scripting.EventParamType.String)
                         {
                             if (valueEdges.ContainsKey(new ValueInputKey(node.Id, param.Name)))
@@ -785,10 +793,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         }
                     }
 
+                    bool abilityRoute = false;
                     foreach (GraphControlFlowValueEdge edge in valueEdges.Values)
                     {
                         if (!string.Equals(edge.To, node.Id, StringComparison.Ordinal))
                         {
+                            continue;
+                        }
+
+                        if (string.Equals(edge.ToPort, GraphControlFlowPorts.Ability, StringComparison.Ordinal))
+                        {
+                            abilityRoute = true;
                             continue;
                         }
 
@@ -806,6 +821,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         {
                             diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
                                 $"DispatchMapEvent node '{node.Id}' has no schema parameter '{edge.ToPort}' for event '{schema.EventName}'.",
+                                node.Id));
+                        }
+                    }
+
+                    if (abilityRoute)
+                    {
+                        RequireValueInput(
+                            node,
+                            GraphControlFlowPorts.Ability,
+                            GraphValueType.Int,
+                            valueEdges,
+                            nodeIndices,
+                            outputTypes,
+                            graphId,
+                            diagnostics);
+                        string abilityScope = (node.Scope ?? "map").Trim();
+                        if (string.Equals(abilityScope, "global", StringComparison.OrdinalIgnoreCase))
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                                $"DispatchMapEvent node '{node.Id}' ability route is map-scoped; global dispatch has no ability mounts.",
                                 node.Id));
                         }
                     }
@@ -872,8 +907,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityCastRange:
+                case GraphNodeOp.LoadSlotAbilityId:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.IsContextActive:
+                    RequireNonEmpty(node.Context, "context", node, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
                     break;
 
                 case GraphNodeOp.AbilityAcceptsTargetKind:
@@ -2066,7 +2111,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     for (int i = 0; i < schema.Params.Count; i++)
                     {
                         Ludots.Core.Scripting.EventParamSchema param = schema.Params[i];
-                        if (param.Type == Ludots.Core.Scripting.EventParamType.String ||
+                        if (string.Equals(param.Name, GraphControlFlowPorts.Ability, StringComparison.Ordinal) ||
+                            param.Type == Ludots.Core.Scripting.EventParamType.String ||
                             !valueEdges.ContainsKey(new ValueInputKey(node.Id, param.Name)))
                         {
                             continue;
@@ -2096,11 +2142,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     string dispatchScope = (node.Scope ?? "map").Trim().ToLowerInvariant();
                     bool selfScope = string.Equals(dispatchScope, "self", StringComparison.Ordinal);
                     bool globalScope = string.Equals(dispatchScope, "global", StringComparison.Ordinal);
+                    bool abilityRoute = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Ability));
+                    byte abilityRegister = 0;
+                    if (abilityRoute)
+                    {
+                        abilityRegister = ResolveValueInput(
+                            node,
+                            GraphControlFlowPorts.Ability,
+                            GraphValueType.Int,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    }
+
+                    byte dispatchFlags = globalScope
+                        ? DispatchMapEventFlags.GlobalScope
+                        : selfScope
+                            ? DispatchMapEventFlags.SelfScope
+                            : (byte)0;
+                    if (abilityRoute)
+                    {
+                        dispatchFlags |= DispatchMapEventFlags.AbilityRoute;
+                    }
+
                     program[emitIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.DispatchMapEvent,
                         Imm = Intern(symbolToIndex, symbols, schema.EventName),
-                        Flags = (byte)(globalScope ? 2 : selfScope ? 1 : 0)
+                        Flags = dispatchFlags,
+                        A = abilityRegister,
                     };
                     SetSource(sources, emitIndex, graphId, node, nameof(GraphNodeOp.DispatchMapEvent), GraphControlFlowPorts.Enter);
 
@@ -2245,12 +2313,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.LoadAbilityCastRange:
+                case GraphNodeOp.LoadSlotAbilityId:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.IsContextActive:
+                    instruction.Imm = RequireSymbol(node.Context, "context", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
                     break;
 
                 case GraphNodeOp.AbilityAcceptsTargetKind:

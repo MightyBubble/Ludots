@@ -236,6 +236,81 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void IsContextActive_FailsClosedWhenDeadOrUnknownAndReadsTheMountedSet()
+        {
+            using World world = NewWorld(out var runtime, out var profiles, out _, out _);
+            Entity subject = world.Create();
+            int aimKey = Key(AimProfile);
+
+            Assert.That(runtime.IsContextActive(subject, aimKey), Is.False);
+
+            runtime.Activate(subject, aimKey, 0);
+            Assert.That(runtime.IsContextActive(subject, aimKey), Is.True);
+
+            int battleId = profiles.ProfileIdRegistry.GetId(BattleProfile);
+            world.Add(subject, new InteractionContextInstance { ContextId = battleId });
+            Assert.That(runtime.IsContextActive(subject, Key(BattleProfile)), Is.True, "a base mount counts as active");
+
+            Entity dead = world.Create();
+            world.Destroy(dead);
+            Assert.That(
+                () => runtime.IsContextActive(dead, aimKey),
+                Throws.InvalidOperationException.With.Message.Contains("SubjectDead"));
+            Assert.That(
+                () => runtime.IsContextActive(subject, Key("interaction.context.test.missing")),
+                Throws.InvalidOperationException.With.Message.Contains("Unknown"));
+
+            var api = new GasGraphRuntimeApi(world);
+            api.BindContextInstances(runtime);
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.IsContextActive, A = byte.MaxValue, Imm = aimKey, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            var frame = GraphFrame.Bind(
+                GraphKind.Effect,
+                GraphEntityPreset.None,
+                world,
+                subject,
+                subject,
+                default,
+                api,
+                programs: null,
+                new float[GraphVmLimits.MaxFloatRegisters],
+                new int[GraphVmLimits.MaxIntRegisters],
+                new byte[GraphVmLimits.MaxBoolRegisters],
+                new Entity[GraphVmLimits.MaxEntityRegisters],
+                new Entity[GraphVmLimits.MaxTargets],
+                new int[GraphVmLimits.MaxIntIds],
+                new int[GraphVmLimits.MaxCallStackDepth]);
+            GraphExecutor.Execute(ref frame, program, programAlreadyValidated: false);
+            Assert.That(frame.B[0], Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Compiler_EmitsIsContextActiveWithOptionalSource()
+        {
+            foreach (string kind in new[] { "Effect", "Query" })
+            {
+                var doc = new GraphControlFlowDocument
+                {
+                    Id = "ctx.active." + kind,
+                    Kind = kind,
+                    Entry = "check",
+                    Nodes =
+                    {
+                        new GraphControlFlowNode { Id = "check", Op = "IsContextActive", Context = AimProfile },
+                    },
+                };
+                GraphControlFlowCompileResult result = GraphControlFlowCompiler.Compile(doc);
+                Assert.That(result.Diagnostics, Is.Empty, string.Join("; ", result.Diagnostics));
+                GraphInstruction check = result.Package!.Value.Program.First(instruction => instruction.Op == (ushort)GraphNodeOp.IsContextActive);
+                Assert.That(check.A, Is.EqualTo(byte.MaxValue), "an omitted source reads the caster");
+                Assert.That(result.Package.Value.Symbols[check.Imm], Is.EqualTo(AimProfile));
+            }
+        }
+
+        [Test]
         public void Compiler_EmitsActivateContextWithParentSymbolAndOptionalSource()
         {
             var doc = new GraphControlFlowDocument

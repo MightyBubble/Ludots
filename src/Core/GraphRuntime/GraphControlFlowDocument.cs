@@ -389,6 +389,11 @@ namespace Ludots.Core.GraphRuntime
         public const string List = "list";
         public const string TeamId = "teamId";
         public const string Source = "source";
+        /// <summary>
+        /// DispatchMapEvent ability-id route. An int, not a schema parameter:
+        /// a schema parameter with this name is rejected.
+        /// </summary>
+        public const string Ability = "ability";
         public const string Min = "min";
         public const string Max = "max";
         public const string Tolerance = "tolerance";

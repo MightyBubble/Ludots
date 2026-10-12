@@ -4547,6 +4547,52 @@
         "GraphOpsNodeGalleryContextAcceptanceTests.LoadEntityFacingVignette_QuotesTheTargetFacingDegrees"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadSlotAbilityId",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadSlotAbilityId",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCastModeAcceptanceTests.LoadSlotAbilityIdVignette_QuotesTheInstalledAbilityId",
+        "CastModeGraphOpsTests.LoadSlotAbilityId_ReadsTheResolvedIdAndRejectsAnEmptySlot"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "IsContextActive",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_IsContextActive",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.IsContextActiveVignette_QuotesAnActiveContext",
+        "InteractionContextInstanceTests.IsContextActive_FailsClosedWhenDeadOrUnknownAndReadsTheMountedSet"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

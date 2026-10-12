@@ -216,14 +216,16 @@
 - [读出木桩的朝向](LoadEntityFacing.md) — 不靠眼睛看，图里直接读木桩面朝哪一度，读数顺手折成伤打出去。
 - [读出木桩的横坐标](LoadEntityPosX.md) — 不靠眼睛看，图里直接读木桩站在第几厘米，读数顺手折成伤打出去。
 - [读出木桩的纵坐标](LoadEntityPosY.md) — 横向读过了，这次读纵坐标，木桩站得多偏一看便知。
+- [读出这一槽的技能编号](LoadSlotAbilityId.md) — 图按槽位找到技能，读它的编号。
 - [读出这一槽的施法距离](LoadAbilityCastRange.md) — 图按槽位找到技能，读它写明的施法距离。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
 - [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
 - [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
 - [读活指针纵向](LoadPointerScreenY.md) — 活指针纵向停在 42，读数进伤害链。
 - [负债翻面成正数](NegFloat.md) — 负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
-- [问这个槽是不是这种施法](IsCastMode.md) — 图拿代表记下的施法方式，对槽位上那条技能。
 - [问这一槽接不接受这种目标](AbilityAcceptsTargetKind.md) — 图按槽位读技能声明的目标种类。
+- [问这个情境还在不在](IsContextActive.md) — 图先把情境挂上，再问它是不是还在。
+- [问这个槽是不是这种施法](IsCastMode.md) — 图拿代表记下的施法方式，对槽位上那条技能。
 - [隔空落子](SetWorldPosition.md) — 不用挪动命令，一枚棋子从图里被放到了指定点。
 - [面板落地](CreatePanel.md) — 关卡蓝图一句话，属性卡从模板里长了出来。
 - [面板退场](DestroyPanel.md) — 节点一句话，面板实例连同它的绑定一起收走。

@@ -173,6 +173,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Dst = 0;
                         break;
                     case GraphNodeOp.DeactivateContext:
+                    case GraphNodeOp.IsContextActive:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ActivateVirtualCamera:

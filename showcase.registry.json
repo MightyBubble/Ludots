@@ -11412,6 +11412,60 @@
       "video": "artifacts/evidence/capability_standard_graph_op_LoadEntityFacing/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_IsContextActive",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsContextActiveEntryMod",
+      "projectPath": "CapabilityStandardGraphOpIsContextActiveEntryMod.csproj",
+      "title": "问这个情境还在不在",
+      "summary": "图先把情境挂上，再问它是不是还在。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "IsContextActive"
+      ],
+      "binding": "capability_standard_graph_op_IsContextActive",
+      "preset": "capability_standard_graph_op_IsContextActive_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/IsContextActive.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_IsContextActive",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_IsContextActive/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_IsContextActive/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_LoadSlotAbilityId",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod",
+      "projectPath": "CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod.csproj",
+      "title": "读出这一槽的技能编号",
+      "summary": "图按槽位找到技能，读它的编号。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "LoadSlotAbilityId"
+      ],
+      "binding": "capability_standard_graph_op_LoadSlotAbilityId",
+      "preset": "capability_standard_graph_op_LoadSlotAbilityId_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadSlotAbilityId.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadSlotAbilityId",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadSlotAbilityId/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadSlotAbilityId/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

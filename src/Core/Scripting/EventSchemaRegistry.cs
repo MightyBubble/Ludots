@@ -41,6 +41,10 @@ namespace Ludots.Core.Scripting
         {
             MapTriggerEventPayloadKeys.SourceMapId,
             MapTriggerEventPayloadKeys.SourceEntity,
+            // Ability-scoped mounts filter on this key. DispatchMapEvent's ability route
+            // stamps it without a schema parameter, because custom schemas cannot declare
+            // the reserved MapTrigger. namespace.
+            MapTriggerEventPayloadKeys.AbilityId,
         };
 
         internal static bool IsTransportMetadataPayloadKey(string payloadKey)

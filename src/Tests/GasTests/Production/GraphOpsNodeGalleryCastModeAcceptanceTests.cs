@@ -1,5 +1,6 @@
 using Arch.Core;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
@@ -56,6 +57,19 @@ public sealed class GraphOpsNodeGalleryCastModeAcceptanceTests
         runtime.EnsureWorld();
         runtime.Tick(0.35f);
         AssertDetail(runtime, "AbilityAcceptsTargetKind");
+    }
+
+    [Test]
+    public void LoadSlotAbilityIdVignette_QuotesTheInstalledAbilityId()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadSlotAbilityId");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        AssertDetail(runtime, "LoadSlotAbilityId");
+        int abilityId = AbilityIdRegistry.GetId("Ability.GraphOps.CastRange");
+        Assert.That(abilityId, Is.GreaterThan(0));
+        Assert.That(runtime.Metrics.Detail, Does.Contain($"技能编号 {abilityId}"));
     }
 
     [Test]

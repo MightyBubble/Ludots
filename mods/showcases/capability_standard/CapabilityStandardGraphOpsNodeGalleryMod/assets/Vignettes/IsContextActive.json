@@ -1,0 +1,38 @@
+{
+  "op": "IsContextActive",
+  "driver": "linear",
+  "title": "问这个情境还在不在",
+  "beat": "图先把情境挂上，再问它是不是还在。",
+  "detailTemplate": "情境还在（{result}），木桩从{healthBefore}掉到{healthAfter}。",
+  "assertDetailContains": [
+    "成立"
+  ],
+  "featuredNodeId": "check",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "bool",
+    "applyTo": "graphSettled"
+  }
+}

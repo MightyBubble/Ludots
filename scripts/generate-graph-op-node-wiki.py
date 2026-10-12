@@ -344,6 +344,9 @@ OPTIONAL_TARGET_BOUNDARY = {
     "SubmitAssignedOrder": "目标口可以不接。不接时这道令没有实体目标，落点仍由 a、b 给出。",
     "AbilityAcceptsTargetKind": "`symbol` 只接受 `unit`、`ground` 或 `none`。`none` 独占：技能声明里不能和 `unit` 或 `ground` 写在一起，加载直接失败。技能没写 `targeting.targetKinds`、槽位是空的、或种类名不认识，节点直接失败，不会当成“都收”。`castRangeCm` 为 0 也不会自动变成 `none`。",
     "LoadEntityFacing": "源实体死了，或者身上没有 `FacingDirection`，节点直接失败，不会写成 0 度。读出的度数是组件弧度乘 180/π，和 `PointToDirection`、`StickToDirection` 同一套，不折进 0–360。",
+    "LoadSlotAbilityId": "源实体死了，或者这个槽没有装技能，节点直接失败，不会写成 0。读的是槽上解析出来的技能编号，顺序是临时授予、物品授予、形态、底槽。它不打开技能定义。",
+    "IsContextActive": "`source` 可以不接，不接就读跑这张图的人。人死了，或者情境名没装上，节点直接失败。情境装了但当前没挂上，读数是 0。基座挂载和派生实例都算挂着。",
+    "DispatchMapEvent": "可以另接一个 int 口 `ability`。接上之后这次派发带上技能编号，只叫醒这张技能自己挂的触发图，并把跑这张图的人写成事件来源。事件参数里不能再有名叫 ability 的参数。global 不能接这个口。技能编号小于等于 0 直接失败。",
 }
 
 

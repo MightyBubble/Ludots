@@ -129,6 +129,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Ability id resolved for <paramref name="actor"/> at <paramref name="slot"/>.
+        /// A dead actor or an empty slot fails closed. Does not read the ability definition.
+        /// </summary>
+        int LoadSlotAbilityId(Entity actor, int slot)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
+        }
+
+        /// <summary>
         /// True when the ability on <paramref name="actor"/> at <paramref name="slot"/>
         /// lists the target kind named by <paramref name="kindKeyId"/> (<c>unit</c>, <c>ground</c>, or exclusive <c>none</c>).
         /// An empty slot, a missing targeting block, or an unknown kind fails closed.
@@ -156,6 +165,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Fail-closed when the context is not mounted as an instance.
         /// </summary>
         void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// True when <paramref name="subject"/> carries the interaction context named by
+        /// <paramref name="contextKeyId"/> (base mount or derived instance). A dead subject
+        /// or an unknown profile fails closed; a known inactive profile returns false.
+        /// </summary>
+        bool IsContextActive(Entity subject, int contextKeyId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
         }
@@ -665,9 +684,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// come from the StoreArg* staging table keyed by the event schema's payload keys;
         /// TriggerManager.ValidateFirePayload backstops missing/mistyped parameters.
         /// selfSource stamps MapTrigger.SourceEntity when the schema declares it (Entity.Null
-        /// for map-domain dispatch). Optional bridge — requires a bound TriggerManager.
+        /// for map-domain dispatch). A positive <paramref name="abilityId"/> is the ability route:
+        /// MapTrigger.AbilityId and SourceEntity are stamped as transport metadata even when the
+        /// schema does not declare them. Optional bridge — requires a bound TriggerManager.
         /// </summary>
-        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs, int abilityId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
         }
