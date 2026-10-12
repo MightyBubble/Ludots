@@ -1,16 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Config
 {
     public readonly record struct ConfigModMount(string Id, string RootPath);
+
+    public sealed class ConfigLoadException : Exception
+    {
+        public ConfigLoadException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
 
     public sealed class ConfigProvenanceIdWinner
     {
@@ -21,6 +26,7 @@ namespace Ludots.Core.Config
     public sealed class ConfigProvenanceDeletion
     {
         public required string Id { get; init; }
+        public required string SourceUri { get; init; }
     }
 
     public sealed class ConfigProvenanceDuplicate
@@ -42,6 +48,7 @@ namespace Ludots.Core.Config
         public required string RelativePath { get; init; }
         public required IReadOnlyList<string> Fragments { get; init; }
         public string? FileWinner { get; init; }
+        public string? FileWinnerKind { get; init; }
         public required IReadOnlyList<ConfigProvenanceIdWinner> Winners { get; init; }
         public required IReadOnlyList<ConfigProvenanceDeletion> Deletions { get; init; }
         public required IReadOnlyList<ConfigProvenanceDuplicate> Duplicates { get; init; }
@@ -51,65 +58,39 @@ namespace Ludots.Core.Config
     public sealed class ConfigProvenanceSnapshot
     {
         public required IReadOnlyList<ConfigProvenanceFile> Files { get; init; }
+        public string? Error { get; init; }
     }
 
     /// <summary>
-    /// 严格装载失败时，把合并来源写进异常文本。
-    /// 装载器会在 catch 里用 ex.Message 再包一层，后缀必须先写在原始异常上，否则这层包装把溯源丢掉。
-    /// 只改 Open 包住的调用；其它线程上的异常不动。
+    /// 严格装载失败时，把这一份相对路径的合并来源附在新异常上。
+    /// 装载器内部抓住的异常保持原样；只有逃出 Wrap 的 JsonException / InvalidOperationException 才换成 ConfigLoadException。
     /// </summary>
     public static class ConfigMergeProvenance
     {
         public const string TemplatesRelativePath = "Entities/templates.json";
         private const string ProvenanceMark = "\n配置路径: ";
-        private const string MarkerKey = "ConfigMergeProvenance";
 
-        private static readonly AsyncLocal<Scope?> Current = new();
-        private static readonly AsyncLocal<int> HandlerDepth = new();
-        // JsonException 自己还有一份 _message，Message 读的是它，不是 Exception._message。
-        // 只改基类字段的话，反序列化错误的文本上看不到溯源。
-        private static readonly FieldInfo ExceptionMessageField = typeof(Exception).GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-            ?? throw new InvalidOperationException("Exception message field is required to attach config provenance.");
-        private static readonly FieldInfo? JsonExceptionMessageField = typeof(JsonException).GetField("_message", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-        private static int _handlerInstalled;
-
-        public static Scope Open(string relativePath, ConfigConflictReport? report)
+        public static T Wrap<T>(string relativePath, ConfigConflictReport? report, Func<ConfigConflictReport, T> load)
         {
-            EnsureHandler();
-            if (report == null)
+            if (string.IsNullOrWhiteSpace(relativePath))
             {
-                for (Scope? existing = Current.Value; existing != null; existing = existing.Parent)
-                {
-                    if (string.Equals(existing.RelativePath, relativePath, StringComparison.Ordinal))
-                    {
-                        report = existing.Report;
-                        break;
-                    }
-                }
+                throw new ArgumentException("Relative path is required.", nameof(relativePath));
+            }
+
+            if (load == null)
+            {
+                throw new ArgumentNullException(nameof(load));
             }
 
             report ??= new ConfigConflictReport();
-            var scope = new Scope(relativePath, report, Current.Value);
-            Current.Value = scope;
-            return scope;
-        }
-
-        public static ConfigConflictReport? ResolveReport(string relativePath, ConfigConflictReport? report)
-        {
-            if (report != null)
+            try
             {
-                return report;
+                return load(report);
             }
-
-            for (Scope? scope = Current.Value; scope != null; scope = scope.Parent)
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
             {
-                if (string.Equals(scope.RelativePath, relativePath, StringComparison.Ordinal))
-                {
-                    return scope.Report;
-                }
+                throw new ConfigLoadException(ex.Message + Format(relativePath, report), ex);
             }
-
-            return null;
         }
 
         public static ConfigProvenanceSnapshot Capture(string coreAssetsRoot, IReadOnlyList<ConfigModMount> modsInLoadOrder)
@@ -162,29 +143,36 @@ namespace Ludots.Core.Config
                 MergeEntry(pipeline, in entry, report);
             }
 
+            string? error = null;
             if (catalog.TryGet(TemplatesRelativePath, out _))
             {
-                var registry = new DataRegistry<EntityTemplate>(pipeline);
-                registry.Load(TemplatesRelativePath, catalog, report: null);
-                var byId = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
-                foreach (EntityTemplate template in registry.GetAll())
+                try
                 {
-                    if (template == null || string.IsNullOrEmpty(template.Id))
+                    var registry = new DataRegistry<EntityTemplate>(pipeline);
+                    registry.Load(TemplatesRelativePath, catalog, report: null);
+                    var byId = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
+                    foreach (EntityTemplate template in registry.GetAll())
                     {
-                        continue;
+                        if (template == null || string.IsNullOrEmpty(template.Id))
+                        {
+                            continue;
+                        }
+
+                        byId[template.Id] = template;
                     }
 
-                    byId[template.Id] = template;
+                    EntityTemplateInheritance.ExpandAll(byId, report);
                 }
-
-                using Scope expand = Open(TemplatesRelativePath, report);
-                EntityTemplateInheritance.ExpandAll(byId, report);
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                }
             }
 
-            return ToSnapshot(report);
+            return ToSnapshot(report, error);
         }
 
-        public static ConfigProvenanceSnapshot ToSnapshot(ConfigConflictReport report)
+        public static ConfigProvenanceSnapshot ToSnapshot(ConfigConflictReport report, string? error = null)
         {
             if (report == null)
             {
@@ -215,11 +203,15 @@ namespace Ludots.Core.Config
                     });
                 }
 
-                IReadOnlyList<(string Path, string Id)> deletions = report.GetDeletions(path);
+                IReadOnlyList<(string Path, string Id, string SourceUri)> deletions = report.GetDeletions(path);
                 var deletionDtos = new List<ConfigProvenanceDeletion>(deletions.Count);
                 for (int d = 0; d < deletions.Count; d++)
                 {
-                    deletionDtos.Add(new ConfigProvenanceDeletion { Id = deletions[d].Id });
+                    deletionDtos.Add(new ConfigProvenanceDeletion
+                    {
+                        Id = deletions[d].Id,
+                        SourceUri = deletions[d].SourceUri,
+                    });
                 }
 
                 IReadOnlyList<(string Id, string FirstSource, string SecondSource)> duplicates = report.GetDuplicateIds(path);
@@ -248,11 +240,20 @@ namespace Ludots.Core.Config
                     }
                 }
 
+                string? fileWinner = null;
+                string? fileWinnerKind = null;
+                if (report.TryGetFileWinner(path, out string winnerUri, out string winnerKind))
+                {
+                    fileWinner = winnerUri;
+                    fileWinnerKind = winnerKind;
+                }
+
                 files.Add(new ConfigProvenanceFile
                 {
                     RelativePath = path,
                     Fragments = fragmentCopy,
-                    FileWinner = report.TryGetFileWinner(path, out string fileWinner) ? fileWinner : null,
+                    FileWinner = fileWinner,
+                    FileWinnerKind = fileWinnerKind,
                     Winners = winnerDtos,
                     Deletions = deletionDtos,
                     Duplicates = duplicateDtos,
@@ -260,7 +261,7 @@ namespace Ludots.Core.Config
                 });
             }
 
-            return new ConfigProvenanceSnapshot { Files = files };
+            return new ConfigProvenanceSnapshot { Files = files, Error = error };
         }
 
         private static void MergeEntry(ConfigPipeline pipeline, in ConfigCatalogEntry entry, ConfigConflictReport report)
@@ -279,76 +280,13 @@ namespace Ludots.Core.Config
             }
         }
 
-        private static void EnsureHandler()
-        {
-            if (Interlocked.Exchange(ref _handlerInstalled, 1) != 0)
-            {
-                return;
-            }
-
-            AppDomain.CurrentDomain.FirstChanceException += OnFirstChance;
-        }
-
-        private static void OnFirstChance(object? sender, FirstChanceExceptionEventArgs args)
-        {
-            if (HandlerDepth.Value != 0)
-            {
-                return;
-            }
-
-            Scope? scope = Current.Value;
-            if (scope == null)
-            {
-                return;
-            }
-
-            Exception ex = args.Exception;
-            if (ex is not JsonException and not InvalidOperationException)
-            {
-                return;
-            }
-
-            if (ex.Data.Contains(MarkerKey))
-            {
-                return;
-            }
-
-            HandlerDepth.Value = 1;
-            try
-            {
-                string message = ex.Message;
-                if (message.Contains(ProvenanceMark, StringComparison.Ordinal))
-                {
-                    ex.Data[MarkerKey] = scope.RelativePath;
-                    return;
-                }
-
-                SetMessage(ex, message + Format(scope));
-                ex.Data[MarkerKey] = scope.RelativePath;
-            }
-            finally
-            {
-                HandlerDepth.Value = 0;
-            }
-        }
-
-        private static void SetMessage(Exception ex, string message)
-        {
-            if (ex is JsonException && JsonExceptionMessageField != null)
-            {
-                JsonExceptionMessageField.SetValue(ex, message);
-            }
-
-            ExceptionMessageField.SetValue(ex, message);
-        }
-
-        private static string Format(Scope scope)
+        private static string Format(string relativePath, ConfigConflictReport report)
         {
             var text = new StringBuilder();
             text.Append(ProvenanceMark);
-            text.Append(scope.RelativePath);
+            text.Append(relativePath);
             text.Append("\n合并顺序: ");
-            IReadOnlyList<string> fragments = scope.Report.GetFragments(scope.RelativePath);
+            IReadOnlyList<string> fragments = report.GetFragments(relativePath);
             if (fragments.Count == 0)
             {
                 text.Append("（无）");
@@ -367,13 +305,13 @@ namespace Ludots.Core.Config
             }
 
             text.Append("\n胜出: ");
-            if (scope.Report.TryGetFileWinner(scope.RelativePath, out string fileWinner))
+            if (report.TryGetFileWinner(relativePath, out string fileWinner, out _))
             {
                 text.Append(fileWinner);
             }
             else
             {
-                IReadOnlyList<(string Id, string SourceUri)> winners = scope.Report.GetWinners(scope.RelativePath);
+                IReadOnlyList<(string Id, string SourceUri)> winners = report.GetWinners(relativePath);
                 if (winners.Count == 0)
                 {
                     text.Append("（无）");
@@ -395,36 +333,6 @@ namespace Ludots.Core.Config
             }
 
             return text.ToString();
-        }
-
-        public sealed class Scope : IDisposable
-        {
-            private bool _disposed;
-
-            internal Scope(string relativePath, ConfigConflictReport report, Scope? parent)
-            {
-                RelativePath = relativePath;
-                Report = report;
-                Parent = parent;
-            }
-
-            public string RelativePath { get; }
-            public ConfigConflictReport Report { get; }
-            internal Scope? Parent { get; }
-
-            public void Dispose()
-            {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _disposed = true;
-                if (ReferenceEquals(Current.Value, this))
-                {
-                    Current.Value = Parent;
-                }
-            }
         }
     }
 }

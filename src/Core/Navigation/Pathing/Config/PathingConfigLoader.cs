@@ -21,9 +21,10 @@ namespace Ludots.Core.Navigation.Pathing.Config
             ConfigConflictReport report = null,
             string relativePath = "Navigation/pathing.json")
         {
-            using ConfigMergeProvenance.Scope provenance = ConfigMergeProvenance.Open(relativePath, report);
+            return ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, tracked);
             if (mergedObject == null) throw new InvalidOperationException("PathingConfig not found in any source.");
 
             ValidateRaw(mergedObject);
@@ -33,6 +34,7 @@ namespace Ludots.Core.Navigation.Pathing.Config
             if (cfg == null) throw new InvalidOperationException("Failed to deserialize PathingConfig.");
             Validate(cfg);
             return cfg;
+            });
         }
 
         private static void ValidateRaw(JsonObject root)

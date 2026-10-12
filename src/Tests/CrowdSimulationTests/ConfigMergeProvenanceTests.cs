@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
+using Ludots.Core.Hosting;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -41,12 +42,12 @@ public class ConfigMergeProvenanceTests
                 ( "CrowdSimulationStandardMod", Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod") ),
                 ( ProbeModId, probeRoot ));
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                 () => new CrowdSimulationConfigLoader(pipeline).LoadConfig(catalog))!;
 
             const string standardUri = "CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json";
             string winnerUri = $"{ProbeModId}:assets/CrowdSimulationConfig.json";
-            AssertProvenance(ex.Message, "CrowdSimulationConfig.json", standardUri, winnerUri, $"胜出: {winnerUri}");
+            AssertProvenance(ex, "CrowdSimulationConfig.json", new[] { standardUri, winnerUri }, winnerUri, typeof(InvalidOperationException));
         }
         finally
         {
@@ -65,15 +66,16 @@ public class ConfigMergeProvenanceTests
             string probe = WriteProbe(root, "Navigation/navmesh.json", MinimalNavmesh("\"not-a-number\""));
             (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                 () => new NavMeshBakeConfigLoader(pipeline, DefaultProfiles()).Load(catalog))!;
 
+            string winnerUri = $"{ProbeModId}:assets/Navigation/navmesh.json";
             AssertProvenance(
-                ex.Message,
+                ex,
                 "Navigation/navmesh.json",
-                "Core:Navigation/navmesh.json",
-                $"{ProbeModId}:assets/Navigation/navmesh.json",
-                $"胜出: {ProbeModId}:assets/Navigation/navmesh.json");
+                new[] { "Core:Navigation/navmesh.json", winnerUri },
+                winnerUri,
+                typeof(InvalidOperationException));
         }
         finally
         {
@@ -92,15 +94,16 @@ public class ConfigMergeProvenanceTests
             string probe = WriteProbe(root, "Navigation/pathing.json", """{ "agentTypes": "not-an-array" }""");
             (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                 () => new PathingConfigLoader(pipeline).Load(catalog))!;
 
+            string winnerUri = $"{ProbeModId}:assets/Navigation/pathing.json";
             AssertProvenance(
-                ex.Message,
+                ex,
                 "Navigation/pathing.json",
-                "Core:Navigation/pathing.json",
-                $"{ProbeModId}:assets/Navigation/pathing.json",
-                $"胜出: {ProbeModId}:assets/Navigation/pathing.json");
+                new[] { "Core:Navigation/pathing.json", winnerUri },
+                winnerUri,
+                typeof(InvalidOperationException));
         }
         finally
         {
@@ -122,16 +125,16 @@ public class ConfigMergeProvenanceTests
                 """[{ "id": "Small", "radiusCm": "not-a-number" }]""");
             (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
 
-            Exception ex = Assert.Throws<JsonException>(
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                 () => new AgentProfileConfigLoader(pipeline).Load(catalog))!;
 
             string winnerUri = $"{ProbeModId}:assets/Navigation/agent_profiles.json";
             AssertProvenance(
-                ex.Message,
+                ex,
                 "Navigation/agent_profiles.json",
-                "Core:Navigation/agent_profiles.json",
-                winnerUri,
-                $"Small={winnerUri}");
+                new[] { "Core:Navigation/agent_profiles.json", winnerUri },
+                $"Small={winnerUri}",
+                typeof(JsonException));
         }
         finally
         {
@@ -153,16 +156,16 @@ public class ConfigMergeProvenanceTests
                 """[{ "id": "Unit.Probe", "components": "not-an-object" }]""");
             (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                 () => new DataRegistry<EntityTemplate>(pipeline).Load("Entities/templates.json", catalog))!;
 
             string winnerUri = $"{ProbeModId}:assets/Entities/templates.json";
             AssertProvenance(
-                ex.Message,
+                ex,
                 "Entities/templates.json",
-                "Core:Entities/templates.json",
-                winnerUri,
-                $"Unit.Probe={winnerUri}");
+                new[] { "Core:Entities/templates.json", winnerUri },
+                $"Unit.Probe={winnerUri}",
+                typeof(InvalidOperationException));
         }
         finally
         {
@@ -228,11 +231,10 @@ public class ConfigMergeProvenanceTests
             string probeUri = $"{ProbeModId}:assets/Entities/templates.json";
 
             Assert.That(templates.FileWinner, Is.Null);
-            Assert.That(templates.Fragments, Does.Contain("Core:Entities/templates.json"));
-            Assert.That(templates.Fragments, Does.Contain(probeUri));
+            Assert.That(templates.Fragments, Is.EqualTo(new[] { "Core:Entities/templates.json", probeUri }));
             Assert.That(templates.Winners, Has.Some.Matches<ConfigProvenanceIdWinner>(w => w.Id == "Shared" && w.SourceUri == probeUri));
             Assert.That(templates.Winners, Has.None.Matches<ConfigProvenanceIdWinner>(w => w.Id == "Gone"));
-            Assert.That(templates.Deletions, Has.Some.Matches<ConfigProvenanceDeletion>(d => d.Id == "Gone"));
+            Assert.That(templates.Deletions, Has.Some.Matches<ConfigProvenanceDeletion>(d => d.Id == "Gone" && d.SourceUri == probeUri));
             Assert.That(templates.Duplicates, Has.Some.Matches<ConfigProvenanceDuplicate>(d =>
                 d.Id == "Shared" &&
                 d.FirstSource == "Core:Entities/templates.json" &&
@@ -244,17 +246,164 @@ public class ConfigMergeProvenanceTests
         }
     }
 
-    private static void AssertProvenance(string message, string relativePath, string earlierUri, string laterUri, string winnerText)
+    [Test]
+    public void ExceptionCaughtInsideLoad_IsUnchanged()
     {
+        var caught = new InvalidOperationException("inside-load");
+        string result = ConfigMergeProvenance.Wrap("probe.json", null, _ =>
+        {
+            try
+            {
+                throw caught;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Assert.That(ex, Is.SameAs(caught));
+                Assert.That(ex.Message, Is.EqualTo("inside-load"));
+                Assert.That(ex.Message, Does.Not.Contain("配置路径:"));
+                return "ok";
+            }
+        });
+
+        Assert.That(result, Is.EqualTo("ok"));
+    }
+
+    [Test]
+    public void DeepObject_SkipsNonObject_WinnerIsLastAppliedObject()
+    {
+        string root = NewTempDir();
+        try
+        {
+            WriteCoreCatalog(root, """[{ "Path": "probe.json", "Policy": "DeepObject" }]""");
+            WriteCoreFile(root, "probe.json", """{ "kept": 1, "replaced": 1 }""");
+            string probe = WriteProbe(root, "probe.json", """[1, 2, 3]""");
+            (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, probe));
+            var entry = ConfigPipeline.RequireEntry(catalog, "probe.json", ConfigMergePolicy.DeepObject);
+            var report = new ConfigConflictReport();
+            pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            ConfigProvenanceFile file = FindFile(ConfigMergeProvenance.ToSnapshot(report), "probe.json");
+            Assert.That(file.Fragments, Is.EqualTo(new[] { "Core:probe.json", $"{ProbeModId}:assets/probe.json" }));
+            Assert.That(file.FileWinner, Is.EqualTo("Core:probe.json"));
+            Assert.That(file.FileWinnerKind, Is.EqualTo(ConfigConflictReport.FileWinnerLastFragment));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Test]
+    public void ArrayReplace_WinnerIsFragmentWhoseArrayWasUsed()
+    {
+        string root = NewTempDir();
+        try
+        {
+            WriteCoreCatalog(root, """[{ "Path": "probe.json", "Policy": "ArrayReplace" }]""");
+            WriteCoreFile(root, "probe.json", """[{ "id": "A" }]""");
+            string skipped = WriteProbe(root, "probe.json", """{ "not": "an-array" }""");
+            (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root, (ProbeModId, skipped));
+            var entry = ConfigPipeline.RequireEntry(catalog, "probe.json", ConfigMergePolicy.ArrayReplace);
+            var report = new ConfigConflictReport();
+            pipeline.MergeFromCatalog(in entry, report);
+            ConfigProvenanceFile file = FindFile(ConfigMergeProvenance.ToSnapshot(report), "probe.json");
+            Assert.That(file.FileWinner, Is.EqualTo("Core:probe.json"));
+            Assert.That(file.FileWinnerKind, Is.EqualTo(ConfigConflictReport.FileWinnerAppliedArray));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Test]
+    public void Capture_BadTemplateExpand_StillReturnsProvenance()
+    {
+        string root = NewTempDir();
+        try
+        {
+            WriteCoreCatalog(root, """[{ "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }]""");
+            WriteCoreFile(root, "Entities/templates.json", """[{ "id": "Child", "extends": "Missing", "components": {} }]""");
+            (ConfigPipeline pipeline, ConfigCatalog catalog) = Mount(root);
+            ConfigProvenanceSnapshot snapshot = ConfigMergeProvenance.Capture(pipeline, catalog);
+            ConfigProvenanceFile templates = FindFile(snapshot, "Entities/templates.json");
+            Assert.That(templates.Fragments, Is.EqualTo(new[] { "Core:Entities/templates.json" }));
+            Assert.That(snapshot.Error, Does.Contain("extends unknown template"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Test]
+    public void Capture_ModOrder_MatchesGameResolvedPlan()
+    {
+        string root = NewTempDir();
+        try
+        {
+            string assets = Path.Combine(root, "assets");
+            Directory.CreateDirectory(assets);
+            WriteCoreCatalog(assets, """[{ "Path": "probe.json", "Policy": "DeepObject" }]""");
+            WriteCoreFile(assets, "probe.json", """{ "k": 0 }""");
+            WriteMod(root, "LowMod", 1, "{}", """{ "k": 1 }""");
+            WriteMod(root, "HighMod", 9, "{}", """{ "k": 9 }""");
+            WriteMod(root, "TargetMod", 0, """{ "HighMod": "*", "LowMod": "*" }""", null);
+
+            IReadOnlyList<ResolvedModLoadEntry> plan = NavMeshBakeConfigLoader.ResolveModLoadPlan(root, "TargetMod");
+            Assert.That(plan.Select(item => item.Id).ToArray(), Is.EqualTo(new[] { "HighMod", "LowMod", "TargetMod" }));
+
+            var vfs = new VirtualFileSystem();
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadResolvedPlan(plan);
+            Assert.That(modLoader.LoadedModIds, Is.EqualTo(new[] { "HighMod", "LowMod", "TargetMod" }));
+
+            var mounts = new List<ConfigModMount>(plan.Count);
+            for (int i = 0; i < plan.Count; i++)
+            {
+                mounts.Add(new ConfigModMount(plan[i].Id, plan[i].RootPath));
+            }
+
+            ConfigProvenanceSnapshot snapshot = ConfigMergeProvenance.Capture(Path.Combine(root, "assets"), mounts);
+            ConfigProvenanceFile file = FindFile(snapshot, "probe.json");
+            Assert.That(file.Fragments, Is.EqualTo(new[]
+            {
+                "Core:probe.json",
+                "HighMod:assets/probe.json",
+                "LowMod:assets/probe.json",
+            }));
+            Assert.Throws<InvalidOperationException>(() => NavMeshBakeConfigLoader.ResolveModLoadPlan(root, "NoSuchMod"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static void AssertProvenance(
+        ConfigLoadException ex,
+        string relativePath,
+        string[] fragments,
+        string winnerText,
+        Type innerType)
+    {
+        Assert.That(ex.InnerException, Is.Not.Null);
+        Assert.That(ex.InnerException, Is.TypeOf(innerType));
+        Assert.That(ex.InnerException!.Message, Does.Not.Contain("配置路径:"));
+        string message = ex.Message;
         Assert.That(message, Does.Contain($"配置路径: {relativePath}"));
         Assert.That(message.Split("配置路径:").Length - 1, Is.EqualTo(1));
-        int orderAt = message.IndexOf("合并顺序:", StringComparison.Ordinal);
-        Assert.That(orderAt, Is.GreaterThanOrEqualTo(0));
-        int earlierAt = message.IndexOf(earlierUri, orderAt, StringComparison.Ordinal);
-        int laterAt = message.IndexOf(laterUri, orderAt, StringComparison.Ordinal);
-        Assert.That(earlierAt, Is.GreaterThanOrEqualTo(0));
-        Assert.That(laterAt, Is.GreaterThan(earlierAt));
-        Assert.That(message, Does.Contain(winnerText));
+        Assert.That(LineAfter(message, "合并顺序:"), Is.EqualTo(string.Join(" | ", fragments)));
+        Assert.That(LineAfter(message, "胜出:"), Is.EqualTo(winnerText));
+    }
+
+    private static string LineAfter(string message, string label)
+    {
+        int at = message.IndexOf(label, StringComparison.Ordinal);
+        Assert.That(at, Is.GreaterThanOrEqualTo(0));
+        int start = at + label.Length;
+        int end = message.IndexOf('\n', start);
+        string line = end < 0 ? message.Substring(start) : message.Substring(start, end - start);
+        return line.Trim();
     }
 
     private static int IndexOf(IReadOnlyList<string> items, string value)
@@ -376,6 +525,29 @@ public class ConfigMergeProvenanceTests
         string path = Path.Combine(coreRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, json);
+    }
+
+    private static void WriteMod(string repo, string id, int priority, string dependenciesJson, string? probeJson)
+    {
+        string modRoot = Path.Combine(repo, "mods", id);
+        Directory.CreateDirectory(modRoot);
+        File.WriteAllText(
+            Path.Combine(modRoot, "mod.json"),
+            $$"""
+            {
+              "name": "{{id}}",
+              "version": "1.0.0",
+              "priority": {{priority}},
+              "dependencies": {{dependenciesJson}}
+            }
+            """);
+        if (probeJson == null)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.Combine(modRoot, "assets"));
+        File.WriteAllText(Path.Combine(modRoot, "assets", "probe.json"), probeJson);
     }
 
     private static string WriteProbe(string parent, string relativePath, string json)

@@ -172,13 +172,17 @@ public sealed partial class CrowdSimulationRuntime
         _configResolved = true;
 
         var catalog = engine.ConfigCatalog;
-        if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out _))
+        if (catalog == null || !catalog.TryGet(CrowdSimulationConfigPath, out var configEntry))
         {
             return false;
         }
 
-        _configDto = new CrowdSimulationConfigLoader(engine.ConfigPipeline)
-            .LoadConfig(catalog, engine.ConfigConflictReport);
+        _configDto = ConfigMergeProvenance.Wrap(CrowdSimulationConfigPath, engine.ConfigConflictReport, tracked =>
+        {
+            var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
+            return CrowdSimulationConfig.Load(merged);
+        });
 
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
@@ -187,11 +191,15 @@ public sealed partial class CrowdSimulationRuntime
             return true;
         }
 
-        var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
-        _debug = CrowdSimulationDebugConfig.Load(debugMerged);
-        _planTimeout = _debug.PlanTimeout;
-        _presentation = _debug.Presentation;
+        CrowdSimulationDebugConfig debug = ConfigMergeProvenance.Wrap(CrowdSimulationDebugPath, engine.ConfigConflictReport, tracked =>
+        {
+            var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+            return CrowdSimulationDebugConfig.Load(debugMerged);
+        });
+        _debug = debug;
+        _planTimeout = debug.PlanTimeout;
+        _presentation = debug.Presentation;
         return true;
     }
 

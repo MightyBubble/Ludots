@@ -178,7 +178,7 @@ namespace Ludots.Tests.Architecture
                 var pipeline = new ConfigPipeline(vfs, modLoader: null!);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => new AgentProfileConfigLoader(pipeline).Load(catalog))!;
                 Assert.That(ex.Message, Does.Contain("speedCmPerSecond"));
             }
@@ -339,11 +339,11 @@ namespace Ludots.Tests.Architecture
                 var pipeline = new ConfigPipeline(vfs, modLoader: null!);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                InvalidOperationException navmeshEx = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException navmeshEx = Assert.Throws<ConfigLoadException>(
                     () => new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog))!;
                 Assert.That(navmeshEx.Message, Does.Contain("radiusCm"));
 
-                InvalidOperationException pathingEx = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException pathingEx = Assert.Throws<ConfigLoadException>(
                     () => new PathingConfigLoader(pipeline).Load(catalog))!;
                 Assert.That(pathingEx.Message, Does.Contain("layer"));
             }

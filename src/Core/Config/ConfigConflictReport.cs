@@ -10,7 +10,8 @@ namespace Ludots.Core.Config
         private readonly Dictionary<(string Path, string Id), string> _winnerById = new();
         private readonly List<(string Path, string Id)> _winnerOrder = new();
         private readonly Dictionary<string, string> _fileWinnerByPath = new(StringComparer.Ordinal);
-        private readonly HashSet<(string Path, string Id)> _deleted = new();
+        private readonly Dictionary<string, string> _fileWinnerKindByPath = new(StringComparer.Ordinal);
+        private readonly Dictionary<(string Path, string Id), string> _deleted = new();
         private readonly Dictionary<(string Path, string Id), (string First, string Second)> _duplicates = new();
         private readonly Dictionary<(string TemplateId, string Component), string> _componentOverrideChains = new();
 
@@ -36,13 +37,17 @@ namespace Ludots.Core.Config
             _deleted.Remove(key);
         }
 
+        public const string FileWinnerLastFragment = "last-fragment";
+        public const string FileWinnerAppliedArray = "applied-array";
+
         /// <summary>
-        /// DeepObject / Replace / ArrayReplace 的胜出是最后一份片段。
-        /// 这些策略把数组整段换掉，没有字段级赢家。
+        /// 记策略真正用上的那一份。DeepObject / Replace 是最后一份对象（跳过的非对象不是赢家）。
+        /// ArrayReplace 是实际采用的那份数组。更早的键仍可能来自更早的片段。
         /// </summary>
-        public void RecordFileWinner(string relativePath, string sourceUri)
+        public void RecordFileWinner(string relativePath, string sourceUri, string kind)
         {
             _fileWinnerByPath[relativePath] = sourceUri;
+            _fileWinnerKindByPath[relativePath] = kind;
         }
 
         public void RecordDeleted(string relativePath, string id, string sourceUri)
@@ -59,8 +64,7 @@ namespace Ludots.Core.Config
                 }
             }
 
-            _deleted.Add(key);
-            RecordFragment(relativePath, sourceUri);
+            _deleted[key] = sourceUri;
         }
 
         public void RecordDuplicateId(string relativePath, string id, string firstSource, string secondSource)
@@ -117,9 +121,17 @@ namespace Ludots.Core.Config
             return _winnerById.TryGetValue((relativePath, id), out sourceUri);
         }
 
-        public bool TryGetFileWinner(string relativePath, out string sourceUri)
+        public bool TryGetFileWinner(string relativePath, out string sourceUri, out string kind)
         {
-            return _fileWinnerByPath.TryGetValue(relativePath, out sourceUri);
+            if (_fileWinnerByPath.TryGetValue(relativePath, out sourceUri))
+            {
+                kind = _fileWinnerKindByPath[relativePath];
+                return true;
+            }
+
+            sourceUri = string.Empty;
+            kind = string.Empty;
+            return false;
         }
 
         public IReadOnlyList<(string Id, string SourceUri)> GetWinners(string relativePath)
@@ -171,13 +183,13 @@ namespace Ludots.Core.Config
             return Array.Empty<string>();
         }
 
-        public IReadOnlyList<(string Path, string Id)> GetDeletions(string relativePath)
+        public IReadOnlyList<(string Path, string Id, string SourceUri)> GetDeletions(string relativePath)
         {
-            var result = new List<(string, string)>();
-            foreach (var d in _deleted)
+            var result = new List<(string, string, string)>();
+            foreach (KeyValuePair<(string Path, string Id), string> pair in _deleted)
             {
-                if (string.Equals(d.Path, relativePath, StringComparison.Ordinal))
-                    result.Add(d);
+                if (string.Equals(pair.Key.Path, relativePath, StringComparison.Ordinal))
+                    result.Add((pair.Key.Path, pair.Key.Id, pair.Value));
             }
             return result;
         }
