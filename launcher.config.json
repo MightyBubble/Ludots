@@ -2749,6 +2749,13 @@
       }
     },
     {
+          "name": "aim_control_schemes",
+          "target": {
+            "type": "path",
+            "value": "mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod"
+          }
+        },
+    {
       "name": "capability_standard_graph_op_IsCastMode",
       "target": {
         "type": "path",

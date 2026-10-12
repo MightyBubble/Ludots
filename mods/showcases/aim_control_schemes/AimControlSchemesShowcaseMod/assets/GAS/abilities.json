@@ -1,0 +1,62 @@
+[
+  {
+    "id": "Ability.AimSchemes.Slot1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 800
+    }
+  },
+  {
+    "id": "Ability.AimSchemes.Slot2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 800
+    }
+  },
+  {
+    "id": "Ability.AimSchemes.Slot3",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 800
+    }
+  },
+  {
+    "id": "Ability.AimSchemes.Slot4",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 800
+    }
+  }
+]

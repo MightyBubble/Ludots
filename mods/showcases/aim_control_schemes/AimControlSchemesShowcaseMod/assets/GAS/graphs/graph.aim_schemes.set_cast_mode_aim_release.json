@@ -1,0 +1,65 @@
+[
+  {
+    "id": "graph.aim_schemes.set_cast_mode_aim_release",
+    "kind": "TriggerGraph",
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set",
+        "op": "SetCastMode",
+        "mode": "castMode.aim_release"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "source"
+      }
+    ],
+    "entries": [
+      {
+        "label": "AimSchemes.ModeAimRelease",
+        "action": "AimSchemes.ModeAimRelease",
+        "start": "rep",
+        "refire": "restart"
+      }
+    ]
+  }
+]

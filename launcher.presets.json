@@ -3738,6 +3738,15 @@
       "buildMode": "auto"
     },
     {
+          "id": "aim_control_schemes_raylib",
+          "name": "Aim Control Schemes Raylib",
+          "selectors": [
+            "$aim_control_schemes"
+          ],
+          "adapterId": "raylib",
+          "buildMode": "auto"
+        },
+    {
       "id": "capability_standard_graph_op_IsCastMode_raylib",
       "name": "Graph Op IsCastMode Raylib",
       "selectors": [

@@ -1,0 +1,64 @@
+[
+  {
+    "id": "aim_control_schemes_hero",
+    "initialInteractionContext": "interaction.context.aim_schemes.battle",
+    "components": {
+      "Name": {
+        "Value": "AimSchemes Hero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": {
+        "Value": {
+          "X": 2000,
+          "Y": 2000
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.AimSchemes.Slot1",
+          "Ability.AimSchemes.Slot2",
+          "Ability.AimSchemes.Slot3",
+          "Ability.AimSchemes.Slot4"
+        ]
+      },
+      "OrderBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardSpatialBuffer": {}
+    }
+  },
+  {
+    "id": "aim_control_schemes_dummy",
+    "components": {
+      "Name": {
+        "Value": "AimSchemes Dummy"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "aim_control_schemes_anchor",
+    "components": {
+      "Name": {
+        "Value": "AimSchemes Anchor"
+      },
+      "OrderBuffer": {}
+    }
+  }
+]

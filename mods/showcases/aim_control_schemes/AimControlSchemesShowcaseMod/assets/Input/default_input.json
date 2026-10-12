@@ -1,0 +1,40 @@
+{
+  "actions": [
+    {
+      "id": "AimSchemes.ModeSmart",
+      "name": "AimSchemes_ModeSmart",
+      "type": "Button"
+    },
+    {
+      "id": "AimSchemes.ModeAimRelease",
+      "name": "AimSchemes_ModeAimRelease",
+      "type": "Button"
+    },
+    {
+      "id": "AimSchemes.ModeAimClick",
+      "name": "AimSchemes_ModeAimClick",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "AimSchemes.Controls",
+      "name": "Aim Control Schemes Controls",
+      "priority": 90,
+      "bindings": [
+        {
+          "actionId": "AimSchemes.ModeSmart",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "AimSchemes.ModeAimRelease",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "AimSchemes.ModeAimClick",
+          "path": "<Keyboard>/f3"
+        }
+      ]
+    }
+  ]
+}

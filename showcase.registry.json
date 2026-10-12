@@ -11201,6 +11201,30 @@
       ]
     },
     {
+      "id": "aim_control_schemes",
+      "path": "mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod",
+      "projectPath": null,
+      "title": "瞄准控制方案",
+      "summary": "零 C#：同一英雄在键鼠光标、手柄右摇杆、键鼠点地、手柄左摇杆四套方案下施法；F1/F2/F3 切换施法模式。",
+      "tier": "T1",
+      "category": "demo",
+      "binding": "aim_control_schemes",
+      "preset": "aim_control_schemes_raylib",
+      "docsPath": "gitbook/showcases/aim-control-schemes.md",
+      "readmePath": "mods/showcases/aim_control_schemes/AimControlSchemesShowcaseMod/README.md",
+      "acceptanceTest": "Ludots.Tests.GAS.Production.AimControlSchemesShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "aim",
+        "input",
+        "control-scheme",
+        "zero-code",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_IsCastMode",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsCastModeEntryMod",
       "projectPath": "CapabilityStandardGraphOpIsCastModeEntryMod.csproj",
