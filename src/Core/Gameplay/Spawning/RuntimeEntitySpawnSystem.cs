@@ -249,6 +249,8 @@ namespace Ludots.Core.Gameplay.Spawning
         /// 没有直接引导、但有不能编进直接引导的 EntitySpawned 规则时抛错，不生成实体。
         /// <see cref="Update"/> 仍是多于一条才走批车道，单独一条留在单车道。
         /// 模板 children 在这次调用里继续物化，也不进阶段队列。
+        /// 失败不回滚已经创建的实体。还没物化的子请求会丢掉，异常写明条数，不静默吞掉。
+        /// 私有子请求表在调用结束时清空，下一次调用不接着上次的半截。
         /// EffectProcessing 里的 <see cref="Update"/> 仍只排空阶段队列。
         /// </summary>
         public void Materialize(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
@@ -259,15 +261,28 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             _materializingDirect = true;
+            _directChildren?.Clear();
+            int childCursor = 0;
             try
             {
                 MaterializeSpan(requests);
-                int cursor = 0;
-                while (_directChildren != null && cursor < _directChildren.Count)
+                while (_directChildren != null && childCursor < _directChildren.Count)
                 {
-                    RuntimeEntitySpawnRequest child = _directChildren[cursor++];
+                    RuntimeEntitySpawnRequest child = _directChildren[childCursor++];
                     MaterializeSpan(MemoryMarshal.CreateReadOnlySpan(ref child, 1));
                 }
+            }
+            catch (Exception ex)
+            {
+                int pending = _directChildren == null ? 0 : _directChildren.Count - childCursor;
+                if (pending > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.MaterializeIncomplete: {pending} follow-up child request(s) were not materialized and are discarded. Entities already created in this call are not rolled back.",
+                        ex);
+                }
+
+                throw;
             }
             finally
             {

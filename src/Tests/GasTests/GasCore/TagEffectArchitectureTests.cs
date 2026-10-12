@@ -1523,6 +1523,65 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_UnprocessedChildren_AreNamedOnFailure()
+        {
+            const string pose = """
+                "components": {
+                  "Name": { "Value": "Piece" },
+                  "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+                  "FacingDirection": { "AngleRad": 0 }
+                }
+                """;
+            const string poseChild = """
+                "localPose": { "offsetXCm": 0, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": true, "offsetRotation": "None" }
+                """;
+            string templatesJson = $$"""
+                [
+                  {
+                    "id": "child_a",
+                    {{pose}}
+                  },
+                  {
+                    "id": "child_c",
+                    {{pose}}
+                  },
+                  {
+                    "id": "parent_with_children",
+                    {{pose}},
+                    "children": [
+                      { "template": "child_a", {{poseChild}} },
+                      { "template": "missing_child", {{poseChild}} },
+                      { "template": "child_c", {{poseChild}} }
+                    ]
+                  }
+                ]
+                """;
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            using World world = World.Create();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                new RuntimeEntitySpawnQueue(4),
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator());
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Materialize(new[]
+            {
+                new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "parent_with_children",
+                    HasWorldPosition = 1,
+                    WorldPositionCm = Fix64Vec2.FromInt(1, 1),
+                    HasFacing = 1,
+                },
+            }))!;
+            That(ex.Message, Does.Contain("SPAWN.RUNTIME.ERR.MaterializeIncomplete: 1 follow-up"));
+            That(ex.InnerException, Is.Not.Null);
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_ConfiguredOnSpawnEffect_RequiresEffectRequestQueue()
         {
             UnitTypeRegistry.Clear();
