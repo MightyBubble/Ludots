@@ -135,6 +135,25 @@ namespace Ludots.Tests.RaylibAdapter
         }
 
         [Test]
+        public void BuildOverviewSampleSteps_UsesTheChunkUnderTheSample_AndThrowsWhenMissing()
+        {
+            var source = new TwoScaleHeightmapSource(declareOceanVoid: false, chunk0StepCm: 10f, chunk1StepCm: 40f);
+            RaylibContinuousHeightmapRenderer.BuildOverviewSampleSteps(source, out float[] stepX, out float[] stepY);
+            Assert.That(stepX[0], Is.EqualTo(10f));
+            Assert.That(stepY[0], Is.EqualTo(10f));
+
+            int slot = RaylibContinuousHeightmapRenderer.OverviewChunkSlot(source, 450f, 10f);
+            Assert.That(slot, Is.EqualTo(1));
+            Assert.That(stepX[slot], Is.EqualTo(40f));
+            Assert.That(stepY[slot], Is.EqualTo(40f));
+            Assert.That(stepX[slot], Is.Not.EqualTo(stepX[0]));
+
+            var missing = new TwoScaleHeightmapSource(declareOceanVoid: true, omitChunk: 1, chunk0StepCm: 10f, chunk1StepCm: 40f);
+            Assert.Throws<InvalidOperationException>(() =>
+                RaylibContinuousHeightmapRenderer.BuildOverviewSampleSteps(missing, out _, out _));
+        }
+
+        [Test]
         public void ResolveOceanVoidSentinelAtWorld_UsesTheChunkUnderTheSample()
         {
             var source = new TwoScaleHeightmapSource(declareOceanVoid: true);
@@ -206,12 +225,14 @@ namespace Ludots.Tests.RaylibAdapter
         private static ContinuousHeightmapRenderChunk CreateScaledChunk(
             ContinuousHeightSampleScale scale,
             int chunkX,
-            WorldAabbCm bounds)
+            WorldAabbCm bounds,
+            float sampleStepXCm = 300f,
+            float sampleStepYCm = 300f)
         {
             ushort[] samples = new ushort[4];
             return new ContinuousHeightmapRenderChunk(
                 chunkX, 0, bounds,
-                2, 2, 300f, 300f,
+                2, 2, sampleStepXCm, sampleStepYCm,
                 heightSamplesCm: default,
                 heightSamplesRaw: samples.AsMemory(),
                 sampleScale: scale,
@@ -224,7 +245,11 @@ namespace Ludots.Tests.RaylibAdapter
             private readonly ContinuousHeightmapRenderChunk[] _chunks;
             private readonly int _omitChunk;
 
-            public TwoScaleHeightmapSource(bool declareOceanVoid, int omitChunk = -1)
+            public TwoScaleHeightmapSource(
+                bool declareOceanVoid,
+                int omitChunk = -1,
+                float chunk0StepCm = 300f,
+                float chunk1StepCm = 300f)
             {
                 _omitChunk = omitChunk;
                 var profile = ContinuousHeightmapRenderProfile.CreateDefault();
@@ -232,8 +257,8 @@ namespace Ludots.Tests.RaylibAdapter
                 RenderProfile = profile;
                 _chunks = new[]
                 {
-                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 1, 1), 0, new WorldAabbCm(0, 0, 300, 300)),
-                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 140_000, 65_535), 1, new WorldAabbCm(300, 0, 300, 300)),
+                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 1, 1), 0, new WorldAabbCm(0, 0, 300, 300), chunk0StepCm, chunk0StepCm),
+                    CreateScaledChunk(new ContinuousHeightSampleScale(0, 140_000, 65_535), 1, new WorldAabbCm(300, 0, 300, 300), chunk1StepCm, chunk1StepCm),
                 };
             }
 

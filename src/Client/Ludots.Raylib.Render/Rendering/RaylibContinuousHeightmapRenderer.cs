@@ -1511,6 +1511,49 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
+        /// 概览法线步长取样本所在 chunk 的采样步长。栅格里缺一块就失败,不用 (0,0) 的步长,也不用 overview 间距 / 32。
+        /// </summary>
+        internal static void BuildOverviewSampleSteps(
+            IContinuousHeightmapRenderSource source,
+            out float[] sampleStepXCm,
+            out float[] sampleStepYCm)
+        {
+            int columns = source.ChunkColumns;
+            int rows = source.ChunkRows;
+            if (columns <= 0 || rows <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibContinuousHeightmapRenderer)} overview mesh needs a positive chunk grid, got {columns}×{rows}.");
+            }
+
+            int count = checked(columns * rows);
+            sampleStepXCm = new float[count];
+            sampleStepYCm = new float[count];
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    if (!source.TryGetChunk(x, y, out ContinuousHeightmapRenderChunk chunk))
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibContinuousHeightmapRenderer)} overview sample needs chunk ({x}, {y}) and that chunk is missing.");
+                    }
+
+                    int index = (y * columns) + x;
+                    sampleStepXCm[index] = MathF.Max(1f, chunk.SampleStepXCm);
+                    sampleStepYCm[index] = MathF.Max(1f, chunk.SampleStepYCm);
+                }
+            }
+        }
+
+        internal static int OverviewChunkSlot(IContinuousHeightmapRenderSource source, float worldXCm, float worldYCm)
+        {
+            int chunkX = ResolveChunkIndex(worldXCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int chunkY = ResolveChunkIndex(worldYCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            return (chunkY * source.ChunkColumns) + chunkX;
+        }
+
+        /// <summary>
         /// 两侧都采到是中心差分,分母为两倍步长;只采到一侧时高度差只跨一步,分母用单侧步长。
         /// </summary>
         internal static float FiniteDifferenceSpanCm(float stepCm, bool leftSampled, bool rightSampled)
@@ -1722,15 +1765,7 @@ namespace Ludots.Raylib.Render
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             float displayHeightScale = _displayHeightScale;
-            // 细节法线步长 = 源采样步长(与近景 chunk 同频带);取不到块则退到 overview 间距/32。
-            // 哨兵不跟这块走:各样本用自己所在 chunk 的 scale。
-            float detailStepXCm = stepXCm / 32f;
-            float detailStepZCm = stepZCm / 32f;
-            if (source.TryGetChunk(0, 0, out ContinuousHeightmapRenderChunk latticeChunk))
-            {
-                detailStepXCm = MathF.Max(1f, latticeChunk.SampleStepXCm);
-                detailStepZCm = MathF.Max(1f, latticeChunk.SampleStepYCm);
-            }
+            BuildOverviewSampleSteps(source, out float[] overviewStepXCm, out float[] overviewStepYCm);
 
             float DisplayHeightAt(float sampleXCm, float sampleYCm, float heightCm)
             {
@@ -1791,7 +1826,10 @@ namespace Ludots.Raylib.Render
                     int vertex = (y * columns) + x;
                     float worldXCm = bounds.Left + (x * stepXCm);
                     float heightCm = heights[vertex];
-                    // LOD 几何 + 细节法线(主流做法):粗网格只定轮廓,法线/明暗在源采样步长上
+                    int overviewSlot = OverviewChunkSlot(source, worldXCm, worldYCm);
+                    float detailStepXCm = overviewStepXCm[overviewSlot];
+                    float detailStepZCm = overviewStepYCm[overviewSlot];
+                    // LOD 几何 + 细节法线:粗网格只定轮廓,法线步长取样本所在 chunk 的采样步长。
                     // 对连续场中心差分取真坡向——粗网格自身差分会把一切细部斜率抹成 0(远景糊)。
                     float hL = displayHeights[vertex];
                     float hR = hL;
