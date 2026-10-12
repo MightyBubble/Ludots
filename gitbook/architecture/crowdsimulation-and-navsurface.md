@@ -442,6 +442,20 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 3. 展厅：上面 6 个依赖 `MassNavigationMod` 的展厅改为依赖群体模拟或删除；路网、TimeFlow、参与者视图、FeatureHub 的 `mass_navigation` 入口，以及四份 Raylib 启动图，不再引用 MassNavigation。
 4. 求解器：`maps.<mapId>.solver` 仍只有一个值。`src/Core/MassNavigation` 和 `MassNavigationMod` 还在时，`SolverAgentExclusivity` 继续拒绝同一模板带两种 Agent。
 
+## 现在的范围
+
+原先记过五条：阻挡物只有正方形 Box、部署只有出生点和散布、没有编辑器笔刷、没有动态建造、没有迷雾。对照当前代码，后三条里迷雾和动态建造已经在内核里，高度笔刷也有；导航区域笔刷和正方形阻挡仍然在。
+
+阻挡物仍然只能是正方形。`CrowdSimulationAuthoringContract` 要求地图上 `sinkNavigationObstacle` 的实体 `shape` 为 `Box`，并且 `halfWidthCm` 等于 `halfHeightCm`。圆形非阻挡区域实体不走这条拒绝。结构模板的 `blocker` 只接受 `footprint` 为 `rect`；`CrowdStructureFootprint.Make` 把 rect 写成 `Hx = Hy = sizeCm / 2`。`disc` 和 `path` 可以当结构，不能当阻挡。
+
+部署配置 `deploy` 仍是出生点加散布：`initialUnits`、`spreadCm`、`baseJitterCm`、`centersPerGroup`、`bases[]`（`playerId`、`xCm`、`yCm`）。指令里另有 `spawnAt`，按点、玩家、兵种和半径级生成。原句「仅出生点加散布」只覆盖配置节，指令集里还有 `spawnAt`。
+
+动态建造已经有。`placeStructure` 和 `removeStructureAt` 在指令 tick 执行，结构带寿命，变更走脏 tile 重烘。`CrowdStructuresStore` 在 `layered` 为真时拒绝放置，报文写明动态上层烘焙未开放。桥面层仍由会话激活时的 `UpperLayerBake.RasterizeDecks` 从地图桥实体生成。原句「无动态建造」不再成立；动态分层桥仍然没有。
+
+迷雾已经有。`CrowdSimSession.EnableMovement` 在结构仓存在时构造 `CrowdFog`，包括视野组、认知变体，以及 `reveal` / `obscure` / `forget` / `fogShare`。不调用 `EnableMovement` 的纯部署会话不建迷雾。原句「无迷雾」不再成立。
+
+编辑器：`VisualTerrainEditorDocument.PaintWorld` 只改连续高度图的 `BaseHeight`。`tools/FieldEditor` 写 discrete-id 场层（`Fields/cells`），不写 `.navsurface`。没有把导航区域画进 `.navsurface` 的笔刷。原句「无编辑器笔刷」对高度笔刷已不成立；导航区域笔刷仍然没有。
+
 ## 当前缺口（诚实清单）
 
 - S0 演示 Mod 的屏幕化验收（F1–F8 错误展示、配置清单屏）需要宿主系统接线。
