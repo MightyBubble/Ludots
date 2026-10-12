@@ -23,6 +23,16 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(source, Does.Not.Contain("crowd_simulation.session."));
     }
 
+    [Test]
+    public void S4Hud_DoesNotScanUnits()
+    {
+        string path = Path.Combine(
+            FindRepoRoot(), "src", "Core", "CrowdSimulation", "Presentation", "S4DeployDemoPresentationSystem.cs");
+        string source = File.ReadAllText(path);
+        Assert.That(source, Does.Not.Contain("World.Get"));
+        Assert.That(source, Does.Contain("session.Telemetry"));
+    }
+
     private static string SliceMethod(string source, string signature)
     {
         int start = source.IndexOf(signature, StringComparison.Ordinal);

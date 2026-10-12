@@ -240,19 +240,9 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         }
         else
         {
-            int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
-            for (int i = 0; i < session.Units.Count; i++)
-            {
-                switch (session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(i)).State)
-                {
-                    case (byte)CrowdUnitState.Idle: idle++; break;
-                    case (byte)CrowdUnitState.Moving: moving++; break;
-                    case (byte)CrowdUnitState.Arrived: arrived++; break;
-                    case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                    case (byte)CrowdUnitState.Jump: jumping++; break;
-                }
-            }
-
+            var telemetry = session.Telemetry;
+            int idle = telemetry.Idle, moving = telemetry.Moving, arrived = telemetry.Arrived;
+            int unreachable = telemetry.Unreachable, jumping = telemetry.Jumping;
             status = $"tick {session.TickCount};单位 {session.Units.Count}(闲 {idle}/行 {moving}/达 {arrived}" +
                      (unreachable + jumping > 0 ? $"/不可达 {unreachable}/跳跃 {jumping}" : "") + $");选中 {session.SelectedCount}";
             var report = session.LastRebakeReport;

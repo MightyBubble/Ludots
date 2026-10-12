@@ -193,13 +193,24 @@ public sealed class CrowdMovementKernel
         var units = Session.Units;
         var world = Session.World;
         int n = units.Count;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
         for (int i = 0; i < n; i++)
         {
             var e = units.EntityAt(i);
             world.Set(e, new Ludots.Core.Components.WorldPositionCm { Value = Positions[i] });
             world.Set(e, States[i]);
             world.Set(e, Kins[i]);
+            switch (States[i].State)
+            {
+                case (byte)CrowdUnitState.Idle: idle++; break;
+                case (byte)CrowdUnitState.Moving: moving++; break;
+                case (byte)CrowdUnitState.Arrived: arrived++; break;
+                case (byte)CrowdUnitState.Unreachable: unreachable++; break;
+                case (byte)CrowdUnitState.Jump: jumping++; break;
+            }
         }
+
+        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
     }
 
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>

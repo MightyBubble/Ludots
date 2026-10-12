@@ -16,6 +16,11 @@ public sealed class CrowdSimulationTelemetry
     public long FogRefreshes { get; private set; }
     public long PathWaits { get; private set; }
     public long StallTicks { get; private set; }
+    public int Idle { get; private set; }
+    public int Moving { get; private set; }
+    public int Arrived { get; private set; }
+    public int Unreachable { get; private set; }
+    public int Jumping { get; private set; }
     public double LastTickMs { get; private set; }
     public double TickMs { get; private set; }
     public double MaxTickMs { get; private set; }
@@ -35,9 +40,20 @@ public sealed class CrowdSimulationTelemetry
     public void MarkRebake() => Rebakes++;
     public void MarkFogRefresh(int groups) => FogRefreshes += groups;
     public void MarkPathWait() => PathWaits++;
+
+    public void SetUnitStates(int idle, int moving, int arrived, int unreachable, int jumping)
+    {
+        Idle = idle;
+        Moving = moving;
+        Arrived = arrived;
+        Unreachable = unreachable;
+        Jumping = jumping;
+    }
+
     public void ResetCounters()
     {
         Ticks = Units = ContactsSum = Rebakes = FogRefreshes = PathWaits = StallTicks = 0;
+        Idle = Moving = Arrived = Unreachable = Jumping = 0;
         LastTickMs = TickMs = MaxTickMs = 0;
     }
 }
