@@ -4,54 +4,17 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "Aim.Slot1",
-        "action": "Aim.Slot1",
-        "start": "s0",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot2",
-        "action": "Aim.Slot2",
-        "start": "s1",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot3",
-        "action": "Aim.Slot3",
-        "start": "s2",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot4",
-        "action": "Aim.Slot4",
-        "start": "s3",
+        "label": "Aim.Slot",
+        "action": "Aim.Slot",
+        "start": "slot",
         "refire": "restart"
       }
     ],
     "nodes": [
       {
-        "id": "s0",
-        "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 4
-      },
-      {
-        "id": "s1",
-        "op": "ConstInt",
-        "intValue": 1,
-        "pinRegister": 4
-      },
-      {
-        "id": "s2",
-        "op": "ConstInt",
-        "intValue": 2,
-        "pinRegister": 4
-      },
-      {
-        "id": "s3",
-        "op": "ConstInt",
-        "intValue": 3,
-        "pinRegister": 4
+        "id": "slot",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.BindingInt"
       },
       {
         "id": "rep",
@@ -137,22 +100,7 @@
     ],
     "controlEdges": [
       {
-        "from": "s0",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s1",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s2",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s3",
+        "from": "slot",
         "fromPort": "next",
         "to": "rep"
       },
@@ -286,7 +234,7 @@
         "toPort": "source"
       },
       {
-        "from": "s0",
+        "from": "slot",
         "fromPort": "value",
         "to": "write_slot",
         "toPort": "value"
@@ -310,7 +258,7 @@
         "toPort": "source"
       },
       {
-        "from": "s0",
+        "from": "slot",
         "fromPort": "value",
         "to": "load_ability",
         "toPort": "value"

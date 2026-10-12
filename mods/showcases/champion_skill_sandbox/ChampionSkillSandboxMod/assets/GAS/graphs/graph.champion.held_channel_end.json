@@ -5,9 +5,14 @@
     "entries": [
       {
         "label": "on_slot4_release",
-        "action": "Aim.Slot4.Release",
+        "action": "Aim.Slot.Release",
         "start": "rep",
-        "refire": "restart"
+        "refire": "restart",
+        "filters": {
+          "payload": {
+            "MapTrigger.BindingInt": 3
+          }
+        }
       }
     ],
     "nodes": [

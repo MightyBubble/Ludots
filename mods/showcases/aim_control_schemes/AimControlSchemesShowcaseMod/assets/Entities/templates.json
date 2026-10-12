@@ -27,7 +27,9 @@
           "Ability.AimSchemes.Slot1",
           "Ability.AimSchemes.Slot2",
           "Ability.AimSchemes.Slot3",
-          "Ability.AimSchemes.Slot4"
+          "Ability.AimSchemes.Slot4",
+          "Ability.AimSchemes.Slot5",
+          "Ability.AimSchemes.Slot6"
         ]
       },
       "OrderBuffer": {},

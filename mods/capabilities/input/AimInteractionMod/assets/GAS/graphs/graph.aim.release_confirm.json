@@ -4,54 +4,17 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "Aim.Slot1.Release",
-        "action": "Aim.Slot1.Release",
-        "start": "s0",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot2.Release",
-        "action": "Aim.Slot2.Release",
-        "start": "s1",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot3.Release",
-        "action": "Aim.Slot3.Release",
-        "start": "s2",
-        "refire": "restart"
-      },
-      {
-        "label": "Aim.Slot4.Release",
-        "action": "Aim.Slot4.Release",
-        "start": "s3",
+        "label": "Aim.Slot.Release",
+        "action": "Aim.Slot.Release",
+        "start": "slot",
         "refire": "restart"
       }
     ],
     "nodes": [
       {
-        "id": "s0",
-        "op": "ConstInt",
-        "intValue": 0,
-        "pinRegister": 4
-      },
-      {
-        "id": "s1",
-        "op": "ConstInt",
-        "intValue": 1,
-        "pinRegister": 4
-      },
-      {
-        "id": "s2",
-        "op": "ConstInt",
-        "intValue": 2,
-        "pinRegister": 4
-      },
-      {
-        "id": "s3",
-        "op": "ConstInt",
-        "intValue": 3,
-        "pinRegister": 4
+        "id": "slot",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.BindingInt"
       },
       {
         "id": "rep",
@@ -156,22 +119,7 @@
     ],
     "controlEdges": [
       {
-        "from": "s0",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s1",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s2",
-        "fromPort": "next",
-        "to": "rep"
-      },
-      {
-        "from": "s3",
+        "from": "slot",
         "fromPort": "next",
         "to": "rep"
       },
@@ -319,7 +267,7 @@
         "toPort": "a"
       },
       {
-        "from": "s0",
+        "from": "slot",
         "fromPort": "value",
         "to": "eq",
         "toPort": "b"

@@ -80,6 +80,46 @@
     }
   },
   {
+    "id": "Ability.AimSchemes.Slot5",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
+    "targeting": {
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
+    }
+  },
+  {
+    "id": "Ability.AimSchemes.Slot6",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 4
+        }
+      ]
+    },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
+    "targeting": {
+      "castRangeCm": 800,
+      "impactEffect": "Effect.AimSchemes.Impact"
+    }
+  },
+  {
     "id": "Ability.AimSchemes.Friendly",
     "exec": {
       "clockId": "FixedFrame",

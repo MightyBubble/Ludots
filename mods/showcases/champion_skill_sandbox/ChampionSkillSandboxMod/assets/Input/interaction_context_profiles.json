@@ -9,7 +9,7 @@
         "Command",
         "Stop",
         "QueueModifier",
-        "Aim.Slot4.Release"
+        "Aim.Slot.Release"
       ],
       "triggers": [
         {

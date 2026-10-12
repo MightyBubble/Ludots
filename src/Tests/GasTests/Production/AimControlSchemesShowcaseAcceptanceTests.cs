@@ -114,6 +114,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     }
 
     [Test]
+    public void ExtraSlots_CastFromBindingData()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertExtraSlotsCastFromBindings();
+    }
+
+    [Test]
     public void FriendlyTargetAbility_IsDataOnly()
     {
         using Session session = Session.Boot("scheme.aim.kbm");
@@ -226,6 +233,12 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         }
 
         public void Dispose() => _engine.Dispose();
+
+        public void AssertExtraSlotsCastFromBindings()
+        {
+            RunSmart(AimSurface.KeyboardCursor, 4, target: null);
+            RunSmart(AimSurface.KeyboardCursor, 5, target: Near);
+        }
 
         public void RunCastMatrix(AimSurface surface, int slotEntity, int slotGround, ConfirmControl? confirm = null)
         {
@@ -1011,6 +1024,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             1 => "w",
             2 => "e",
             3 => "r",
+            4 => "t",
+            5 => "y",
             _ => throw new ArgumentOutOfRangeException(nameof(slot)),
         };
 
