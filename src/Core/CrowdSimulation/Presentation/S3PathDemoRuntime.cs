@@ -189,7 +189,12 @@ public sealed class S3PathDemoRuntime : IDisposable
             // 生效帧取答复:没算完就原地等待(仿真时钟不走,等待计数)
             var result = Service.AwaitDue(_pendingId.Value);
             _pendingId = null;
-            if (Current?.Flow != null) Service.Recycle(Current.Flow);
+            if (Current != null)
+            {
+                if (Current.Flow != null) Service.Recycle(Current.Flow);
+                Service.ReleaseReply(Current);
+            }
+
             Current = result;
             if (FlowVisual != null) FlowVisual.Flow = result.Flow;
         }

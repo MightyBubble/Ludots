@@ -75,6 +75,7 @@ public class S3SoakTests
                 var result = service.AwaitDue(id); // 仿真在生效帧取答复
                 replies++;
                 if (result.Flow != null) service.Recycle(result.Flow);
+                service.ReleaseReply(result);
             }
 
             if (tick % ticksPerMinute == 0)

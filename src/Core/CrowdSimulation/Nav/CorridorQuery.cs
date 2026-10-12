@@ -23,30 +23,67 @@ public static class CorridorQuery
 
     public sealed class Result
     {
-        public required Branch Kind { get; init; }
-        /// <summary>折线(格单位,x, y 平铺);null = 不可达。</summary>
-        public required Fix64[]? Points { get; init; }
-        /// <summary>tile 分支的 poly 引用链(对拍用)。</summary>
-        public int[]? Polys { get; init; }
+        public Branch Kind;
+        /// <summary>折线(格单位,x, y 平铺)。活前缀是 <see cref="PointCount"/>，null = 不可达。</summary>
+        public Fix64[]? Points;
+        public int PointCount;
+        /// <summary>tile 分支的 poly 引用链(对拍用)。活前缀是 <see cref="PolyCount"/>。</summary>
+        public int[]? Polys;
+        public int PolyCount;
         /// <summary>HPA 分支的 tile 走廊与入口格(对拍用)。</summary>
-        public int[]? TileIds { get; init; }
-        public int[]? Cells { get; init; }
-        public Fix64 Cost { get; init; }
+        public int[]? TileIds;
+        public int[]? Cells;
+        public int CellCount;
+        public Fix64 Cost;
     }
 
     /// <summary>查询暂存(RT-03:每 worker 一份)。</summary>
     public sealed class Scratch
     {
-        public Scratch(int navCellsPerTile)
+        public Scratch(int tileCellCount)
         {
             Tile = new TilePathQuery.Scratch();
-            Hpa = new HpaQuery.Scratch(navCellsPerTile);
+            Hpa = new HpaQuery.Scratch(tileCellCount);
+            Tile.Prepare(tileCellCount);
         }
 
         public TilePathQuery.Scratch Tile { get; }
         public HpaQuery.Scratch Hpa { get; }
         public Dictionary<int, int> DeckPrev { get; } = new();
         public List<int> DeckQueue { get; } = new();
+        public Fix64[] PointBuf { get; private set; } = new Fix64[4096];
+        public int[] LayerBuf { get; private set; } = new int[2048];
+        public List<int> Trace = new(4096);
+        public readonly Result Found = new();
+
+        public void EnsurePoints(int count)
+        {
+            if (PointBuf.Length < count)
+            {
+                var grown = new Fix64[Math.Max(count, PointBuf.Length * 2)];
+                Array.Copy(PointBuf, grown, Math.Min(PointBuf.Length, count));
+                PointBuf = grown;
+            }
+        }
+
+        public void EnsureLayers(int count)
+        {
+            if (LayerBuf.Length < count) LayerBuf = new int[Math.Max(count, LayerBuf.Length * 2)];
+        }
+
+        public Result Publish(Branch kind, int pointCount, int[]? polys, int polyCount, int[]? tileIds, int[]? cells, int cellCount, Fix64 cost)
+        {
+            Found.Kind = kind;
+            Found.PointCount = pointCount;
+            Found.Points = pointCount == 0 ? null : PointBuf;
+            Found.Polys = polys;
+            Found.PolyCount = polyCount;
+            Found.TileIds = tileIds;
+            Found.Cells = cells;
+            Found.CellCount = cellCount;
+            Found.Cost = cost;
+            return Found;
+        }
     }
 
     public static Result CorridorTo(
@@ -61,16 +98,14 @@ public static class CorridorQuery
         if (level != 0)
         {
             int exit = DeckExit(nav, from, mask, s);
-            if (exit < 0) return new Result { Kind = Branch.None, Points = null };
+            if (exit < 0) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
             var sub = CorridorTo(nav, config, exit, to, mask, 0, s);
-            if (sub.Points == null) return new Result { Kind = sub.Kind, Points = null };
-            var pts = new List<Fix64>
-            {
-                Fix64.FromInt(from % nav.NavCellsPerSide) + Fix64.HalfValue,
-                Fix64.FromInt(from / nav.NavCellsPerSide) + Fix64.HalfValue,
-            };
-            pts.AddRange(sub.Points);
-            return new Result { Kind = sub.Kind, Points = pts.ToArray(), Polys = sub.Polys, TileIds = sub.TileIds, Cells = sub.Cells, Cost = sub.Cost };
+            if (sub.Points == null) return s.Publish(sub.Kind, 0, null, 0, null, null, 0, default);
+            s.EnsurePoints(sub.PointCount + 2);
+            Array.Copy(s.PointBuf, 0, s.PointBuf, 2, sub.PointCount);
+            s.PointBuf[0] = Fix64.FromInt(from % nav.NavCellsPerSide) + Fix64.HalfValue;
+            s.PointBuf[1] = Fix64.FromInt(from / nav.NavCellsPerSide) + Fix64.HalfValue;
+            return s.Publish(sub.Kind, sub.PointCount + 2, sub.Polys, sub.PolyCount, sub.TileIds, sub.Cells, sub.CellCount, sub.Cost);
         }
 
         TilePathQuery.Result? r = null;
@@ -81,22 +116,24 @@ public static class CorridorQuery
 
         if (r != null)
         {
-            TilePathQuery.MarkNavTiles(nav, config, r.Polys, mask);
-            return new Result { Kind = Branch.Tile, Points = r.Points, Polys = r.Polys, Cost = r.Cost };
+            TilePathQuery.MarkNavTiles(nav, config, r.Polys, r.PolyCount, mask);
+            s.EnsurePoints(r.PointCount);
+            Array.Copy(r.Points, s.PointBuf, r.PointCount);
+            return s.Publish(Branch.Tile, r.PointCount, r.Polys, r.PolyCount, null, null, 0, r.Cost);
         }
 
         var p = HpaQuery.FindPath(nav, from, to, s.Hpa);
-        if (p == null) return new Result { Kind = Branch.None, Points = null };
-        foreach (int tileId in p.TileIds) mask[tileId] = 1;
+        if (p == null) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
+        for (int i = 0; i < p.TileCount; i++) mask[p.TileIds[i]] = 1;
         int navCellsPerSide = nav.NavCellsPerSide;
-        var hpaPts = new Fix64[p.Cells.Length * 2];
-        for (int i = 0; i < p.Cells.Length; i++)
+        s.EnsurePoints(p.CellCount * 2);
+        for (int i = 0; i < p.CellCount; i++)
         {
-            hpaPts[i * 2] = Fix64.FromInt(p.Cells[i] % navCellsPerSide) + Fix64.HalfValue;
-            hpaPts[i * 2 + 1] = Fix64.FromInt(p.Cells[i] / navCellsPerSide) + Fix64.HalfValue;
+            s.PointBuf[i * 2] = Fix64.FromInt(p.Cells[i] % navCellsPerSide) + Fix64.HalfValue;
+            s.PointBuf[i * 2 + 1] = Fix64.FromInt(p.Cells[i] / navCellsPerSide) + Fix64.HalfValue;
         }
 
-        return new Result { Kind = Branch.Hpa, Points = hpaPts, TileIds = p.TileIds, Cells = p.Cells, Cost = p.Cost };
+        return s.Publish(Branch.Hpa, p.CellCount * 2, null, 0, p.TileIds, p.Cells, p.CellCount, p.Cost);
     }
 
     // 桥面 BFS 到最近的桥头 portal(双层可走),途经 tile 并入走廊
@@ -118,20 +155,20 @@ public static class CorridorQuery
             }
 
             int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
-            TryEnqueue(x + 1, y);
-            TryEnqueue(x - 1, y);
-            TryEnqueue(x, y + 1);
-            TryEnqueue(x, y - 1);
-
-            void TryEnqueue(int nx, int ny)
-            {
-                if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) return;
-                int v = ny * navCellsPerSide + nx;
-                if (nav.UpPass[v] != 0 && !prev.ContainsKey(v)) { prev[v] = cell; q.Add(v); }
-            }
+            TryDeck(nav, prev, q, cell, navCellsPerSide, x + 1, y);
+            TryDeck(nav, prev, q, cell, navCellsPerSide, x - 1, y);
+            TryDeck(nav, prev, q, cell, navCellsPerSide, x, y + 1);
+            TryDeck(nav, prev, q, cell, navCellsPerSide, x, y - 1);
         }
 
         return -1;
+    }
+
+    private static void TryDeck(NavContext nav, Dictionary<int, int> prev, List<int> q, int cell, int navCellsPerSide, int nx, int ny)
+    {
+        if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) return;
+        int v = ny * navCellsPerSide + nx;
+        if (nav.UpPass[v] != 0 && !prev.ContainsKey(v)) { prev[v] = cell; q.Add(v); }
     }
 
     /// <summary>
@@ -140,23 +177,41 @@ public static class CorridorQuery
     /// </summary>
     public static (Fix64[] Points, int[]? Layers)? FlowPoints(FlowField flow, int start)
     {
+        var scratch = new Scratch(1);
+        var hit = FlowPoints(flow, start, scratch);
+        if (hit == null) return null;
+        var pts = new Fix64[hit.Value.PointCount];
+        Array.Copy(hit.Value.Points, pts, pts.Length);
+        int[]? layers = null;
+        if (hit.Value.Layers != null)
+        {
+            layers = new int[hit.Value.LayerCount];
+            Array.Copy(hit.Value.Layers, layers, layers.Length);
+        }
+
+        return (pts, layers);
+    }
+
+    public static (Fix64[] Points, int PointCount, int[]? Layers, int LayerCount)? FlowPoints(FlowField flow, int start, Scratch s)
+    {
         int n2 = flow.Integ.Length / 2;
         int n = (int)Math.Sqrt(n2);
-        var cells = FlowFieldBuilder.TracePath(flow, start, n2); // 终止上界:路点链每格至多访一次
+        var cells = s.Trace;
+        FlowFieldBuilder.TracePathInto(flow, start, n2, cells);
         if (cells[cells.Count - 1] != flow.Goal) return null;
-        var pts = new Fix64[cells.Count * 2];
-        var lv = new int[cells.Count];
+        if (cells.Count < 4) return null;
+        s.EnsurePoints(cells.Count * 2);
+        s.EnsureLayers(cells.Count);
         bool anyDeck = false;
         for (int i = 0; i < cells.Count; i++)
         {
             int k = cells[i], c = k % n2;
-            pts[i * 2] = Fix64.FromInt(c % n) + Fix64.HalfValue;
-            pts[i * 2 + 1] = Fix64.FromInt(c / n) + Fix64.HalfValue;
-            lv[i] = k / n2;
-            anyDeck |= lv[i] != 0;
+            s.PointBuf[i * 2] = Fix64.FromInt(c % n) + Fix64.HalfValue;
+            s.PointBuf[i * 2 + 1] = Fix64.FromInt(c / n) + Fix64.HalfValue;
+            s.LayerBuf[i] = k / n2;
+            anyDeck |= s.LayerBuf[i] != 0;
         }
 
-        if (cells.Count < 4) return null;
-        return (pts, anyDeck ? lv : null);
+        return (s.PointBuf, cells.Count * 2, anyDeck ? s.LayerBuf : null, anyDeck ? cells.Count : 0);
     }
 }

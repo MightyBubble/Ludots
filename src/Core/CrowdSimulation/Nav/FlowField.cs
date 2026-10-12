@@ -20,6 +20,8 @@ public sealed class FlowField
     public int[]? Lk { get; set; }
     /// <summary>随池缓冲保留的 Lk 后备数组(避免反复分配)。</summary>
     public int[]? LkBuf { get; set; }
+    /// <summary>走廊掩码的池内缓冲。Build 把当次掩码抄进来，调用方的暂存可以马上复用。</summary>
+    public byte[]? MaskBuf { get; set; }
     public NavLinkSet? Links { get; set; }
     public byte[]? Mask { get; set; }
     public int Reached { get; set; }
@@ -37,7 +39,7 @@ public sealed class FlowField
 public sealed class FlowPool
 {
     private readonly int _capacity;
-    private readonly Stack<(Fix64[] Integ, Fix64[] Len, int[] Wp, int[]? LkBuf)> _free = new();
+    private readonly Stack<FlowField> _free = new();
     private readonly object _freeLock = new();
 
     public FlowPool(int cellCount, int capacity)
@@ -59,31 +61,37 @@ public sealed class FlowPool
     public int Reused { get; private set; }
     public int FreeCount { get { lock (_freeLock) { return _free.Count; } } }
 
-    /// <summary>取未初始化缓冲(构建方会填满它读到的每个数组)。</summary>
+    /// <summary>取未初始化缓冲(构建方会填满它读到的每个数组)。场对象和数组一起复用。</summary>
     public FlowField Take()
     {
-        (Fix64[] Integ, Fix64[] Len, int[] Wp, int[]? LkBuf) b;
         lock (_freeLock)
         {
-            if (_free.Count > 0) { b = _free.Pop(); Reused++; }
-            else { b = (null!, null!, null!, null); }
+            if (_free.Count > 0)
+            {
+                Reused++;
+                return _free.Pop();
+            }
         }
 
-        if (b.Integ == null)
+        Allocated++;
+        return new FlowField
         {
-            Allocated++;
-            b = (new Fix64[LayeredCount], new Fix64[LayeredCount], new int[LayeredCount], null);
-        }
-
-        return new FlowField { Integ = b.Integ, Len = b.Len, Wp = b.Wp, LkBuf = b.LkBuf, OriginPool = this };
+            Integ = new Fix64[LayeredCount],
+            Len = new Fix64[LayeredCount],
+            Wp = new int[LayeredCount],
+            LkBuf = null,
+            OriginPool = this,
+        };
     }
 
     public void Give(FlowField f)
     {
         if (f.Integ.Length != LayeredCount) return;
+        f.Links = null;
+        f.Lk = null;
         lock (_freeLock)
         {
-            if (_free.Count < _capacity) _free.Push((f.Integ, f.Len, f.Wp, f.LkBuf));
+            if (_free.Count < _capacity) _free.Push(f);
         }
     }
 }
@@ -211,14 +219,55 @@ public static class FlowFieldBuilder
             len[i] = len[t] + Fix64Math.Sqrt(Fix64.FromInt(dx * dx + dy * dy));
         }
 
-        f.Goal = goal; f.Mask = mask; f.Reached = reached; f.Lk = lk; f.Links = links; f.NavId = nav.Id;
+        if (f.MaskBuf == null || f.MaskBuf.Length != mask.Length) f.MaskBuf = new byte[mask.Length];
+        Array.Copy(mask, f.MaskBuf, mask.Length);
+        f.Goal = goal; f.Mask = f.MaskBuf; f.Reached = reached; f.Lk = lk; f.Links = links; f.NavId = nav.Id;
         return f;
+    }
+
+    public static void PadMaskInto(byte[] mask, int navTilesPerSide, int pad, byte[] output)
+    {
+        Array.Clear(output, 0, output.Length);
+        if (pad == 0)
+        {
+            Array.Copy(mask, output, mask.Length);
+            return;
+        }
+
+        for (int cy = 0; cy < navTilesPerSide; cy++)
+        {
+            for (int cx = 0; cx < navTilesPerSide; cx++)
+            {
+                if (mask[cy * navTilesPerSide + cx] == 0) continue;
+                for (int dy = -pad; dy <= pad; dy++)
+                {
+                    for (int dx = -pad; dx <= pad; dx++)
+                    {
+                        int x = cx + dx, y = cy + dy;
+                        if (x >= 0 && y >= 0 && x < navTilesPerSide && y < navTilesPerSide) output[y * navTilesPerSide + x] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    public static void OrMaskInto(byte[] a, byte[] b, byte[] output)
+    {
+        for (int i = 0; i < a.Length; i++) output[i] = (byte)(a[i] | b[i]);
     }
 
     /// <summary>沿拉直路点链走(单位实际行走的绷紧路径),跳跃链接处跳接。</summary>
     public static List<int> TracePath(FlowField flow, int start, int maxSteps)
     {
-        var cells = new List<int> { start };
+        var cells = new List<int>();
+        TracePathInto(flow, start, maxSteps, cells);
+        return cells;
+    }
+
+    public static void TracePathInto(FlowField flow, int start, int maxSteps, List<int> cells)
+    {
+        cells.Clear();
+        cells.Add(start);
         int c = start;
         for (int step = 0; step < maxSteps && c != flow.Goal; step++)
         {
@@ -227,8 +276,6 @@ public static class FlowFieldBuilder
             cells.Add(next);
             c = next;
         }
-
-        return cells;
     }
 
     public static byte[] PadMask(byte[] mask, int navTilesPerSide, int pad)
