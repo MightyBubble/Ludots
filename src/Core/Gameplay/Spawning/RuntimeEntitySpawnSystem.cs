@@ -195,6 +195,10 @@ namespace Ludots.Core.Gameplay.Spawning
             _instanceInitializers[kind - 1] = null!;
         }
 
+        /// <summary>
+        /// 排空阶段队列。不能在 Arch 查询回调里调用：Create / Add / Destroy 是结构变更。
+        /// vendored Arch 没有公开的查询深度，这里只写合同，不放调试断言。
+        /// </summary>
         public override void Update(in float dt)
         {
             while (_requests.TryPeek(out var peek))
@@ -256,6 +260,8 @@ namespace Ludots.Core.Gameplay.Spawning
         /// 模板 children 在这次调用里继续物化，也不进阶段队列。
         /// 失败不回滚已经创建的实体。还没物化的子请求会丢掉，异常写明条数，不静默吞掉。
         /// 私有子请求表在调用结束时清空，下一次调用不接着上次的半截。
+        /// 不能在 Arch 查询回调里调用：Create / Add / Destroy 是结构变更。
+        /// vendored Arch 没有公开的查询深度，这里只写合同，不放调试断言。
         /// EffectProcessing 里的 <see cref="Update"/> 仍只排空阶段队列。
         /// </summary>
         public void Materialize(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
