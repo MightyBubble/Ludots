@@ -4444,7 +4444,7 @@ namespace Ludots.Core.Engine
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
                     Terrain = LogicTerrain,
                     Obstacles = runtimeObstacles,
-                    Config = bakeConfig,
+                    Config = BakeConfigForReferencedProfiles(bakeConfig, referencedNavProfiles),
                     AgentProfiles = agentProfiles,
                     Targets = new[] { new NavBakeTileCoord(0, 0) },
                     BuildConfig = new NavBuildConfig(
@@ -4467,6 +4467,34 @@ namespace Ludots.Core.Engine
             {
                 navigableBoard.NavServices = navRegistry;
             }
+        }
+
+        // Incremental rebuild publishes one tile store per referenced profile.
+        // Profiles kept only so navProfileId resolves have no store and must not be baked.
+        private static NavMeshBakeConfig BakeConfigForReferencedProfiles(
+            NavMeshBakeConfig bakeConfig,
+            HashSet<int> referencedNavProfiles)
+        {
+            var profiles = new List<NavMeshAgentProfileConfig>(referencedNavProfiles.Count);
+            for (int i = 0; i < bakeConfig.Profiles.Count; i++)
+            {
+                if (referencedNavProfiles.Contains(i))
+                {
+                    profiles.Add(bakeConfig.Profiles[i]);
+                }
+            }
+
+            return new NavMeshBakeConfig
+            {
+                Mode = bakeConfig.Mode,
+                Algorithm = bakeConfig.Algorithm,
+                Profiles = profiles,
+                Layers = bakeConfig.Layers,
+                Areas = bakeConfig.Areas,
+                Maps = bakeConfig.Maps,
+                RuntimeIncremental = bakeConfig.RuntimeIncremental,
+                TerrainFeed = bakeConfig.TerrainFeed,
+            };
         }
 
         internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
