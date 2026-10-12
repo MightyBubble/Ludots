@@ -304,15 +304,21 @@ public sealed class CrowdFog
 
         if (!any) return;
 
-        var indexByPlayer = sim.Config.PairRules.IndexByPlayerId;
         var units = sim.Units;
-        for (int i = 0; i < units.Count; i++)
+        var movement = sim.Movement;
+        if (movement == null)
         {
-            var entity = units.EntityAt(i);
-            var owner = sim.World.Get<Gameplay.Components.PlayerOwner>(entity);
-            int g = GroupOf[indexByPlayer[owner.PlayerId]];
+            throw new InvalidOperationException("迷雾更新需要运动内核里的位置和玩家下标。");
+        }
+
+        var positions = movement.Positions;
+        var players = movement.PlayerIdx;
+        int unitCount = units.Count;
+        for (int i = 0; i < unitCount; i++)
+        {
+            int g = GroupOf[players[i]];
             if (g % Period != slot) continue;
-            var p = sim.World.Get<Components.WorldPositionCm>(entity).Value;
+            var p = positions[i];
             // 双向夹紧(负坐标会写进上一组的切片)
             int fx = Math.Max(0, Math.Min(FogCellsPerSide - 1, (int)(p.X / Fix64.FromInt(FogCellSizeCm)).ToLong()));
             int fy = Math.Max(0, Math.Min(FogCellsPerSide - 1, (int)(p.Y / Fix64.FromInt(FogCellSizeCm)).ToLong()));

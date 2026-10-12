@@ -230,7 +230,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 
 ## S4-a 交付：部署单位与指令回放内核（本次）
 
-- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（模板写真：profileId / agentTypeId / speedCmPerSecond / personalRadiusCm / pushPriority / special）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
+- **单位 = Arch ECS 实体**（不克隆参考实现的 SoA 存储）：`CrowdSimulationAgent`（速度、个人半径、推挤优先级、special，以及生成时写入的档案下标和移动类型下标；profileId / agentTypeId 留在模板）、`CrowdSimulationUnitState`（槽位 / 组 / state 等校验字段）、`WorldPositionCm`、`PlayerOwner`（Ludots 玩家号 1..P）。管理层 `CrowdSimUnits` 只持稠密序 + 18 位槽位 + 14 位代的句柄池（与参考实现 units 的句柄同构,回放可复现）;`CrowdNavGroupSet` 是（玩家 × 移动类型 × 半径级）的组注册表。
 - **单位创建走模板生成管线**：有呈现接线的会话里,单位实体由引擎现成的 `EntityBuilder.UseTemplate→Build` 同步实例化（`RuntimeEntitySpawnSystem.SpawnTemplate` 同款形状,不经生成队列——对拍要求单位在指令 tick 内就位）,模板写真组件与 Mod 作者附加组件经 ComponentRegistry 数据驱动落到实体;仿真参数写在模板的 `CrowdSimulationAgent` 上，生成后不再按配置补速度、半径或推挤优先级。钩子随后补逐实例事实（位置/玩家/仿真身份/呈现预置件）并把稠密序与句柄登记进 `CrowdSimUnits`——分配顺序与改造前逐位一致。模板点名 `profileId` 和 `agentTypeId`，激活时按（移动类型 × 半径级）预解析并校验闭包。两移动类型共用体型时各拿各的模板键。无头对拍与回放没有模板资产,保持最小组件集直接创建,组件值与演示路径逐位相同。出生算法（盐流/环形搜索/编组/散布）留在内核,只换了实体创建机制;S4/S5 真值测试原样全绿。
 - **部署算法逐 op 移植**（sim/population.js 的 spawn / spawnAt）：mulberry32 加盐流（每条指令自己的流,输出 u32/2³² 二进分数,Fix64 精确表示）、出生点抖动 → nearestPassable 环形搜索 → 编组中心 → 三角散布 → 格内 inset 落点。满容量（`sim.maxUnits`）拒收并计数（D54:失败不留半生成状态）。
 - **规范校验码（FNV-1a 32,Fix64 原始值口径——甲方体系）**：字段顺序与参考实现 unitChecksum 一致,定点字段按原始 int64 低→高 32 位混合。位置在两端同网格：生成公式在 Ludots 是 Fix64 算术,参考端经镜像侧 S4 归一补丁按同一语义逐 op 求值（FromDouble 向零截断、乘法向 -∞ 取整;**位置乘法在两端都精确,不允许再取整**——米域取整比厘米域少 50 个原始单位,已踩过并固化）。
@@ -293,18 +293,11 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **Clear/重部署**：当前 `CrowdSimUnits.Clear()` 对模板道单位直接 `World.Destroy`,不经过
   呈现生命周期——已记为已知缺口,与呈现接线改造同轨补齐（呈现实体两帧销毁后再重建稠密表）。
 
-## 热路径数据面：gather → SoA → scatter（内核改造，本次）
+## 热路径数据面：chunk 收拢 → SoA → 写回
 
-对拍行序 = 单位稠密序（`CrowdSimUnits._dense` 是 append-only 创建序，真值 bin 的行序），
-而 ECS chunk 遍历按原型分桶（人群单位有头less/模板两条生成道 = 两个原型），不保稠密序——
-热路径不能直接换成 chunk 迭代。取而代之的形状：**每 tick 一次 gather（组件 → 内核 SoA，
-含 `CrowdSimulationAgent` 的解析值——managed 组件不进子步热环）→ 子步（哈希重建 / 避让 /
-领队 / 意图 / 马达）全走 SoA → tick 末一次 scatter（SoA → 组件）**。World 解析从每单位每
-子步约 16 次降到每 tick 9 次（6 读 3 写）；意图层的指令簿线性扫与认知槽字典解析改组级
-备忘（指令簿与槽切换只在 tick 边界变，gather 时失效）。校验码在 tick 末从 SoA 读
-（scatter 后同值）；无运动栈的纯部署会话保留组件直读路径，两条路径值等价。
-语义不变式：结构 op / 指令都发生在 gather 之前的 tick 边界，子步间没有任何组件读者，
-scatter 写回的即子步终值——对拍逐位不变由 S1–S7 全部真值测试钉住。
+子步的地址是稠密下标。空间哈希的桶、分离、接触计数和并行区间都按下标读写，还要随机读邻居。Arch 的查询按原型分块，一块 chunk 盖不住整张稠密表，查询顺序也不是稠密序。单位模板的组件集可以不同。以前把原因写成「无头和模板两条生成道、两个原型」。无头那条生成道已经不在，这个说法作废。剩下的原因是：稠密表是创建序，槽位经 `_sparse` 映回；chunk 序是原型序；中间没有一张跨 chunk 的连续 Span 可以拿来做下标划分。
+
+每个 tick 用缓存的 `QueryDescription` 把单位列扫一遍，按槽位映回稠密下标，收成 SoA。子步只读写这张表。tick 末按同一下标写回 chunk 列，不对单个单位做 `World.Get` / `World.Set`。迷雾盖章读的是刚写完的位置和玩家下标，不再按实体回查。指令和结构变更都在这次收拢之前。子步中间没有别的读者要看组件。校验码在 tick 末读 SoA。没有运动内核的部署会话仍直接读组件。意图层的指令簿线性扫和认知槽解析仍是组级备忘，只在 tick 边界失效。规划发生在收拢之前，它改的是组件，下一次收拢能看见。
 
 50k 单位 tick 基准（自造场景：种子 1337、spawnAt 50000、远点行军、200 tick 稳态窗、
 逐 tick 墙钟、Debug 构建、同机同窗前后对照，`CrowdKernel50KBenchmarkTests` 落
