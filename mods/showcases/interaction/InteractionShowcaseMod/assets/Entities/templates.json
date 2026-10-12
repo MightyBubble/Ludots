@@ -217,7 +217,11 @@
           "Armor": 4
         }
       },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -247,7 +251,11 @@
           "Armor": 10
         }
       },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
