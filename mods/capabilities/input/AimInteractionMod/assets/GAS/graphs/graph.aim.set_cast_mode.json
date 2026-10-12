@@ -29,8 +29,9 @@
       },
       {
         "id": "set_smart",
-        "op": "SetCastMode",
-        "mode": "castMode.smart"
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
       },
       {
         "id": "rep_click",
@@ -38,8 +39,9 @@
       },
       {
         "id": "set_click",
-        "op": "SetCastMode",
-        "mode": "castMode.aim_click"
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.click"
       },
       {
         "id": "rep_release",
@@ -47,8 +49,9 @@
       },
       {
         "id": "set_release",
-        "op": "SetCastMode",
-        "mode": "castMode.aim_release"
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.release"
       },
       {
         "id": "c1",

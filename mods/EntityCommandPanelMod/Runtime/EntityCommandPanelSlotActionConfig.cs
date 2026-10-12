@@ -18,14 +18,16 @@ namespace EntityCommandPanelMod.Runtime
             string[] slotActionIds,
             string[] modeHintContextIds,
             string[] modeHintKeys,
-            string[] modeHintCastModeIds,
-            string[] modeHintCastModeKeys)
+            string modeHintPrefKey,
+            string[] modeHintPrefValueIds,
+            string[] modeHintPrefHintKeys)
         {
             SlotActionIds = slotActionIds;
             ModeHintContextIds = modeHintContextIds;
             ModeHintKeys = modeHintKeys;
-            ModeHintCastModeIds = modeHintCastModeIds;
-            ModeHintCastModeKeys = modeHintCastModeKeys;
+            ModeHintPrefKey = modeHintPrefKey;
+            ModeHintPrefValueIds = modeHintPrefValueIds;
+            ModeHintPrefHintKeys = modeHintPrefHintKeys;
         }
 
         public IReadOnlyList<string> SlotActionIds { get; }
@@ -36,11 +38,14 @@ namespace EntityCommandPanelMod.Runtime
         /// <summary><c>modeHints</c> key used while the context at the same index is active.</summary>
         public IReadOnlyList<string> ModeHintKeys { get; }
 
-        /// <summary>Cast mode ids, checked before interaction contexts. Absent when the file omits the object.</summary>
-        public IReadOnlyList<string> ModeHintCastModeIds { get; }
+        /// <summary>Preference key whose player-level value selects a hint. Empty when the file omits modeHintPrefs.</summary>
+        public string ModeHintPrefKey { get; }
 
-        /// <summary><c>modeHints</c> key used while the cast mode at the same index is the player default.</summary>
-        public IReadOnlyList<string> ModeHintCastModeKeys { get; }
+        /// <summary>Allowed values of <see cref="ModeHintPrefKey"/>, checked before interaction contexts.</summary>
+        public IReadOnlyList<string> ModeHintPrefValueIds { get; }
+
+        /// <summary><c>modeHints</c> key used while the preference value at the same index is the player-level value.</summary>
+        public IReadOnlyList<string> ModeHintPrefHintKeys { get; }
 
         public static EntityCommandPanelSlotActionConfig Load(ConfigPipeline pipeline, ConfigCatalog? catalog, ConfigConflictReport? report)
         {
@@ -87,34 +92,48 @@ namespace EntityCommandPanelMod.Runtime
                 index++;
             }
 
-            string[] castModeIds = Array.Empty<string>();
-            string[] castModeKeys = Array.Empty<string>();
-            if (merged.ContainsKey("modeHintCastModes"))
+            string prefKey = string.Empty;
+            string[] prefValueIds = Array.Empty<string>();
+            string[] prefHintKeys = Array.Empty<string>();
+            if (merged.ContainsKey("modeHintPrefs"))
             {
-                if (merged["modeHintCastModes"] is not JsonObject modeHintCastModes)
+                if (merged["modeHintPrefs"] is not JsonObject modeHintPrefs)
                 {
-                    throw new InvalidOperationException($"'{RelativePath}' modeHintCastModes must be an object.");
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs must be an object.");
                 }
 
-                castModeIds = new string[modeHintCastModes.Count];
-                castModeKeys = new string[modeHintCastModes.Count];
-                int castIndex = 0;
-                foreach (KeyValuePair<string, JsonNode?> pair in modeHintCastModes)
+                if (modeHintPrefs["key"] is not JsonValue keyValue ||
+                    !keyValue.TryGetValue<string>(out string? keyName) ||
+                    string.IsNullOrWhiteSpace(keyName))
                 {
-                    string? modeKey = pair.Value?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(modeKey))
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs.key must be a non-empty preference key.");
+                }
+
+                if (modeHintPrefs["values"] is not JsonObject prefValues)
+                {
+                    throw new InvalidOperationException($"'{RelativePath}' modeHintPrefs.values must be an object.");
+                }
+
+                prefKey = keyName;
+                prefValueIds = new string[prefValues.Count];
+                prefHintKeys = new string[prefValues.Count];
+                int prefIndex = 0;
+                foreach (KeyValuePair<string, JsonNode?> pair in prefValues)
+                {
+                    string? hintKey = pair.Value?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(hintKey))
                     {
                         throw new InvalidOperationException(
-                            $"'{RelativePath}' modeHintCastModes['{pair.Key}'] must map a cast mode id to a non-empty modeHints key.");
+                            $"'{RelativePath}' modeHintPrefs.values['{pair.Key}'] must map a preference value to a non-empty modeHints key.");
                     }
 
-                    castModeIds[castIndex] = pair.Key;
-                    castModeKeys[castIndex] = modeKey;
-                    castIndex++;
+                    prefValueIds[prefIndex] = pair.Key;
+                    prefHintKeys[prefIndex] = hintKey;
+                    prefIndex++;
                 }
             }
 
-            return new EntityCommandPanelSlotActionConfig(actionIds, contextIds, modeKeys, castModeIds, castModeKeys);
+            return new EntityCommandPanelSlotActionConfig(actionIds, contextIds, modeKeys, prefKey, prefValueIds, prefHintKeys);
         }
     }
 }

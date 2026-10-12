@@ -325,8 +325,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadTimeFlowScalePermille:
                     ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
-                case GraphNodeOp.IsCastMode:
-                    RequireNonEmpty(node.Mode, "mode", node, graphId, diagnostics);
+                case GraphNodeOp.IsPref:
+                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Value, "value", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -800,8 +801,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         graphId,
                         diagnostics);
                     break;
-                case GraphNodeOp.IsCastMode:
-                    instruction.Imm = RequireSymbol(node.Mode, "mode", node, symbolToIndex, symbols, graphId, diagnostics);
+                case GraphNodeOp.IsPref:
+                    instruction.Imm = PrefOpEncoding.PackSymbolIndices(
+                        RequireSymbol(node.Key, "key", node, symbolToIndex, symbols, graphId, diagnostics),
+                        RequireSymbol(node.Value, "value", node, symbolToIndex, symbols, graphId, diagnostics));
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);

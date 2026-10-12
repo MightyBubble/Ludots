@@ -1,0 +1,55 @@
+[
+  {
+    "id": "graph.aim.cancel",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.Cancel",
+        "action": "Aim.Cancel",
+        "start": "deact",
+        "refire": "restart"
+      },
+      {
+        "label": "Aim.CancelRelease",
+        "action": "Aim.CancelRelease",
+        "start": "deact",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "deact",
+        "op": "DeactivateOwnContext"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "deact",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

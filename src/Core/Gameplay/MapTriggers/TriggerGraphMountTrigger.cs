@@ -615,8 +615,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             GraphSliceResult result;
+            bool contextMountPushed = false;
             try
             {
+                if (Owner.Kind == TriggerMountOwnerKind.InteractionContext)
+                {
+                    dependencies.GraphApi.PushContextMount(Owner.Subject, Owner.OwnerId);
+                    contextMountPushed = true;
+                }
+
                 result = GraphExecutor.ExecuteScriptSlice(
                     dependencies.Engine.World,
                     _runCaster,
@@ -642,6 +649,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
             finally
             {
+                if (contextMountPushed)
+                {
+                    dependencies.GraphApi.PopContextMount();
+                }
+
                 if (callbacks != null)
                 {
                     callbacks.PopResumeTarget(this);

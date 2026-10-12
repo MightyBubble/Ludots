@@ -1,0 +1,38 @@
+{
+  "modes": [
+    {
+      "buttonId": "Interaction.Mode.WoW",
+      "label": "WoW / Target First",
+      "actionId": "Aim.CastMode.Smart",
+      "prefValue": "interaction.context.aim.smart",
+      "representsPref": false
+    },
+    {
+      "buttonId": "Interaction.Mode.LoL",
+      "label": "LoL / Smart Cast",
+      "actionId": "Aim.CastMode.Smart",
+      "prefValue": "interaction.context.aim.smart",
+      "representsPref": true
+    },
+    {
+      "buttonId": "Interaction.Mode.SC2",
+      "label": "SC2 / Aim Cast",
+      "actionId": "Aim.CastMode.AimClick",
+      "prefValue": "interaction.context.aim.click",
+      "representsPref": true
+    },
+    {
+      "buttonId": "Interaction.Mode.Indicator",
+      "label": "LoL / Indicator Release",
+      "actionId": "Aim.CastMode.AimRelease",
+      "prefValue": "interaction.context.aim.release",
+      "representsPref": true
+    },
+    {
+      "buttonId": "Interaction.Mode.Action",
+      "label": "Action / Context Scored",
+      "actionId": "InteractionModeAction",
+      "contextId": "interaction.context.interaction.context_scored"
+    }
+  ]
+}

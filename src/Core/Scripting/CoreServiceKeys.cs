@@ -334,7 +334,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");
         public static readonly ServiceKey<InteractionContextProfileRegistry> InteractionContextProfileRegistry = new("InteractionContextProfileRegistry");
-        public static readonly ServiceKey<StringIntRegistry> CastModeIdRegistry = new("CastModeIdRegistry");
+        public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionPrefCatalog> InteractionPrefCatalog = new("InteractionPrefCatalog");
         public static readonly ServiceKey<ClientControlSchemePreferenceStore> ClientControlSchemePreferenceStore = new("ClientControlSchemePreferenceStore");
         public static readonly ServiceKey<ControlSchemeRuntime> ControlSchemeRuntime = new("ControlSchemeRuntime");
         public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionModeMap> InteractionModeMap = new("InteractionModeMap");

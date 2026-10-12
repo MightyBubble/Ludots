@@ -4,14 +4,13 @@ using Arch.Core;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
     internal sealed class ChampionSkillCastModeCatalog
     {
-        public const string Uri = "ChampionSkillSandboxMod:assets/UI/cast_mode_toolbar.json";
+        public const string Uri = "ChampionSkillSandboxMod:assets/UI/aim_pref_toolbar.json";
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -27,7 +26,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
         public Mode[] Modes { get; }
 
-        public readonly record struct Mode(string ButtonId, string Label, string ActionId, string CastModeId, string Accent);
+        public readonly record struct Mode(string ButtonId, string Label, string ActionId, string PrefValue, string Accent);
 
         public static ChampionSkillCastModeCatalog Load(GameEngine engine)
         {
@@ -35,7 +34,7 @@ namespace ChampionSkillSandboxMod.Runtime
             FileDto? file = JsonSerializer.Deserialize<FileDto>(stream, JsonOptions);
             if (file?.Modes == null || file.Modes.Length == 0)
             {
-                throw new InvalidOperationException($"{Uri} must list at least one cast mode.");
+                throw new InvalidOperationException($"{Uri} must list at least one preference button.");
             }
 
             var modes = new Mode[file.Modes.Length];
@@ -46,15 +45,15 @@ namespace ChampionSkillSandboxMod.Runtime
                     RequireToken(dto.ButtonId, $"{Uri} modes[{i}].buttonId"),
                     RequireToken(dto.Label, $"{Uri} modes[{i}].label"),
                     RequireToken(dto.ActionId, $"{Uri} modes[{i}].actionId"),
-                    RequireToken(dto.CastModeId, $"{Uri} modes[{i}].castModeId"),
+                    RequireToken(dto.PrefValue, $"{Uri} modes[{i}].prefValue"),
                     RequireToken(dto.Accent, $"{Uri} modes[{i}].accent"));
                 for (int earlier = 0; earlier < i; earlier++)
                 {
                     if (string.Equals(modes[earlier].ButtonId, modes[i].ButtonId, StringComparison.Ordinal) ||
-                        string.Equals(modes[earlier].CastModeId, modes[i].CastModeId, StringComparison.Ordinal) ||
+                        string.Equals(modes[earlier].PrefValue, modes[i].PrefValue, StringComparison.Ordinal) ||
                         string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal))
                     {
-                        throw new InvalidOperationException($"{Uri} modes[{i}] repeats a button, action, or cast mode.");
+                        throw new InvalidOperationException($"{Uri} modes[{i}] repeats a button, action, or preference value.");
                     }
                 }
             }
@@ -102,31 +101,39 @@ namespace ChampionSkillSandboxMod.Runtime
                 return null;
             }
 
-            StringIntRegistry registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("ChampionSkillSandbox cast modes require CastModeIdRegistry.");
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox preference buttons require InteractionPrefCatalog.");
             if (!engine.World.TryGet(rep, out InteractionPref pref))
             {
                 throw new InvalidOperationException(
-                    "ChampionSkillSandbox cast modes require InteractionPref on the possessed rep.");
+                    "ChampionSkillSandbox preference buttons require InteractionPref on the possessed rep.");
             }
 
-            if (pref.DefaultCastModeId <= 0)
+            const string prefKey = "pref.aim.cast_mode";
+            int keyId = catalog.Keys.GetId(prefKey);
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException($"ChampionSkillSandbox preference key '{prefKey}' is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
             {
                 throw new InvalidOperationException(
-                    "ChampionSkillSandbox cast mode is not seeded on the possessed rep.");
+                    $"ChampionSkillSandbox preference '{prefKey}' is not seeded on the possessed rep.");
             }
 
-            string name = registry.GetName(pref.DefaultCastModeId);
+            string name = catalog.Values.GetName(valueId);
             for (int i = 0; i < Modes.Length; i++)
             {
-                if (string.Equals(Modes[i].CastModeId, name, StringComparison.Ordinal))
+                if (string.Equals(Modes[i].PrefValue, name, StringComparison.Ordinal))
                 {
                     return Modes[i].ButtonId;
                 }
             }
 
             throw new InvalidOperationException(
-                $"ChampionSkillSandbox possessed rep cast mode '{name}' is not listed in {Uri}.");
+                $"ChampionSkillSandbox possessed rep preference '{prefKey}' value '{name}' is not listed in {Uri}.");
         }
 
         private static string RequireToken(string? value, string field)
@@ -149,7 +156,7 @@ namespace ChampionSkillSandboxMod.Runtime
             public string? ButtonId { get; set; }
             public string? Label { get; set; }
             public string? ActionId { get; set; }
-            public string? CastModeId { get; set; }
+            public string? PrefValue { get; set; }
             public string? Accent { get; set; }
         }
     }

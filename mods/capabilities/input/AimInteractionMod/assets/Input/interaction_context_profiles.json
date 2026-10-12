@@ -34,7 +34,7 @@
           "trigger": "graph.aim.confirm"
         },
         {
-          "trigger": "graph.aim.cancel_click"
+          "trigger": "graph.aim.cancel"
         }
       ],
       "onActivated": [
@@ -58,7 +58,7 @@
           "trigger": "graph.aim.release_confirm"
         },
         {
-          "trigger": "graph.aim.cancel_release"
+          "trigger": "graph.aim.cancel"
         }
       ],
       "onActivated": [
@@ -66,6 +66,12 @@
       ],
       "onDeactivated": [
         "graph.aim.clear"
+      ]
+    },
+    {
+      "id": "interaction.context.aim.smart",
+      "onActivated": [
+        "graph.aim.smart_cast"
       ]
     }
   ]

@@ -101,22 +101,54 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// True when the rep's resolved cast mode for the actor's ability at
-        /// <paramref name="slot"/> equals the cast mode named by <paramref name="modeKeyId"/>.
-        /// A resolved mode of 0 fails closed and names the rep. An empty slot fails closed.
+        /// True when the rep's resolved preference for <paramref name="keyId"/> equals
+        /// <paramref name="valueId"/>, using the ability at <paramref name="slot"/> on
+        /// <paramref name="actor"/>. An ability pair wins, else the player pair.
+        /// A resolved value of 0 fails closed. An empty slot fails closed.
         /// </summary>
-        bool IsCastMode(Entity rep, Entity actor, int slot, int modeKeyId)
+        bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.CastModeRegistryUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
         }
 
         /// <summary>
-        /// Writes the player-default cast mode named by <paramref name="modeKeyId"/> onto
-        /// <paramref name="rep"/>. The rep must already carry InteractionPref.
+        /// Writes one player-level preference onto <paramref name="rep"/>.
+        /// The rep must already carry InteractionPref. Does not write an ability-template pair.
         /// </summary>
-        void SetCastMode(Entity rep, int modeKeyId)
+        void SetPref(Entity rep, int keyId, int valueId)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.CastModeRegistryUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
+        }
+
+        /// <summary>
+        /// Activates the interaction context profile named by the resolved preference value
+        /// for <paramref name="keyId"/>, under <paramref name="parentContextKeyId"/>.
+        /// The key must be context-valued. An unset preference fails closed.
+        /// </summary>
+        void ActivateContextFromPref(Entity rep, Entity actor, int slot, int keyId, int parentContextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
+        }
+
+        /// <summary>
+        /// Deactivates the interaction context whose mount is running the current graph.
+        /// Fails closed when no context mount is on the stack.
+        /// </summary>
+        void DeactivateOwnContext()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DeactivateOwnContextOutsideMount");
+        }
+
+        /// <summary>Push the context mount that is about to run a graph. Paired with <see cref="PopContextMount"/>.</summary>
+        void PushContextMount(Entity subject, int profileId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackUnavailable");
+        }
+
+        /// <summary>Pop the context mount pushed around the graph that just returned.</summary>
+        void PopContextMount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackUnavailable");
         }
 
         /// <summary>

@@ -1874,27 +1874,23 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            var registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
-                !engine.World.TryGet(rep, out InteractionPref pref) ||
-                pref.DefaultCastModeId <= 0)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
             {
                 return "<none>";
             }
 
-            string name = registry.GetName(pref.DefaultCastModeId);
-            if (string.Equals(name, "castMode.smart", StringComparison.Ordinal))
+            string name = ReadAimPrefValue(engine, rep);
+            if (string.Equals(name, "interaction.context.aim.smart", StringComparison.Ordinal))
             {
                 return SmartCastModeId;
             }
 
-            if (string.Equals(name, "castMode.aim_release", StringComparison.Ordinal))
+            if (string.Equals(name, "interaction.context.aim.release", StringComparison.Ordinal))
             {
                 return IndicatorModeId;
             }
 
-            if (string.Equals(name, "castMode.aim_click", StringComparison.Ordinal))
+            if (string.Equals(name, "interaction.context.aim.click", StringComparison.Ordinal))
             {
                 return PressReleaseModeId;
             }
@@ -3178,5 +3174,31 @@ Assert.Fail(
                 LastState = state;
             }
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

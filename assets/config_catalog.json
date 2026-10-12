@@ -471,12 +471,6 @@
     ]
   },
   {
-    "Path": "Input/cast_modes.json",
-    "Policy": "ArrayById",
-    "IdField": "id",
-    "AllowEmpty": true
-  },
-  {
     "Path": "Input/interaction_prefs.json",
     "Policy": "DeepObject"
   },

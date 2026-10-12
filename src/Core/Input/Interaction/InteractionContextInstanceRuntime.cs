@@ -191,6 +191,38 @@ namespace Ludots.Core.Input.Interaction
         {
             RequireAliveSubject(subject, nameof(Deactivate));
             int profileId = RequireProfileId(contextKeyId, nameof(Deactivate));
+            RemoveInstance(subject, profileId);
+        }
+
+        /// <summary>
+        /// Same removal as <see cref="Deactivate"/>, addressed by the profile registry id the
+        /// mount already holds. Skips the config-key lookup.
+        /// </summary>
+        public void DeactivateProfile(Entity subject, int profileId)
+        {
+            RequireAliveSubject(subject, nameof(Deactivate));
+            if (profileId <= 0 || !_profiles.IsInstalled(profileId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DeactivateContextUnknown: interaction context profile id {profileId} is not installed.");
+            }
+
+            RemoveInstance(subject, profileId);
+        }
+
+        /// <summary>True when <paramref name="profileName"/> is an installed interaction context profile.</summary>
+        public bool IsInstalledProfile(string profileName)
+        {
+            if (string.IsNullOrWhiteSpace(profileName) || !_profiles.ProfileIdRegistry.TryGetId(profileName, out int profileId))
+            {
+                return false;
+            }
+
+            return _profiles.IsInstalled(profileId);
+        }
+
+        private void RemoveInstance(Entity subject, int profileId)
+        {
             if (!_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances) ||
                 instances.IndexOf(profileId) < 0)
             {

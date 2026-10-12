@@ -313,7 +313,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(toolbar.IsVisible, Is.True);
             Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True);
             Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
-            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.smart"));
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.smart"));
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -347,7 +347,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             TickUntilNextFixedTick(engine);
             Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
-            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_release"));
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.release"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -359,7 +359,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
             TickUntilNextFixedTick(engine);
             Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
-            Assert.That(ReadCastModeId(engine), Is.EqualTo("castMode.aim_click"));
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.click"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
@@ -1073,19 +1073,11 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadCastModeId(GameEngine engine)
         {
-            var registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
             Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+            string name = ReadAimPrefValue(engine, rep);
+            if (string.Equals(name, "<none>", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Possessed rep cast mode is not seeded.");
-            }
-
-            string name = registry.GetName(pref.DefaultCastModeId);
-            if (string.IsNullOrEmpty(name))
-            {
-                throw new InvalidOperationException(
-                    $"Possessed rep cast mode id {pref.DefaultCastModeId} is not registered.");
+                throw new InvalidOperationException("Possessed rep preference pref.aim.cast_mode is not seeded.");
             }
 
             return name;
@@ -1961,5 +1953,31 @@ namespace Ludots.Tests.GAS.Production
             public void SetMousePosition(Vector2 position) => _mousePosition = position;
             public string GetCharBuffer() => string.Empty;
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

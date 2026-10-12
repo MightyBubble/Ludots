@@ -83,45 +83,6 @@
         "blackboardKey": "aim.slot"
       },
       {
-        "id": "is_click",
-        "op": "IsCastMode",
-        "mode": "castMode.aim_click"
-      },
-      {
-        "id": "click_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_click",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.click",
-        "parentContext": "interaction.context.aim.cast"
-      },
-      {
-        "id": "is_release",
-        "op": "IsCastMode",
-        "mode": "castMode.aim_release"
-      },
-      {
-        "id": "release_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "act_release",
-        "op": "ActivateContext",
-        "context": "interaction.context.aim.release",
-        "parentContext": "interaction.context.aim.cast"
-      },
-      {
-        "id": "is_smart",
-        "op": "IsCastMode",
-        "mode": "castMode.smart"
-      },
-      {
-        "id": "smart_jump",
-        "op": "JumpIfFalse"
-      },
-      {
         "id": "load_mod",
         "op": "LoadEntryPayloadInt",
         "payloadKey": "Aim.Modifiers"
@@ -137,13 +98,24 @@
         "functionName": "graph.aim.resolve_submit"
       },
       {
-        "id": "halt_ok",
-        "op": "HaltReturnInt"
+        "id": "load_press_mod",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Aim.Modifiers"
       },
       {
-        "id": "fail",
-        "op": "Fail",
-        "message": "UnmatchedCastMode"
+        "id": "store_press_mod",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.press_modifiers"
+      },
+      {
+        "id": "act_pref",
+        "op": "ActivateContextFromPref",
+        "key": "pref.aim.cast_mode",
+        "parentContext": "interaction.context.aim.cast"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -218,66 +190,6 @@
         "to": "read_slot"
       },
       {
-        "from": "read_slot",
-        "fromPort": "next",
-        "to": "is_click"
-      },
-      {
-        "from": "is_click",
-        "fromPort": "next",
-        "to": "click_jump"
-      },
-      {
-        "from": "click_jump",
-        "fromPort": "true",
-        "to": "act_click"
-      },
-      {
-        "from": "act_click",
-        "fromPort": "next",
-        "to": "halt_ok"
-      },
-      {
-        "from": "click_jump",
-        "fromPort": "false",
-        "to": "is_release"
-      },
-      {
-        "from": "is_release",
-        "fromPort": "next",
-        "to": "release_jump"
-      },
-      {
-        "from": "release_jump",
-        "fromPort": "true",
-        "to": "act_release"
-      },
-      {
-        "from": "act_release",
-        "fromPort": "next",
-        "to": "halt_ok"
-      },
-      {
-        "from": "release_jump",
-        "fromPort": "false",
-        "to": "is_smart"
-      },
-      {
-        "from": "is_smart",
-        "fromPort": "next",
-        "to": "smart_jump"
-      },
-      {
-        "from": "smart_jump",
-        "fromPort": "true",
-        "to": "load_mod"
-      },
-      {
-        "from": "smart_jump",
-        "fromPort": "false",
-        "to": "fail"
-      },
-      {
         "from": "load_mod",
         "fromPort": "next",
         "to": "store_mod"
@@ -289,6 +201,26 @@
       },
       {
         "from": "invoke",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_press_mod"
+      },
+      {
+        "from": "load_press_mod",
+        "fromPort": "next",
+        "to": "store_press_mod"
+      },
+      {
+        "from": "store_press_mod",
+        "fromPort": "next",
+        "to": "act_pref"
+      },
+      {
+        "from": "act_pref",
         "fromPort": "next",
         "to": "halt_ok"
       }
@@ -367,93 +299,39 @@
         "toPort": "source"
       },
       {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_click",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "is_click",
-        "toPort": "target"
-      },
-      {
-        "from": "read_slot",
-        "fromPort": "value",
-        "to": "is_click",
-        "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_release",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "is_release",
-        "toPort": "target"
-      },
-      {
-        "from": "read_slot",
-        "fromPort": "value",
-        "to": "is_release",
-        "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_smart",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "is_smart",
-        "toPort": "target"
-      },
-      {
-        "from": "read_slot",
-        "fromPort": "value",
-        "to": "is_smart",
-        "toPort": "value"
-      },
-      {
-        "from": "is_click",
-        "fromPort": "value",
-        "to": "click_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_click",
-        "toPort": "source"
-      },
-      {
-        "from": "is_release",
-        "fromPort": "value",
-        "to": "release_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "act_release",
-        "toPort": "source"
-      },
-      {
-        "from": "is_smart",
-        "fromPort": "value",
-        "to": "smart_jump",
-        "toPort": "condition"
-      },
-      {
         "from": "load_mod",
         "fromPort": "value",
         "to": "store_mod",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "store_press_mod",
+        "toPort": "source"
+      },
+      {
+        "from": "load_press_mod",
+        "fromPort": "value",
+        "to": "store_press_mod",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "act_pref",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "act_pref",
+        "toPort": "target"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "act_pref",
         "toPort": "value"
       }
     ]

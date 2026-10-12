@@ -28,10 +28,12 @@ namespace EntityCommandPanelMod.Runtime
         private readonly string[] _modeHintKeys;
         private readonly int[] _modeHintProfileIds;
         private bool _modeHintProfileIdsResolved;
-        private readonly string[] _modeHintCastModeIds;
-        private readonly string[] _modeHintCastModeKeys;
-        private readonly int[] _modeHintCastModeRegistryIds;
-        private bool _modeHintCastModeIdsResolved;
+        private readonly string _modeHintPrefKey;
+        private readonly string[] _modeHintPrefValueIds;
+        private readonly string[] _modeHintPrefHintKeys;
+        private readonly int[] _modeHintPrefValueRegistryIds;
+        private int _modeHintPrefKeyId;
+        private bool _modeHintPrefIdsResolved;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
@@ -66,14 +68,15 @@ namespace EntityCommandPanelMod.Runtime
                 _modeHintKeys[i] = slotConfig.ModeHintKeys[i];
             }
 
-            int castModeHintCount = slotConfig.ModeHintCastModeIds.Count;
-            _modeHintCastModeIds = new string[castModeHintCount];
-            _modeHintCastModeKeys = new string[castModeHintCount];
-            _modeHintCastModeRegistryIds = new int[castModeHintCount];
-            for (int i = 0; i < castModeHintCount; i++)
+            _modeHintPrefKey = slotConfig.ModeHintPrefKey;
+            int prefHintCount = slotConfig.ModeHintPrefValueIds.Count;
+            _modeHintPrefValueIds = new string[prefHintCount];
+            _modeHintPrefHintKeys = new string[prefHintCount];
+            _modeHintPrefValueRegistryIds = new int[prefHintCount];
+            for (int i = 0; i < prefHintCount; i++)
             {
-                _modeHintCastModeIds[i] = slotConfig.ModeHintCastModeIds[i];
-                _modeHintCastModeKeys[i] = slotConfig.ModeHintCastModeKeys[i];
+                _modeHintPrefValueIds[i] = slotConfig.ModeHintPrefValueIds[i];
+                _modeHintPrefHintKeys[i] = slotConfig.ModeHintPrefHintKeys[i];
             }
 
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
@@ -631,7 +634,7 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             int contextIndex = ResolveActiveModeHintIndex(rep);
-            return contextIndex < 0 ? -1 : _modeHintCastModeIds.Length + contextIndex;
+            return contextIndex < 0 ? -1 : _modeHintPrefValueIds.Length + contextIndex;
         }
 
         private string ResolveActiveModeHintKey()
@@ -658,50 +661,61 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            key = _modeHintCastModeKeys[index];
+            key = _modeHintPrefHintKeys[index];
             return true;
         }
 
         private bool TryResolveCastModeHintIndex(Entity rep, out int index)
         {
             index = -1;
-            if (_modeHintCastModeIds.Length == 0)
+            if (_modeHintPrefValueIds.Length == 0)
             {
                 return false;
             }
 
-            if (!_modeHintCastModeIdsResolved)
+            if (!_modeHintPrefIdsResolved)
             {
-                StringIntRegistry registry = _engine.GetService(CoreServiceKeys.CastModeIdRegistry)
+                InteractionPrefCatalog catalog = _engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
                     ?? throw new InvalidOperationException(
-                        $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes requires CastModeIdRegistry.");
-                for (int i = 0; i < _modeHintCastModeIds.Length; i++)
+                        $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintPrefs requires InteractionPrefCatalog.");
+                _modeHintPrefKeyId = catalog.Keys.GetId(_modeHintPrefKey);
+                if (_modeHintPrefKeyId == catalog.Keys.InvalidId)
                 {
-                    if (!registry.TryGetId(_modeHintCastModeIds[i], out _modeHintCastModeRegistryIds[i]))
-                    {
-                        throw new InvalidOperationException(
-                            $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes names unknown cast mode '{_modeHintCastModeIds[i]}'.");
-                    }
+                    throw new InvalidOperationException(
+                        $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintPrefs.key '{_modeHintPrefKey}' is not a declared preference key.");
                 }
 
-                _modeHintCastModeIdsResolved = true;
+                for (int i = 0; i < _modeHintPrefValueIds.Length; i++)
+                {
+                    int valueId = catalog.Values.GetId(_modeHintPrefValueIds[i]);
+                    if (valueId == catalog.Values.InvalidId || !catalog.Allows(_modeHintPrefKeyId, valueId))
+                    {
+                        throw new InvalidOperationException(
+                            $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintPrefs key '{_modeHintPrefKey}' does not allow value '{_modeHintPrefValueIds[i]}'.");
+                    }
+
+                    _modeHintPrefValueRegistryIds[i] = valueId;
+                }
+
+                _modeHintPrefIdsResolved = true;
             }
 
             if (!_engine.World.TryGet(rep, out InteractionPref pref))
             {
                 throw new InvalidOperationException(
-                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes requires InteractionPref on the possessed rep.");
+                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintPrefs requires InteractionPref on the possessed rep.");
             }
 
-            if (pref.DefaultCastModeId <= 0)
+            int resolved = pref.ResolvePref(0, _modeHintPrefKeyId);
+            if (resolved <= 0)
             {
                 throw new InvalidOperationException(
-                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintCastModes is configured but the possessed rep's cast mode is not seeded.");
+                    $"'{EntityCommandPanelSlotActionConfig.RelativePath}' modeHintPrefs is configured but preference '{_modeHintPrefKey}' is not seeded on the possessed rep.");
             }
 
-            for (int i = 0; i < _modeHintCastModeRegistryIds.Length; i++)
+            for (int i = 0; i < _modeHintPrefValueRegistryIds.Length; i++)
             {
-                if (_modeHintCastModeRegistryIds[i] == pref.DefaultCastModeId)
+                if (_modeHintPrefValueRegistryIds[i] == resolved)
                 {
                     index = i;
                     return true;

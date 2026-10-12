@@ -12,7 +12,7 @@
 |----|----|
 | 可用图种 | Query / TriggerGraph |
 | 返回 | 无（副作用节点） |
-| 输入端口（值边 toPort） | 无（直接筛当前名单） |
+| 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
 | 特殊写法 | — |
 
 手册分册（全量字段与语义）：[名单筛选与汇总 · gr-op-07](../mod-editor-prd/config/gr-op-07-entityset.md)
@@ -22,10 +22,6 @@
 ```json
 {"id": "selectable_filter", "op": "QueryFilterSelectable"}
 ```
-
-接线（值边把上一步的结果送进本节点端口）：
-
-本节点不需要值边输入：它直接筛当前 TargetList。上一步的连线（`QueryAllMapEntities` → `selectable_filter` 的控制边）就是全部接线；图 JSON 仍需声明空的 `valueEdges: []`。
 
 ## 这场是怎么搭出来的
 
@@ -40,8 +36,8 @@ LoadCaster → QueryAllMapEntities → **QueryFilterSelectable**（本篇）
 ## 边界与更多用法
 
 - 图种边界：可用于 Query / TriggerGraph；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
-- 合同来源：实体须带 `CommandSourceSelectableTag`，且 `CommandSourceSelectableState`（存在时）为启用；共享选中链 `graph.core.select_hit` 用它挡掉演示用不可选实体。
-- 同类用法：候选名单预处理、点选/框选前剔除装饰单位。
+- 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
+- 同类用法：战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。
 ## 怎么进
 
 ```text

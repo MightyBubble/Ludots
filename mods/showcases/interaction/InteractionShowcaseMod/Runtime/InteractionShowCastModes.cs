@@ -5,7 +5,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 
 namespace InteractionShowcaseMod.Runtime
@@ -13,14 +12,14 @@ namespace InteractionShowcaseMod.Runtime
     /// <summary>
     /// Cast-style buttons inject the same actions as the F-keys.
     /// <c>graph.aim.set_cast_mode</c> writes the cast mode. This showcase's
-    /// <c>graph.interaction.cast_mode_exit</c> listens on those same actions:
+    /// <c>graph.interaction.leave_context_scored</c> listens on those same actions:
     /// it leaves <c>context_scored</c> and switches to the tactical camera.
     /// WoW and LoL both inject <c>Aim.CastMode.Smart</c>; the catalog marks LoL
     /// as the button that represents that mode because the two styles resolve the same way.
     /// </summary>
     internal static class InteractionShowCastModes
     {
-        public const string CatalogUri = "InteractionShowcaseMod:assets/UI/cast_mode_toolbar.json";
+        public const string CatalogUri = "InteractionShowcaseMod:assets/UI/aim_pref_toolbar.json";
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -47,8 +46,8 @@ namespace InteractionShowcaseMod.Runtime
                 return contextMode.Value.ButtonId;
             }
 
-            string castModeId = ReadCastModeId(engine, rep);
-            return catalog.RepresentativeForCastMode(castModeId).ButtonId;
+            string prefValue = ReadPrefValue(engine, rep);
+            return catalog.RepresentativeForPref(prefValue).ButtonId;
         }
 
         public static string GetDisplayName(GameEngine engine, string buttonId)
@@ -72,23 +71,38 @@ namespace InteractionShowcaseMod.Runtime
             return rep;
         }
 
-        private static string ReadCastModeId(GameEngine engine, Entity rep)
+        private static string ReadPrefValue(GameEngine engine, Entity rep)
         {
-            StringIntRegistry registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("Interaction showcase cast modes require CastModeIdRegistry.");
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("Interaction showcase preference buttons require InteractionPrefCatalog.");
             if (!engine.World.TryGet(rep, out InteractionPref pref))
             {
                 throw new InvalidOperationException(
-                    "Interaction showcase cast modes require InteractionPref on the possessed rep.");
+                    "Interaction showcase preference buttons require InteractionPref on the possessed rep.");
             }
 
-            if (pref.DefaultCastModeId <= 0)
+            const string prefKey = "pref.aim.cast_mode";
+            int keyId = catalog.Keys.GetId(prefKey);
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException($"Interaction showcase preference key '{prefKey}' is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
             {
                 throw new InvalidOperationException(
-                    "Interaction showcase cast mode is not seeded on the possessed rep.");
+                    $"Interaction showcase preference '{prefKey}' is not seeded on the possessed rep.");
             }
 
-            return registry.GetName(pref.DefaultCastModeId);
+            string name = catalog.Values.GetName(valueId);
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new InvalidOperationException(
+                    $"Interaction showcase preference '{prefKey}' value id {valueId} is not registered.");
+            }
+
+            return name;
         }
 
         private static PlayerInputHandler ResolveHandler(GameEngine engine, string actionId)
@@ -145,8 +159,8 @@ namespace InteractionShowcaseMod.Runtime
             string ButtonId,
             string Label,
             string ActionId,
-            string? CastModeId,
-            bool RepresentsCastMode,
+            string? PrefValue,
+            bool RepresentsPref,
             string? ContextId);
 
         private sealed class Catalog
@@ -171,42 +185,42 @@ namespace InteractionShowcaseMod.Runtime
                 for (int i = 0; i < file.Modes.Length; i++)
                 {
                     ModeDto dto = file.Modes[i] ?? throw new InvalidOperationException($"{CatalogUri} modes[{i}] is missing.");
-                    bool hasCastMode = !string.IsNullOrWhiteSpace(dto.CastModeId);
+                    bool hasPref = !string.IsNullOrWhiteSpace(dto.PrefValue);
                     bool hasContext = !string.IsNullOrWhiteSpace(dto.ContextId);
-                    if (hasCastMode == hasContext)
+                    if (hasPref == hasContext)
                     {
                         throw new InvalidOperationException(
-                            $"{CatalogUri} modes[{i}] must declare exactly one of castModeId or contextId.");
+                            $"{CatalogUri} modes[{i}] must declare exactly one of prefValue or contextId.");
                     }
 
-                    if (hasCastMode && dto.RepresentsCastMode == null)
+                    if (hasPref && dto.RepresentsPref == null)
                     {
                         throw new InvalidOperationException(
-                            $"{CatalogUri} modes[{i}] must declare representsCastMode.");
+                            $"{CatalogUri} modes[{i}] must declare representsPref.");
                     }
 
-                    if (hasContext && dto.RepresentsCastMode != null)
+                    if (hasContext && dto.RepresentsPref != null)
                     {
                         throw new InvalidOperationException(
-                            $"{CatalogUri} modes[{i}] context row must not declare representsCastMode.");
+                            $"{CatalogUri} modes[{i}] context row must not declare representsPref.");
                     }
 
                     modes[i] = new Mode(
                         RequireToken(dto.ButtonId, $"{CatalogUri} modes[{i}].buttonId"),
                         RequireToken(dto.Label, $"{CatalogUri} modes[{i}].label"),
                         RequireToken(dto.ActionId, $"{CatalogUri} modes[{i}].actionId"),
-                        hasCastMode ? RequireToken(dto.CastModeId, $"{CatalogUri} modes[{i}].castModeId") : null,
-                        dto.RepresentsCastMode ?? false,
+                        hasPref ? RequireToken(dto.PrefValue, $"{CatalogUri} modes[{i}].prefValue") : null,
+                        dto.RepresentsPref ?? false,
                         hasContext ? RequireToken(dto.ContextId, $"{CatalogUri} modes[{i}].contextId") : null);
                     for (int earlier = 0; earlier < i; earlier++)
                     {
-                        bool sameCastMode = modes[i].CastModeId != null &&
-                            string.Equals(modes[earlier].CastModeId, modes[i].CastModeId, StringComparison.Ordinal);
+                        bool samePref = modes[i].PrefValue != null &&
+                            string.Equals(modes[earlier].PrefValue, modes[i].PrefValue, StringComparison.Ordinal);
                         bool sameAction = string.Equals(modes[earlier].ActionId, modes[i].ActionId, StringComparison.Ordinal);
                         if (string.Equals(modes[earlier].ButtonId, modes[i].ButtonId, StringComparison.Ordinal) ||
                             (modes[i].ContextId != null &&
                              string.Equals(modes[earlier].ContextId, modes[i].ContextId, StringComparison.Ordinal)) ||
-                            (sameAction && !sameCastMode))
+                            (sameAction && !samePref))
                         {
                             throw new InvalidOperationException(
                                 $"{CatalogUri} modes[{i}] repeats a button or context, or reuses an action for a different cast mode.");
@@ -216,7 +230,7 @@ namespace InteractionShowcaseMod.Runtime
 
                 for (int i = 0; i < modes.Length; i++)
                 {
-                    if (modes[i].CastModeId == null)
+                    if (modes[i].PrefValue == null)
                     {
                         continue;
                     }
@@ -224,8 +238,8 @@ namespace InteractionShowcaseMod.Runtime
                     int representatives = 0;
                     for (int other = 0; other < modes.Length; other++)
                     {
-                        if (string.Equals(modes[other].CastModeId, modes[i].CastModeId, StringComparison.Ordinal) &&
-                            modes[other].RepresentsCastMode)
+                        if (string.Equals(modes[other].PrefValue, modes[i].PrefValue, StringComparison.Ordinal) &&
+                            modes[other].RepresentsPref)
                         {
                             representatives++;
                         }
@@ -234,7 +248,7 @@ namespace InteractionShowcaseMod.Runtime
                     if (representatives != 1)
                     {
                         throw new InvalidOperationException(
-                            $"{CatalogUri} cast mode '{modes[i].CastModeId}' must have exactly one representsCastMode row.");
+                            $"{CatalogUri} cast mode '{modes[i].PrefValue}' must have exactly one representsPref row.");
                     }
                 }
 
@@ -254,13 +268,13 @@ namespace InteractionShowcaseMod.Runtime
                 throw new InvalidOperationException($"{CatalogUri} has no button '{buttonId}'.");
             }
 
-            public Mode RepresentativeForCastMode(string castModeId)
+            public Mode RepresentativeForPref(string prefValue)
             {
                 Mode? found = null;
                 for (int i = 0; i < Modes.Length; i++)
                 {
-                    if (!string.Equals(Modes[i].CastModeId, castModeId, StringComparison.Ordinal) ||
-                        !Modes[i].RepresentsCastMode)
+                    if (!string.Equals(Modes[i].PrefValue, prefValue, StringComparison.Ordinal) ||
+                        !Modes[i].RepresentsPref)
                     {
                         continue;
                     }
@@ -268,7 +282,7 @@ namespace InteractionShowcaseMod.Runtime
                     if (found != null)
                     {
                         throw new InvalidOperationException(
-                            $"{CatalogUri} cast mode '{castModeId}' has more than one representative button.");
+                            $"{CatalogUri} cast mode '{prefValue}' has more than one representative button.");
                     }
 
                     found = Modes[i];
@@ -277,7 +291,7 @@ namespace InteractionShowcaseMod.Runtime
                 if (found == null)
                 {
                     throw new InvalidOperationException(
-                        $"{CatalogUri} does not represent cast mode '{castModeId}'.");
+                        $"{CatalogUri} does not represent cast mode '{prefValue}'.");
                 }
 
                 return found.Value;
@@ -337,8 +351,8 @@ namespace InteractionShowcaseMod.Runtime
                 public string? ButtonId { get; set; }
                 public string? Label { get; set; }
                 public string? ActionId { get; set; }
-                public string? CastModeId { get; set; }
-                public bool? RepresentsCastMode { get; set; }
+                public string? PrefValue { get; set; }
+                public bool? RepresentsPref { get; set; }
                 public string? ContextId { get; set; }
             }
         }

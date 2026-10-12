@@ -530,19 +530,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ActivateVirtualCamera = 530,
 
         /// <summary>
-        /// B[Dst] = the rep's resolved cast mode for the actor's ability at slot I[C] equals the
-        /// cast mode named by symbols[Imm]. A is the rep, B is the actor. A resolved mode of 0
-        /// fails closed and names the rep.
-        /// </summary>
-        IsCastMode = 531,
-
-        /// <summary>
-        /// Write the player-default cast mode named by symbols[Imm] onto the rep in A.
-        /// The rep must already carry InteractionPref.
-        /// </summary>
-        SetCastMode = 532,
-
-        /// <summary>
         /// TargetPosCm = round(F[A], F[B]) in centimeters, same rounding as ClampTargetToRange.
         /// </summary>
         SetTargetPos = 533,
@@ -578,6 +565,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// A dead subject or an unknown profile fails closed; a known inactive profile returns 0.
         /// </summary>
         IsContextActive = 539,
+
+        /// <summary>
+        /// B[Dst] = the rep's resolved preference for key symbols[low Imm] equals symbols[high Imm],
+        /// for the actor's ability at slot I[C]. A is the rep, B is the actor.
+        /// An ability-template pair wins, else the player pair. A resolved value of 0 fails closed.
+        /// </summary>
+        IsPref = 540,
+
+        /// <summary>
+        /// Write the player-level preference named by the two Imm halves onto the rep in A.
+        /// The rep must already carry InteractionPref. Does not write an ability-template pair.
+        /// </summary>
+        SetPref = 541,
+
+        /// <summary>
+        /// Activate the interaction context whose profile id is the resolved preference value
+        /// for key symbols[low Imm], under parent symbols[high Imm]. A is the subject, B is the
+        /// actor, I[C] is the ability slot. The key must be context-valued. An unset preference fails closed.
+        /// </summary>
+        ActivateContextFromPref = 542,
+
+        /// <summary>
+        /// Deactivate the interaction context whose trigger mount or lifecycle slot is running
+        /// this graph, on that mount's subject. Running outside a context mount fails closed.
+        /// </summary>
+        DeactivateOwnContext = 543,
 
     }
 

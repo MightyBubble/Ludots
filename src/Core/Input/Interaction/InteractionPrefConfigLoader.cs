@@ -4,16 +4,14 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/interaction_prefs.json</c>: the game-instance seed of the player-level
-    /// default command intent + cast dispatch profile that map binding plants on every bound
-    /// player representative lacking a <see cref="InteractionPref"/>. Catalog-declared DeepObject
-    /// merge through the shared <see cref="ConfigPipeline"/>; id resolution against the
-    /// installed profile registries is fail fast.
+    /// Loader for <c>Input/interaction_prefs.json</c>: declared preference keys plus the
+    /// game-instance seed planted on every bound player representative that lacks
+    /// <see cref="InteractionPref"/>. Catalog-declared DeepObject merge through
+    /// <see cref="ConfigPipeline"/>. Id resolution against installed registries is fail fast.
     /// </summary>
     public sealed class InteractionPrefConfigLoader
     {
@@ -31,7 +29,7 @@ namespace Ludots.Core.Input.Interaction
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        /// <summary>Load and validate the merged interaction preference seed config.</summary>
+        /// <summary>Load and validate the merged interaction preference config.</summary>
         public InteractionPrefsConfig Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null,
@@ -50,7 +48,7 @@ namespace Ludots.Core.Input.Interaction
             return config;
         }
 
-        /// <summary>Structural fail-fast validation; id resolution happens in <see cref="ResolveSeed"/>.</summary>
+        /// <summary>Structural fail-fast validation. Profile installation is checked in <see cref="ResolveSeed"/>.</summary>
         public static void Validate(InteractionPrefsConfig config, string source)
         {
             if (config == null)
@@ -63,19 +61,21 @@ namespace Ludots.Core.Input.Interaction
 
             RequireTrimmedNonEmpty(defaults.CommandIntentId, $"{source}.defaults.commandIntentId");
             RequireTrimmedNonEmpty(defaults.CastDispatchProfileId, $"{source}.defaults.castDispatchProfileId");
-            ValidateCastModeFields(defaults, source);
+            Dictionary<string, HashSet<string>> declared = ValidateKeys(config.Keys, source);
+            ValidatePlayerPrefs(defaults.Prefs, declared, source);
+            ValidateAbilityPrefs(defaults.AbilityPrefs, declared, source);
         }
 
         /// <summary>
-        /// Resolve the seed ids: both the command intent profile and the cast dispatch profile
-        /// must be installed; the seed ids are the registries' own id spaces (the spaces the
-        /// arbiter, mounted contexts, and dispatch resolution resolve in).
+        /// Install declared keys into <paramref name="catalog"/> and resolve the seed ids.
+        /// Context-valued keys require each value to be an installed interaction context profile.
         /// </summary>
         public static InteractionPrefSeed ResolveSeed(
             InteractionPrefsConfig config,
             CommandIntentProfileRegistry commandIntents,
             CastDispatchProfileRegistry castDispatchProfiles,
-            StringIntRegistry castModes,
+            InteractionPrefCatalog catalog,
+            InteractionContextProfileRegistry contextProfiles,
             AbilityDefinitionRegistry abilityDefinitions,
             string source = "Input/interaction_prefs.json")
         {
@@ -84,9 +84,14 @@ namespace Ludots.Core.Input.Interaction
                 throw new ArgumentNullException(nameof(config));
             }
 
-            if (castModes == null)
+            if (catalog == null)
             {
-                throw new ArgumentNullException(nameof(castModes));
+                throw new ArgumentNullException(nameof(catalog));
+            }
+
+            if (contextProfiles == null)
+            {
+                throw new ArgumentNullException(nameof(contextProfiles));
             }
 
             if (abilityDefinitions == null)
@@ -94,10 +99,8 @@ namespace Ludots.Core.Input.Interaction
                 throw new ArgumentNullException(nameof(abilityDefinitions));
             }
 
-            InteractionPrefDefaultsDefinition defaults = config.Defaults
-                ?? throw new InvalidOperationException($"Command preference config '{source}' must explicitly define defaults.");
-            ValidateCastModeFields(defaults, source);
-
+            Validate(config, source);
+            InteractionPrefDefaultsDefinition defaults = config.Defaults!;
             string intentName = defaults.CommandIntentId;
             if (!commandIntents.ProfileIdRegistry.TryGetId(intentName, out int intentRegistryId) ||
                 !commandIntents.IsInstalled(intentRegistryId))
@@ -114,101 +117,213 @@ namespace Ludots.Core.Input.Interaction
                     $"{source} defaults.castDispatchProfileId references cast dispatch profile '{dispatchName}' which is not installed.");
             }
 
-            int castModeId = 0;
-            string? castModeName = defaults.CastModeId;
-            if (castModeName != null)
+            List<InteractionPrefKeyDefinition>? keys = config.Keys;
+            if (keys != null)
             {
-                if (!castModes.TryGetId(castModeName, out castModeId))
+                for (int i = 0; i < keys.Count; i++)
                 {
-                    throw new InvalidOperationException(
-                        $"{source} defaults.castModeId references cast mode '{castModeName}' which is not installed.");
+                    InteractionPrefKeyDefinition key = keys[i]!;
+                    catalog.DefineKey(key.Id!, key.ContextValued, key.Values!, contextProfiles, $"{source}.keys[{i}]");
                 }
             }
 
-            InteractionPrefAbilityCastModeSeed[] abilityCastModes = ResolveAbilityCastModes(
-                defaults.AbilityCastModes,
-                castModes,
+            InteractionPrefPairSeed[] playerPrefs = ResolvePlayerPrefs(defaults.Prefs, catalog, source);
+            InteractionPrefAbilityPrefSeed[] abilityPrefs = ResolveAbilityPrefs(
+                defaults.AbilityPrefs,
+                catalog,
                 abilityDefinitions,
                 source);
-            return new InteractionPrefSeed(intentRegistryId, dispatchRegistryId, castModeId, abilityCastModes);
+            return new InteractionPrefSeed(intentRegistryId, dispatchRegistryId, playerPrefs, abilityPrefs);
         }
 
-        private static void ValidateCastModeFields(InteractionPrefDefaultsDefinition defaults, string source)
+        private static Dictionary<string, HashSet<string>> ValidateKeys(List<InteractionPrefKeyDefinition>? keys, string source)
         {
-            if (defaults == null)
+            var declared = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            if (keys == null)
             {
-                throw new InvalidOperationException($"Command preference config '{source}' must explicitly define defaults.");
+                return declared;
             }
 
-            RequireOptionalTrimmedNonEmpty(defaults.CastModeId, $"{source}.defaults.castModeId");
-            List<InteractionPrefAbilityCastModeDefinition>? pairs = defaults.AbilityCastModes;
-            if (pairs == null)
+            for (int i = 0; i < keys.Count; i++)
+            {
+                InteractionPrefKeyDefinition key = keys[i]
+                    ?? throw new InvalidOperationException($"{source}.keys[{i}] must be an object.");
+                string keyPath = $"{source}.keys[{i}].id";
+                string keyName = key.Id ?? string.Empty;
+                RequireTrimmedNonEmpty(keyName, keyPath);
+                if (declared.ContainsKey(keyName))
+                {
+                    throw new InvalidOperationException($"{keyPath} duplicates preference key '{keyName}'.");
+                }
+
+                List<string>? values = key.Values;
+                if (values == null || values.Count == 0)
+                {
+                    throw new InvalidOperationException($"{source}.keys[{i}] '{keyName}' must declare at least one value.");
+                }
+
+                var allowed = new HashSet<string>(values.Count, StringComparer.Ordinal);
+                for (int v = 0; v < values.Count; v++)
+                {
+                    string valuePath = $"{source}.keys[{i}].values[{v}]";
+                    string valueName = values[v] ?? string.Empty;
+                    RequireTrimmedNonEmpty(valueName, valuePath);
+                    if (!allowed.Add(valueName))
+                    {
+                        throw new InvalidOperationException($"{valuePath} duplicates value '{valueName}' on key '{keyName}'.");
+                    }
+                }
+
+                declared[keyName] = allowed;
+            }
+
+            return declared;
+        }
+
+        private static void ValidatePlayerPrefs(
+            List<InteractionPrefPairDefinition>? prefs,
+            Dictionary<string, HashSet<string>> declared,
+            string source)
+        {
+            if (prefs == null)
             {
                 return;
             }
 
-            if (pairs.Count > InteractionPref.MaxAbilityOverrides)
+            if (prefs.Count > InteractionPref.MaxPlayerPrefs)
             {
                 throw new InvalidOperationException(
-                    $"{source}.defaults.abilityCastModes exceeds {InteractionPref.MaxAbilityOverrides} entries.");
+                    $"{source}.defaults.prefs exceeds {InteractionPref.MaxPlayerPrefs} entries.");
             }
 
-            var seen = new HashSet<string>(pairs.Count, StringComparer.Ordinal);
-            for (int i = 0; i < pairs.Count; i++)
+            var seen = new HashSet<string>(prefs.Count, StringComparer.Ordinal);
+            for (int i = 0; i < prefs.Count; i++)
             {
-                InteractionPrefAbilityCastModeDefinition pair = pairs[i];
-                if (pair == null)
+                InteractionPrefPairDefinition pair = prefs[i]
+                    ?? throw new InvalidOperationException($"{source}.defaults.prefs[{i}] must be an object.");
+                string keyPath = $"{source}.defaults.prefs[{i}].key";
+                string valuePath = $"{source}.defaults.prefs[{i}].value";
+                string keyName = pair.Key ?? string.Empty;
+                string valueName = pair.Value ?? string.Empty;
+                RequireTrimmedNonEmpty(keyName, keyPath);
+                RequireTrimmedNonEmpty(valueName, valuePath);
+                if (!seen.Add(keyName))
                 {
-                    throw new InvalidOperationException($"{source}.defaults.abilityCastModes[{i}] must be an object.");
+                    throw new InvalidOperationException($"{keyPath} duplicates preference key '{keyName}'.");
                 }
 
-                string abilityPath = $"{source}.defaults.abilityCastModes[{i}].abilityId";
-                string modePath = $"{source}.defaults.abilityCastModes[{i}].castModeId";
-                string abilityName = pair.AbilityId ?? string.Empty;
-                string modeName = pair.CastModeId ?? string.Empty;
-                RequireTrimmedNonEmpty(abilityName, abilityPath);
-                RequireTrimmedNonEmpty(modeName, modePath);
-                if (!seen.Add(abilityName))
-                {
-                    throw new InvalidOperationException($"{abilityPath} duplicates ability '{abilityName}'.");
-                }
+                RequireDeclaredValue(declared, keyName, valueName, keyPath, valuePath);
             }
         }
 
-        private static InteractionPrefAbilityCastModeSeed[] ResolveAbilityCastModes(
-            List<InteractionPrefAbilityCastModeDefinition>? pairs,
-            StringIntRegistry castModes,
+        private static void ValidateAbilityPrefs(
+            List<InteractionPrefAbilityPrefDefinition>? prefs,
+            Dictionary<string, HashSet<string>> declared,
+            string source)
+        {
+            if (prefs == null)
+            {
+                return;
+            }
+
+            if (prefs.Count > InteractionPref.MaxAbilityPrefs)
+            {
+                throw new InvalidOperationException(
+                    $"{source}.defaults.abilityPrefs exceeds {InteractionPref.MaxAbilityPrefs} entries.");
+            }
+
+            var seen = new HashSet<string>(prefs.Count, StringComparer.Ordinal);
+            for (int i = 0; i < prefs.Count; i++)
+            {
+                InteractionPrefAbilityPrefDefinition pair = prefs[i]
+                    ?? throw new InvalidOperationException($"{source}.defaults.abilityPrefs[{i}] must be an object.");
+                string abilityPath = $"{source}.defaults.abilityPrefs[{i}].abilityId";
+                string keyPath = $"{source}.defaults.abilityPrefs[{i}].key";
+                string valuePath = $"{source}.defaults.abilityPrefs[{i}].value";
+                string abilityName = pair.AbilityId ?? string.Empty;
+                string keyName = pair.Key ?? string.Empty;
+                string valueName = pair.Value ?? string.Empty;
+                RequireTrimmedNonEmpty(abilityName, abilityPath);
+                RequireTrimmedNonEmpty(keyName, keyPath);
+                RequireTrimmedNonEmpty(valueName, valuePath);
+                string pin = abilityName + "\n" + keyName;
+                if (!seen.Add(pin))
+                {
+                    throw new InvalidOperationException($"{keyPath} duplicates preference key '{keyName}' for ability '{abilityName}'.");
+                }
+
+                RequireDeclaredValue(declared, keyName, valueName, keyPath, valuePath);
+            }
+        }
+
+        private static void RequireDeclaredValue(
+            Dictionary<string, HashSet<string>> declared,
+            string keyName,
+            string valueName,
+            string keyPath,
+            string valuePath)
+        {
+            if (!declared.TryGetValue(keyName, out HashSet<string>? allowed))
+            {
+                throw new InvalidOperationException($"{keyPath} references preference key '{keyName}' which is not declared.");
+            }
+
+            if (!allowed.Contains(valueName))
+            {
+                throw new InvalidOperationException(
+                    $"{valuePath} references value '{valueName}' which is not allowed for preference key '{keyName}'.");
+            }
+        }
+
+        private static InteractionPrefPairSeed[] ResolvePlayerPrefs(
+            List<InteractionPrefPairDefinition>? prefs,
+            InteractionPrefCatalog catalog,
+            string source)
+        {
+            if (prefs == null || prefs.Count == 0)
+            {
+                return Array.Empty<InteractionPrefPairSeed>();
+            }
+
+            var resolved = new InteractionPrefPairSeed[prefs.Count];
+            for (int i = 0; i < prefs.Count; i++)
+            {
+                InteractionPrefPairDefinition pair = prefs[i]!;
+                resolved[i] = new InteractionPrefPairSeed(
+                    catalog.Keys.GetId(pair.Key!),
+                    catalog.Values.GetId(pair.Value!));
+            }
+
+            return resolved;
+        }
+
+        private static InteractionPrefAbilityPrefSeed[] ResolveAbilityPrefs(
+            List<InteractionPrefAbilityPrefDefinition>? prefs,
+            InteractionPrefCatalog catalog,
             AbilityDefinitionRegistry abilityDefinitions,
             string source)
         {
-            if (pairs == null || pairs.Count == 0)
+            if (prefs == null || prefs.Count == 0)
             {
-                return Array.Empty<InteractionPrefAbilityCastModeSeed>();
+                return Array.Empty<InteractionPrefAbilityPrefSeed>();
             }
 
-            var resolved = new InteractionPrefAbilityCastModeSeed[pairs.Count];
-            for (int i = 0; i < pairs.Count; i++)
+            var resolved = new InteractionPrefAbilityPrefSeed[prefs.Count];
+            for (int i = 0; i < prefs.Count; i++)
             {
-                InteractionPrefAbilityCastModeDefinition pair = pairs[i]
-                    ?? throw new InvalidOperationException($"{source}.defaults.abilityCastModes[{i}] must be an object.");
-                string abilityName = pair.AbilityId
-                    ?? throw new InvalidOperationException($"{source}.defaults.abilityCastModes[{i}].abilityId must be a non-empty string.");
+                InteractionPrefAbilityPrefDefinition pair = prefs[i]!;
+                string abilityName = pair.AbilityId!;
                 int abilityId = AbilityIdRegistry.GetId(abilityName);
                 if (abilityId == AbilityIdRegistry.InvalidId || !abilityDefinitions.TryGet(abilityId, out _))
                 {
                     throw new InvalidOperationException(
-                        $"{source} defaults.abilityCastModes[{i}].abilityId references ability '{abilityName}' which is not installed.");
+                        $"{source} defaults.abilityPrefs[{i}].abilityId references ability '{abilityName}' which is not installed.");
                 }
 
-                string modeName = pair.CastModeId
-                    ?? throw new InvalidOperationException($"{source}.defaults.abilityCastModes[{i}].castModeId must be a non-empty string.");
-                if (!castModes.TryGetId(modeName, out int modeId))
-                {
-                    throw new InvalidOperationException(
-                        $"{source} defaults.abilityCastModes[{i}].castModeId references cast mode '{modeName}' which is not installed.");
-                }
-
-                resolved[i] = new InteractionPrefAbilityCastModeSeed(abilityId, modeId);
+                resolved[i] = new InteractionPrefAbilityPrefSeed(
+                    abilityId,
+                    catalog.Keys.GetId(pair.Key!),
+                    catalog.Values.GetId(pair.Value!));
             }
 
             return resolved;
@@ -225,16 +340,6 @@ namespace Ludots.Core.Input.Interaction
             {
                 throw new InvalidOperationException($"{path} must not contain leading or trailing whitespace.");
             }
-        }
-
-        private static void RequireOptionalTrimmedNonEmpty(string? value, string path)
-        {
-            if (value == null)
-            {
-                return;
-            }
-
-            RequireTrimmedNonEmpty(value, path);
         }
     }
 }

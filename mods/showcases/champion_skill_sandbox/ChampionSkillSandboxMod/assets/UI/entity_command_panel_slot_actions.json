@@ -1,8 +1,11 @@
 {
   "slotActionIds": ["Aim.Slot1", "Aim.Slot2", "Aim.Slot3", "Aim.Slot4"],
   "modeHintContexts": {},
-  "modeHintCastModes": {
-    "castMode.aim_release": "SmartCastWithIndicator",
-    "castMode.aim_click": "PressReleaseAimCast"
+  "modeHintPrefs": {
+    "key": "pref.aim.cast_mode",
+    "values": {
+      "interaction.context.aim.release": "SmartCastWithIndicator",
+      "interaction.context.aim.click": "PressReleaseAimCast"
+    }
   }
 }

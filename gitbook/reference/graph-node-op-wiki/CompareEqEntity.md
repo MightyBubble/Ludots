@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Query / Script / TriggerGraph |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Bool → 布尔槽 |
 | 输入端口（值边 toPort） | `a`（第一操作数）、`b`（第二操作数） |
 | 特殊写法 | 结果写入 dst 寄存器 |

@@ -889,16 +889,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
-                case GraphNodeOp.IsCastMode:
-                    RequireNonEmpty(node.Mode, "mode", node, graphId, diagnostics);
+                case GraphNodeOp.IsPref:
+                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Value, "value", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
-                case GraphNodeOp.SetCastMode:
-                    RequireNonEmpty(node.Mode, "mode", node, graphId, diagnostics);
+                case GraphNodeOp.SetPref:
+                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Value, "value", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ActivateContextFromPref:
+                    RequireNonEmpty(node.Key, "key", node, graphId, diagnostics);
+                    RequireNonEmpty(node.ParentContext, "parentContext", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.DeactivateOwnContext:
                     break;
 
                 case GraphNodeOp.SetTargetPos:
@@ -2277,8 +2290,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         diagnostics);
                     break;
 
-                case GraphNodeOp.IsCastMode:
-                    instruction.Imm = RequireSymbol(node.Mode, "mode", node, symbolToIndex, symbols, graphId, diagnostics);
+                case GraphNodeOp.IsPref:
+                    instruction.Imm = PrefOpEncoding.PackSymbolIndices(
+                        RequireSymbol(node.Key, "key", node, symbolToIndex, symbols, graphId, diagnostics),
+                        RequireSymbol(node.Value, "value", node, symbolToIndex, symbols, graphId, diagnostics));
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -2290,11 +2305,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
-                case GraphNodeOp.SetCastMode:
-                    instruction.Imm = RequireSymbol(node.Mode, "mode", node, symbolToIndex, symbols, graphId, diagnostics);
+                case GraphNodeOp.SetPref:
+                    instruction.Imm = PrefOpEncoding.PackSymbolIndices(
+                        RequireSymbol(node.Key, "key", node, symbolToIndex, symbols, graphId, diagnostics),
+                        RequireSymbol(node.Value, "value", node, symbolToIndex, symbols, graphId, diagnostics));
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ActivateContextFromPref:
+                    instruction.Imm = PrefOpEncoding.PackSymbolIndices(
+                        RequireSymbol(node.Key, "key", node, symbolToIndex, symbols, graphId, diagnostics),
+                        RequireSymbol(node.ParentContext, "parentContext", node, symbolToIndex, symbols, graphId, diagnostics));
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.DeactivateOwnContext:
                     break;
 
                 case GraphNodeOp.SetTargetPos:

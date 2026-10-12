@@ -34,8 +34,8 @@ public sealed class MobaDemoCastStyleAcceptanceTests
     private const float DeltaTime = 1f / 60f;
     private const string AimCastContext = "interaction.context.aim.cast";
     private const string AimingContext = "interaction.context.aim.click";
-    private const string SmartCastMode = "castMode.smart";
-    private const string AimClickMode = "castMode.aim_click";
+    private const string SmartCastMode = "interaction.context.aim.smart";
+    private const string AimClickMode = "interaction.context.aim.click";
 
     [Test]
     public void SmartCast_QHitsTheEnemyUnderTheCursor_EmptyGroundCastsNothing()
@@ -276,14 +276,32 @@ public sealed class MobaDemoCastStyleAcceptanceTests
 
     private static string ReadCastMode(GameEngine engine, Entity rep)
     {
-        var registry = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-            ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
-        if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
+        return ReadAimPrefValue(engine, rep);
+    }
+
+    private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+    {
+        InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+            ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+        if (!engine.World.TryGet(rep, out InteractionPref pref))
         {
             return "<none>";
         }
 
-        return registry.GetName(pref.DefaultCastModeId);
+        int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+        if (keyId == catalog.Keys.InvalidId)
+        {
+            throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+        }
+
+        int valueId = pref.ResolvePref(0, keyId);
+        if (valueId <= 0)
+        {
+            return "<none>";
+        }
+
+        string name = catalog.Values.GetName(valueId);
+        return string.IsNullOrEmpty(name) ? "<none>" : name;
     }
 
     private static void Press(GameEngine engine, TestInputBackend backend, string path)

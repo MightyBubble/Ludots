@@ -4399,7 +4399,7 @@
       "codegenStatus": "covered"
     },
     {
-      "op": "IsCastMode",
+      "op": "IsPref",
       "authorableKinds": [
         "Derived",
         "Effect",
@@ -4409,34 +4409,70 @@
         "Script",
         "Validation"
       ],
-      "showcaseId": "capability_standard_graph_op_IsCastMode",
       "status": "covered",
       "unitTestRefs": [
         "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryCastModeAcceptanceTests.IsCastModeVignette_ExecutesOpWithoutThrow"
+        "GraphOpsNodeGalleryPrefAcceptanceTests.IsPrefVignette_ExecutesOpWithoutThrow"
       ],
-      "codegenStatus": "covered"
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_IsPref"
     },
     {
-      "op": "SetCastMode",
+      "op": "SetPref",
       "authorableKinds": [
         "Effect",
         "TriggerGraph",
         "Script"
       ],
-      "showcaseId": "capability_standard_graph_op_SetCastMode",
       "status": "covered",
       "unitTestRefs": [
         "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryCastModeAcceptanceTests.SetCastModeVignette_ExecutesOpWithoutThrow"
+        "GraphOpsNodeGalleryPrefAcceptanceTests.SetPrefVignette_ExecutesOpWithoutThrow"
       ],
-      "codegenStatus": "covered"
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_SetPref"
+    },
+    {
+      "op": "ActivateContextFromPref",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPrefAcceptanceTests.ActivateContextFromPrefVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_ActivateContextFromPref"
+    },
+    {
+      "op": "DeactivateOwnContext",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPrefAcceptanceTests.DeactivateOwnContextVignette_ExecutesOpWithoutThrow"
+      ],
+      "codegenStatus": "covered",
+      "showcaseId": "capability_standard_graph_op_DeactivateOwnContext"
     },
     {
       "op": "SetTargetPos",
@@ -4456,7 +4492,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryCastModeAcceptanceTests.SetTargetPosVignette_ExecutesOpWithoutThrow"
+        "GraphOpsNodeGalleryPrefAcceptanceTests.SetTargetPosVignette_ExecutesOpWithoutThrow"
       ],
       "codegenStatus": "covered"
     },
@@ -4478,7 +4514,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryCastModeAcceptanceTests.LoadAbilityCastRangeVignette_QuotesTheAuthoredCentimeters"
+        "GraphOpsNodeGalleryPrefAcceptanceTests.LoadAbilityCastRangeVignette_QuotesTheAuthoredCentimeters"
       ],
       "codegenStatus": "covered"
     },
@@ -4504,7 +4540,7 @@
       ],
       "codegenStatus": "covered"
     },
-        {
+    {
       "op": "LoadEntityFacing",
       "authorableKinds": [
         "Derived",
@@ -4544,8 +4580,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryCastModeAcceptanceTests.LoadSlotAbilityIdVignette_QuotesTheInstalledAbilityId",
-        "CastModeGraphOpsTests.LoadSlotAbilityId_ReadsTheResolvedIdAndRejectsAnEmptySlot"
+        "GraphOpsNodeGalleryPrefAcceptanceTests.LoadSlotAbilityIdVignette_QuotesTheInstalledAbilityId",
+        "PrefGraphOpsTests.LoadSlotAbilityId_ReadsTheResolvedIdAndRejectsAnEmptySlot"
       ],
       "codegenStatus": "covered"
     },

@@ -13,7 +13,7 @@
 | 可用图种 | 仅 TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `target`（目标实体）、`condition`（条件） |
-| 特殊写法 | — |
+| 特殊写法 | imm 填整数立即数 |
 
 手册分册（全量字段与语义）：[命令意图 · input-01](../mod-editor-prd/config/input-01-command-intent.md)
 

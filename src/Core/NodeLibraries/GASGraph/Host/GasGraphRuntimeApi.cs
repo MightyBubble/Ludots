@@ -148,7 +148,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
-        private StringIntRegistry? _castModes;
+        private Ludots.Core.Input.Interaction.InteractionPrefCatalog? _prefCatalog;
+        private const int ContextMountStackCapacity = 8;
+        private readonly Entity[] _contextMountSubjects = new Entity[ContextMountStackCapacity];
+        private readonly int[] _contextMountProfiles = new int[ContextMountStackCapacity];
+        private int _contextMountDepth;
         private AbilityDefinitionRegistry? _abilityDefinitions;
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
@@ -340,10 +344,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
         }
 
-        /// <summary>Binds the cast-mode id registry. Unbound calls fail closed.</summary>
-        public void BindCastModeRegistry(StringIntRegistry castModes)
+        /// <summary>Binds the preference-key catalog. Unbound calls fail closed.</summary>
+        public void BindInteractionPrefCatalog(Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog)
         {
-            _castModes = castModes ?? throw new ArgumentNullException(nameof(castModes));
+            _prefCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         }
 
         /// <summary>Binds ability definitions so slot cast range can be read. Unbound calls fail closed.</summary>
@@ -1110,60 +1114,202 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <inheritdoc />
-        public bool IsCastMode(Entity rep, Entity actor, int slot, int modeKeyId)
+        public bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
+        {
+            Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(IsPref));
+            int abilityId = RequireSlotAbility(actor, slot, nameof(IsPref));
+            (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(IsPref));
+            int resolved = pref.ResolvePref(abilityId, keyRegistryId);
+            if (resolved == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsPrefUnset: rep {rep} has no value for preference '{_prefCatalog!.KeyName(keyRegistryId)}'.");
+            }
+
+            return resolved == valueRegistryId;
+        }
+
+        /// <inheritdoc />
+        public void SetPref(Entity rep, int keyId, int valueId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetPref));
+            if (_world == null || !_world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetPrefRepDead: rep {rep} is not alive.");
+            }
+
+            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetPrefRepHasNoPref: rep {rep} carries no InteractionPref.");
+            }
+
+            (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(SetPref));
+            pref.SetPlayerPref(keyRegistryId, valueRegistryId);
+            _world.Set(rep, pref);
+        }
+
+        /// <inheritdoc />
+        public void ActivateContextFromPref(Entity rep, Entity actor, int slot, int keyId, int parentContextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateContextFromPref));
+            Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(ActivateContextFromPref));
+            int abilityId = RequireSlotAbility(actor, slot, nameof(ActivateContextFromPref));
+            Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog = RequirePrefCatalog();
+            string keyName = ConfigKeyRegistry.GetName(keyId);
+            if (string.IsNullOrWhiteSpace(keyName) || catalog.Keys.GetId(keyName) == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' is not installed.");
+            }
+
+            int keyRegistryId = catalog.Keys.GetId(keyName);
+            if (!catalog.IsContextValued(keyRegistryId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefNotContextValued: preference key '{keyName}' is not context-valued.");
+            }
+
+            if (parentContextKeyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefParentMissing: preference key '{keyName}' requires a parent context.");
+            }
+
+            int resolved = pref.ResolvePref(abilityId, keyRegistryId);
+            if (resolved == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnset: rep {rep} has no value for preference '{keyName}'.");
+            }
+
+            string valueName = catalog.ValueName(resolved);
+            if (string.IsNullOrWhiteSpace(valueName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' resolved value id {resolved} has no name.");
+            }
+
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            if (!contextInstances.IsInstalledProfile(valueName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' value '{valueName}' is not an installed interaction context profile.");
+            }
+
+            ActivateContext(rep, ConfigKeyRegistry.Register(valueName), parentContextKeyId);
+        }
+
+        /// <inheritdoc />
+        public void DeactivateOwnContext()
+        {
+            RejectDerivedAttributeSideEffect(nameof(DeactivateOwnContext));
+            if (_contextMountDepth <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.DeactivateOwnContextOutsideMount");
+            }
+
+            Entity subject = _contextMountSubjects[_contextMountDepth - 1];
+            int profileId = _contextMountProfiles[_contextMountDepth - 1];
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.DeactivateProfile(subject, profileId);
+        }
+
+        /// <inheritdoc />
+        public void PushContextMount(Entity subject, int profileId)
+        {
+            if (profileId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ContextMountProfileInvalid: profile id {profileId} is not a context mount.");
+            }
+
+            if (_contextMountDepth >= ContextMountStackCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ContextMountStackOverflow: nested context mounts exceeded {ContextMountStackCapacity}.");
+            }
+
+            _contextMountSubjects[_contextMountDepth] = subject;
+            _contextMountProfiles[_contextMountDepth] = profileId;
+            _contextMountDepth++;
+        }
+
+        /// <inheritdoc />
+        public void PopContextMount()
+        {
+            if (_contextMountDepth <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackEmpty");
+            }
+
+            _contextMountDepth--;
+        }
+
+        private Ludots.Core.Input.Interaction.InteractionPref RequirePref(Entity rep, Entity actor, string opName)
         {
             if (_world == null || !_world.IsAlive(rep))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.IsCastModeRepDead: rep {rep} is not alive.");
+                    $"GAS.GRAPH.ERR.{opName}RepDead: rep {rep} is not alive.");
             }
 
             if (!_world.IsAlive(actor))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.IsCastModeActorDead: actor {actor} is not alive.");
+                    $"GAS.GRAPH.ERR.{opName}ActorDead: actor {actor} is not alive.");
             }
 
             if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.IsCastModeRepHasNoPref: rep {rep} carries no InteractionPref.");
+                    $"GAS.GRAPH.ERR.{opName}RepHasNoPref: rep {rep} carries no InteractionPref.");
             }
 
-            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.IsCastModeSlotEmpty: actor {actor} slot {slot} has no ability.");
-            }
-
-            int resolved = pref.ResolveCastMode(slotState.AbilityId);
-            if (resolved == 0)
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.IsCastModeUnseeded: rep {rep} resolved cast mode is 0.");
-            }
-
-            return resolved == ResolveInstalledCastMode(modeKeyId, nameof(IsCastMode));
+            return pref;
         }
 
-        /// <inheritdoc />
-        public void SetCastMode(Entity rep, int modeKeyId)
+        private int RequireSlotAbility(Entity actor, int slot, string opName)
         {
-            RejectDerivedAttributeSideEffect(nameof(SetCastMode));
-            if (_world == null || !_world.IsAlive(rep))
+            if (!AbilitySlotResolver.TryResolve(_world!, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.SetCastModeRepDead: rep {rep} is not alive.");
+                    $"GAS.GRAPH.ERR.{opName}SlotEmpty: actor {actor} slot {slot} has no ability.");
             }
 
-            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            return slotState.AbilityId;
+        }
+
+        private (int KeyId, int ValueId) ResolveAllowedPref(int keyConfigId, int valueConfigId, string opName)
+        {
+            Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog = RequirePrefCatalog();
+            string keyName = ConfigKeyRegistry.GetName(keyConfigId);
+            string valueName = ConfigKeyRegistry.GetName(valueConfigId);
+            int keyId = string.IsNullOrWhiteSpace(keyName) ? catalog.Keys.InvalidId : catalog.Keys.GetId(keyName);
+            if (keyId == catalog.Keys.InvalidId)
             {
                 throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.SetCastModeRepHasNoPref: rep {rep} carries no InteractionPref.");
+                    $"GAS.GRAPH.ERR.{opName}Unknown: preference key '{keyName}' is not installed.");
             }
 
-            pref.SetDefaultCastMode(ResolveInstalledCastMode(modeKeyId, nameof(SetCastMode)));
-            _world.Set(rep, pref);
+            int valueId = string.IsNullOrWhiteSpace(valueName) ? catalog.Values.InvalidId : catalog.Values.GetId(valueName);
+            if (valueId == catalog.Values.InvalidId || !catalog.Allows(keyId, valueId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}Unknown: preference key '{keyName}' does not allow value '{valueName}'.");
+            }
+
+            return (keyId, valueId);
+        }
+
+        private Ludots.Core.Input.Interaction.InteractionPrefCatalog RequirePrefCatalog()
+        {
+            return _prefCatalog
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable: no preference catalog is bound to the graph runtime.");
         }
 
         /// <inheritdoc />
@@ -1216,27 +1362,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return slotState.AbilityId;
-        }
-
-        private int ResolveInstalledCastMode(int modeKeyId, string opName)
-        {
-            StringIntRegistry modes = _castModes
-                ?? throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.CastModeRegistryUnavailable: no cast mode registry is bound to the graph runtime.");
-            string modeId = ConfigKeyRegistry.GetName(modeKeyId);
-            if (string.IsNullOrWhiteSpace(modeId))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.{opName}Unknown: mode key id {modeKeyId} resolves to no cast mode.");
-            }
-
-            if (!modes.TryGetId(modeId, out int registeredModeId))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.{opName}Unknown: cast mode '{modeId}' is not installed.");
-            }
-
-            return registeredModeId;
         }
 
         /// <summary>

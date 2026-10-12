@@ -121,7 +121,7 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
             AssertSelectedEntity(engine, "Arcweaver");
             PressButton(engine, backend, "<Keyboard>/f1", frameTimesMs);
-            // WoW and LoL both SetCastMode(castMode.smart). The deleted target_first and smart_cast
+            // WoW and LoL both write pref.aim.cast_mode = interaction.context.aim.smart. The deleted target_first and smart_cast
             // contexts mounted the same slot graphs, so the HUD representative for that mode is LoL.
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
@@ -1249,32 +1249,24 @@ namespace Ludots.Tests.GAS.Production
                 return ActionModeId;
             }
 
-            if (!engine.World.TryGet(rep, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
-            {
-                throw new InvalidOperationException(
-                    "Interaction showcase mode read requires a seeded InteractionPref cast mode on the possessed rep.");
-            }
-
-            StringIntRegistry castModes = engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("CastModeIdRegistry is missing.");
-            string castModeId = castModes.GetName(pref.DefaultCastModeId);
-            if (string.Equals(castModeId, "castMode.smart", StringComparison.Ordinal))
+            string prefValue = ReadAimPrefValue(engine, rep);
+            if (string.Equals(prefValue, "interaction.context.aim.smart", StringComparison.Ordinal))
             {
                 return LolModeId;
             }
 
-            if (string.Equals(castModeId, "castMode.aim_click", StringComparison.Ordinal))
+            if (string.Equals(prefValue, "interaction.context.aim.click", StringComparison.Ordinal))
             {
                 return Sc2ModeId;
             }
 
-            if (string.Equals(castModeId, "castMode.aim_release", StringComparison.Ordinal))
+            if (string.Equals(prefValue, "interaction.context.aim.release", StringComparison.Ordinal))
             {
                 return IndicatorModeId;
             }
 
             throw new InvalidOperationException(
-                $"Interaction showcase has no HUD mode for cast mode '{castModeId}'.");
+                $"Interaction showcase has no HUD mode for preference value '{prefValue}'.");
         }
 
         private static string BuildAbilityDiagnostics(GameEngine engine, string actorName)
@@ -2256,5 +2248,31 @@ namespace Ludots.Tests.GAS.Production
                 LastState = state;
             }
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

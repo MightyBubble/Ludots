@@ -1841,20 +1841,15 @@ namespace Ludots.Core.Engine
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
-            // Cast-mode vocabulary (id catalog only). The engine ships an empty list; mods
-            // contribute ids. Core never branches on the names.
-            var castModeIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            new CastModeConfigLoader(ConfigPipeline).Install(castModeIds, ConfigCatalog, ConfigConflictReport);
-
-            // Game-instance InteractionPref seed: the player-level default intent +
-            // dispatch pair, plus the optional cast mode, that map binding plants on every
-            // bound player representative lacking the component. Seed ids are the kernel
-            // registries' own id spaces.
+            // Preference keys are mod data. Context profiles are already installed, so a
+            // context-valued key can require each allowed value to be a profile id.
+            var interactionPrefCatalog = new InteractionPrefCatalog();
             _interactionPrefSeed = InteractionPrefConfigLoader.ResolveSeed(
                 new InteractionPrefConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 commandIntentProfileRegistry,
                 castDispatchProfileRegistry,
-                castModeIds,
+                interactionPrefCatalog,
+                interactionContextProfileRegistry,
                 abilityDefinitions);
 
 
@@ -1877,7 +1872,7 @@ namespace Ludots.Core.Engine
                 new InteractionModeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
                 inputConfigRoot);
             gasGraphApi.BindInteractionModeMap(interactionModeMap);
-            gasGraphApi.BindCastModeRegistry(castModeIds);
+            gasGraphApi.BindInteractionPrefCatalog(interactionPrefCatalog);
             gasGraphApi.BindAbilityDefinitions(abilityDefinitions);
 
 
@@ -2014,7 +2009,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
-            SetService(CoreServiceKeys.CastModeIdRegistry, castModeIds);
+            SetService(CoreServiceKeys.InteractionPrefCatalog, interactionPrefCatalog);
             SetService(CoreServiceKeys.ClientControlSchemePreferenceStore, schemePreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
             SetService(CoreServiceKeys.InteractionModeMap, interactionModeMap);

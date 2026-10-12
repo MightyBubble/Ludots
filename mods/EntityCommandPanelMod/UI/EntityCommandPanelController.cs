@@ -19,8 +19,8 @@ namespace EntityCommandPanelMod.UI
 {
     internal sealed class EntityCommandPanelController
     {
-        private const string NoCastModeBadge = "—";
-        private const float NoCastModeProgress = 0.42f;
+        private const string EmptyHintBadge = "—";
+        private const float EmptyHintProgress = 0.42f;
 
         private readonly GameEngine _engine;
         private readonly EntityCommandPanelRuntime _runtime;
@@ -358,19 +358,19 @@ namespace EntityCommandPanelMod.UI
                                                         .FontSize(24f)
                                                         .Color("#F3E3A4")
                                                         .TextShadow(0f, 1f, 2f, new UiColor(0x06, 0x09, 0x0E)),
-                                                    Ui.Text($"Theme LoL | {NoCastModeBadge} | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
+                                                    Ui.Text($"Theme LoL | {EmptyHintBadge} | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
                                                         .FontFamily("Segoe UI")
                                                         .FontSize(11f)
                                                         .Color("#C6D3DE"))
                                                 .Gap(4f),
                                             Ui.Row(
-                                                    BuildShowcaseInfoPill("CAST", NoCastModeBadge, "#1A2430", "#ECD28B"),
+                                                    BuildShowcaseInfoPill("CAST", EmptyHintBadge, "#1A2430", "#ECD28B"),
                                                     BuildShowcaseInfoPill("HUD", "LoL", "#1A2430", "#D9E6F2"))
                                                 .Gap(8f))
                                         .Justify(UiJustifyContent.SpaceBetween)
                                         .Align(UiAlignItems.Center),
                                     BuildShowcaseBar("Resource", "Mana Ready", 0.84f, "#2C8CE4", "#102035", 564f),
-                                    BuildShowcaseBar("Lockout Sync", NoCastModeBadge, NoCastModeProgress, "#D2A755", "#241C0D", 564f),
+                                    BuildShowcaseBar("Lockout Sync", EmptyHintBadge, EmptyHintProgress, "#D2A755", "#241C0D", 564f),
                                     Ui.Row(primarySlots).Gap(8f),
                                     Ui.Row(utilitySlots).Gap(8f))
                                 .Gap(10f)
@@ -435,12 +435,12 @@ namespace EntityCommandPanelMod.UI
                                         .Width(220f)
                                         .Height(170f)
                                         .FlexShrink(0f),
-                                    BuildShowcaseBar("Routing", NoCastModeBadge, NoCastModeProgress, "#A76B44", "#21140E", 220f))
+                                    BuildShowcaseBar("Routing", EmptyHintBadge, EmptyHintProgress, "#A76B44", "#21140E", 220f))
                                 .Gap(10f)
                                 .FlexShrink(0f),
                             Ui.Column(
                                     Ui.Row(
-                                            BuildShowcaseInfoPill("CAST", NoCastModeBadge, "#2A1D16", "#F0D8AE"),
+                                            BuildShowcaseInfoPill("CAST", EmptyHintBadge, "#2A1D16", "#F0D8AE"),
                                             BuildShowcaseInfoPill("GROUP", groupCount <= 0 ? "0/0" : $"{state.GroupIndex + 1}/{groupCount}", "#2A1D16", "#D8C5B1"),
                                             BuildShowcaseInfoPill("HUD", "Dota2", "#2A1D16", "#D6905B"))
                                         .Gap(8f),
@@ -518,12 +518,12 @@ namespace EntityCommandPanelMod.UI
                                                         .FontFamily("Segoe UI Semibold")
                                                         .FontSize(22f)
                                                         .Color("#D7F6FF"),
-                                                    Ui.Text($"Theme SC2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)} | {NoCastModeBadge}")
+                                                    Ui.Text($"Theme SC2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)} | {EmptyHintBadge}")
                                                         .FontFamily("Segoe UI")
                                                         .FontSize(11f)
                                                         .Color("#93BED7"))
                                                 .Gap(4f),
-                                            BuildShowcaseBar("Command Sync", NoCastModeBadge, NoCastModeProgress, "#4CB6E9", "#0D2131", 254f))
+                                            BuildShowcaseBar("Command Sync", EmptyHintBadge, EmptyHintProgress, "#4CB6E9", "#0D2131", 254f))
                                         .Justify(UiJustifyContent.SpaceBetween)
                                         .Align(UiAlignItems.Center),
                                     Ui.Row(cells[0], cells[1], cells[2], cells[3], cells[4]).Gap(8f),
@@ -1434,7 +1434,7 @@ namespace EntityCommandPanelMod.UI
             string iconUri = _iconFactory.Build(
                 glyph,
                 accent,
-                NoCastModeBadge,
+                EmptyHintBadge,
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty));

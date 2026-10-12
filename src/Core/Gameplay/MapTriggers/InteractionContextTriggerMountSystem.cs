@@ -572,14 +572,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             for (int i = 0; i < graphIds.Length; i++)
             {
-                _graphReturnWriter.Execute(
-                    graphIds[i],
-                    caster: subject,
-                    explicitTarget: Entity.Null,
-                    targetContext: Entity.Null,
-                    targetPosCm: default,
-                    randomSeed: 0u,
-                    api: _graphApi);
+                _graphApi.PushContextMount(subject, profileId);
+                try
+                {
+                    _graphReturnWriter.Execute(
+                        graphIds[i],
+                        caster: subject,
+                        explicitTarget: Entity.Null,
+                        targetContext: Entity.Null,
+                        targetPosCm: default,
+                        randomSeed: 0u,
+                        api: _graphApi);
+                }
+                finally
+                {
+                    _graphApi.PopContextMount();
+                }
             }
         }
 

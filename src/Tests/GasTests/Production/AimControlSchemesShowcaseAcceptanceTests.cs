@@ -212,14 +212,14 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             ConfirmControl confirmControl = confirm ?? (surface == AimSurface.KeyboardCursor
                 ? ConfirmControl.MouseLeft
                 : ConfirmControl.RightShoulder);
-            RunMode("castMode.smart", "f1", surface, confirmControl, slotEntity, slotGround, indicating: false);
-            RunMode("castMode.aim_release", "f2", surface, confirmControl, slotEntity, slotGround, indicating: true);
-            RunMode("castMode.aim_click", "f3", surface, confirmControl, slotEntity, slotGround, indicating: true);
+            RunMode("interaction.context.aim.smart", "f1", surface, confirmControl, slotEntity, slotGround, indicating: false);
+            RunMode("interaction.context.aim.release", "f2", surface, confirmControl, slotEntity, slotGround, indicating: true);
+            RunMode("interaction.context.aim.click", "f3", surface, confirmControl, slotEntity, slotGround, indicating: true);
         }
 
         public void AssertPrimaryClickMoveAndAttack()
         {
-            SetMode("castMode.smart", "f1");
+            SetMode("interaction.context.aim.smart", "f1");
             Vector2 ground = Position(Hero) + new Vector2(700f, 0f);
             AimMouse(ground);
             ClickLeft();
@@ -285,7 +285,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         public void HoldSkillWithoutAimSample(int slot)
         {
-            SetMode("castMode.aim_release", "f2");
+            SetMode("interaction.context.aim.release", "f2");
             Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick untouched"));
             PressSlot(AimSurface.GamepadRight, slot);
             TickUntilFixedTickAdvances();
@@ -302,7 +302,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         public void AssertSmartStickBeforeIndicate(Vector2 axis, int slot)
         {
-            Assert.That(ReadCastMode(), Is.EqualTo("castMode.smart"), Diag("default smart"));
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), Diag("default smart"));
             Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range before stick"));
             string stick = _surface == AimSurface.GamepadLeft ? "leftStick" : "rightStick";
             AimStick(stick, axis);
@@ -357,7 +357,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(input.HasContext("AimSchemes.Controls"), Is.True, Diag("startup controls"));
             Assert.That(input.HasContext(_inputContextId), Is.True, Diag("scheme context"));
             Assert.That(Contexts(), Does.Contain("interaction.context.aim.cast"), Diag("aim cast context"));
-            Assert.That(ReadCastMode(), Is.EqualTo("castMode.smart"), Diag("seeded cast mode"));
+            Assert.That(ReadCastMode(), Is.EqualTo("interaction.context.aim.smart"), Diag("seeded cast mode"));
             Assert.That(ReadFloat("aim.range_cm"), Is.EqualTo(0f).Within(0.1f), Diag("range stays unset until a cast"));
             Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick seed"));
             Assert.That(CollectionCount("aim.actors"), Is.EqualTo(1), Diag("aim actor"));
@@ -455,7 +455,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                 return;
             }
 
-            if (ReadCastMode() == "castMode.aim_release")
+            if (ReadCastMode() == "interaction.context.aim.release")
             {
                 ReleaseSlot(surface, slot);
             }
@@ -729,14 +729,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
 
         private string ReadCastMode()
         {
-            var registry = _engine.GetService(CoreServiceKeys.CastModeIdRegistry)
-                ?? throw new InvalidOperationException("CastModeIdRegistry missing.");
-            if (!_engine.World.TryGet(Hero, out InteractionPref pref) || pref.DefaultCastModeId <= 0)
-            {
-                return "<none>";
-            }
-
-            return registry.GetName(pref.DefaultCastModeId);
+            return ReadAimPrefValue(_engine, Hero);
         }
 
         private bool AimGestureOpen()
@@ -1027,5 +1020,31 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             public float Fov => 50f;
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

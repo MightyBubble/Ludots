@@ -46,12 +46,14 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             SeedPinnedLivePointer(ctx);
         }
 
-        SeedCastModeStage(ctx);
+        SeedPrefStage(ctx);
         SeedFacing(ctx);
         GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
-    private const string GalleryCastModeId = "castMode.gallery";
+    private const string GalleryPrefKey = "pref.gallery.sample";
+    private const string GalleryPrefValue = "interaction.context.gallery.pref";
+    private const string GalleryParentContext = "interaction.context.gallery.aim";
     private const string GalleryRangedAbilityId = "Ability.GraphOps.CastRange";
 
     private static void SeedFacing(GraphOpsNodeDriverContext ctx)
@@ -78,14 +80,16 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    private static void SeedCastModeStage(GraphOpsNodeDriverContext ctx)
+    private static void SeedPrefStage(GraphOpsNodeDriverContext ctx)
     {
         string op = ctx.Vignette.Op;
-        bool isCastMode = string.Equals(op, nameof(GraphNodeOp.IsCastMode), StringComparison.Ordinal);
-        bool setCastMode = string.Equals(op, nameof(GraphNodeOp.SetCastMode), StringComparison.Ordinal);
+        bool isPref = string.Equals(op, nameof(GraphNodeOp.IsPref), StringComparison.Ordinal);
+        bool setPref = string.Equals(op, nameof(GraphNodeOp.SetPref), StringComparison.Ordinal);
+        bool activate = string.Equals(op, nameof(GraphNodeOp.ActivateContextFromPref), StringComparison.Ordinal);
+        bool deactivate = string.Equals(op, nameof(GraphNodeOp.DeactivateOwnContext), StringComparison.Ordinal);
         bool loadRange = string.Equals(op, nameof(GraphNodeOp.LoadAbilityCastRange), StringComparison.Ordinal);
         bool loadSlot = string.Equals(op, nameof(GraphNodeOp.LoadSlotAbilityId), StringComparison.Ordinal);
-        if (!isCastMode && !setCastMode && !loadRange && !loadSlot)
+        if (!isPref && !setPref && !activate && !deactivate && !loadRange && !loadSlot)
         {
             return;
         }
@@ -96,13 +100,14 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Gallery '{op}' requires a live target actor.");
         }
 
-        if (isCastMode || setCastMode)
+        if (isPref || setPref || activate)
         {
             var pref = default(InteractionPref);
             pref.SetPlayerDefault(1, 1);
-            if (isCastMode)
+            if (isPref || activate)
             {
-                pref.SetDefaultCastMode(RequireGalleryCastModeId(ctx));
+                (int keyId, int valueId) = RequireGalleryPref(ctx, GalleryPrefValue);
+                pref.SetPlayerPref(keyId, valueId);
             }
 
             if (ctx.SimWorld.Has<InteractionPref>(actor))
@@ -115,25 +120,76 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             }
         }
 
-        if (isCastMode || loadRange || loadSlot)
+        if (activate)
+        {
+            InteractionContextInstanceRuntime contexts = RequireContexts(ctx);
+            int parentKey = ConfigKeyRegistry.Register(GalleryParentContext);
+            contexts.Activate(actor, parentKey, parentContextKeyId: 0);
+        }
+
+        if (deactivate)
+        {
+            InteractionContextInstanceRuntime contexts = RequireContexts(ctx);
+            if (!contexts.IsInstalledProfile(GalleryPrefValue))
+            {
+                throw new InvalidOperationException(
+                    $"Gallery DeactivateOwnContext requires installed context '{GalleryPrefValue}'.");
+            }
+
+            int profileId = RequireProfiles(ctx).ProfileIdRegistry.GetId(GalleryPrefValue);
+            int contextKey = ConfigKeyRegistry.Register(GalleryPrefValue);
+            contexts.Activate(actor, contextKey, parentContextKeyId: 0);
+            ctx.Api.PushContextMount(actor, profileId);
+        }
+
+        if (isPref || activate || loadRange || loadSlot)
         {
             SeedRangedAbilitySlot(ctx, actor);
         }
     }
 
-    private static int RequireGalleryCastModeId(GraphOpsNodeDriverContext ctx)
+    private static (int KeyId, int ValueId) RequireGalleryPref(GraphOpsNodeDriverContext ctx, string valueName)
     {
         if (ctx.Globals == null
-            || !ctx.Globals.TryGetValue(CoreServiceKeys.CastModeIdRegistry.Name, out object? raw)
-            || raw is not StringIntRegistry modes
-            || !modes.TryGetId(GalleryCastModeId, out int modeId)
-            || modeId <= 0)
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionPrefCatalog.Name, out object? raw)
+            || raw is not InteractionPrefCatalog catalog)
         {
-            throw new InvalidOperationException(
-                $"Gallery cast-mode stage requires installed cast mode '{GalleryCastModeId}'.");
+            throw new InvalidOperationException("Gallery preference stage requires InteractionPrefCatalog.");
         }
 
-        return modeId;
+        int keyId = catalog.Keys.GetId(GalleryPrefKey);
+        int valueId = catalog.Values.GetId(valueName);
+        if (keyId == catalog.Keys.InvalidId || valueId == catalog.Values.InvalidId || !catalog.Allows(keyId, valueId))
+        {
+            throw new InvalidOperationException(
+                $"Gallery preference key '{GalleryPrefKey}' does not allow value '{valueName}'.");
+        }
+
+        return (keyId, valueId);
+    }
+
+    private static InteractionContextInstanceRuntime RequireContexts(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionContextInstances.Name, out object? raw)
+            || raw is not InteractionContextInstanceRuntime contexts)
+        {
+            throw new InvalidOperationException("Gallery preference stage requires InteractionContextInstances.");
+        }
+
+        return contexts;
+    }
+
+    private static InteractionContextProfileRegistry RequireProfiles(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Globals == null
+            || !ctx.Globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out object? raw)
+            || raw is not InteractionContextProfileRegistry profiles)
+        {
+            throw new InvalidOperationException("Gallery preference stage requires InteractionContextProfileRegistry.");
+        }
+
+        return profiles;
     }
 
     private static void SeedRangedAbilitySlot(GraphOpsNodeDriverContext ctx, Entity actor)

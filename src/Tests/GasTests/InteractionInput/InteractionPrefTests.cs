@@ -58,7 +58,7 @@ namespace Ludots.Tests.GAS
         public void Resolve_AbilityOverride_ReplacesBothFields()
         {
             InteractionPref pref = NewPref(intent: 11, dispatch: 21);
-            pref.SetAbilityOverride(502, commandIntentId: 12, castDispatchProfileId: 22, castModeId: 0);
+            pref.SetAbilityOverride(502, commandIntentId: 12, castDispatchProfileId: 22);
 
             Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(12));
             Assert.That(pref.ResolveCastDispatchProfile(502), Is.EqualTo(22));
@@ -70,8 +70,8 @@ namespace Ludots.Tests.GAS
         public void Resolve_PartialOverride_InheritsTheUnoverriddenField()
         {
             InteractionPref pref = NewPref(intent: 11, dispatch: 21);
-            pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 22, castModeId: 0);
-            pref.SetAbilityOverride(505, commandIntentId: 12, castDispatchProfileId: 0, castModeId: 0);
+            pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 22);
+            pref.SetAbilityOverride(505, commandIntentId: 12, castDispatchProfileId: 0);
 
             Assert.That(pref.ResolveCommandIntent(504), Is.EqualTo(11), "intent not overridden inherits the player default");
             Assert.That(pref.ResolveCastDispatchProfile(504), Is.EqualTo(22));
@@ -85,45 +85,71 @@ namespace Ludots.Tests.GAS
             InteractionPref pref = NewPref(intent: 11, dispatch: 21);
 
             Assert.That(() => pref.SetPlayerDefault(0, 21), Throws.InvalidOperationException, "the player default is complete: no half defaults");
-            Assert.That(() => pref.SetAbilityOverride(0, 12, 0, 0), Throws.InvalidOperationException, "overrides need a positive ability template id");
-            Assert.That(() => pref.SetAbilityOverride(506, 0, 0, 0), Throws.InvalidOperationException, "an all-zero override is a silent no-op and is rejected");
-            Assert.That(() => pref.SetDefaultCastMode(0), Throws.InvalidOperationException, "a player cast mode of 0 is the unseeded state, not a write");
-
+            Assert.That(() => pref.SetAbilityOverride(0, 12, 0), Throws.InvalidOperationException, "overrides need a positive ability template id");
+            Assert.That(() => pref.SetAbilityOverride(506, 0, 0), Throws.InvalidOperationException, "an all-zero override is a silent no-op and is rejected");
             for (int i = 1; i <= InteractionPref.MaxAbilityOverrides; i++)
             {
-                pref.SetAbilityOverride(i, commandIntentId: 0, castDispatchProfileId: 30 + i, castModeId: 0);
+                pref.SetAbilityOverride(i, commandIntentId: 0, castDispatchProfileId: 30 + i);
             }
 
             Assert.That(
-                () => pref.SetAbilityOverride(999, 12, 22, 0),
+                () => pref.SetAbilityOverride(999, 12, 22),
                 Throws.InvalidOperationException.With.Message.Contains(nameof(InteractionPref.MaxAbilityOverrides)));
 
-            pref.SetAbilityOverride(1, commandIntentId: 99, castDispatchProfileId: 0, castModeId: 0);
+            pref.SetAbilityOverride(1, commandIntentId: 99, castDispatchProfileId: 0);
             Assert.That(pref.ResolveCommandIntent(1), Is.EqualTo(99), "rewriting an existing override replaces it in place");
 
             Assert.That(pref.ClearAbilityOverride(1), Is.True);
             Assert.That(pref.ResolveCommandIntent(1), Is.EqualTo(11), "a cleared override falls back to the player default");
             Assert.That(pref.ClearAbilityOverride(1), Is.False, "clearing twice reports the missing entry");
-            Assert.That(pref.TryGetAbilityOverride(2, out int intent, out int dispatch, out int castMode), Is.True);
-            Assert.That((intent, dispatch, castMode), Is.EqualTo((0, 32, 0)), "surviving entries stay readable after a clear");
+            Assert.That(pref.TryGetAbilityOverride(2, out int intent, out int dispatch), Is.True);
+            Assert.That((intent, dispatch), Is.EqualTo((0, 32)), "surviving entries stay readable after a clear");
         }
 
         [Test]
-        public void Resolve_CastMode_PlayerDefaultAndPerAbilityPin()
+        public void Resolve_Pref_PlayerLevelAndAbilityPin()
         {
             InteractionPref pref = NewPref(intent: 11, dispatch: 21);
-            Assert.That(pref.ResolveCastMode(0), Is.EqualTo(0), "an unseeded player cast mode stays 0");
-            Assert.That(pref.ResolveCastMode(501), Is.EqualTo(0));
+            Assert.That(pref.ResolvePref(0, 3), Is.EqualTo(0), "an unseeded key stays 0");
+            Assert.That(pref.ResolvePref(501, 3), Is.EqualTo(0));
 
-            pref.SetDefaultCastMode(7);
-            pref.SetAbilityOverride(502, commandIntentId: 0, castDispatchProfileId: 0, castModeId: 9);
-            pref.SetAbilityOverride(503, commandIntentId: 12, castDispatchProfileId: 0, castModeId: 0);
+            pref.SetPlayerPref(3, 7);
+            pref.SetAbilityPref(502, 3, 9);
+            pref.SetAbilityOverride(503, commandIntentId: 12, castDispatchProfileId: 0);
 
-            Assert.That(pref.ResolveCastMode(0), Is.EqualTo(7), "whole-command scope reads the player cast mode");
-            Assert.That(pref.ResolveCastMode(502), Is.EqualTo(9), "an ability pin wins");
-            Assert.That(pref.ResolveCastMode(503), Is.EqualTo(7), "a zero cast-mode pin inherits the player default");
-            Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(11), "a cast-mode-only pin leaves intent on the player default");
+            Assert.That(pref.ResolvePref(0, 3), Is.EqualTo(7), "whole-command scope reads the player preference");
+            Assert.That(pref.ResolvePref(502, 3), Is.EqualTo(9), "an ability pin wins");
+            Assert.That(pref.ResolvePref(503, 3), Is.EqualTo(7), "an ability without this key inherits the player value");
+            Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(11), "a preference pin does not invent an intent");
             Assert.That(pref.ResolveCastDispatchProfile(502), Is.EqualTo(21));
+        }
+
+        [Test]
+        public void PrefMutators_FailFastWhenIdsAreIllegalOrTheTableIsFull()
+        {
+            InteractionPref pref = NewPref(intent: 11, dispatch: 21);
+            Assert.That(() => pref.SetPlayerPref(0, 1), Throws.InvalidOperationException);
+            Assert.That(() => pref.SetAbilityPref(0, 1, 1), Throws.InvalidOperationException);
+
+            for (int i = 1; i <= InteractionPref.MaxPlayerPrefs; i++)
+            {
+                pref.SetPlayerPref(i, 10 + i);
+            }
+
+            Assert.That(
+                () => pref.SetPlayerPref(99, 1),
+                Throws.InvalidOperationException.With.Message.Contains(nameof(InteractionPref.MaxPlayerPrefs)));
+            pref.SetPlayerPref(1, 77);
+            Assert.That(pref.ResolvePref(0, 1), Is.EqualTo(77), "replacing a key does not grow the table");
+
+            for (int i = 1; i <= InteractionPref.MaxAbilityPrefs; i++)
+            {
+                pref.SetAbilityPref(1000 + i, 1, 20 + i);
+            }
+
+            Assert.That(
+                () => pref.SetAbilityPref(2000, 1, 1),
+                Throws.InvalidOperationException.With.Message.Contains(nameof(InteractionPref.MaxAbilityPrefs)));
         }
 
         // ── Seed config contract ──
@@ -150,178 +176,135 @@ namespace Ludots.Tests.GAS
             CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
             intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(IntentId)));
             var dispatch = NewDispatchRegistry();
-
-            var castModes = NewCastModes();
             var abilities = new AbilityDefinitionRegistry();
-            InteractionPrefSeed seed = InteractionPrefConfigLoader.ResolveSeed(
-                new InteractionPrefsConfig
-                {
-                    Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = DispatchId },
-                },
-                intents.Intents,
-                dispatch,
-                castModes,
-                abilities);
+            InteractionPrefSeed seed = Resolve(BarePrefs(), intents.Intents, dispatch, abilities);
             Assert.That(seed.CommandIntentId, Is.EqualTo(intents.Intents.ProfileIdRegistry.GetId(IntentId)));
             Assert.That(seed.CastDispatchProfileId, Is.EqualTo(dispatch.ProfileIdRegistry.GetId(DispatchId)));
-            Assert.That(seed.DefaultCastModeId, Is.EqualTo(0), "omitted defaults.castModeId stays unseeded");
-            Assert.That(seed.AbilityCastModes, Is.Empty);
+            Assert.That(seed.PlayerPrefs, Is.Empty);
+            Assert.That(seed.AbilityPrefs, Is.Empty);
 
             Assert.That(
-                () => InteractionPrefConfigLoader.ResolveSeed(
+                () => Resolve(
                     new InteractionPrefsConfig
                     {
                         Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = "intent.command.not_installed", CastDispatchProfileId = DispatchId },
                     },
                     intents.Intents,
                     dispatch,
-                    castModes,
                     abilities),
                 Throws.InvalidOperationException.With.Message.Contains("intent.command.not_installed"));
 
             Assert.That(
-                () => InteractionPrefConfigLoader.ResolveSeed(
+                () => Resolve(
                     new InteractionPrefsConfig
                     {
                         Defaults = new InteractionPrefDefaultsDefinition { CommandIntentId = IntentId, CastDispatchProfileId = "dispatch.not_installed" },
                     },
                     intents.Intents,
                     dispatch,
-                    castModes,
                     abilities),
                 Throws.InvalidOperationException.With.Message.Contains("dispatch.not_installed"));
         }
 
         [Test]
-        public void SeedResolution_OptionalCastMode_ResolvesKnownIdsAndFailsUnknownOnes()
+        public void SeedResolution_ContextValuedKey_ResolvesProfilesAndFailsUnknownOnes()
         {
             using var world = World.Create();
             CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
             intents.Intents.Install(CommandIntentProfileTests.Harness.Config(NewIntentDefinition(IntentId)));
             var dispatch = NewDispatchRegistry();
-            const string mode = "castMode.pref.smart";
-            const string abilityMode = "castMode.pref.aim";
-            const string abilityName = "ability.interaction_pref.cast_pin";
-            var castModes = NewCastModes(mode, abilityMode);
+            const string key = "pref.test.gesture";
+            const string smart = "interaction.context.pref.smart";
+            const string click = "interaction.context.pref.click";
+            const string abilityName = "ability.interaction_pref.pin";
             int abilityId = AbilityIdRegistry.Register(abilityName);
             var abilities = new AbilityDefinitionRegistry();
             abilities.Register(abilityId, default);
+            InteractionContextProfileRegistry profiles = InstalledProfiles(smart, click);
+            var catalog = new InteractionPrefCatalog();
 
             InteractionPrefSeed seed = InteractionPrefConfigLoader.ResolveSeed(
-                Prefs(IntentId, DispatchId, castModeId: mode, abilityId: abilityName, abilityCastModeId: abilityMode),
+                Prefs(key, smart, abilityName, click, contextValued: true, values: new[] { smart, click }),
                 intents.Intents,
                 dispatch,
-                castModes,
+                catalog,
+                profiles,
                 abilities,
                 source: "Input/interaction_prefs.json");
-            Assert.That(seed.DefaultCastModeId, Is.EqualTo(castModes.GetId(mode)));
-            Assert.That(seed.AbilityCastModes, Has.Length.EqualTo(1));
-            Assert.That(seed.AbilityCastModes[0].AbilityTemplateId, Is.EqualTo(abilityId));
-            Assert.That(seed.AbilityCastModes[0].CastModeId, Is.EqualTo(castModes.GetId(abilityMode)));
+            Assert.That(seed.PlayerPrefs, Has.Length.EqualTo(1));
+            Assert.That(seed.PlayerPrefs[0].KeyId, Is.EqualTo(catalog.Keys.GetId(key)));
+            Assert.That(seed.PlayerPrefs[0].ValueId, Is.EqualTo(catalog.Values.GetId(smart)));
+            Assert.That(seed.AbilityPrefs[0].AbilityTemplateId, Is.EqualTo(abilityId));
+            Assert.That(seed.AbilityPrefs[0].ValueId, Is.EqualTo(catalog.Values.GetId(click)));
+            Assert.That(catalog.IsContextValued(catalog.Keys.GetId(key)), Is.True);
 
             InteractionPref planted = InteractionPref.FromSeed(in seed);
-            Assert.That(planted.ResolveCastMode(0), Is.EqualTo(seed.DefaultCastModeId));
-            Assert.That(planted.ResolveCastMode(abilityId), Is.EqualTo(seed.AbilityCastModes[0].CastModeId));
-            Assert.That(planted.ResolveCommandIntent(abilityId), Is.EqualTo(seed.CommandIntentId), "a cast-mode pin does not invent an intent");
+            Assert.That(planted.ResolvePref(0, seed.PlayerPrefs[0].KeyId), Is.EqualTo(seed.PlayerPrefs[0].ValueId));
+            Assert.That(planted.ResolvePref(abilityId, seed.PlayerPrefs[0].KeyId), Is.EqualTo(seed.AbilityPrefs[0].ValueId));
+            Assert.That(planted.ResolveCommandIntent(abilityId), Is.EqualTo(seed.CommandIntentId), "a preference pin does not invent an intent");
 
-            InvalidOperationException unknownMode = Assert.Throws<InvalidOperationException>(() =>
+            InvalidOperationException unknownProfile = Assert.Throws<InvalidOperationException>(() =>
                 InteractionPrefConfigLoader.ResolveSeed(
-                    Prefs(IntentId, DispatchId, castModeId: "castMode.missing"),
+                    Prefs(key, "interaction.context.missing", abilityName: null, abilityValue: null, contextValued: true, values: new[] { "interaction.context.missing" }),
                     intents.Intents,
                     dispatch,
-                    castModes,
+                    new InteractionPrefCatalog(),
+                    profiles,
                     abilities,
                     source: "Input/interaction_prefs.json"));
-            Assert.That(unknownMode!.Message, Does.Contain("Input/interaction_prefs.json"));
-            Assert.That(unknownMode.Message, Does.Contain("defaults.castModeId"));
-            Assert.That(unknownMode.Message, Does.Contain("castMode.missing"));
+            Assert.That(unknownProfile!.Message, Does.Contain(key));
+            Assert.That(unknownProfile.Message, Does.Contain("interaction.context.missing"));
 
             InvalidOperationException unknownAbility = Assert.Throws<InvalidOperationException>(() =>
                 InteractionPrefConfigLoader.ResolveSeed(
-                    Prefs(IntentId, DispatchId, abilityId: "ability.not_installed", abilityCastModeId: mode),
+                    Prefs(key, smart, "ability.not_installed", smart, contextValued: true, values: new[] { smart, click }),
                     intents.Intents,
                     dispatch,
-                    castModes,
+                    new InteractionPrefCatalog(),
+                    profiles,
                     abilities,
                     source: "Input/interaction_prefs.json"));
-            Assert.That(unknownAbility!.Message, Does.Contain("Input/interaction_prefs.json"));
-            Assert.That(unknownAbility.Message, Does.Contain("defaults.abilityCastModes[0].abilityId"));
-            Assert.That(unknownAbility.Message, Does.Contain("ability.not_installed"));
-
-            InvalidOperationException unknownPairMode = Assert.Throws<InvalidOperationException>(() =>
-                InteractionPrefConfigLoader.ResolveSeed(
-                    Prefs(IntentId, DispatchId, abilityId: abilityName, abilityCastModeId: "castMode.missing"),
-                    intents.Intents,
-                    dispatch,
-                    castModes,
-                    abilities,
-                    source: "Input/interaction_prefs.json"));
-            Assert.That(unknownPairMode!.Message, Does.Contain("defaults.abilityCastModes[0].castModeId"));
-            Assert.That(unknownPairMode.Message, Does.Contain("castMode.missing"));
+            Assert.That(unknownAbility!.Message, Does.Contain("ability.not_installed"));
+            Assert.That(unknownAbility.Message, Does.Contain("defaults.abilityPrefs"));
         }
 
         [Test]
-        public void SeedConfig_BlankOrDuplicateCastModeFields_FailFast()
+        public void SeedConfig_DuplicateKeysAndUndeclaredValues_FailFast()
         {
-            Assert.That(
-                () => InteractionPrefConfigLoader.Validate(Prefs(IntentId, DispatchId, castModeId: " "), "test"),
-                Throws.InvalidOperationException.With.Message.Contains("defaults.castModeId"));
-
+            const string key = "pref.test.gesture";
             Assert.That(
                 () => InteractionPrefConfigLoader.Validate(
-                    Prefs(IntentId, DispatchId, abilityId: " ability.x", abilityCastModeId: "castMode.x"),
+                    Prefs(key, " ", abilityName: null, abilityValue: null, contextValued: false, values: new[] { "symbol.a" }),
                     "test"),
-                Throws.InvalidOperationException.With.Message.Contains("abilityId"));
+                Throws.InvalidOperationException.With.Message.Contains("defaults.prefs"));
 
-            var duplicated = Prefs(IntentId, DispatchId);
-            duplicated.Defaults!.AbilityCastModes = new List<InteractionPrefAbilityCastModeDefinition>
-            {
-                new() { AbilityId = "ability.x", CastModeId = "castMode.a" },
-                new() { AbilityId = "ability.x", CastModeId = "castMode.b" },
-            };
+            var duplicated = Prefs(key, "symbol.a", abilityName: null, abilityValue: null, contextValued: false, values: new[] { "symbol.a", "symbol.a" });
             Assert.That(
                 () => InteractionPrefConfigLoader.Validate(duplicated, "Input/interaction_prefs.json"),
-                Throws.InvalidOperationException.With.Message.Contains("defaults.abilityCastModes[1].abilityId"));
+                Throws.InvalidOperationException.With.Message.Contains("duplicates value"));
+
+            var undeclared = BarePrefs();
+            undeclared.Defaults!.Prefs = new List<InteractionPrefPairDefinition>
+            {
+                new() { Key = "pref.missing", Value = "symbol.a" },
+            };
+            Assert.That(
+                () => InteractionPrefConfigLoader.Validate(undeclared, "Input/interaction_prefs.json"),
+                Throws.InvalidOperationException.With.Message.Contains("pref.missing"));
         }
 
         [Test]
-        public void RootEngineCastModeCatalog_IsEmpty_AndPrefsDeclareNeitherCastField()
+        public void RootEngine_DoesNotShipACastModeCatalog()
         {
             string root = FindRepoRoot();
-            string modesPath = Path.Combine(root, "assets", "Input", "cast_modes.json");
-            JsonNode? modes = JsonNode.Parse(File.ReadAllText(modesPath));
-            Assert.That(modes, Is.InstanceOf<JsonArray>());
-            Assert.That(modes!.AsArray(), Is.Empty, "the engine declares no cast modes");
+            Assert.That(File.Exists(Path.Combine(root, "assets", "Input", "cast_modes.json")), Is.False);
 
             string prefs = File.ReadAllText(Path.Combine(root, "assets", "Input", "interaction_prefs.json"));
             Assert.That(prefs, Does.Not.Contain("castModeId"));
             Assert.That(prefs, Does.Not.Contain("abilityCastModes"));
 
             string catalog = File.ReadAllText(Path.Combine(root, "assets", "config_catalog.json"));
-            Assert.That(catalog, Does.Contain("Input/cast_modes.json"));
-        }
-
-        [Test]
-        public void CastModeEntries_RejectExtraFieldsBlankIdsAndDuplicates()
-        {
-            var registry = NewCastModes();
-            Assert.That(CastModeConfigLoader.RegisterEntry(registry, new JsonObject { ["id"] = "castMode.one" }, "Input/cast_modes.json", 0), Is.EqualTo(1));
-
-            Assert.That(
-                () => CastModeConfigLoader.RegisterEntry(
-                    registry,
-                    new JsonObject { ["id"] = "castMode.two", ["kind"] = "smart" },
-                    "Input/cast_modes.json",
-                    1),
-                Throws.InvalidOperationException.With.Message.Contains("id-only").And.Message.Contains("kind"));
-
-            Assert.That(
-                () => CastModeConfigLoader.RegisterEntry(registry, new JsonObject { ["id"] = "  " }, "Input/cast_modes.json", 2),
-                Throws.InvalidOperationException.With.Message.Contains("id"));
-
-            Assert.That(
-                () => CastModeConfigLoader.RegisterEntry(registry, new JsonObject { ["id"] = "castMode.one" }, "Input/cast_modes.json", 3),
-                Throws.InvalidOperationException.With.Message.Contains("duplicates"));
+            Assert.That(catalog, Does.Not.Contain("Input/cast_modes.json"));
         }
 
         // ── Resolution chain: possessed rep, not the scheme ──
@@ -385,13 +368,15 @@ namespace Ludots.Tests.GAS
             InteractionPref pref = restored.Get<InteractionPref>(restoredEntity);
             Assert.That(pref.DefaultCommandIntentId, Is.EqualTo(4242), "the raw registry id must round-trip untouched");
             Assert.That(pref.DefaultCastDispatchProfileId, Is.EqualTo(8484));
-            Assert.That(pref.DefaultCastModeId, Is.EqualTo(77), "the player cast mode rides the same unmanaged formatter");
+            Assert.That(pref.ResolvePref(0, 3), Is.EqualTo(77), "the player preference rides the same unmanaged formatter");
             Assert.That(pref.ResolveCommandIntent(502), Is.EqualTo(4243), "the ability override survives byte-for-byte");
             Assert.That(pref.ResolveCastDispatchProfile(504), Is.EqualTo(8485), "a partial override keeps inheriting the unoverridden field");
-            Assert.That(pref.ResolveCastMode(506), Is.EqualTo(79), "a cast-mode-only pin survives the save");
-            Assert.That(pref.ResolveCastMode(504), Is.EqualTo(77), "an override that leaves cast mode 0 inherits the player default after restore");
-            Assert.That(pref.TryGetAbilityOverride(505, out int intent, out int dispatch, out int castMode), Is.True);
-            Assert.That((intent, dispatch, castMode), Is.EqualTo((4244, 0, 78)));
+            Assert.That(pref.ResolvePref(506, 3), Is.EqualTo(79), "an ability preference pin survives the save");
+            Assert.That(pref.ResolvePref(504, 3), Is.EqualTo(77), "an ability without the key inherits the player value after restore");
+            Assert.That(pref.ResolvePref(505, 4), Is.EqualTo(78));
+            Assert.That(pref.TryGetAbilityOverride(505, out int intent, out int dispatch), Is.True);
+            Assert.That((intent, dispatch), Is.EqualTo((4244, 0)));
+            Assert.That(pref.ResolveCommandIntent(506), Is.EqualTo(4242), "a preference pin does not invent an intent");
         }
 
         // ── Harness ──
@@ -407,47 +392,91 @@ namespace Ludots.Tests.GAS
         {
             InteractionPref pref = default;
             pref.SetPlayerDefault(4242, 8484);
-            pref.SetDefaultCastMode(77);
-            pref.SetAbilityOverride(502, commandIntentId: 4243, castDispatchProfileId: 8485, castModeId: 0);
-            pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 8485, castModeId: 0);
-            pref.SetAbilityOverride(505, commandIntentId: 4244, castDispatchProfileId: 0, castModeId: 78);
-            pref.SetAbilityOverride(506, commandIntentId: 0, castDispatchProfileId: 0, castModeId: 79);
+            pref.SetPlayerPref(3, 77);
+            pref.SetAbilityOverride(502, commandIntentId: 4243, castDispatchProfileId: 8485);
+            pref.SetAbilityOverride(504, commandIntentId: 0, castDispatchProfileId: 8485);
+            pref.SetAbilityOverride(505, commandIntentId: 4244, castDispatchProfileId: 0);
+            pref.SetAbilityPref(505, 4, 78);
+            pref.SetAbilityPref(506, 3, 79);
             return pref;
         }
 
-        private static StringIntRegistry NewCastModes(params string[] ids)
+        private static InteractionPrefsConfig BarePrefs()
         {
-            var registry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            for (int i = 0; i < ids.Length; i++)
+            return new InteractionPrefsConfig
             {
-                registry.Register(ids[i]);
-            }
-
-            return registry;
+                Defaults = new InteractionPrefDefaultsDefinition
+                {
+                    CommandIntentId = IntentId,
+                    CastDispatchProfileId = DispatchId,
+                },
+            };
         }
 
         private static InteractionPrefsConfig Prefs(
-            string intentId,
-            string dispatchId,
-            string? castModeId = null,
-            string? abilityId = null,
-            string? abilityCastModeId = null)
+            string key,
+            string value,
+            string? abilityName,
+            string? abilityValue,
+            bool contextValued,
+            string[] values)
         {
-            var defaults = new InteractionPrefDefaultsDefinition
+            var config = BarePrefs();
+            config.Keys = new List<InteractionPrefKeyDefinition>
             {
-                CommandIntentId = intentId,
-                CastDispatchProfileId = dispatchId,
-                CastModeId = castModeId,
-            };
-            if (abilityId != null || abilityCastModeId != null)
-            {
-                defaults.AbilityCastModes = new List<InteractionPrefAbilityCastModeDefinition>
+                new()
                 {
-                    new() { AbilityId = abilityId, CastModeId = abilityCastModeId },
+                    Id = key,
+                    ContextValued = contextValued,
+                    Values = new List<string>(values),
+                },
+            };
+            config.Defaults!.Prefs = new List<InteractionPrefPairDefinition>
+            {
+                new() { Key = key, Value = value },
+            };
+            if (abilityName != null || abilityValue != null)
+            {
+                config.Defaults.AbilityPrefs = new List<InteractionPrefAbilityPrefDefinition>
+                {
+                    new() { AbilityId = abilityName, Key = key, Value = abilityValue },
                 };
             }
 
-            return new InteractionPrefsConfig { Defaults = defaults };
+            return config;
+        }
+
+        private static InteractionPrefSeed Resolve(
+            InteractionPrefsConfig config,
+            CommandIntentProfileRegistry intents,
+            CastDispatchProfileRegistry dispatch,
+            AbilityDefinitionRegistry abilities)
+        {
+            return InteractionPrefConfigLoader.ResolveSeed(
+                config,
+                intents,
+                dispatch,
+                new InteractionPrefCatalog(),
+                InstalledProfiles(),
+                abilities);
+        }
+
+        private static InteractionContextProfileRegistry InstalledProfiles(params string[] ids)
+        {
+            var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var profiles = new InteractionContextProfileRegistry(profileIds);
+            var definitions = new List<InteractionContextProfileDefinition>(ids.Length);
+            for (int i = 0; i < ids.Length; i++)
+            {
+                definitions.Add(new InteractionContextProfileDefinition { Id = ids[i] });
+            }
+
+            profiles.Install(
+                new InteractionContextProfilesConfig { Profiles = definitions },
+                new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            return profiles;
         }
 
         private static string FindRepoRoot()

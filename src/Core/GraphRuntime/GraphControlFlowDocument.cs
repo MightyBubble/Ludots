@@ -254,12 +254,12 @@ namespace Ludots.Core.GraphRuntime
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
-        /// <summary>
-        /// Symbol shared by SetInteractionMode (interaction mode) and IsCastMode / SetCastMode
-        /// (cast mode). The patcher stores a config-key id; the runtime resolves it against the
-        /// installed registry for that op.
-        /// </summary>
+        /// <summary>Interaction mode symbol for SetInteractionMode. The patcher stores a config-key id.</summary>
         public string? Mode { get; set; }
+        /// <summary>Preference key symbol for IsPref / SetPref / ActivateContextFromPref.</summary>
+        public string? Key { get; set; }
+        /// <summary>Preference value symbol for IsPref / SetPref.</summary>
+        public string? Value { get; set; }
         /// <summary>Interaction context profile id symbol for ActivateContext/DeactivateContext; resolved against the installed context profiles at run time.</summary>
         public string? Context { get; set; }
         /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>

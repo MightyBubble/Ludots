@@ -395,8 +395,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AcquireTimeFlowPause or
                 GraphNodeOp.AcquireTimeFlowScale or
                 GraphNodeOp.ReleaseTimeFlowToken or
-                GraphNodeOp.IsCastMode or
-                GraphNodeOp.SetCastMode or
+                GraphNodeOp.IsPref or
+                GraphNodeOp.SetPref or
+                GraphNodeOp.ActivateContextFromPref or
+                GraphNodeOp.DeactivateOwnContext or
                 GraphNodeOp.SetTargetPos or
                 GraphNodeOp.LoadAbilityCastRange or
                 GraphNodeOp.LoadSlotAbilityId or
@@ -977,8 +979,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
         Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
             Register(GraphNodeOp.SetInteractionMode, HandleSetInteractionMode, "SetInteractionMode graph opcode.");
-            Register(GraphNodeOp.IsCastMode, HandleIsCastMode, "IsCastMode graph opcode.");
-            Register(GraphNodeOp.SetCastMode, HandleSetCastMode, "SetCastMode graph opcode.");
+            Register(GraphNodeOp.IsPref, HandleIsPref, "IsPref graph opcode.");
+            Register(GraphNodeOp.SetPref, HandleSetPref, "SetPref graph opcode.");
+            Register(GraphNodeOp.ActivateContextFromPref, HandleActivateContextFromPref, "ActivateContextFromPref graph opcode.");
+            Register(GraphNodeOp.DeactivateOwnContext, HandleDeactivateOwnContext, "DeactivateOwnContext graph opcode.");
             Register(GraphNodeOp.SetTargetPos, HandleSetTargetPos, "SetTargetPos graph opcode.");
             Register(GraphNodeOp.LoadAbilityCastRange, HandleLoadAbilityCastRange, "LoadAbilityCastRange graph opcode.");
             Register(GraphNodeOp.LoadSlotAbilityId, HandleLoadSlotAbilityId, "LoadSlotAbilityId graph opcode.");
@@ -1831,14 +1835,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.SetInteractionMode(target, ins.Imm);
         }
 
-        private static void HandleIsCastMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        private static void HandleIsPref(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.B[ins.Dst] = (byte)(s.Api.IsCastMode(s.E[ins.A], s.E[ins.B], s.I[ins.C], ins.Imm) ? 1 : 0);
+            s.B[ins.Dst] = (byte)(s.Api.IsPref(
+                s.E[ins.A],
+                s.E[ins.B],
+                s.I[ins.C],
+                PrefOpEncoding.UnpackKey(ins.Imm),
+                PrefOpEncoding.UnpackOther(ins.Imm)) ? 1 : 0);
         }
 
-        private static void HandleSetCastMode(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        private static void HandleSetPref(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.Api.SetCastMode(s.E[ins.A], ins.Imm);
+            s.Api.SetPref(s.E[ins.A], PrefOpEncoding.UnpackKey(ins.Imm), PrefOpEncoding.UnpackOther(ins.Imm));
+        }
+
+        private static void HandleActivateContextFromPref(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ActivateContextFromPref(
+                s.E[ins.A],
+                s.E[ins.B],
+                s.I[ins.C],
+                PrefOpEncoding.UnpackKey(ins.Imm),
+                PrefOpEncoding.UnpackOther(ins.Imm));
+        }
+
+        private static void HandleDeactivateOwnContext(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.DeactivateOwnContext();
         }
 
         private static void HandleSetTargetPos(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

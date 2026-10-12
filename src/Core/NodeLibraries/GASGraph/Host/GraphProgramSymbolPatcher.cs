@@ -129,8 +129,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.WriteMapVarInt:
                     case GraphNodeOp.WriteMapVarFloat:
                     case GraphNodeOp.SetInteractionMode:
-                    case GraphNodeOp.IsCastMode:
-                    case GraphNodeOp.SetCastMode:
                     case GraphNodeOp.Fail:
                     case GraphNodeOp.LoadEntryPayloadEntity:
                     case GraphNodeOp.LoadEntryPayloadInt:
@@ -162,6 +160,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.IsPref:
+                    case GraphNodeOp.SetPref:
+                    case GraphNodeOp.ActivateContextFromPref:
+                        ins.Imm = PrefOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, PrefOpEncoding.UnpackSymbolKey(ins.Imm))),
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, PrefOpEncoding.UnpackSymbolOther(ins.Imm))));
                         break;
                     case GraphNodeOp.ActivateContext:
                         ins.Imm = ContextOpEncoding.Pack(

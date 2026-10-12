@@ -2756,27 +2756,11 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_IsCastMode",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsCastModeEntryMod",
-        "projectPath": "CapabilityStandardGraphOpIsCastModeEntryMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_graph_op_LoadAbilityCastRange",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadAbilityCastRangeEntryMod.csproj"
-      }
-    },
-        {
-      "name": "capability_standard_graph_op_SetCastMode",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCastModeEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSetCastModeEntryMod.csproj"
       }
     },
     {
@@ -2817,6 +2801,38 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadSlotAbilityIdEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateContextFromPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateContextFromPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateContextFromPrefEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DeactivateOwnContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDeactivateOwnContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDeactivateOwnContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IsPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIsPrefEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetPref",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPrefEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetPrefEntryMod.csproj"
       }
     }
   ],
