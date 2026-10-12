@@ -14,7 +14,7 @@ public sealed class SpatialVocabularyContractTests
     [
         "CmPerSecond", "NavCellArea", "NavCells", "NavTiles", "Fraction",
         "Capacity", "Count", "Scale", "Ratio", "Ticks", "Tries", "Rings", "Slices",
-        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec", "SubSteps",
+        "Cm", "Dot", "Deg", "Rad", "Hz", "Sec", "Ms", "SubSteps",
     ];
 
     private static readonly string[] BareLengthWords = ["Len", "Width", "Padding", "Spacing", "Error", "Area", "LookAhead"];
