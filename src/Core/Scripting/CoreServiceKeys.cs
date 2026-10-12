@@ -318,6 +318,7 @@ namespace Ludots.Core.Scripting
 
         // --- GAS Input / Command Sources / Orders ---
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
+        public static readonly ServiceKey<RuntimeEntitySpawnSystem> RuntimeEntitySpawnSystem = new("RuntimeEntitySpawnSystem");
         public static readonly ServiceKey<RuntimeEntityLifecycleQueue> RuntimeEntityLifecycleQueue = new("RuntimeEntityLifecycleQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleReceiptQueue> RuntimeEntityLifecycleReceiptQueue = new("RuntimeEntityLifecycleReceiptQueue");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");

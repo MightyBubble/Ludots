@@ -52,6 +52,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly VisualTransform[] _presenterBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
         private readonly CullState[] _presenterBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
+        private readonly int[] _batchInitializerIndices = new int[BatchEntityScratchCapacity];
+        private IRuntimeSpawnInstanceInitializer[] _instanceInitializers = new IRuntimeSpawnInstanceInitializer[4];
+        private int _instanceInitializerCount;
         private readonly PresenterEntityRuntime? _presenterRuntime;
         private readonly PresenterDefinitionRegistry? _presenterDefinitions;
         private readonly CompiledPresenterBootstrapRegistry? _presenterBootstrap;
@@ -144,6 +147,41 @@ namespace Ludots.Core.Gameplay.Spawning
             _ownsTypeId = ownsTypeId;
             _entityTriggerGraphMounts = entityTriggerGraphMounts;
             _initialInteractionContexts = initialInteractionContexts;
+        }
+
+        public int LargestTemplateBatch => _templateBatchSpawner.LargestCreatedBatch;
+
+        /// <summary>返回 1 基 kind。初始化器挂在这个系统实例上，不进进程静态，避免回放和活会话串世界。</summary>
+        public ushort RegisterInstanceInitializer(IRuntimeSpawnInstanceInitializer initializer)
+        {
+            if (initializer == null)
+            {
+                throw new ArgumentNullException(nameof(initializer));
+            }
+
+            if (_instanceInitializerCount == ushort.MaxValue)
+            {
+                throw new InvalidOperationException("SPAWN.RUNTIME.ERR.InstanceInitializerCapacity");
+            }
+
+            if (_instanceInitializerCount == _instanceInitializers.Length)
+            {
+                Array.Resize(ref _instanceInitializers, _instanceInitializers.Length * 2);
+            }
+
+            _instanceInitializers[_instanceInitializerCount] = initializer;
+            _instanceInitializerCount++;
+            return (ushort)_instanceInitializerCount;
+        }
+
+        public void UnregisterInstanceInitializer(ushort kind)
+        {
+            if (kind == 0 || kind > _instanceInitializerCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            }
+
+            _instanceInitializers[kind - 1] = null!;
         }
 
         public override void Update(in float dt)
@@ -316,6 +354,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
             ApplyRelationshipPlan(in relationshipPlan, entity);
+            ApplyInstanceInitializer(in request, entity);
             TryBootstrapPresenter(entity, request.TemplateId);
             EnqueueTemplateChildren(in request, entity);
             return entity;
@@ -607,9 +646,15 @@ namespace Ludots.Core.Gameplay.Spawning
                 return false;
             }
 
+            if (!_requests.TryPeek(out RuntimeEntitySpawnRequest head))
+            {
+                return false;
+            }
+
+            ushort initializerKind = head.InstanceInitializerKind;
             while (count < _batchRequests.Length &&
                    _requests.TryPeekAt(count, out var next) &&
-                   IsTemplateBatchMember(templateId, in next))
+                   IsTemplateBatchMember(templateId, initializerKind, in next))
             {
                 _batchRequests[count] = next;
                 count++;
@@ -620,6 +665,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private bool TryDrainCopiedTemplateBatch(string templateId, int count)
         {
+            ushort initializerKind = _batchRequests[0].InstanceInitializerKind;
             for (int i = 0; i < count; i++)
             {
                 if (!_requests.TryDequeue(out RuntimeEntitySpawnRequest drained))
@@ -627,7 +673,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     return false;
                 }
 
-                if (!IsTemplateBatchMember(templateId, in drained))
+                if (!IsTemplateBatchMember(templateId, initializerKind, in drained))
                 {
                     throw new InvalidOperationException(
                         $"Runtime template batch queue changed during preflight: template='{templateId}', row={i}.");
@@ -639,13 +685,15 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
-        private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
+        private static bool IsTemplateBatchMember(string templateId, ushort initializerKind, in RuntimeEntitySpawnRequest request)
         {
             // 带父链接/attachment 局部姿的请求只能走单实体 lane（batch lane 不处理父子链接）。
             // 未设置 Parent 的请求字段是 default(Entity)（0,0,0），不等于 Entity.Null——
             // 两种"无父"都要放行 batch lane（先例：EntityTriggerGraphMounts）。
+            // 初始化器 kind 不同不能进同一批：WriteChunk 只拿队头的那一个。
             return request.Kind == RuntimeEntitySpawnKind.Template &&
                    !HasComponentPatches(in request) &&
+                   request.InstanceInitializerKind == initializerKind &&
                    (request.Parent == Entity.Null || request.Parent == default) &&
                    request.LinkSourceAsParent == 0 &&
                    request.HasAttachedLocalPose == 0 &&
@@ -756,11 +804,16 @@ namespace Ludots.Core.Gameplay.Spawning
         {
             long prepareStart = Stopwatch.GetTimestamp();
             bool allHaveMapEntity = true;
+            ushort initializerKind = _batchRequests[0].InstanceInitializerKind;
+            IRuntimeSpawnInstanceInitializer? instanceInitializer = initializerKind == 0
+                ? null
+                : RequireInitializer(initializerKind);
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
                 MapEntity? mapEntity = TryResolveMapEntity(in request);
                 allHaveMapEntity &= mapEntity.HasValue;
+                _batchInitializerIndices[i] = request.InstanceInitializerIndex;
                 _templateBatchRequests[i] = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
                     request.WorldPositionCm,
                     hasWorldPosition: request.HasWorldPosition != 0,
@@ -815,7 +868,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 out ReadOnlySpan<Entity> created,
                 _presenterBatchStableIds.AsSpan(0, count),
                 _presenterBatchOwnerTransforms.AsSpan(0, count),
-                _presenterBatchOwnerCulls.AsSpan(0, count)))
+                _presenterBatchOwnerCulls.AsSpan(0, count),
+                instanceInitializer,
+                _batchInitializerIndices.AsSpan(0, count)))
             {
                 return false;
             }
@@ -1145,6 +1200,26 @@ namespace Ludots.Core.Gameplay.Spawning
             ParticipantIdentityProjector.UpsertTeam(World, entity, team.Id);
         }
 
+        private void ApplyInstanceInitializer(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (request.InstanceInitializerKind == 0)
+            {
+                return;
+            }
+
+            RequireInitializer(request.InstanceInitializerKind).ApplyEntity(World, entity, request.InstanceInitializerIndex);
+        }
+
+        private IRuntimeSpawnInstanceInitializer RequireInitializer(ushort kind)
+        {
+            if (kind == 0 || kind > _instanceInitializerCount || _instanceInitializers[kind - 1] == null)
+            {
+                throw new InvalidOperationException($"SPAWN.RUNTIME.ERR.UnknownInstanceInitializer: kind={kind}.");
+            }
+
+            return _instanceInitializers[kind - 1];
+        }
+
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
         {
             PlayerOwner owner;
@@ -1164,8 +1239,14 @@ namespace Ludots.Core.Gameplay.Spawning
                 owner = World.Get<PlayerOwner>(request.Source);
             }
 
-            if (_ownership != null && _playerLookup != null &&
-                _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
+            // 没有归属解析器或玩家表时只写组件，不建边。这是无头合同，不是“代表还没进表”的暂存。
+            if (_ownership == null || _playerLookup == null)
+            {
+                ParticipantIdentityProjector.UpsertPlayerOwner(World, entity, owner.PlayerId);
+                return;
+            }
+
+            if (_playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
             {
                 if (!World.Has<PlayerIdentity>(playerRep))
                 {
