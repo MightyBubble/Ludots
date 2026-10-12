@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Ludots.Core.Components;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -5,25 +7,72 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// S4 规范校验码(FNV-1a 32,Fix64 原始值口径——甲方体系):
-/// 字段顺序与参考实现 unitChecksum 一致(tick、单位数、x/y、vx/vy、slotX/slotY、
-/// blend、stall、state、group、id、order、mode、level,再指令与领队),
-/// 每个定点字段按原始 int64 的低 32 位 → 高 32 位依次混合(与参考实现逐 f64 词序同构)。
-/// 读面:有运动栈的会话在 tick 末从内核 SoA 读(scatter 后同值);纯部署会话(无运动栈)
-/// 保留组件直读。两条路径值等价——SoA 即 scatter 落回前的组件值。
+/// 一条 Mix 上的四个断面。后一断面从前一断面的结果继续混。
+/// <see cref="Total"/> 等于 <see cref="Avoidance"/>，即整段混合的终态。
+/// </summary>
+public readonly struct CrowdSimStateDigest
+{
+    public readonly int Tick;
+    public readonly ulong Position;
+    public readonly ulong Motion;
+    public readonly ulong State;
+    public readonly ulong Avoidance;
+
+    public CrowdSimStateDigest(int tick, ulong position, ulong motion, ulong state, ulong avoidance)
+    {
+        Tick = tick;
+        Position = position;
+        Motion = motion;
+        State = state;
+        Avoidance = avoidance;
+    }
+
+    public ulong Total => Avoidance;
+}
+
+/// <summary>两串逐 tick 摘要的第一处分歧。无分歧时 <see cref="Diverged"/> 为 false，Tick 为 -1。</summary>
+public readonly struct CrowdSimDigestDiff
+{
+    public readonly bool Diverged;
+    public readonly int Tick;
+    public readonly string Section;
+
+    public CrowdSimDigestDiff(bool diverged, int tick, string section)
+    {
+        Diverged = diverged;
+        Tick = tick;
+        Section = section;
+    }
+
+    public static CrowdSimDigestDiff None => new(false, -1, "");
+}
+
+/// <summary>
+/// 规范校验码（FNV-1a 32，Fix64 原始值）。词序：tick、单位数、x/y、vx/vy、slotX/slotY、
+/// blend、stall、state、group、句柄、order、mode、level，再分离两轴、calm、相位。
+/// 每个定点字段按原始 int64 的低 32 位再高 32 位混合。
+/// 有运动栈的会话在 tick 末从内核 SoA 读；纯部署会话读组件。
+/// 未执行的指令队列和订单簿不在这条 Mix 里（单位当前的 order 号在 state 断面）。
+/// 把队列折进合计会改掉已冻结的校验码；队列是回放输入，执行当 tick 的效果落在 state / motion / position。
 /// </summary>
 public static class CrowdSimChecksum
 {
+    public const string PositionSection = "position";
+    public const string MotionSection = "motion";
+    public const string StateSection = "state";
+    public const string AvoidanceSection = "avoidance";
+
     private const uint Offset = 2166136261u, Prime = 16777619u;
 
-    public static ulong ComputeValue(CrowdSimSession sim)
+    public static ulong ComputeValue(CrowdSimSession sim) => Compute(sim).Total;
+
+    public static CrowdSimStateDigest Compute(CrowdSimSession sim)
     {
         var units = sim.Units;
         int n = units.Count;
         var movement = sim.Movement;
         uint h = Mix(Mix(Offset, (uint)sim.TickCount), (uint)n);
 
-        // 位置(Fix64 原始值,先低后高;与参考实现 f64 词序同构)
         for (int i = 0; i < n; i++)
         {
             var pos = Position(sim, movement, i);
@@ -38,9 +87,8 @@ public static class CrowdSimChecksum
             h = Mix(h, (uint)(pos.Y.RawValue >> 32));
         }
 
-        // 运动字段(vx / vy / slotX / slotY / blend / stall,与参考实现同序)
-        // 每个定点字段按原始 int64 低 32 → 高 32 两词混入(与导出端 mixI64 同形);
-        // 旧口径只混低 32 词,随 S6 校验码混法变更一并作废。
+        ulong position = h;
+
         for (int k = 0; k < 6; k++)
         {
             for (int i = 0; i < n; i++)
@@ -51,17 +99,16 @@ public static class CrowdSimChecksum
             }
         }
 
-        // 整型字段:state / group / id / order / mode / level
+        ulong motion = h;
+
         for (int i = 0; i < n; i++) h = Mix(h, State(sim, movement, i).State);
         for (int i = 0; i < n; i++) h = Mix(h, (uint)State(sim, movement, i).GroupId);
         for (int i = 0; i < n; i++) h = Mix(h, units.HandleAt(i));
         for (int i = 0; i < n; i++) h = Mix(h, State(sim, movement, i).Order);
         for (int i = 0; i < n; i++) h = Mix(h, State(sim, movement, i).Mode);
         for (int i = 0; i < n; i++) h = Mix(h, State(sim, movement, i).Level);
+        ulong state = h;
 
-        // 避让隐藏状态:分离两轴 + calm 逐单位(mixI64 双词)+ 相位一词——影响下 tick 行为
-        // 的状态必须进校验码,否则快照恢复分歧延迟显形且无法定位到避让子系统。
-        // 无运动栈(部署会话)时恒零,与导出端词数对齐。
         for (int i = 0; i < n; i++)
         {
             long sx = movement != null ? movement.Separation[i].X.RawValue : 0;
@@ -84,11 +131,40 @@ public static class CrowdSimChecksum
         }
 
         h = Mix(h, (uint)(movement?.Phase ?? 0));
-
-        return h;
+        ulong avoidance = h;
+        return new CrowdSimStateDigest(sim.TickCount, position, motion, state, avoidance);
     }
 
-    /// <summary>展示/对拍边界格式(真值帧列是 8 位十六进制);tick 路径不再产字符串。</summary>
+    /// <summary>
+    /// 按 tick 对齐两串摘要，返回第一处分歧。共同前缀一致但条数不同时 Tick 为 -2，Section 为空。
+    /// 断面顺序：position、motion、state、avoidance。后段接续前段，更早的词变了，后面的断面跟着变，这里只报第一个。
+    /// </summary>
+    public static CrowdSimDigestDiff DiffDigest(
+        IReadOnlyList<CrowdSimStateDigest> left,
+        IReadOnlyList<CrowdSimStateDigest> right)
+    {
+        int common = Math.Min(left.Count, right.Count);
+        for (int i = 0; i < common; i++)
+        {
+            if (TryFirstSection(left[i], right[i], out string section))
+                return new CrowdSimDigestDiff(true, left[i].Tick, section);
+        }
+
+        if (left.Count != right.Count) return new CrowdSimDigestDiff(true, -2, "");
+        return CrowdSimDigestDiff.None;
+    }
+
+    public static bool TryFirstSection(in CrowdSimStateDigest left, in CrowdSimStateDigest right, out string section)
+    {
+        if (left.Position != right.Position) { section = PositionSection; return true; }
+        if (left.Motion != right.Motion) { section = MotionSection; return true; }
+        if (left.State != right.State) { section = StateSection; return true; }
+        if (left.Avoidance != right.Avoidance) { section = AvoidanceSection; return true; }
+        section = "";
+        return false;
+    }
+
+    /// <summary>展示/对拍边界格式（真值帧列是 8 位十六进制）；tick 路径不产字符串。</summary>
     public static string Format(ulong checksum) => checksum.ToString("x8");
 
     private static Fix64Vec2 Position(CrowdSimSession sim, CrowdMovementKernel? movement, int dense) =>
@@ -101,9 +177,6 @@ public static class CrowdSimChecksum
 
     private static uint Mix(uint h, uint v) => (h ^ v) * Prime;
 
-    /// <summary>
-    /// 运动字段的定点原始值:Fix64 原始 int64(校验码按低→高两词混入,与导出端 mixI64 同形)。
-    /// </summary>
     private static long MotionRaw(CrowdSimSession sim, CrowdMovementKernel? movement, int dense, int field)
     {
         CrowdSimulationKinematics kin;

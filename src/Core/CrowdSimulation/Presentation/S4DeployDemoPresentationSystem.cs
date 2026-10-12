@@ -285,6 +285,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public int RebakeExec, RebakeReport, RebakeKind, Tiles, Hits, Misses, Orders, Evicted, Stuck;
         public bool RuntimePresent, Interactive;
         public int ReplayStatus, Divergence;
+        public string ReplaySection = string.Empty;
         public bool BuildMode, PreviewKnown, PreviewShown, PreviewValid, Pending;
         public int TemplateIndex, ViewMode;
         public string TemplateLabel = string.Empty;
@@ -331,7 +332,8 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
             }
 
             if ((runtime != null) != RuntimePresent) return false;
-            if (runtime != null && (ReplayStatus != runtime.ReplayStatus || Divergence != runtime.ReplayDivergenceTick)) return false;
+            if (runtime != null && (ReplayStatus != runtime.ReplayStatus || Divergence != runtime.ReplayDivergenceTick
+                || !string.Equals(ReplaySection, runtime.ReplayDivergenceSection, StringComparison.Ordinal))) return false;
             if (Interactive != demo.InteractiveMode || BuildMode != demo.BuildMode) return false;
             if (TemplateIndex != demo.TemplateIndex || ViewMode != demo.ViewMode || Pending != pending) return false;
             if (!string.Equals(TemplateLabel, templateLabel, StringComparison.Ordinal)
@@ -430,13 +432,20 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     : runtime.ReplayStatus switch
                     {
                         1 => "回放:逐位一致",
-                        2 => $"回放:分歧 @tick {runtime.ReplayDivergenceTick}",
+                        2 => string.IsNullOrEmpty(runtime.ReplayDivergenceSection)
+                            ? $"回放:分歧 @tick {runtime.ReplayDivergenceTick}"
+                            : $"回放:分歧 @tick {runtime.ReplayDivergenceTick} {runtime.ReplayDivergenceSection}",
                         _ => "回放:待触发",
                     };
             if (runtime != null)
             {
                 ReplayStatus = runtime.ReplayStatus;
                 Divergence = runtime.ReplayDivergenceTick;
+                ReplaySection = runtime.ReplayDivergenceSection;
+            }
+            else
+            {
+                ReplaySection = string.Empty;
             }
 
             BuildMode = demo.BuildMode;

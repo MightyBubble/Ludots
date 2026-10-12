@@ -218,6 +218,9 @@ public sealed class CrowdSimSession
     }
 
     public int TickCount { get; private set; }
+
+    /// <summary>本 tick 的分区摘要。只在 <see cref="Step"/> 返回 true 时更新。</summary>
+    public CrowdSimStateDigest LastDigest { get; private set; }
     public int SpawnSeq { get; set; }
     public int SelectedCount { get; private set; }
     public int SpawnSkippedTotal { get; private set; }
@@ -282,7 +285,7 @@ public sealed class CrowdSimSession
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
     /// (领队→意图→马达)× SubSteps → tickCount+1 → 流场刷新排队 → 校验码。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
-    /// checksum 仅在 true 时有效——tick 路径零字符串分配。
+    /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效——tick 路径零字符串分配。
     /// </summary>
     public bool Step(out ulong checksum)
     {
@@ -324,12 +327,13 @@ public sealed class CrowdSimSession
 
         TickCount++;
         Planner?.ProcessRefreshes(TickCount);
-        checksum = CrowdSimChecksum.ComputeValue(this);
+        LastDigest = CrowdSimChecksum.Compute(this);
+        checksum = LastDigest.Total;
         return true;
     }
 
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>
-    public void Advance(int ticks, List<ulong>? checksums = null)
+    public void Advance(int ticks, List<ulong>? checksums = null, List<CrowdSimStateDigest>? digests = null)
     {
         int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
         int ran = 0;
@@ -339,6 +343,7 @@ public sealed class CrowdSimSession
             if (!Step(out var h)) continue;
             ran++;
             checksums?.Add(h);
+            digests?.Add(LastDigest);
         }
     }
 
