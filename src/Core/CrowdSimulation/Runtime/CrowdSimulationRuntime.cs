@@ -291,25 +291,25 @@ public sealed partial class CrowdSimulationRuntime
         var heightAsset = ContinuousHeightmapBinary.Read(OpenAsset(engine, heightAssetPath));
         BoardConfig solverBoard = NavSolverDeclaration.RequireBoard(
             mapConfig, NavSolverDeclaration.RequireMap(navmesh, mapConfig.Id));
-        NavSurfaceContract.ValidateWorldSize(
-            solverBoard.WidthCm,
-            solverBoard.HeightCm,
-            runtimeConfig.NavCellSizeCm,
-            surface,
-            surfaceAssetPath,
-            heightAsset,
-            heightAssetPath);
         var mapSurface = CrowdSimulationMapSurfaceSource.Extract(
             mapConfig,
             engine.MapLoader.TemplateRegistry.GetAll().Where(t => !string.IsNullOrWhiteSpace(t.Id))
                 .ToDictionary(t => t.Id, StringComparer.Ordinal));
-        var grid = SurfaceGrid.Build(runtimeConfig, surface, mapSurface.Blockers);
+        var ingested = CrowdSimulationWorldIngest.Build(
+            runtimeConfig,
+            solverBoard.WidthCm,
+            solverBoard.HeightCm,
+            surface,
+            surfaceAssetPath,
+            heightAsset,
+            heightAssetPath,
+            mapSurface.Blockers);
+        var grid = ingested.Grid;
         _surfaceGrid = grid;
         _jumpCandidates = surface.JumpCandidates;
         _mapSurfaceBlockers = mapSurface.Blockers;
         _mapSurfaceBridges = mapSurface.Bridges;
-        var heights = NavHeightField.FromHeightmap(
-            heightAsset, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm);
+        var heights = ingested.Heights;
         _heights = heights;
         var deck = UpperLayerBake.RasterizeDecks(mapSurface.Bridges, runtimeConfig);
         _deck = deck;

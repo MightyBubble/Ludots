@@ -40,6 +40,7 @@ public class MapSizeAgreementTests
         Assert.DoesNotThrow(() => NavSurfaceContract.ValidateWorldSize(
             boardWidthCm,
             boardHeightCm,
+            runtime.NavCellsPerSide,
             runtime.NavCellSizeCm,
             surface,
             "assets/" + runtime.SurfaceAsset,
@@ -51,7 +52,7 @@ public class MapSizeAgreementTests
     public void BoardNavsurfaceMismatch_NamesNavsurface()
     {
         var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.ValidateWorldSize(
-            1600, 1600, 100,
+            1600, 1600, 16, 100,
             Surface(15, 16, 100),
             SurfacePath,
             Height(1600, 1600, 16),
@@ -69,7 +70,7 @@ public class MapSizeAgreementTests
     public void NavsurfaceCellSizeMismatch_NamesNavsurface()
     {
         var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.ValidateWorldSize(
-            1600, 1600, 100,
+            1600, 1600, 16, 100,
             Surface(16, 16, 200),
             SurfacePath,
             Height(1600, 1600, 16),
@@ -87,7 +88,7 @@ public class MapSizeAgreementTests
     public void HeightBboxMismatch_NamesHeight()
     {
         var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.ValidateWorldSize(
-            1600, 1600, 100,
+            1600, 1600, 16, 100,
             Surface(16, 16, 100),
             SurfacePath,
             Height(1601, 1600, 16),
@@ -100,6 +101,35 @@ public class MapSizeAgreementTests
         Assert.That(ex.Message, Does.Contain(SurfacePath));
         Assert.That(ex.Message, Does.Contain("头 16×16"));
         Assert.That(ex.Message, Does.Contain("采样 16×16"));
+    }
+
+    [Test]
+    public void HeightSamplesNotSquareMultiple_NamesHeight()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => NavSurfaceContract.ValidateWorldSize(
+            1600, 1600, 16, 100,
+            Surface(16, 16, 100),
+            SurfacePath,
+            Height(1600, 1600, 20),
+            HeightPath));
+
+        Assert.That(ex!.Message, Does.StartWith(HeightPath));
+        Assert.That(ex.Message, Does.Contain("采样 20×20"));
+        Assert.That(ex.Message, Does.Contain("16×16"));
+    }
+
+    [Test]
+    public void NonDividingBoard_NamesBoard()
+    {
+        var map = TestDefaults.DemoMap();
+        map.Boards[0].WidthCm = 1_600_001;
+        map.Boards[0].HeightCm = 1_600_001;
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            TestDefaults.Assemble(map: map, pairRules: TestDefaults.DemoPairRules()));
+
+        Assert.That(ex!.Message, Does.Contain("Maps/crowd_simulation_demo.json"));
+        Assert.That(ex.Message, Does.Contain("求解器板 \"default\""));
+        Assert.That(ex.Message, Does.Contain("WidthCm（1600001）"));
     }
 
     private static NavSurfaceAsset Surface(int cellsX, int cellsY, int navCellSizeCm) => new()
