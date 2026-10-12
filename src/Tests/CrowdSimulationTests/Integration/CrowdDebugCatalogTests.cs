@@ -52,7 +52,7 @@ public class CrowdDebugCatalogTests
             engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
             engine.SetService(CoreServiceKeys.ViewController, new StubView());
             engine.Start();
-            var ex = Assert.Throws<InvalidOperationException>(() => engine.LoadMap("crowd_simulation_s1337"));
+            var ex = Assert.Throws<Ludots.Core.Config.ConfigLoadException>(() => engine.LoadMap("crowd_simulation_s1337"));
             Assert.That(ex!.Message, Does.Contain("CrowdSimulationDebug.json"));
             Assert.That(ex.Message, Does.Contain("存在目录登记但合并为空"));
         }

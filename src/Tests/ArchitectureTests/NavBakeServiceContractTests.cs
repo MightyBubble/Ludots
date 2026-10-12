@@ -688,7 +688,7 @@ namespace Ludots.Tests.Architecture
 
             try
             {
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => LoadTempConfig(missingAlgorithmRoot, profiles))!;
                 Assert.That(ex.Message, Does.Contain("algorithm"));
             }
@@ -721,7 +721,7 @@ namespace Ludots.Tests.Architecture
 
             try
             {
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => LoadTempConfig(wrongCaseRoot, profiles))!;
                 Assert.That(ex.Message, Does.Contain("recast"));
             }
@@ -751,7 +751,7 @@ namespace Ludots.Tests.Architecture
 
             try
             {
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => LoadTempConfig(missingRuntimeRoot, CreateAgentProfiles()))!;
                 Assert.That(ex.Message, Does.Contain("runtimeIncremental"));
             }

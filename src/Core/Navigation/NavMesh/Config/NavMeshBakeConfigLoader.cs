@@ -28,8 +28,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             ConfigConflictReport report = null,
             string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
+            return ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, tracked);
             if (mergedObject == null)
             {
                 throw new InvalidOperationException($"NavMeshBakeConfig not found in any source for '{relativePath}'.");
@@ -72,6 +74,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
 
             return config;
+            });
         }
 
         public static NavMeshBakeConfig LoadFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
@@ -112,7 +115,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             return new NavMeshBakeConfigContext(config, agentProfiles);
         }
 
-        private static IReadOnlyList<ResolvedModLoadEntry> ResolveModLoadPlan(string repoRoot, string targetModId)
+        /// <summary>
+        /// 目标 mod 的依赖闭包，按 DependencyResolver 排序。无烘焙启动计划时，游戏把这份清单交给 LoadResolvedPlan。
+        /// </summary>
+        public static IReadOnlyList<ResolvedModLoadEntry> ResolveModLoadPlan(string repoRoot, string targetModId)
         {
             string modsRoot = Path.Combine(Path.GetFullPath(repoRoot), "mods");
             if (!Directory.Exists(modsRoot))

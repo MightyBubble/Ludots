@@ -312,8 +312,9 @@ namespace Ludots.Tests.GAS
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var templates = new DataRegistry<EntityTemplate>(pipeline);
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => templates.Load("entities/templates.json", catalog))!;
+                Assert.That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
                 Assert.That(ex.Message, Does.Contain("entities/templates.json"));
 
                 templates.Load("Entities/templates.json", catalog);

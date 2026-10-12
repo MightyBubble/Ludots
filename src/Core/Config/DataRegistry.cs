@@ -18,6 +18,15 @@ namespace Ludots.Core.Config
 
         public void Load(string relativePath, ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
+            LoadTracked(relativePath, catalog, tracked);
+            return 0;
+            });
+        }
+
+        private void LoadTracked(string relativePath, ConfigCatalog catalog, ConfigConflictReport report)
+        {
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");

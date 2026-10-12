@@ -177,9 +177,12 @@ public sealed partial class CrowdSimulationRuntime
             return false;
         }
 
-        var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
-        _configDto = CrowdSimulationConfig.Load(merged);
+        _configDto = ConfigMergeProvenance.Wrap(CrowdSimulationConfigPath, engine.ConfigConflictReport, tracked =>
+        {
+            var merged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in configEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationConfigPath} 存在目录登记但合并为空。");
+            return CrowdSimulationConfig.Load(merged);
+        });
 
         if (!catalog.TryGet(CrowdSimulationDebugPath, out var debugEntry))
         {
@@ -188,11 +191,15 @@ public sealed partial class CrowdSimulationRuntime
             return true;
         }
 
-        var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, engine.ConfigConflictReport)
-            ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
-        _debug = CrowdSimulationDebugConfig.Load(debugMerged);
-        _planTimeout = _debug.PlanTimeout;
-        _presentation = _debug.Presentation;
+        CrowdSimulationDebugConfig debug = ConfigMergeProvenance.Wrap(CrowdSimulationDebugPath, engine.ConfigConflictReport, tracked =>
+        {
+            var debugMerged = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in debugEntry, tracked)
+                ?? throw new InvalidOperationException($"{CrowdSimulationDebugPath} 存在目录登记但合并为空。");
+            return CrowdSimulationDebugConfig.Load(debugMerged);
+        });
+        _debug = debug;
+        _planTimeout = debug.PlanTimeout;
+        _presentation = debug.Presentation;
         return true;
     }
 
