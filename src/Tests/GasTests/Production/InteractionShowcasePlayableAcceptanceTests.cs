@@ -224,22 +224,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
             SetMouseScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             int baselineRings = CountOverlays(overlays, GroundOverlayShape.Ring);
+            float vanguardTargetHealthBeforeR = ReadHealth(engine.World, vanguardTarget);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             int ringOverlays = CountOverlays(overlays, GroundOverlayShape.Ring);
+            float vanguardTargetHealthDuringHold = ReadHealth(engine.World, vanguardTarget);
             string vanguardIndicatorDiagnostics = string.Join(" || ",
                 BuildInputActionDiagnostics(engine, "Aim.Slot4"),
                 BuildAbilityDiagnostics(engine, "Vanguard"),
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
-            Assert.That(ringOverlays, Is.GreaterThan(baselineRings), vanguardIndicatorDiagnostics);
-            float vanguardTargetHealthBeforeR = ReadHealth(engine.World, vanguardTarget);
-            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
-            Tick(engine, 4, frameTimesMs);
-            float vanguardTargetHealthAfterR = ReadHealth(engine.World, vanguardTarget);
+            Assert.That(ringOverlays, Is.EqualTo(baselineRings),
+                "Shockwave declares targetKinds none, so the press casts without an aim indicator. " + vanguardIndicatorDiagnostics);
             Assert.That(
-                vanguardTargetHealthAfterR,
+                vanguardTargetHealthDuringHold,
                 Is.LessThan(vanguardTargetHealthBeforeR),
                 BuildVanguardShockwaveDiagnostics(engine, vanguardTarget, overlays));
+            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
 
             PressButton(engine, backend, "<Keyboard>/f3", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(Sc2ModeId));
@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS.Production
             float vanguardTargetHealthAfterConfirm = ReadHealth(engine.World, vanguardTarget);
             Assert.That(vanguardTargetHealthAfterConfirm, Is.LessThan(vanguardTargetHealthAfterCancel));
             CaptureSnapshot(engine, uiRoot, overlays, snapshots, frameTimesMs, "vanguard_indicator_and_aimcast");
-            timeline.Add("[T+006] Vanguard demoed indicator-release ring AoE plus SC2 aim-cast cancel/confirm branches");
+            timeline.Add("[T+006] Vanguard Shockwave casts on press with no aim indicator; E still does SC2 aim-cast cancel/confirm");
 
             SelectNamedEntity(engine, backend, "Commander", frameTimesMs);
             AssertSelectedEntity(engine, "Commander");
@@ -1916,7 +1916,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("1. Boot the real engine with the interaction showcase mod and load the hub map.");
             sb.AppendLine("2. Select Arcweaver, switch reference modes, cast unit/point/toggle/double-tap/vector abilities, and validate health/tag/position deltas.");
             sb.AppendLine("3. Drag-select the full hero squad, issue move, queued move, and stop through the shared local order source.");
-            sb.AppendLine("4. Select Vanguard and validate indicator-release plus SC2 aim-cast cancel and confirm branches.");
+            sb.AppendLine("4. Select Vanguard: Shockwave casts on press with no aim indicator, then SC2 aim-cast cancel and confirm on E.");
             sb.AppendLine("5. Select Commander, switch to action mode, and validate context-scored skill resolution on `Space`.");
             sb.AppendLine("6. Load the stress map and wait until 3200 mirrored fireball casters saturate the battlefield.");
             sb.AppendLine();

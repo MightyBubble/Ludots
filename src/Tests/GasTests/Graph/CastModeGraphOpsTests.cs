@@ -1,6 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Scripting;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -437,6 +443,124 @@ namespace Ludots.Tests.GasTests.Graph
         }
 
         private readonly record struct Run(byte FeaturedDst, byte[] Bools, float[] Floats, IntVector2 TargetPosCm);
+
+        [Test]
+        public void AimPress_NoneCheck_WithChampionBindHook_StaysInsideTheSlice()
+        {
+            string repo = FindRepoRoot();
+            JsonSerializerOptions json = StrictJsonOptions.CreateCamelCase(includeFields: true);
+            GraphControlFlowDocument press = LoadGraph(Path.Combine(
+                repo, "mods/capabilities/input/AimInteractionMod/assets/GAS/graphs/graph.aim.press.json"), json);
+            GraphControlFlowDocument hook = LoadGraph(Path.Combine(
+                repo, "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json"), json);
+            hook.Entries = hook.Entries
+                .Where(entry => string.Equals(entry.HookNodeBefore?.GraphId, press.Id, StringComparison.Ordinal))
+                .ToList();
+
+            GraphIdRegistry.Register("graph.aim.resolve_submit");
+            GraphIdRegistry.Register("graph.champion.rebind_aim_actor");
+            var schemas = new EventSchemaRegistry();
+            var programs = new GraphProgramRegistry();
+            RegisterGraph(programs, press, schemas);
+            RegisterGraph(programs, hook, schemas);
+            var collections = new EntityCollectionStore(new StringIntRegistry(
+                capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            TriggerGraphHookWeaver.Weave(
+                programs,
+                new List<KeyValuePair<string, GraphControlFlowDocument>>
+                {
+                    new(press.Id, press),
+                    new(hook.Id, hook),
+                },
+                SymbolResolver.Instance,
+                schemas,
+                collections);
+
+            Assert.That(programs.TryGetRegistration(GraphIdRegistry.GetId(press.Id), out GraphProgramRegistration woven), Is.True);
+            int steps = 0;
+            IReadOnlyList<TriggerGraphEntry> entries = woven.TriggerGraphEntries;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                steps = Math.Max(steps, LongestHostPath(woven.Program, entries[i].StartPc));
+            }
+
+            TestContext.Out.WriteLine($"woven graph.aim.press longest host path = {steps} steps");
+            Assert.That(steps, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps),
+                $"Champion bind hook woven into graph.aim.press runs {steps} host steps; the press slice budget is {TriggerGraphLimits.SliceBudgetSteps}. InvokeGraph children are not part of this count.");
+        }
+
+        private static GraphControlFlowDocument LoadGraph(string path, JsonSerializerOptions json)
+        {
+            List<GraphControlFlowDocument> docs = JsonSerializer.Deserialize<List<GraphControlFlowDocument>>(File.ReadAllText(path), json)
+                ?? throw new InvalidOperationException($"Failed to read {path}.");
+            return docs[0];
+        }
+
+        private static void RegisterGraph(GraphProgramRegistry programs, GraphControlFlowDocument doc, EventSchemaRegistry schemas)
+        {
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc, schemas);
+            List<GraphDiagnostic> errors = compiled.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList();
+            Assert.That(errors, Is.Empty, () => string.Join("\n", errors.Select(d => d.Message)));
+            GraphProgramPackage package = compiled.Package!.Value;
+            int id = GraphIdRegistry.Register(doc.Id);
+            programs.Register(id, package.Program, GraphKind.TriggerGraph, compiled.SourceMap, package.Symbols, package.TriggerGraphEntries);
+        }
+
+        private static int LongestHostPath(GraphInstruction[] program, int startPc)
+        {
+            var memo = new int[program.Length];
+            Array.Fill(memo, -1);
+            var stack = new HashSet<int>();
+            return Walk(startPc);
+
+            int Walk(int pc)
+            {
+                if ((uint)pc >= (uint)program.Length)
+                {
+                    return 0;
+                }
+
+                if (memo[pc] >= 0)
+                {
+                    return memo[pc];
+                }
+
+                if (!stack.Add(pc))
+                {
+                    throw new InvalidOperationException($"graph.aim.press cycles at pc {pc}.");
+                }
+
+                GraphInstruction ins = program[pc];
+                var op = (GraphNodeOp)ins.Op;
+                int rest = op switch
+                {
+                    GraphNodeOp.HaltReturnInt or GraphNodeOp.Fail => 0,
+                    GraphNodeOp.Jump => Walk(pc + 1 + ins.Imm),
+                    GraphNodeOp.JumpIfFalse => Math.Max(Walk(pc + 1), Walk(pc + 1 + ins.Imm)),
+                    _ => Walk(pc + 1),
+                };
+                stack.Remove(pc);
+                memo[pc] = 1 + rest;
+                return memo[pc];
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            for (int i = 0; i < 12 && dir != null; i++)
+            {
+                if (Directory.Exists(Path.Combine(dir.FullName, "mods")) &&
+                    File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
+                {
+                    return dir.FullName;
+                }
+
+                dir = dir.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Failed to locate repository root.");
+        }
 
         private sealed class Fixture
         {

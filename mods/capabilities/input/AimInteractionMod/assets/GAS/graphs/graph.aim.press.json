@@ -89,6 +89,15 @@
         "blackboardKey": "aim.slot"
       },
       {
+        "id": "accept_none",
+        "op": "AbilityAcceptsTargetKind",
+        "symbol": "none"
+      },
+      {
+        "id": "none_jump",
+        "op": "JumpIfFalse"
+      },
+      {
         "id": "is_click",
         "op": "IsCastMode",
         "mode": "castMode.aim_click"
@@ -225,7 +234,7 @@
       {
         "from": "write_slot",
         "fromPort": "next",
-        "to": "is_click"
+        "to": "accept_none"
       },
       {
         "from": "is_click",
@@ -311,6 +320,21 @@
         "from": "c1",
         "fromPort": "next",
         "to": "halt_ok"
+      },
+      {
+        "from": "accept_none",
+        "fromPort": "next",
+        "to": "none_jump"
+      },
+      {
+        "from": "none_jump",
+        "fromPort": "true",
+        "to": "load_queue_mod"
+      },
+      {
+        "from": "none_jump",
+        "fromPort": "false",
+        "to": "is_click"
       }
     ],
     "valueEdges": [
@@ -475,6 +499,24 @@
         "fromPort": "value",
         "to": "store_queue_mod",
         "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "accept_none",
+        "toPort": "source"
+      },
+      {
+        "from": "s0",
+        "fromPort": "value",
+        "to": "accept_none",
+        "toPort": "value"
+      },
+      {
+        "from": "accept_none",
+        "fromPort": "value",
+        "to": "none_jump",
+        "toPort": "condition"
       }
     ]
   }

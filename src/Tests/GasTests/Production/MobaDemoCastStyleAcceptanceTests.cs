@@ -5,7 +5,9 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
@@ -126,6 +128,84 @@ public sealed class MobaDemoCastStyleAcceptanceTests
     }
 
     [Test]
+    public void AimClick_WSubmitsOnThePressTick_AndAimIndicatingStaysEmpty()
+    {
+        using GameEngine engine = CreateEngine(out TestInputBackend input);
+        Entity hero = FindEntity(engine.World, "Hero");
+        Press(engine, input, "<Keyboard>/F3");
+        Assert.That(ReadCastMode(engine, hero), Is.EqualTo(AimClickMode), Diagnostics(engine));
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+        CommandIntentSubmissionBuffer submissions = engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
+            ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
+        Assert.That(CountCollectionMembers(collections, "aim.indicating"), Is.EqualTo(0));
+        float speedBefore = ReadAttribute(engine.World, hero, "MoveSpeed");
+        input.SetButton("<Keyboard>/w", true);
+        int pressTick = -1;
+        CastIntentSubmission cast = default;
+        bool submitted = false;
+        for (int frame = 0; frame < 8 && pressTick < 0; frame++)
+        {
+            int before = engine.GameSession.CurrentTick;
+            Tick(engine, 1);
+            if (engine.GameSession.CurrentTick == before)
+            {
+                continue;
+            }
+
+            pressTick = engine.GameSession.CurrentTick;
+            submitted = submissions.CastCount > 0;
+            if (submitted)
+            {
+                cast = submissions.Cast(0);
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pressTick, Is.GreaterThan(0), Diagnostics(engine));
+            Assert.That(submitted, Is.True, "Skill W submits on the press tick. " + Diagnostics(engine));
+            Assert.That(submissions.CastCount, Is.EqualTo(1), Diagnostics(engine));
+            Assert.That(cast.Slot, Is.EqualTo(1), Diagnostics(engine));
+            Assert.That(cast.HasTarget, Is.False, Diagnostics(engine));
+            Assert.That(IsDerivedContextActive(engine, hero, AimingContext), Is.False, Diagnostics(engine));
+            Assert.That(CountCollectionMembers(collections, "aim.indicating"), Is.EqualTo(0), Diagnostics(engine));
+        });
+
+        var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
+            as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem
+            ?? throw new InvalidOperationException("CommandIntentBufferDrain missing.");
+        float speedAfter = speedBefore;
+        int resolvedStep = -1;
+        for (int step = 0; step < 4 && resolvedStep < 0; step++)
+        {
+            int before = engine.GameSession.CurrentTick;
+            for (int frame = 0; frame < 8 && engine.GameSession.CurrentTick == before; frame++)
+            {
+                Tick(engine, 1);
+            }
+
+            speedAfter = ReadAttribute(engine.World, hero, "MoveSpeed");
+            if (Math.Abs(speedAfter - (speedBefore + 50f)) <= 0.001f)
+            {
+                resolvedStep = step;
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(speedAfter, Is.EqualTo(speedBefore + 50f).Within(0.001f),
+                "The press-tick cast resolves to the speed buff. " +
+                $"drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectedCount} reason={drain.LastRejectionReason} " +
+                $"cooldownW={HasTag(engine.World, hero, "Cooldown.Skill.W")} " +
+                Diagnostics(engine));
+            Assert.That(resolvedStep, Is.LessThanOrEqualTo(2),
+                "Drain, exec, and attribute aggregation settle within two logic ticks after the press.");
+        });
+    }
+
+    [Test]
     public void RightClickGround_WalksTheChampion()
     {
         using GameEngine engine = CreateEngine(out TestInputBackend input);
@@ -226,10 +306,37 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         }
     }
 
-    private static float ReadHealth(World world, Entity entity)
+    private static bool HasTag(World world, Entity entity, string tag)
     {
-        int id = AttributeRegistry.GetId("Health");
+        int tagId = TagRegistry.GetId(tag);
+        return tagId > 0 &&
+               world.TryGet(entity, out GameplayTagContainer tags) &&
+               tags.HasTag(tagId);
+    }
+
+    private static float ReadHealth(World world, Entity entity) => ReadAttribute(world, entity, "Health");
+
+    private static float ReadAttribute(World world, Entity entity, string attribute)
+    {
+        int id = AttributeRegistry.GetId(attribute);
         return world.Get<AttributeBuffer>(entity).GetCurrent(id);
+    }
+
+    private static int CountCollectionMembers(EntityCollectionStore collections, string key)
+    {
+        Span<EntityCollectionHandle> handles = stackalloc EntityCollectionHandle[Math.Max(collections.CollectionCount, 1)];
+        int count = collections.CopyActiveHandles(handles);
+        int members = 0;
+        for (int i = 0; i < count; i++)
+        {
+            if (collections.TryGetView(handles[i], out EntityCollectionView view) &&
+                string.Equals(view.Key, key, StringComparison.Ordinal))
+            {
+                members += view.Count;
+            }
+        }
+
+        return members;
     }
 
     private static string Diagnostics(GameEngine engine)
