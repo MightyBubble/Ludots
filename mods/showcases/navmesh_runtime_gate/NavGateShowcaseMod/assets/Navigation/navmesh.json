@@ -41,6 +41,9 @@
       },
       "navProfiles": [
         "Small"
+      ],
+      "navAreas": [
+        "Default"
       ]
     }
   }

@@ -10,7 +10,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public enum MassNavigationRouteSinkStatus : byte
 {
     Applied = 0,
-    NoConfiguredAgentType = 1,
     ServiceMissing = 2,
     SolveFailed = 3,
     CopyFailed = 4,
@@ -194,18 +193,7 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         MassNavigationAgent authoredAgent = world.Get<MassNavigationAgent>(agent);
-        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType))
-        {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                orderToken: requestId,
-                agentIndex: agentIndex);
-        }
+        PathingAgentTypeConfig agentType = RequireAgentType(authoredAgent.AgentTypeId);
 
         if (!_syncInProgress)
         {
@@ -271,18 +259,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
-        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType))
-        {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                orderToken: requestId,
-                agentIndex: agentIndex);
-        }
+        _ = RequireAgentType(authoredAgent.AgentTypeId);
 
         if (!float.IsFinite(destinationWorldCm.X) || !float.IsFinite(destinationWorldCm.Y))
         {
@@ -590,20 +567,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: state.AgentIndex);
         }
 
-        bool hasAgentType = TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType);
-        if (!hasAgentType)
-        {
-            state.InvalidateRoute();
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                orderToken: state.OrderToken,
-                agentIndex: state.AgentIndex);
-        }
+        PathingAgentTypeConfig agentType = RequireAgentType(authoredAgent.AgentTypeId);
 
         if (authoredAgent.ProfileId != state.ProfileId ||
             !string.Equals(agentType.Id, state.AgentTypeId, StringComparison.Ordinal))
@@ -715,16 +679,8 @@ public sealed class MassNavigationRouteExecutionSink
     {
         if (string.IsNullOrWhiteSpace(state.AgentTypeId))
         {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                destinationWorldCm: state.DestinationWorldCm,
-                orderToken: state.OrderToken,
-                agentIndex: state.AgentIndex);
+            throw new InvalidOperationException(
+                "MassNavigationAgent.agentTypeId 为空，不在 Navigation/pathing.json 的 agentTypes 里。");
         }
 
         Vector2 startWorldCm = simulation.GetAgentWorldPositionCm(state.AgentIndex);
@@ -849,6 +805,17 @@ public sealed class MassNavigationRouteExecutionSink
             resolvedGoalWorldCm,
             orderToken: state.OrderToken,
             agentIndex: state.AgentIndex);
+    }
+
+    private PathingAgentTypeConfig RequireAgentType(string agentTypeId)
+    {
+        if (!TryResolveAgentType(agentTypeId, out PathingAgentTypeConfig agentType))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationAgent.agentTypeId \"{agentTypeId}\" 不在 Navigation/pathing.json 的 agentTypes 里。");
+        }
+
+        return agentType;
     }
 
     private bool TryResolveAgentType(string agentTypeId, out PathingAgentTypeConfig agentType)

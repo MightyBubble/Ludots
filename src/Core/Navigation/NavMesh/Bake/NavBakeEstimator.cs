@@ -330,14 +330,28 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxClimbCm >= 0.");
             }
 
-            float slopeDeg = algorithm == NavBakeAlgorithmKind.Recast
-                ? NavCapabilityBakeBody.RequireRecastSlope(navProfile)
-                : navProfile.MaxSlopeDeg ?? 0f;
-            if (algorithm != NavBakeAlgorithmKind.Recast &&
-                navProfile.MaxSlopeDeg is float authoredSlope &&
-                (authoredSlope < 0f || authoredSlope >= 90f || float.IsNaN(authoredSlope)))
+            float slopeDeg;
+            float minWalkableUpDot;
+            if (algorithm == NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxSlopeDeg >= 0 and < 90.");
+                slopeDeg = NavCapabilityBakeBody.RequireRecastSlope(navProfile);
+                minWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f);
+            }
+            else if (navProfile.MaxSlopeDeg is not float authoredSlope)
+            {
+                // 省略 = 不限坡度。180° 只是估计字段的占位，行走点积固定为 -1，不把 0 当成不限。
+                slopeDeg = 180f;
+                minWalkableUpDot = -1f;
+            }
+            else if (authoredSlope <= 0f || authoredSlope >= 90f || float.IsNaN(authoredSlope))
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.profile '{navProfile.Id}'.maxSlopeDeg 省略表示不限坡度；写出的值必须 > 0 且 < 90。");
+            }
+            else
+            {
+                slopeDeg = authoredSlope;
+                minWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f);
             }
 
             float recastCellSizeCm = 0f;
@@ -380,7 +394,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 AgentClearanceCm = agentProfile?.ClearanceCm ?? 0f,
                 MaxClimbCm = navProfile.MaxClimbCm,
                 MaxSlopeDeg = slopeDeg,
-                MinWalkableUpDot = MathF.Cos(slopeDeg * MathF.PI / 180f),
+                MinWalkableUpDot = minWalkableUpDot,
                 RecastCellSizeCm = recastCellSizeCm,
                 RecastCellHeightCm = recastCellHeightCm,
                 RecastColumnsPerAxis = columnsPerAxis,

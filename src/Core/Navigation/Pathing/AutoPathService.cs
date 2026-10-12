@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Platform.Abstractions;
 
@@ -26,13 +27,16 @@ namespace Ludots.Core.Navigation.Pathing
         private readonly bool _navMeshAvailable;
 
         private readonly Dictionary<string, CompiledAgentType> _agents;
+        private readonly Dictionary<string, NavQueryService> _meshQueries;
+        private readonly string _mapId;
+        private readonly bool _meshScopeSpecified;
 
         private NodeGraphPathScratch _graphScratch = new NodeGraphPathScratch();
         private int[] _nodeIdsScratch = Array.Empty<int>();
         private int[] _xScratch = Array.Empty<int>();
         private int[] _yScratch = Array.Empty<int>();
 
-        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
@@ -45,9 +49,12 @@ namespace Ludots.Core.Navigation.Pathing
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
@@ -60,9 +67,12 @@ namespace Ludots.Core.Navigation.Pathing
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = null;
             _graph = null;
@@ -75,9 +85,12 @@ namespace Ludots.Core.Navigation.Pathing
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
@@ -90,9 +103,12 @@ namespace Ludots.Core.Navigation.Pathing
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null, NavMapQueryScope meshScope = default)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
@@ -105,6 +121,9 @@ namespace Ludots.Core.Navigation.Pathing
             _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             _agents = CompileAgents(config);
+            _meshScopeSpecified = meshScope.IsSpecified;
+            _mapId = meshScope.MapId;
+            _meshQueries = InstallMeshQueries(config, meshScope);
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -339,6 +358,12 @@ namespace Ludots.Core.Navigation.Pathing
         {
             travelCost = 0f;
 
+            if (_meshScopeSpecified && (_meshQueries == null || !_meshQueries.ContainsKey(agent.Id)))
+            {
+                throw new InvalidOperationException(
+                    NavMapQueryScope.MissingQueryMessage(_mapId, agent.Id, agent.NavProfileId));
+            }
+
             if (!_navMeshAvailable)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 22);
@@ -354,7 +379,16 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
-            if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            NavQueryService query;
+            if (_meshScopeSpecified)
+            {
+                if (_meshQueries == null || !_meshQueries.TryGetValue(agent.Id, out query))
+                {
+                    throw new InvalidOperationException(
+                        NavMapQueryScope.MissingQueryMessage(_mapId, agent.Id, agent.NavProfileId));
+                }
+            }
+            else if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out query))
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NotReady, default, expanded: 0, errorCode: 21);
                 return false;
@@ -418,6 +452,50 @@ namespace Ludots.Core.Navigation.Pathing
             return new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, 0, errorCode: 33);
         }
 
+        private Dictionary<string, NavQueryService> InstallMeshQueries(PathingConfig config, NavMapQueryScope scope)
+        {
+            if (!scope.IsSpecified)
+            {
+                return null;
+            }
+
+            var queries = new Dictionary<string, NavQueryService>(StringComparer.OrdinalIgnoreCase);
+            if (!_navMeshAvailable || _navRegistry == null)
+            {
+                return queries;
+            }
+
+            var meshProfiles = new HashSet<string>(scope.NavProfileIds, StringComparer.Ordinal);
+            if (config.AgentTypes == null)
+            {
+                return queries;
+            }
+
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                PathingAgentTypeConfig agent = config.AgentTypes[i];
+                if (agent == null || !NavMapAgentBinding.SelectsMesh(agent) || !_agents.TryGetValue(agent.Id, out CompiledAgentType compiled))
+                {
+                    continue;
+                }
+
+                if (!meshProfiles.Contains(compiled.NavProfileId))
+                {
+                    continue;
+                }
+
+                if (!_navRegistry.TryCreateQuery(compiled.NavLayer, compiled.NavProfileIndex, compiled.NavAreaCosts, out NavQueryService query))
+                {
+                    throw new InvalidOperationException(
+                        $"地图 {scope.MapId} 的移动类型 \"{compiled.Id}\"（能力档 \"{compiled.NavProfileId}\"）无法建立网格查询。");
+                }
+
+                queries[compiled.Id] = query;
+            }
+
+            return queries;
+        }
+
         private CompiledAgentType CompileAgent(PathingAgentTypeConfig cfg)
         {
             AgentProfileConfig agentProfile = _agentProfiles.Require(cfg.ProfileId, $"PathingConfig.agentTypes[{cfg.Id}]");
@@ -445,6 +523,7 @@ namespace Ludots.Core.Navigation.Pathing
             return new CompiledAgentType(
                 id: cfg.Id,
                 navLayer: agentProfile.Layer,
+                navProfileId: agentProfile.NavProfileId,
                 navProfileIndex: profileIndex,
                 navAreaCosts: areaCosts,
                 useGraphEdgeFilter: useEdgeFilter,
@@ -479,6 +558,7 @@ namespace Ludots.Core.Navigation.Pathing
         {
             public readonly string Id;
             public readonly int NavLayer;
+            public readonly string NavProfileId;
             public readonly int NavProfileIndex;
             public readonly NavAreaCostTable NavAreaCosts;
             public readonly bool UseGraphEdgeFilter;
@@ -493,6 +573,7 @@ namespace Ludots.Core.Navigation.Pathing
             public CompiledAgentType(
                 string id,
                 int navLayer,
+                string navProfileId,
                 int navProfileIndex,
                 NavAreaCostTable navAreaCosts,
                 bool useGraphEdgeFilter,
@@ -506,6 +587,7 @@ namespace Ludots.Core.Navigation.Pathing
             {
                 Id = id;
                 NavLayer = navLayer;
+                NavProfileId = navProfileId;
                 NavProfileIndex = navProfileIndex;
                 NavAreaCosts = navAreaCosts;
                 UseGraphEdgeFilter = useGraphEdgeFilter;

@@ -25,7 +25,7 @@ namespace Ludots.Tests.Presentation
         public void RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig()
         {
             using var world = World.Create();
-            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out Entity direct);
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
             var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
             var pathService = new FakePathService(
                 store,
@@ -44,19 +44,9 @@ namespace Ludots.Tests.Presentation
                 requestId: 77,
                 maxExpanded: 128,
                 maxPoints: 8);
-            MassNavigationRouteSinkResult directTrack = sink.TrackRouteTarget(
-                runtime,
-                world,
-                direct,
-                agentIndex: 1,
-                destinationWorldCm: new Vector2(5_800, 5_000),
-                requestId: 77,
-                maxExpanded: 128,
-                maxPoints: 8);
             sink.EndSync();
 
             Assert.That(routedTrack.Tracked, Is.True);
-            Assert.That(directTrack.Status, Is.EqualTo(MassNavigationRouteSinkStatus.NoConfiguredAgentType));
             Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
 
             MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);

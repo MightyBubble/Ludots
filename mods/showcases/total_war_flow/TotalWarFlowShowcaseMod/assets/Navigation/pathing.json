@@ -24,24 +24,6 @@
         "forbiddenTagsAny": [],
         "tagCostRules": []
       }
-    },
-    "Humanoid": {
-      "profileId": "Small",
-      "navMesh": {
-        "areaCosts": [
-          {
-            "areaId": 0,
-            "cost": 1.0
-          }
-        ]
-      },
-      "selection": {
-        "mode": "Direct",
-        "graphBias": 0.0,
-        "meshBias": 0.0,
-        "graphCostWeight": 1.0,
-        "meshCostWeight": 1.0
-      }
     }
   }
 }

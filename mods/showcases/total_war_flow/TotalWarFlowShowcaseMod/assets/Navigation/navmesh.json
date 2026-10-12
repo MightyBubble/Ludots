@@ -38,6 +38,9 @@
       },
       "navProfiles": [
         "tw.agent"
+      ],
+      "navAreas": [
+        "Default"
       ]
     }
   }

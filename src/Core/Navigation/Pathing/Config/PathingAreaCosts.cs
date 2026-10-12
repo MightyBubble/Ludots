@@ -21,7 +21,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
     /// <summary>
     /// cost 与 speedDivisor 的唯一读取处。speedDivisor 缺省等于 cost。
     /// 两者都必须 &gt; 0 且不是 NaN。passable 缺省为 true。
-    /// 每个 agent type 必须列出每一个已声明区域；排除写 passable: false，不能省略行。
+    /// 调用方传入的区域表就是合同（地图的 navAreas，不是全局目录）。
+    /// 绑定的移动类型必须列出其中每一个区域；排除写 passable: false，不能省略行。
     /// </summary>
     public static class PathingAreaCosts
     {
@@ -65,7 +66,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
 
             if (areas == null)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"PathingConfig.agentTypes[{agent.Id}] 的区域表为 null。绑定的移动类型必须列出地图 navAreas 里的每一个区域；排除写 passable: false。");
             }
 
             for (int i = 0; i < areas.Count; i++)

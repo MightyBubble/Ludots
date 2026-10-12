@@ -1,0 +1,12 @@
+{
+  "maps": {
+    "road_network_showcase_chunked": {
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
+    }
+  }
+}

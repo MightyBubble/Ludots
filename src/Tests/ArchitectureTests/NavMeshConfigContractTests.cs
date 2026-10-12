@@ -443,7 +443,9 @@ namespace Ludots.Tests.Architecture
                 ["navProfiles"] = new System.Text.Json.Nodes.JsonArray(
                     System.Text.Json.Nodes.JsonValue.Create("Small"),
                     System.Text.Json.Nodes.JsonValue.Create("Medium"),
-                    System.Text.Json.Nodes.JsonValue.Create("Large"))
+                    System.Text.Json.Nodes.JsonValue.Create("Large")),
+                ["navAreas"] = new System.Text.Json.Nodes.JsonArray(
+                    System.Text.Json.Nodes.JsonValue.Create("Default"))
             };
             mapsNode[mapId] = mapNode;
             var boardsNode = new System.Text.Json.Nodes.JsonObject();

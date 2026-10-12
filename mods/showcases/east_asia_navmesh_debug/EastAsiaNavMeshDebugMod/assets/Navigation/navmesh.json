@@ -29,7 +29,11 @@
         }
       },
       "navProfiles": [
-        "Small"
+        "Small",
+        "Medium"
+      ],
+      "navAreas": [
+        "Default"
       ]
     }
   }

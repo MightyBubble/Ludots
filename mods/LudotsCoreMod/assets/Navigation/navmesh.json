@@ -11,6 +11,9 @@
         "Small",
         "Medium",
         "Large"
+      ],
+      "navAreas": [
+        "Default"
       ]
     },
     "navmesh_debug_openworld": {
@@ -22,6 +25,9 @@
       },
       "navProfiles": [
         "Small"
+      ],
+      "navAreas": [
+        "Default"
       ]
     },
     "navmesh_debug_vhtm": {
@@ -33,6 +39,9 @@
       },
       "navProfiles": [
         "Small"
+      ],
+      "navAreas": [
+        "Default"
       ]
     }
   }

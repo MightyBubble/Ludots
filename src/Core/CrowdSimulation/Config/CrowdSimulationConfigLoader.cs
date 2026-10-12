@@ -578,10 +578,33 @@ public sealed class CrowdSimulationConfigLoader
             membersByAgent[agentIndexById[template.AgentTypeId]].Add(template);
         }
 
-        NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(navmesh, profiles, referencedProfileIds);
-        for (int i = 0; i < pathing.AgentTypes.Count; i++)
+        NavMapAgentBinding mapBinding = NavMapAgentBinding.Create(
+            map.Id,
+            navTagged: false,
+            navmesh,
+            pathing,
+            profiles,
+            referencedAgentIds);
+        for (int i = 0; i < mapBinding.BoundAgents.Count; i++)
         {
-            PathingAreaCosts.RequireComplete(pathing.AgentTypes[i], navmesh.Areas);
+            referencedProfileIds.Add(mapBinding.BoundAgents[i].ProfileId);
+            PathingAreaCosts.RequireComplete(mapBinding.BoundAgents[i], mapBinding.NavAreas);
+        }
+
+        NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(navmesh, profiles, referencedProfileIds);
+        if (config.Structures?.Templates != null)
+        {
+            foreach (var entry in config.Structures.Templates)
+            {
+                string area = entry.Value?.Area;
+                if (string.IsNullOrEmpty(area) || mapBinding.ContainsNavArea(area))
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"{CrowdSimulationConfigValidator.FileName}: structures.templates.{entry.Key}.area \"{area}\" 不在 maps.{map.Id}.navAreas 里。");
+            }
         }
 
         var avoidance = Fix64.FromDouble(config.Agents.AvoidanceRadiusScale);

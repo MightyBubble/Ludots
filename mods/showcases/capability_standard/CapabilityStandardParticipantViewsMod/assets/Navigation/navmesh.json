@@ -1,0 +1,12 @@
+{
+  "maps": {
+    "capability_standard_participant_views": {
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
+    }
+  }
+}

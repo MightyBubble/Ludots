@@ -48,15 +48,170 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void AgentType_MissingAreaRow_IsRejected()
+    public void AgentType_MissingAreaRow_IsRejectedOnlyForDeclaredNavAreas()
     {
-        JsonObject navmesh = TestDefaults.DefaultNavmeshJson();
-        navmesh["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
+        JsonObject catalogOnly = TestDefaults.DefaultNavmeshJson();
+        catalogOnly["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
+        Assert.DoesNotThrow(() => TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(catalogOnly)));
+
+        JsonObject declared = TestDefaults.DefaultNavmeshJson();
+        declared["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
+        declared["maps"]!["crowd_simulation_demo"]!["navAreas"]!.AsArray().Add("lava");
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)))!;
+            TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(declared)))!;
         Assert.That(ex.Message, Does.Contain("foot"));
         Assert.That(ex.Message, Does.Contain("areaId 9"));
         Assert.That(ex.Message, Does.Contain("passable"));
+    }
+
+    [Test]
+    public void RequireComplete_NullAreas_Throws()
+    {
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            PathingAreaCosts.RequireComplete(new PathingAgentTypeConfig { Id = "foot" }, null))!;
+        Assert.That(ex.Message, Does.Contain("null"));
+    }
+
+    [Test]
+    public void MergedHumanoid_SelectionEqualsCore_InCrowdAndTotalWar()
+    {
+        string root = RepoRoot();
+        JsonObject core = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(root, "assets", "Navigation", "pathing.json")))!;
+        JsonObject crowd = (JsonObject)core.DeepClone();
+        ConfigPipeline.DeepMerge(crowd, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root, "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/Navigation/pathing.json")))!);
+        JsonObject totalWar = (JsonObject)core.DeepClone();
+        ConfigPipeline.DeepMerge(totalWar, (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(
+            root, "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod/assets/Navigation/pathing.json")))!);
+
+        PathingSelectionConfig coreSelection = PathingConfigLoader.Parse(core).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection;
+        AssertSelectionEquals(coreSelection, PathingConfigLoader.Parse(crowd).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection);
+        AssertSelectionEquals(coreSelection, PathingConfigLoader.Parse(totalWar).AgentTypes.Single(agent => agent.Id == "Humanoid").Selection);
+        Assert.That(File.ReadAllText(Path.Combine(root, "mods/capabilities/navigation/CrowdSimulationStandardMod/assets/Navigation/pathing.json")), Does.Not.Contain("Humanoid"));
+        Assert.That(File.ReadAllText(Path.Combine(root, "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod/assets/Navigation/pathing.json")), Does.Not.Contain("Humanoid"));
+    }
+
+    [Test]
+    public void MeshQueries_OnlyMapDeclaredProfiles_UnboundRequestThrowsWithIds()
+    {
+        AgentProfileRegistry bodies = new(new[]
+        {
+            Body("Small", "Small"),
+            Body("Medium", "Medium"),
+        });
+        NavMeshBakeConfig bake = NavMeshBakeConfigLoader.Parse(JsonNode.Parse("""
+            {
+              "mode": "offline",
+              "algorithm": "recast",
+              "profiles": {
+                "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" },
+                "Medium": { "maxClimbCm": 45, "maxSlopeDeg": 45, "agentProfileId": "Medium" }
+              },
+              "layers": [ { "id": "Ground", "layer": 0 } ],
+              "areas": { "Default": { "areaId": 0, "slopeFree": false } },
+              "maps": { "demo": { "navProfiles": ["Small"], "navAreas": ["Default"] } },
+              "runtimeIncremental": {
+                "tileBudgetPerFixedTick": 1,
+                "includeNeighborTiles": true,
+                "heightScaleMeters": 1,
+                "minWalkableUpDot": 0.6,
+                "cliffHeightThreshold": 1
+              }
+            }
+            """)!.AsObject(), bodies);
+        var navProfiles = new NavMeshProfileRegistry(bake, bodies);
+        var store = new NavTileStore(_ => throw new InvalidOperationException("unbound query must not open a tile"));
+        var registry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+        {
+            [new NavQueryServiceKey(layer: 0, profile: 0)] = store,
+        }, tileWidthCm: 100, tileHeightCm: 100);
+        PathingConfig pathing = PathingConfigLoader.Parse(JsonNode.Parse("""
+            {
+              "agentTypes": {
+                "Humanoid": {
+                  "profileId": "Small",
+                  "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                },
+                "Ship": {
+                  "profileId": "Medium",
+                  "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                }
+              }
+            }
+            """)!.AsObject());
+        var scope = new NavMapQueryScope("demo", new[] { "Small" });
+        var adapter = new NavMeshPathServiceAdapter(registry, navProfiles, bodies, pathing, new PathStore(4, 8), scope);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            adapter.TrySolve(new PathRequest(1, default, PathDomain.NavMesh, "Ship", PathEndpoint.FromWorldCm(0, 0), PathEndpoint.FromWorldCm(10, 0), new PathBudget(8, 8)), out _))!;
+        Assert.That(ex.Message, Does.Contain("Ship"));
+        Assert.That(ex.Message, Does.Contain("Medium"));
+        Assert.That(ex.Message, Does.Contain("demo"));
+
+        var auto = new AutoPathService(registry, navProfiles, bodies, new PathStore(4, 8), pathing, meshScope: scope);
+        InvalidOperationException autoEx = Assert.Throws<InvalidOperationException>(() =>
+            auto.TrySolve(new PathRequest(2, default, PathDomain.Auto, "Ship", PathEndpoint.FromWorldCm(0, 0), PathEndpoint.FromWorldCm(10, 0), new PathBudget(8, 8)), out _))!;
+        Assert.That(autoEx.Message, Does.Contain("Ship"));
+        Assert.That(autoEx.Message, Does.Contain("Medium"));
+        Assert.That(autoEx.Message, Does.Contain("demo"));
+    }
+
+    [Test]
+    public void UnknownMassNavigationAgentType_FailsAtBinding()
+    {
+        NavMeshBakeConfig bake = NavMeshBakeConfigLoader.Parse(JsonNode.Parse("""
+            {
+              "mode": "offline",
+              "algorithm": "recast",
+              "profiles": {
+                "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" }
+              },
+              "layers": [ { "id": "Ground", "layer": 0 } ],
+              "areas": { "Default": { "areaId": 0, "slopeFree": false } },
+              "maps": { "demo": { "navProfiles": ["Small"], "navAreas": ["Default"] } },
+              "runtimeIncremental": {
+                "tileBudgetPerFixedTick": 1,
+                "includeNeighborTiles": true,
+                "heightScaleMeters": 1,
+                "minWalkableUpDot": 0.6,
+                "cliffHeightThreshold": 1
+              }
+            }
+            """)!.AsObject(), Bodies("Small"));
+        PathingConfig pathing = PathingConfigLoader.Parse(JsonNode.Parse("""
+            {
+              "agentTypes": {
+                "Humanoid": {
+                  "profileId": "Small",
+                  "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
+                  "navMesh": { "areaCosts": [ { "areaId": 0, "cost": 1 } ] }
+                }
+              }
+            }
+            """)!.AsObject());
+        NavMapAgentBinding binding = NavMapAgentBinding.Create("demo", navTagged: false, bake, pathing, Bodies("Small"), Array.Empty<string>());
+        var template = new EntityTemplate
+        {
+            Id = "mass_unit",
+            Components = new Dictionary<string, JsonNode>(StringComparer.Ordinal)
+            {
+                ["MassNavigationAgent"] = JsonNode.Parse("""{ "profileId": "Small", "agentTypeId": "Ghost" }""")!,
+            },
+        };
+        NavSessionBinding.Set(binding);
+        try
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                NavSessionBinding.RequireMassNavigationTemplate(template))!;
+            Assert.That(ex.Message, Does.Contain("mass_unit"));
+            Assert.That(ex.Message, Does.Contain("Ghost"));
+            Assert.That(ex.Message, Does.Contain("demo"));
+        }
+        finally
+        {
+            NavSessionBinding.Clear();
+        }
     }
 
     [Test]
@@ -227,22 +382,47 @@ public class NavSchemaAuditTests
             }
             """)!.AsObject();
 
-    private static AgentProfileRegistry Bodies(string navProfileId)
-        => new(new[]
+    private static void AssertSelectionEquals(PathingSelectionConfig expected, PathingSelectionConfig actual)
+    {
+        Assert.That(actual.Mode, Is.EqualTo(expected.Mode));
+        Assert.That(actual.GraphBias, Is.EqualTo(expected.GraphBias));
+        Assert.That(actual.MeshBias, Is.EqualTo(expected.MeshBias));
+        Assert.That(actual.GraphCostWeight, Is.EqualTo(expected.GraphCostWeight));
+        Assert.That(actual.MeshCostWeight, Is.EqualTo(expected.MeshCostWeight));
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+        while (dir != null)
         {
-            new AgentProfileConfig
+            if (File.Exists(Path.Combine(dir.FullName, "assets", "Navigation", "pathing.json")))
             {
-                Id = "Small",
-                NavProfileId = navProfileId,
-                RadiusCm = 30,
-                HeightCm = 180,
-                ClearanceCm = 40,
-                DraftCm = 0,
-                BeamCm = 0,
-                Mass = 1,
-                Layer = 0,
+                return dir.FullName;
             }
-        });
+
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("找不到仓库根目录。");
+    }
+
+    private static AgentProfileConfig Body(string id, string navProfileId)
+        => new()
+        {
+            Id = id,
+            NavProfileId = navProfileId,
+            RadiusCm = 30,
+            HeightCm = 180,
+            ClearanceCm = 40,
+            DraftCm = 0,
+            BeamCm = 0,
+            Mass = 1,
+            Layer = 0,
+        };
+
+    private static AgentProfileRegistry Bodies(string navProfileId)
+        => new(new[] { Body("Small", navProfileId) });
 
     private static JsonObject MinimalNavmesh()
         => JsonNode.Parse("""

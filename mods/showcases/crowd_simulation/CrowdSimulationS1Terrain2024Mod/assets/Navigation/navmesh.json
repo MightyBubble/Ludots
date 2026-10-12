@@ -1,6 +1,17 @@
 {
   "maps": {
     "crowd_simulation_s2024": {
+      "navAreas": [
+        "Default",
+        "shallow",
+        "rough",
+        "sheer",
+        "deep",
+        "road",
+        "deck",
+        "flooded",
+        "burning"
+      ],
       "terrainAreas": [
         {
           "terrainId": "water",

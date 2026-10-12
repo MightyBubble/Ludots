@@ -98,6 +98,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         /// </summary>
         public List<string> NavProfiles { get; set; }
 
+        /// <summary>
+        /// 本图要校验代价行的区域 id。绑定了移动类型的地图必填，顺序不参与校验。
+        /// </summary>
+        public List<string> NavAreas { get; set; }
+
         /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
         public List<NavTerrainAreaBinding> TerrainAreas { get; set; }
     }

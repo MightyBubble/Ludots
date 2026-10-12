@@ -612,6 +612,27 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavBakeEstimator_OmittedNonRecastSlope_IsUnlimited()
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt);
+            config.Profiles[0].MaxSlopeDeg = null;
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(CreateSlopeContext(config, NavBakeAlgorithmKind.Cdt));
+            Assert.That(estimate.Profiles[0].MinWalkableUpDot, Is.EqualTo(-1f));
+            Assert.That(estimate.Profiles[0].MaxSlopeDeg, Is.EqualTo(180f));
+        }
+
+        [Test]
+        public void NavBakeEstimator_ExplicitZeroNonRecastSlope_IsRejected()
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt);
+            config.Profiles[0].MaxSlopeDeg = 0f;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.Estimate(CreateSlopeContext(config, NavBakeAlgorithmKind.Cdt)))!;
+            Assert.That(ex.Message, Does.Contain("maxSlopeDeg"));
+            Assert.That(ex.Message, Does.Contain("0"));
+        }
+
+        [Test]
         public void NavBakeEstimator_HashChangesWhenTargetTerrainContentChanges()
         {
             var terrain = new MutableGridLogicTerrainField(8, 4, chunkSizeCells: 4);
@@ -1091,6 +1112,25 @@ namespace Ludots.Tests.Architecture
             double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
             const double epsilon = 0.001d;
             return u >= -epsilon && v >= -epsilon && u + v <= 1d + epsilon;
+        }
+
+        private static NavBakeContext CreateSlopeContext(NavMeshBakeConfig config, NavBakeAlgorithmKind algorithm)
+        {
+            return new NavBakeContext
+            {
+                MapId = "nav_estimate_slope",
+                SourceUri = "Core:Maps/nav_estimate_slope.hex",
+                Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                Obstacles = new NavObstacleSet(),
+                Config = config,
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = algorithm,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
         }
 
         private static NavMeshBakeConfig CreateBakeConfig(string mode, string algorithm)

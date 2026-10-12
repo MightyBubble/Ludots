@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
 
 namespace Ludots.Core.Navigation.Pathing
@@ -9,26 +10,37 @@ namespace Ludots.Core.Navigation.Pathing
     public sealed class NavMeshPathServiceAdapter : IPathService
     {
         private readonly PathStore _store;
+        private readonly string _mapId;
         private readonly Dictionary<string, NavQueryService> _queries;
+        private readonly Dictionary<string, string> _capabilityByAgent;
 
         public NavMeshPathServiceAdapter(
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
             AgentProfileRegistry agentProfiles,
             PathingConfig pathing,
-            PathStore store)
+            PathStore store,
+            NavMapQueryScope scope)
         {
             _ = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
             _ = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
             _ = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _ = pathing ?? throw new ArgumentNullException(nameof(pathing));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            if (!scope.IsSpecified)
+            {
+                throw new ArgumentException("Navmesh path service requires the map query scope.", nameof(scope));
+            }
+
+            _mapId = scope.MapId;
             if (pathing.AgentTypes == null || pathing.AgentTypes.Count == 0)
             {
                 throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
             }
 
+            var meshProfiles = new HashSet<string>(scope.NavProfileIds, StringComparer.Ordinal);
             _queries = new Dictionary<string, NavQueryService>(pathing.AgentTypes.Count, StringComparer.Ordinal);
+            _capabilityByAgent = new Dictionary<string, string>(pathing.AgentTypes.Count, StringComparer.Ordinal);
             for (int i = 0; i < pathing.AgentTypes.Count; i++)
             {
                 PathingAgentTypeConfig agent = pathing.AgentTypes[i]
@@ -38,12 +50,17 @@ namespace Ludots.Core.Navigation.Pathing
                     throw new InvalidOperationException("PathingConfig.agentTypes contains a missing id.");
                 }
 
-                if (!SelectsNavMesh(agent))
+                AgentProfileConfig body = agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
+                if (!_capabilityByAgent.TryAdd(agent.Id, body.NavProfileId))
+                {
+                    throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agent.Id}'.");
+                }
+
+                if (!NavMapAgentBinding.SelectsMesh(agent) || !meshProfiles.Contains(body.NavProfileId))
                 {
                     continue;
                 }
 
-                AgentProfileConfig body = agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
                 if (!navProfiles.TryGetIndex(body.NavProfileId, out int profileIndex))
                 {
                     throw new InvalidOperationException(
@@ -53,20 +70,11 @@ namespace Ludots.Core.Navigation.Pathing
                 if (!navRegistry.TryCreateQuery(body.Layer, profileIndex, PathingAreaCostCompiler.Compile(agent.NavMesh), out NavQueryService query))
                 {
                     throw new InvalidOperationException(
-                        $"PathingConfig.agentTypes[{agent.Id}] cannot create a navmesh query for layer {body.Layer}, nav profile '{body.NavProfileId}'.");
+                        $"地图 {_mapId} 的移动类型 \"{agent.Id}\"（能力档 \"{body.NavProfileId}\"）无法建立网格查询。");
                 }
 
-                if (!_queries.TryAdd(agent.Id, query))
-                {
-                    throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agent.Id}'.");
-                }
+                _queries.Add(agent.Id, query);
             }
-        }
-
-        private static bool SelectsNavMesh(PathingAgentTypeConfig agent)
-        {
-            PathSelectionMode? mode = agent.Selection?.Mode;
-            return mode == PathSelectionMode.PreferMesh || mode == PathSelectionMode.AutoCheapest;
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)
@@ -85,8 +93,9 @@ namespace Ludots.Core.Navigation.Pathing
 
             if (string.IsNullOrWhiteSpace(request.AgentTypeId) || !_queries.TryGetValue(request.AgentTypeId, out NavQueryService query))
             {
+                _capabilityByAgent.TryGetValue(request.AgentTypeId ?? string.Empty, out string capabilityProfileId);
                 throw new InvalidOperationException(
-                    $"NavMesh path request agent type '{request.AgentTypeId}' is not in PathingConfig.agentTypes.");
+                    NavMapQueryScope.MissingQueryMessage(_mapId, request.AgentTypeId, capabilityProfileId));
             }
             int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
             int maxPortals = Math.Max(0, maxPoints - 2);

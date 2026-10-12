@@ -109,6 +109,7 @@ using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Hosting;
@@ -4572,28 +4573,34 @@ namespace Ludots.Core.Engine
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
-            var referencedAgentProfiles = new List<string>();
-            if (pathingConfig.AgentTypes != null)
+            string mapId = session.MapId.Value;
+            NavMapAgentBinding mapBinding = NavMapAgentBinding.Create(
+                mapId,
+                IsNavTagged(session.MapConfig),
+                bakeForPathing,
+                pathingConfig,
+                agentProfiles,
+                CrowdAgentTypeIds(bakeForPathing, mapId));
+            NavSessionBinding.Set(mapBinding);
+            if (mapBinding.BoundAgents.Count > 0)
             {
-                for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+                var referencedAgentProfiles = new List<string>(mapBinding.BoundAgents.Count);
+                for (int i = 0; i < mapBinding.BoundAgents.Count; i++)
                 {
-                    PathingAgentTypeConfig agent = pathingConfig.AgentTypes[i];
-                    if (agent == null)
-                    {
-                        continue;
-                    }
-
+                    PathingAgentTypeConfig agent = mapBinding.BoundAgents[i];
                     referencedAgentProfiles.Add(agent.ProfileId);
-                    PathingAreaCosts.RequireComplete(agent, bakeForPathing.Areas);
+                    PathingAreaCosts.RequireComplete(agent, mapBinding.NavAreas);
                 }
+
+                NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(bakeForPathing, agentProfiles, referencedAgentProfiles);
             }
 
-            NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(bakeForPathing, agentProfiles, referencedAgentProfiles);
             var graphEdgeCostOverlay = GetService(CoreServiceKeys.GraphEdgeCostOverlay);
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
-            bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
+            bool requiresNavMeshPathing = mapBinding.RequiresMeshQueries;
             bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
+            var meshScope = new NavMapQueryScope(mapId, mapBinding.MeshQueryProfileIds);
 
             if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
@@ -4617,20 +4624,20 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore, meshScope);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
                 {
-                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
                 }
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay, meshScope);
             }
             else
             {
@@ -4648,6 +4655,7 @@ namespace Ludots.Core.Engine
 
         private void ClearPathingServices()
         {
+            NavSessionBinding.Clear();
             RemoveService(CoreServiceKeys.PathingConfig);
             RemoveService(CoreServiceKeys.PathStore);
             RemoveService(CoreServiceKeys.PathService);
@@ -4679,29 +4687,49 @@ namespace Ludots.Core.Engine
             return false;
         }
 
-        private static bool RequiresNavMeshPathing(PathingConfig pathingConfig)
+        private static bool IsNavTagged(MapConfig mapConfig)
         {
-            if (pathingConfig?.AgentTypes == null)
+            if (mapConfig?.Tags == null)
             {
                 return false;
             }
 
-            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            for (int i = 0; i < mapConfig.Tags.Count; i++)
             {
-                var agent = pathingConfig.AgentTypes[i];
-                if (agent == null)
-                {
-                    continue;
-                }
-
-                if (agent.Selection?.Mode == PathSelectionMode.AutoCheapest ||
-                    agent.Selection?.Mode == PathSelectionMode.PreferMesh)
+                if (string.Equals(mapConfig.Tags[i], MapTags.FeatureNavMeshOn.Name, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private List<string> CrowdAgentTypeIds(NavMeshBakeConfig bake, string mapId)
+        {
+            var ids = new List<string>();
+            if (bake?.Maps == null ||
+                !bake.Maps.TryGetValue(mapId, out NavMapNavBoardsConfig mapNav) ||
+                mapNav?.TerrainAreas == null ||
+                mapNav.TerrainAreas.Count == 0 ||
+                MapLoader?.TemplateRegistry == null)
+            {
+                return ids;
+            }
+
+            foreach (EntityTemplate template in MapLoader.TemplateRegistry.GetAll())
+            {
+                if (template?.Components == null ||
+                    !template.Components.TryGetValue("CrowdSimulationAgent", out JsonNode node) ||
+                    node is not JsonObject obj)
+                {
+                    continue;
+                }
+
+                ids.Add(CrowdUnitTemplateFacts.Parse(template.Id, obj).AgentTypeId);
+            }
+
+            return ids;
         }
 
         private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
@@ -4728,9 +4756,10 @@ namespace Ludots.Core.Engine
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
             AgentProfileRegistry agentProfiles,
-            PathStore pathStore)
+            PathStore pathStore,
+            NavMapQueryScope meshScope)
         {
-            return new NavMeshPathServiceAdapter(navRegistry, navProfiles, agentProfiles, pathingConfig, pathStore);
+            return new NavMeshPathServiceAdapter(navRegistry, navProfiles, agentProfiles, pathingConfig, pathStore, meshScope);
         }
 
         private NavMeshBakeConfig _navMeshBakeConfig;
