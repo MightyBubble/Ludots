@@ -190,6 +190,21 @@
       {
         "from": "r_rep",
         "fromPort": "next",
+        "to": "r_c0"
+      },
+      {
+        "from": "r_c0",
+        "fromPort": "next",
+        "to": "r_c1"
+      },
+      {
+        "from": "r_c1",
+        "fromPort": "next",
+        "to": "r_c2"
+      },
+      {
+        "from": "r_c2",
+        "fromPort": "next",
         "to": "q_a"
       },
       {
