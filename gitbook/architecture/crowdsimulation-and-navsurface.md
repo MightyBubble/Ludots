@@ -354,22 +354,26 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 `mod.json` 依赖 `MassNavigationMod` 的展厅：
 
 - `mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod`
-- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod`（内核有 `CrowdFormations`，这个展厅仍走 MassNavigation）
-- `mods/showcases/total_war_flow/TotalWarFlowShowcaseMod`
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod`（内核有 `CrowdFormations`，这个展厅仍走 MassNavigation；地图 `formation_capability_showcase`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`）
+- `mods/showcases/total_war_flow/TotalWarFlowShowcaseMod`（地图 `total_war_flow_field`，`assets/Navigation/navmesh.json` 第 33 行 `solver` 为 `mass-navigation`）
 - `mods/showcases/wasd_sandbox/WasdSandboxMod`
-- `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod`
-- `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod`（`ExpectedAgentCount = 10000`）
+- `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod`（地图 `crowd_physics_arena`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`）
+- `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod`
+
+`mod.json` 不依赖 `MassNavigationMod`，求解器仍是 `mass-navigation` 的展厅：
+
+- `mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod`（地图 `east_asia_visual_heightmap`，`assets/Navigation/navmesh.json` 第 25 行）
 
 另外这些文件引用了 MassNavigation 类型或配置，但 `mod.json` 没有把 `MassNavigationMod` 写成依赖：
 
-- `mods/showcases/road_network/RoadNetworkShowcaseMod`：`RoadNetworkMassNavigationRuntimeAccessor`，以及 `RoadMoveExecutionSystem`、`RoadMoveLifecycleSystem`、`RoadMoveOrderBindingSystem`、`RoadMovePlanSelectionSystem`、`InstallRoadNetworkShowcaseOnMapFocusTrigger`
+- `mods/showcases/road_network/RoadNetworkShowcaseMod`：地图 `road_network_showcase_chunked`，`assets/Navigation/navmesh.json` 第 4 行 `solver` 为 `mass-navigation`。`RoadNetworkMassNavigationRuntimeAccessor`，以及 `RoadMoveExecutionSystem`、`RoadMoveLifecycleSystem`、`RoadMoveOrderBindingSystem`、`RoadMovePlanSelectionSystem`、`InstallRoadNetworkShowcaseOnMapFocusTrigger`
 - `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod`：配置类型用 `MassNavigationFlowSolverConfig`、`MassNavigationRuntimeCapacityConfig`、`MassNavigationFlowArrivalTuning`、`MassNavigationFlowAvoidanceTuning`、`MassNavigationCrowdSemantics`
 - `mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod`：`config_catalog.json` 登记 `MassNavigationConfig.json`
 - `mods/FeatureHubMod/Systems/FeatureHubNavigationSystem.cs`：键盘 8 进入地图 `mass_navigation`
 
 启动图：`src/Apps/Raylib/Ludots.App.Raylib/raylib.mass-navigation.launch.graph.json`、`raylib.mass-navigation-10k-hud.launch.graph.json`、`raylib.tw-flow.launch.graph.json`、`raylib.formation-capability-showcase.launch.graph.json`。
 
-能力 Mod 本体：`mods/capabilities/navigation/MassNavigationMod`（模板、`GAS/graphs.json`、`GAS/effects.json`、`Maps/mass_navigation.json`、`config_catalog.json`）。
+能力 Mod 本体：`mods/capabilities/navigation/MassNavigationMod`（模板、`GAS/graphs.json`、`GAS/effects.json`、`Maps/mass_navigation.json`、`config_catalog.json`）。地图 `mass_navigation` 的 `solver` 在 `assets/Navigation/navmesh.json` 第 4 行。
 
 ### 系统与接入点
 
@@ -387,7 +391,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 
 同目录运行时里，展厅和测试还直接用这些类型：`MassNavigationRuntime`、`MassNavigationSimulationRuntime`、`MassNavigationGroupRuntime`（群体侧编组是 `CrowdNavGroupSet`）、`MassNavigationRouteExecutionSink`、`MassNavigationMovePlanExecutionSink`（群体侧路线是 `PathQueryService` / `TilePathQuery` / `HpaQuery` / `CorridorQuery`）、`MassNavigationTelemetry`、`MassNavigationDomainRelationshipProjection`（群体侧关系投影是 `CrowdPairRulesProjection`）、`MassNavigationFlowSolverState` 及其避让、到达、位移、空间哈希。
 
-`MassNavigationTelemetry` 有分阶段毫秒、FPS、视野内人数。`CrowdSimulationTelemetry` 只有 tick、单位数、接触累加、重烘、迷雾刷新、等路、停摆、`TickMs`。
+`MassNavigationTelemetry` 有分阶段毫秒、FPS、视野内人数。`CrowdSimulationTelemetry` 只有 tick、单位数、接触累加、重烘、迷雾刷新、等路、停摆、`LastTickMs`、`TickMs`、`MaxTickMs`。
 
 目录外的接入：
 
@@ -409,7 +413,7 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 
 求解器与展厅测试：
 
-- `src/Tests/PresentationTests/MassNavigation/` 下 16 个测试文件（含 `CapabilityStandardMassNavigationLargeWorld10kProductionPathTests`、`MassNavSelectionChainTests`）
+- `src/Tests/PresentationTests/MassNavigation/` 下 16 个测试文件（含 `CapabilityStandardMassNavigationLargeWorld10kProductionPathTests`、`MassNavSelectionChainTests`）。`ExpectedAgentCount = 10000` 是 `CapabilityStandardMassNavigationLargeWorld10kProductionPathTests` 的常量，不是 `CapabilityStandardMassNavigationLargeWorld10kMod` 的字段。`MassNavigationMapFocusTests` 的夹具地图 `mass_probe_a`、`mass_probe_b` 也把 `solver` 写成 `mass-navigation`。
 - `src/Tests/PresentationTests/MassNavigationGroupRuntimeTransactionTests.cs`
 - `src/Tests/PresentationTests/MassNavigationIssue671RuntimeTests.cs`
 - `src/Tests/PresentationTests/MassNavigationMovePlanExecutionTests.cs`
@@ -430,8 +434,8 @@ P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / �
 ### 删除前要满足的条件
 
 1. 功能：上一节写「无」的职责，要么群体侧有了承担它的类型，要么展厅、启动图和测试不再引用原来的类型。仍被引用的包括：`IMovePlanCommandGroupExecutionSystem` 与 order type `massNavigationMove`、`IPoseAuthorityTransitionListener` 的 MassNavigation 实现、运动动画参数、观察者 LiveVisible 披露、Physics2D kinematic 喂姿、`MassNavigationFlowObstacleProjection`、`MassNavigationTelemetry` 的分阶段毫秒 / FPS / 视野内人数。
-2. 性能：`CapabilityStandardMassNavigationLargeWorld10kProductionPathTests` 的 10000 单位生产路径，要有群体会话上的对等测试。`CrowdKernel50KBenchmarkTests` 继续把 50000 单位、200 tick 稳态窗的平均、P50、P95、最大写到 `artifacts/benchmarks/crowd-kernel-50k-tick/`。这个测试把 33 ms 标成 `Warn.If`，不把墙钟当硬断言。
-3. 展厅：上面 6 个依赖 `MassNavigationMod` 的展厅改为依赖群体模拟或删除；路网、TimeFlow、参与者视图、FeatureHub 的 `mass_navigation` 入口，以及四份 Raylib 启动图，不再引用 MassNavigation。
+2. 性能：`CapabilityStandardMassNavigationLargeWorld10kProductionPathTests` 用常量 `ExpectedAgentCount = 10000` 跑这条生产路径，要有群体会话上的对等测试。`CrowdKernel50KBenchmarkTests` 继续把 50000 单位、200 tick 稳态窗的平均、P50、P95、最大写到 `artifacts/benchmarks/crowd-kernel-50k-tick/`。这个测试把 33 ms 标成 `Warn.If`，不把墙钟当硬断言。
+3. 展厅：上面依赖 `MassNavigationMod` 的展厅改为依赖群体模拟或删除；`EastAsiaNavMeshDebugMod` 的地图 `east_asia_visual_heightmap`（`navmesh.json` 第 25 行，`solver` 为 `mass-navigation`，`mod.json` 不依赖 `MassNavigationMod`）改为群体模拟或删除；路网地图 `road_network_showcase_chunked`、TimeFlow、参与者视图、FeatureHub 的 `mass_navigation` 入口，以及四份 Raylib 启动图，不再引用 MassNavigation。
 4. 求解器：`maps.<mapId>.solver` 仍只有一个值。`src/Core/MassNavigation` 和 `MassNavigationMod` 还在时，`SolverAgentExclusivity` 继续拒绝同一模板带两种 Agent。
 
 ## 现在的范围
