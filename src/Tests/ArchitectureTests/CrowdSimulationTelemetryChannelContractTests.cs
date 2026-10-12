@@ -18,6 +18,8 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(tick, Does.Not.Contain("ConfigKeyRegistry"));
         Assert.That(tick, Does.Not.Contain("BuildActiveDefinitionSummary"));
         Assert.That(tick, Does.Not.Contain("CrowdSimChecksum.Format"));
+        Assert.That(tick, Does.Contain("PublishTelemetryFrame"));
+        Assert.That(tick, Does.Not.Contain("BeginFrame"));
         Assert.That(source, Does.Not.Contain("crowd_simulation.session."));
     }
 

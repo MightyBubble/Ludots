@@ -39,6 +39,8 @@ public sealed class CrowdMovementKernel
     /// <summary>逐单位的本 tick 接触计数(分离求解累加,会话逐 tick 清零;真值 bin 的 u16 同构,
     /// 跨子步累加不回绕)。</summary>
     public ushort[] Contacts = Array.Empty<ushort>();
+    /// <summary>本 tick 接触合计(分离写完后由会话汇总;停摆帧不带进遥测)。</summary>
+    public int ContactSum;
 
     // ── tick 级 SoA 舞台:对拍行序 = 稠密序(对拍会话只追加,创建序即行序)。chunk
     // 遍历按原型分桶不保稠密序——热路径不直接进 chunk,改为每 tick 一次 gather(组件→SoA)、

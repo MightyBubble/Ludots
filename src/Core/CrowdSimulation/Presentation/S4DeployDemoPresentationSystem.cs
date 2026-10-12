@@ -41,6 +41,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
     private readonly CrowdPresentationConfig _presentation;
 
     private readonly S4DeployNavWireframe _wire = new();
+    private readonly CrowdSimTelemetryPanel _telemetryPanel = new();
     private int _flashReportTick = -1;
     private long _flashStartMs;
 
@@ -297,5 +298,6 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         _overlay.AddText(32, 78, $"最近重烘:{rebake}", 18, new Vector4(1f, 1f, 1f, 1f));
         _overlay.AddText(32, 102, replay, 18, _demo.InteractiveMode ? new Vector4(1f, 0.55f, 0.4f, 1f) : new Vector4(0.8f, 1f, 0.8f, 1f));
         _overlay.AddText(32, 126, keys, 18, new Vector4(0.75f, 0.9f, 1f, 1f));
+        if (session != null) _telemetryPanel.Draw(_overlay, hud, session.Telemetry);
     }
 }

@@ -85,8 +85,9 @@ public sealed partial class CrowdSimulationRuntime
     public CrowdSimSession? Session => _session;
     public Entity SessionEntity => _sessionEntity;
     /// <summary>回放结论:0 未跑 / 1 逐位一致 / 2 分歧(分歧 tick 见 ReplayDivergenceTick)。</summary>
-    /// <summary>人群遥测(类型化计数/采样;看板与调试面板只读)。</summary>
-    public CrowdSimulationTelemetry Telemetry { get; } = new();
+    private readonly CrowdSimulationTelemetry _detachedTelemetry = new();
+    /// <summary>人群遥测(活会话的那一份;未激活时是空壳)。看板与调试面板只读。</summary>
+    public CrowdSimulationTelemetry Telemetry => _session?.Telemetry ?? _detachedTelemetry;
 
     public int ReplayStatus { get; private set; }
     public int ReplayDivergenceTick { get; private set; } = -1;
@@ -405,12 +406,12 @@ public sealed partial class CrowdSimulationRuntime
                     $"CrowdSimulation stalled at tick {session.TickCount}: waiting for path reply (planner pending={session.Planner?.PendingCount ?? -1}, serviceFault={_pathService?.Faulted}).");
             }
 
-            Telemetry.BeginFrame(session.Units.Count, 0, stalled: true,
+            session.PublishTelemetryFrame(stalled: true,
                 (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
             return;
         }
 
-        Telemetry.BeginFrame(session.Units.Count, 0, stalled: false,
+        session.PublishTelemetryFrame(stalled: false,
             (double)(_tickWatch.ElapsedTicks - t0) / System.Diagnostics.Stopwatch.Frequency * 1000.0);
         _stallLogged = false;
         if (_hashCount == _hashTicks.Length)

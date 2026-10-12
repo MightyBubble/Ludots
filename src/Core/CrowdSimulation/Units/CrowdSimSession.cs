@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
@@ -46,6 +47,9 @@ public sealed class CrowdSimSession
         SubSteps = Math.Clamp(Math.Max(1, needed), 1, config.Movement.MaxSubSteps);
         SubStepDt = simDt / SubSteps;
     }
+
+    /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
+    public CrowdSimulationTelemetry Telemetry { get; } = new();
 
     public CrowdSimulationRuntimeConfig Config { get; }
     public ArchWorld World { get; }
@@ -196,6 +200,7 @@ public sealed class CrowdSimSession
 
     public void NotifyRebake(CrowdRebakeReport report)
     {
+        Telemetry.MarkRebake();
         RebakeReported?.Invoke(report);
         Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
             $"CrowdSimulation rebake: kind={(report.Kind == CrowdRebakeReport.KindPlace ? "place" : "remove")} " +
@@ -220,6 +225,7 @@ public sealed class CrowdSimSession
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
         if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
         {
+            Telemetry.MarkPathWait();
             checksum = 0;
             return false;
         }
@@ -236,6 +242,7 @@ public sealed class CrowdSimSession
             }
 
             Movement.ScatterUnits();
+            Movement.ContactSum = SumContacts(Movement.Contacts, Units.Count);
         }
 
         // F02:运动后、tick 计数前——迷雾更新 + 认知同步(与参考端 advance 的挂点逐位同;
@@ -288,4 +295,20 @@ public sealed class CrowdSimSession
     }
 
     public void SetSelectedCount(int count) => SelectedCount = count;
+
+    /// <summary>停摆帧接触记 0,避免把上一成功帧的接触再累进遥测。</summary>
+    internal void PublishTelemetryFrame(bool stalled, double tickMs)
+    {
+        int contacts = stalled || Movement == null ? 0 : Movement.ContactSum;
+        Telemetry.BeginFrame(Units.Count, contacts, stalled, tickMs);
+    }
+
+    private static int SumContacts(ushort[] contacts, int units)
+    {
+        int n = units;
+        if (n > contacts.Length) n = contacts.Length;
+        int sum = 0;
+        for (int i = 0; i < n; i++) sum += contacts[i];
+        return sum;
+    }
 }
