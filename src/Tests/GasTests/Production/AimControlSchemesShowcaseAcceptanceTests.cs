@@ -113,12 +113,19 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         Assert.That(Vector2.Distance(afterStick, moved), Is.LessThanOrEqualTo(5f), session.Diag("stick does not collapse the stored point"));
     }
 
-    [Test]
-    public void ExtraSlots_CastFromBindingData()
-    {
-        using Session session = Session.Boot("scheme.aim.kbm");
-        session.AssertExtraSlotsCastFromBindings();
-    }
+        [Test]
+        public void ExtraSlots_CastFromBindingData()
+        {
+            using Session session = Session.Boot("scheme.aim.kbm");
+            session.AssertExtraSlotsCastFromBindings();
+        }
+
+        [Test]
+        public void ClickAim_IndicatorAppearsOnThePressTick()
+        {
+            using Session session = Session.Boot("scheme.aim.kbm");
+            session.AssertIndicatorOnPressTick();
+        }
 
     [Test]
     public void FriendlyTargetAbility_IsDataOnly()
@@ -240,6 +247,21 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             RunSmart(AimSurface.KeyboardCursor, 5, target: Near);
         }
 
+        public void AssertIndicatorOnPressTick()
+        {
+            SetMode("interaction.context.aim.click", "f3");
+            AimMouse(Position(Hero) + new Vector2(240f, 0f));
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(0), Diag("range hidden before press"));
+            Assert.That(CountPresenter("aim.line"), Is.EqualTo(0), Diag("line hidden before press"));
+            int tick = _engine.GameSession.CurrentTick;
+            PressSlot(AimSurface.KeyboardCursor, 0);
+            Assert.That(_engine.GameSession.CurrentTick, Is.EqualTo(tick + 1), Diag("press advances one tick"));
+            Assert.That(AimGestureOpen(), Is.True, Diag("gesture on the press tick"));
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("range indicator on the press tick"));
+            Assert.That(CountPresenter("aim.line"), Is.EqualTo(1), Diag("line indicator on the press tick"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("press tick"));
+        }
+
         public void RunCastMatrix(AimSurface surface, int slotEntity, int slotGround, ConfirmControl? confirm = null)
         {
             Assert.That(surface, Is.EqualTo(_surface));
@@ -297,7 +319,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AdvanceTick();
             _device.MovePointer(screenCm.X, screenCm.Y);
             AdvanceTick();
-            TickUntilFixedTickAdvances();
         }
 
         public void AimStick(string stick, Vector2 axis)
@@ -306,7 +327,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             AdvanceTick();
             SetAxis(stick, axis);
             AdvanceTick();
-            TickUntilFixedTickAdvances();
         }
 
         public void AssertStickHeldWithoutRange(Vector2 unit, string step)
@@ -322,7 +342,6 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             SetMode("interaction.context.aim.release", "f2");
             Assert.That(ReadInt("aim.stick.valid"), Is.EqualTo(0), Diag("stick untouched"));
             PressSlot(AimSurface.GamepadRight, slot);
-            TickUntilFixedTickAdvances();
             Assert.That(Contexts(), Does.Contain("interaction.context.aim.release"), Diag("hold without stick"));
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("hold without stick"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("hold does not submit"));
@@ -538,9 +557,11 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         private void RunIndicating(AimSurface surface, ConfirmControl confirm, int slot, Entity? target, bool cancel)
         {
             AimFor(surface, target);
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(0), Diag($"range hidden before press slot {slot}"));
             PressSlot(surface, slot);
-            WaitUntil(AimGestureOpen, 4);
-            Assert.That(AimGestureOpen(), Is.True, Diag($"indicate slot {slot}"));
+            Assert.That(AimGestureOpen(), Is.True, Diag($"gesture on the press tick slot {slot}"));
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag($"range indicator on the press tick slot {slot}"));
+            Assert.That(CountPresenter("aim.line"), Is.EqualTo(1), Diag($"line indicator on the press tick slot {slot}"));
             if (target == null)
             {
                 Assert.That(CollectionCount("aim.hover"), Is.EqualTo(0), Diag($"hover slot {slot}"));
@@ -913,6 +934,24 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             });
             Assert.That(found, Is.EqualTo(1), Diag("aim.line instance"));
             return rotation;
+        }
+
+        private int CountPresenter(string definitionId)
+        {
+            PresenterDefinitionRegistry definitions = _engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionId);
+            Assert.That(defId, Is.GreaterThan(0), Diag(definitionId));
+            int found = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            _engine.World.Query(in query, (Entity _, ref PresenterState state) =>
+            {
+                if (state.DefId == defId && state.OwnerEntity == Hero)
+                {
+                    found++;
+                }
+            });
+            return found;
         }
 
         private float ReadFloat(string key)

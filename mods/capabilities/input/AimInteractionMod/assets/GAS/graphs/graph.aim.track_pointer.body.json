@@ -1,0 +1,937 @@
+[
+  {
+    "id": "graph.aim.track_pointer.body",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "body",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "c99",
+        "op": "ConstInt",
+        "intValue": 99
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "px",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.sample.x"
+      },
+      {
+        "id": "py",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.sample.y"
+      },
+      {
+        "id": "ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "tx",
+        "op": "LoadTargetPosX"
+      },
+      {
+        "id": "ty",
+        "op": "LoadTargetPosY"
+      },
+      {
+        "id": "xf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "yf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "write_x",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "write_y",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "write_valid",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "direction",
+        "op": "PointToDirection",
+        "validOutput": "hasDir"
+      },
+      {
+        "id": "dir_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "write_facing",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "Cast.Facing"
+      },
+      {
+        "id": "write_invalid",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "pick_radius",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.pick.pointer_radius_cm"
+      },
+      {
+        "id": "pick_all",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete"
+      },
+      {
+        "id": "pick_rel",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
+        "id": "hostile",
+        "op": "QueryFilterRelationship"
+      },
+      {
+        "id": "pick",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "pick_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "pick_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "write_target",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "pos_x",
+        "op": "LoadEntityPosX"
+      },
+      {
+        "id": "pos_y",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "pos_xf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "pos_yf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "set_hover_pos",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "hover_radius",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 1
+      },
+      {
+        "id": "pick_rel_1",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.pick.relationship"
+      },
+      {
+        "id": "hover_hostile",
+        "op": "QueryFilterRelationship"
+      },
+      {
+        "id": "write_hover",
+        "op": "WriteCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "null_get",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "write_null",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "q_hover",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "clear_hover",
+        "op": "WriteCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "halt_dead",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "is_click",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.click"
+      },
+      {
+        "id": "click_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "is_release",
+        "op": "IsContextActive",
+        "context": "interaction.context.aim.release"
+      },
+      {
+        "id": "release_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt_ok",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "read_tgt",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "tgt_alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "tgt_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "write_stick_off",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      },
+      {
+        "id": "write_stick_fail",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.stick.valid"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt_dead"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "ground"
+      },
+      {
+        "from": "ground",
+        "fromPort": "next",
+        "to": "ground_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "px"
+      },
+      {
+        "from": "ground_jump",
+        "fromPort": "true",
+        "to": "tx"
+      },
+      {
+        "from": "tx",
+        "fromPort": "next",
+        "to": "ty"
+      },
+      {
+        "from": "ty",
+        "fromPort": "next",
+        "to": "xf"
+      },
+      {
+        "from": "xf",
+        "fromPort": "next",
+        "to": "yf"
+      },
+      {
+        "from": "yf",
+        "fromPort": "next",
+        "to": "write_x"
+      },
+      {
+        "from": "write_x",
+        "fromPort": "next",
+        "to": "write_y"
+      },
+      {
+        "from": "write_y",
+        "fromPort": "next",
+        "to": "write_valid"
+      },
+      {
+        "from": "write_valid",
+        "fromPort": "next",
+        "to": "write_stick_off"
+      },
+      {
+        "from": "direction",
+        "fromPort": "next",
+        "to": "dir_jump"
+      },
+      {
+        "from": "dir_jump",
+        "fromPort": "true",
+        "to": "write_facing"
+      },
+      {
+        "from": "write_facing",
+        "fromPort": "next",
+        "to": "pick_radius"
+      },
+      {
+        "from": "dir_jump",
+        "fromPort": "false",
+        "to": "pick_radius"
+      },
+      {
+        "from": "write_invalid",
+        "fromPort": "next",
+        "to": "c99"
+      },
+      {
+        "from": "ground_jump",
+        "fromPort": "false",
+        "to": "write_stick_fail"
+      },
+      {
+        "from": "pick_all",
+        "fromPort": "next",
+        "to": "pick_rel"
+      },
+      {
+        "from": "hostile",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "pick_alive"
+      },
+      {
+        "from": "pick_alive",
+        "fromPort": "next",
+        "to": "pick_jump"
+      },
+      {
+        "from": "write_target",
+        "fromPort": "next",
+        "to": "pos_x"
+      },
+      {
+        "from": "pos_x",
+        "fromPort": "next",
+        "to": "pos_y"
+      },
+      {
+        "from": "pos_y",
+        "fromPort": "next",
+        "to": "pos_xf"
+      },
+      {
+        "from": "pos_xf",
+        "fromPort": "next",
+        "to": "pos_yf"
+      },
+      {
+        "from": "pos_yf",
+        "fromPort": "next",
+        "to": "set_hover_pos"
+      },
+      {
+        "from": "set_hover_pos",
+        "fromPort": "next",
+        "to": "is_click"
+      },
+      {
+        "from": "hover_radius",
+        "fromPort": "next",
+        "to": "pick_rel_1"
+      },
+      {
+        "from": "hover_hostile",
+        "fromPort": "next",
+        "to": "write_hover"
+      },
+      {
+        "from": "write_hover",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "pick_jump",
+        "fromPort": "true",
+        "to": "write_target"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "next",
+        "to": "write_null"
+      },
+      {
+        "from": "write_null",
+        "fromPort": "next",
+        "to": "is_click"
+      },
+      {
+        "from": "q_hover",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "clear_hover",
+        "fromPort": "next",
+        "to": "halt_ok"
+      },
+      {
+        "from": "pick_jump",
+        "fromPort": "false",
+        "to": "c99"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "next",
+        "to": "tgt_alive"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "next",
+        "to": "tgt_jump"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "true",
+        "to": "hover_radius"
+      },
+      {
+        "from": "tgt_jump",
+        "fromPort": "false",
+        "to": "q_hover"
+      },
+      {
+        "from": "write_stick_off",
+        "fromPort": "next",
+        "to": "direction"
+      },
+      {
+        "from": "write_stick_fail",
+        "fromPort": "next",
+        "to": "write_invalid"
+      },
+      {
+        "from": "c99",
+        "fromPort": "next",
+        "to": "null_get"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "clear_hover"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "next",
+        "to": "click_jump"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "click_jump",
+        "fromPort": "false",
+        "to": "is_release"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "next",
+        "to": "release_jump"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "true",
+        "to": "read_tgt"
+      },
+      {
+        "from": "release_jump",
+        "fromPort": "false",
+        "to": "halt_ok"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "next",
+        "to": "pick_all"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "next",
+        "to": "hostile"
+      },
+      {
+        "from": "pick_rel_1",
+        "fromPort": "next",
+        "to": "hover_hostile"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt_dead",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt_ok",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "ground",
+        "toPort": "b"
+      },
+      {
+        "from": "ground",
+        "fromPort": "value",
+        "to": "ground_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "tx",
+        "fromPort": "value",
+        "to": "xf",
+        "toPort": "a"
+      },
+      {
+        "from": "ty",
+        "fromPort": "value",
+        "to": "yf",
+        "toPort": "a"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_x",
+        "toPort": "source"
+      },
+      {
+        "from": "xf",
+        "fromPort": "value",
+        "to": "write_x",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_y",
+        "toPort": "source"
+      },
+      {
+        "from": "yf",
+        "fromPort": "value",
+        "to": "write_y",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "direction",
+        "toPort": "source"
+      },
+      {
+        "from": "direction",
+        "fromPort": "hasDir",
+        "to": "dir_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_facing",
+        "toPort": "source"
+      },
+      {
+        "from": "direction",
+        "fromPort": "value",
+        "to": "write_facing",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_invalid",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_invalid",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pick_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_alive",
+        "fromPort": "value",
+        "to": "pick_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_target",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "write_target",
+        "toPort": "value"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pos_x",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "pos_y",
+        "toPort": "source"
+      },
+      {
+        "from": "pos_x",
+        "fromPort": "value",
+        "to": "pos_xf",
+        "toPort": "a"
+      },
+      {
+        "from": "pos_y",
+        "fromPort": "value",
+        "to": "pos_yf",
+        "toPort": "a"
+      },
+      {
+        "from": "pos_xf",
+        "fromPort": "value",
+        "to": "set_hover_pos",
+        "toPort": "a"
+      },
+      {
+        "from": "pos_yf",
+        "fromPort": "value",
+        "to": "set_hover_pos",
+        "toPort": "b"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "hover_hostile",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "c99",
+        "fromPort": "value",
+        "to": "null_get",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "source"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hover",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "clear_hover",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_tgt",
+        "toPort": "source"
+      },
+      {
+        "from": "read_tgt",
+        "fromPort": "value",
+        "to": "tgt_alive",
+        "toPort": "source"
+      },
+      {
+        "from": "tgt_alive",
+        "fromPort": "value",
+        "to": "tgt_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick_off",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_stick_fail",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_stick_fail",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_click",
+        "toPort": "source"
+      },
+      {
+        "from": "is_click",
+        "fromPort": "value",
+        "to": "click_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "is_release",
+        "toPort": "source"
+      },
+      {
+        "from": "is_release",
+        "fromPort": "value",
+        "to": "release_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_radius",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_radius",
+        "fromPort": "value",
+        "to": "pick_all",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel",
+        "fromPort": "value",
+        "to": "hostile",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "pick_rel_1",
+        "toPort": "source"
+      },
+      {
+        "from": "pick_rel_1",
+        "fromPort": "value",
+        "to": "hover_hostile",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "px",
+        "toPort": "source"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "py",
+        "toPort": "source"
+      }
+    ]
+  }
+]

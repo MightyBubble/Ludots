@@ -7,19 +7,22 @@
         "label": "Aim.CastMode.Smart",
         "action": "Aim.CastMode.Smart",
         "start": "rep_smart",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       },
       {
         "label": "Aim.CastMode.AimClick",
         "action": "Aim.CastMode.AimClick",
         "start": "rep_click",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       },
       {
         "label": "Aim.CastMode.AimRelease",
         "action": "Aim.CastMode.AimRelease",
         "start": "rep_release",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       }
     ],
     "nodes": [

@@ -7,13 +7,15 @@
         "label": "Aim.Cancel",
         "action": "Aim.Cancel",
         "start": "deact",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       },
       {
         "label": "Aim.CancelRelease",
         "action": "Aim.CancelRelease",
         "start": "deact",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       }
     ],
     "nodes": [

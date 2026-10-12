@@ -18,6 +18,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GasTests.Graph
@@ -389,6 +390,20 @@ namespace Ludots.Tests.GasTests.Graph
             schemas.RegisterCustom(new EventSchema("Aim.Rule.Press", EventScope.Map, new[] { modifiers }));
             schemas.RegisterCustom(new EventSchema("Aim.Rule.Resolve", EventScope.Map, new[] { modifiers }));
 
+            foreach (string path in Directory.GetFiles(aimDir, "graph.aim.*.json"))
+            {
+                GraphControlFlowDocument named = LoadGraph(path, json);
+                GraphIdRegistry.Register(named.Id);
+                for (int i = 0; i < named.Nodes.Count; i++)
+                {
+                    if (string.Equals(named.Nodes[i].Op, "InvokeGraph", StringComparison.Ordinal) &&
+                        !string.IsNullOrWhiteSpace(named.Nodes[i].FunctionName))
+                    {
+                        GraphIdRegistry.Register(named.Nodes[i].FunctionName!);
+                    }
+                }
+            }
+
             string pressPath = Path.Combine(aimDir, "graph.aim.press.json");
             string confirmPath = Path.Combine(aimDir, "graph.aim.confirm.json");
             string releasePath = Path.Combine(aimDir, "graph.aim.release_confirm.json");
@@ -404,8 +419,10 @@ namespace Ludots.Tests.GasTests.Graph
             int ruleUnit = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_only.json"), null, null, json, schemas);
             int ruleGround = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.ground_only.json"), null, null, json, schemas);
             int ruleBoth = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.rule.unit_or_ground.json"), null, null, json, schemas);
-            int trackPointer = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_pointer.json"), null, null, json, schemas);
-            int trackStick = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_stick.json"), null, null, json, schemas);
+            int trackPointer = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_pointer.json"), "graph.aim.track_pointer.body", json, schemas);
+            int trackStick = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.track_stick.json"), "graph.aim.track_stick.body", json, schemas);
+            int cancel = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.cancel.json"), null, json, schemas);
+            int castMode = MeasureWovenPress(Path.Combine(aimDir, "graph.aim.set_cast_mode.json"), null, json, schemas);
 
             foreach (string path in Directory.GetFiles(aimDir, "graph.aim.*.json"))
             {
@@ -428,7 +445,8 @@ namespace Ludots.Tests.GasTests.Graph
                 $"confirm champion={championConfirm} interaction={interactionConfirm}; " +
                 $"release champion={championRelease} interaction={interactionRelease}; " +
                 $"rule none={ruleNone} unit={ruleUnit} ground={ruleGround} both={ruleBoth}; " +
-                $"track pointer={trackPointer} stick={trackStick}");
+                $"track pointer={trackPointer} stick={trackStick}; " +
+                $"cancel={cancel} castMode={castMode}");
             Assert.Multiple(() =>
             {
                 Assert.That(champion, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "press champion");
@@ -443,8 +461,19 @@ namespace Ludots.Tests.GasTests.Graph
                 Assert.That(ruleUnit, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule unit");
                 Assert.That(ruleGround, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule ground");
                 Assert.That(ruleBoth, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "rule both");
+                Assert.That(trackPointer, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "track pointer");
+                Assert.That(trackStick, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "track stick");
+                Assert.That(cancel, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "cancel");
+                Assert.That(castMode, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "cast mode");
             });
         }
+
+        private static int MeasureWovenPress(
+            string pressPath,
+            string? invokeTarget,
+            JsonSerializerOptions json,
+            EventSchemaRegistry schemas)
+            => MeasureWovenPress(pressPath, hookPath: null, invokeTarget, json, schemas);
 
         private static int MeasureWovenPress(
             string pressPath,
@@ -488,7 +517,14 @@ namespace Ludots.Tests.GasTests.Graph
             IReadOnlyList<TriggerGraphEntry> entries = woven.TriggerGraphEntries;
             for (int i = 0; i < entries.Count; i++)
             {
-                steps = Math.Max(steps, LongestHostPath(woven.Program, entries[i].StartPc));
+                int longest = TriggerGraphSliceBudget.CountLongest(woven.Program, entries[i].StartPc);
+                if (!string.IsNullOrEmpty(entries[i].Budget))
+                {
+                    int runtime = SliceStepProbe.Measure(woven.Program, entries[i].StartPc);
+                    Assert.That(runtime, Is.EqualTo(longest), $"{graphId} {entries[i].Label}");
+                }
+
+                steps = Math.Max(steps, longest);
             }
 
             return steps;
@@ -509,45 +545,6 @@ namespace Ludots.Tests.GasTests.Graph
             GraphProgramPackage package = compiled.Package!.Value;
             int id = GraphIdRegistry.Register(doc.Id);
             programs.Register(id, package.Program, GraphKind.TriggerGraph, compiled.SourceMap, package.Symbols, package.TriggerGraphEntries);
-        }
-
-        private static int LongestHostPath(GraphInstruction[] program, int startPc)
-        {
-            var memo = new int[program.Length];
-            Array.Fill(memo, -1);
-            var stack = new HashSet<int>();
-            return Walk(startPc);
-
-            int Walk(int pc)
-            {
-                if ((uint)pc >= (uint)program.Length)
-                {
-                    return 0;
-                }
-
-                if (memo[pc] >= 0)
-                {
-                    return memo[pc];
-                }
-
-                if (!stack.Add(pc))
-                {
-                    throw new InvalidOperationException($"graph.aim.press cycles at pc {pc}.");
-                }
-
-                GraphInstruction ins = program[pc];
-                var op = (GraphNodeOp)ins.Op;
-                int rest = op switch
-                {
-                    GraphNodeOp.HaltReturnInt or GraphNodeOp.Fail => 0,
-                    GraphNodeOp.Jump => Walk(pc + 1 + ins.Imm),
-                    GraphNodeOp.JumpIfFalse => Math.Max(Walk(pc + 1), Walk(pc + 1 + ins.Imm)),
-                    _ => Walk(pc + 1),
-                };
-                stack.Remove(pc);
-                memo[pc] = 1 + rest;
-                return memo[pc];
-            }
         }
 
         private static string FindRepoRoot()

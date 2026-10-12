@@ -7,7 +7,8 @@
         "label": "Aim.Confirm",
         "action": "Aim.Confirm",
         "start": "rep",
-        "refire": "restart"
+        "refire": "restart",
+        "budget": "single-slice"
       }
     ],
     "nodes": [
