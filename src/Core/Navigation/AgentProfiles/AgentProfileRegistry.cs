@@ -70,5 +70,50 @@ namespace Ludots.Core.Navigation.AgentProfiles
 
             throw new InvalidOperationException($"{context} references unknown agent profile '{profileId}'.");
         }
+
+        /// <summary>
+        /// Bake body for a capability profile. The agent whose id equals the capability id wins,
+        /// so extra bodies that share the capability do not replace that body's radius.
+        /// Several referencers and no id match is ambiguous.
+        /// </summary>
+        public AgentProfileConfig ResolveForNavProfile(string navProfileId, string context)
+        {
+            AgentProfileConfig sameId = null;
+            AgentProfileConfig only = null;
+            int referencers = 0;
+            for (int i = 0; i < _profiles.Count; i++)
+            {
+                AgentProfileConfig agent = _profiles[i];
+                if (!string.Equals(agent.NavProfileId, navProfileId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                referencers++;
+                only = agent;
+                if (string.Equals(agent.Id, navProfileId, StringComparison.Ordinal))
+                {
+                    sameId = agent;
+                }
+            }
+
+            if (sameId != null)
+            {
+                return sameId;
+            }
+
+            if (referencers == 1)
+            {
+                return only;
+            }
+
+            if (referencers == 0)
+            {
+                throw new InvalidOperationException($"{context} nav profile '{navProfileId}' is not referenced by any agent profile.");
+            }
+
+            throw new InvalidOperationException(
+                $"{context} nav profile '{navProfileId}' is referenced by {referencers} agent profiles and none shares its id.");
+        }
     }
 }

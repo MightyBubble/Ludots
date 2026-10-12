@@ -49,9 +49,8 @@ namespace Ludots.Core.Navigation.AgentProfiles
         }
 
         private static readonly string[] RequiredProperties =
-            { "id", "radiusCm", "heightCm", "clearanceCm", "draftCm", "beamCm", "mass", "layer" };
-        /// <summary>可选项(缺失合法,出现则必须认识):呈现身份等跨层数据。</summary>
-        private static readonly string[] OptionalProperties = { "templateId" };
+            { "id", "radiusCm", "heightCm", "clearanceCm", "draftCm", "beamCm", "mass", "layer", "navProfileId" };
+        private static readonly string[] OptionalProperties = Array.Empty<string>();
 
         private static void ValidateRaw(JsonObject obj, int index)
         {

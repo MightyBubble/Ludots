@@ -6,6 +6,16 @@
       "id": "Small",
       "maxClimbCm": 40,
       "maxSlopeDeg": 45
+    },
+    {
+      "id": "Medium",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Large",
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
     }
   ],
   "layers": [
@@ -18,7 +28,7 @@
     {
       "id": "Default",
       "areaId": 0,
-      "cost": 1.0
+      "slopeFree": false
     }
   ],
   "runtimeIncremental": {

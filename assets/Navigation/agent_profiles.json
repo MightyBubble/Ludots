@@ -7,7 +7,8 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 1.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Small"
   },
   {
     "id": "Medium",
@@ -17,7 +18,8 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 2.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Medium"
   },
   {
     "id": "Large",
@@ -27,7 +29,8 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 4.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Large"
   },
   {
     "id": "light",
@@ -37,7 +40,8 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 1.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Small"
   },
   {
     "id": "heavy",
@@ -47,7 +51,8 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 4.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Small"
   },
   {
     "id": "formation",
@@ -57,6 +62,7 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 8.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "Small"
   }
 ]

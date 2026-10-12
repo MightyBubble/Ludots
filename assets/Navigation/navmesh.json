@@ -28,7 +28,7 @@
     {
       "id": "Default",
       "areaId": 0,
-      "cost": 1.0
+      "slopeFree": false
     }
   ],
   "runtimeIncremental": {

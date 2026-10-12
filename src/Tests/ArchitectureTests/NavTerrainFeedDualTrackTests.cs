@@ -235,7 +235,7 @@ namespace Ludots.Tests.Architecture
         public void Loader_AuthoredArea63_IsRejected()
         {
             Assert.Throws<InvalidOperationException>(
-                () => LoadTempNavConfig(null, areasOverride: "\"areas\": [ { \"id\": \"Bad\", \"areaId\": 63, \"cost\": 1 } ]"));
+                () => LoadTempNavConfig(null, areasOverride: "\"areas\": [ { \"id\": \"Bad\", \"areaId\": 63, \"slopeFree\": false } ]"));
         }
 
         private static MutableGridLogicTerrainField FlatTerrain()

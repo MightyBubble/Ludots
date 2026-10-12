@@ -6,6 +6,16 @@
       "id": "Small",
       "maxClimbCm": 40,
       "maxSlopeDeg": 55
+    },
+    {
+      "id": "Medium",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Large",
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
     }
   ],
   "layers": [
@@ -18,12 +28,12 @@
     {
       "id": "mud",
       "areaId": 1,
-      "cost": 2.0
+      "slopeFree": false
     },
     {
       "id": "road",
       "areaId": 2,
-      "cost": 0.7
+      "slopeFree": false
     }
   ],
   "runtimeIncremental": {

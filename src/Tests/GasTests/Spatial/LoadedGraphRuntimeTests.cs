@@ -138,6 +138,7 @@ namespace Ludots.Tests.GAS
                 new AgentProfileConfig
                 {
                     Id = id,
+                    NavProfileId = id,
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

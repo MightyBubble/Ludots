@@ -156,6 +156,7 @@ public class CrowdSimulationConfigTests
                 return new AgentProfileConfig
                 {
                     Id = p.Id,
+                    NavProfileId = p.NavProfileId,
                     RadiusCm = p.RadiusCm,
                     HeightCm = p.HeightCm,
                     ClearanceCm = p.ClearanceCm,

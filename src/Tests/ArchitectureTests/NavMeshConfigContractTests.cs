@@ -286,6 +286,7 @@ namespace Ludots.Tests.Architecture
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

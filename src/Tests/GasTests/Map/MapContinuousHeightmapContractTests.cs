@@ -47,7 +47,8 @@ namespace Ludots.Tests.Gas
                 "draftCm": 0,
                 "beamCm": 0,
                 "mass": 1,
-                "layer": 0
+                "layer": 0,
+                "navProfileId": "Small"
               }
             ]
             """);

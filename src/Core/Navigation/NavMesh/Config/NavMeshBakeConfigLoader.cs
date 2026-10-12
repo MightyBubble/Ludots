@@ -68,9 +68,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
             if (config.Areas == null)
             {
-                config.Areas = new();
+                throw new InvalidOperationException("NavMeshBakeConfig.areas is required.");
             }
 
+            ValidateAgentNavProfileReferences(config);
             return config;
         }
 
@@ -256,9 +257,53 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key} must be an object.");
                     }
 
-                    RequireOnlyProperties(mapObj, $"NavMeshBakeConfig.maps.{mapEntry.Key}", new[] { "boards" });
-                    if (mapObj.TryGetPropertyValue("boards", out var boardsNode) && boardsNode is JsonObject boards)
+                    RequireOnlyProperties(
+                        mapObj,
+                        $"NavMeshBakeConfig.maps.{mapEntry.Key}",
+                        Array.Empty<string>(),
+                        new[] { "boards", "terrainAreas", "surfaceAsset" });
+                    if (!mapObj.ContainsKey("boards") && !mapObj.ContainsKey("terrainAreas") && !mapObj.ContainsKey("surfaceAsset"))
                     {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key} must declare boards, terrainAreas, or surfaceAsset.");
+                    }
+
+                    if (mapObj.ContainsKey("surfaceAsset"))
+                    {
+                        RequireString(mapObj, "surfaceAsset", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                    }
+
+                    if (mapObj.ContainsKey("terrainAreas"))
+                    {
+                        if (mapObj["terrainAreas"] is not JsonObject terrainAreas)
+                        {
+                            throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas must be an object.");
+                        }
+
+                        foreach (var terrainEntry in terrainAreas)
+                        {
+                            if (string.IsNullOrWhiteSpace(terrainEntry.Key))
+                            {
+                                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas has an empty terrain type id.");
+                            }
+
+                            if (terrainEntry.Value is not JsonValue terrainValue ||
+                                !terrainValue.TryGetValue<string>(out string? areaId) ||
+                                string.IsNullOrWhiteSpace(areaId))
+                            {
+                                throw new InvalidOperationException(
+                                    $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas.{terrainEntry.Key} must be a non-empty area id.");
+                            }
+                        }
+                    }
+
+                    if (mapObj.ContainsKey("boards"))
+                    {
+                        if (mapObj["boards"] is not JsonObject boards)
+                        {
+                            throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.boards must be an object.");
+                        }
+
                         foreach (var boardEntry in boards)
                         {
                             if (boardEntry.Value is not JsonObject boardObj)
@@ -289,7 +334,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
 
                 string path = $"NavMeshBakeConfig.profiles[{i}]";
-                RequireOnlyProperties(profile, path, new[] { "id", "maxClimbCm", "maxSlopeDeg" }, new[] { "cellSizeCm" });
+                RequireOnlyProperties(profile, path, new[] { "id", "maxClimbCm", "maxSlopeDeg" }, new[] { "cellSizeCm", "jump" });
                 if (profile.ContainsKey("cellSizeCm"))
                 {
                     int cellSizeCm = RequireInt(profile, "cellSizeCm", path);
@@ -304,9 +349,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                     throw new InvalidOperationException($"NavMeshBakeConfig.profiles contains duplicate id '{id}'.");
                 }
 
-                _agentProfiles.Require(id, $"{relativePath}.profiles[{i}]");
                 RequireNumber(profile, "maxClimbCm", path);
                 RequireNumber(profile, "maxSlopeDeg", path);
+                if (profile.ContainsKey("jump"))
+                {
+                    ValidateJump(profile, path);
+                }
             }
 
             if (root["layers"] is not JsonArray layers || layers.Count == 0)
@@ -338,6 +386,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException("NavMeshBakeConfig.areas must be an explicit array.");
             }
 
+            var seenAreaIds = new HashSet<string>(StringComparer.Ordinal);
+            var seenAreaNumbers = new HashSet<int>();
             for (int i = 0; i < areas.Count; i++)
             {
                 if (areas[i] is not JsonObject area)
@@ -346,17 +396,34 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
 
                 string path = $"NavMeshBakeConfig.areas[{i}]";
-                RequireOnlyProperties(area, path, "id", "areaId", "cost");
-                RequireString(area, "id", path);
+                RequireOnlyProperties(area, path, "id", "areaId", "slopeFree");
+                string areaKey = RequireString(area, "id", path);
+                if (!seenAreaIds.Add(areaKey))
+                {
+                    throw new InvalidOperationException($"NavMeshBakeConfig.areas contains duplicate id '{areaKey}'.");
+                }
+
                 int authoredAreaId = RequireInt(area, "areaId", path);
+                if (authoredAreaId < 0 || authoredAreaId > 255)
+                {
+                    throw new InvalidOperationException($"{path}.areaId must be 0..255.");
+                }
+
+                if (!seenAreaNumbers.Add(authoredAreaId))
+                {
+                    throw new InvalidOperationException($"NavMeshBakeConfig.areas contains duplicate areaId {authoredAreaId}.");
+                }
+
                 if (authoredAreaId >= RecastNavTileBaker.ReservedWalkableAreaId)
                 {
                     throw new InvalidOperationException(
                         $"{path}.areaId {authoredAreaId} is reserved: ids >= {RecastNavTileBaker.ReservedWalkableAreaId} collide with the Recast walkable marker on the direct terrain feed.");
                 }
 
-                RequireNumber(area, "cost", path);
+                RequireBool(area, "slopeFree", path);
             }
+
+            ValidateTerrainAreaReferences(root, seenAreaIds);
 
             if (root["runtimeIncremental"] is not JsonObject runtimeIncremental)
             {
@@ -394,6 +461,79 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             if (cliff < 0)
             {
                 throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.cliffHeightThreshold must be >= 0.");
+            }
+        }
+
+        private void ValidateAgentNavProfileReferences(NavMeshBakeConfig config)
+        {
+            var navIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < config.Profiles.Count; i++)
+            {
+                NavMeshAgentProfileConfig profile = config.Profiles[i]
+                    ?? throw new InvalidOperationException($"NavMeshBakeConfig.profiles[{i}] is null.");
+                if (!navIds.Add(profile.Id))
+                {
+                    throw new InvalidOperationException($"NavMeshBakeConfig.profiles contains duplicate id '{profile.Id}'.");
+                }
+            }
+
+            for (int i = 0; i < _agentProfiles.Count; i++)
+            {
+                AgentProfileConfig agent = _agentProfiles[i];
+                if (!navIds.Contains(agent.NavProfileId))
+                {
+                    throw new InvalidOperationException(
+                        $"AgentProfile '{agent.Id}' navProfileId '{agent.NavProfileId}' is not a NavMeshBakeConfig.profiles id.");
+                }
+            }
+        }
+
+        private static void ValidateJump(JsonObject profile, string path)
+        {
+            if (profile["jump"] is not JsonObject jump)
+            {
+                throw new InvalidOperationException($"{path}.jump must be an object.");
+            }
+
+            RequireOnlyProperties(jump, $"{path}.jump", "upCm", "downCm", "rangeNavCells", "cost");
+            int upCm = RequireInt(jump, "upCm", $"{path}.jump");
+            int downCm = RequireInt(jump, "downCm", $"{path}.jump");
+            int range = RequireInt(jump, "rangeNavCells", $"{path}.jump");
+            if (upCm <= 0 || downCm <= 0 || range <= 0)
+            {
+                throw new InvalidOperationException($"{path}.jump upCm, downCm and rangeNavCells must be > 0.");
+            }
+
+            float cost = RequireFloat(jump, "cost", $"{path}.jump");
+            if (cost <= 0f || float.IsNaN(cost))
+            {
+                throw new InvalidOperationException($"{path}.jump.cost must be > 0.");
+            }
+        }
+
+        private static void ValidateTerrainAreaReferences(JsonObject root, HashSet<string> areaIds)
+        {
+            if (root["maps"] is not JsonObject maps)
+            {
+                return;
+            }
+
+            foreach (var mapEntry in maps)
+            {
+                if (mapEntry.Value is not JsonObject mapObj || mapObj["terrainAreas"] is not JsonObject terrainAreas)
+                {
+                    continue;
+                }
+
+                foreach (var terrainEntry in terrainAreas)
+                {
+                    string areaId = terrainEntry.Value is JsonValue value && value.TryGetValue<string>(out string? text) ? text : string.Empty;
+                    if (!areaIds.Contains(areaId))
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas.{terrainEntry.Key} references unknown area '{areaId}'.");
+                    }
+                }
             }
         }
 

@@ -4315,8 +4315,10 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("NavMesh bootstrap requires AgentProfiles.");
             var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
-            var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
+            // Capability profiles copied so every agent navProfileId resolves are not tile stores.
+            // Only profiles reached from pathing agent types are materialized.
+            var referencedNavProfiles = NavProfileIndicesReferencedByPathing(profileRegistry, agentProfiles);
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
 
@@ -4386,6 +4388,11 @@ namespace Ludots.Core.Engine
                 int layer = bakeConfig.Layers[li].Layer;
                 for (int pi = 0; pi < profileRegistry.Count; pi++)
                 {
+                    if (!referencedNavProfiles.Contains(pi))
+                    {
+                        continue;
+                    }
+
                     int profileIndex = pi;
                     var uriCache = new Dictionary<NavTileId, string>(256);
 
@@ -4803,22 +4810,31 @@ namespace Ludots.Core.Engine
             return false;
         }
 
-        private static NavAreaCostTable BuildAreaCostTable(NavMeshBakeConfig cfg)
+        private HashSet<int> NavProfileIndicesReferencedByPathing(
+            NavMeshProfileRegistry profileRegistry,
+            AgentProfileRegistry agentProfiles)
         {
-            var arr = new Fix64[256];
-            for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
-            if (cfg?.Areas != null)
+            var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var referenced = new HashSet<int>();
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
             {
-                for (int i = 0; i < cfg.Areas.Count; i++)
+                PathingAgentTypeConfig agentType = pathingConfig.AgentTypes[i];
+                AgentProfileConfig body = agentProfiles.Require(agentType.ProfileId, $"PathingConfig.agentTypes[{agentType.Id}]");
+                if (!profileRegistry.TryGetIndex(body.NavProfileId, out int profileIndex))
                 {
-                    var a = cfg.Areas[i];
-                    if (a == null) continue;
-                    if (a.AreaId < 0 || a.AreaId > 255) throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid areaId: {a.AreaId}");
-                    if (a.Cost <= 0) throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid cost for areaId={a.AreaId}");
-                    arr[a.AreaId] = Fix64.FromFloat(a.Cost);
+                    throw new InvalidOperationException(
+                        $"PathingConfig.agentTypes[{agentType.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not in NavMeshBakeConfig.profiles.");
                 }
+
+                referenced.Add(profileIndex);
             }
-            return new NavAreaCostTable(arr);
+
+            if (referenced.Count == 0)
+            {
+                throw new InvalidOperationException("PathingConfig.agentTypes does not reference any nav profile.");
+            }
+
+            return referenced;
         }
 
         public void LoadEntryMap(string mapId)

@@ -38,7 +38,9 @@ public sealed class EastAsiaNavMeshDebugContractTests
         Assert.That(map.Metadata, Does.ContainKey("navWalkabilityOverlay"));
         Assert.That(nav.Config.ParsedAlgorithm, Is.EqualTo(NavBakeAlgorithmKind.Recast));
         Assert.That(nav.Config.ParsedMode, Is.EqualTo(NavBakeMode.Offline));
-        Assert.That(nav.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small" }));
+        Assert.That(nav.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small", "Medium", "Large" }));
+        Assert.That(nav.Config.Profiles[0].MaxClimbCm, Is.EqualTo(40));
+        Assert.That(nav.Config.Profiles[0].MaxSlopeDeg, Is.EqualTo(45f));
     }
 
     [Test]

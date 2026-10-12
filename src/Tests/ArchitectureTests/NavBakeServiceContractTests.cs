@@ -536,6 +536,7 @@ namespace Ludots.Tests.Architecture
                     new AgentProfileConfig
                     {
                         Id = "Large",
+                        NavProfileId = "Large",
                         RadiusCm = 90,
                         HeightCm = 240,
                         ClearanceCm = 60,
@@ -775,15 +776,15 @@ namespace Ludots.Tests.Architecture
                 WriteNavigationAgentProfiles(depRoot,
                     """
                     [
-                      { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0 },
-                      { "id": "DepScout", "radiusCm": 22, "heightCm": 140, "clearanceCm": 25, "draftCm": 0, "beamCm": 0, "mass": 0.7, "layer": 0 }
+                      { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0, "navProfileId": "Small" },
+                      { "id": "DepScout", "radiusCm": 22, "heightCm": 140, "clearanceCm": 25, "draftCm": 0, "beamCm": 0, "mass": 0.7, "layer": 0, "navProfileId": "Small" }
                     ]
                     """);
                 WriteNavigationAgentProfiles(targetRoot,
                     """
                     [
-                      { "id": "Small", "radiusCm": 42, "heightCm": 190, "clearanceCm": 45, "draftCm": 0, "beamCm": 0, "mass": 1.25, "layer": 1 },
-                      { "id": "ModHeavy", "radiusCm": 80, "heightCm": 240, "clearanceCm": 70, "draftCm": 0, "beamCm": 0, "mass": 3.5, "layer": 1 }
+                      { "id": "Small", "radiusCm": 42, "heightCm": 190, "clearanceCm": 45, "draftCm": 0, "beamCm": 0, "mass": 1.25, "layer": 1, "navProfileId": "Small" },
+                      { "id": "ModHeavy", "radiusCm": 80, "heightCm": 240, "clearanceCm": 70, "draftCm": 0, "beamCm": 0, "mass": 3.5, "layer": 1, "navProfileId": "ModHeavy" }
                     ]
                     """);
                 WriteNavigationNavmesh(targetRoot,
@@ -798,7 +799,7 @@ namespace Ludots.Tests.Architecture
                         { "id": "Air", "layer": 1 }
                       ],
                       "areas": [
-                        { "id": "Road", "areaId": 1, "cost": 0.75 }
+                        { "id": "Road", "areaId": 1, "slopeFree": false }
                       ]
                     }
                     """);
@@ -1107,7 +1108,7 @@ namespace Ludots.Tests.Architecture
                 {
                     new NavLayerConfig { Id = GroundLayerId, Layer = 0 }
                 },
-                Areas = new List<NavAreaCostConfig>(),
+                Areas = new List<NavMeshAreaConfig>(),
                 RuntimeIncremental = new NavRuntimeIncrementalConfig
                 {
                     TileBudgetPerFixedTick = 1,
@@ -1126,6 +1127,7 @@ namespace Ludots.Tests.Architecture
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,
@@ -1266,7 +1268,7 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(navigationDir, "agent_profiles.json"),
                 """
                 [
-                  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0 }
+                  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0, "navProfileId": "Small" }
                 ]
                 """);
             File.WriteAllText(Path.Combine(navigationDir, "navmesh.json"),
