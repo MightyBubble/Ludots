@@ -180,8 +180,8 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | Core 技能定义上的 `targeting.targetKinds` + `AbilityAcceptsTargetKind`（op 536） | Core 穷举玩法参数，和已删的 `indicator` / `TargetShape` 是同一种做法 | **已改**：全部撤掉，536 号空着。目标规则是能力 mod 的共用规则图 `graph.aim.rule.{none,unit_only,ground_only,unit_or_ground}`，技能在 `triggerGraphs` 里引用；按下图读槽位技能（`LoadSlotAbilityId` 538），用 `DispatchMapEvent` 的技能路由派 `Aim.Rule.Press` / `Aim.Rule.Resolve`，没有规则图接手就 `Fail`。按下不再在规则图里分支，只 `ActivateContextFromPref` |
 | Core 里固定了「施法方式」这一维：`InteractionPref.DefaultCastModeId` / `OverrideCastModeIds`、`Input/cast_modes.json`、`IsCastMode` / `SetCastMode`（531/532） | 和 `targetKinds` 同病：施法方式是 MOBA 词，三消没有。Core 自己从不读它，只有 mod 图读 | **已改**：`Input/interaction_prefs.json` 声明偏好键和允许取值，`InteractionPref` 存固定容量的（键, 值）对，玩家级和按技能模板各一张表；`IsPref` / `SetPref`（540/541）只认符号。531/532 空着。命令意图和派发档案还在，下单排干自己读它们 |
 | 指示器靠 `aim.indicating` 集合开关 | 这个集合只是在镜像「某个瞄准状态开着」 | **已改**：`aim.rules` 听点击 / 松开两个状态的 `ContextActivated` / `ContextDeactivated`，画在主体 `aim.actors` 第 0 个成员上（`ownerSource: EventSourceCollectionMember`）；范围表演按（定义, 范围键, 事件主体）销毁，瞄准中换演员也删得掉。集合已删，Core 集合角色里的 `AimAffected` 也删了 |
-| 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | 切片 R 之后逐个搬走：绑演员进共用进入图，形状跟交互状态走，就近辅助瞄准进规则图；五个钩子删光。加载期规则：`hookAnchor` 只能指向本 mod 的图，跨 mod 定制一律走事件 |
-| 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | 半径和关系过滤搬进技能引用的规则图；友方技能引用另一张规则图 |
+| 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | **已改**：五个钩子已删。绑演员留在各游戏自己的图里，挂在自己的战斗上下文上；形状指示改听点击 / 松开状态的 `ContextActivated` / `ContextDeactivated`；就近辅助是能力图 `graph.aim.assist`，冠军图 `graph.champion.arm_hostile_assist` 写黑板 `aim.assist`。加载期钩子只能指向本 mod 声明的图，跨 mod 报出两边的 mod 名和图名 |
+| 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | **已改**：半径和关系改由技能引用的 `graph.aim.pick.hostile` / `graph.aim.pick.friendly` 写到黑板 `aim.pick.pointer_radius_cm`、`aim.pick.stick_radius_cm`、`aim.pick.relationship`，共用追踪图再读。`Ability.AimSchemes.Friendly` 只换引用 |
 | 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | `EntityCommandPanelMod` 出一份通用数据工具栏：按钮 = 输入动作 id（走现有 `InjectButtonPress`），高亮 = 偏好键取值或某个 context 是否开着。两份 C# 删掉 |
 | 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 已落地。这段 push / pop 和前 90 帧打回 `scheme.default` 的分支已删。座位方案见缺口 5 |
 | `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`）。`user://` 按宿主传入的用户数据根展开。缺根在引擎初始化时报 `userDataRoot`。坏文件报路径。存的方案 id 不在允许集里直接抛。测试引擎每次传一个新的临时目录 |
@@ -194,9 +194,9 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 | # | 缺口 | 方案 |
 |---|------|------|
-| 1 | 每个游戏手抄一份进入图（冠军 / MOBA / 交互 / 方案展示四份同骨架）。原因：`ActivateContext` 的父上下文、集合 key、模板都是编译期符号，`InvokeGraph` 不能传符号参数 | 进入图只留能力 mod 一份 `graph.aim.enter`。`ActivateContext` 不写 `parentContext` 时，父上下文取「本挂载所属的上下文」（运行期取挂载 id，通用）。游戏只在自己战斗上下文的 `triggers[]` 里引用这张图，不再抄。下游说的「Case E 每个 rep 都要单独写一份图」随这条和切片 R 的共用规则图一起解决 |
-| 2 | 钩子全局生效 | 同上表：钩子只许本 mod 内用，跨 mod 定制走事件。先盘点仓库里现有的跨 mod 钩子，有的话同批迁走 |
-| 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | 集合唯一写点在成员增删时同时发通用地图事件（载荷：集合 key、成员、所有者），TriggerGraph 入口用现有 `filters.payload` 按 key 订阅。能力 mod 的重绑图订阅选中集合，不靠钩子 |
+| 1 | 每个游戏手抄一份进入图（冠军 / MOBA / 交互 / 方案展示四份同骨架）。原因：`ActivateContext` 的父上下文、集合 key、模板都是编译期符号，`InvokeGraph` 不能传符号参数 | **已改**：进入图只剩 `graph.aim.enter`。`ActivateContext` 不写 `parentContext` 时，父上下文是正在跑这张图的挂载，挂载外直接失败；四个游戏在自己的战斗上下文 `onActivated` 里引用它 |
+| 2 | 钩子全局生效 | **已改**：仓库里的跨 mod 钩子就是上面那五个，已经迁走。`TriggerGraphHookWeaver` 只允许钩子指向本 mod 声明的图 |
+| 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | **已改**：集合成员增删发 `EntityCollectionMembershipChanged`，载荷是集合 key、成员、所有者。各游戏的绑演员图用 `filters.payload` 订阅 `collection.command.source` 并重写 `aim.actors`。没有图订阅这个事件时不分配 |
 | 4 | 原先 `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 已落地。目录策略仍是 DeepObject：管线没有「对象根加一条按 id 合并的数组」这一档，加载器把现成的 DeepObject 和 ArrayById 拼在一起。`schemes` / `profiles` 按 `id` 字段级合并，后加载的字段赢，`inputContexts` 和 `rules` 整段替换。`allowedSchemes` 用 `ArrayAppendFields` 追加，重复 id 在校验里失败关闭。和根资产、能力 mod 相同的副本已从游戏 mod 删掉 |
 | 5 | 原先地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 已落地。进图读的就是 `game.json` 的 `startupLocalSeats[].controlSchemeId`（写进 `MapLaunchContext.LocalSeats`）。SHOW-6 改成「启动方案必须显式声明」，空了报这个字段名。交互展示座位是 `scheme.aim.kbm`。没写这个字段的其他座位仍保持运行时已经激活的方案，这是 `ParticipantBindingResolver` 的既有合同 |
 | 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
@@ -207,7 +207,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后只剩数据：再加一个取值和一个交互状态，规则图不用改 |
 | 12 | 指示器在按下后的下一拍才出现 | 切片 R 改成听 `ContextActivated` 后复测；还晚就查 presenter 规则阶段在帧内的顺序，不加特例 |
 | 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | **已改**：`DeactivateOwnContext`（543）关掉正在跑这张图的那个状态。点击和松开共用 `graph.aim.cancel` |
-| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | 已有 `aim.cast` 的 `onActivated: graph.aim.seed_stick`；第 1 条落地后删掉三处副本 |
+| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | **已改**：摇杆清零只留 `interaction.context.aim.cast` 激活时的 `graph.aim.seed_stick`。冠军重绑图里的那次调用已删 |
 | 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
 
 **待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
