@@ -263,10 +263,20 @@ public static class Program
                 var trace = FlowFieldBuilder.TracePath(flow, start, navCellsPerSide * navCellsPerSide);
                 if (trace[trace.Count - 1] != goal && corridor.Points == null) { pool.Give(flow); continue; }
 
-                var pts = corridor.Points != null && nav.Links == null
-                    ? corridor.Points
-                    : CorridorQuery.FlowPoints(flow, start)?.Points;
-                RenderPath(bundle, nav, flow, trace, pts, start, goal,
+                Fix64[]? pts;
+                int pointCount;
+                if (corridor.Points != null && nav.Links == null)
+                {
+                    pts = corridor.Points;
+                    pointCount = corridor.PointCount;
+                }
+                else
+                {
+                    pts = CorridorQuery.FlowPoints(flow, start)?.Points;
+                    pointCount = pts?.Length ?? 0;
+                }
+
+                RenderPath(bundle, nav, flow, trace, pts, pointCount, start, goal,
                     Path.Combine(outDir, $"{bundle.MapId}_s3c_{typeId}_p{shown}.png"));
                 shown++;
                 pool.Give(flow);
@@ -278,7 +288,7 @@ public static class Program
         return 0;
     }
 
-    private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int start, int goal, string path)
+    private static void RenderPath(SeedBundle bundle, NavContext nav, FlowField flow, List<int> trace, Fix64[]? pts, int pointCount, int start, int goal, string path)
     {
         var px = BaseLayer(bundle.Surface, bundle.Height);
         int navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
@@ -316,7 +326,7 @@ public static class Program
         // 折线(查询结果)品红
         if (pts != null)
         {
-            for (int k = 2; k < pts.Length; k += 2)
+            for (int k = 2; k < pointCount; k += 2)
             {
                 DrawLine(px,
                     (float)pts[k - 2].ToDouble() * csCm, (float)pts[k - 1].ToDouble() * csCm,

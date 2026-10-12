@@ -94,6 +94,12 @@ public sealed class CrowdNavGroupSet
         {
             if (_groups[i] is { Count: 0 } empty)
             {
+                if (empty.Flow is { } flow)
+                {
+                    flow.OriginPool?.Give(flow);
+                    empty.Flow = null;
+                }
+
                 _groups[i] = null;
                 _free.Push(i);
                 _objects.Push(empty);

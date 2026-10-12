@@ -86,7 +86,7 @@ public sealed class S3PathDemoPresentationSystem : ISystem<float>
         var current = _runtime.Current;
         if (current?.Points != null)
         {
-            int pointCount = current.Points.Length / 2;
+            int pointCount = current.PointCount / 2;
             Span<Vector2> pts = pointCount <= CrowdSimulationLimits.RoutePolylineStackLimit
                 ? stackalloc Vector2[pointCount]
                 : new Vector2[pointCount];

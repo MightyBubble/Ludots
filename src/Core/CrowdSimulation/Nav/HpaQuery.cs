@@ -13,29 +13,93 @@ public static class HpaQuery
 {
     private const int GoalKey = -2;
 
-    /// <summary>查询暂存(RT-03:每 worker 一份;与烘焙用的图内暂存互不相干)。</summary>
+    /// <summary>查询暂存(RT-03:每 worker 一份;与烘焙用的图内暂存互不相干)。
+    /// Relax 是方法而不是局部函数:局部函数会按每次搜索分配一个闭包。</summary>
     public sealed class Scratch
     {
         public Scratch(int navCellsPerTile)
         {
             StartDist = new Fix64[navCellsPerTile];
             GoalDist = new Fix64[navCellsPerTile];
+            GScore.EnsureCapacity(4096);
+            Parent.EnsureCapacity(4096);
+            Closed.EnsureCapacity(4096);
         }
 
         public Fix64[] StartDist { get; }
         public Fix64[] GoalDist { get; }
-        public NavMinHeap Heap { get; } = new(512);
-        public Dictionary<int, Fix64> GScore { get; } = new();
-        public Dictionary<int, int> Parent { get; } = new();
-        public HashSet<int> Closed { get; } = new();
+        public NavMinHeap Heap { get; } = new(8192);
+        public Dictionary<int, Fix64> GScore { get; } = new(4096);
+        public Dictionary<int, int> Parent { get; } = new(4096);
+        public HashSet<int> Closed { get; } = new(4096);
+        public int[] CellBuf { get; private set; } = new int[4096];
+        public int CellCount;
+        public int[] TileBuf { get; private set; } = new int[1024];
+        public int TileCount;
+        public readonly Result Found = new();
+        public Fix64 Gu;
+        public int U;
+        public Fix64 HMul;
+        public int GoalCell;
+        public int NavCellsPerSide;
+        public int N2;
+
+        public void Relax(int v, Fix64 w)
+        {
+            if (Closed.Contains(v)) return;
+            var ng = Gu + w;
+            if (!GScore.TryGetValue(v, out var gv) || ng < gv)
+            {
+                GScore[v] = ng;
+                Parent[v] = U;
+                Heap.Push(ng + NavGridSteps.Octile(v % N2, GoalCell, NavCellsPerSide) * HMul, v);
+            }
+        }
+
+        public void SetCells(int count)
+        {
+            if (CellBuf.Length < count)
+            {
+                var grown = new int[Math.Max(count, CellBuf.Length * 2)];
+                Array.Copy(CellBuf, grown, CellCount);
+                CellBuf = grown;
+            }
+
+            CellCount = count;
+        }
+
+        public void SetTiles(int count)
+        {
+            if (TileBuf.Length < count)
+            {
+                var grown = new int[Math.Max(count, TileBuf.Length * 2)];
+                Array.Copy(TileBuf, grown, TileCount);
+                TileBuf = grown;
+            }
+
+            TileCount = count;
+        }
+
+        public Result Publish(Fix64 cost, int expanded)
+        {
+            Found.TileIds = TileBuf;
+            Found.TileCount = TileCount;
+            Found.Cells = CellBuf;
+            Found.CellCount = CellCount;
+            Found.Cost = cost;
+            Found.Expanded = expanded;
+            return Found;
+        }
     }
 
     public sealed class Result
     {
-        public required int[] TileIds { get; init; }
-        public required int[] Cells { get; init; }
-        public required Fix64 Cost { get; init; }
-        public required int Expanded { get; init; }
+        public int[] TileIds = Array.Empty<int>();
+        public int TileCount;
+        public int[] Cells = Array.Empty<int>();
+        public int CellCount;
+        public Fix64 Cost;
+        public int Expanded;
     }
 
     /// <summary>tile 内 8 连通 Dijkstra(clusterDijkstra 移植),dist 按 tile 内局部下标填满。</summary>
@@ -82,7 +146,12 @@ public static class HpaQuery
             var d = s.StartDist[NavGridSteps.LocalIndex(goalCell, navCellsPerSide, navCellsPerTile)];
             if (d < inf)
             {
-                return new Result { TileIds = new[] { sc }, Cells = new[] { startCell, goalCell }, Cost = d, Expanded = 0 };
+                s.SetTiles(1);
+                s.TileBuf[0] = sc;
+                s.SetCells(2);
+                s.CellBuf[0] = startCell;
+                s.CellBuf[1] = goalCell;
+                return s.Publish(d, 0);
             }
         }
 
@@ -104,26 +173,19 @@ public static class HpaQuery
         }
 
         var best = Fix64.MaxValue;
-        int expanded = 0, u = 0;
-        var gu = Fix64.Zero;
-        void Relax(int v, Fix64 w)
-        {
-            if (closed.Contains(v)) return;
-            var ng = gu + w;
-            if (!g.TryGetValue(v, out var gv) || ng < gv)
-            {
-                g[v] = ng; parent[v] = u;
-                heap.Push(ng + NavGridSteps.Octile(v % n2, goalCell, navCellsPerSide) * hMul, v);
-            }
-        }
-
+        int expanded = 0;
+        s.HMul = hMul;
+        s.GoalCell = goalCell;
+        s.NavCellsPerSide = navCellsPerSide;
+        s.N2 = n2;
         while (heap.Size > 0)
         {
-            u = heap.Pop();
+            int u = heap.Pop();
+            s.U = u;
             if (u == GoalKey) break;
             if (!closed.Add(u)) continue;
             expanded++;
-            gu = g[u];
+            s.Gu = g[u];
             // 键 ≥ N² 是桥面节点:终点在地面,它们永远不会结束搜索
             int cl = NavGridSteps.TileOf(u % n2, navCellsPerSide, navCellsPerTile, navTilesPerSide);
             var b = blocks[cl];
@@ -131,35 +193,57 @@ public static class HpaQuery
             if (cl == gc && u < n2)
             {
                 var gd = s.GoalDist[NavGridSteps.LocalIndex(u, navCellsPerSide, navCellsPerTile)];
-                if (gd < inf && gu + gd < best)
+                if (gd < inf && s.Gu + gd < best)
                 {
-                    best = gu + gd; parent[GoalKey] = u; heap.Push(best, GoalKey);
+                    best = s.Gu + gd; parent[GoalKey] = u; heap.Push(best, GoalKey);
                 }
             }
 
-            for (int k = b.AdjStart[i]; k < b.AdjStart[i + 1]; k++) Relax(b.AdjTo[k], b.AdjCost[k]);
+            for (int k = b.AdjStart[i]; k < b.AdjStart[i + 1]; k++) s.Relax(b.AdjTo[k], b.AdjCost[k]);
             if (hpa.LinkOut.TryGetValue(u, out var lo))
             {
-                foreach (var (to, cost) in lo) Relax(to, cost);
+                for (int li = 0; li < lo.Count; li++) s.Relax(lo[li].To, lo[li].Cost);
             }
         }
 
         if (best >= inf) return null;
-        var path = new List<int>();
-        for (int v = parent[GoalKey]; v != -1; v = parent[v]) path.Add(v);
-        path.Reverse();
-        var tileIds = new List<int> { sc };
-        var cells = new List<int> { startCell };
-        foreach (int k2 in path)
+        int hops = 0;
+        for (int v = parent[GoalKey]; v != -1; v = parent[v]) hops++;
+        s.SetCells(hops + 2);
+        s.CellBuf[0] = startCell;
+        int write = hops;
+        for (int v = parent[GoalKey]; v != -1; v = parent[v]) s.CellBuf[write--] = v % n2;
+        s.CellBuf[hops + 1] = goalCell;
+        s.SetTiles(1);
+        s.TileBuf[0] = sc;
+        int tiles = 1;
+        for (int i = 1; i <= hops; i++)
         {
-            int c = k2 % n2;
-            cells.Add(c);
-            int cl = NavGridSteps.TileOf(c, navCellsPerSide, navCellsPerTile, navTilesPerSide);
-            if (tileIds[tileIds.Count - 1] != cl) tileIds.Add(cl);
+            int cl = NavGridSteps.TileOf(s.CellBuf[i], navCellsPerSide, navCellsPerTile, navTilesPerSide);
+            if (s.TileBuf[tiles - 1] != cl)
+            {
+                if (tiles == s.TileBuf.Length)
+                {
+                    s.TileCount = tiles;
+                    s.SetTiles(tiles + 1);
+                }
+
+                s.TileBuf[tiles++] = cl;
+            }
         }
 
-        cells.Add(goalCell);
-        if (tileIds[tileIds.Count - 1] != gc) tileIds.Add(gc);
-        return new Result { TileIds = tileIds.ToArray(), Cells = cells.ToArray(), Cost = best, Expanded = expanded };
+        if (s.TileBuf[tiles - 1] != gc)
+        {
+            if (tiles == s.TileBuf.Length)
+            {
+                s.TileCount = tiles;
+                s.SetTiles(tiles + 1);
+            }
+
+            s.TileBuf[tiles++] = gc;
+        }
+
+        s.TileCount = tiles;
+        return s.Publish(best, expanded);
     }
 }

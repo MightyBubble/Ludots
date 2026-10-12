@@ -59,8 +59,26 @@ public static class NavMeshAssembler
         }
 
         var res = new List<int>();
-        var (polyA, sideArrA, loA, hiA) = (ea.BorderPoly, ea.BorderSide, ea.BorderLo, ea.BorderHi);
-        var (polyB, sideArrB, loB, hiB) = (eb.BorderPoly, eb.BorderSide, eb.BorderLo, eb.BorderHi);
+        StitchInto(ea, eb, sideA, sideB, res);
+        var output = res.ToArray();
+        lock (_stitchMemoLock)
+        {
+            _stitchMemo[key] = output;
+        }
+
+        return output;
+    }
+
+    /// <summary>把缝合对写进调用方的表。查询侧复用这张表，不走上面的记忆化数组。</summary>
+    public static void StitchInto(NavTileEntry ea, NavTileEntry eb, int sideA, int sideB, List<int> dest)
+    {
+        dest.Clear();
+        var sideArrA = ea.BorderSide;
+        var loA = ea.BorderLo;
+        var hiA = ea.BorderHi;
+        var sideArrB = eb.BorderSide;
+        var loB = eb.BorderLo;
+        var hiB = eb.BorderHi;
         int bordersA = ea.LiveBorders, bordersB = eb.LiveBorders;
         for (int i = 0; i < bordersA; i++)
         {
@@ -69,17 +87,9 @@ public static class NavMeshAssembler
             {
                 if (sideArrB[j] != sideB) continue;
                 int lo = Math.Max(loA[i], loB[j]), hi = Math.Min(hiA[i], hiB[j]);
-                if (hi > lo) { res.Add(i); res.Add(j); res.Add(lo); res.Add(hi); }
+                if (hi > lo) { dest.Add(i); dest.Add(j); dest.Add(lo); dest.Add(hi); }
             }
         }
-
-        var output = res.ToArray();
-        lock (_stitchMemoLock)
-        {
-            _stitchMemo[key] = output;
-        }
-
-        return output;
     }
 
     /// <summary>清空记忆化(新烘焙会话的条目 uid 会复用,防陈旧引用)。</summary>

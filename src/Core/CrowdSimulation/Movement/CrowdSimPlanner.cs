@@ -86,7 +86,6 @@ public sealed class CrowdSimPlanner
     private struct LiveGroup
     {
         public PendingGroup Pg;
-        public PathResult Result;
     }
 
     private sealed class PendingPlan
@@ -197,7 +196,7 @@ public sealed class CrowdSimPlanner
                 var g = session.Groups.Groups[link.GroupId]!;
                 g.Goal = CrowdDeployment.NearestPassable(session.ResolveNavContext(g.NavId), link.GoalCell);
                 g.GoalComp = g.Goal >= 0 ? session.ResolveNavContext(g.NavId).Comp[g.Goal] : -2;
-                g.Flow = null;
+                if (g.Flow != null) RecycleFlow(g);
                 g.Leader = null;
                 g.Planning = true;
                 g.StateSeq++;
@@ -515,8 +514,10 @@ public sealed class CrowdSimPlanner
                 var nav = _session.ResolveNavContext(g.NavId);
                 if (nav.Version != pg.Version || g.NavId != pg.NavId) stale.Add(g);
                 g.Flow = result.Flow;
+                result.Flow = null;
+                _service.ReleaseReply(result);
                 g.Planning = false;
-                live[pg.GroupId] = new LiveGroup { Pg = pg, Result = result };
+                live[pg.GroupId] = new LiveGroup { Pg = pg };
             }
 
             FinishOrder(po, live);
@@ -651,8 +652,9 @@ public sealed class CrowdSimPlanner
 
             var leader = RentLeader();
             leader.Reset(
-                ToVec2Path(leaderResult.Points, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
+                ToVec2Path(leaderResult, navCellSizeCm), strictest.LayerIdx, session.ResolveNavContext(strictest.NavId),
                 o.Mode == CrowdOrderMode.Preserve, o.Face, fc.LeaderLookAheadNavCells * navCellCm, pace);
+            Recycle(leaderResult);
 
             // 质心取落帧时刻;起点格是请求时刻的,接受其 8 邻域
             Fix64 cx = Fix64.Zero, cy = Fix64.Zero;
@@ -751,19 +753,28 @@ public sealed class CrowdSimPlanner
 
     private static bool strictestPassable(NavContext nav, int cell) => nav.Passable[cell] != 0;
 
-    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×navCellSizeCm 换算。</summary>
-    private List<Fix64Vec2> ToVec2Path(Fix64[] points, int navCellSizeCm)
+    /// <summary>PathResult.Points 是格系坐标(格心 +0.5);领队走世界厘米,出服务边界处 ×navCellSizeCm 换算。只读活前缀。</summary>
+    private List<Fix64Vec2> ToVec2Path(PathResult result, int navCellSizeCm)
     {
         Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
         var path = _pathScratch;
         path.Clear();
-        for (int i = 0; i + 1 < points.Length; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
+        var points = result.Points;
+        int n = result.PointCount;
+        if (points == null) return path;
+        for (int i = 0; i + 1 < n; i += 2) path.Add(new Fix64Vec2(points[i] * navCellCm, points[i + 1] * navCellCm));
         return path;
     }
 
     private void Recycle(PathResult result)
     {
-        if (result.Flow is { } f) RecycleFlow(f);
+        if (result.Flow is { } f)
+        {
+            result.Flow = null;
+            RecycleFlow(f);
+        }
+
+        _service.ReleaseReply(result);
     }
 
     private void RecycleFlow(CrowdNavGroupSet.Group g)
@@ -806,6 +817,8 @@ public sealed class CrowdSimPlanner
 
         if (g.Flow is { } old) RecycleFlow(old);
         g.Flow = result.Flow;
+        result.Flow = null;
+        _service.ReleaseReply(result);
     }
 
     /// <summary>队伍反应(reactRebake 移植):对看到本次变更的组逐个判定——目标被挡 → 重规划指令;
