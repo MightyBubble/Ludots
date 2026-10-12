@@ -176,6 +176,20 @@ CrowdSimulationConfig.json: navtile.sizeCm（12500）/ profiles.cellSizeCm（625
 
 需要实体模板数据的检查在 `CrowdSimulationAuthoringContract`，由 Runtime 在进图激活时执行（配置装载后、烘焙与生成前），共三族：模板双求解器 Agent 互斥、模板 `CrowdSimulationAgent.profileId` 存在于 agent_profiles.json、地图阻挡物只能是正方形 Box。单位模板的（兵种 × 半径级）实例化闭包（模板存在、profile 的移动类型与半径级一致）在同一路径的接线预解析里校验。
 
+## 玩家、阵营和关系
+
+作者分三处写。
+
+地图 `Maps/<id>.json` 的 `Players[]` 写 `PlayerId`、`TeamId`、`RepresentativeInstanceId`。`Teams[]` 写 `TeamId` 和队伍代表的 `RepresentativeInstanceId`。玩家数 1 到 16。`TeamId` 必须大于 0。
+
+阵营是队伍代表实体。关系边写在队伍代表的 `Relations`：`To` 指向另一个队伍代表，或指向自己；`Type` 是关系类型 id。同队要让路或共享视野，就写一条指向自己的边。
+
+功能位写在标准参数 Mod 的 `CrowdSimulationConfig.json`，键是 `pairRules`。`yieldsTo.relation` 和 `sharesVisionWith.relation` 各点一个关系类型 id。这个 id 必须已经在 `RelationshipTypeRegistry` 里登记。群体配置不解释这个 id 的含义。让路的推挤参数 `push.movingBonus`、`push.dominantShare` 仍写在标准参数 Mod。
+
+会话激活时 `CrowdPairRulesProjection.Project` 用 `PlayerEntityLookup` 取每个玩家的代表实体，读代表上的 `Team`，再经 `TeamRelationQuery` 按队伍对查询这两类边，写成 `CrowdPairRules` 的玩家对矩阵。避让查 `yieldsTo` 投影出的表，视野组合组查 `sharesVisionWith`。`CrowdPairRulesSessionGuard` 在随后的 tick 里核对代表实体的 `Team` 和关系修订号；矩阵和开局不同就报错。
+
+`MemberOf` 是玩家代表到队伍代表的边。改这条边会抬修订号，`RelationshipRuntime` 把新的队伍号写入 `Team`。
+
 ## .navsurface v1 格式要点
 
 小端二进制：`magic "LNSF"` + version + 尺寸 / 格边长 + 地形类型表（id 字符串，格值 = 表下标）+ 逐格 u8 地形编号 + 跳跃候选（端点格、落差厘米、格距）。读取侧做精确长度校验（多一字节少一字节都拒绝）、编号越界拒绝、端点越界拒绝。资产的地形类型表必须与 `maps.<mapId>.terrainAreas` 逐字同序——编号语义是“表中下标”，顺序错一位全图错位。
