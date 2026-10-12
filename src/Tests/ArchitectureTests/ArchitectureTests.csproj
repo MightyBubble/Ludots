@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Graph\Ludots.Graph.Abstractions\Ludots.Graph.Abstractions.csproj" />
     <ProjectReference Include="..\..\Analyzers\Ludots.Analyzers.Layering\Ludots.Analyzers.Layering.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Libraries\DotRecast\src\DotRecast.Detour\DotRecast.Detour.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Tool\Ludots.Tool.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />

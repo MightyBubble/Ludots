@@ -102,8 +102,7 @@ namespace Ludots.Core.Navigation.NavMesh
             if (tileWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCm), "Tile width must be positive.");
             if (tileHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCm), "Tile height must be positive.");
 
-            DtMeshData data = BuildTileData(tile, tileWidthCm, tileHeightCm)
-                ?? throw new InvalidOperationException($"Failed to build Detour tile data for NavTile {tile.TileId}.");
+            DtMeshData data = BuildTileData(tile, tileWidthCm, tileHeightCm);
 
             return WriteDetourTileBytes(data);
         }
@@ -375,12 +374,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             for (int i = 0; i < filtered.Count; i++)
             {
-                DtMeshData? data = BuildTileData(filtered[i], tileWidthCm, tileHeightCm);
-                if (data == null)
-                {
-                    continue;
-                }
-
+                DtMeshData data = BuildTileData(filtered[i], tileWidthCm, tileHeightCm);
                 var addStatus = navMesh.AddTile(data, 0, 0, out _);
                 if (addStatus.Failed())
                 {
@@ -391,8 +385,14 @@ namespace Ludots.Core.Navigation.NavMesh
             return navMesh;
         }
 
-        internal static DtMeshData? BuildTileData(NavTile tile, int tileWidthCm, int tileHeightCm)
+        internal static DtMeshData BuildTileData(NavTile tile, int tileWidthCm, int tileHeightCm)
         {
+            if (tile.VertexCount >= 0xffff)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile {tile.TileId} at ({tile.OriginXcm}, {tile.OriginYcm}) cm cannot build Detour tile data: vertex count {tile.VertexCount} is at least 65535.");
+            }
+
             int minYcm = int.MaxValue;
             int maxYcm = int.MinValue;
             for (int i = 0; i < tile.VertexCount; i++)
@@ -456,7 +456,14 @@ namespace Ludots.Core.Navigation.NavMesh
                 buildBvTree = true
             };
 
-            return DtNavMeshBuilder.CreateNavMeshData(option);
+            DtMeshData data = DtNavMeshBuilder.CreateNavMeshData(option);
+            if (data == null)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile {tile.TileId} at ({tile.OriginXcm}, {tile.OriginYcm}) cm cannot build Detour tile data: vertex count {tile.VertexCount}, polygon count {tile.TriangleCount}.");
+            }
+
+            return data;
         }
 
         private static DtMeshData BuildFlatGridBaselineTileData(NavTile tile, int tileWidthCm, int tileHeightCm)

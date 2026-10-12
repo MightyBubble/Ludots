@@ -47,7 +47,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
     /// <summary>
     /// 发布（Replace / Unload / Reload）和查询都在游戏线程，这份网格不另加锁。
-    /// 修订号和已加载瓦片数都没变就复用；变了按瓦片引用差量 AddTile/RemoveTile，槽位不够或原点变了才整网重建一次。
+    /// 修订号、已加载数、层和瓦片尺寸都没变就复用；变了按瓦片引用差量 AddTile/RemoveTile，槽位不够或原点变了才整网重建一次。
     /// </summary>
     internal static class ResidentDetourNavMesh
     {
@@ -341,12 +341,7 @@ namespace Ludots.Core.Navigation.NavMesh
                         RemoveInstalled(mesh, tile.TileId);
                     }
 
-                    DtMeshData? data = DetourNavQueryEngine.BuildTileData(tile, tileWidthCm, tileHeightCm);
-                    if (data == null)
-                    {
-                        return false;
-                    }
-
+                    DtMeshData data = DetourNavQueryEngine.BuildTileData(tile, tileWidthCm, tileHeightCm);
                     DtStatus addStatus = mesh.AddTile(data, 0, 0, out long tileRef);
                     if (addStatus.Failed() || tileRef == 0)
                     {
@@ -390,12 +385,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 for (int i = 0; i < Filtered.Count; i++)
                 {
                     NavTile tile = Filtered[i];
-                    DtMeshData? data = DetourNavQueryEngine.BuildTileData(tile, tileWidthCm, tileHeightCm);
-                    if (data == null)
-                    {
-                        return false;
-                    }
-
+                    DtMeshData data = DetourNavQueryEngine.BuildTileData(tile, tileWidthCm, tileHeightCm);
                     DtStatus addStatus = navMesh.AddTile(data, 0, 0, out long tileRef);
                     if (addStatus.Failed() || tileRef == 0)
                     {

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using DotRecast.Detour;
 using Ludots.Core.Navigation.NavMesh;
 using NUnit.Framework;
 
@@ -113,6 +114,41 @@ public sealed class ResidentDetourNavMeshTests
         Assert.That(medianBytes, Is.LessThan(8L * 1024 * 1024));
     }
 
+    [Test]
+    public void UnbuildableTile_ThrowsAndDoesNotPublishSync()
+    {
+        const int chunkX = 3;
+        const int chunkY = 4;
+        NavTile tile = CreateOversizedVertexTile(chunkX, chunkY);
+        NavQueryService service = CreateQuery(tile);
+        NavTile loaded = service.Store.GetOrLoad(tile.TileId);
+        int originX = chunkX * TileSizeCm;
+        int originZ = chunkY * TileSizeCm;
+        IDtQueryFilter filter = DetourNavQueryEngine.BuildDefaultFilter(null!);
+
+        InvalidOperationException first = Assert.Throws<InvalidOperationException>(() =>
+            ResidentDetourNavMesh.FindPath(
+                service.Store, 0, filter, TileSizeCm, TileSizeCm,
+                originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000, 256));
+        Assert.Throws<InvalidOperationException>(() =>
+            ResidentDetourNavMesh.FindPath(
+                service.Store, 0, filter, TileSizeCm, TileSizeCm,
+                originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000, 256));
+
+        NavPathResult query = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
+        NavPathResult again = service.TryFindPath(originX + 1_000, originZ + 1_000, originX + 2_000, originZ + 2_000);
+
+        Assert.That(loaded.TileId, Is.EqualTo(tile.TileId));
+        Assert.That(first.Message, Does.Contain("3,4,0"));
+        Assert.That(first.Message, Does.Contain(originX.ToString()));
+        Assert.That(first.Message, Does.Contain(originZ.ToString()));
+        Assert.That(first.Message, Does.Contain("65535"));
+        Assert.That(query.Status, Is.EqualTo(NavPathStatus.InvalidInput));
+        Assert.That(again.Status, Is.EqualTo(NavPathStatus.InvalidInput));
+        Assert.That(service.ResidentMesh, Is.Null);
+        Assert.That(service.ResidentMeshBuildCount, Is.EqualTo(0));
+    }
+
     private static long Measure(NavQueryService service, int count)
     {
         long before = GC.GetAllocatedBytesForCurrentThread();
@@ -178,6 +214,31 @@ public sealed class ResidentDetourNavMeshTests
             n1: new[] { 1, -1 },
             n2: new[] { -1, 0 },
             triAreaIds: new byte[] { 0, 0 },
+            portals: Array.Empty<NavBorderPortal>());
+    }
+
+    private static NavTile CreateOversizedVertexTile(int chunkX, int chunkY)
+    {
+        const int vertexCount = 65535;
+        int originX = chunkX * TileSizeCm;
+        int originZ = chunkY * TileSizeCm;
+        return new NavTile(
+            new NavTileId(chunkX, chunkY, 0),
+            tileVersion: 1,
+            buildConfigHash: 0UL,
+            checksum: 0UL,
+            originX,
+            originZ,
+            vertexXcm: new int[vertexCount],
+            vertexYcm: new int[vertexCount],
+            vertexZcm: new int[vertexCount],
+            triA: new[] { 0 },
+            triB: new[] { 1 },
+            triC: new[] { 2 },
+            n0: new[] { -1 },
+            n1: new[] { -1 },
+            n2: new[] { -1 },
+            triAreaIds: new byte[] { 0 },
             portals: Array.Empty<NavBorderPortal>());
     }
 }
