@@ -12,10 +12,15 @@
         },
         {
           "trigger": "graph.aim_schemes.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.aim_schemes.restore_default_pick"
         }
       ],
       "onActivated": [
-        "graph.aim_schemes.bind_aim_actor"
+        "graph.aim_schemes.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
       ]
     }
   ]

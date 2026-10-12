@@ -53,6 +53,9 @@
         },
         {
           "trigger": "graph.interaction.shape_clear"
+        },
+        {
+          "trigger": "graph.interaction.restore_default_pick"
         }
       ],
       "onActivated": [

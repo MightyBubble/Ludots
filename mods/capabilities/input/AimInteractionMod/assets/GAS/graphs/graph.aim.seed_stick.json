@@ -15,55 +15,14 @@
         "op": "LoadCaster"
       },
       {
-        "id": "actors",
-        "op": "QueryFromCollection",
-        "collectionKey": "aim.actors"
-      },
-      {
-        "id": "c0",
-        "op": "ConstInt",
-        "intValue": 0
-      },
-      {
-        "id": "member",
-        "op": "TargetListGet"
-      },
-      {
-        "id": "alive",
-        "op": "LoadEntityPosValid"
-      },
-      {
-        "id": "alive_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "z",
-        "op": "ConstFloat",
-        "floatValue": 0
+        "id": "prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
       },
       {
         "id": "c1",
         "op": "ConstInt",
         "intValue": 1
-      },
-      {
-        "id": "sx",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.stick.x"
-      },
-      {
-        "id": "sy",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.stick.y"
-      },
-      {
-        "id": "sv",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.stick.valid"
-      },
-      {
-        "id": "halt0",
-        "op": "HaltReturnInt"
       },
       {
         "id": "halt",
@@ -74,135 +33,24 @@
       {
         "from": "rep",
         "fromPort": "next",
-        "to": "actors"
+        "to": "prep"
       },
       {
-        "from": "actors",
-        "fromPort": "next",
-        "to": "c0"
-      },
-      {
-        "from": "c0",
-        "fromPort": "next",
-        "to": "member"
-      },
-      {
-        "from": "member",
-        "fromPort": "next",
-        "to": "alive"
-      },
-      {
-        "from": "alive",
-        "fromPort": "next",
-        "to": "alive_jump"
-      },
-      {
-        "from": "alive_jump",
-        "fromPort": "false",
-        "to": "halt0"
-      },
-      {
-        "from": "alive_jump",
-        "fromPort": "true",
-        "to": "z"
-      },
-      {
-        "from": "z",
+        "from": "prep",
         "fromPort": "next",
         "to": "c1"
       },
       {
         "from": "c1",
         "fromPort": "next",
-        "to": "sx"
-      },
-      {
-        "from": "sx",
-        "fromPort": "next",
-        "to": "sy"
-      },
-      {
-        "from": "sy",
-        "fromPort": "next",
-        "to": "sv"
-      },
-      {
-        "from": "sv",
-        "fromPort": "next",
         "to": "halt"
       }
     ],
     "valueEdges": [
       {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "halt0",
-        "toPort": "value"
-      },
-      {
         "from": "c1",
         "fromPort": "value",
         "to": "halt",
-        "toPort": "value"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "actors",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "member",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "alive",
-        "toPort": "source"
-      },
-      {
-        "from": "alive",
-        "fromPort": "value",
-        "to": "alive_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sx",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "sx",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sy",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "sy",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "sv",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "sv",
         "toPort": "value"
       }
     ]

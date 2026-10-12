@@ -32,6 +32,9 @@
         },
         {
           "trigger": "graph.champion.arm_hostile_assist"
+        },
+        {
+          "trigger": "graph.champion.restore_default_pick"
         }
       ],
       "onActivated": [

@@ -47,50 +47,6 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "r_z",
-        "op": "ConstFloat",
-        "floatValue": 0
-      },
-      {
-        "id": "r_slot",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.slot"
-      },
-      {
-        "id": "r_valid",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.point.valid"
-      },
-      {
-        "id": "r_x",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.x_cm"
-      },
-      {
-        "id": "r_y",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.y_cm"
-      },
-      {
-        "id": "r_range",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.range_cm"
-      },
-      {
-        "id": "r_c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
-        "id": "r_null",
-        "op": "TargetListGet"
-      },
-      {
-        "id": "r_target",
-        "op": "WriteBlackboardEntity",
-        "blackboardKey": "aim.target"
-      },
-      {
         "id": "r_halt",
         "op": "HaltReturnInt"
       },
@@ -98,6 +54,16 @@
         "id": "r_pick",
         "op": "InvokeGraph",
         "functionName": "graph.aim.pick.hostile"
+      },
+      {
+        "id": "r_prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
+      },
+      {
+        "id": "r_refresh",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.refresh_gesture"
       }
     ],
     "controlEdges": [
@@ -142,59 +108,24 @@
         "to": "r_halt"
       },
       {
-        "from": "r_alive_jump",
-        "fromPort": "true",
-        "to": "r_z"
-      },
-      {
-        "from": "r_z",
-        "fromPort": "next",
-        "to": "r_slot"
-      },
-      {
-        "from": "r_slot",
-        "fromPort": "next",
-        "to": "r_valid"
-      },
-      {
-        "from": "r_valid",
-        "fromPort": "next",
-        "to": "r_x"
-      },
-      {
-        "from": "r_x",
-        "fromPort": "next",
-        "to": "r_y"
-      },
-      {
-        "from": "r_y",
-        "fromPort": "next",
-        "to": "r_range"
-      },
-      {
-        "from": "r_c99",
-        "fromPort": "next",
-        "to": "r_null"
-      },
-      {
-        "from": "r_null",
-        "fromPort": "next",
-        "to": "r_target"
-      },
-      {
-        "from": "r_target",
-        "fromPort": "next",
-        "to": "r_pick"
-      },
-      {
-        "from": "r_range",
-        "fromPort": "next",
-        "to": "r_c99"
-      },
-      {
         "from": "r_pick",
         "fromPort": "next",
+        "to": "r_refresh"
+      },
+      {
+        "from": "r_alive_jump",
+        "fromPort": "true",
+        "to": "r_prep"
+      },
+      {
+        "from": "r_refresh",
+        "fromPort": "next",
         "to": "r_halt"
+      },
+      {
+        "from": "r_prep",
+        "fromPort": "next",
+        "to": "r_pick"
       }
     ],
     "valueEdges": [
@@ -232,84 +163,6 @@
         "from": "r_c0",
         "fromPort": "value",
         "to": "r_halt",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_slot",
-        "toPort": "source"
-      },
-      {
-        "from": "r_c0",
-        "fromPort": "value",
-        "to": "r_slot",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_valid",
-        "toPort": "source"
-      },
-      {
-        "from": "r_c0",
-        "fromPort": "value",
-        "to": "r_valid",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_x",
-        "toPort": "source"
-      },
-      {
-        "from": "r_z",
-        "fromPort": "value",
-        "to": "r_x",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_y",
-        "toPort": "source"
-      },
-      {
-        "from": "r_z",
-        "fromPort": "value",
-        "to": "r_y",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_range",
-        "toPort": "source"
-      },
-      {
-        "from": "r_z",
-        "fromPort": "value",
-        "to": "r_range",
-        "toPort": "value"
-      },
-      {
-        "from": "r_c99",
-        "fromPort": "value",
-        "to": "r_null",
-        "toPort": "value"
-      },
-      {
-        "from": "r_actor",
-        "fromPort": "value",
-        "to": "r_target",
-        "toPort": "source"
-      },
-      {
-        "from": "r_null",
-        "fromPort": "value",
-        "to": "r_target",
         "toPort": "value"
       }
     ]

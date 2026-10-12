@@ -25,6 +25,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
@@ -693,6 +694,53 @@ namespace Ludots.Tests.GAS.Production
                 $"{BuildInputActionDiagnostics(engine, "RuneBurst")} || {BuildAbilityDiagnostics(engine, "Arcweaver")} || selected={string.Join(",", GetSelectedNames(engine))}");
         }
 
+        [Test]
+        public void InteractionShowcase_MidAimReselect_MovesIndicatorWithoutFailure()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            TestInputBackend backend = GetInputBackend(engine);
+            LoadMap(engine, HubMapId, frameTimesMs);
+
+            PlayerInputHandler input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler missing.");
+            input.PushContext("Aim.Gamepad");
+
+            SelectNamedEntity(engine, backend, "Arcweaver", frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/f4", frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 0f);
+            backend.SetAxis("<Gamepad>/rightStick/y", 0f);
+            Tick(engine, 1, frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/q", holdFrames: 2, frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 1f);
+            Tick(engine, 4, frameTimesMs);
+
+            Entity arcweaver = FindEntityByName(engine.World, "Arcweaver");
+            string before = DescribeAimActors(engine, arcweaver);
+            Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), before);
+            Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.GreaterThan(0), before);
+            Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.GreaterThan(0), before);
+
+            // aim.release is foreground, so the battle Select.Begin mount is parked for the gesture.
+            // Selection commit writes collection.command.source; that membership event is what rebind hears.
+            ReplaceCommandSource(engine, FindEntityByName(engine.World, "Vanguard"));
+            backend.SetAxis("<Gamepad>/rightStick/x", 0f);
+            Tick(engine, 1, frameTimesMs);
+            backend.SetAxis("<Gamepad>/rightStick/x", 0.75f);
+            Tick(engine, 6, frameTimesMs);
+
+            Entity vanguard = FindEntityByName(engine.World, "Vanguard");
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Vanguard"));
+            Assert.That(TriggerErrorText(engine), Is.EqualTo("<none>"), "stick aim after reselect");
+            Assert.That(CountActivePresenter(engine, "aim.range", vanguard), Is.GreaterThan(0), "range indicator on Vanguard");
+            Assert.That(CountActivePresenter(engine, "aim.line", vanguard), Is.GreaterThan(0), "line indicator on Vanguard");
+            Assert.That(CountActivePresenter(engine, "aim.range", arcweaver), Is.EqualTo(0), "old range indicator");
+            Assert.That(CountActivePresenter(engine, "aim.line", arcweaver), Is.EqualTo(0), "old line indicator");
+            Assert.That(ReadBlackboardInt(engine, vanguard, "aim.stick.valid"), Is.EqualTo(1), "stick sample on the new actor");
+
+            ReleaseButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+        }
+
         private static GameEngine CreateEngine()
         {
             string repoRoot = FindRepoRoot();
@@ -985,6 +1033,141 @@ namespace Ludots.Tests.GAS.Production
                 }
             });
             return result;
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity member)
+        {
+            Entity owner = GetLocalPlayer(engine);
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Assert.That(
+                collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view),
+                Is.True,
+                "command source");
+            EntityCollectionDescriptor descriptor = EntityCollectionDescriptor.Create(
+                view.Key,
+                view.SourceKind,
+                view.Role,
+                view.ContextEntity,
+                member,
+                view.Title,
+                view.Summary);
+            collections.Replace(owner, view.KeyId, descriptor, new[] { member }, default, default);
+        }
+
+        private static int ReadBlackboardInt(GameEngine engine, Entity entity, string key)
+        {
+            int keyId = OrderBlackboardKeyRegistry.Resolve(key);
+            if (!engine.World.TryGet(entity, out BlackboardIntBuffer ints) || !ints.TryGet(keyId, out int value))
+            {
+                throw new InvalidOperationException($"blackboard int '{key}' missing on entity {entity.Id}");
+            }
+
+            return value;
+        }
+
+        private static int CountActivePresenter(GameEngine engine, string definitionKey, Entity owner)
+        {
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionKey);
+            Assert.That(defId, Is.GreaterThan(0), definitionKey);
+            int found = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity _, ref PresenterState state) =>
+            {
+                if (state.DefId == defId && state.OwnerEntity == owner)
+                {
+                    found++;
+                }
+            });
+            return found;
+        }
+
+        private static string DescribeAimActors(GameEngine engine, Entity actor)
+        {
+            var parts = new List<string>
+            {
+                $"selected={GetSelectedEntityName(engine)}",
+                $"triggers={TriggerErrorText(engine)}",
+                $"contexts={DescribeContexts(engine)}",
+                $"presenters={DescribePresenters(engine, "aim.range")}/{DescribePresenters(engine, "aim.line")}",
+            };
+            try
+            {
+                parts.Add($"stick={ReadBlackboardInt(engine, actor, "aim.stick.valid")}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                parts.Add(ex.Message);
+            }
+
+            return string.Join(" || ", parts);
+        }
+
+        private static string DescribeContexts(GameEngine engine)
+        {
+            InteractionContextProfileRegistry? profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry);
+            if (profiles == null)
+            {
+                return "<no profiles>";
+            }
+
+            var parts = new List<string>();
+            var query = new QueryDescription().WithAll<Name, InteractionContextInstance>();
+            engine.World.Query(in query, (Entity entity, ref Name name, ref InteractionContextInstance instance) =>
+            {
+                parts.Add($"{name.Value}:{profiles.ProfileIdRegistry.GetName(instance.ContextId)}");
+            });
+            var derived = new QueryDescription().WithAll<Name, InteractionContextInstances>();
+            engine.World.Query(in derived, (Entity entity, ref Name name, ref InteractionContextInstances instances) =>
+            {
+                Span<int> ids = stackalloc int[16];
+                int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(engine.World, entity, ids);
+                for (int i = 0; i < count; i++)
+                {
+                    parts.Add($"{name.Value}:{profiles.ProfileIdRegistry.GetName(ids[i])}");
+                }
+            });
+            return parts.Count == 0 ? "<none>" : string.Join(",", parts);
+        }
+
+        private static string DescribePresenters(GameEngine engine, string definitionKey)
+        {
+            PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int defId = definitions.GetId(definitionKey);
+            var names = new List<string>();
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity _, ref PresenterState state) =>
+            {
+                if (state.DefId != defId)
+                {
+                    return;
+                }
+
+                string owner = engine.World.TryGet(state.OwnerEntity, out Name name) ? name.Value : state.OwnerEntity.Id.ToString();
+                names.Add(owner);
+            });
+            return names.Count == 0 ? "<none>" : string.Join(",", names);
+        }
+
+        private static string TriggerErrorText(GameEngine engine)
+        {
+            if (engine.TriggerManager.Errors.Count == 0)
+            {
+                return "<none>";
+            }
+
+            var parts = new List<string>();
+            int limit = Math.Min(4, engine.TriggerManager.Errors.Count);
+            for (int i = 0; i < limit; i++)
+            {
+                var error = engine.TriggerManager.Errors[i];
+                parts.Add($"{error.TriggerName}: {error.Exception.Message}");
+            }
+
+            return string.Join(" | ", parts);
         }
 
         private static Vector2 ReadPosition(World world, string name)
@@ -2206,7 +2389,14 @@ namespace Ludots.Tests.GAS.Production
                 _mouseWheel = wheel;
             }
 
-            public float GetAxis(string devicePath) => 0f;
+            private readonly Dictionary<string, float> _axes = new(StringComparer.Ordinal);
+
+            public void SetAxis(string devicePath, float value)
+            {
+                _axes[devicePath] = value;
+            }
+
+            public float GetAxis(string devicePath) => _axes.TryGetValue(devicePath, out float value) ? value : 0f;
             public bool GetButton(string devicePath) => _buttons.TryGetValue(devicePath, out var isDown) && isDown;
             public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => _mouseWheel;

@@ -17,6 +17,9 @@
         },
         {
           "trigger": "graph.moba.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.moba.restore_default_pick"
         }
       ],
       "onActivated": [

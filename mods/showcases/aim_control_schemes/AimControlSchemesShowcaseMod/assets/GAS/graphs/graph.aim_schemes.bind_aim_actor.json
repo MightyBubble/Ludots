@@ -66,20 +66,6 @@
         "functionName": "graph.aim.pick.hostile"
       },
       {
-        "id": "is_cast",
-        "op": "IsContextActive",
-        "context": "interaction.context.aim.cast"
-      },
-      {
-        "id": "cast_jump",
-        "op": "JumpIfFalse"
-      },
-      {
-        "id": "enter",
-        "op": "InvokeGraph",
-        "functionName": "graph.aim.enter"
-      },
-      {
         "id": "c1",
         "op": "ConstInt",
         "intValue": 1
@@ -91,6 +77,16 @@
       {
         "id": "halt0",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
+      },
+      {
+        "id": "refresh",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.refresh_gesture"
       }
     ],
     "controlEdges": [
@@ -142,32 +138,12 @@
       {
         "from": "alive_jump",
         "fromPort": "true",
-        "to": "pick"
+        "to": "prep"
       },
       {
         "from": "pick",
         "fromPort": "next",
-        "to": "is_cast"
-      },
-      {
-        "from": "is_cast",
-        "fromPort": "next",
-        "to": "cast_jump"
-      },
-      {
-        "from": "cast_jump",
-        "fromPort": "true",
-        "to": "c1"
-      },
-      {
-        "from": "cast_jump",
-        "fromPort": "false",
-        "to": "enter"
-      },
-      {
-        "from": "enter",
-        "fromPort": "next",
-        "to": "c1"
+        "to": "refresh"
       },
       {
         "from": "c1",
@@ -178,6 +154,16 @@
         "from": "alive_jump",
         "fromPort": "false",
         "to": "halt0"
+      },
+      {
+        "from": "prep",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "refresh",
+        "fromPort": "next",
+        "to": "c1"
       }
     ],
     "valueEdges": [
@@ -209,18 +195,6 @@
         "from": "alive",
         "fromPort": "value",
         "to": "alive_jump",
-        "toPort": "condition"
-      },
-      {
-        "from": "rep",
-        "fromPort": "value",
-        "to": "is_cast",
-        "toPort": "source"
-      },
-      {
-        "from": "is_cast",
-        "fromPort": "value",
-        "to": "cast_jump",
         "toPort": "condition"
       },
       {

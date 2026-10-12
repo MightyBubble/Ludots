@@ -42,48 +42,9 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "z",
-        "op": "ConstFloat",
-        "floatValue": 0
-      },
-      {
-        "id": "slot",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.slot"
-      },
-      {
-        "id": "valid",
-        "op": "WriteBlackboardInt",
-        "blackboardKey": "aim.point.valid"
-      },
-      {
-        "id": "x",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.x_cm"
-      },
-      {
-        "id": "y",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.point.y_cm"
-      },
-      {
-        "id": "rng",
-        "op": "WriteBlackboardFloat",
-        "blackboardKey": "aim.range_cm"
-      },
-      {
-        "id": "c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
-        "id": "null_get",
-        "op": "TargetListGet"
-      },
-      {
-        "id": "target",
-        "op": "WriteBlackboardEntity",
-        "blackboardKey": "aim.target"
+        "id": "prep",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.prepare_actor"
       },
       {
         "id": "act",
@@ -134,50 +95,10 @@
       {
         "from": "alive_jump",
         "fromPort": "true",
-        "to": "z"
+        "to": "prep"
       },
       {
-        "from": "z",
-        "fromPort": "next",
-        "to": "slot"
-      },
-      {
-        "from": "slot",
-        "fromPort": "next",
-        "to": "valid"
-      },
-      {
-        "from": "valid",
-        "fromPort": "next",
-        "to": "x"
-      },
-      {
-        "from": "x",
-        "fromPort": "next",
-        "to": "y"
-      },
-      {
-        "from": "y",
-        "fromPort": "next",
-        "to": "rng"
-      },
-      {
-        "from": "rng",
-        "fromPort": "next",
-        "to": "c99"
-      },
-      {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "null_get"
-      },
-      {
-        "from": "null_get",
-        "fromPort": "next",
-        "to": "target"
-      },
-      {
-        "from": "target",
+        "from": "prep",
         "fromPort": "next",
         "to": "act"
       },
@@ -227,84 +148,6 @@
         "fromPort": "value",
         "to": "alive_jump",
         "toPort": "condition"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "slot",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "slot",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "valid",
-        "toPort": "source"
-      },
-      {
-        "from": "c0",
-        "fromPort": "value",
-        "to": "valid",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "x",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "x",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "y",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "y",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "rng",
-        "toPort": "source"
-      },
-      {
-        "from": "z",
-        "fromPort": "value",
-        "to": "rng",
-        "toPort": "value"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
-        "toPort": "value"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
-        "to": "target",
-        "toPort": "source"
-      },
-      {
-        "from": "null_get",
-        "fromPort": "value",
-        "to": "target",
-        "toPort": "value"
       },
       {
         "from": "rep",

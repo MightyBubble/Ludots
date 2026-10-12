@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
@@ -117,6 +118,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
     {
         using Session session = Session.Boot("scheme.aim.kbm");
         session.AssertFriendlyTargetAbilityIsData();
+    }
+
+    [Test]
+    public void FriendlyCast_RestoresDefaultPickOnHover()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertFriendlyCastRestoresDefaultPick();
     }
 
     private enum AimSurface
@@ -399,6 +407,40 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(friendly), Diag("friendly pick relationship"));
             Assert.That(ReadFloat("aim.pick.pointer_radius_cm"), Is.EqualTo(160f), Diag("friendly pointer radius"));
             Assert.That(ReadFloat("aim.pick.stick_radius_cm"), Is.EqualTo(400f), Diag("friendly stick radius"));
+        }
+
+        public void AssertFriendlyCastRestoresDefaultPick()
+        {
+            RelationshipTypeRegistry types = _engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
+            int hostile = types.GetId("Hostile");
+            int friendly = types.GetId("Friendly");
+            Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(hostile), Diag("idle pick relationship"));
+
+            int abilityId = AbilityIdRegistry.GetId("Ability.AimSchemes.Friendly");
+            if (!_engine.World.Has<GrantedSlotBuffer>(Hero))
+            {
+                _engine.World.Add(Hero, default(GrantedSlotBuffer));
+            }
+
+            ref GrantedSlotBuffer granted = ref _engine.World.Get<GrantedSlotBuffer>(Hero);
+            granted.Grant(0, abilityId, sourceTagId: 0);
+            ref Team nearTeam = ref _engine.World.Get<Team>(Near);
+            nearTeam.Id = _engine.World.Get<Team>(Hero).Id;
+
+            SetMode("interaction.context.aim.click", "f3");
+            AimMouse(Position(Near));
+            PressSlot(AimSurface.KeyboardCursor, 0);
+            WaitUntil(AimGestureOpen, 4);
+            Assert.That(AimGestureOpen(), Is.True, Diag("friendly gesture"));
+            Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(friendly), Diag("friendly while aiming"));
+            Confirm(ConfirmControl.MouseLeft);
+            ReleaseSlot(AimSurface.KeyboardCursor, 0);
+            WaitUntil(() => !AimGestureOpen(), 4);
+            Assert.That(AimGestureOpen(), Is.False, Diag("friendly gesture closed"));
+            AimMouse(Position(Hero) + new Vector2(240f, 0f));
+            Assert.That(ReadInt("aim.pick.relationship"), Is.EqualTo(hostile), Diag("hover restored to default pick"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("friendly cast restore"));
         }
 
         private void AssertBootstrapped()
