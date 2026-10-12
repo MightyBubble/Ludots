@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Components;
@@ -8,9 +9,10 @@ using Ludots.Core.Mathematics.FixedPoint;
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
-/// 参考脚本到指令日志的行为级映射。真值文件仍是 select / selectAll / clearSelection
-/// 和无成员 order；选中不进校验码。这里在入日志前把它们译成带成员句柄的 order：
-/// 当时选中非空就用那份选中，否则用本方花名册（隐藏模板键除外）。
+/// 参考真值到指令日志的行为级映射。真值文件仍是 select / selectAll / clearSelection
+/// 和无成员 order；选中影子只活在这里，不进校验码，也不挂在会话上。
+/// <see cref="Step"/> 先把到点记录译成带成员句柄的 order，再让会话冲刷队列。
+/// 当时影子选中非空就用那份，否则用本方单位（带隐藏模板标签的除外）。
 /// 译完的日志不再含选中记录，回放只重放这份日志。
 /// </summary>
 public sealed class CrowdReferenceScript
@@ -100,6 +102,25 @@ public sealed class CrowdReferenceScript
         }
     }
 
+    public bool Step(CrowdSimSession sim, out ulong checksum)
+    {
+        ApplyDue(sim);
+        return sim.Step(out checksum);
+    }
+
+    public void Advance(CrowdSimSession sim, int ticks, List<ulong>? checksums = null)
+    {
+        int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
+        int ran = 0;
+        while (ran < ticks)
+        {
+            if (guard-- <= 0) throw new InvalidOperationException("会话推进停摆过长:路径服务答复未到。");
+            if (!Step(sim, out var hash)) continue;
+            ran++;
+            checksums?.Add(hash);
+        }
+    }
+
     public void ApplyDue(CrowdSimSession sim)
     {
         while (_index < _entries.Length && _entries[_index].Tick <= sim.TickCount)
@@ -137,7 +158,9 @@ public sealed class CrowdReferenceScript
                 sim.Commands.Submit<object?>(sim, order, CrowdSimCommands.Exec);
                 return;
             default:
-                sim.Commands.Submit<object?>(sim, CrowdSimCommand.Parse(cmd), CrowdSimCommands.Exec);
+                var parsed = CrowdSimCommand.Parse(cmd);
+                sim.Commands.Submit<object?>(sim, parsed, CrowdSimCommands.Exec);
+                if (parsed.Kind == CrowdSimCommandKind.Spawn) InvalidateShadow();
                 return;
         }
     }

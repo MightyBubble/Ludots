@@ -90,7 +90,7 @@ src/Tests/CrowdSimulationTests/      S0 验收测试
 
 - **一图一求解器互斥已在活路径**：配置门禁与实体模板合同都拒绝同一地图同时声明 MassNavigation 与 CrowdSimulation 求解器；这不是待办，是装载即拒的现行规则。
 - **crowd 会话对自己单位的位置写权**：单位位置、运动学、仿真身份组件由会话步进独占写入，引擎侧系统（分区同步、呈现投影）只读。会话步进系统注册在 PostMovement 组、排在 `SpatialPartitionUpdateSystem` 之前——分区按 `PreviousWorldPositionCm != WorldPositionCm` 判移动，步进晚于同步会让成员格冻结。其他组件域（GAS 效果、交互上下文）不写 crowd 会话状态。
-- **GAS 下令链**：现场右键经 `QueryFromCollection`（`selected` 非空用它，空则用 `crowd_simulation.roster`）→ `SubmitCommandIntent` → `CommandIntentBufferDrainSystem` → `CommandIntentProfileRegistry.RouteGroup` → `OrderQueue`。订单类型 `crowdSimulationMove` 由 `CrowdSimulationOrderBridgeSystem` 在会话步进之前整批收成一条带成员句柄的群体 `order`，成员在提交时钉死。花名册是本方单位里模板键不在隐藏集的那些；隐藏集默认空。群体指令日志仍是确定性记录。`AuthoritativeAction` 的帧合同装不下同 tick 顺序和变长成员（见上节），日志继续留在 `CrowdCommandQueue`。S3 的探路键鼠仍读 `AuthoritativeInput` 的 `PressedThisTick`。
+- **GAS 下令链**：现场右键经 `QueryFromCollection`（`selected` 非空用它，空则查玩家代表向外的 `Owns`，再用 `QueryFilterTagNone` 去掉带 `crowd_simulation.hidden_template` 的单位）→ `SubmitCommandIntent` → `CommandIntentBufferDrainSystem` → `CommandIntentProfileRegistry.RouteGroup` → `OrderQueue`。订单类型 `crowdSimulationMove` 在 `OrderBufferSystem` 登记外部消费者。桥在会话步进之前把该类型的批次收成一条带成员句柄的群体 `order`：地面点取 `WorldCm` 的 X 与 Z（写入时是 (X, 0, Y)），按整数截断，形状为 `box`（普通右键只有一个地面点，成员共用这一点）。同一批次由 `OrderBufferSystem` 写上 `EntityIntake`，`GlobalIntake` 在下一步开始时已经配过对。成员在提交时钉死。群体指令日志仍是确定性记录。`AuthoritativeAction` 的帧合同装不下同 tick 顺序和变长成员（见上节），日志继续留在 `CrowdCommandQueue`。S3 的探路键鼠仍读 `AuthoritativeInput` 的 `PressedThisTick`。
 
 ### 存档
 
@@ -244,7 +244,7 @@ S0 配置门禁 → S1 地形与障碍物（读 .navsurface、阻挡实体生成
 - **演示 = 数据脚本**：S4 演示 mod 删成纯数据（无 main）——`CrowdSimulationDebug.json` 声明 `session.autostart` + 一段与对拍资产同构的脚本（spawn 12000 → 四个基地外,另在地图中心给四个玩家各点一团 300 单位的展示生成,让镜头够得着）+ `autoReplayAtTick:150` 自动回放。真机日志：13220 单位全数落地、20 个体型 presenter 定义各数百实例激活、首单位视觉变换贴在地表（446.7 m）、回放逐帧对拍一致（status=1）。
 - **踩过的坑（已固化成代码注释）**：① 缺 `PreviousWorldPositionCm` 时 `WorldToVisualSyncSystem` 的查询直接捞不到单位,`VisualTransform` 永远停在默认值,presenter 全沉在（0,0,0）;② 缺 `ContinuousHeightmapSampleState` 时地形高度同步不写 Y,单位埋在海平面以下的地表里（探针打印首单位 vt 才看见 Y=0）;③ 引擎全局档案注册表是多特性合并产物,Core 的小体型（r20~80）并进来会把半径级挤歪、`NavFor(1,0)` 直接缺键——crowd 会话的档案来源改由 `agents.profilesUri` 显式声明,默认才回退全局注册表;④ presenter 配置的 `extends` 合并到行为槽位为止,`assetBinding` 是整换不并字段,变体干脆整段写全;⑤ 行为槽位有注册表,`cross` 的两根梁用 `body`+`orientation`,不能自造槽名。
 - **相机**：S4 mod 用同 id 片段把演示相机的 `edgePanMarginPx` 关成 0（无头跑证据时指针静置在窗口边缘会把镜头慢慢拖走,抓屏全都对不上）。
-- **选中与参考脚本**：选中只活在玩家代表的 `selected` 集合里，`CrowdSimulationUnitState` 不存选中，`select` / `selectAll` / `clearSelection` 不进群体指令日志。现场框选写这个集合；右键把提交当时的成员句柄钉进 `order`。参考真值 JSON 仍保留 select 记录和无成员 order，不重导。`CrowdReferenceScript` 在步进开头把它们译成带成员句柄的 order：当时影子选中非空就用那份，否则用本方花名册（隐藏模板键除外）。译后的日志不含选中记录，回放只重放这份日志。选中不进校验码，运动校验码与真值逐位相同。空成员在入日志前拒收，报错 `order: 成员集为空。`。S4 演示的玩家模板挂 `interaction.context.crowd_simulation.battle`，左键框选、右键下令走上面的主线图。
+- **选中与参考脚本**：选中只活在玩家代表的 `selected` 集合里，`CrowdSimulationUnitState` 不存选中，`select` / `selectAll` / `clearSelection` 不进群体指令日志。现场框选按修饰键替换、追加或减去，写进这个集合；右键把提交当时的成员句柄钉进 `order`，地面点取 `WorldCm` 的 X 与 Z。参考真值 JSON 仍保留 select 记录和无成员 order，不重导。对拍调用 `CrowdReferenceScript`：影子选中留在翻译器里，到点记录译成带成员句柄的 order（影子非空用影子，否则用本方单位，带 `crowd_simulation.hidden_template` 的除外），然后会话只冲刷队列。演示调试脚本走 `CrowdDemoScript`，到点的无成员 order 用本方单位补成员，不保留选中影子。译后的日志不含选中记录，回放只重放这份日志。选中不进校验码，运动校验码与真值逐位相同。空成员在入日志前拒收，报错 `order: 成员集为空。`。S4 演示的玩家模板挂 `interaction.context.crowd_simulation.battle`，左键框选、右键下令走上面的主线图。HUD 的选中数读本机座位的玩家号。
 
 ## S5-a 交付：移动内核与阵型（本次）
 

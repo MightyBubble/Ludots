@@ -100,9 +100,9 @@ public sealed class S5MovementSmokeTests
             new JsonObject { ["tick"] = 0, ["cmd"] = new JsonObject { ["type"] = "spawnAt", ["player"] = 1, ["xCm"] = 480000, ["yCm"] = 560000, ["count"] = 120, ["unitType"] = 0, ["rIdx"] = 0 } },
             new JsonObject { ["tick"] = 10, ["cmd"] = new JsonObject { ["type"] = "order", ["player"] = 1, ["xCm"] = 800000, ["yCm"] = 800000, ["shape"] = "box" } },
         };
-        session.ReferenceScript = CrowdReferenceScript.Load(script, session.Units.Capacity);
+        var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);
         var live = new List<ulong>();
-        session.Advance(200, live);
+        reference.Advance(session, 200, live);
         var log = session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray();
         Assert.That(log.Count(e => e.Cmd.Kind == CrowdSimCommandKind.Order), Is.EqualTo(1));
         Assert.That(log.Single(e => e.Cmd.Kind == CrowdSimCommandKind.Order).Cmd.Members, Has.Length.EqualTo(120));

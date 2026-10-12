@@ -40,10 +40,10 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        session.ReferenceScript = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         for (int t = 0; t < frames.Length; t++)
         {
-            Assert.That(session.Step(out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
+            Assert.That(script.Step(session, out var hash), Is.True, $"{seed} 第 {t + 1} 帧停摆");
             Assert.That(CrowdSimChecksum.Format(hash), Is.EqualTo(frames[t]), $"{seed} 第 {t + 1} 帧校验码不一致");
         }
 
@@ -81,9 +81,9 @@ public class S4DeployTruthTests
         var (runtime, session) = BuildSession(seed);
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(S1Dir(seed), "CrowdSimulation", "parity", "s4-deploy-truth.json")))!;
         var frames = truth["frames"]!.AsArray().Select(f => f!.GetValue<string>()).ToArray();
-        session.ReferenceScript = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(truth["script"]!.AsArray(), session.Units.Capacity);
         var first = new List<ulong>();
-        session.Advance(frames.Length, first);
+        script.Advance(session, frames.Length, first);
         var log = session.Commands.Log.Select(e => new CrowdCommand(e.Tick, e.Cmd)).ToArray();
         Assert.That(log.Any(e => e.Cmd.Kind is CrowdSimCommandKind.Order && (e.Cmd.Members == null || e.Cmd.Members.Length == 0)), Is.False);
 

@@ -65,10 +65,10 @@ public sealed class CrowdParallelDeterminismTests
         var session = scope.Session;
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;
-        session.ReferenceScript = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
 
         var checksums = new List<ulong>(ticks);
-        session.Advance(ticks, checksums);
+        script.Advance(session, ticks, checksums);
         int arrived = 0;
         for (int i = 0; i < session.Units.Count; i++)
         {
@@ -82,7 +82,7 @@ public sealed class CrowdParallelDeterminismTests
     {
         using var scope = Open(workerCount);
         var session = scope.Session;
-        session.ReferenceScript = CrowdReferenceScript.Load(new JsonArray
+        var script = CrowdReferenceScript.Load(new JsonArray
         {
             new JsonObject
             {
@@ -108,7 +108,7 @@ public sealed class CrowdParallelDeterminismTests
         CrowdOrder? order = null;
         for (int guard = 0; guard < 80; guard++)
         {
-            if (!session.Step(out var hash)) throw new InvalidOperationException("聚拢场景推进停摆。");
+            if (!script.Step(session, out var hash)) throw new InvalidOperationException("聚拢场景推进停摆。");
             checksums.Add(hash);
             if (session.Units.Count == 0) continue;
             var st = session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(0));
@@ -132,7 +132,7 @@ public sealed class CrowdParallelDeterminismTests
         Place(session, 0, pair.Inner, CrowdUnitState.Moving);
         Place(session, 1, pair.Outer, CrowdUnitState.Moving);
         var witnessBefore = Snapshot(session, pair);
-        if (!session.Step(out var placed)) throw new InvalidOperationException("摆位后的 tick 停摆。");
+        if (!script.Step(session, out var placed)) throw new InvalidOperationException("摆位后的 tick 停摆。");
         checksums.Add(placed);
 
         var after0 = session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(0));

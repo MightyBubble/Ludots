@@ -84,6 +84,8 @@ public sealed partial class CrowdSimulationRuntime
     private readonly ulong[] _hashValues = new ulong[4096];
     private int _hashCount, _hashHead;
     private readonly List<CrowdCommand> _pendingScript = new();
+    private CrowdDemoScript? _demoScript;
+    private GameEngine? _engine;
     private int _autoReplayAtTick = -1;
     private bool _autoReplayDone;
 
@@ -219,6 +221,7 @@ public sealed partial class CrowdSimulationRuntime
 
     private void Activate(GameEngine engine, MapId mapId, MapConfig mapConfig)
     {
+        _engine = engine;
         if (!_systemsInstalled)
         {
             _systemsInstalled = true;
@@ -345,7 +348,7 @@ public sealed partial class CrowdSimulationRuntime
             TemplatesByUnitTypeRadius = unitTypeTemplates,
             RadiusMetersBlackboardKeyId = ConfigKeyRegistry.Register(Keys.UnitRadiusKey),
             SelectedCollectionKeyId = collections.KeyRegistry.Register(SelectedCollectionKey),
-            RosterCollectionKeyId = collections.KeyRegistry.Register(CrowdSimPresentationWiring.RosterCollectionKey),
+            HiddenTemplateTagId = RequireHiddenTemplateTagId(),
             Collections = collections,
             CollectionApplier = engine.GetService(CoreServiceKeys.CollectionApplier),
             PlayerReps = playerReps,
@@ -398,9 +401,8 @@ public sealed partial class CrowdSimulationRuntime
                 rows.Add(new JsonObject { ["tick"] = entry.Tick, ["cmd"] = entry.Cmd.DeepClone() });
             }
 
-            var reference = CrowdReferenceScript.Load(rows, _session.Units.Capacity);
-            reference.ValidateStructure(_session);
-            _session.ReferenceScript = reference;
+            _demoScript = CrowdDemoScript.Load(rows);
+            _demoScript.ValidateStructure(_session);
         }
         _autoReplayAtTick = _debug.Session?.AutoReplayAtTick ?? -1;
         _autoReplayDone = false;
@@ -420,7 +422,7 @@ public sealed partial class CrowdSimulationRuntime
         }
 
         Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-            $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_session.ReferenceScript?.Count ?? 0}, autoReplayAt={_autoReplayAtTick}.");
+            $"CrowdSimulation session activated for map '{_activeMapId}': navs={navs.Count}, script={_demoScript?.Count ?? 0}, autoReplayAt={_autoReplayAtTick}.");
     }
 
     private void Deactivate(GameEngine engine)
@@ -436,6 +438,8 @@ public sealed partial class CrowdSimulationRuntime
         _hashCount = 0;
         _hashHead = 0;
         _pendingScript.Clear();
+        _demoScript = null;
+        _engine = null;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         engine.RemoveService(CoreServiceKeys.CrowdSimulationSession);
@@ -453,6 +457,7 @@ public sealed partial class CrowdSimulationRuntime
         (_pairRulesGuard ?? throw new InvalidOperationException("CrowdSimulation 会话缺少功能位修订检查。"))
             .CheckAtTickBoundary();
         long t0 = _tickWatch.ElapsedTicks;
+        _demoScript?.ApplyDue(session);
         if (!session.Step(out var hash))
         {
             if (!_stallLogged)
@@ -495,7 +500,7 @@ public sealed partial class CrowdSimulationRuntime
         {
             string presenters = _presenterRuntime?.BuildActiveDefinitionSummary(8) ?? "-";
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={session.SelectedCollectionCount(1)}, hash={Units.CrowdSimChecksum.Format(hash)}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
+                $"CrowdSimulation tick {session.TickCount}: units={session.Units.Count}, selected={FormatLocalSeatSelected(session)}, hash={Units.CrowdSimChecksum.Format(hash)}, presenters=[{presenters}], elapsed={_tickWatch.ElapsedMilliseconds}ms.");
         }
 
         WriteStats(session);
@@ -520,9 +525,8 @@ public sealed partial class CrowdSimulationRuntime
             TemplatesByUnitTypeRadius = session.Presentation.TemplatesByUnitTypeRadius,
             RadiusMetersBlackboardKeyId = session.Presentation.RadiusMetersBlackboardKeyId,
             SelectedCollectionKeyId = session.Presentation.SelectedCollectionKeyId,
-            RosterCollectionKeyId = session.Presentation.RosterCollectionKeyId,
+            HiddenTemplateTagId = session.Presentation.HiddenTemplateTagId,
             Collections = session.Presentation.Collections,
-            HiddenTemplateKeyIds = session.Presentation.HiddenTemplateKeyIds,
         };
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius, replayWiring);
         // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
@@ -598,7 +602,10 @@ public sealed partial class CrowdSimulationRuntime
         ref var blackboard = ref world.Get<BlackboardFloatBuffer>(_sessionEntity);
         blackboard.Set(StatKeyIds.Tick, session.TickCount);
         blackboard.Set(StatKeyIds.Units, session.Units.Count);
-        blackboard.Set(StatKeyIds.Selected, session.SelectedCollectionCount(1));
+        if (TryLocalSeatPlayerId(out int seatPlayer))
+        {
+            blackboard.Set(StatKeyIds.Selected, session.SelectedCollectionCount(seatPlayer));
+        }
         blackboard.Set(StatKeyIds.ReplayStatus, ReplayStatus);
         blackboard.Set(StatKeyIds.ReplayDivergenceTick, ReplayDivergenceTick);
         // F02 迷雾 HUD 计数:玩家 1 的视野组(无迷雾会话不写,呈现层回退缺省)
@@ -611,6 +618,34 @@ public sealed partial class CrowdSimulationRuntime
             blackboard.Set(StatKeyIds.FogGhosts, fog.GhostCount[g]);
             blackboard.Set(StatKeyIds.FogTerrain, fog.Terrain ? 1 : 0);
         }
+    }
+
+    public bool TryLocalSeatPlayerId(out int playerId)
+    {
+        playerId = 0;
+        if (_engine == null) return false;
+        var seats = _engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+        if (seats == null || !seats.TryGetSoleSeat(out Client.ClientLocalSeat seat)) return false;
+        if (seat.PossessedPlayerId <= 0) return false;
+        playerId = seat.PossessedPlayerId;
+        return true;
+    }
+
+    private string FormatLocalSeatSelected(CrowdSimSession session)
+        => TryLocalSeatPlayerId(out int playerId)
+            ? session.SelectedCollectionCount(playerId).ToString()
+            : "-";
+
+    private static int RequireHiddenTemplateTagId()
+    {
+        int id = TagRegistry.GetId(CrowdSimPresentationWiring.HiddenTemplateTag);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException(
+                "crowd_simulation.hidden_template 未登记。不参与全体下令的模板在模板数据里带上这个标签。");
+        }
+
+        return id;
     }
 
     private static string RequireHeightAssetPath(MapConfig mapConfig, MapId mapId)

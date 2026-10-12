@@ -45,7 +45,7 @@ public class S7RebakeSmokeTests
             scriptJson.Add(new JsonObject { ["tick"] = tick, ["cmd"] = JsonNode.Parse(json)!.AsObject() });
         }
 
-        session.ReferenceScript = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
 
         int rebakes = 0;
         int dirtyTiles = 0;
@@ -55,7 +55,7 @@ public class S7RebakeSmokeTests
             dirtyTiles += r.Tiles;
         };
         var first = new List<ulong>();
-        session.Advance(240, first);
+        script.Advance(session, 240, first);
         Assert.That(rebakes, Is.GreaterThanOrEqualTo(5), $"重烘报告次数 {rebakes}:建筑放置/拆除 + 路障放置/到期 + 道路");
         Assert.That(dirtyTiles, Is.GreaterThan(0), $"重烘焙到的脏 tile 累计 {dirtyTiles}:足迹必须真实盖住格心");
         // 建筑拆除后原阻挡格必须解封(该点后被道路覆盖,EntityAt 非空是对的,查阻挡栅格)

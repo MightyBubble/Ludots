@@ -71,7 +71,7 @@ public sealed class S7RebakeTruthTests
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7-rebake-truth.json")))!;
         var scriptJson = meta["script"]!.AsArray();
-        session.ReferenceScript = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
 
         var reports = new List<CrowdRebakeReport>();
@@ -104,10 +104,10 @@ public sealed class S7RebakeTruthTests
         string? firstModeMismatch = null, firstContactMismatch = null, firstStructuralMismatch = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }

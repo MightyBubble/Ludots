@@ -9,7 +9,8 @@
       { "id": "press_py", "op": "ReadBlackboardFloat", "blackboardKey": "crowd_simulation.press.py" },
       { "id": "pointer_x", "op": "LoadPointerScreenX" },
       { "id": "pointer_y", "op": "LoadPointerScreenY" },
-      { "id": "roster", "op": "QueryFromCollection", "collectionKey": "crowd_simulation.roster" },
+      { "id": "owns", "op": "RelationshipQueryOutgoing", "relationshipType": "Owns" },
+      { "id": "visible", "op": "QueryFilterTagNone", "tag": "crowd_simulation.hidden_template" },
       { "id": "rect_hits", "op": "ScreenRegionToEntities" },
       { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
     ],
@@ -18,12 +19,14 @@
       { "from": "press_px", "fromPort": "next", "to": "press_py" },
       { "from": "press_py", "fromPort": "next", "to": "pointer_x" },
       { "from": "pointer_x", "fromPort": "next", "to": "pointer_y" },
-      { "from": "pointer_y", "fromPort": "next", "to": "roster" },
-      { "from": "roster", "fromPort": "next", "to": "rect_hits" },
+      { "from": "pointer_y", "fromPort": "next", "to": "owns" },
+      { "from": "owns", "fromPort": "next", "to": "visible" },
+      { "from": "visible", "fromPort": "next", "to": "rect_hits" },
       { "from": "rect_hits", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
-      { "from": "rep", "fromPort": "value", "to": "roster", "toPort": "source" },
+      { "from": "rep", "fromPort": "value", "to": "owns", "toPort": "source" },
+      { "from": "owns", "fromPort": "list", "to": "visible", "toPort": "list" },
       { "from": "rep", "fromPort": "value", "to": "press_px", "toPort": "source" },
       { "from": "rep", "fromPort": "value", "to": "press_py", "toPort": "source" },
       { "from": "press_px", "fromPort": "value", "to": "rect_hits", "toPort": "a" },

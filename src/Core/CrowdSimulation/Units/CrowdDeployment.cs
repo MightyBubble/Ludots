@@ -27,7 +27,6 @@ public static class CrowdDeployment
 
         // 单位先清——后续任何异常都不会留下指着已清组的活单位
         sim.Units.Clear();
-        sim.NoteUnitsCleared();
         sim.Groups.Reset();
 
         var types = new List<int>();
@@ -98,7 +97,6 @@ public static class CrowdDeployment
 
         if (skipped > 0) sim.NotifySpawnSkip(skipped, total);
         sim.Groups.ReleaseEmpty();
-        sim.Units.CommitRoster();
         return made;
     }
 
@@ -142,7 +140,6 @@ public static class CrowdDeployment
         }
 
         sim.Groups.ReleaseEmpty();
-        sim.Units.CommitRoster();
         return made;
     }
 

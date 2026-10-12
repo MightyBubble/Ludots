@@ -191,8 +191,6 @@ public sealed class CrowdSimSession
     public int TickCount { get; private set; }
     public int SpawnSeq { get; set; }
     public int SpawnSkippedTotal { get; private set; }
-    /// <summary>参考脚本(select/无成员 order)的翻译器。Step 在冲刷队列前把它译成带成员的指令再入日志。</summary>
-    public CrowdReferenceScript? ReferenceScript { get; set; }
 
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
     public event Action<string>? Notified;
@@ -221,7 +219,6 @@ public sealed class CrowdSimSession
     /// </summary>
     public bool Step(out ulong checksum)
     {
-        ReferenceScript?.ApplyDue(this);
         Commands.Flush(this, CrowdSimCommands.Exec);
         if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
@@ -285,11 +282,7 @@ public sealed class CrowdSimSession
         TickCount = 0;
         SpawnSeq = 0;
         SpawnSkippedTotal = 0;
-        ReferenceScript?.Rewind();
     }
-
-    /// <summary>单位被整表清空后,参考选中影子里的句柄代已经作废。</summary>
-    public void NoteUnitsCleared() => ReferenceScript?.InvalidateShadow();
 
     /// <summary>
     /// 把成员句柄收成槽位世代标记。空集、失效句柄、重复句柄、玩家不符都在这里拒收,不改写成员集。

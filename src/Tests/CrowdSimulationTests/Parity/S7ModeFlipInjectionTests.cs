@@ -74,7 +74,7 @@ public sealed class S7ModeFlipInjectionTests
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7-rebake-truth.json")))!;
-        session.ReferenceScript = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
+        var script = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
 
         var bin = File.ReadAllBytes(Path.Combine(dir, "s7-rebake.bin"));
         int cursor = 4; // magic
@@ -91,10 +91,10 @@ public sealed class S7ModeFlipInjectionTests
         string? firstStructural = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }

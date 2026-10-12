@@ -6,11 +6,11 @@
 
 ## 判断标准结论
 
-新变体主要交付物是 **A**：已有 op 的连线（`QueryFromCollection` → `ScreenRegionToEntities` → `WriteCollection`；`QueryFromCollection` → `SubmitCommandIntent`）加上一条已有队列的消费（`OrderQueue` 按类型抽出 `crowdSimulationMove`）。
+新变体主要交付物是 **A**：已有 op 的连线（`RelationshipQueryOutgoing` → `QueryFilterTagNone` → `ScreenRegionToEntities` → `WriteCollection`；`selected` 或同一条 Owns 查询 → `SubmitCommandIntent`）加上 `OrderBufferSystem` 按订单类型把批次交给外部消费者。
 
 结论: **PASS**
 
-一句话理由: 选中与名单都走集合仓和既有图 op；空选中的“全体本方”是花名册图在提交前查出成员，内核不再把空成员改写成全体。
+一句话理由: 选中与“全体本方”都走既有图 op；空选中查玩家代表的 Owns，隐藏模板用标签滤掉。`OrderBufferSystem` 把 `crowdSimulationMove` 整批交给群体会话，并写上 EntityIntake。
 
 ## GAS Composition Gate — Self Review
 
@@ -24,38 +24,39 @@
 
 结论: PASS
 
-一句话理由: 框选与下令是图连线；`OrderQueue.DrainOrderType` 只是把已经入队的一种订单交还给它的消费者，不新开一条施法管线。
+一句话理由: 框选与下令是图连线。外部消费者是订单接入上的一种类型分发，不新开施法管线，也不新加 profile enum。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 框选命中 | 2 | `QueryFromCollection` + `ScreenRegionToEntities` + `WriteCollection` |
-| 下令成员 | 2 | `QueryFromCollection`（`selected` 或 `crowd_simulation.roster`）+ `SubmitCommandIntent` |
+| 框选命中 | 2 | `RelationshipQueryOutgoing`（Owns）+ `QueryFilterTagNone` + `ScreenRegionToEntities` + `WriteCollection` |
+| 框选修饰键 | 2 | `SwitchInt` 按 `MapTrigger.Modifiers` 选 Replace / Add / Subtract |
+| 下令成员 | 2 | `QueryFromCollection`（`selected`）或 Owns + 标签过滤 + `SubmitCommandIntent` |
 | 意图排空与路由 | 0 | `CommandIntentBufferDrainSystem` + `CommandIntentProfileRegistry.RouteGroup` |
 | 共享批次入队 | 0 | `OrderQueue.TryEnqueueSharedBatch` |
-| 群体订单出队 | 0 | `OrderQueue.DrainOrderType`（只抽一种订单类型，其余留在队列） |
-| 花名册入集 | 3 | 单位生成时 `CollectionApplier.Apply` 写入 `crowd_simulation.roster` |
-| 参考脚本翻译 | 3 | `CrowdReferenceScript` 在指令入日志前把参考 select/order 译成带成员的 order |
+| 外部订单消费者 | 0 | `OrderBufferSystem.RegisterExternalOrderConsumer`：整批交给消费者，并写 EntityIntake |
+| 隐藏模板 | 3 | 模板 `GameplayTagContainer` 带 `crowd_simulation.hidden_template` |
+| 参考脚本翻译 | 3 | 对拍调用 `CrowdReferenceScript`；演示脚本用 `CrowdDemoScript` 补本方句柄 |
 
 ### 3. Reuse list
 
-- Handlers: `QueryFromCollection`、`ScreenRegionToEntities`、`WriteCollection`、`SubmitCommandIntent`、`AggCount`、`BranchBool`
-- Queues / Systems: `CommandIntentSubmissionBuffer`、`CommandIntentBufferDrainSystem`、`OrderQueue`、`CrowdCommandQueue`
-- Resolvers / Registries: `CommandIntentProfileRegistry`、`OrderTypeRegistry`、`CollectionApplier`、`EntityCollectionStore`
-- Existing presets / graphs: RTS `graph.rts.select_hit` 与 Case E `graph.case_e.command_commit` 的连线形状
+- Handlers: `RelationshipQueryOutgoing`、`QueryFilterTagNone`、`QueryFromCollection`、`ScreenRegionToEntities`、`WriteCollection`、`SubmitCommandIntent`、`SwitchInt`、`AggCount`、`BranchBool`
+- Queues / Systems: `CommandIntentSubmissionBuffer`、`CommandIntentBufferDrainSystem`、`OrderQueue`、`OrderBufferSystem`、`CrowdCommandQueue`
+- Resolvers / Registries: `CommandIntentProfileRegistry`、`OrderTypeRegistry`、`CollectionApplier`、`EntityCollectionStore`、`TagRegistry`
+- Existing presets / graphs: Case E 框选修饰键开关；RTS `graph.rts.command_commit` 的空选中分支形状
 
 ### 4. New Layer 0 ops (if any)
 
 | Op 名 | 单一职责 | 为何不能组合现有 op |
 |-------|----------|---------------------|
-| 无新 graph op | | 本方过滤放在花名册集合里：`QueryScreenRegionCollection` 的派生源只能是 `QueryAllMapEntities` 计划，而计划谓词没有“同一 PlayerOwner”。`ScreenRegionToEntities` 能过滤调用方已经交给它的名单，花名册用 `QueryFromCollection` 读出即可。同队关系会把玩家 1 与玩家 3 算进同一边，不能当本方。 |
+| 无新 graph op | | `RelationshipQueryOutgoing` 在要求完整结果时，按 `QueryFromCollection` 的方式把目标缓冲长大再收一次。截断查询（flags == 1）仍把丢下的条数交给调用方。 |
 
-（`OrderQueue.DrainOrderType` 不是 graph op。队列原先只能整批 `TryDequeueBatch`，群体订单若留在队列里会被下一帧重复提交，也会被 `OrderBufferSystem` 当成单位订单消化。）
+`OrderBufferSystem` 的外部消费者按订单类型 id 登记。队头连续的已登记批次在会话步进前交出去，并按实体接入的方式写 EntityIntake，使 GlobalIntake 不会留到下一步。未登记类型留在队列里，走原来的单位订单接入。
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无。集合写入沿用 `CollectionApplier` 的单次替换；意图提交沿用现有 drain。参考脚本翻译失败时指令不入日志。
+必须原子 rollback 的步骤: 无。集合写入沿用 `CollectionApplier`。消费者在副作用之前校验；抛出时批次仍在队列里，EntityIntake 预约取消。
 
 ### 6. Config SSOT
 
@@ -63,15 +64,14 @@
 
 - `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/GAS/graphs/graph.crowd_simulation.*.json`
 - `mods/capabilities/navigation/CrowdSimulationMod/assets/GAS/order_types.json`（对象按键合并）
-- `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/interaction_context_profiles.json`（profiles 追加）
-- `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/command_intent_profiles.json`
+- `mods/capabilities/navigation/CrowdSimulationMod/assets/GAS/tag_rules.json`（`crowd_simulation.hidden_template`）
+- `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/interaction_context_profiles.json`
+- `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/command_intent_profiles.json`（只含 `intent.command.crowd_simulation`）
 - `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/default_input.json`
 
-图、交互上下文和意图档案放在 S4 演示 Mod：`command_intent_profiles.json` 整段替换 `profiles`，引擎集成测试不加载 S4，因此不会改掉只加载 CrowdSimulationMod 时的 `intent.command.default`。S4 这份片段仍带上现行默认档案，再加 `intent.command.crowd_simulation`。订单类型按键合并，放在 CrowdSimulationMod。
+`command_intent_profiles.json` 的 `profiles` 是以档案 id 为键的对象，同键深合并。S4 只放群体档案。订单类型与标签按键合并，放在 CrowdSimulationMod。
 
-是否新增 JSON schema: NO
-
-`command_intent_profiles.json` 的数组合并策略是整段替换（目录项没有把 `profiles` 列入追加字段）。群体这份片段因此带上现行的 `intent.command.default`，再追加 `intent.command.crowd_simulation`。改目录追加策略会让已经整段替换默认意图的 Mod 出现重复 id。
+是否新增 JSON schema: 否（`profiles` 从数组改成对象，加载器拒绝数组并写明要对象）
 
 ### 7. Red flag scan
 
@@ -82,13 +82,13 @@
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线
+「下一个 Mod 变体」将修改: graph 连线，或再登记一个订单类型消费者
 
 ## 复用 / 新增
 
 | 类型 | 项 |
 |------|-----|
-| 复用 | CollectionApplier、EntityCollectionStore、QueryFromCollection、ScreenRegionToEntities、WriteCollection、SubmitCommandIntent、CommandIntentBufferDrainSystem、OrderQueue 共享批次、dispatch.all_together |
-| 新增 Layer 0 | `OrderQueue.DrainOrderType` |
-| 新增 Layer 2 | 群体框选图、花名册下令图、`intent.command.crowd_simulation`、`crowdSimulationMove` |
-| 禁止 | 选中字节、SelectionMirror、select 指令、内核里把空成员改写成全体 |
+| 复用 | CollectionApplier、EntityCollectionStore、RelationshipQueryOutgoing、QueryFilterTagNone、QueryFromCollection、ScreenRegionToEntities、WriteCollection、SwitchInt、SubmitCommandIntent、CommandIntentBufferDrainSystem、OrderQueue 共享批次 |
+| 新增 Layer 0 | `OrderBufferSystem` 外部订单消费者 |
+| 新增 Layer 2 | 群体框选图、Owns 下令图、`intent.command.crowd_simulation`、`crowdSimulationMove` |
+| 禁止 | 选中字节、SelectionMirror、select 指令、花名册集合、内核里把空成员改写成全体 |

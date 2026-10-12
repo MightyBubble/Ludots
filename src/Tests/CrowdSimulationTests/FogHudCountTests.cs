@@ -47,17 +47,17 @@ public sealed class FogHudCountTests
             script.Add(new JsonObject { ["tick"] = row.Tick, ["cmd"] = row.Cmd });
         }
 
-        session.ReferenceScript = CrowdReferenceScript.Load(script, session.Units.Capacity);
+        var reference = CrowdReferenceScript.Load(script, session.Units.Capacity);
 
         var fog = session.Fog;
         int sawVisible = 0, sawExplored = 0, sawGhost = 0;
         int entitiesAfterBarrier = -1, entitiesAfterExpiry = -1;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!reference.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!reference.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
