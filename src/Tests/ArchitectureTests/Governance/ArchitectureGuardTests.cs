@@ -716,6 +716,61 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void Core_HasNoAbilityAimNames_AndPresentationEventsStayGeneric()
+        {
+            string repoRoot = FindRepoRoot();
+            string eventKindPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Platform",
+                "Ludots.Platform.Abstractions",
+                "PresentationEventKind.cs");
+            Assert.That(File.Exists(eventKindPath), Is.True, eventKindPath);
+            Assert.That(
+                File.ReadAllText(eventKindPath),
+                Does.Not.Contain("Aim"),
+                "Presentation event kinds stay generic. Aim visuals follow context and collection events.");
+
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Platform"),
+            };
+            var hits = new List<string>();
+            string[] forbidden = { "AbilityAim", "AbilityAcceptsTargetKind" };
+            for (int i = 0; i < roots.Length; i++)
+            {
+                foreach (string file in Directory.EnumerateFiles(roots[i], "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Retired ability-aim names and the targeting-kind graph op must not return:\n" +
+                string.Join("\n", hits));
+
+            string registry = File.ReadAllText(Path.Combine(
+                repoRoot, "src", "Core", "Gameplay", "GAS", "AbilityDefinitionRegistry.cs"));
+            string loader = File.ReadAllText(Path.Combine(
+                repoRoot, "src", "Core", "Gameplay", "GAS", "Config", "AbilityExecLoader.cs"));
+            Assert.That(registry, Does.Not.Contain("TargetKinds"));
+            Assert.That(loader, Does.Not.Contain("TargetKinds"));
+            Assert.That(
+                loader,
+                Does.Contain("Targeting rules belong in the TriggerGraphs this ability references."));
+        }
+
+        [Test]
         public void Epic322_AbilityAimOverlayNaming_IsRemoved()
         {
             var repoRoot = FindRepoRoot();
