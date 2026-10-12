@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
@@ -94,6 +95,7 @@ public sealed class CrowdSimUnits
                 throw new InvalidOperationException("CrowdSimulation 无头接线需要 EntityTemplateKeyRegistry。");
             }
 
+            PresentationLifecycleConsumption.DeclareNoConsumer(world);
             _receipts = new RuntimeEntitySpawnReceiptQueue(queueCapacity);
             var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
             _receiptChannelId = channels.Register(ReceiptChannelName);
@@ -423,9 +425,10 @@ public sealed class CrowdSimUnits
     }
 
     /// <summary>
-    /// 清空稠密表。已绑定且仍存活的单位走 ConsumeEntity，当帧从仿真里消失，
-    /// 实体留到呈现销毁发布之后才 Destroy。Entity.Null 占位不销毁。
-    /// 代 bump 与槽池 LIFO 序保持回放可复现。
+    /// 清空稠密表。已绑定且仍存活的单位走 ConsumeEntity，当帧从仿真里消失。
+    /// 引擎世界有呈现消费者，实体留到销毁事件发布之后才 Destroy。
+    /// 无头世界在构造时声明没有消费者，ConsumeEntity 当场收尾销毁。
+    /// Entity.Null 占位不销毁。代 bump 与槽池 LIFO 序保持回放可复现。
     /// </summary>
     public void Clear()
     {

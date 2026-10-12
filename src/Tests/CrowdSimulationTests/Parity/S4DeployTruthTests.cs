@@ -115,9 +115,24 @@ public class S4DeployTruthTests
         Assert.That(session.World.IsAlive(entity), Is.True);
         session.Units.Clear();
         Assert.That(session.Units.Count, Is.EqualTo(0));
-        Assert.That(session.World.IsAlive(entity), Is.True);
-        Assert.That(session.World.Has<PresentationDestroyPending>(entity), Is.True);
+        Assert.That(session.World.IsAlive(entity), Is.False);
+        Assert.That(session.World.Size, Is.EqualTo(0));
         CrowdMovementKernel.Create(session).GatherUnits();
+    }
+
+    [Test]
+    public void Clear_HeadlessWaves_KeepLiveEntityCountAtLastWave()
+    {
+        var (_, session) = BuildSession("s1337");
+        int[] waves = { 40, 40, 25 };
+        foreach (int count in waves)
+        {
+            session.Units.Clear();
+            int made = CrowdDeployment.Spawn(session, count);
+            Assert.That(made, Is.EqualTo(count));
+            Assert.That(session.Units.Count, Is.EqualTo(count));
+            Assert.That(session.World.Size, Is.EqualTo(count));
+        }
     }
 
     [Test]

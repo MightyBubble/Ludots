@@ -27,7 +27,7 @@ Layer 3  Preset           DeployConsumeSource 等封装名（给人抄）
 | Op | BuiltinHandler / Queue | 职责 |
 |----|------------------------|------|
 | `MaterializeTemplate` | 复用 spawn 物化 + presenter/map | 按 templateId 创建实体 |
-| `ConsumeEntity` | 新或 presentation lifecycle 包装 | 标记/销毁源实体 |
+| `ConsumeEntity` | presentation lifecycle 包装 | 标记源实体；没有呈现消费者时当场收尾销毁 |
 | `TransferStableId` | 新 | 源 → 目标 presentation id |
 | `CopyAttributeSlice` | 新或扩展 `ApplyModifiers` | 显式 attribute 列表 + Base/Current |
 | `CopyIdentityComponents` | 新 | PlayerOwner / Team（registry 扩展） |
@@ -36,6 +36,10 @@ Layer 3  Preset           DeployConsumeSource 等封装名（给人抄）
 | `CopyMapOwnership` | `RuntimeEntityMapOwnershipSupport` | 已有 |
 
 坐标：**不在任何 op profile 内**；SSOT 为 `EffectTargetPointResolver` + ability propose 阶段 placement validation（独立基建）。
+
+`ConsumeEntity` 调用 `PresentationEntityLifecycle.RequestDestroy`：挂 `PresentationDestroyPending`，并去掉已有的 `PresentationDestroyEventPublished`。引擎世界有呈现消费者时，下一帧 `PresentationEntityLifecycleSystem` 发布销毁事件，`PresentationEntityFinalizeDestroySystem` 看到 Pending 和 Published 之后才 `World.Destroy`。
+
+世界没有呈现生命周期消费者时，在该 `World` 上调用 `PresentationLifecycleConsumption.DeclareNoConsumer`。此后同一次 `ConsumeEntity` 在 RequestDestroy 之后走 `PresentationEntityFinalizeDestroySystem.FinalizeWithoutConsumer`：补上 Published，再进同一段 `FinalizePublished`。不声明的世界保持一帧后销毁。人群无头会话和回放会话在构造单位表时声明；引擎会话不声明。
 
 ## 4 Layer 1 — 事务壳
 
