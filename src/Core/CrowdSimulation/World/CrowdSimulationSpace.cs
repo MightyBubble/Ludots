@@ -31,7 +31,7 @@ public static class CrowdSimulationSpace
     /// 与 <c>(worldCm / FromInt(navCellSizeCm)).ToLong()</c> 同值；先 <see cref="Fix64.Floor"/> 再取整也同值。
     /// </summary>
     public static int NavCellCoord(Fix64 worldCm, int navCellSizeCm)
-        => (worldCm / Fix64.FromInt(navCellSizeCm)).FloorToInt();
+        => Fix64.DivPositiveInt(worldCm, navCellSizeCm).FloorToInt();
 
     /// <summary>厘米坐标 → 导航格号。越界钳到网格内；负坐标钳到 0。</summary>
     public static int CellAt(Fix64 xCm, Fix64 yCm, int navCellSizeCm, int navCellsPerSide)

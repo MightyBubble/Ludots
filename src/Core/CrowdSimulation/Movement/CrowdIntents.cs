@@ -201,7 +201,7 @@ public static class CrowdIntents
                 Fix64 ra = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, 0);
                 Fix64 rb = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, tx, ty, sc, 0);
                 if (ra < CrowdFlowSample.Unreachable / 4 && rb < CrowdFlowSample.Unreachable / 4 &&
-                    ra - rb > CrowdFix.Hypot(tx - px, ty - py) / s.Cs * RouteRatio + Fix64.OneValue)
+                    ra - rb > Fix64.DivPositiveInt(CrowdFix.Hypot(tx - px, ty - py), s.NavCellSizeCm) * RouteRatio + Fix64.OneValue)
                 {
                     vis = false;
                 }

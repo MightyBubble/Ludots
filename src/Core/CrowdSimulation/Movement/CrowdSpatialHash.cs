@@ -53,6 +53,10 @@ public sealed class CrowdSpatialHash
     public CrowdSpatialHash(int worldSizeCm, Fix64 navCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
         CellSizeCm = navCellSizeCm;
+        long cellRaw = navCellSizeCm.RawValue;
+        _cellSizeInt = cellRaw > 0 && (cellRaw & ((1L << Fix64.FractionalBits) - 1)) == 0
+            ? (int)(cellRaw >> Fix64.FractionalBits)
+            : 0;
         _rings = rings;
         _reachCm = reachCm;
         _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / navCellSizeCm).ToLong();
@@ -97,10 +101,14 @@ public sealed class CrowdSpatialHash
         return (ox.ToArray(), oy.ToArray(), ringEnd.ToArray());
     }
 
+    private readonly int _cellSizeInt;
+
     private int CellAtCm(Fix64 vCm)
     {
-        // 向零截断与参考端 (x * inv) | 0 逐字对齐
-        int c = (int)(vCm / CellSizeCm).ToLong();
+        // 向零截断与参考端 (x * inv) | 0 逐字对齐。格长是正整数时，非负坐标的商与定点除法逐位相同。
+        int c = _cellSizeInt != 0
+            ? (int)Fix64.DivPositiveInt(vCm, _cellSizeInt).ToLong()
+            : (int)(vCm / CellSizeCm).ToLong();
         return c < 0 ? 0 : c >= _dim ? _dim - 1 : c;
     }
 
