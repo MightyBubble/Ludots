@@ -1426,7 +1426,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallDummyInput(engine);
 
         var uiRoot = new UIRoot(new SkiaUiRenderer());

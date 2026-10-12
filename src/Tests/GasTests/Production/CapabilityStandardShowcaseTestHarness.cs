@@ -33,7 +33,7 @@ internal static class CapabilityStandardShowcaseTestHarness
         List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine, inputBackend ?? new NullInputBackend());
         engine.Start();
         return engine;

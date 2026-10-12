@@ -201,7 +201,8 @@ public sealed class DualSeatPanelsShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "DualSeatPanelsShowcaseMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine, backend);
         AcceptanceUiHostInstaller.Install(engine);
         engine.SetService(CoreServiceKeys.ViewController, (Ludots.Core.Presentation.Camera.IViewController)new HeadlessViewController(1920f, 1080f));

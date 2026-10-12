@@ -168,7 +168,8 @@ namespace Ludots.Tests.GAS
             // the mod's default profile) is merged before the mod installs at GameStart.
             engine.InitializeWithConfigPipeline(
                 WithSlotActions(RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" })),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallUiServices(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));

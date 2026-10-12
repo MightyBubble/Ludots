@@ -258,7 +258,8 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         mods = mods.ToArray();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         backend = InstallInput(engine);
         AcceptanceUiHostInstaller.Install(engine);
         return engine;

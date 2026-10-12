@@ -71,7 +71,10 @@ namespace ModdingTest
                 // Let's verify.
                 
                 Console.WriteLine("[Bootstrapper] Initializing...");
-                var result = GameBootstrapper.InitializeFromBaseDirectory(rootDir);
+                string userDataRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Ludots");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(rootDir, userDataRoot);
                 engine = result.Engine;
                 
                 Console.WriteLine("[Bootstrapper] Engine Initialized.");

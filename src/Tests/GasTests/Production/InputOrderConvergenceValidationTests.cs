@@ -24,7 +24,8 @@ namespace Ludots.Tests.GAS.Production
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                assetsRoot);
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var attributeSystems = GetSystems(engine, SystemGroup.AttributeCalculation);
 
@@ -42,7 +43,8 @@ namespace Ludots.Tests.GAS.Production
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }),
-                assetsRoot);
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
 
             var localInputNames = GetSystemNames(engine, SystemGroup.LocalInput);
@@ -114,7 +116,8 @@ namespace Ludots.Tests.GAS.Production
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                assetsRoot);
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);

@@ -78,7 +78,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
-                engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InstallDummyInput(engine);
                 engine.Start();
                 engine.LoadMap(mapId);

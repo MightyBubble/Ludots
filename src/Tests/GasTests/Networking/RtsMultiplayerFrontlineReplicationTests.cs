@@ -95,7 +95,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         using var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.AuthoritativeServer);
 
         await engine.TriggerManager.FireEventAsync(GameEvents.GameStart, engine.CreateContext());
@@ -2357,7 +2358,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             RepoModPaths.ResolveExplicit(
                 repoRoot,
                 role == NetworkProcessRole.Standalone ? FrontlineMods : FrontlineNetworkedMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         if (installPresentationServices)
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();

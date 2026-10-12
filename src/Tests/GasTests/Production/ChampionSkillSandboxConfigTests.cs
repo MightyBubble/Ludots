@@ -961,7 +961,7 @@ namespace Ludots.Tests.GAS.Production
                     GraphPath: null);
 
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                    firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot))!;
+                    firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot()))!;
                 Assert.That(ex.Message, Does.Contain("presentation.presenterInstanceCapacity"));
                 Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, originalSyncContext), Is.True);
 
@@ -974,7 +974,7 @@ namespace Ludots.Tests.GAS.Production
                 """);
 
                 using var secondEngine = new GameEngine();
-                Assert.DoesNotThrow(() => secondEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot));
+                Assert.DoesNotThrow(() => secondEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
                 Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, secondEngine.SyncContext), Is.True);
             }
             finally
@@ -990,7 +990,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, SandboxMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             InstallUi(engine);
             InstallHeadlessPresentation(engine);

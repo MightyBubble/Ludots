@@ -418,7 +418,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             var view = new StubViewController();
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)view);

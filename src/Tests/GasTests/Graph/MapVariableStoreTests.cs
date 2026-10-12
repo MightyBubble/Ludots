@@ -650,7 +650,8 @@ namespace Ludots.Tests.Gas.Graph
                         Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                         Path.Combine(Root, ModId),
                     },
-                    Path.Combine(repoRoot, "assets"));
+                    Path.Combine(repoRoot, "assets"),
+                    Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 return engine;
             }
 

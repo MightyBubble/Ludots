@@ -173,7 +173,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
 
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);

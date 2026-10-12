@@ -37,7 +37,8 @@ namespace Ludots.Tests.GasTests.Production
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, Mods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.Start();
             engine.LoadMap(MapId);

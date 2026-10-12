@@ -407,7 +407,7 @@ namespace Ludots.Tests.Presentation
                 modPaths.Add(tempModDir);
 
                 using var engine = new GameEngine();
-                engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+                engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 ApplyHostAssets(engine);
                 InstallInput(engine);
                 HeadlessPresentationTestHost.Install(engine);
@@ -858,7 +858,8 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, ShowcaseMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             ApplyHostAssets(engine);
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);

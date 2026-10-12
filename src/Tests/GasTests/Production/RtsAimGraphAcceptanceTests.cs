@@ -324,7 +324,8 @@ public sealed class RtsAimGraphAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
         for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)

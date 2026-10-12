@@ -53,6 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\EngineUserData.cs" Link="EngineUserData.cs" />
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />

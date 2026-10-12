@@ -520,7 +520,8 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
-                Path.Combine(FindRepoRoot(), "assets"));
+                Path.Combine(FindRepoRoot(), "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var backend = new TestInputBackend();
             var config = new InputConfigRoot
@@ -604,7 +605,8 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
-                Path.Combine(FindRepoRoot(), "assets"));
+                Path.Combine(FindRepoRoot(), "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var backend = new TestInputBackend();
             var config = new InputConfigRoot
@@ -684,7 +686,8 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
-                Path.Combine(FindRepoRoot(), "assets"));
+                Path.Combine(FindRepoRoot(), "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var backend = new TestInputBackend();
             var config = new InputConfigRoot

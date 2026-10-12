@@ -798,7 +798,8 @@ public sealed class MapLoadLifecycleOrderingTests
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                     Path.Combine(Root, "TestLifecycleMod")
                 },
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             return engine;
         }
 

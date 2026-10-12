@@ -231,7 +231,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallDummyInput(engine);
             var uiRoot = new UIRoot(new SkiaUiRenderer());
             uiRoot.Resize(1920f, 1080f);

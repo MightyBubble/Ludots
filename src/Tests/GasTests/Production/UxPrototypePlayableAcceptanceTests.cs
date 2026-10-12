@@ -850,7 +850,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
 
             AcceptanceUiHostInstaller.Install(engine);

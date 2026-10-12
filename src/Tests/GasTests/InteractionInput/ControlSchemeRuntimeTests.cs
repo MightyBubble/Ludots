@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -605,20 +606,37 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ResolveEnginePath_Blank_NamesTheGameJsonField()
+        public void ResolveConfiguredPath_Blank_NamesTheGameJsonField()
         {
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(
-                () => ClientControlSchemePreferenceStore.ResolveEnginePath("  "));
+                () => ClientControlSchemePreferenceStore.ResolveConfiguredPath("  ", Path.GetTempPath()));
             Assert.That(error!.Message, Does.Contain("controlSchemePreferencePath"));
         }
 
         [Test]
-        public void ResolveEnginePath_TestHost_UsesATempFile()
+        public void ResolveConfiguredPath_BlankRoot_NamesUserDataRoot()
         {
-            string path = ClientControlSchemePreferenceStore.ResolveEnginePath("user://control-scheme.json");
-            Assert.That(path, Does.Not.StartWith("user://"));
-            Assert.That(Path.GetFileName(path), Does.EndWith(".json"));
-            Assert.That(path, Does.Contain("ludots-control-scheme"));
+            ArgumentException error = Assert.Throws<ArgumentException>(
+                () => ClientControlSchemePreferenceStore.ResolveConfiguredPath("user://control-scheme.json", " "));
+            Assert.That(error!.ParamName, Is.EqualTo("userDataRoot"));
+        }
+
+        [Test]
+        public void ResolveConfiguredPath_UserScheme_ExpandsAgainstHostRoot()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "ludots-user-data", Guid.NewGuid().ToString("N"));
+            string path = ClientControlSchemePreferenceStore.ResolveConfiguredPath("user://control-scheme.json", root);
+            Assert.That(path, Is.EqualTo(Path.Combine(root, "control-scheme.json")));
+        }
+
+        [Test]
+        public void Initialize_BlankUserDataRoot_NamesTheParameter()
+        {
+            using var engine = new GameEngine();
+            ArgumentException error = Assert.Throws<ArgumentException>(
+                () => engine.InitializeWithConfigPipeline(new List<string>(), "unused-assets", " "));
+            Assert.That(error!.ParamName, Is.EqualTo("userDataRoot"));
+            Assert.That(error.Message, Does.Contain("userDataRoot"));
         }
 
         [Test]

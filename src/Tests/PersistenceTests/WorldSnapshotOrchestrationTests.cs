@@ -300,7 +300,8 @@ public sealed class WorldSnapshotOrchestrationTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadStartupMap();
         Assert.That(engine.GetService(CoreServiceKeys.SaveParticipants), Is.Not.Null);
         return engine;

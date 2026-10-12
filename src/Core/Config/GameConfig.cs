@@ -42,8 +42,8 @@ namespace Ludots.Core.Config
         public List<string> StartupInputContexts { get; set; } = new List<string>();
 
         /// <summary>
-        /// Where this client writes the active control scheme id. <c>user://</c> expands to the
-        /// per-user Ludots data directory. Blank fails engine startup by this field name.
+        /// Where this client writes the active control scheme id. <c>user://</c> expands against
+        /// the host-supplied user data root. Blank fails engine startup by this field name.
         /// </summary>
         public string? ControlSchemePreferencePath { get; set; }
 

@@ -196,7 +196,8 @@ public sealed class PanelButtonCommandsShowcaseAcceptanceTests
             RepoModPaths.ResolveExplicit(
                 repoRoot,
                 new[] { "LudotsCoreMod", "FireballSharedMod", "PanelButtonCommandsShowcaseMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
         for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)

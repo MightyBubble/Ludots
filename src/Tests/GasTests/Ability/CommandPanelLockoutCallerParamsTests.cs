@@ -43,7 +43,8 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");
 
             var clock = new DiscreteClock();
@@ -183,7 +184,8 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");
 
             var clock = new DiscreteClock();

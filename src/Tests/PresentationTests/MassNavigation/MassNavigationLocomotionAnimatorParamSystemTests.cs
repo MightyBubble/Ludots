@@ -71,7 +71,8 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World;
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);

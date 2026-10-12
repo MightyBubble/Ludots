@@ -223,7 +223,8 @@ public sealed class TcgPromptShowcaseAcceptanceTests
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "TcgDemoMod", "TcgPromptShowcaseMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)

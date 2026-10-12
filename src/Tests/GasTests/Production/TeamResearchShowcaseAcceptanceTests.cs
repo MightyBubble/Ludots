@@ -123,7 +123,8 @@ public sealed class TeamResearchShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
 
         AcceptanceUiHostInstaller.Install(engine);

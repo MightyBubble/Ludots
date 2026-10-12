@@ -184,7 +184,9 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | 半径和关系过滤搬进技能引用的规则图；友方技能引用另一张规则图 |
 | 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | `EntityCommandPanelMod` 出一份通用数据工具栏：按钮 = 输入动作 id（走现有 `InjectButtonPress`），高亮 = 偏好键取值或某个 context 是否开着。两份 C# 删掉 |
 | 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 已落地。这段 push / pop 和前 90 帧打回 `scheme.default` 的分支已删。座位方案见缺口 5 |
-| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`，展开到本机 Ludots 目录）。坏文件报路径。存的方案 id 不在允许集里直接抛。测试进程加载了 nunit.framework 时，每个引擎写自己的临时文件，避免后一个游戏读到前一个游戏的方案 id |
+| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`）。`user://` 按宿主传入的用户数据根展开。缺根在引擎初始化时报 `userDataRoot`。坏文件报路径。存的方案 id 不在允许集里直接抛。测试引擎每次传一个新的临时目录 |
+| 座位 `controlSchemeId` 在 SHOW-6 以外可以留空 | 空值保持当前已激活的方案，这是 `ParticipantBindingResolver` 的合同 | 已知，这轮不改。`CoreInputMod` 收尾时关掉：启动必须声明方案，缺了就报错 |
+| `allowedSchemes` 里同一个 id 出现两次 | 追加合并只往后接，不去重 | 已知。校验读到重复 id 直接失败关闭 |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**

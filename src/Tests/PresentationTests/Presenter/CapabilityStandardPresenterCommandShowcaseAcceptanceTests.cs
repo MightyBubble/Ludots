@@ -344,7 +344,7 @@ namespace Ludots.Tests.Presentation
             List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             return engine;

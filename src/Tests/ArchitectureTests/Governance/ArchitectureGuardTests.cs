@@ -2904,6 +2904,36 @@ namespace Ludots.Tests.Architecture.Governance
              }
         }
 
+        [Test]
+        public void Core_MustNotDetectTestHostOrResolveApplicationData()
+        {
+            string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core");
+            Assert.That(Directory.Exists(coreRoot), Is.True);
+            var hits = new List<string>();
+            foreach (string file in Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                    file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach ((int lineNumber, string text) in Ludots.Tests.Architecture.SourceTextScanner.ReadCodeLines(file))
+                {
+                    if (text.Contains("nunit", StringComparison.OrdinalIgnoreCase) ||
+                        text.Contains("IsTestHost", StringComparison.Ordinal) ||
+                        text.Contains("SpecialFolder.ApplicationData", StringComparison.Ordinal))
+                    {
+                        hits.Add($"{Path.GetRelativePath(coreRoot, file)}:{lineNumber}:{text.Trim()}");
+                    }
+                }
+            }
+
+            Assert.That(hits, Is.Empty,
+                "src/Core must not detect the test host or call SpecialFolder.ApplicationData.\n" +
+                string.Join("\n", hits));
+        }
+
         private static string FindRepoRootForGuards()
         {
             string dir = AppContext.BaseDirectory;

@@ -844,7 +844,7 @@ namespace Ludots.Tests.Architecture
                     }
                     """);
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine, Is.Not.Null);
@@ -948,7 +948,7 @@ namespace Ludots.Tests.Architecture
                     }
                     """);
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine, Is.Not.Null);
@@ -1044,7 +1044,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("missing plan freshness metadata"));
             }
@@ -1104,7 +1104,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(bootstrapJson, Does.Contain("PlanRootModIds"));
                 Assert.That(bootstrapJson, Does.Contain("PlanOrderedModIds"));
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath);
+                var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
                 try
                 {
@@ -1221,7 +1221,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(coreInputRoot, Does.Exist);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Stale launch graph rejected"));
                 Assert.That(ex.Message, Does.Contain("selectors"));
@@ -1623,7 +1623,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<Exception>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("unexpectedAdapterField"));
             }
@@ -1684,7 +1684,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Launch plan order is invalid"));
             }
@@ -1735,7 +1735,7 @@ namespace Ludots.Tests.Architecture
 
                 WriteBootstrap(bootstrapPath, "graph-order-fingerprint");
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
@@ -1769,7 +1769,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("missing launch graph metadata"));
             }
@@ -1829,7 +1829,7 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-invalid-order-fingerprint");
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Launch plan order is invalid"));
             }
@@ -1871,7 +1871,7 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-case-alias-fingerprint");
 
                 var ex = Assert.Throws<Exception>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("does not match plannedMods"));
             }

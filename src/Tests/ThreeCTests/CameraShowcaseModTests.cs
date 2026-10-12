@@ -218,7 +218,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             return engine;

@@ -101,7 +101,8 @@ public sealed class FormationCapabilityLifecycleTests
                     "MassNavigationMod",
                     "FormationCapabilityShowcaseMod",
                 }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new EmptyInputBackend();

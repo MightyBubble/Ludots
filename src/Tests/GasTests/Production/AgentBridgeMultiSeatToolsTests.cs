@@ -300,7 +300,8 @@ namespace Ludots.Tests.GasTests.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, Mods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             engine.MergedConfig.StartupPresentLayout = PresentBinding.HorizontalEqualSplitLayoutId;

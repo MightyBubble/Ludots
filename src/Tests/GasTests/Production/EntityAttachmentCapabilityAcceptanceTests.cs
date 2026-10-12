@@ -48,7 +48,8 @@ namespace Ludots.Tests.GAS.Production
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             engine.LoadMap(MapId);
             Assert.That(engine.CurrentMapSession, Is.Not.Null, "capability map must create a live session");

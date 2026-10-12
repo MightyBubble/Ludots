@@ -266,6 +266,11 @@ namespace Ludots.Core.Engine
         /// </summary>
         public GameConfig MergedConfig { get; private set; }
 
+        /// <summary>
+        /// Host directory for per-user data. <c>user://</c> expands against this root.
+        /// </summary>
+        public string UserDataRoot { get; private set; } = string.Empty;
+
         public void RegisterSystem(ISystem<float> system, SystemGroup group)
         {
             if (group == SystemGroup.LocalInput && system is ITimeSlicedSystem)
@@ -395,33 +400,45 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
-        /// <summary>
-        /// New initialization method using ConfigPipeline to merge game.json from all sources.
-        /// This is the recommended initialization path.
-        /// </summary>
         public RegistrationConflictReport ConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigConflictReport ConfigConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigCatalog ConfigCatalog { get; private set; }
         public Ludots.Core.Gameplay.AI.Config.AiCompiledRuntime AiRuntime { get; private set; }
         private Ludots.Core.GraphRuntime.GraphFunctionCatalog? _graphFunctionCatalog;
 
-        public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
+        /// <summary>
+        /// Initialize with ConfigPipeline merging game.json from Core and mods.
+        /// <paramref name="userDataRoot"/> is the host directory for per-user data; required.
+        /// <c>user://</c> expands against it.
+        /// </summary>
+        public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot, string userDataRoot)
         {
-            InitializeWithConfigPipelineInternal(modPaths, null, assetsRoot);
+            InitializeWithConfigPipelineInternal(modPaths, null, assetsRoot, userDataRoot);
         }
 
-        public void InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, string assetsRoot)
+        public void InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, string assetsRoot, string userDataRoot)
         {
             if (modPlan == null)
             {
                 throw new ArgumentNullException(nameof(modPlan));
             }
 
-            InitializeWithConfigPipelineInternal(null, modPlan, assetsRoot);
+            InitializeWithConfigPipelineInternal(null, modPlan, assetsRoot, userDataRoot);
         }
 
-        private void InitializeWithConfigPipelineInternal(List<string>? modPaths, ResolvedModLoadPlan? modPlan, string assetsRoot)
+        private void InitializeWithConfigPipelineInternal(
+            List<string>? modPaths,
+            ResolvedModLoadPlan? modPlan,
+            string assetsRoot,
+            string userDataRoot)
         {
+            if (string.IsNullOrWhiteSpace(userDataRoot))
+            {
+                throw new ArgumentException("userDataRoot is required.", nameof(userDataRoot));
+            }
+
+            UserDataRoot = userDataRoot;
+
             // Early log bootstrap with console backend — will be upgraded after config merge
             if (Diagnostics.Log.Backend is NullLogBackend)
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
@@ -1811,7 +1828,9 @@ namespace Ludots.Core.Engine
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            string schemePreferencePath = ClientControlSchemePreferenceStore.ResolveEnginePath(MergedConfig.ControlSchemePreferencePath);
+            string schemePreferencePath = ClientControlSchemePreferenceStore.ResolveConfiguredPath(
+                MergedConfig.ControlSchemePreferencePath,
+                UserDataRoot);
             var schemePreferences = new ClientControlSchemePreferenceStore(schemePreferencePath);
             schemePreferences.Load(schemePreferencePath);
             var controlSchemeRuntime = new ControlSchemeRuntime(

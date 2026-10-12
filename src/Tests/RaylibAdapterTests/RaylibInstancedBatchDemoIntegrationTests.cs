@@ -94,7 +94,7 @@ namespace Ludots.Tests.RaylibAdapter
             List<string> modPaths = ResolveModPaths(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "InstancedBatchDemoMod" });
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.RegisterPresentationAdapterCapabilities(
                 new PresentationAdapterCapabilities(RaylibHostComposer.ComposePresentationVisualCapabilities()));
             InstallInput(engine);

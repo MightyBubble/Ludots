@@ -152,7 +152,7 @@ namespace Ludots.Tests.GAS.Production
             List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
 
             var uiRoot = new UIRoot(new SkiaUiRenderer());

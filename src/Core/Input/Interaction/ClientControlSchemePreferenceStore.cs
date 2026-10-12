@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -81,13 +80,14 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Persist the active scheme id as JSON. <c>user://</c> expands to the per-user Ludots
-        /// data directory; parent directories are created on demand. Saving before any scheme
-        /// is active fails; the missing-file state is only produced by never having saved.
+        /// Persist the active scheme id as JSON. Parent directories are created on demand.
+        /// <c>user://</c> is rejected here: expand it against the host user data root first.
+        /// Saving before any scheme is active fails; the missing-file state is only produced
+        /// by never having saved.
         /// </summary>
         public void Save(string path)
         {
-            string effectivePath = ExpandUserPath(path);
+            string effectivePath = RequireExpandedPath(path);
             if (string.IsNullOrEmpty(_activeSchemeId))
             {
                 throw new InvalidOperationException(
@@ -118,7 +118,7 @@ namespace Ludots.Core.Input.Interaction
         /// </summary>
         public void Load(string path)
         {
-            string effectivePath = ExpandUserPath(path);
+            string effectivePath = RequireExpandedPath(path);
             if (!File.Exists(effectivePath))
             {
                 _activeSchemeId = string.Empty;
@@ -162,44 +162,38 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
-        /// Production keeps <paramref name="configuredPath"/> (<c>game.json</c>
-        /// <c>controlSchemePreferencePath</c>, usually <c>user://</c>). A process that has loaded
-        /// nunit.framework gets a fresh temp file: one shared user file would make a later game
-        /// in the same process fail when the saved id is outside its allowed set. The configured
-        /// path is still required in both hosts.
+        /// Resolve <c>game.json</c> <c>controlSchemePreferencePath</c>. A blank path fails by that
+        /// field name. <c>user://</c> expands against <paramref name="userDataRoot"/>; a blank root
+        /// fails by <c>userDataRoot</c>. Other paths are kept as given.
         /// </summary>
-        public static string ResolveEnginePath(string? configuredPath)
+        public static string ResolveConfiguredPath(string? configuredPath, string userDataRoot)
         {
+            if (string.IsNullOrWhiteSpace(userDataRoot))
+            {
+                throw new ArgumentException("userDataRoot is required.", nameof(userDataRoot));
+            }
+
             if (string.IsNullOrWhiteSpace(configuredPath))
             {
                 throw new InvalidOperationException("game.json controlSchemePreferencePath is required.");
             }
 
-            if (!IsTestHost())
+            if (!configuredPath.StartsWith("user://", StringComparison.Ordinal))
             {
                 return configuredPath;
             }
 
-            string directory = Path.Combine(Path.GetTempPath(), "ludots-control-scheme");
-            Directory.CreateDirectory(directory);
-            return Path.Combine(directory, Guid.NewGuid().ToString("N") + ".json");
-        }
-
-        private static bool IsTestHost()
-        {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for (int i = 0; i < assemblies.Length; i++)
+            string relative = configuredPath.Substring("user://".Length).TrimStart('/');
+            if (relative.Length == 0)
             {
-                if (string.Equals(assemblies[i].GetName().Name, "nunit.framework", StringComparison.Ordinal))
-                {
-                    return true;
-                }
+                throw new InvalidOperationException(
+                    "game.json controlSchemePreferencePath user:// has no path after the prefix.");
             }
 
-            return false;
+            return Path.Combine(userDataRoot, relative.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        private static string ExpandUserPath(string path)
+        private static string RequireExpandedPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -208,8 +202,8 @@ namespace Ludots.Core.Input.Interaction
 
             if (path.StartsWith("user://", StringComparison.Ordinal))
             {
-                return path.Replace("user://",
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Ludots/");
+                throw new InvalidOperationException(
+                    $"Preference path '{path}' still uses user://. Expand it against userDataRoot before saving or loading.");
             }
 
             return path;

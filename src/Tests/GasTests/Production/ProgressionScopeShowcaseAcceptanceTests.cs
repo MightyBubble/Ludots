@@ -118,7 +118,7 @@ namespace Ludots.Tests.GAS.Production
             });
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallDummyInput(engine);
             AcceptanceUiHostInstaller.Install(engine);
             engine.Start();

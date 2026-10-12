@@ -101,7 +101,8 @@ public sealed class GraphDebugToolTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, Mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }

@@ -78,7 +78,8 @@ public sealed class MassNavigationOrderAdapterInstallContractTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         return engine;
     }
 

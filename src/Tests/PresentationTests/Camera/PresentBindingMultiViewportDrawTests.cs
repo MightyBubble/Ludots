@@ -228,7 +228,7 @@ namespace Ludots.Tests.Presentation
             string assetsRoot = Path.Combine(repoRoot, "assets");
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod" });
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             engine.MergedConfig.StartupPresentLayout = layoutId;
             engine.SetService(CoreServiceKeys.ViewController, new ResizablePresentSurface(1920f, 1080f));

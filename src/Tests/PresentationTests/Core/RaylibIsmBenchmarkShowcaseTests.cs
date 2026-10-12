@@ -39,7 +39,7 @@ namespace Ludots.Tests.Presentation
                 new[] { "LudotsCoreMod", "CoreInputMod", "RaylibPlatformMeshesMod", "RaylibIsmBenchmarkShowcaseMod" });
 
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var renderer = new CapturingRaylibBenchmarkRenderer();
             engine.SetService(new ServiceKey<IRaylibBenchmarkRenderer>(RendererServiceKey), renderer);

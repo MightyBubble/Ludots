@@ -137,7 +137,8 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, TimerMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var input = new PlayerInputHandler(new NullInputBackend(), inputConfig);

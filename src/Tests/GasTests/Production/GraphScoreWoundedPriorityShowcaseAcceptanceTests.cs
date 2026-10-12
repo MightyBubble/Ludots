@@ -78,7 +78,8 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
                 "CoreInputMod",
                 "CapabilityStandardGraphScoreShowcaseMod"
             }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallDummyInput(engine);
         return engine;
     }

@@ -28,7 +28,8 @@ public sealed class EntityCommandPanelAuthoringAcceptanceTests
             RepoModPaths.ResolveExplicit(
                 repoRoot,
                 new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" }),
-            assetsRoot);
+            assetsRoot,
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);
         try
         {

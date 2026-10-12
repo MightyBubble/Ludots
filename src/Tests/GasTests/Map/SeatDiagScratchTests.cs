@@ -37,7 +37,7 @@ namespace Ludots.Tests.GAS
             };
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"), Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
 
             TestContext.Out.WriteLine($"HasStartupLocalSeats={engine.MergedConfig?.HasStartupLocalSeats}");

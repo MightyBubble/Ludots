@@ -205,7 +205,13 @@ public static class LauncherEvidenceRecorder
 
     private static RecordingRuntime CreateRaylibRuntime(LauncherLaunchPlan plan, string bootstrapPath)
     {
-        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
+        string userDataRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Ludots");
+        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
+            plan.AppOutputDirectory,
+            bootstrapPath,
+            userDataRoot);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
         try
@@ -311,7 +317,13 @@ public static class LauncherEvidenceRecorder
 
     private static RecordingRuntime CreateWebRuntime(LauncherLaunchPlan plan, string bootstrapPath)
     {
-        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
+        string userDataRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Ludots");
+        var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
+            plan.AppOutputDirectory,
+            bootstrapPath,
+            userDataRoot);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
         try

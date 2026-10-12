@@ -36,7 +36,13 @@ namespace Ludots.Adapter.Web
             ILogBackend effectiveBackend = consoleBackend;
             Log.Initialize(effectiveBackend);
 
-            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            string userDataRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Ludots");
+            var result = GameBootstrapper.InitializeFromBaseDirectory(
+                baseDir,
+                gameConfigFile ?? "launcher.runtime.json",
+                userDataRoot);
             var engine = result.Engine;
             var config = result.Config;
 

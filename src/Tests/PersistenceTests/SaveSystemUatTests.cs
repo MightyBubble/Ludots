@@ -233,7 +233,8 @@ public sealed class SaveSystemUatTests
                 "RtsDemoMod",
                 "RtsCncTrainingShowcaseMod"
             }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadMap("rts_cnc_training");
         Assert.That(engine.GetService(CoreServiceKeys.SaveParticipants), Is.Not.Null);
         return engine;
@@ -244,7 +245,8 @@ public sealed class SaveSystemUatTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadStartupMap();
         Assert.That(engine.GetService(CoreServiceKeys.SaveParticipants), Is.Not.Null);
         return engine;

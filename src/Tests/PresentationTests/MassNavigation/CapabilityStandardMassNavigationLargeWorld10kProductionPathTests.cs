@@ -878,7 +878,8 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, ShowcaseMods),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             ApplyHostAssets(engine);
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);

@@ -295,7 +295,8 @@ namespace Ludots.Tests.GAS
             // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallUiServices(engine);
             InstallTestAggregationProfiles(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());

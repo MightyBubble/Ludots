@@ -259,7 +259,7 @@ namespace Ludots.Tests.Gas
             }.ToList();
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, _coreRoot);
+            engine.InitializeWithConfigPipeline(modPaths, _coreRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             return engine;
         }

@@ -52,9 +52,14 @@ public static class GraphOpsHeadlessGameEngine
         }
 
         var engine = new GameEngine();
+        // Gallery auxiliary engine. Acceptance runs construct it too, and scheme install writes
+        // the preference file, so this root stays a fresh directory per engine.
+        string userDataRoot = Path.Combine(Path.GetTempPath(), "ludots-user-data", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(userDataRoot);
         engine.InitializeWithConfigPipeline(
             ResolveModPaths(repoRoot, modIds),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            userDataRoot);
         InstallNullInput(engine);
         return engine;
     }

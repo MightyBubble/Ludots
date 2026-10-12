@@ -170,7 +170,8 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
                     RepoModPaths.ResolveExplicit(
                         repoRoot,
                         new[] { "LudotsCoreMod", "AimInteractionMod", "AimControlSchemesShowcaseMod" }),
-                    Path.Combine(repoRoot, "assets"));
+                    Path.Combine(repoRoot, "assets"),
+                    Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InputConfigRoot inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var input = new PlayerInputHandler(backend, inputConfig);
                 for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)

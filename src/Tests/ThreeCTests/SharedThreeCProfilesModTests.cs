@@ -22,7 +22,7 @@ namespace Ludots.Tests.ThreeC
             });
 
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             Assert.That(registry, Is.Not.Null);

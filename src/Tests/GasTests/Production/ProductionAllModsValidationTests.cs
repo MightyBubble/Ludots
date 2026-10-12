@@ -264,7 +264,7 @@ namespace Ludots.Tests.GAS.Production
                 {
                     var ex = Assert.Throws(modCase.ExpectedExceptionType ?? typeof(Exception), () =>
                     {
-                        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                     });
                     if (!string.IsNullOrWhiteSpace(modCase.ExpectedMessageContains))
                     {
@@ -273,7 +273,7 @@ namespace Ludots.Tests.GAS.Production
                     return;
                 }
 
-                engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InstallDummyInput(engine);
 
                 engine.Start();

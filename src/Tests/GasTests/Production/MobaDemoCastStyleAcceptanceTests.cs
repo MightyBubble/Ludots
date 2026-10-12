@@ -230,7 +230,8 @@ public sealed class MobaDemoCastStyleAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         backend = new TestInputBackend();
