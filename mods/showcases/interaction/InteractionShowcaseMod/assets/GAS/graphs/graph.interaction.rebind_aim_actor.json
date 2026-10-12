@@ -15,19 +15,110 @@
         "op": "LoadCaster"
       },
       {
-        "id": "r_q",
+        "id": "r_c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "r_c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "r_c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "r_c99",
+        "op": "ConstInt",
+        "intValue": 99
+      },
+      {
+        "id": "r_z",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "q_a",
         "op": "QueryFromCollection",
         "collectionKey": "collection.command.source"
       },
       {
-        "id": "r_lim",
+        "id": "lim_a",
         "op": "QueryLimit",
         "intValue": 1
       },
       {
-        "id": "r_c0",
-        "op": "ConstInt",
-        "intValue": 0
+        "id": "f_a",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_arcweaver"
+      },
+      {
+        "id": "cnt_a",
+        "op": "AggCount"
+      },
+      {
+        "id": "eq_a",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump_a",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_v",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "lim_v",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "f_v",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_vanguard"
+      },
+      {
+        "id": "cnt_v",
+        "op": "AggCount"
+      },
+      {
+        "id": "eq_v",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump_v",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_c",
+        "op": "QueryFromCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "lim_c",
+        "op": "QueryLimit",
+        "intValue": 1
+      },
+      {
+        "id": "f_c",
+        "op": "QueryFilterTemplate",
+        "template": "interaction_commander"
+      },
+      {
+        "id": "cnt_c",
+        "op": "AggCount"
+      },
+      {
+        "id": "eq_c",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jump_c",
+        "op": "JumpIfFalse"
       },
       {
         "id": "r_write",
@@ -45,11 +136,6 @@
       {
         "id": "r_alive_jump",
         "op": "JumpIfFalse"
-      },
-      {
-        "id": "r_z",
-        "op": "ConstFloat",
-        "floatValue": 0
       },
       {
         "id": "r_slot",
@@ -77,11 +163,6 @@
         "blackboardKey": "aim.range_cm"
       },
       {
-        "id": "r_c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "r_null",
         "op": "TargetListGet"
       },
@@ -89,6 +170,16 @@
         "id": "r_target",
         "op": "WriteBlackboardEntity",
         "blackboardKey": "aim.target"
+      },
+      {
+        "id": "q_clear",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "w_clear",
+        "op": "WriteCollection",
+        "collectionKey": "aim.actors"
       },
       {
         "id": "r_halt",
@@ -99,22 +190,122 @@
       {
         "from": "r_rep",
         "fromPort": "next",
-        "to": "r_q"
+        "to": "q_a"
       },
       {
-        "from": "r_q",
+        "from": "q_a",
         "fromPort": "next",
-        "to": "r_lim"
+        "to": "lim_a"
       },
       {
-        "from": "r_lim",
+        "from": "lim_a",
         "fromPort": "next",
-        "to": "r_c0"
+        "to": "f_a"
       },
       {
-        "from": "r_c0",
+        "from": "f_a",
         "fromPort": "next",
+        "to": "cnt_a"
+      },
+      {
+        "from": "cnt_a",
+        "fromPort": "next",
+        "to": "eq_a"
+      },
+      {
+        "from": "eq_a",
+        "fromPort": "next",
+        "to": "jump_a"
+      },
+      {
+        "from": "jump_a",
+        "fromPort": "true",
         "to": "r_write"
+      },
+      {
+        "from": "jump_a",
+        "fromPort": "false",
+        "to": "q_v"
+      },
+      {
+        "from": "q_v",
+        "fromPort": "next",
+        "to": "lim_v"
+      },
+      {
+        "from": "lim_v",
+        "fromPort": "next",
+        "to": "f_v"
+      },
+      {
+        "from": "f_v",
+        "fromPort": "next",
+        "to": "cnt_v"
+      },
+      {
+        "from": "cnt_v",
+        "fromPort": "next",
+        "to": "eq_v"
+      },
+      {
+        "from": "eq_v",
+        "fromPort": "next",
+        "to": "jump_v"
+      },
+      {
+        "from": "jump_v",
+        "fromPort": "true",
+        "to": "r_write"
+      },
+      {
+        "from": "jump_v",
+        "fromPort": "false",
+        "to": "q_c"
+      },
+      {
+        "from": "q_c",
+        "fromPort": "next",
+        "to": "lim_c"
+      },
+      {
+        "from": "lim_c",
+        "fromPort": "next",
+        "to": "f_c"
+      },
+      {
+        "from": "f_c",
+        "fromPort": "next",
+        "to": "cnt_c"
+      },
+      {
+        "from": "cnt_c",
+        "fromPort": "next",
+        "to": "eq_c"
+      },
+      {
+        "from": "eq_c",
+        "fromPort": "next",
+        "to": "jump_c"
+      },
+      {
+        "from": "jump_c",
+        "fromPort": "true",
+        "to": "r_write"
+      },
+      {
+        "from": "jump_c",
+        "fromPort": "false",
+        "to": "q_clear"
+      },
+      {
+        "from": "q_clear",
+        "fromPort": "next",
+        "to": "w_clear"
+      },
+      {
+        "from": "w_clear",
+        "fromPort": "next",
+        "to": "r_halt"
       },
       {
         "from": "r_write",
@@ -189,10 +380,10 @@
     ],
     "valueEdges": [
       {
-        "from": "r_rep",
+        "from": "r_c0",
         "fromPort": "value",
-        "to": "r_q",
-        "toPort": "source"
+        "to": "r_halt",
+        "toPort": "value"
       },
       {
         "from": "r_c0",
@@ -207,6 +398,90 @@
         "toPort": "value"
       },
       {
+        "from": "r_c1",
+        "fromPort": "value",
+        "to": "eq_a",
+        "toPort": "b"
+      },
+      {
+        "from": "r_c1",
+        "fromPort": "value",
+        "to": "eq_v",
+        "toPort": "b"
+      },
+      {
+        "from": "r_c1",
+        "fromPort": "value",
+        "to": "eq_c",
+        "toPort": "b"
+      },
+      {
+        "from": "r_c2",
+        "fromPort": "value",
+        "to": "w_clear",
+        "toPort": "value"
+      },
+      {
+        "from": "r_rep",
+        "fromPort": "value",
+        "to": "q_a",
+        "toPort": "source"
+      },
+      {
+        "from": "r_rep",
+        "fromPort": "value",
+        "to": "q_v",
+        "toPort": "source"
+      },
+      {
+        "from": "r_rep",
+        "fromPort": "value",
+        "to": "q_c",
+        "toPort": "source"
+      },
+      {
+        "from": "r_rep",
+        "fromPort": "value",
+        "to": "q_clear",
+        "toPort": "source"
+      },
+      {
+        "from": "cnt_a",
+        "fromPort": "value",
+        "to": "eq_a",
+        "toPort": "a"
+      },
+      {
+        "from": "cnt_v",
+        "fromPort": "value",
+        "to": "eq_v",
+        "toPort": "a"
+      },
+      {
+        "from": "cnt_c",
+        "fromPort": "value",
+        "to": "eq_c",
+        "toPort": "a"
+      },
+      {
+        "from": "eq_a",
+        "fromPort": "value",
+        "to": "jump_a",
+        "toPort": "condition"
+      },
+      {
+        "from": "eq_v",
+        "fromPort": "value",
+        "to": "jump_v",
+        "toPort": "condition"
+      },
+      {
+        "from": "eq_c",
+        "fromPort": "value",
+        "to": "jump_c",
+        "toPort": "condition"
+      },
+      {
         "from": "r_actor",
         "fromPort": "value",
         "to": "r_alive",
@@ -217,12 +492,6 @@
         "fromPort": "value",
         "to": "r_alive_jump",
         "toPort": "condition"
-      },
-      {
-        "from": "r_c0",
-        "fromPort": "value",
-        "to": "r_halt",
-        "toPort": "value"
       },
       {
         "from": "r_actor",
