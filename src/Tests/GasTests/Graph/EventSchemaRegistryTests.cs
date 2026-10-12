@@ -107,7 +107,7 @@ namespace Ludots.Tests.Gas.Graph
                 Is.EqualTo(new[]
                 {
                     "rep", "action", "pointerScreenX", "pointerScreenY", "modifiers",
-                    "actionValueX", "actionValueY",
+                    "actionValueX", "actionValueY", "bindingInt",
                 }));
             EventParamSchema pointerX = input.Params.Single(p => p.Name == "pointerScreenX");
             EventParamSchema pointerY = input.Params.Single(p => p.Name == "pointerScreenY");
@@ -123,6 +123,10 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(actionValueY.Type, Is.EqualTo(EventParamType.Float));
             Assert.That(actionValueX.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueX));
             Assert.That(actionValueY.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.ActionValueY));
+            EventParamSchema bindingInt = input.Params.Single(p => p.Name == "bindingInt");
+            Assert.That(bindingInt.Optional, Is.True);
+            Assert.That(bindingInt.Type, Is.EqualTo(EventParamType.Int));
+            Assert.That(bindingInt.PayloadKey, Is.EqualTo(MapTriggerEventPayloadKeys.BindingInt));
         }
 
         [Test]
