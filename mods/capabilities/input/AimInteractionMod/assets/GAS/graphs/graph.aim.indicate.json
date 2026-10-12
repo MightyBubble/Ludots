@@ -1010,6 +1010,18 @@
         "fromPort": "value",
         "to": "fc_wf",
         "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "fc_sv",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "fc_pv",
+        "toPort": "source"
       }
     ]
   }
