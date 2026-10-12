@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Systems;
@@ -102,6 +103,29 @@ public class S4DeployTruthTests
         Assert.That(second.Select(CrowdSimChecksum.Format), Is.EqualTo(frames).AsCollection, $"{seed} 回放与沙盒校验码不一致");
     }
 
+    [Test]
+    public void Clear_ExcludesUnitsImmediately_AndRequestsLifecycleDestroy()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 1);
+        Assert.That(made, Is.EqualTo(1));
+        var entity = session.Units.EntityAt(0);
+        Assert.That(session.World.IsAlive(entity), Is.True);
+        session.Units.Clear();
+        Assert.That(session.Units.Count, Is.EqualTo(0));
+        Assert.That(session.World.IsAlive(entity), Is.True);
+        Assert.That(session.World.Has<PresentationDestroyPending>(entity), Is.True);
+    }
+
+    [Test]
+    public void Deploy_UsesTemplateBatchCreate()
+    {
+        var (_, session) = BuildSession("s1337");
+        int made = CrowdDeployment.Spawn(session, 200);
+        Assert.That(made, Is.EqualTo(200));
+        Assert.That(session.Units.LargestSpawnBatch, Is.GreaterThan(1));
+    }
+
     private static long CanonRaw(double meters) => (long)(meters * 100 * 4294967296.0);
 
     private static int ReadI32(byte[] buffer, ref int cursor)
@@ -183,6 +207,7 @@ public class S4DeployTruthTests
         {
             StableIds = new PresentationStableIdAllocator(),
             TemplateRegistry = mapLoader.TemplateRegistry,
+            TemplateKeys = mapLoader.EntityTemplateKeys,
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
                 runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys, TestDefaults.DemoProfiles(), "测试装配(CrowdSimulationTests)"),
             RadiusMetersBlackboardKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(

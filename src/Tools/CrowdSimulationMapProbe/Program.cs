@@ -490,6 +490,7 @@ public static class Program
         {
             StableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator(),
             TemplateRegistry = mapLoader.TemplateRegistry,
+            TemplateKeys = mapLoader.EntityTemplateKeys,
             TemplatesByUnitTypeRadius = CrowdSimPresentationWiring.BuildUnitTypeTemplates(
                 runtime, mapLoader.TemplateRegistry, mapLoader.EntityTemplateKeys,
                 new AgentProfileRegistry(JsonSerializer.Deserialize<List<AgentProfileConfig>>(

@@ -1,14 +1,15 @@
 using System;
-using System.Collections.Generic;
 using Arch.Core;
+using Arch.Core.Extensions.Dangerous;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
-using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.CrowdSimulation.Units;
@@ -27,28 +28,40 @@ public readonly record struct CrowdUnitSpawnRequest(
 
 /// <summary>
 /// CrowdSimulation 单位存储(ECS 实体,不另造 SoA):每个单位是一个 Arch 实体,
-/// 带 CrowdSimulationAgent(速度、半径、推挤优先级和下标)、CrowdSimulationUnitState(仿真身份)、
-/// WorldPositionCm、PlayerOwner。管理层只持三件东西:稠密序(创建序)、
-/// 槽位代数组与空闲槽池——与参考实现 units 的 18 位槽位 + 14 位代句柄同构,
-/// 句柄稳定且回放可复现。
-/// 单位实体走引擎模板生成管线(EntityBuilder.UseTemplate→Build,RuntimeEntitySpawnSystem
-/// 同款同步路径)实例化;出生算法(盐流/搜索/散布)留在内核,生成后钩子只补逐实例事实
-/// (位置/玩家/仿真身份/呈现预置件)并把稠密序与句柄登记进来。
+/// 带 CrowdSimulationAgent、CrowdSimulationUnitState、WorldPositionCm、PlayerOwner。
+/// 管理层只持稠密序、槽位代数组与空闲槽池。
+/// 单位经 RuntimeEntitySpawnRequest 进入 RuntimeEntitySpawnSystem；本类只登记逐实例事实，
+/// 并在指令边界调用同一次 Update。批内写入由挂在该系统实例上的初始化器完成。
 /// </summary>
 public sealed class CrowdSimUnits
 {
     public const int SlotBits = 18, SlotMask = (1 << SlotBits) - 1, GenMask = (1 << 14) - 1;
+    public const string ReceiptChannelName = "crowd_simulation.units";
+    private const int MaxTemplateKeysPerDeploy = 64;
 
     private readonly ArchWorld _world;
     private readonly CrowdSimPresentationWiring _presentation;
+    private readonly RuntimeEntitySpawnSystem _spawns;
+    private readonly RuntimeEntitySpawnQueue _spawnQueue;
+    private readonly RuntimeEntitySpawnReceiptQueue _receipts;
+    private readonly int _receiptChannelId;
+    private readonly ushort _initializerKind;
     private readonly List<Entity> _dense = new();
     private readonly List<int> _slotOfDense = new();
     private readonly int[] _sparse;
     private readonly ushort[] _gen;
     private readonly int[] _freeSlots;
     private int _freeTop;
-    private readonly Dictionary<string, EntityTemplate> _templateCache = new(StringComparer.Ordinal);
-    private EntityBuilder? _builder;
+    private readonly PendingUnit[] _pending;
+    private int _pendingCount;
+    private readonly RuntimeEntitySpawnRequest[] _requestScratch;
+    private readonly RuntimeEntitySpawnReceipt[] _receiptScratch;
+    private readonly CrowdUnitSpawnInitializer _initializer;
+
+    static CrowdSimUnits()
+    {
+        TemplateBatchComponentAdmission.Register<CrowdSimulationAgent>("CrowdSimulationAgent");
+    }
 
     public CrowdSimUnits(ArchWorld world, int capacity, CrowdSimPresentationWiring presentation)
     {
@@ -59,6 +72,45 @@ public sealed class CrowdSimUnits
         _sparse = new int[capacity];
         _gen = new ushort[capacity];
         _freeSlots = new int[capacity];
+        _pending = new PendingUnit[capacity];
+        int queueCapacity = Math.Max(capacity, 16);
+        _requestScratch = new RuntimeEntitySpawnRequest[capacity];
+        _receiptScratch = new RuntimeEntitySpawnReceipt[capacity];
+        if (presentation.Spawns != null)
+        {
+            _spawns = presentation.Spawns;
+            _spawnQueue = presentation.SpawnQueue ?? throw new InvalidOperationException(
+                "CrowdSimulation 引擎接线给了 RuntimeEntitySpawnSystem，但没有 RuntimeEntitySpawnQueue。");
+            _receipts = presentation.SpawnReceipts ?? throw new InvalidOperationException(
+                "CrowdSimulation 引擎接线给了 RuntimeEntitySpawnSystem，但没有 RuntimeEntitySpawnReceiptQueue。");
+            _receiptChannelId = presentation.SpawnReceiptChannelId;
+            if (_receiptChannelId <= 0)
+            {
+                throw new InvalidOperationException("CrowdSimulation 引擎接线的生成回执通道 id 无效。");
+            }
+        }
+        else
+        {
+            if (presentation.TemplateKeys == null)
+            {
+                throw new InvalidOperationException("CrowdSimulation 无头接线需要 EntityTemplateKeyRegistry。");
+            }
+
+            _spawnQueue = new RuntimeEntitySpawnQueue(queueCapacity);
+            _receipts = new RuntimeEntitySpawnReceiptQueue(queueCapacity);
+            var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
+            _receiptChannelId = channels.Register(ReceiptChannelName);
+            _spawns = new RuntimeEntitySpawnSystem(
+                world,
+                _spawnQueue,
+                presentation.TemplateRegistry,
+                presentation.TemplateKeys,
+                presentation.StableIds,
+                receipts: _receipts);
+        }
+
+        _initializer = new CrowdUnitSpawnInitializer(this);
+        _initializerKind = _spawns.RegisterInstanceInitializer(_initializer);
         Clear();
     }
 
@@ -69,110 +121,188 @@ public sealed class CrowdSimUnits
     public ushort GenOf(int slot) => _gen[slot];
     public uint HandleAt(int dense) => (uint)(((_gen[_slotOfDense[dense]] & GenMask) << SlotBits) | _slotOfDense[dense]);
     public int FreeTop => _freeTop;
+    public int LargestSpawnBatch => _spawns.LargestTemplateBatch;
 
     /// <summary>稠密下标 → 补全后的个人(避让/碰撞)半径。</summary>
     public Fix64 PersonalRadiusCmAt(int dense) => _world.Get<CrowdSimulationAgent>(_dense[dense]).PersonalRadiusCm;
 
     public int DenseOfSlot(int slot) => _sparse[slot];
 
-    /// <summary>生成一个单位;满容量返回 -1(失败不留痕迹)。
-    /// 实体由模板生成管线实例化(模板写真组件 + Mod 作者附加组件都落到实体),再由钩子
-    /// 补齐逐实例组件——单位创建只有这一条生产路径,引擎与无头装配同一管线。</summary>
+    /// <summary>
+    /// 占一个槽并记下逐实例事实。实体要等 <see cref="MaterializePending"/> 才绑定。
+    /// 满容量返回 -1，不改槽池。
+    /// </summary>
     public int Add(in CrowdUnitSpawnRequest unit)
     {
         if (_dense.Count >= Capacity) return -1;
         int slot = _freeSlots[--_freeTop];
         int dense = _dense.Count;
         _sparse[slot] = dense;
-        Entity entity = AddViaTemplate(in unit, slot);
-        _dense.Add(entity);
+        (string templateId, int templateKeyId) = _presentation.TemplatesByUnitTypeRadius[unit.UnitType][unit.RadiusClass];
+        _pending[dense] = new PendingUnit
+        {
+            Slot = slot,
+            GroupId = unit.GroupId,
+            PlayerId = unit.PlayerId,
+            ProfileIndex = unit.ProfileIndex,
+            AgentTypeIndex = unit.AgentTypeIndex,
+            RadiusCm = unit.RadiusCm,
+            TemplateKeyId = templateKeyId,
+            TemplateId = templateId,
+            XCm = unit.XCm,
+            YCm = unit.YCm,
+        };
+        _dense.Add(Entity.Null);
         _slotOfDense.Add(slot);
+        _pendingCount++;
         return dense;
     }
 
-    private Entity AddViaTemplate(in CrowdUnitSpawnRequest unit, int slot)
+    /// <summary>
+    /// 把尚未绑定的单位按模板分组送进生成队列，并立刻调用本世界的 RuntimeEntitySpawnSystem.Update。
+    /// 没有待生成单位时直接返回。队列里已有别的请求，或空间不够整批，都抛错，不截断。
+    /// </summary>
+    public void MaterializePending()
     {
-        var wiring = _presentation;
-        (string templateId, int templateKeyId) = wiring.TemplatesByUnitTypeRadius[unit.UnitType][unit.RadiusClass];
-        ResolveTemplate(templateId);
-        _builder ??= new EntityBuilder(_world, _templateCache);
-        var posCm = new Fix64Vec2(unit.XCm, unit.YCm);
+        if (_pendingCount == 0)
+        {
+            return;
+        }
 
-        // 模板组件经 ComponentRegistry 数据驱动落到实体(模板写真 + Mod 作者附加组件);
-        // 逐实例事实在生成后钩子补位(RuntimeEntitySpawnSystem.SpawnTemplate 同款形状)。
-        Entity entity = _builder!.UseTemplate(templateId)
-            .WithEntityContext($"CrowdSimulation unit '{templateId}'")
-            .Build();
+        int pending = _pendingCount;
+        int first = _dense.Count - pending;
+        if (first < 0)
+        {
+            throw new InvalidOperationException("SPAWN.RUNTIME.ERR.CrowdPendingRange");
+        }
 
-        if (!_world.Has<CrowdSimulationAgent>(entity))
+        Span<int> uniqueKeys = stackalloc int[MaxTemplateKeysPerDeploy];
+        int uniqueCount = 0;
+        for (int dense = first; dense < first + pending; dense++)
+        {
+            int key = _pending[dense].TemplateKeyId;
+            bool seen = false;
+            for (int u = 0; u < uniqueCount; u++)
+            {
+                if (uniqueKeys[u] == key)
+                {
+                    seen = true;
+                    break;
+                }
+            }
+
+            if (seen)
+            {
+                continue;
+            }
+
+            if (uniqueCount == uniqueKeys.Length)
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.CrowdTemplateKeyCap: more than {uniqueKeys.Length} unit templates in one deploy.");
+            }
+
+            uniqueKeys[uniqueCount++] = key;
+        }
+
+        if (_spawnQueue.Count != 0)
         {
             throw new InvalidOperationException(
-                $"单位模板 \"{templateId}\" 没有 CrowdSimulationAgent。");
+                $"SPAWN.RUNTIME.ERR.QueueBusy: crowd materialize requires an empty spawn queue, count={_spawnQueue.Count}.");
         }
 
-        var agent = _world.Get<CrowdSimulationAgent>(entity);
-        agent.ProfileIndex = unit.ProfileIndex;
-        agent.AgentTypeIndex = unit.AgentTypeIndex;
-        _world.Set(entity, agent);
-        SetOrAdd(entity, new CrowdSimulationUnitState { Slot = slot, GroupId = unit.GroupId, State = 0, Mode = 0, Level = 0, Order = 0 });
-        SetOrAdd(entity, new CrowdSimulationKinematics());
-        SetOrAdd(entity, new WorldPositionCm { Value = posCm });
-        // WorldToVisualSyncSystem 的查询要求 PreviousWorldPositionCm 同帧就位,
-        // 否则 VisualTransform 永远停在默认值、presenter 沉在原点。
-        SetOrAdd(entity, new PreviousWorldPositionCm { Value = posCm });
-        SetOrAdd(entity, new PlayerOwner { PlayerId = unit.PlayerId });
-        if (!_world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(entity))
+        for (int u = 0; u < uniqueCount; u++)
         {
-            _world.Add(entity, new Ludots.Core.Presentation.Components.PresentationStableId { Value = wiring.StableIds.Allocate() });
+            int key = uniqueKeys[u];
+            int written = 0;
+            for (int dense = first; dense < first + pending; dense++)
+            {
+                ref readonly PendingUnit item = ref _pending[dense];
+                if (item.TemplateKeyId != key)
+                {
+                    continue;
+                }
+
+                _requestScratch[written++] = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = item.TemplateId,
+                    HasWorldPosition = 1,
+                    WorldPositionCm = new Fix64Vec2(item.XCm, item.YCm),
+                    HasFacing = 1,
+                    FacingAngleRad = 0f,
+                    PlayerOwnerIdOverride = item.PlayerId,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = _receiptChannelId,
+                    ReceiptId = dense,
+                    InstanceInitializerKind = _initializerKind,
+                    InstanceInitializerIndex = dense,
+                };
+            }
+
+            _spawnQueue.EnqueueAllOrThrow(_requestScratch.AsSpan(0, written));
         }
 
-        SetOrAdd(entity, new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
-        SetOrAdd(entity, new FacingDirection { AngleRad = 0f });
-        SetOrAdd(entity, Ludots.Core.Presentation.Components.VisualTransform.Default);
-        SetOrAdd(entity, new Ludots.Core.Presentation.Components.CullState { IsVisible = false, LOD = Ludots.Platform.Abstractions.LODLevel.Low });
-        // 地形高度采样的门控标记:没有它 TerrainHeightSyncSystem 不写 Y,单位埋在海平面以下的地表里。
-        SetOrAdd(entity, new Ludots.Core.Presentation.Components.ContinuousHeightmapSampleState());
-        SetRadiusBlackboard(entity, in unit);
-        return entity;
-    }
-
-    private void SetRadiusBlackboard(Entity entity, in CrowdUnitSpawnRequest unit)
-    {
-        float radiusVisual = WorldUnits.CmToM((float)unit.RadiusCm.ToDouble());
-        int keyId = _presentation.RadiusMetersBlackboardKeyId;
-        if (_world.Has<BlackboardFloatBuffer>(entity))
+        _spawns.Update(0f);
+        if (_spawnQueue.Count != 0)
         {
-            ref var buffer = ref _world.Get<BlackboardFloatBuffer>(entity);
-            buffer.Set(keyId, radiusVisual);
+            throw new InvalidOperationException(
+                $"SPAWN.RUNTIME.ERR.CrowdMaterializeIncomplete: remaining={_spawnQueue.Count}.");
         }
-        else
+
+        int got = _receipts.DetachChannel(_receiptChannelId, _receiptScratch.AsSpan(0, pending));
+        if (got != pending)
         {
-            var buffer = new BlackboardFloatBuffer();
-            buffer.Set(keyId, radiusVisual);
-            _world.Add(entity, buffer);
+            throw new InvalidOperationException(
+                $"SPAWN.RUNTIME.ERR.ReceiptCount: expected {pending}, got {got}.");
+        }
+
+        for (int i = 0; i < got; i++)
+        {
+            RuntimeEntitySpawnReceipt receipt = _receiptScratch[i];
+            int dense = receipt.ReceiptId;
+            if ((uint)dense >= (uint)_dense.Count || _dense[dense] != Entity.Null)
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.ReceiptBind: receiptId={dense}, denseCount={_dense.Count}.");
+            }
+
+            if (!_world.IsAlive(receipt.Entity))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.ReceiptEntity: receiptId={dense} is not alive.");
+            }
+
+            _dense[dense] = receipt.Entity;
+        }
+
+        for (int dense = first; dense < first + pending; dense++)
+        {
+            if (_dense[dense] == Entity.Null)
+            {
+                throw new InvalidOperationException($"SPAWN.RUNTIME.ERR.ReceiptMissing: dense={dense}.");
+            }
+        }
+
+        _pendingCount = 0;
+    }
+
+    /// <summary>从引擎的生成系统上摘掉本会话的初始化器。无头自建的系统随会话一起丢。</summary>
+    public void ReleaseSpawnInitializer()
+    {
+        if (_initializerKind != 0)
+        {
+            _spawns.UnregisterInstanceInitializer(_initializerKind);
         }
     }
 
-    private void SetOrAdd<T>(Entity entity, T component) where T : struct
-    {
-        if (_world.Has<T>(entity)) _world.Set(entity, component);
-        else _world.Add(entity, component);
-    }
-
-    private void ResolveTemplate(string templateId)
-    {
-        if (_templateCache.ContainsKey(templateId)) return;
-        var template = _presentation.TemplateRegistry.Get(templateId)
-            ?? throw new InvalidOperationException(
-                $"CrowdSimulation 单位模板 \"{templateId}\" 不存在(应由 Mod 的 Entities/templates.json 提供)。");
-        _templateCache[templateId] = template;
-    }
-
-    /// <summary>清空(代 bump:旧句柄全部失效;槽池回到初始 LIFO 序,回放可复现)。</summary>
+    /// <summary>
+    /// 清空稠密表。已绑定且仍存活的单位走 ConsumeEntity，当帧从仿真里消失，
+    /// 实体留到呈现销毁发布之后才 Destroy。Entity.Null 占位不销毁。
+    /// 代 bump 与槽池 LIFO 序保持回放可复现。
+    /// </summary>
     public void Clear()
     {
-        // 先摘选中集合再毁实体:集合成员是实体引用,销毁后留着只会指到死实体。
-        // 空选中属主(回放派生接线)跳过镜像——活集合仓不可被回放触碰。
         if (_presentation.SelectionOwner != Entity.Null)
         {
             _presentation.Collections.Replace(
@@ -181,14 +311,21 @@ public sealed class CrowdSimUnits
                 SelectionMirror.Descriptor,
                 ReadOnlySpan<Entity>.Empty);
         }
+
         for (int i = 0; i < _dense.Count; i++)
         {
-            _world.Destroy(_dense[i]);
+            Entity entity = _dense[i];
+            if (entity != Entity.Null && _world.IsAlive(entity))
+            {
+                EntityLifecycleAtomicOps.ConsumeEntity(_world, entity, "CrowdSimulation.Clear");
+            }
+
             _gen[_slotOfDense[i]] = (ushort)((_gen[_slotOfDense[i]] + 1) & GenMask);
         }
 
         _dense.Clear();
         _slotOfDense.Clear();
+        _pendingCount = 0;
         Array.Fill(_sparse, -1);
         for (int k = 0; k < Capacity; k++) _freeSlots[k] = Capacity - 1 - k;
         _freeTop = Capacity;
@@ -200,5 +337,120 @@ public sealed class CrowdSimUnits
         public required Entity Entity { get; init; }
         public required int Dense { get; init; }
         public required uint Handle { get; init; }
+    }
+
+    private struct PendingUnit
+    {
+        public int Slot;
+        public int GroupId;
+        public int PlayerId;
+        public int ProfileIndex;
+        public int AgentTypeIndex;
+        public Fix64 RadiusCm;
+        public int TemplateKeyId;
+        public string TemplateId;
+        public Fix64 XCm;
+        public Fix64 YCm;
+    }
+
+    private sealed class CrowdUnitSpawnInitializer : IRuntimeSpawnInstanceInitializer
+    {
+        private readonly CrowdSimUnits _units;
+
+        public CrowdUnitSpawnInitializer(CrowdSimUnits units)
+        {
+            _units = units;
+        }
+
+        public Signature AppendSignature(Signature signature)
+        {
+            return signature
+                + Component<CrowdSimulationUnitState>.Signature
+                + Component<CrowdSimulationKinematics>.Signature
+                + Component<PlayerOwner>.Signature
+                + Component<ContinuousHeightmapSampleState>.Signature
+                + Component<BlackboardFloatBuffer>.Signature;
+        }
+
+        public void WriteChunk(ArchWorld world, ReadOnlySpan<Entity> created, ReadOnlySpan<int> instanceIndices)
+        {
+            if (created.Length == 0)
+            {
+                return;
+            }
+
+            Entity first = created[0];
+            Archetype archetype = world.GetEntityDataArray()[first.Id].Archetype;
+            Slot slot = world.GetSlot(first);
+            int keyId = _units._presentation.RadiusMetersBlackboardKeyId;
+            int batchIndex = 0;
+            int chunkIndex = slot.ChunkIndex;
+            int row = slot.Index;
+            while (batchIndex < created.Length)
+            {
+                ref Chunk chunk = ref archetype.GetChunk(chunkIndex);
+                int run = Math.Min(created.Length - batchIndex, chunk.Count - row);
+                Span<CrowdSimulationAgent> agents = chunk.GetSpan<CrowdSimulationAgent>();
+                Span<CrowdSimulationUnitState> states = chunk.GetSpan<CrowdSimulationUnitState>();
+                Span<CrowdSimulationKinematics> kinematics = chunk.GetSpan<CrowdSimulationKinematics>();
+                Span<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+                Span<ContinuousHeightmapSampleState> heights = chunk.GetSpan<ContinuousHeightmapSampleState>();
+                Span<BlackboardFloatBuffer> boards = chunk.GetSpan<BlackboardFloatBuffer>();
+                for (int offset = 0; offset < run; offset++)
+                {
+                    int componentIndex = row + offset;
+                    int dense = instanceIndices[batchIndex + offset];
+                    ref readonly PendingUnit pending = ref _units._pending[dense];
+                    agents[componentIndex].ProfileIndex = pending.ProfileIndex;
+                    agents[componentIndex].AgentTypeIndex = pending.AgentTypeIndex;
+                    states[componentIndex] = new CrowdSimulationUnitState
+                    {
+                        Slot = pending.Slot,
+                        GroupId = pending.GroupId,
+                    };
+                    kinematics[componentIndex] = default;
+                    owners[componentIndex] = new PlayerOwner { PlayerId = pending.PlayerId };
+                    heights[componentIndex] = default;
+                    var board = new BlackboardFloatBuffer();
+                    board.Set(keyId, WorldUnits.CmToM((float)pending.RadiusCm.ToDouble()));
+                    boards[componentIndex] = board;
+                }
+
+                batchIndex += run;
+                chunkIndex++;
+                row = 0;
+            }
+        }
+
+        public void ApplyEntity(ArchWorld world, Entity entity, int instanceIndex)
+        {
+            ref readonly PendingUnit pending = ref _units._pending[instanceIndex];
+            if (!world.Has<CrowdSimulationAgent>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"单位模板 \"{pending.TemplateId}\" 没有 CrowdSimulationAgent。");
+            }
+
+            ref CrowdSimulationAgent agent = ref world.Get<CrowdSimulationAgent>(entity);
+            agent.ProfileIndex = pending.ProfileIndex;
+            agent.AgentTypeIndex = pending.AgentTypeIndex;
+            SetOrAdd(world, entity, new CrowdSimulationUnitState
+            {
+                Slot = pending.Slot,
+                GroupId = pending.GroupId,
+            });
+            SetOrAdd(world, entity, new CrowdSimulationKinematics());
+            SetOrAdd(world, entity, new PlayerOwner { PlayerId = pending.PlayerId });
+            SetOrAdd(world, entity, new ContinuousHeightmapSampleState());
+            var board = new BlackboardFloatBuffer();
+            board.Set(_units._presentation.RadiusMetersBlackboardKeyId, WorldUnits.CmToM((float)pending.RadiusCm.ToDouble()));
+            SetOrAdd(world, entity, board);
+        }
+
+        private static void SetOrAdd<T>(ArchWorld world, Entity entity, T component) where T : struct
+        {
+            if (world.Has<T>(entity)) world.Set(entity, component);
+            else world.Add(entity, component);
+        }
     }
 }
