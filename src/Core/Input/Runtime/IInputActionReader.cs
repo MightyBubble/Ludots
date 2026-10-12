@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Persistence;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -25,5 +27,11 @@ namespace Ludots.Core.Input.Runtime
         bool IsDown(string actionId);
         bool PressedThisFrame(string actionId);
         bool ReleasedThisFrame(string actionId);
+
+        /// <summary>
+        /// Binding-integer edges folded into this read. Empty when the action's
+        /// bindings do not declare <c>intValue</c>, or none of them edged.
+        /// </summary>
+        void CopyBindingIntFires(string actionId, List<InputBindingIntFire> destination);
     }
 }

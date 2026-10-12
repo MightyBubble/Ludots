@@ -212,6 +212,45 @@ public sealed class TriggerGraphActionValueDispatchTests
         Assert.That(_contexts[0].Contains(MapTriggerEventPayloadKeys.ActionValueX), Is.False);
         Assert.That(_contexts[0].Contains(MapTriggerEventPayloadKeys.ActionValueY), Is.False);
         Assert.That(_contexts[0].Get<string>(MapTriggerEventPayloadKeys.Action), Is.EqualTo("Click"));
+        Assert.That(_contexts[0].Contains(MapTriggerEventPayloadKeys.BindingInt), Is.False);
+    }
+
+    [Test]
+    public void ButtonPress_BindingInt_DispatchesEachFireAndSkipsTheAggregateEdge()
+    {
+        TriggerGraphActionBindingSystem system = NewSystem(Button("Aim.Slot", InputActionDef.FiresOnPress));
+        Mount("Aim.Slot");
+        _input.SetActionState(
+            "Aim.Slot",
+            Vector3.One,
+            isDown: true,
+            pressedThisFrame: true,
+            releasedThisFrame: false,
+            present: true,
+            new[]
+            {
+                new Ludots.Core.Persistence.InputBindingIntFire(0, Pressed: true, Released: false),
+                new Ludots.Core.Persistence.InputBindingIntFire(5, Pressed: true, Released: false),
+            });
+        _buttons.SetState("Aim.Slot", new PointerButtonState(
+            pointer: new Vector2(8f, 9f),
+            pressPointer: new Vector2(2f, 3f),
+            releasePointer: default,
+            lastDownPointer: new Vector2(2f, 3f),
+            isDown: true,
+            pressedThisFrame: true,
+            releasedThisFrame: false,
+            hasPressPointer: true,
+            hasReleasePointer: false,
+            hasLastDownPointer: true));
+
+        system.Update(0f);
+
+        Assert.That(_contexts, Has.Count.EqualTo(2));
+        Assert.That(_contexts[0].Get<int>(MapTriggerEventPayloadKeys.BindingInt), Is.EqualTo(0));
+        Assert.That(_contexts[1].Get<int>(MapTriggerEventPayloadKeys.BindingInt), Is.EqualTo(5));
+        Assert.That(_contexts[0].Get<string>(MapTriggerEventPayloadKeys.Action), Is.EqualTo("Aim.Slot"));
+        AssertPointer(_contexts[1], 2f, 3f);
     }
 
     [Test]

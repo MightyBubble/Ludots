@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Persistence;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Runtime
@@ -26,6 +27,9 @@ namespace Ludots.Core.Input.Runtime
         private readonly HashSet<string> _seenBindingContributions = new(StringComparer.Ordinal);
         private readonly InputActionInstance[] _actionStates;
         private readonly Vector3[] _tempValues;
+        private readonly List<InputBindingIntFire>[] _intFires;
+        private readonly List<int>[] _latchedInjectedInts;
+        private readonly List<(string ActionId, int Value)> _pendingInjectedInts = new();
         private Vector2 _mousePosition;
         private Vector2 _mouseDelta;
         private bool _hasMousePosition;
@@ -37,15 +41,19 @@ namespace Ludots.Core.Input.Runtime
         {
             _backend = backend;
             if (config == null) throw new ArgumentNullException(nameof(config));
-            InputConfigPipelineLoader.Validate(config, "PlayerInputHandler config");
+            InputConfigPipelineLoader.Validate(config, "PlayerInputHandler config", requireDeclaredActionForBindingInt: true);
 
             _actionStates = new InputActionInstance[config.Actions.Count];
             _tempValues = new Vector3[config.Actions.Count];
+            _intFires = new List<InputBindingIntFire>[config.Actions.Count];
+            _latchedInjectedInts = new List<int>[config.Actions.Count];
             for (int i = 0; i < config.Actions.Count; i++)
             {
                 var actionDef = config.Actions[i];
                 _actionIndices[actionDef.Id] = i;
                 _actionStates[i] = new InputActionInstance(actionDef);
+                _intFires[i] = new List<InputBindingIntFire>(1);
+                _latchedInjectedInts[i] = new List<int>(1);
             }
 
             for (int i = 0; i < config.Contexts.Count; i++)
@@ -75,6 +83,11 @@ namespace Ludots.Core.Input.Runtime
 
         public void PopContext(string contextId)
         {
+            if (_contextsById.TryGetValue(contextId, out CompiledContext context))
+            {
+                ResetBindingDown(context);
+            }
+
             _activeContexts.RemoveAll(c => string.Equals(c.Id, contextId, StringComparison.Ordinal));
         }
 
@@ -140,6 +153,7 @@ namespace Ludots.Core.Input.Runtime
             }
 
             _actionStates[actionIndex].SuppressThisFrame();
+            _intFires[actionIndex].Clear();
             return true;
         }
 
@@ -156,13 +170,31 @@ namespace Ludots.Core.Input.Runtime
             for (int i = 0; i < _actionStates.Length; i++)
             {
                 var state = _actionStates[i];
+                List<InputBindingIntFire> fires = _intFires[i];
                 accumulator.CaptureAction(
                     state.Definition.Id,
                     state.Value,
                     state.Triggered,
                     state.PressedThisFrame,
                     state.ReleasedThisFrame,
-                    boundByActiveContext: state.BoundByActiveContext);
+                    boundByActiveContext: state.BoundByActiveContext,
+                    intFires: fires.Count > 0 ? fires : null);
+            }
+        }
+
+        public void CopyBindingIntFires(string actionId, List<InputBindingIntFire> destination)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            if (string.IsNullOrWhiteSpace(actionId) || !_actionIndices.TryGetValue(actionId, out int actionIndex))
+            {
+                return;
+            }
+
+            List<InputBindingIntFire> fires = _intFires[actionIndex];
+            for (int i = 0; i < fires.Count; i++)
+            {
+                destination.Add(fires[i]);
             }
         }
 
@@ -177,6 +209,17 @@ namespace Ludots.Core.Input.Runtime
 
         public void InjectButtonPress(string actionId) => InjectAction(actionId, Vector3.One);
 
+        /// <summary>
+        /// Same one-frame press as <see cref="InjectButtonPress(string)"/>, plus the
+        /// binding integer. The matching release is latched until the action falls,
+        /// which is the next update when no hardware binding is holding it.
+        /// </summary>
+        public void InjectButtonPress(string actionId, int bindingInt)
+        {
+            InjectButtonPress(actionId);
+            _pendingInjectedInts.Add((actionId, bindingInt));
+        }
+
         public void InjectButtonRelease(string actionId) => _injections.Remove(actionId);
 
         /// <summary>Whether a synthetic injection is currently held for this action (true after press, false after release).</summary>
@@ -185,6 +228,7 @@ namespace Ludots.Core.Input.Runtime
         public void Update(float deltaTime)
         {
             UpdateRevision++;
+            ClearBindingIntFires();
             RefreshPointerState();
             // Bound is which active contexts name the action, not the sampled
             // magnitude. A blocked frame still reports those actions present, so
@@ -239,6 +283,11 @@ namespace Ludots.Core.Input.Runtime
                             : Vector3.Zero;
                     }
 
+                    if (binding.HasIntValue)
+                    {
+                        RecordBindingIntEdge(bindings[bindingIndex], value);
+                    }
+
                     _tempValues[binding.ActionIndex] += value;
                 }
             }
@@ -251,10 +300,88 @@ namespace Ludots.Core.Input.Runtime
                 }
             }
             _injections.Clear();
+            RecordInjectedIntPresses();
 
             for (int i = 0; i < _actionStates.Length; i++)
             {
                 _actionStates[i].Update(_tempValues[i]);
+            }
+
+            ReleaseLatchedInjectedInts();
+        }
+
+        private void ClearBindingIntFires()
+        {
+            for (int i = 0; i < _intFires.Length; i++)
+            {
+                _intFires[i].Clear();
+            }
+        }
+
+        private void RecordBindingIntEdge(CompiledBinding binding, Vector3 value)
+        {
+            bool down = value.LengthSquared() > 0.000001f;
+            if (down == binding.WasDown)
+            {
+                return;
+            }
+
+            _intFires[binding.ActionIndex].Add(new InputBindingIntFire(binding.IntValue, down, !down));
+            binding.WasDown = down;
+        }
+
+        private void RecordInjectedIntPresses()
+        {
+            for (int i = 0; i < _pendingInjectedInts.Count; i++)
+            {
+                (string actionId, int value) = _pendingInjectedInts[i];
+                if (!_actionIndices.TryGetValue(actionId, out int actionIndex))
+                {
+                    continue;
+                }
+
+                _intFires[actionIndex].Add(new InputBindingIntFire(value, Pressed: true, Released: false));
+                _latchedInjectedInts[actionIndex].Add(value);
+            }
+
+            _pendingInjectedInts.Clear();
+        }
+
+        private void ReleaseLatchedInjectedInts()
+        {
+            for (int i = 0; i < _actionStates.Length; i++)
+            {
+                List<int> latched = _latchedInjectedInts[i];
+                if (latched.Count == 0 || _actionStates[i].Triggered)
+                {
+                    continue;
+                }
+
+                for (int n = 0; n < latched.Count; n++)
+                {
+                    _intFires[i].Add(new InputBindingIntFire(latched[n], Pressed: false, Released: true));
+                }
+
+                latched.Clear();
+            }
+        }
+
+        private static void ResetBindingDown(CompiledContext context)
+        {
+            CompiledBinding[] bindings = context.Bindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                ResetBindingDown(bindings[i]);
+            }
+        }
+
+        private static void ResetBindingDown(CompiledBinding binding)
+        {
+            binding.WasDown = false;
+            CompiledBinding[] parts = binding.CompositeParts;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                ResetBindingDown(parts[i]);
             }
         }
 
@@ -552,6 +679,8 @@ namespace Ludots.Core.Input.Runtime
                 ActionIndex = actionIndex,
                 Path = binding.Path ?? string.Empty,
                 Processors = CompileProcessors(binding.Processors),
+                HasIntValue = binding.IntValue.HasValue,
+                IntValue = binding.IntValue ?? 0,
             };
 
             if (!string.IsNullOrEmpty(binding.CompositeType))
@@ -660,6 +789,10 @@ namespace Ludots.Core.Input.Runtime
             }
 
             AppendInteractions(sb, binding.Interactions);
+            if (binding.HasIntValue)
+            {
+                sb.Append("|i").Append(binding.IntValue);
+            }
 
             var parts = binding.CompositeParts;
             if (parts.Length == 0)
@@ -1040,6 +1173,9 @@ namespace Ludots.Core.Input.Runtime
             public CompiledBinding[] CompositeParts { get; set; } = Array.Empty<CompiledBinding>();
             public CompiledProcessor[] Processors { get; init; } = Array.Empty<CompiledProcessor>();
             public CompiledInteraction[] Interactions { get; set; } = Array.Empty<CompiledInteraction>();
+            public bool HasIntValue { get; init; }
+            public int IntValue { get; init; }
+            public bool WasDown;
         }
 
         private enum InteractionKind : byte

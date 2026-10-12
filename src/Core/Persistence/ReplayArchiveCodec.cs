@@ -4,6 +4,7 @@ using System.IO;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ludots.Core.Persistence
 {
@@ -88,8 +89,29 @@ namespace Ludots.Core.Persistence
             public bool Pressed { get; set; }
             public bool Released { get; set; }
             public bool? Present { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public List<IntFireDto>? IntFires { get; set; }
             public ActionDto() { }
-            public ActionDto(AuthoritativeAction action) { ActionId = action.ActionId; X = action.Value.X; Y = action.Value.Y; Z = action.Value.Z; IsDown = action.IsDown; Pressed = action.Pressed; Released = action.Released; Present = action.Present; }
+            public ActionDto(AuthoritativeAction action)
+            {
+                ActionId = action.ActionId;
+                X = action.Value.X;
+                Y = action.Value.Y;
+                Z = action.Value.Z;
+                IsDown = action.IsDown;
+                Pressed = action.Pressed;
+                Released = action.Released;
+                Present = action.Present;
+                if (action.IntFires is { Count: > 0 })
+                {
+                    IntFires = new List<IntFireDto>(action.IntFires.Count);
+                    for (int i = 0; i < action.IntFires.Count; i++)
+                    {
+                        InputBindingIntFire fire = action.IntFires[i];
+                        IntFires.Add(new IntFireDto { Value = fire.Value, Pressed = fire.Pressed, Released = fire.Released });
+                    }
+                }
+            }
             public AuthoritativeAction ToAction()
             {
                 if (Present is not bool present)
@@ -97,8 +119,43 @@ namespace Ludots.Core.Persistence
                     throw new SaveContextException($"Replay action '{ActionId}' is missing required field 'Present'.");
                 }
 
-                return new(ActionId, new Vector3(X, Y, Z), IsDown, Pressed, Released, present);
+                return new(ActionId, new Vector3(X, Y, Z), IsDown, Pressed, Released, present, ToIntFires());
             }
+
+            private InputBindingIntFire[]? ToIntFires()
+            {
+                if (IntFires == null || IntFires.Count == 0)
+                {
+                    return null;
+                }
+
+                var fires = new InputBindingIntFire[IntFires.Count];
+                for (int i = 0; i < IntFires.Count; i++)
+                {
+                    IntFireDto? dto = IntFires[i];
+                    if (dto == null)
+                    {
+                        throw new SaveContextException($"Replay action '{ActionId}' int fire {i} is missing.");
+                    }
+
+                    if (dto.Pressed == dto.Released)
+                    {
+                        throw new SaveContextException(
+                            $"Replay action '{ActionId}' int fire {i} must set exactly one of Pressed or Released.");
+                    }
+
+                    fires[i] = new InputBindingIntFire(dto.Value, dto.Pressed, dto.Released);
+                }
+
+                return fires;
+            }
+        }
+
+        private sealed class IntFireDto
+        {
+            public int Value { get; set; }
+            public bool Pressed { get; set; }
+            public bool Released { get; set; }
         }
     }
 }

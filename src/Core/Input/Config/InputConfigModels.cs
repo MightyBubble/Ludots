@@ -68,6 +68,13 @@ namespace Ludots.Core.Input.Config
 
         public List<InputModifierDef> Processors { get; set; } = new List<InputModifierDef>();
         public List<InputModifierDef> Interactions { get; set; } = new List<InputModifierDef>();
+
+        /// <summary>
+        /// Optional integer stamped on each edge of this binding. Absent means the
+        /// binding contributes only to the action's summed value. Every binding of
+        /// one action must agree: all carry an integer, or none do.
+        /// </summary>
+        public int? IntValue { get; set; }
     }
 
     /// <summary>

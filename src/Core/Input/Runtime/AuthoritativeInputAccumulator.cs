@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Persistence;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -29,7 +30,8 @@ namespace Ludots.Core.Input.Runtime
             bool pressedThisFrame,
             bool releasedThisFrame,
             bool boundByActiveContext,
-            bool preserveValueUntilSnapshot = false)
+            bool preserveValueUntilSnapshot = false,
+            IReadOnlyList<InputBindingIntFire>? intFires = null)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -52,6 +54,14 @@ namespace Ludots.Core.Input.Runtime
             state.PressedThisTick |= pressedThisFrame;
             state.ReleasedThisTick |= releasedThisFrame;
             state.PreserveValueUntilSnapshot |= preserveValueUntilSnapshot;
+            if (intFires != null)
+            {
+                state.IntFires ??= new List<InputBindingIntFire>(intFires.Count);
+                for (int i = 0; i < intFires.Count; i++)
+                {
+                    state.IntFires.Add(intFires[i]);
+                }
+            }
         }
 
         public void CaptureVisualFrame(PlayerInputHandler input)
@@ -72,6 +82,7 @@ namespace Ludots.Core.Input.Runtime
             state.IsDown = false;
             state.PressedThisTick = false;
             state.ReleasedThisTick = false;
+            state.IntFires?.Clear();
         }
 
         public void BuildTickSnapshot(FrozenInputActionReader snapshot)
@@ -88,10 +99,12 @@ namespace Ludots.Core.Input.Runtime
                     state.IsDown,
                     state.PressedThisTick,
                     state.ReleasedThisTick,
-                    state.Present);
+                    state.Present,
+                    state.IntFires);
                 state.PressedThisTick = false;
                 state.ReleasedThisTick = false;
                 state.PreserveValueUntilSnapshot = false;
+                state.IntFires?.Clear();
             }
         }
 
@@ -103,6 +116,7 @@ namespace Ludots.Core.Input.Runtime
             public bool PressedThisTick;
             public bool ReleasedThisTick;
             public bool PreserveValueUntilSnapshot;
+            public List<InputBindingIntFire>? IntFires;
         }
     }
 }

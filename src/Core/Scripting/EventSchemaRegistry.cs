@@ -109,6 +109,7 @@ namespace Ludots.Core.Scripting
                 new("modifiers", EventParamType.Int, MapTriggerEventPayloadKeys.Modifiers),
                 new("actionValueX", EventParamType.Float, MapTriggerEventPayloadKeys.ActionValueX, Optional: true),
                 new("actionValueY", EventParamType.Float, MapTriggerEventPayloadKeys.ActionValueY, Optional: true),
+                new("bindingInt", EventParamType.Int, MapTriggerEventPayloadKeys.BindingInt, Optional: true),
             }),
             new(GameEvents.MapVariableChanged.Value, EventScope.Map, new EventParamSchema[]
             {

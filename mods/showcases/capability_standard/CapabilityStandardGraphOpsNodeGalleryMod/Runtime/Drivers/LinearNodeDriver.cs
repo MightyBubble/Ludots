@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.AimSource;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Persistence;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
@@ -265,6 +266,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         public bool IsDown(string actionId) => false;
         public bool PressedThisFrame(string actionId) => false;
         public bool ReleasedThisFrame(string actionId) => false;
+        public void CopyBindingIntFires(string actionId, List<InputBindingIntFire> destination) =>
+            destination?.Clear();
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)

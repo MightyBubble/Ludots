@@ -82,6 +82,57 @@ namespace PersistenceTests
             Assert.That(decoded.Frames[0].Actions[1].ActionId, Is.EqualTo("Stick"));
             Assert.That(decoded.Frames[0].Actions[1].Present, Is.True);
             Assert.That(decoded.Frames[0].Actions[1].Value, Is.EqualTo(new Vector3(1f, 2f, 0f)));
+            Assert.That(decoded.Frames[0].Actions[0].IntFires, Is.Null);
+        }
+
+        [Test]
+        public void CodecRoundTripsBindingIntFiresAndRejectsAFireWithBothEdges()
+        {
+            WorldSaveSnapshot checkpoint = Checkpoint();
+            var archive = new ReplayArchive(
+                new ReplayHeader(1, "mods", "registry", "map", 10, 0),
+                checkpoint,
+                new[]
+                {
+                    new AuthoritativeFrame(0, 11, new[]
+                    {
+                        new AuthoritativeAction(
+                            "Aim.Slot",
+                            Vector3.One,
+                            true,
+                            true,
+                            false,
+                            Present: true,
+                            new[]
+                            {
+                                new InputBindingIntFire(0, Pressed: true, Released: false),
+                                new InputBindingIntFire(5, Pressed: true, Released: false),
+                            }),
+                    }),
+                });
+
+            ReplayArchive decoded = new ReplayArchiveCodec().Decode(new ReplayArchiveCodec().Encode(archive));
+            IReadOnlyList<InputBindingIntFire> fires = decoded.Frames[0].Actions[0].IntFires!;
+            Assert.That(fires, Is.EqualTo(new[]
+            {
+                new InputBindingIntFire(0, Pressed: true, Released: false),
+                new InputBindingIntFire(5, Pressed: true, Released: false),
+            }));
+
+            var both = new AuthoritativeFrame(0, 1, new[]
+            {
+                new AuthoritativeAction(
+                    "Aim.Slot",
+                    Vector3.One,
+                    true,
+                    true,
+                    false,
+                    Present: true,
+                    new[] { new InputBindingIntFire(1, Pressed: true, Released: true) }),
+            });
+            Assert.That(
+                Assert.Throws<SaveContextException>(() => new AuthoritativeFrameStream().Append(both))!.Message,
+                Does.Contain("exactly one"));
         }
 
         [Test]

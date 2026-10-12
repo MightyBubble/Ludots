@@ -44,6 +44,9 @@ namespace Ludots.Core.Scripting
         public const string ActionValueX = "MapTrigger.ActionValueX";            // float
         public const string ActionValueY = "MapTrigger.ActionValueY";            // float
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
+        // Stamped only when the firing binding declared intValue. Button dispatches
+        // without that parameter omit the key; graphs that LoadEntryPayloadInt it fail closed.
+        public const string BindingInt = "MapTrigger.BindingInt";                // int
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
         public const string CalendarId = "Calendar.CalendarId";                  // int (ConfigKey id)
         public const string CalendarDayIndex = "Calendar.DayIndex";              // int

@@ -67,10 +67,11 @@ namespace Ludots.Core.Input.Config
                 if (contexts.TryGetValue(id, out var def)) result.Contexts.Add(def);
             }
 
+            Validate(result, relativePath, requireDeclaredActionForBindingInt: true);
             return result;
         }
 
-        public static void Validate(InputConfigRoot config, string source)
+        public static void Validate(InputConfigRoot config, string source, bool requireDeclaredActionForBindingInt = false)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.Actions == null)
@@ -137,6 +138,130 @@ namespace Ludots.Core.Input.Config
                 }
 
                 action.FiresOn = firesOn;
+            }
+
+            ValidateBindingIntValues(config, source, requireDeclaredActionForBindingInt);
+        }
+
+        /// <summary>
+        /// Integer parameters are per binding, so they are checked after the action
+        /// directory exists. A single mod file may bind an action declared by another
+        /// mod; that file skips the "action must exist" check. The merged config and
+        /// the handler do not.
+        /// </summary>
+        private static void ValidateBindingIntValues(InputConfigRoot config, string source, bool requireDeclaredAction)
+        {
+            var actions = new Dictionary<string, InputActionDef>(StringComparer.Ordinal);
+            for (int i = 0; i < config.Actions.Count; i++)
+            {
+                InputActionDef action = config.Actions[i];
+                if (action != null && !string.IsNullOrWhiteSpace(action.Id))
+                {
+                    actions[action.Id] = action;
+                }
+            }
+
+            var intModeByAction = new Dictionary<string, bool>(StringComparer.Ordinal);
+            List<InputContextDef> contexts = config.Contexts;
+            if (contexts == null)
+            {
+                return;
+            }
+
+            for (int c = 0; c < contexts.Count; c++)
+            {
+                InputContextDef context = contexts[c];
+                if (context?.Bindings == null)
+                {
+                    continue;
+                }
+
+                for (int b = 0; b < context.Bindings.Count; b++)
+                {
+                    ValidateBindingInt(
+                        context.Bindings[b],
+                        actions,
+                        intModeByAction,
+                        source,
+                        context.Id,
+                        requireDeclaredAction,
+                        insideComposite: false);
+                }
+            }
+        }
+
+        private static void ValidateBindingInt(
+            InputBindingDef binding,
+            Dictionary<string, InputActionDef> actions,
+            Dictionary<string, bool> intModeByAction,
+            string source,
+            string contextId,
+            bool requireDeclaredAction,
+            bool insideComposite)
+        {
+            if (binding == null)
+            {
+                return;
+            }
+
+            bool composite = insideComposite || !string.IsNullOrEmpty(binding.CompositeType);
+            if (binding.IntValue != null && composite)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_BINDING_INT_COMPOSITE: input config '{source}' context '{contextId}' action '{binding.ActionId}' carries intValue on a composite binding. intValue belongs on a button binding.");
+            }
+
+            if (binding.IntValue != null)
+            {
+                string actionId = binding.ActionId ?? string.Empty;
+                if (actions.TryGetValue(actionId, out InputActionDef action))
+                {
+                    if (action.Type != InputActionType.Button)
+                    {
+                        throw new InvalidOperationException(
+                            $"LUDOTS_INPUT_BINDING_INT_NOT_BUTTON: input config '{source}' context '{contextId}' action '{actionId}' is {action.Type}; intValue is only valid on {InputActionType.Button} bindings.");
+                    }
+                }
+                else if (requireDeclaredAction)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_BINDING_INT_ACTION_UNKNOWN: input config '{source}' context '{contextId}' binding intValue references undeclared action '{actionId}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(actionId) &&
+                    actions.ContainsKey(actionId) &&
+                    intModeByAction.TryGetValue(actionId, out bool hasInt) &&
+                    !hasInt)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_BINDING_INT_MIXED: input config '{source}' action '{actionId}' mixes bindings with intValue and bindings without it.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(actionId) && actions.ContainsKey(actionId))
+                {
+                    intModeByAction[actionId] = true;
+                }
+            }
+            else if (!composite && !string.IsNullOrWhiteSpace(binding.ActionId) && actions.ContainsKey(binding.ActionId))
+            {
+                if (intModeByAction.TryGetValue(binding.ActionId, out bool hasInt) && hasInt)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_BINDING_INT_MIXED: input config '{source}' action '{binding.ActionId}' mixes bindings with intValue and bindings without it.");
+                }
+
+                intModeByAction[binding.ActionId] = false;
+            }
+
+            List<InputBindingDef> parts = binding.CompositeParts;
+            if (parts == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < parts.Count; i++)
+            {
+                ValidateBindingInt(parts[i], actions, intModeByAction, source, contextId, requireDeclaredAction, insideComposite: true);
             }
         }
 

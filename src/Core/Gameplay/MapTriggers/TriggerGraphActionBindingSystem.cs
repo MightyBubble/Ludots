@@ -6,6 +6,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
+using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.MapTriggers
@@ -32,6 +33,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Action<Entity> _reconcileContext;
         private readonly List<string> _actionSnapshot = new(32);
         private readonly List<TriggerGraphMountTrigger> _mountSnapshot = new(16);
+        private readonly List<InputBindingIntFire> _intFires = new(4);
 
         public TriggerGraphActionBindingSystem(
             Func<MapSession?> currentSession,
@@ -134,7 +136,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 if (DispatchPhase(input, actionId, valueChange) != phase) continue;
 
                 System.Numerics.Vector2 actionValue = default;
-                System.Numerics.Vector2 pointer;
+                System.Numerics.Vector2 pointer = default;
                 if (valueChange)
                 {
                     string watchedId = actionId == ReservedInputActionIds.PointerMoved
@@ -150,8 +152,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         pointer = default;
                     }
                 }
-                else if (!FiredThisTick(input, actionId) ||
-                         !TryResolveEventPointer(actionId, IsRelease(actionId), out pointer))
+                else if (!DispatchButtonEdges(session, input, possessedRep, actionId, mounts))
+                {
+                    continue;
+                }
+
+                if (!valueChange)
                 {
                     continue;
                 }
@@ -165,8 +171,81 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
                         (possessedRep.HasValue && rep != possessedRep.Value)) continue;
                     if (valueChange && !mount.ConsumeActionValueSample(actionValue)) continue;
-                    Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue);
+                    Dispatch(session, mount, actionId, rep, pointer, modifiers, valueChange, actionValue, bindingInt: null);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Integer bindings dispatch once per matching edge and suppress the aggregate
+        /// edge. The aggregate is the 0-to-nonzero transition of the summed value, so
+        /// a second slot pressed while another is held would otherwise never fire, and
+        /// firing both would double the first slot.
+        /// </summary>
+        private bool DispatchButtonEdges(
+            MapSession session,
+            IInputActionReader input,
+            Entity? possessedRep,
+            string actionId,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts)
+        {
+            bool release = IsRelease(actionId);
+            _intFires.Clear();
+            input.CopyBindingIntFires(actionId, _intFires);
+            int matched = 0;
+            for (int f = 0; f < _intFires.Count; f++)
+            {
+                InputBindingIntFire fire = _intFires[f];
+                if (release ? !fire.Released : !fire.Pressed)
+                {
+                    continue;
+                }
+
+                matched++;
+                if (!TryResolveEventPointer(actionId, release, out System.Numerics.Vector2 pointer))
+                {
+                    continue;
+                }
+
+                DispatchMounts(session, input, possessedRep, mounts, actionId, pointer, stampActionValue: false, default, fire.Value);
+            }
+
+            if (matched > 0)
+            {
+                return true;
+            }
+
+            if (!FiredThisTick(input, actionId) ||
+                !TryResolveEventPointer(actionId, release, out System.Numerics.Vector2 aggregatePointer))
+            {
+                return true;
+            }
+
+            DispatchMounts(session, input, possessedRep, mounts, actionId, aggregatePointer, stampActionValue: false, default, bindingInt: null);
+            return true;
+        }
+
+        private void DispatchMounts(
+            MapSession session,
+            IInputActionReader input,
+            Entity? possessedRep,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts,
+            string actionId,
+            System.Numerics.Vector2 pointer,
+            bool stampActionValue,
+            System.Numerics.Vector2 actionValue,
+            int? bindingInt)
+        {
+            int modifiers = ReadHeldModifiers(input);
+            CopyMounts(mounts);
+            for (int i = 0; i < _mountSnapshot.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = _mountSnapshot[i];
+                Entity rep = mount.Scope;
+                if (!mount.IsActionRegistered || rep == Entity.Null || rep == default ||
+                    (possessedRep.HasValue && rep != possessedRep.Value)) continue;
+                if (stampActionValue && !mount.ConsumeActionValueSample(actionValue)) continue;
+                Dispatch(session, mount, actionId, rep, pointer, modifiers, stampActionValue, actionValue, bindingInt);
             }
         }
 
@@ -178,7 +257,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             System.Numerics.Vector2 pointer,
             int modifiers,
             bool stampActionValue,
-            System.Numerics.Vector2 actionValue)
+            System.Numerics.Vector2 actionValue,
+            int? bindingInt)
         {
             ScriptContext context = _createContext();
             context.Set(CoreServiceKeys.MapId, session.MapId);
@@ -192,6 +272,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 context.Set(MapTriggerEventPayloadKeys.ActionValueX, actionValue.X);
                 context.Set(MapTriggerEventPayloadKeys.ActionValueY, actionValue.Y);
+            }
+
+            if (bindingInt.HasValue)
+            {
+                context.Set(MapTriggerEventPayloadKeys.BindingInt, bindingInt.Value);
             }
 
             _triggerManager.DispatchMountedTrigger(mount, context);

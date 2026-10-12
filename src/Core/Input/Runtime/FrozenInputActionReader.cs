@@ -77,7 +77,8 @@ namespace Ludots.Core.Input.Runtime
             bool isDown,
             bool pressedThisFrame,
             bool releasedThisFrame,
-            bool present)
+            bool present,
+            IReadOnlyList<InputBindingIntFire>? intFires = null)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -91,7 +92,26 @@ namespace Ludots.Core.Input.Runtime
                 PressedThisFrame = pressedThisFrame,
                 ReleasedThisFrame = releasedThisFrame,
                 Present = present,
+                IntFires = CopyFires(intFires),
             };
+        }
+
+        public void CopyBindingIntFires(string actionId, List<InputBindingIntFire> destination)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_states.TryGetValue(actionId, out ActionState state) ||
+                state.IntFires == null)
+            {
+                return;
+            }
+
+            InputBindingIntFire[] fires = state.IntFires;
+            for (int i = 0; i < fires.Length; i++)
+            {
+                destination.Add(fires[i]);
+            }
         }
 
         public void AddActionValue(string actionId, Vector3 value)
@@ -194,7 +214,8 @@ namespace Ludots.Core.Input.Runtime
                     state.IsDown,
                     state.PressedThisFrame,
                     state.ReleasedThisFrame,
-                    state.Present));
+                    state.Present,
+                    state.IntFires));
             }
 
             destination.Sort(static (left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
@@ -205,6 +226,22 @@ namespace Ludots.Core.Input.Runtime
             return value.LengthSquared() > 0.000001f;
         }
 
+        private static InputBindingIntFire[]? CopyFires(IReadOnlyList<InputBindingIntFire>? fires)
+        {
+            if (fires == null || fires.Count == 0)
+            {
+                return null;
+            }
+
+            var copy = new InputBindingIntFire[fires.Count];
+            for (int i = 0; i < fires.Count; i++)
+            {
+                copy[i] = fires[i];
+            }
+
+            return copy;
+        }
+
         private struct ActionState
         {
             public Vector3 Value;
@@ -212,6 +249,7 @@ namespace Ludots.Core.Input.Runtime
             public bool PressedThisFrame;
             public bool ReleasedThisFrame;
             public bool Present;
+            public InputBindingIntFire[]? IntFires;
         }
     }
 }

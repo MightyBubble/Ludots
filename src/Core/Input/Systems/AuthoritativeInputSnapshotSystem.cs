@@ -45,7 +45,8 @@ namespace Ludots.Core.Input.Systems
                         action.IsDown,
                         action.Pressed,
                         action.Released,
-                        action.Present);
+                        action.Present,
+                        action.IntFires);
                 }
                 _seatInput?.FreezeSnapshots(discardLiveInput: true);
                 return;
