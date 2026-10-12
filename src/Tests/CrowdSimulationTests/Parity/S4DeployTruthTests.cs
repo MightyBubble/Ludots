@@ -160,6 +160,17 @@ public class S4DeployTruthTests
     }
 
     [Test]
+    public void Deploy_ChunkOrderRejectsArchetypeThatIsNotTheDenseSet()
+    {
+        var (_, session) = BuildSession("s1337");
+        Assert.That(CrowdDeployment.Spawn(session, 2), Is.EqualTo(2));
+        Archetype archetype = session.World.GetArchetype(session.Units.EntityAt(0));
+        session.World.Create(archetype.Signature);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => CrowdDeployment.Spawn(session, 2))!;
+        Assert.That(ex.Message, Does.Contain("must contain exactly the dense set"));
+    }
+
+    [Test]
     public void Deploy_UsesTemplateBatchCreate()
     {
         var (_, session) = BuildSession("s1337");

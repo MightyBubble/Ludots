@@ -278,7 +278,7 @@ public sealed class CrowdSimUnits
     /// 批车道按模板把同一签名的实体追加进同一个原型，chunk 序就不再是稠密下标。
     /// Gather/Scatter 仍按稠密下标写 SoA；序一乱，每行都打到不同缓存行，50k 的 tick 会多出数毫秒。
     /// 只交换这些实体已经占着的行，不新建实体，稠密表和实体 id 都不变。
-    /// 原型里还有别的实体时不动：那会把别人的行卷进来。查询按下标回读，结果仍然对，只是少了这次顺序。
+    /// 人群单位原型必须正好是这张稠密表。多出来的实体不能静默跳过，否则交换会卷进别人的行。
     /// </summary>
     private void OrderChunkRowsByDenseIndex()
     {
@@ -292,7 +292,8 @@ public sealed class CrowdSimUnits
         Archetype archetype = _world.GetArchetype(first);
         if (archetype.EntityCount != n)
         {
-            return;
+            throw new InvalidOperationException(
+                $"SPAWN.RUNTIME.ERR.CrowdChunkOrder: unit archetype has {archetype.EntityCount} entities, dense count is {n}. The crowd unit archetype must contain exactly the dense set.");
         }
 
         var packed = new Entity[n];
@@ -389,6 +390,7 @@ public sealed class CrowdSimUnits
         }
     }
 
+    // Vendored Arch stores each column as T[] aligned with Signature.Components. The cast is the contract.
     private static void SwapComponentRow<T>(Array left, int leftIndex, Array right, int rightIndex)
     {
         T[] a = (T[])left;
