@@ -114,10 +114,6 @@
         "op": "HaltReturnInt"
       },
       {
-        "id": "face",
-        "op": "LoadEntityFacing"
-      },
-      {
         "id": "wf",
         "op": "WriteBlackboardFloat",
         "blackboardKey": "Cast.Facing"
@@ -220,24 +216,19 @@
         "to": "sv"
       },
       {
-        "from": "sv",
-        "fromPort": "next",
-        "to": "face"
-      },
-      {
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
       },
       {
-        "from": "face",
-        "fromPort": "next",
-        "to": "wf"
-      },
-      {
         "from": "wf",
         "fromPort": "next",
         "to": "c1"
+      },
+      {
+        "from": "sv",
+        "fromPort": "next",
+        "to": "wf"
       }
     ],
     "valueEdges": [
@@ -394,17 +385,11 @@
       {
         "from": "member",
         "fromPort": "value",
-        "to": "face",
-        "toPort": "source"
-      },
-      {
-        "from": "member",
-        "fromPort": "value",
         "to": "wf",
         "toPort": "source"
       },
       {
-        "from": "face",
+        "from": "z",
         "fromPort": "value",
         "to": "wf",
         "toPort": "value"
