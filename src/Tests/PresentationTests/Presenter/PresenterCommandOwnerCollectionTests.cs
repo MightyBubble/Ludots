@@ -158,6 +158,55 @@ public sealed class PresenterCommandOwnerCollectionTests
         Assert.That(pipeline.Instances.ActiveCount, Is.EqualTo(1));
     }
 
+    [Test]
+    public void DirectCreates_SameScopeDifferentOwners_StayDistinct()
+    {
+        using World world = World.Create();
+        var definitions = new PresenterDefinitionRegistry();
+        int markerId = definitions.Register("range_marker", new PresenterDefinition());
+        var commands = new PresenterCommandBuffer();
+        var events = new PresentationEventStream(8);
+        var instances = new PresenterEntityRuntime(world);
+        using var runtime = new PresenterRuntimeSystem(
+            world,
+            commands,
+            events,
+            new TransientMarkerBuffer(),
+            new PresentationRequestBuffer(),
+            instances,
+            new PresentationStableIdAllocator(),
+            definitions);
+        Entity ownerA = world.Create();
+        Entity ownerB = world.Create();
+        const int scope = 9;
+        Assert.That(commands.TryAdd(Create(markerId, scope, ownerA)), Is.True);
+        Assert.That(commands.TryAdd(Create(markerId, scope, ownerB)), Is.True);
+        runtime.Update(0f);
+
+        Assert.That(instances.TryGetActiveScopedInstance(
+            markerId, ownerA, scope, PresentationAnchorKind.Entity, Vector3.Zero, out Entity presenterA), Is.True);
+        Assert.That(instances.TryGetActiveScopedInstance(
+            markerId, ownerB, scope, PresentationAnchorKind.Entity, Vector3.Zero, out Entity presenterB), Is.True);
+        Assert.That(presenterA, Is.Not.EqualTo(presenterB));
+        Assert.That(world.Get<PresenterState>(presenterA).OwnerEntity, Is.EqualTo(ownerA));
+        Assert.That(world.Get<PresenterState>(presenterB).OwnerEntity, Is.EqualTo(ownerB));
+        Assert.That(instances.ActiveCount, Is.EqualTo(2));
+    }
+
+    private static PresenterCommand Create(int markerId, int scope, Entity owner)
+    {
+        return new PresenterCommand
+        {
+            CommandKind = PresenterCommandKind.CreatePresenter,
+            CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
+            RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
+            PresenterDefinitionId = markerId,
+            ScopeTag = scope,
+            AnchorKind = PresentationAnchorKind.Entity,
+            Source = owner,
+        };
+    }
+
     private PresentationEventStream rulesEvents = null!;
     private PresenterCommandBuffer commands = null!;
 

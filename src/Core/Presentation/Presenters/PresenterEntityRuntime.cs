@@ -297,7 +297,7 @@ namespace Ludots.Core.Presentation.Presenters
                 OwnerStableId = ResolveOwnerStableId(owner, parent),
                 ScopeId = scopeId,
                 OwnerEntity = owner,
-                ScopeSubject = scopeSubject,
+                ScopeSubject = IsAssignedEntity(scopeSubject) ? scopeSubject : Entity.Null,
                 AnchorKind = anchorKind,
                 BehaviorActiveMask = BuildDefaultBehaviorMask(definition),
                 Elapsed = 0f,
@@ -3975,7 +3975,14 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static Entity ScopeIdentity(in PresenterState state)
         {
-            return state.ScopeSubject != Entity.Null ? state.ScopeSubject : state.OwnerEntity;
+            return IsAssignedEntity(state.ScopeSubject) ? state.ScopeSubject : state.OwnerEntity;
+        }
+
+        // Entity.Null is (-1, 0, -1). An unset subject is default(Entity), which compares unequal to Null.
+        // Treating that zero value as assigned collapses every direct create onto one scoped key.
+        private static bool IsAssignedEntity(Entity entity)
+        {
+            return entity.Id >= 0 && entity != default;
         }
 
         private void RemoveIndexes(Entity presenter, in PresenterState state)

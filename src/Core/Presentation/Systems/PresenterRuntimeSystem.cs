@@ -649,7 +649,9 @@ namespace Ludots.Core.Presentation.Systems
 
         private static Entity ScopeIdentity(in PresenterCommand cmd)
         {
-            return cmd.ScopeSubject != Entity.Null ? cmd.ScopeSubject : cmd.Source;
+            // Same sentinel as PresenterEntityRuntime: default(Entity) is not Entity.Null.
+            Entity subject = cmd.ScopeSubject;
+            return subject.Id >= 0 && subject != default ? subject : cmd.Source;
         }
 
         private void HandleDestroyScopedPresenter(in PresenterCommand cmd)
