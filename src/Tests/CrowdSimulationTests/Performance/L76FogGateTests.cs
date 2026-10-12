@@ -154,12 +154,25 @@ public sealed class L76FogGateTests
             new(obscureAt, CrowdSimCommand.Parse(JsonNode.Parse(obscureJson)!)),
         });
         Step(session);
-        foreach (int cell in obscureCells)
+        while (session.TickCount < obscureAt + period)
         {
-            Assert.That(fog.CellVisibilityOf(groupA, cell), Is.Not.EqualTo(CellVisibility.Visible), $"遮蔽中格 {cell}");
+            foreach (int cell in obscureCells)
+            {
+                Assert.That(
+                    fog.CellVisibilityOf(groupA, cell),
+                    Is.Not.EqualTo(CellVisibility.Visible),
+                    $"遮蔽中 tick {session.TickCount} 格 {cell}");
+            }
+
+            Step(session);
         }
 
-        while (session.TickCount <= obscureAt + period) Step(session);
+        Assert.That(session.TickCount, Is.EqualTo(obscureAt + period));
+        Assert.That(
+            fog.CellVisibilityOf(groupA, lit),
+            Is.Not.EqualTo(CellVisibility.Visible),
+            $"到期前 tick {session.TickCount}");
+        Step(session);
         Assert.That(fog.CellVisibilityOf(groupA, lit), Is.EqualTo(CellVisibility.Visible));
 
         int structureId = FirstStructure(fog);
