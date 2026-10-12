@@ -78,6 +78,7 @@ namespace Ludots.Client.Raylib.Rendering
         /// 本渲染器仍负责纹理暂存与上传,见 TryGetStagedTexture)。
         /// </summary>
         public bool DrawFlowKind { get; set; } = true;
+        public FogDecalPalette? FogPalette { get; set; }
 
         /// <summary>
         /// Fog 场是否由本渲染器直接绘制(false = 宿主把迷雾三态纹理改道到地形贴花槽位,
@@ -186,8 +187,8 @@ namespace Ludots.Client.Raylib.Rendering
 
                 if (fullUpload)
                 {
-                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height));
-                    ApplyCells(state, cells);
+                    ClearRect(state, new IntRect(0, 0, state.Width, state.Height), FogPalette);
+                    ApplyCells(state, cells, FogPalette);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
                 else
@@ -195,8 +196,8 @@ namespace Ludots.Client.Raylib.Rendering
                     BuildDirtyRects(state, dirtyRects);
                     if (state.DirtyRectCount > 0)
                     {
-                        ClearDirtyRects(state);
-                        ApplyCells(state, cells);
+                        ClearDirtyRects(state, FogPalette);
+                        ApplyCells(state, cells, FogPalette);
                     }
                 }
 
@@ -363,7 +364,10 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void ApplyCells(FieldTextureState state, ReadOnlySpan<GlobalFieldVisualCell> cells)
+        private static void ApplyCells(
+            FieldTextureState state,
+            ReadOnlySpan<GlobalFieldVisualCell> cells,
+            FogDecalPalette? fogPalette)
         {
             for (int i = 0; i < cells.Length; i++)
             {
@@ -373,7 +377,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state, x, y, in cell);
+                SetPixel(state, x, y, in cell, fogPalette);
             }
         }
 
@@ -392,11 +396,11 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static void ClearDirtyRects(FieldTextureState state)
+        private static void ClearDirtyRects(FieldTextureState state, FogDecalPalette? fogPalette)
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                ClearRect(state, state.DirtyRects[i]);
+                ClearRect(state, state.DirtyRects[i], fogPalette);
             }
         }
 
@@ -455,9 +459,9 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private static void ClearRect(FieldTextureState state, IntRect rect)
+        private static void ClearRect(FieldTextureState state, IntRect rect, FogDecalPalette? fogPalette)
         {
-            ResolveClearColorBytes(state.Id.Kind, out byte r, out byte g, out byte b, out byte a);
+            ResolveClearColorBytes(state.Id.Kind, fogPalette, out byte r, out byte g, out byte b, out byte a);
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
@@ -478,13 +482,15 @@ namespace Ludots.Client.Raylib.Rendering
             FieldTextureState state,
             int x,
             int y,
-            in GlobalFieldVisualCell cell)
+            in GlobalFieldVisualCell cell,
+            FogDecalPalette? fogPalette)
         {
             ResolveCellColorBytes(
                 state.Id.Kind,
                 state.ValueKind,
                 state.PaletteId,
                 in cell,
+                fogPalette,
                 out byte r,
                 out byte g,
                 out byte b,
@@ -620,6 +626,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ResolveClearColorBytes(
             GlobalFieldVisualKind kind,
+            FogDecalPalette? fogPalette,
             out byte r,
             out byte g,
             out byte b,
@@ -627,7 +634,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (kind == GlobalFieldVisualKind.Fog)
             {
-                ResolveFogColorBytes(FogVisibilityUnseen, out r, out g, out b, out a);
+                ResolveFogColorBytes(FogVisibilityUnseen, fogPalette, out r, out g, out b, out a);
                 return;
             }
 
@@ -651,6 +658,7 @@ namespace Ludots.Client.Raylib.Rendering
             GlobalFieldVisualValueKind valueKind,
             int paletteId,
             in GlobalFieldVisualCell cell,
+            FogDecalPalette? fogPalette,
             out byte r,
             out byte g,
             out byte b,
@@ -658,7 +666,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (kind == GlobalFieldVisualKind.Fog)
             {
-                ResolveFogColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                ResolveFogColorBytes(cell.ByteValue, fogPalette, out r, out g, out b, out a);
                 return;
             }
 
@@ -740,6 +748,27 @@ namespace Ludots.Client.Raylib.Rendering
             g = (byte)Math.Clamp((int)Math.Round(110 * (1f - (0.75f * t))), 0, 255);
             b = (byte)Math.Clamp((int)Math.Round(48 * (1f - (0.55f * t))), 0, 255);
             a = (byte)Math.Clamp((int)Math.Round(70 + (160 * t)), 0, 255);
+        }
+
+        private static void ResolveFogColorBytes(
+            byte visibility,
+            FogDecalPalette? palette,
+            out byte r,
+            out byte g,
+            out byte b,
+            out byte a)
+        {
+            if (palette != null)
+            {
+                FogDecalColor color = palette.For(visibility);
+                r = color.R;
+                g = color.G;
+                b = color.B;
+                a = color.A;
+                return;
+            }
+
+            ResolveFogColorBytes(visibility, out r, out g, out b, out a);
         }
 
         private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)

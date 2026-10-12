@@ -302,6 +302,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DynamicParticipantVisibilityPublisher> DynamicParticipantVisibilityPublisher = new("DynamicParticipantVisibilityPublisher");
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<ISeatVisionScope> SeatVisionScope = new("Presentation.SeatVisionScope");
+        public static readonly ServiceKey<FogDecalPalette> FogDecalPalette = new("Presentation.FogDecalPalette");
         public static readonly ServiceKey<InfluenceFieldRegistry> InfluenceFieldRegistry = new("Fields.InfluenceFieldRegistry");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
         public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");

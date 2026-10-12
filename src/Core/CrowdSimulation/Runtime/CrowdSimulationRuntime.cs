@@ -21,7 +21,9 @@ using Ludots.Core.Map;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Client;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -221,6 +223,11 @@ public sealed partial class CrowdSimulationRuntime
         _debug = CrowdSimulationDebugConfig.Load(debugMerged);
         _planTimeout = _debug.PlanTimeout;
         _presentation = _debug.Presentation;
+        if (_presentation?.FogDecal != null)
+        {
+            engine.SetService(CoreServiceKeys.FogDecalPalette, _presentation.FogDecal.ToPalette());
+        }
+
         return true;
     }
 
@@ -373,6 +380,17 @@ public sealed partial class CrowdSimulationRuntime
             engine.GetService(CoreServiceKeys.VisionFogLayerRegistry),
             engine.GetService(CoreServiceKeys.VisionFogFieldStore));
         _session.EnableMovement(kernel, planner);
+        if (_session.Fog != null &&
+            engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
+            seats != null)
+        {
+            engine.SetService(
+                CoreServiceKeys.SeatVisionScope,
+                new CrowdSeatVisionScope(seats, () =>
+                    engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out CrowdSimSession? session)
+                        ? session
+                        : null));
+        }
         _session.SetStaticBlockers(CrowdSimulation.Movement.CrowdBlockerColliders.Build(
             mapSurface.Blockers, runtimeConfig.NavCellsPerSide, runtimeConfig.NavCellSizeCm));
 
