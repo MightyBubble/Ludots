@@ -157,6 +157,8 @@ public sealed class CrowdMovementKernel
             NavMemo = new Nav.NavContext?[gm];
             OrderStamp = new byte[gm];
             NavStamp = new byte[gm];
+            // 新戳全是 0。世代号若停在 255，下面的 ++ 会回绕成 0，全部被误判为命中。
+            GroupMemoEpoch = 0;
         }
 
         if (OrderGate.Length < gm)
