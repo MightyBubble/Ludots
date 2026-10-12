@@ -221,6 +221,12 @@ public sealed class CrowdSimSession
 
     /// <summary>本 tick 的分区摘要。只在 <see cref="Step"/> 返回 true 时更新。</summary>
     public CrowdSimStateDigest LastDigest { get; private set; }
+
+    /// <summary>
+    /// 诊断分区（groups / jump / commands）。默认关，这三个词为 0，不进 <see cref="CrowdSimStateDigest.Total"/>。
+    /// 打开后每 tick 用各自的 Mix 计算。自动回放武装时运行时从第一 tick 打开，回放会话复制同一开关。
+    /// </summary>
+    public bool DiagnosticDigest { get; set; }
     public int SpawnSeq { get; set; }
     public int SelectedCount { get; private set; }
     public int SpawnSkippedTotal { get; private set; }

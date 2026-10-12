@@ -100,6 +100,9 @@ public sealed partial class CrowdSimulationRuntime
     /// <summary>首个分歧分区名。无分歧或条数不同时为空。</summary>
     public string ReplayDivergenceSection { get; private set; } = "";
 
+    /// <summary>首个分歧 tick 上同时有差的诊断断面。无分歧时为 0。</summary>
+    public CrowdSimDiagnosticSection ReplayDivergenceDiagnostic { get; private set; }
+
     /// <summary>停用本次激活的自动回放:现场指令(玩家交互)进入会话后,自动回放的对拍自证
     /// 不再是"同输入重放"。只拦自动触发;RunReplay 与对拍语义本身不动。</summary>
     public void SuppressAutoReplay() => _autoReplayDone = true;
@@ -402,9 +405,11 @@ public sealed partial class CrowdSimulationRuntime
         _session.Commands.Schedule(_session, _pendingScript);
         _autoReplayAtTick = _debug.Session?.AutoReplayAtTick ?? -1;
         _autoReplayDone = false;
+        if (_autoReplayAtTick >= 0) _session.DiagnosticDigest = true;
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         ReplayDivergenceSection = "";
+        ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         _hashCount = 0;
         _hashHead = 0;
 
@@ -438,6 +443,7 @@ public sealed partial class CrowdSimulationRuntime
         ReplayStatus = 0;
         ReplayDivergenceTick = -1;
         ReplayDivergenceSection = "";
+        ReplayDivergenceDiagnostic = CrowdSimDiagnosticSection.None;
         engine.RemoveService(CoreServiceKeys.CrowdSimulationSession);
         engine.RemoveService(CoreServiceKeys.CrowdSimulationRuntime);
         engine.RemoveService(CoreServiceKeys.TeamColorPalette);
@@ -485,8 +491,11 @@ public sealed partial class CrowdSimulationRuntime
         {
             _autoReplayDone = true;
             RunReplay();
+            string diag = CrowdSimChecksum.FormatDiagnostic(ReplayDivergenceDiagnostic);
             Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection}.");
+                diag.Length == 0
+                    ? $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection}."
+                    : $"CrowdSimulation replay at tick {session.TickCount}: status={ReplayStatus} divergenceTick={ReplayDivergenceTick} section={ReplayDivergenceSection} diag={diag}.");
         }
 
         if (session.TickCount % session.Config.FixedHz == 0)
@@ -519,6 +528,7 @@ public sealed partial class CrowdSimulationRuntime
             Collections = session.Presentation.Collections,
         };
         var replay = new CrowdSimSession(session.Config, ArchWorld.Create(), session.Navs, session.NavByLayerRadius, replayWiring);
+        replay.DiagnosticDigest = session.DiagnosticDigest;
         // 回放 = 全新仿真(参考 createHeadless / runReplay 同形):结构 op 会改写导航上下文,
         // 回放共享活会话的导航即带着已生效的结构变更从头跑(首个分歧恰在首个规划落地)。
         // 有结构仓的会话,回放用烘焙输入重建仓 + 全新导航 + 独立 tile 缓存。
@@ -579,6 +589,7 @@ public sealed partial class CrowdSimulationRuntime
         CrowdSimDigestDiff diff = CrowdSimChecksum.DiffDigest(live, replayDigests);
         ReplayDivergenceTick = diff.Tick;
         ReplayDivergenceSection = diff.Section;
+        ReplayDivergenceDiagnostic = diff.Diagnostic;
         ReplayStatus = diff.Diverged ? 2 : 1;
     }
 

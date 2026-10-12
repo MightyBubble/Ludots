@@ -286,6 +286,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
         public bool RuntimePresent, Interactive;
         public int ReplayStatus, Divergence;
         public string ReplaySection = string.Empty;
+        public CrowdSimDiagnosticSection ReplayDiagnostic;
         public bool BuildMode, PreviewKnown, PreviewShown, PreviewValid, Pending;
         public int TemplateIndex, ViewMode;
         public string TemplateLabel = string.Empty;
@@ -333,6 +334,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
 
             if ((runtime != null) != RuntimePresent) return false;
             if (runtime != null && (ReplayStatus != runtime.ReplayStatus || Divergence != runtime.ReplayDivergenceTick
+                || ReplayDiagnostic != runtime.ReplayDivergenceDiagnostic
                 || !string.Equals(ReplaySection, runtime.ReplayDivergenceSection, StringComparison.Ordinal))) return false;
             if (Interactive != demo.InteractiveMode || BuildMode != demo.BuildMode) return false;
             if (TemplateIndex != demo.TemplateIndex || ViewMode != demo.ViewMode || Pending != pending) return false;
@@ -432,9 +434,7 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                     : runtime.ReplayStatus switch
                     {
                         1 => "回放:逐位一致",
-                        2 => string.IsNullOrEmpty(runtime.ReplayDivergenceSection)
-                            ? $"回放:分歧 @tick {runtime.ReplayDivergenceTick}"
-                            : $"回放:分歧 @tick {runtime.ReplayDivergenceTick} {runtime.ReplayDivergenceSection}",
+                        2 => FormatReplayDivergence(runtime),
                         _ => "回放:待触发",
                     };
             if (runtime != null)
@@ -442,10 +442,12 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 ReplayStatus = runtime.ReplayStatus;
                 Divergence = runtime.ReplayDivergenceTick;
                 ReplaySection = runtime.ReplayDivergenceSection;
+                ReplayDiagnostic = runtime.ReplayDivergenceDiagnostic;
             }
             else
             {
                 ReplaySection = string.Empty;
+                ReplayDiagnostic = CrowdSimDiagnosticSection.None;
             }
 
             BuildMode = demo.BuildMode;
@@ -478,5 +480,15 @@ public sealed class S4DeployDemoPresentationSystem : ISystem<float>
                 .Replace("{activity}", activity, StringComparison.Ordinal)
                 .Replace("{pending}", pendingText, StringComparison.Ordinal);
         }
+    }
+
+    private static string FormatReplayDivergence(CrowdSimulationRuntime runtime)
+    {
+        if (string.IsNullOrEmpty(runtime.ReplayDivergenceSection))
+            return $"回放:分歧 @tick {runtime.ReplayDivergenceTick}";
+        string diag = CrowdSimChecksum.FormatDiagnostic(runtime.ReplayDivergenceDiagnostic);
+        return diag.Length == 0
+            ? $"回放:分歧 @tick {runtime.ReplayDivergenceTick} {runtime.ReplayDivergenceSection}"
+            : $"回放:分歧 @tick {runtime.ReplayDivergenceTick} {runtime.ReplayDivergenceSection} diag={diag}";
     }
 }
