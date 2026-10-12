@@ -23,6 +23,10 @@
       "priority": 90,
       "bindings": [
         {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
           "actionId": "AimSchemes.ModeSmart",
           "path": "<Keyboard>/f1"
         },
