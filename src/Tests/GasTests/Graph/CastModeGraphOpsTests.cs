@@ -449,34 +449,73 @@ namespace Ludots.Tests.GasTests.Graph
         {
             string repo = FindRepoRoot();
             JsonSerializerOptions json = StrictJsonOptions.CreateCamelCase(includeFields: true);
-            GraphControlFlowDocument press = LoadGraph(Path.Combine(
-                repo, "mods/capabilities/input/AimInteractionMod/assets/GAS/graphs/graph.aim.press.json"), json);
-            GraphControlFlowDocument hook = LoadGraph(Path.Combine(
-                repo, "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json"), json);
-            hook.Entries = hook.Entries
-                .Where(entry => string.Equals(entry.HookNodeBefore?.GraphId, press.Id, StringComparison.Ordinal))
-                .ToList();
-
-            GraphIdRegistry.Register("graph.aim.resolve_submit");
-            GraphIdRegistry.Register("graph.champion.rebind_aim_actor");
+            string pressPath = Path.Combine(repo, "mods/capabilities/input/AimInteractionMod/assets/GAS/graphs/graph.aim.press.json");
             var schemas = new EventSchemaRegistry();
+            int champion = MeasureWovenPress(
+                pressPath,
+                Path.Combine(repo, "mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/graphs/graph.champion.bind_aim_actor.json"),
+                "graph.champion.rebind_aim_actor",
+                json,
+                schemas);
+            int interaction = MeasureWovenPress(
+                pressPath,
+                Path.Combine(repo, "mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/graphs/graph.interaction.bind_aim_actor.json"),
+                "graph.interaction.rebind_aim_actor",
+                json,
+                schemas);
+            int moba = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
+            int aimSchemes = MeasureWovenPress(pressPath, hookPath: null, invokeTarget: null, json, schemas);
+
+            TestContext.Out.WriteLine(
+                $"woven graph.aim.press longest host path: champion={champion} interaction={interaction} moba={moba} aim_schemes={aimSchemes}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(champion, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "champion");
+                Assert.That(interaction, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "interaction");
+                Assert.That(moba, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "moba");
+                Assert.That(aimSchemes, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps), "aim_schemes");
+            });
+        }
+
+        private static int MeasureWovenPress(
+            string pressPath,
+            string? hookPath,
+            string? invokeTarget,
+            JsonSerializerOptions json,
+            EventSchemaRegistry schemas)
+        {
+            GraphControlFlowDocument press = LoadGraph(pressPath, json);
+            GraphIdRegistry.Register("graph.aim.resolve_submit");
+            if (invokeTarget != null)
+            {
+                GraphIdRegistry.Register(invokeTarget);
+            }
+
             var programs = new GraphProgramRegistry();
             RegisterGraph(programs, press, schemas);
-            RegisterGraph(programs, hook, schemas);
+            var docs = new List<KeyValuePair<string, GraphControlFlowDocument>>
+            {
+                new(press.Id, press),
+            };
+            if (hookPath != null)
+            {
+                GraphControlFlowDocument hook = LoadGraph(hookPath, json);
+                hook.Entries = hook.Entries
+                    .Where(entry => string.Equals(entry.HookNodeBefore?.GraphId, press.Id, StringComparison.Ordinal))
+                    .ToList();
+                RegisterGraph(programs, hook, schemas);
+                docs.Add(new(hook.Id, hook));
+            }
+
             var collections = new EntityCollectionStore(new StringIntRegistry(
                 capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            TriggerGraphHookWeaver.Weave(
-                programs,
-                new List<KeyValuePair<string, GraphControlFlowDocument>>
-                {
-                    new(press.Id, press),
-                    new(hook.Id, hook),
-                },
-                SymbolResolver.Instance,
-                schemas,
-                collections);
+            TriggerGraphHookWeaver.Weave(programs, docs, SymbolResolver.Instance, schemas, collections);
+            return LongestWovenPress(programs, press.Id);
+        }
 
-            Assert.That(programs.TryGetRegistration(GraphIdRegistry.GetId(press.Id), out GraphProgramRegistration woven), Is.True);
+        private static int LongestWovenPress(GraphProgramRegistry programs, string graphId)
+        {
+            Assert.That(programs.TryGetRegistration(GraphIdRegistry.GetId(graphId), out GraphProgramRegistration woven), Is.True, graphId);
             int steps = 0;
             IReadOnlyList<TriggerGraphEntry> entries = woven.TriggerGraphEntries;
             for (int i = 0; i < entries.Count; i++)
@@ -484,9 +523,7 @@ namespace Ludots.Tests.GasTests.Graph
                 steps = Math.Max(steps, LongestHostPath(woven.Program, entries[i].StartPc));
             }
 
-            TestContext.Out.WriteLine($"woven graph.aim.press longest host path = {steps} steps");
-            Assert.That(steps, Is.LessThanOrEqualTo(TriggerGraphLimits.SliceBudgetSteps),
-                $"Champion bind hook woven into graph.aim.press runs {steps} host steps; the press slice budget is {TriggerGraphLimits.SliceBudgetSteps}. InvokeGraph children are not part of this count.");
+            return steps;
         }
 
         private static GraphControlFlowDocument LoadGraph(string path, JsonSerializerOptions json)
