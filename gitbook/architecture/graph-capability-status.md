@@ -169,6 +169,50 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 
+### 3.3.2 瞄准改走交互状态 + 控制方案（PR #1755 这条线）
+
+目标：`CoreInputMod` 整个删掉；手柄、键鼠、LoL 式、暗黑式施放全部是交互状态 + 控制方案 + 图，玩法 mod 零 C#。能力 mod 是 `mods/capabilities/input/AimInteractionMod`，四个游戏（冠军沙盒、MOBA、交互展示、`aim_control_schemes`）共用它。
+
+**这条线上没守住的，必须在本线改掉，不另开票拖：**
+
+| 项 | 错在哪 | 怎么改 |
+|----|--------|--------|
+| Core 技能定义上的 `targeting.targetKinds` + `AbilityAcceptsTargetKind`（op 536） | Core 穷举玩法参数，和已删的 `indicator` / `TargetShape` 是同一种做法 | 切片 R 在做：全部撤掉；目标规则写在技能 `triggerGraphs` 引用的共用规则图里；Core 只补「按技能 id 派发事件」「按槽位读技能 id」两件通用能力 |
+| Core 里固定了「施法方式」这一维：`InteractionPref.DefaultCastModeId` / `OverrideCastModeIds`、`Input/cast_modes.json`、`IsCastMode` / `SetCastMode`（531/532） | 和 `targetKinds` 同病：施法方式是 MOBA 词，三消没有。Core 自己从不读它，只有 mod 图读 | 改成通用偏好键：mod 在 `Input/interaction_prefs.json` 声明偏好键和取值目录，`InteractionPref` 存固定容量的（键, 值）对，玩家级 + 按技能模板覆盖；op 换成 `IsPref` / `SetPref`（键、值都是符号）。施法方式变成能力 mod 声明的一个键。命令意图、派发档案两个字段保留，因为 Core 的下单排干自己读它们 |
+| 指示器靠 `aim.indicating` 集合开关 | 这个集合只是在镜像「某个瞄准状态开着」 | 切片 R 在做：presenter 规则直接听 `ContextActivated` / `ContextDeactivated`（按 context id），删掉这个集合 |
+| 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | 切片 R 之后逐个搬走：绑演员进共用进入图，形状跟交互状态走，就近辅助瞄准进规则图；五个钩子删光。加载期规则：`hookAnchor` 只能指向本 mod 的图，跨 mod 定制一律走事件 |
+| 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | 半径和关系过滤搬进技能引用的规则图；友方技能引用另一张规则图 |
+| 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | `EntityCommandPanelMod` 出一份通用数据工具栏：按钮 = 输入动作 id（走现有 `InjectButtonPress`），高亮 = 偏好键取值或某个 context 是否开着。两份 C# 删掉 |
+| 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 见下面缺口 5：座位初始方案由数据声明，展示改声明自己的方案，删 C# |
+| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 构造参数必填；切方案时写盘，路径用现有本机偏好目录；读到坏数据就报错 |
+| 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
+
+**机制缺口和方案（按「先通用件、再删数据副本」做）：**
+
+| # | 缺口 | 方案 |
+|---|------|------|
+| 1 | 每个游戏手抄一份进入图（冠军 / MOBA / 交互 / 方案展示四份同骨架）。原因：`ActivateContext` 的父上下文、集合 key、模板都是编译期符号，`InvokeGraph` 不能传符号参数 | 进入图只留能力 mod 一份 `graph.aim.enter`。`ActivateContext` 不写 `parentContext` 时，父上下文取「本挂载所属的上下文」（运行期取挂载 id，通用）。游戏只在自己战斗上下文的 `triggers[]` 里引用这张图，不再抄。下游说的「Case E 每个 rep 都要单独写一份图」随这条和切片 R 的共用规则图一起解决 |
+| 2 | 钩子全局生效 | 同上表：钩子只许本 mod 内用，跨 mod 定制走事件。先盘点仓库里现有的跨 mod 钩子，有的话同批迁走 |
+| 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | 集合唯一写点在成员增删时同时发通用地图事件（载荷：集合 key、成员、所有者），TriggerGraph 入口用现有 `filters.payload` 按 key 订阅。能力 mod 的重绑图订阅选中集合，不靠钩子 |
+| 4 | `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 两份配置的 `schemes` / `profiles` 改 ArrayById 按 `id` 字段级合并；`allowedSchemes` 用 `ArrayAppendFields` 追加并去重，重复 id 失败关闭。和 `Enums/enums.json` 同一套管线 |
+| 5 | 地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 座位已有 `ControlSchemeId`（`MapLaunchContext.LocalSeats`），补一个数据入口：`game.json` / 地图声明座位初始方案；SHOW-6 从「启动方案必须是 `scheme.default`」改成「启动方案必须显式声明」 |
+| 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
+| 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | 输入动作允许带一个整型参数（绑定数据声明），按下图只留一个入口，从入口载荷读槽号。加槽只改绑定，不改能力图 |
+| 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | 施法方式的取值直接就是手势交互状态的 id；按下图用一个通用 op「激活某偏好键当前取值所指的 context」。即时施放 = `onActivated` 里提交并关掉自己的状态。新增方式 = 新 profile + 新取值，零图改动 |
+| 9 | 指示器只有一种形状 | 切片 R 之后形状跟着规则图开的目标状态走：每种形状一个共用目标 context + 一条 presenter 规则，技能引用对应规则图 |
+| 10 | 按下图织钩子后已到 61 / 64 步，超出会静默拖到下一拍 | 入口可声明 `budget: single-slice`，装载期按静态最长路径算步数，超了直接报错。输入入口默认要求这一条 |
+| 11 | 没有「先选目标再放」（WoW 式） | 第 8 条落地后是纯数据：多一个取值 + 一个 context |
+| 12 | 指示器在按下后的下一拍才出现 | 切片 R 改成听 `ContextActivated` 后复测；还晚就查 presenter 规则阶段在帧内的顺序，不加特例 |
+| 13 | 两张取消图（对没开的状态调 `DeactivateContext` 会抛异常） | 加通用 op「关掉本挂载所属的 context」，每个手势状态在自己的 `triggers[]` 挂同一张取消图 |
+| 14 | 摇杆清零在冠军进入图、重绑图、展示进入图里各粘一份 | 已有 `aim.cast` 的 `onActivated: graph.aim.seed_stick`；第 1 条落地后删掉三处副本 |
+| 15 | `F1` / `F2` / `F3` 切施法方式的键位每个游戏写一份 | 这是游戏数据，接受 |
+
+**待查（切片 R 汇报，不顺手改）：** `targeting.castRangeCm`（主干上原有）和本线加的 `LoadAbilityCastRange`（534）：Core GAS 校验是否还读它、瞄准图能否改读技能引用的数据；`context_groups.json` 的 `requiresTarget` 是否和「技能要不要目标」重复。
+
+**还没删的 `CoreInputMod` 部分：** 小地图指针交互改走前台交互状态（删 `MinimapInputConsumer` / `PointerInputCaptured` / `interactionActions`）；`collection.command.source` 换成各 mod 自己的集合；最后删 `CoreInputMod` 目录和它的依赖，去掉 `Default_Gameplay`，启动交互状态找不到就报错，加禁名守卫。
+
+**顺序：** 切片 R → 施法方式改通用偏好键 + 第 8 条 → 第 1、2、3 条（删钩子、删进入图副本）→ 第 4 条 → 第 5、6 条和偏好仓库 → 通用工具栏删 C# → 第 7、10、13 条 → `CoreInputMod` 收尾。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+
 ### 3.4 不要当成这轮图能力去合
 
 - 过期审计草稿，已经被后来的本子取代。卫生上该关，不是功能缺口。https://github.com/MightyBubble/Ludots/pull/961
