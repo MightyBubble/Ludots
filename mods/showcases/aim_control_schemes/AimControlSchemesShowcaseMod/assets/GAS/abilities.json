@@ -11,6 +11,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -27,6 +28,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -43,6 +45,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
@@ -59,6 +62,7 @@
       ]
     },
     "targeting": {
+      "targetKinds": ["unit", "ground"],
       "castRangeCm": 800,
       "impactEffect": "Effect.AimSchemes.Impact"
     }
