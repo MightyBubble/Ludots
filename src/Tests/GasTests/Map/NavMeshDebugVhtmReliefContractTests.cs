@@ -47,6 +47,22 @@ namespace Ludots.Tests.Gas
               "dependencies": { "LudotsCoreMod": "^1.0.0" }
             }
             """);
+            File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "pathing.json"), """
+            {
+              "agentTypes": {
+                "Humanoid": {
+                  "profileId": "Small",
+                  "navMesh": {
+                    "areaCosts": [
+                      { "areaId": 0, "cost": 1.0 },
+                      { "areaId": 1, "cost": 1.0 },
+                      { "areaId": 2, "cost": 1.0 }
+                    ]
+                  }
+                }
+              }
+            }
+            """);
             File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "navmesh.json"), """
             {
               "mode": "runtime-incremental",

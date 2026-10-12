@@ -86,7 +86,7 @@ public sealed class MassNavigationRouteExecutionSink
     private readonly bool[] _snapshotForceResetNextApply;
     private readonly int[] _snapshotPointXCm;
     private readonly int[] _snapshotPointYCm;
-    private PathingAgentTypeConfig[] _agentTypesByProfileId = Array.Empty<PathingAgentTypeConfig>();
+    private readonly Dictionary<string, PathingAgentTypeConfig> _agentTypesById;
     private readonly int[] _xScratch;
     private readonly int[] _yScratch;
     private int _syncPlanCount;
@@ -135,7 +135,7 @@ public sealed class MassNavigationRouteExecutionSink
 
         _xScratch = new int[waypointCapacityPerAgent];
         _yScratch = new int[waypointCapacityPerAgent];
-        RebuildProfileIndex();
+        _agentTypesById = BuildAgentTypeIndex(pathingConfig);
     }
 
     public int ActiveRouteCount => _routesByKey.Count;
@@ -194,7 +194,18 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         MassNavigationAgent authoredAgent = world.Get<MassNavigationAgent>(agent);
-        _ = TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType);
+        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType))
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 2,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
 
         if (!_syncInProgress)
         {
@@ -260,7 +271,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
-        if (!TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType))
+        if (!TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType))
         {
             return new MassNavigationRouteSinkResult(
                 MassNavigationRouteSinkStatus.NoConfiguredAgentType,
@@ -579,7 +590,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: state.AgentIndex);
         }
 
-        bool hasAgentType = TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType);
+        bool hasAgentType = TryResolveAgentType(authoredAgent.AgentTypeId, out PathingAgentTypeConfig agentType);
         if (!hasAgentType)
         {
             state.InvalidateRoute();
@@ -840,59 +851,40 @@ public sealed class MassNavigationRouteExecutionSink
             agentIndex: state.AgentIndex);
     }
 
-    private bool TryResolveAgentType(int profileId, out PathingAgentTypeConfig agentType)
+    private bool TryResolveAgentType(string agentTypeId, out PathingAgentTypeConfig agentType)
     {
-        if ((uint)profileId < (uint)_agentTypesByProfileId.Length)
+        if (!string.IsNullOrWhiteSpace(agentTypeId) && _agentTypesById.TryGetValue(agentTypeId, out agentType))
         {
-            agentType = _agentTypesByProfileId[profileId];
-            return agentType != null;
+            return true;
         }
 
         agentType = null!;
         return false;
     }
 
-    private void RebuildProfileIndex()
+    private static Dictionary<string, PathingAgentTypeConfig> BuildAgentTypeIndex(PathingConfig pathingConfig)
     {
-        int maxProfileId = 0;
-        for (int i = 0; i < _pathingConfig.AgentTypes.Count; i++)
+        var byId = new Dictionary<string, PathingAgentTypeConfig>(StringComparer.Ordinal);
+        if (pathingConfig.AgentTypes == null)
         {
-            PathingAgentTypeConfig agentType = _pathingConfig.AgentTypes[i];
-            if (agentType == null)
+            return byId;
+        }
+
+        for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+        {
+            PathingAgentTypeConfig agentType = pathingConfig.AgentTypes[i];
+            if (agentType == null || string.IsNullOrWhiteSpace(agentType.Id))
             {
                 continue;
             }
 
-            if (MassNavigationProfileRegistry.TryGetId(agentType.ProfileId, out int profileId) && profileId > maxProfileId)
+            if (!byId.TryAdd(agentType.Id, agentType))
             {
-                maxProfileId = profileId;
+                throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agentType.Id}'.");
             }
         }
 
-        _agentTypesByProfileId = maxProfileId > 0
-            ? new PathingAgentTypeConfig[maxProfileId + 1]
-            : Array.Empty<PathingAgentTypeConfig>();
-
-        for (int i = 0; i < _pathingConfig.AgentTypes.Count; i++)
-        {
-            PathingAgentTypeConfig agentType = _pathingConfig.AgentTypes[i];
-            if (agentType == null)
-            {
-                continue;
-            }
-
-            if (MassNavigationProfileRegistry.TryGetId(agentType.ProfileId, out int profileId))
-            {
-                PathingAgentTypeConfig existing = _agentTypesByProfileId[profileId];
-                if (existing != null)
-                {
-                    throw new InvalidOperationException(
-                        $"PathingConfig.agentTypes '{agentType.Id}' and '{existing.Id}' share profileId '{agentType.ProfileId}'.");
-                }
-
-                _agentTypesByProfileId[profileId] = agentType;
-            }
-        }
+        return byId;
     }
 
     private void EnsureScratch(int required)

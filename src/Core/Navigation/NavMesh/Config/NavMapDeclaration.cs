@@ -1,102 +1,61 @@
 using System;
 using System.Collections.Generic;
-using Ludots.Core.Navigation.AgentProfiles;
-using Ludots.Core.Navigation.Pathing.Config;
+using System.Text.Json.Nodes;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
 {
     public static class NavMapDeclaration
     {
-        public static PathingConfig SelectAgentTypes(PathingConfig catalog, IReadOnlyList<string> agentTypeIds, string mapId)
-        {
-            ArgumentNullException.ThrowIfNull(catalog);
-            if (catalog.AgentTypes == null || catalog.AgentTypes.Count == 0)
-            {
-                throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
-            }
-
-            if (agentTypeIds == null || agentTypeIds.Count == 0)
-            {
-                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.agentTypes is required.");
-            }
-
-            var byId = new Dictionary<string, PathingAgentTypeConfig>(catalog.AgentTypes.Count, StringComparer.Ordinal);
-            for (int i = 0; i < catalog.AgentTypes.Count; i++)
-            {
-                PathingAgentTypeConfig agent = catalog.AgentTypes[i]
-                    ?? throw new InvalidOperationException("PathingConfig.agentTypes contains null.");
-                if (string.IsNullOrWhiteSpace(agent.Id) || !byId.TryAdd(agent.Id, agent))
-                {
-                    throw new InvalidOperationException($"PathingConfig.agentTypes contains a missing or duplicate id '{agent.Id}'.");
-                }
-            }
-
-            var selected = new List<PathingAgentTypeConfig>(agentTypeIds.Count);
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < agentTypeIds.Count; i++)
-            {
-                string id = agentTypeIds[i];
-                if (string.IsNullOrWhiteSpace(id) || !seen.Add(id))
-                {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.agentTypes[{i}] is missing or duplicate.");
-                }
-
-                if (!byId.TryGetValue(id, out PathingAgentTypeConfig agent))
-                {
-                    throw new InvalidOperationException(
-                        $"NavMeshBakeConfig.maps.{mapId}.agentTypes '{id}' is not a PathingConfig.agentTypes id.");
-                }
-
-                selected.Add(agent);
-            }
-
-            return new PathingConfig { AgentTypes = selected };
-        }
-
-        public static List<NavMeshAgentProfileConfig> CapabilityProfiles(
+        /// <summary>
+        /// 按 maps.&lt;mapId&gt;.navProfiles 的数组顺序取出能力档。不按键名重排。
+        /// </summary>
+        public static List<NavMeshAgentProfileConfig> ResolveNavProfiles(
             NavMeshBakeConfig navmesh,
-            PathingConfig selectedAgents,
-            AgentProfileRegistry bodies)
+            IReadOnlyList<string> navProfileIds,
+            string mapId)
         {
             ArgumentNullException.ThrowIfNull(navmesh);
-            ArgumentNullException.ThrowIfNull(selectedAgents);
-            ArgumentNullException.ThrowIfNull(bodies);
+            if (navmesh.Profiles == null || navmesh.Profiles.Count == 0)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.profiles is empty.");
+            }
+
+            if (navProfileIds == null || navProfileIds.Count == 0)
+            {
+                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.navProfiles is required.");
+            }
+
             var byId = new Dictionary<string, NavMeshAgentProfileConfig>(navmesh.Profiles.Count, StringComparer.Ordinal);
             for (int i = 0; i < navmesh.Profiles.Count; i++)
             {
                 NavMeshAgentProfileConfig profile = navmesh.Profiles[i]
                     ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles contains null.");
-                if (!byId.TryAdd(profile.Id, profile))
+                if (string.IsNullOrWhiteSpace(profile.Id) || !byId.TryAdd(profile.Id, profile))
                 {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.profiles contains duplicate id '{profile.Id}'.");
+                    throw new InvalidOperationException($"NavMeshBakeConfig.profiles contains a missing or duplicate id '{profile.Id}'.");
                 }
             }
 
-            var caps = new List<NavMeshAgentProfileConfig>();
+            var selected = new List<NavMeshAgentProfileConfig>(navProfileIds.Count);
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < selectedAgents.AgentTypes.Count; i++)
+            for (int i = 0; i < navProfileIds.Count; i++)
             {
-                PathingAgentTypeConfig agent = selectedAgents.AgentTypes[i];
-                AgentProfileConfig body = bodies.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
-                if (!byId.TryGetValue(body.NavProfileId, out NavMeshAgentProfileConfig capability))
+                string id = navProfileIds[i];
+                if (string.IsNullOrWhiteSpace(id) || !seen.Add(id))
+                {
+                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.navProfiles[{i}] is missing or duplicate.");
+                }
+
+                if (!byId.TryGetValue(id, out NavMeshAgentProfileConfig profile))
                 {
                     throw new InvalidOperationException(
-                        $"PathingConfig.agentTypes[{agent.Id}] agent profile '{body.Id}' references nav profile '{body.NavProfileId}', which is not in NavMeshBakeConfig.profiles.");
+                        $"NavMeshBakeConfig.maps.{mapId}.navProfiles '{id}' is not a NavMeshBakeConfig.profiles id.");
                 }
 
-                if (seen.Add(capability.Id))
-                {
-                    caps.Add(capability);
-                }
+                selected.Add(profile);
             }
 
-            if (caps.Count == 0)
-            {
-                throw new InvalidOperationException("NavMeshBakeConfig.maps agentTypes does not reference any nav profile.");
-            }
-
-            NavSchemaOrder.SortByKey(caps, static profile => profile.Id);
-            return caps;
+            return selected;
         }
 
         public static NavMeshBakeConfig WithProfiles(NavMeshBakeConfig source, List<NavMeshAgentProfileConfig> profiles)
@@ -117,41 +76,26 @@ namespace Ludots.Core.Navigation.NavMesh.Config
     }
 
     /// <summary>
-    /// 群体地图的临时判定只在这一处：某块板声明了 surfaceAsset。
+    /// 群体地图的临时判定：合并后的 maps.&lt;mapId&gt;.terrainAreas 非空。
     /// 随后会改成地图上的显式求解器字段。
     /// </summary>
     public static class CrowdMapDeclaration
     {
-        public static bool IsCrowdMap(NavMeshBakeConfig config, string mapId)
-            => TrySurfaceAsset(config, mapId, out _);
-
-        public static bool TrySurfaceAsset(NavMeshBakeConfig config, string mapId, out string surfaceAsset)
+        public static bool IsCrowdMap(JsonObject mergedNavmesh, string mapId)
         {
-            surfaceAsset = null;
-            if (config?.Maps == null || !config.Maps.TryGetValue(mapId, out NavMapNavBoardsConfig map) || map?.Boards == null)
+            if (mergedNavmesh == null || string.IsNullOrWhiteSpace(mapId))
             {
                 return false;
             }
 
-            string foundName = null;
-            foreach ((string name, NavTileGridConfig board) in map.Boards)
+            if (mergedNavmesh["maps"] is not JsonObject maps ||
+                !maps.TryGetPropertyValue(mapId, out JsonNode mapNode) ||
+                mapNode is not JsonObject mapObj)
             {
-                if (board == null || string.IsNullOrWhiteSpace(board.SurfaceAsset))
-                {
-                    continue;
-                }
-
-                if (foundName != null)
-                {
-                    throw new InvalidOperationException(
-                        $"NavMeshBakeConfig.maps.{mapId}.boards 有多块板声明 surfaceAsset（{foundName}、{name}）。");
-                }
-
-                foundName = name;
-                surfaceAsset = board.SurfaceAsset;
+                return false;
             }
 
-            return foundName != null;
+            return mapObj["terrainAreas"] is JsonArray terrainAreas && terrainAreas.Count > 0;
         }
     }
 }

@@ -347,7 +347,7 @@ namespace Ludots.Tests.Presentation
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
             int directProfile = MassNavigationProfileRegistry.Register("direct");
-            routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
             direct = world.Create(new MassNavigationAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
@@ -374,8 +374,8 @@ namespace Ludots.Tests.Presentation
             out Entity second)
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
-            first = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
-            second = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            first = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
+            second = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);
@@ -400,8 +400,8 @@ namespace Ludots.Tests.Presentation
             out Entity mover)
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
-            mover = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
-            Entity blocker = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            mover = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
+            Entity blocker = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);

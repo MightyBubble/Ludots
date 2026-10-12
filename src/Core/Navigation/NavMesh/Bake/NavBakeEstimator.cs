@@ -190,7 +190,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
                 AgentProfileConfig agentProfile = context.Algorithm == NavBakeAlgorithmKind.Recast
                     ? NavCapabilityBakeBody.RequireRecast(context.AgentProfiles, navProfile)
-                    : null;
+                    : NavCapabilityBakeBody.RequireBody(context.AgentProfiles, navProfile);
                 int profileTileX = maxTileSizeXVoxels;
                 int profileTileZ = maxTileSizeZVoxels;
                 int profileCellCm = cellCm;
@@ -566,9 +566,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             for (int i = 0; i < profiles.Count; i++)
             {
                 NavMeshAgentProfileConfig navProfile = profiles[i];
-                AgentProfileConfig agent = string.IsNullOrWhiteSpace(navProfile.AgentProfileId)
-                    ? null
-                    : agentProfiles.Require(navProfile.AgentProfileId, $"NavMeshBakeConfig.profiles.{navProfile.Id}.agentProfileId");
+                AgentProfileConfig agent = NavCapabilityBakeBody.RequireBody(agentProfiles, navProfile);
                 string slopeText = navProfile.MaxSlopeDeg?.ToString("R", CultureInfo.InvariantCulture) ?? "unlimited";
                 sb.Append(navProfile.Id).Append(':')
                     .Append(navProfile.MaxClimbCm).Append(':')

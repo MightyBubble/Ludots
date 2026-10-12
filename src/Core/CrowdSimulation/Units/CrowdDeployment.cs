@@ -45,7 +45,7 @@ public static class CrowdDeployment
                 for (int r = 0; r < radiusClasses.Count; r++)
                 {
                     int l = cfg.UnitTypes[t].AgentTypeIndex;
-                    if (!ProfileOf(cfg, l, r).BulkDeploy)
+                    if (ProfileOf(cfg, l, r).Special)
                     {
                         continue;
                     }

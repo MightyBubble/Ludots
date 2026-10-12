@@ -24,17 +24,23 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return slope;
         }
 
-        public static AgentProfileConfig RequireRecast(AgentProfileRegistry agents, NavMeshAgentProfileConfig navProfile)
+        public static AgentProfileConfig RequireBody(AgentProfileRegistry agents, NavMeshAgentProfileConfig navProfile)
         {
             ArgumentNullException.ThrowIfNull(agents);
-            _ = RequireRecastSlope(navProfile);
+            ArgumentNullException.ThrowIfNull(navProfile);
             if (string.IsNullOrWhiteSpace(navProfile.AgentProfileId))
             {
                 throw new InvalidOperationException(
-                    $"NavMeshBakeConfig.profiles.{navProfile.Id} is baked by Recast and must declare agentProfileId. Crowd capabilities that are not Recast-baked may omit it.");
+                    $"NavMeshBakeConfig.profiles.{navProfile.Id} 必须声明 agentProfileId（Recast 烘焙使用的体型）。");
             }
 
             return agents.Require(navProfile.AgentProfileId, $"NavMeshBakeConfig.profiles.{navProfile.Id}.agentProfileId");
+        }
+
+        public static AgentProfileConfig RequireRecast(AgentProfileRegistry agents, NavMeshAgentProfileConfig navProfile)
+        {
+            _ = RequireRecastSlope(navProfile);
+            return RequireBody(agents, navProfile);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.Components;
@@ -177,6 +178,26 @@ public sealed partial class CrowdSimulationRuntime
     public bool HandleMapSuspended(GameEngine engine, MapId mapId) => HandleMapUnloaded(engine, mapId);
 
     private NavMeshBakeConfig _navmesh;
+    private JsonObject _mergedNavmesh;
+
+    private JsonObject RequireMergedNavmesh(GameEngine engine)
+    {
+        if (_mergedNavmesh != null)
+        {
+            return _mergedNavmesh;
+        }
+
+        ConfigCatalog catalog = engine.ConfigCatalog
+            ?? throw new InvalidOperationException("CrowdSimulation 会话宿主需要 ConfigCatalog。");
+        if (!catalog.TryGet(NavMeshConfigPaths.BakeConfigPath, out var entry))
+        {
+            throw new InvalidOperationException($"{NavMeshConfigPaths.BakeConfigPath} 没有目录登记。");
+        }
+
+        _mergedNavmesh = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
+            ?? throw new InvalidOperationException($"{NavMeshConfigPaths.BakeConfigPath} 合并为空。");
+        return _mergedNavmesh;
+    }
 
     private NavMeshBakeConfig RequireLoadedNavmesh(GameEngine engine)
     {
@@ -200,7 +221,7 @@ public sealed partial class CrowdSimulationRuntime
     }
 
     private bool IsCrowdMap(GameEngine engine, string mapId)
-        => CrowdMapDeclaration.IsCrowdMap(RequireLoadedNavmesh(engine), mapId);
+        => CrowdMapDeclaration.IsCrowdMap(RequireMergedNavmesh(engine), mapId);
 
     private bool TryEnsureConfig(GameEngine engine)
     {

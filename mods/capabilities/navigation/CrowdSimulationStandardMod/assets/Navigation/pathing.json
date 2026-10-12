@@ -230,6 +230,56 @@
           }
         ]
       }
+    },
+    "Humanoid": {
+      "profileId": "Small",
+      "navMesh": {
+        "areaCosts": [
+          {
+            "areaId": 0,
+            "cost": 1.0
+          },
+          {
+            "areaId": 1,
+            "cost": 1.0
+          },
+          {
+            "areaId": 2,
+            "cost": 1.0
+          },
+          {
+            "areaId": 3,
+            "cost": 1.0
+          },
+          {
+            "areaId": 4,
+            "cost": 1.0
+          },
+          {
+            "areaId": 5,
+            "cost": 1.0
+          },
+          {
+            "areaId": 6,
+            "cost": 1.0
+          },
+          {
+            "areaId": 7,
+            "cost": 1.0
+          },
+          {
+            "areaId": 8,
+            "cost": 1.0
+          }
+        ]
+      },
+      "selection": {
+        "mode": "Direct",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      }
     }
   }
 }

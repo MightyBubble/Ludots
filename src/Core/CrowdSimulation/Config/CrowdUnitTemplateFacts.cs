@@ -17,7 +17,7 @@ public sealed class CrowdUnitTemplateFacts
     public required Fix64 SpeedCmPerSecond { get; init; }
     public required Fix64 PersonalRadiusCm { get; init; }
     public required Fix64 PushPriority { get; init; }
-    public required bool BulkDeploy { get; init; }
+    public required bool Special { get; init; }
 
     public static List<CrowdUnitTemplateFacts> FromTemplates(IEnumerable<EntityTemplate> templates)
     {
@@ -54,7 +54,7 @@ public sealed class CrowdUnitTemplateFacts
             SpeedCmPerSecond = RequirePositive(obj, "speedCmPerSecond", Prefix("speedCmPerSecond")),
             PersonalRadiusCm = RequirePositive(obj, "personalRadiusCm", Prefix("personalRadiusCm")),
             PushPriority = RequirePriority(obj, "pushPriority", Prefix("pushPriority")),
-            BulkDeploy = RequireBool(obj, "bulkDeploy", Prefix("bulkDeploy")),
+            Special = RequireBool(obj, "special", Prefix("special")),
         };
     }
 
@@ -71,10 +71,6 @@ public sealed class CrowdUnitTemplateFacts
                 "CrowdSimulationAgent 已删除 radiusClassCm / radiusCm。半径在 agent profile，模板写 profileId；个人半径写 personalRadiusCm。");
         }
 
-        if (obj.ContainsKey("special"))
-        {
-            throw new InvalidOperationException("CrowdSimulationAgent 已删除 special，改用 bulkDeploy（true 参与批量部署）。");
-        }
     }
 
     private static bool RequireBool(JsonObject obj, string name, string path)

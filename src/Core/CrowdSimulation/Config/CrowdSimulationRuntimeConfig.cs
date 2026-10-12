@@ -89,12 +89,12 @@ public sealed class RuntimeAgentType
 {
     public required string Id { get; init; }
     /// <summary>
-    /// 本图 maps.&lt;mapId&gt;.agentTypes 的数组下标。
+    /// 被单位模板引用的 pathing agent type，按合并后的属性顺序编号。
     /// 体型档案的 layer 是 NavTile 层，不参与这个编号。
     /// </summary>
     public required int AgentTypeIndex { get; init; }
     public required int NavProfileIndex { get; init; }
-    /// <summary>按下标 = areaId 的通行代价。未列出的区域为 1；passable 为 false 时为 0。</summary>
+    /// <summary>按下标 = areaId 的通行代价。passable 为 false 时为 0。</summary>
     public required Fix64[] CostByArea { get; init; }
     /// <summary>按下标 = areaId 的速度除数。未写 speedDivisor 时与代价相同；不可通行为 0。</summary>
     public required Fix64[] SpeedDivisorByArea { get; init; }
@@ -118,12 +118,12 @@ public sealed class RuntimeAgentProfile
     public required Fix64 PushPriority { get; init; }
     /// <summary>该模板的速度（厘米 / 仿真秒）。领队步伐取同组最小，子步数取实际绑定模板的最大。</summary>
     public required Fix64 SpeedCmPerSecond { get; init; }
-    /// <summary>true 参与批量部署。同一移动类型的模板不必相同。</summary>
-    public required bool BulkDeploy { get; init; }
+    /// <summary>true 不参与批量部署。同一移动类型的模板不必相同。</summary>
+    public required bool Special { get; init; }
     public required int AgentTypeIndex { get; init; }
     /// <summary>通行净空（切比雪夫格数，由几何推导，不是配置项）。</summary>
     public required int ClearanceNavCells { get; init; }
-    /// <summary>导航上下文 id = layer × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
+    /// <summary>导航上下文 id = AgentTypeIndex × <see cref="CrowdSimulationLimits.NavContextLayerStride"/> + clearance（数值键，禁止字符串拼接）。</summary>
     public required int NavContextId { get; init; }
 }
 

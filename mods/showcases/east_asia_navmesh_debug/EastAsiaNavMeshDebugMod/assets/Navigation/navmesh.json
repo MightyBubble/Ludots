@@ -28,8 +28,8 @@
           "tileWorldHeightCm": 228544
         }
       },
-      "agentTypes": [
-        "StrategyFoot"
+      "navProfiles": [
+        "Small"
       ]
     }
   }

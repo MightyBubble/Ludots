@@ -14,7 +14,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 options,
                 "NavMeshBakeConfig.profiles",
                 static (item, id) => item.Id = id);
-            NavSchemaOrder.SortByKey(items, static profile => profile.Id);
             return items;
         }
 

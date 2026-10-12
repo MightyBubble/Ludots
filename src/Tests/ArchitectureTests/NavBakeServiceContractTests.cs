@@ -812,7 +812,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(context.AgentProfiles.Require("DepScout", "test").RadiusCm, Is.EqualTo(22f).Within(0.0001f));
                 Assert.That(context.AgentProfiles.Require("ModHeavy", "test").Mass, Is.EqualTo(3.5f).Within(0.0001f));
                 Assert.That(context.Config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmRecast));
-                Assert.That(context.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "ModHeavy", "Small" }));
+                Assert.That(context.Config.Profiles.Select(profile => profile.Id), Is.EqualTo(new[] { "Small", "ModHeavy" }));
                 Assert.That(context.Config.Profiles.Single(profile => profile.Id == "Small").MaxClimbCm, Is.EqualTo(55));
                 Assert.That(context.Config.Layers.Count, Is.EqualTo(2));
                 Assert.That(context.Config.Areas.Count, Is.EqualTo(1));

@@ -41,8 +41,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public float? MaxSlopeDeg { get; set; }
 
         /// <summary>
-        /// 烘焙这个能力档时使用的体型 id，经 AgentProfileRegistry.Require 解析。
-        /// Recast 烘焙必填，在烘焙时校验；不经 Recast 烘焙的能力档（群体模拟）可以不写。
+        /// 这个能力档对应的体型 id，经 AgentProfileRegistry.Require 解析。
+        /// Recast 烘焙用它做碰撞体。不经 Recast 烘焙的能力档也要写。
         /// </summary>
         public string AgentProfileId { get; set; }
 
@@ -94,9 +94,9 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public Dictionary<string, NavTileGridConfig> Boards { get; set; } = new Dictionary<string, NavTileGridConfig>();
 
         /// <summary>
-        /// 本图启用的 pathing agentTypes id。数组顺序就是群体 AgentTypeIndex，不按键名重排。
+        /// 本图烘焙并装载瓦片库的能力档 id。数组顺序就是烘焙和装载顺序，不按键名重排。
         /// </summary>
-        public List<string> AgentTypes { get; set; }
+        public List<string> NavProfiles { get; set; }
 
         /// <summary>有序绑定。数组下标就是 .navsurface 里的地形类型编号。</summary>
         public List<NavTerrainAreaBinding> TerrainAreas { get; set; }

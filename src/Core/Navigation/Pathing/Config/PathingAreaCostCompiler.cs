@@ -8,6 +8,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
     {
         public static NavAreaCostTable Compile(PathingNavMeshConfig cfg)
         {
+            // Detour 的区域地址是 0..255。已声明区域必须先经 PathingAreaCosts.RequireComplete，
+            // 这里的 1 只填那些没有对应声明的槽，不是“省略行 = 代价 1”。
             var costs = new Fix64[256];
             var impassable = new bool[256];
             for (int i = 0; i < costs.Length; i++)

@@ -1971,10 +1971,11 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("MassNavigationAgent requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassNavigationAgent", "profileId");
+            ValidateProperties(obj, "MassNavigationAgent", "profileId", "agentTypeId");
             string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
+            string agentTypeId = RequireStringProperty(obj, "agentTypeId", "MassNavigationAgent");
             int profileKey = MassNavigationProfileRegistry.Register(profileId);
-            entity.Add(new MassNavigationAgent { ProfileId = profileKey });
+            entity.Add(new MassNavigationAgent { ProfileId = profileKey, AgentTypeId = agentTypeId });
         }
 
         private static void SetCrowdSimulationAgent(Entity entity, JsonNode data)
@@ -1993,7 +1994,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 "speedCmPerSecond",
                 "personalRadiusCm",
                 "pushPriority",
-                "bulkDeploy");
+                "special");
             var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
             entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
             {
@@ -2002,7 +2003,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 SpeedCmPerSecond = facts.SpeedCmPerSecond,
                 PersonalRadiusCm = facts.PersonalRadiusCm,
                 PushPriority = facts.PushPriority,
-                BulkDeploy = facts.BulkDeploy,
+                Special = facts.Special,
             });
         }
 

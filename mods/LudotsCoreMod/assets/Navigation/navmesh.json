@@ -7,8 +7,10 @@
           "tileWorldHeightCm": 6400
         }
       },
-      "agentTypes": [
-        "Humanoid"
+      "navProfiles": [
+        "Small",
+        "Medium",
+        "Large"
       ]
     },
     "navmesh_debug_openworld": {
@@ -18,8 +20,8 @@
           "tileWorldHeightCm": 25600
         }
       },
-      "agentTypes": [
-        "Humanoid"
+      "navProfiles": [
+        "Small"
       ]
     },
     "navmesh_debug_vhtm": {
@@ -29,8 +31,8 @@
           "tileWorldHeightCm": 6400
         }
       },
-      "agentTypes": [
-        "Humanoid"
+      "navProfiles": [
+        "Small"
       ]
     }
   }

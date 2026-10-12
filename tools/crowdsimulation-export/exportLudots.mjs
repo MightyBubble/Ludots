@@ -193,7 +193,7 @@ writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, nu
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
 // 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
 // 地形类型到区域写在 navmesh.json 的 maps.<mapId>.terrainAreas（有序数组）。
-// .navsurface 路径写在 maps.<mapId>.boards.default.surfaceAsset。agentTypes 点名这张图要绑定的移动类型。
+// .navsurface 从地图 ContinuousHeightmap.asset 推导（同主干，扩展名 .navsurface）。
 const cmPart = (num, den) => Math.round(worldCm * num / den);
 const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'Default', mountain: 'rough', cliff: 'sheer' };
 const terrainAreas = [];
@@ -205,9 +205,7 @@ for (const terrain of config.terrainTypes) {
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   maps: {
     [mapId]: {
-      agentTypes: ['foot', 'hull', 'climber', 'amphib', 'leaper'],
       terrainAreas,
-      boards: { default: { surfaceAsset: `terrain/${mapId}.navsurface` } },
     },
   },
 }, null, 2));

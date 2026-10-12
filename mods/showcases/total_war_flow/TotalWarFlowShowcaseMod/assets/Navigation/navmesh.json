@@ -36,7 +36,7 @@
           "tileWorldHeightCm": 6400
         }
       },
-      "agentTypes": [
+      "navProfiles": [
         "tw.agent"
       ]
     }

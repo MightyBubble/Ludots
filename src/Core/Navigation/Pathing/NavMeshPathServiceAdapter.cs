@@ -38,6 +38,11 @@ namespace Ludots.Core.Navigation.Pathing
                     throw new InvalidOperationException("PathingConfig.agentTypes contains a missing id.");
                 }
 
+                if (!SelectsNavMesh(agent))
+                {
+                    continue;
+                }
+
                 AgentProfileConfig body = agentProfiles.Require(agent.ProfileId, $"PathingConfig.agentTypes[{agent.Id}]");
                 if (!navProfiles.TryGetIndex(body.NavProfileId, out int profileIndex))
                 {
@@ -56,6 +61,12 @@ namespace Ludots.Core.Navigation.Pathing
                     throw new InvalidOperationException($"PathingConfig.agentTypes contains duplicate id '{agent.Id}'.");
                 }
             }
+        }
+
+        private static bool SelectsNavMesh(PathingAgentTypeConfig agent)
+        {
+            PathSelectionMode? mode = agent.Selection?.Mode;
+            return mode == PathSelectionMode.PreferMesh || mode == PathSelectionMode.AutoCheapest;
         }
 
         public bool TrySolve(in PathRequest request, out PathResult result)

@@ -48,14 +48,15 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void UnlistedCrowdArea_StaysCostOne()
+    public void AgentType_MissingAreaRow_IsRejected()
     {
         JsonObject navmesh = TestDefaults.DefaultNavmeshJson();
         navmesh["areas"]!["lava"] = JsonNode.Parse("""{"areaId":9,"slopeFree":false}""");
-        var runtime = TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh));
-        var foot = runtime.AgentTypes.Single(agent => agent.Id == "foot");
-        Assert.That(foot.CostByArea[9], Is.EqualTo(Fix64.OneValue));
-        Assert.That(foot.SpeedDivisorByArea[9], Is.EqualTo(Fix64.OneValue));
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            TestDefaults.Assemble(navmesh: TestDefaults.ParseNavmesh(navmesh)))!;
+        Assert.That(ex.Message, Does.Contain("foot"));
+        Assert.That(ex.Message, Does.Contain("areaId 9"));
+        Assert.That(ex.Message, Does.Contain("passable"));
     }
 
     [Test]
@@ -80,8 +81,9 @@ public class NavSchemaAuditTests
     [Test]
     public void UnknownNavProfileId_FailsLoad()
     {
+        NavMeshBakeConfig config = NavMeshBakeConfigLoader.Parse(MinimalNavmesh(), Bodies("Missing"));
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            NavMeshBakeConfigLoader.Parse(MinimalNavmesh(), Bodies("Missing")))!;
+            NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(config, Bodies("Missing"), new[] { "Small" }))!;
         Assert.That(ex.Message, Does.Contain("navProfileId"));
         Assert.That(ex.Message, Does.Contain("Missing"));
     }
@@ -89,7 +91,7 @@ public class NavSchemaAuditTests
     [Test]
     public void Template_MissingEachRequiredField_Fails()
     {
-        string[] fields = { "profileId", "agentTypeId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "bulkDeploy" };
+        string[] fields = { "profileId", "agentTypeId", "speedCmPerSecond", "personalRadiusCm", "pushPriority", "special" };
         foreach (string field in fields)
         {
             JsonObject template = FullTemplate();
@@ -133,20 +135,20 @@ public class NavSchemaAuditTests
     }
 
     [Test]
-    public void MapWithoutAgentTypes_IsRejected()
+    public void MapAgentTypes_NamesNavProfiles()
     {
         JsonObject navmesh = MinimalNavmesh();
         navmesh["maps"] = JsonNode.Parse("""
             {
               "demo": {
-                "boards": { "default": { "tileWorldWidthCm": 100, "tileWorldHeightCm": 100 } }
+                "agentTypes": ["Humanoid"]
               }
             }
             """);
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
             NavMeshBakeConfigLoader.Parse(navmesh, Bodies("Small")))!;
-        Assert.That(ex.Message, Does.Contain("maps.demo"));
-        Assert.That(ex.Message, Does.Contain("agentTypes"));
+        Assert.That(ex.Message, Does.Contain("maps.demo.agentTypes"));
+        Assert.That(ex.Message, Does.Contain("navProfiles"));
     }
 
     [Test]
@@ -221,7 +223,7 @@ public class NavSchemaAuditTests
               "speedCmPerSecond": 1400,
               "personalRadiusCm": 600,
               "pushPriority": 2,
-              "bulkDeploy": true
+              "special": false
             }
             """)!.AsObject();
 

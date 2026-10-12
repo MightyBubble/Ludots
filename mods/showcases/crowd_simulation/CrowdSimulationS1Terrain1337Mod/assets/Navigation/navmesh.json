@@ -22,18 +22,6 @@
           "terrainId": "cliff",
           "areaId": "sheer"
         }
-      ],
-      "boards": {
-        "default": {
-          "surfaceAsset": "terrain/crowd_simulation_s1337.navsurface"
-        }
-      },
-      "agentTypes": [
-        "foot",
-        "hull",
-        "climber",
-        "amphib",
-        "leaper"
       ]
     }
   }

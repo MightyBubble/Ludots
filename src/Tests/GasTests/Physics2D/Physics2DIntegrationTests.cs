@@ -783,7 +783,7 @@ namespace GasTests
                 Algorithm = NavBakeNames.AlgorithmCdt,
                 Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
+                    new NavMeshAgentProfileConfig { Id = "Small", AgentProfileId = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 },
                 Layers = new List<NavLayerConfig>
                 {

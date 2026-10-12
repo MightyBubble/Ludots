@@ -195,7 +195,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         NavMeshAgentProfileConfig navProfile = context.Config.Profiles[pi];
                         AgentProfileConfig agentProfile = context.Algorithm == NavBakeAlgorithmKind.Recast
                             ? NavCapabilityBakeBody.RequireRecast(context.AgentProfiles, navProfile)
-                            : null;
+                            : NavCapabilityBakeBody.RequireBody(context.AgentProfiles, navProfile);
                         bool success = algorithm.TryBake(context, target, layer, navProfile, agentProfile, out NavTile tile, out byte[] detourTileBytes, out NavBakeArtifact artifact);
                         int index = Interlocked.Increment(ref cursor);
                         entries[index] = new NavBakeResultEntry(target, navProfile.Id, layer.Layer, success, tile, detourTileBytes, artifact);

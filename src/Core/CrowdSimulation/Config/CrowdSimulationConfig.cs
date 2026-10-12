@@ -94,7 +94,7 @@ public sealed class CrowdSimulationConfig
         ("terrainAreas", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas"),
         ("navProfiles", "Navigation/navmesh.json 的 profiles"),
         ("world.terrainTypes", "Navigation/navmesh.json 的 maps.<mapId>.terrainAreas 数组顺序"),
-        ("world.surfaceAsset", "Navigation/navmesh.json 的 maps.<mapId>.boards.<name>.surfaceAsset"),
+        ("world.surfaceAsset", "地图 ContinuousHeightmap.asset（同主干 .navsurface）"),
         ("world.navCellSizeCm", "Navigation/navmesh.json 的 profiles[].cellSizeCm"),
         ("world.mapId", "当前聚焦的地图"),
         ("mapId", "当前聚焦的地图"),

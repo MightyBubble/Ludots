@@ -4316,19 +4316,18 @@ namespace Ludots.Core.Engine
             var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
-            PathingConfig declaredPathing = SelectMapAgentTypes(bakeConfig, mapId);
-            List<NavMeshAgentProfileConfig> capabilityProfiles = NavMapDeclaration.CapabilityProfiles(bakeConfig, declaredPathing, agentProfiles);
-            var referencedNavProfiles = new HashSet<int>();
-            for (int i = 0; i < capabilityProfiles.Count; i++)
+            if (bakeConfig.Maps == null ||
+                !bakeConfig.Maps.TryGetValue(mapId, out var declaredMap) ||
+                declaredMap?.NavProfiles == null ||
+                declaredMap.NavProfiles.Count == 0)
             {
-                if (!profileRegistry.TryGetIndex(capabilityProfiles[i].Id, out int profileIndex))
-                {
-                    throw new InvalidOperationException(
-                        $"NavMeshBakeConfig.profiles '{capabilityProfiles[i].Id}' is not registered.");
-                }
-
-                referencedNavProfiles.Add(profileIndex);
+                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.navProfiles is required.");
             }
+
+            List<NavMeshAgentProfileConfig> capabilityProfiles = NavMapDeclaration.ResolveNavProfiles(
+                bakeConfig,
+                declaredMap.NavProfiles,
+                mapId);
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
 
@@ -4396,14 +4395,13 @@ namespace Ludots.Core.Engine
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
-                for (int pi = 0; pi < profileRegistry.Count; pi++)
+                for (int pi = 0; pi < capabilityProfiles.Count; pi++)
                 {
-                    if (!referencedNavProfiles.Contains(pi))
+                    if (!profileRegistry.TryGetIndex(capabilityProfiles[pi].Id, out int profileIndex))
                     {
-                        continue;
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.profiles '{capabilityProfiles[pi].Id}' is not registered.");
                     }
-
-                    int profileIndex = pi;
                     var uriCache = new Dictionary<NavTileId, string>(256);
 
                     string ResolveTileUri(NavTileId id)
@@ -4557,12 +4555,6 @@ namespace Ludots.Core.Engine
             var bakeForPathing = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeForPathing);
             var pathingConfig = pathingCatalog;
-            if (bakeForPathing.Maps != null &&
-                bakeForPathing.Maps.TryGetValue(session.MapId.Value, out var mapNav) &&
-                mapNav?.AgentTypes is { Count: > 0 })
-            {
-                pathingConfig = NavMapDeclaration.SelectAgentTypes(pathingCatalog, mapNav.AgentTypes, session.MapId.Value);
-            }
 
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
             LoadedGraphRuntime loadedGraphRuntime = null;
@@ -4580,6 +4572,23 @@ namespace Ludots.Core.Engine
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
+            var referencedAgentProfiles = new List<string>();
+            if (pathingConfig.AgentTypes != null)
+            {
+                for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+                {
+                    PathingAgentTypeConfig agent = pathingConfig.AgentTypes[i];
+                    if (agent == null)
+                    {
+                        continue;
+                    }
+
+                    referencedAgentProfiles.Add(agent.ProfileId);
+                    PathingAreaCosts.RequireComplete(agent, bakeForPathing.Areas);
+                }
+            }
+
+            NavMeshBakeConfigLoader.ValidateReferencedAgentNavProfiles(bakeForPathing, agentProfiles, referencedAgentProfiles);
             var graphEdgeCostOverlay = GetService(CoreServiceKeys.GraphEdgeCostOverlay);
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
@@ -4743,17 +4752,6 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
             _navMeshBakeConfig = new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
             return _navMeshBakeConfig;
-        }
-
-        private PathingConfig SelectMapAgentTypes(NavMeshBakeConfig bakeConfig, string mapId)
-        {
-            if (bakeConfig.Maps == null || !bakeConfig.Maps.TryGetValue(mapId, out var mapNav) || mapNav?.AgentTypes == null || mapNav.AgentTypes.Count == 0)
-            {
-                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.agentTypes is required.");
-            }
-
-            var pathingCatalog = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            return NavMapDeclaration.SelectAgentTypes(pathingCatalog, mapNav.AgentTypes, mapId);
         }
 
         private string ResolveSingleExistingUri(string relPath)

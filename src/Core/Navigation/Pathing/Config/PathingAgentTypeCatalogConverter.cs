@@ -15,7 +15,6 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 options,
                 "PathingConfig.agentTypes",
                 static (item, id) => item.Id = id);
-            NavSchemaOrder.SortByKey(items, static agent => agent.Id);
             return items;
         }
 

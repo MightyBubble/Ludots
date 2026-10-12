@@ -147,7 +147,7 @@ public class CrowdSimulationConfigTests
     }
 
     [Test]
-    public void TemplateAgentType_NotDeclaredByMap_IsNotBound()
+    public void TemplateAgentType_NotInPathing_IsRejected()
     {
         var templates = TestDefaults.DemoTemplates();
         var first = templates[0];
@@ -159,40 +159,22 @@ public class CrowdSimulationConfigTests
             SpeedCmPerSecond = first.SpeedCmPerSecond,
             PersonalRadiusCm = first.PersonalRadiusCm,
             PushPriority = first.PushPriority,
-            BulkDeploy = first.BulkDeploy,
+            Special = first.Special,
         };
-        var runtime = TestDefaults.Assemble(templates: templates);
-        Assert.That(runtime.Profiles.Any(p => p.Id == first.ProfileId), Is.False);
-        Assert.That(runtime.Profiles.Count, Is.EqualTo(19));
+        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
+        Assert.That(ex!.Message, Does.Contain("ghost"));
+        Assert.That(ex.Message, Does.Contain(first.TemplateId));
     }
 
     [Test]
-    public void DeclaredAgentType_WithoutTemplate_IsRejected()
+    public void PathingAgentType_WithoutTemplate_IsNotBound()
     {
         var templates = TestDefaults.DemoTemplates();
-        for (int i = 0; i < templates.Count; i++)
-        {
-            if (templates[i].AgentTypeId != "foot")
-            {
-                continue;
-            }
-
-            var item = templates[i];
-            templates[i] = new CrowdUnitTemplateFacts
-            {
-                TemplateId = item.TemplateId,
-                ProfileId = item.ProfileId,
-                AgentTypeId = "ghost",
-                SpeedCmPerSecond = item.SpeedCmPerSecond,
-                PersonalRadiusCm = item.PersonalRadiusCm,
-                PushPriority = item.PushPriority,
-                BulkDeploy = item.BulkDeploy,
-            };
-        }
-
-        var ex = Assert.Throws<InvalidOperationException>(() => TestDefaults.Assemble(templates: templates));
-        Assert.That(ex!.Message, Does.Contain("foot"));
-        Assert.That(ex.Message, Does.Contain("没有 CrowdSimulationAgent 模板"));
+        templates.RemoveAll(item => item.AgentTypeId == "foot");
+        var runtime = TestDefaults.Assemble(templates: templates);
+        Assert.That(runtime.AgentTypes.Any(agent => agent.Id == "foot"), Is.False);
+        Assert.That(runtime.AgentTypes[0].Id, Is.EqualTo("hull"));
+        Assert.That(runtime.Profiles.Count, Is.EqualTo(16));
     }
 
     [Test]

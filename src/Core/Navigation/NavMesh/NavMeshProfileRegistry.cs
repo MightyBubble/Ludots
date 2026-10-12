@@ -26,16 +26,6 @@ namespace Ludots.Core.Navigation.NavMesh
                 _indexById[p.Id] = i;
                 _idsByIndex.Add(p.Id);
             }
-
-            for (int i = 0; i < agentProfiles.Count; i++)
-            {
-                AgentProfileConfig agent = agentProfiles[i];
-                if (!_indexById.ContainsKey(agent.NavProfileId))
-                {
-                    throw new InvalidOperationException(
-                        $"AgentProfile '{agent.Id}' navProfileId '{agent.NavProfileId}' is not a NavMeshBakeConfig.profiles id.");
-                }
-            }
         }
 
         public int Count => _idsByIndex.Count;

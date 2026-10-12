@@ -11,7 +11,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -27,7 +27,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -43,7 +43,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -59,7 +59,7 @@
         "speedCmPerSecond": 1400,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -75,7 +75,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -91,7 +91,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -107,7 +107,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -123,7 +123,7 @@
         "speedCmPerSecond": 1100,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -139,7 +139,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 600,
         "pushPriority": 3,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -155,7 +155,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1200,
         "pushPriority": 4,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -171,7 +171,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 1800,
         "pushPriority": 5,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -187,7 +187,7 @@
         "speedCmPerSecond": 800,
         "personalRadiusCm": 2400,
         "pushPriority": 6,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -203,7 +203,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 600,
         "pushPriority": 1,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -219,7 +219,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1200,
         "pushPriority": 2,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -235,7 +235,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 1800,
         "pushPriority": 3,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -251,7 +251,7 @@
         "speedCmPerSecond": 1000,
         "personalRadiusCm": 2400,
         "pushPriority": 4,
-        "bulkDeploy": true
+        "special": false
       }
     }
   },
@@ -267,7 +267,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 600,
         "pushPriority": 2,
-        "bulkDeploy": false
+        "special": true
       }
     }
   },
@@ -283,7 +283,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1200,
         "pushPriority": 3,
-        "bulkDeploy": false
+        "special": true
       }
     }
   },
@@ -299,7 +299,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 1800,
         "pushPriority": 4,
-        "bulkDeploy": false
+        "special": true
       }
     }
   },
@@ -315,7 +315,7 @@
         "speedCmPerSecond": 1200,
         "personalRadiusCm": 2400,
         "pushPriority": 5,
-        "bulkDeploy": false
+        "special": true
       }
     }
   },

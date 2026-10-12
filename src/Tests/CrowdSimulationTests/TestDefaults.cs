@@ -83,6 +83,10 @@ public static class TestDefaults
         return new MapConfig
         {
             Id = "crowd_simulation_demo",
+            ContinuousHeightmap = new Ludots.Core.Presentation.Terrain.ContinuousHeightmapBindingConfig
+            {
+                Asset = "assets/terrain/crowd_simulation_demo.height",
+            },
             Boards = new List<BoardConfig>
             {
                 new BoardConfig { WidthCm = WorldCm, HeightCm = WorldCm },

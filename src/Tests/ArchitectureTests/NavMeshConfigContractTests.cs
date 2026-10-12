@@ -440,7 +440,10 @@ namespace Ludots.Tests.Architecture
             navmesh["maps"] = mapsNode;
             var mapNode = new System.Text.Json.Nodes.JsonObject
             {
-                ["agentTypes"] = new System.Text.Json.Nodes.JsonArray(System.Text.Json.Nodes.JsonValue.Create("Humanoid"))
+                ["navProfiles"] = new System.Text.Json.Nodes.JsonArray(
+                    System.Text.Json.Nodes.JsonValue.Create("Small"),
+                    System.Text.Json.Nodes.JsonValue.Create("Medium"),
+                    System.Text.Json.Nodes.JsonValue.Create("Large"))
             };
             mapsNode[mapId] = mapNode;
             var boardsNode = new System.Text.Json.Nodes.JsonObject();
