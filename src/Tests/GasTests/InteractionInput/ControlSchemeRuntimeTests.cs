@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ActiveScheme_SaveLoad_RoundTripsTheSchemeId()
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             store.SetActiveScheme("scheme.test.roundtrip");
             string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
             try
@@ -163,7 +163,7 @@ namespace Ludots.Tests.GAS
                 string[] keys = saved.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
                 Assert.That(keys, Is.EqualTo(new[] { "activeSchemeId" }));
                 Assert.That(saved.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo("scheme.test.roundtrip"));
-                var reloaded = new ClientControlSchemePreferenceStore();
+                var reloaded = NewStore();
                 uint revisionBefore = reloaded.Revision;
                 reloaded.Load(path);
                 Assert.That(reloaded.Revision, Is.GreaterThan(revisionBefore));
@@ -178,7 +178,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ActiveScheme_LoadMissingFile_ClearsTheScheme()
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             store.SetActiveScheme("scheme.test.was");
             store.Load(Path.Combine(Path.GetTempPath(), $"ludots_missing_{Guid.NewGuid():N}.json"));
             Assert.That(store.ActiveSchemeId, Is.Empty);
@@ -187,7 +187,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void SetActiveScheme_Null_Fails()
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(null!));
             Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
             Assert.That(store.ActiveSchemeId, Is.Empty);
@@ -202,7 +202,7 @@ namespace Ludots.Tests.GAS
 
         private static void RejectActiveScheme(string schemeId)
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(schemeId));
             Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
             Assert.That(store.ActiveSchemeId, Is.Empty);
@@ -211,7 +211,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void SetActiveScheme_WhitespacePadded_Fails()
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(" scheme.test "));
             Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
             Assert.That(error.Message, Does.Contain("whitespace"));
@@ -221,7 +221,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Save_BeforeAnyScheme_FailsAndWritesNothing()
         {
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
             try
             {
@@ -260,7 +260,7 @@ namespace Ludots.Tests.GAS
                 }
                 """;
             string path = WriteSchemeFile(json);
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             store.SetActiveScheme("scheme.test.keep");
             try
             {
@@ -278,7 +278,7 @@ namespace Ludots.Tests.GAS
         private static void RejectSchemeFile(string json, string field)
         {
             string path = WriteSchemeFile(json);
-            var store = new ClientControlSchemePreferenceStore();
+            var store = NewStore();
             store.SetActiveScheme("scheme.test.keep");
             try
             {
@@ -544,6 +544,81 @@ namespace Ludots.Tests.GAS
             Assert.That(catalog, Does.Not.Contain("Input/axis_move.json"));
             Assert.That(catalog, Does.Contain("Input/interaction_prefs.json"),
                 "the interaction preference seed config is a catalog-declared required config.");
+            int schemesAt = catalog.IndexOf("\"Path\": \"Input/control_schemes.json\"", StringComparison.Ordinal);
+            Assert.That(schemesAt, Is.GreaterThanOrEqualTo(0));
+            string schemesEntry = catalog.Substring(schemesAt, Math.Min(280, catalog.Length - schemesAt));
+            Assert.That(schemesEntry, Does.Contain("\"ArrayAppendFields\""));
+            Assert.That(schemesEntry, Does.Contain("allowedSchemes"));
+        }
+
+        [Test]
+        public void Validate_DuplicateAllowedScheme_FailsClosed()
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA) },
+                    AllowedSchemes = new List<string> { SchemeA, SchemeA },
+                }, "Input/control_schemes.json"));
+            Assert.That(error!.Message, Does.Contain("duplicates scheme"));
+            Assert.That(error.Message, Does.Contain(SchemeA));
+            Assert.That(error.Message, Does.Contain("allowedSchemes"));
+        }
+
+        [Test]
+        public void Install_PersistedSchemeOutsideAllowedSet_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.Preferences.SetActiveScheme(SchemeB);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                harness.InstallTwoSchemes(allowedSchemes: new List<string> { SchemeA }));
+
+            Assert.That(error!.Message, Does.Contain(SchemeB));
+            Assert.That(error.Message, Does.Contain("not allowed"));
+        }
+
+        [Test]
+        public void TrySwitch_WritesTheBoundPreferenceFile()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            string path = harness.Preferences.PersistencePath;
+            using (JsonDocument saved = JsonDocument.Parse(File.ReadAllText(path)))
+            {
+                Assert.That(saved.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo(SchemeA));
+            }
+
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            using JsonDocument switched = JsonDocument.Parse(File.ReadAllText(path));
+            Assert.That(switched.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo(SchemeB));
+        }
+
+        [Test]
+        public void Store_BlankPath_Fails()
+        {
+            ArgumentException error = Assert.Throws<ArgumentException>(() => new ClientControlSchemePreferenceStore(" "));
+            Assert.That(error!.ParamName, Is.EqualTo("persistencePath"));
+        }
+
+        [Test]
+        public void ResolveEnginePath_Blank_NamesTheGameJsonField()
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ClientControlSchemePreferenceStore.ResolveEnginePath("  "));
+            Assert.That(error!.Message, Does.Contain("controlSchemePreferencePath"));
+        }
+
+        [Test]
+        public void ResolveEnginePath_TestHost_UsesATempFile()
+        {
+            string path = ClientControlSchemePreferenceStore.ResolveEnginePath("user://control-scheme.json");
+            Assert.That(path, Does.Not.StartWith("user://"));
+            Assert.That(Path.GetFileName(path), Does.EndWith(".json"));
+            Assert.That(path, Does.Contain("ludots-control-scheme"));
         }
 
         [Test]
@@ -571,6 +646,12 @@ namespace Ludots.Tests.GAS
                 }
                 """)!.AsObject();
             Assert.DoesNotThrow(() => ControlSchemeConfigLoader.RejectLegacySchemeDefaults(current, "test"));
+        }
+
+        private static ClientControlSchemePreferenceStore NewStore()
+        {
+            return new ClientControlSchemePreferenceStore(
+                Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
         }
 
         private static string FindRepoRoot()
@@ -614,7 +695,7 @@ namespace Ludots.Tests.GAS
             {
                 var intentIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
-                var preferences = new ClientControlSchemePreferenceStore();
+                var preferences = NewStore();
 
                 var harness = new Harness
                 {
@@ -634,8 +715,8 @@ namespace Ludots.Tests.GAS
                 harness.Runtime = new ControlSchemeRuntime(
                     harness._schemeIds,
                     orderTypes,
-                    withHandler ? () => harness.Handler : null,
                     preferences,
+                    withHandler ? () => harness.Handler : null,
                     inputConfig: withInputConfig ? BuildInputConfig(includeMoveAxis: true) : null);
                 return harness;
             }

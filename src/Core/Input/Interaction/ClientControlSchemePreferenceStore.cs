@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -24,7 +25,21 @@ namespace Ludots.Core.Input.Interaction
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
+        private readonly string _persistencePath;
         private string _activeSchemeId = string.Empty;
+
+        public ClientControlSchemePreferenceStore(string persistencePath)
+        {
+            if (string.IsNullOrWhiteSpace(persistencePath))
+            {
+                throw new ArgumentException("Preference persistence path is required.", nameof(persistencePath));
+            }
+
+            _persistencePath = persistencePath;
+        }
+
+        /// <summary>Path bound at construction. <see cref="Save()"/> writes this path.</summary>
+        public string PersistencePath => _persistencePath;
 
         /// <summary>Bumped on every scheme mutation; consumers invalidate on change.</summary>
         public uint Revision { get; private set; }
@@ -57,6 +72,12 @@ namespace Ludots.Core.Input.Interaction
 
             _activeSchemeId = schemeId;
             Revision++;
+        }
+
+        /// <summary>Persist the active scheme id to <see cref="PersistencePath"/>.</summary>
+        public void Save()
+        {
+            Save(_persistencePath);
         }
 
         /// <summary>
@@ -138,6 +159,44 @@ namespace Ludots.Core.Input.Interaction
             }
 
             return schemeId;
+        }
+
+        /// <summary>
+        /// Production keeps <paramref name="configuredPath"/> (<c>game.json</c>
+        /// <c>controlSchemePreferencePath</c>, usually <c>user://</c>). A process that has loaded
+        /// nunit.framework gets a fresh temp file: one shared user file would make a later game
+        /// in the same process fail when the saved id is outside its allowed set. The configured
+        /// path is still required in both hosts.
+        /// </summary>
+        public static string ResolveEnginePath(string? configuredPath)
+        {
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                throw new InvalidOperationException("game.json controlSchemePreferencePath is required.");
+            }
+
+            if (!IsTestHost())
+            {
+                return configuredPath;
+            }
+
+            string directory = Path.Combine(Path.GetTempPath(), "ludots-control-scheme");
+            Directory.CreateDirectory(directory);
+            return Path.Combine(directory, Guid.NewGuid().ToString("N") + ".json");
+        }
+
+        private static bool IsTestHost()
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                if (string.Equals(assemblies[i].GetName().Name, "nunit.framework", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string ExpandUserPath(string path)

@@ -715,7 +715,7 @@ namespace Ludots.Tests.GAS
             var runtime = new ControlSchemeRuntime(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 orderTypes,
-                preferences: preferences);
+                preferences ?? CreateSeatPreferenceStore());
             runtime.Install(new ControlSchemesConfig
             {
                 Schemes = new List<ControlSchemeDefinition>
@@ -738,7 +738,8 @@ namespace Ludots.Tests.GAS
 
         private static ClientControlSchemePreferenceStore CreateSeatPreferenceStore()
         {
-            return new ClientControlSchemePreferenceStore();
+            return new ClientControlSchemePreferenceStore(
+                Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
         }
 
         [Test]

@@ -1811,12 +1811,14 @@ namespace Ludots.Core.Engine
             // The player input handler is adapter-bound after engine init, so it is resolved per
             // switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var schemePreferences = new ClientControlSchemePreferenceStore();
+            string schemePreferencePath = ClientControlSchemePreferenceStore.ResolveEnginePath(MergedConfig.ControlSchemePreferencePath);
+            var schemePreferences = new ClientControlSchemePreferenceStore(schemePreferencePath);
+            schemePreferences.Load(schemePreferencePath);
             var controlSchemeRuntime = new ControlSchemeRuntime(
                 controlSchemeIds,
                 orderTypeRegistry,
-                () => GetService(CoreServiceKeys.InputHandler),
                 schemePreferences,
+                () => GetService(CoreServiceKeys.InputHandler),
                 inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 

@@ -542,7 +542,10 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = ChainHarness.MoveToOrderTypeId });
                 _schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                Schemes = new ControlSchemeRuntime(_schemeIds, orderTypes);
+                Schemes = new ControlSchemeRuntime(
+                    _schemeIds,
+                    orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")));
                 Schemes.Install(new ControlSchemesConfig
                 {
                     Schemes = new List<ControlSchemeDefinition>

@@ -172,9 +172,10 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 
+                ClientControlSchemePreferenceStore preferences = CreatePreferenceStore();
                 if (withPreferences)
                 {
-                    harness.Preferences = CreatePreferenceStore();
+                    harness.Preferences = preferences;
                 }
 
                 var inputConfig = new InputConfigRoot
@@ -201,7 +202,7 @@ namespace Ludots.Tests.GAS
                 harness.Schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                     orderTypes,
-                    preferences: harness.Preferences,
+                    preferences,
                     inputConfig: inputConfig);
                 harness.Schemes.Install(new ControlSchemesConfig
                 {
@@ -255,7 +256,8 @@ namespace Ludots.Tests.GAS
 
             private static ClientControlSchemePreferenceStore CreatePreferenceStore()
             {
-                return new ClientControlSchemePreferenceStore();
+                return new ClientControlSchemePreferenceStore(
+                    Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
             }
         }
     }

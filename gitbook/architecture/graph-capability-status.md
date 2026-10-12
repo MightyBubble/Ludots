@@ -183,8 +183,8 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 游戏专属钩子织进共用能力图：交互展示 `bind_aim_actor` / `shape_indicate` / `shape_clear`，冠军 `bind_aim_actor` / `nearest_hostile_assist` | 钩子织入是全局的，装上就对所有游戏生效，越过了游戏 mod 的职责。现在没有启动预设同时装两个游戏，所以还没炸 | 切片 R 之后逐个搬走：绑演员进共用进入图，形状跟交互状态走，就近辅助瞄准进规则图；五个钩子删光。加载期规则：`hookAnchor` 只能指向本 mod 的图，跨 mod 定制一律走事件 |
 | 共用能力图替游戏做决定：拾取半径写死（指针 160 cm、摇杆 400 cm），只找敌对单位 | 友方技能瞄不了，能力 mod 管了玩法 | 半径和关系过滤搬进技能引用的规则图；友方技能引用另一张规则图 |
 | 展示 mod 里还有施法方式 C#：冠军 `ChampionSkillCastModes.cs` + `ChampionSkillCastModeToolbarProvider.cs`，交互展示 `InteractionShowCastModes.cs` | 两份 C# 各读一份 `cast_mode_toolbar.json`，重复造轮子，还直读 `InteractionPref` 判断高亮 | `EntityCommandPanelMod` 出一份通用数据工具栏：按钮 = 输入动作 id（走现有 `InjectButtonPress`），高亮 = 偏好键取值或某个 context 是否开着。两份 C# 删掉 |
-| 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 见下面缺口 5：座位初始方案由数据声明，展示改声明自己的方案，删 C# |
-| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 构造参数必填；切方案时写盘，路径用现有本机偏好目录；读到坏数据就报错 |
+| 交互展示 C# 手动 push / pop `Aim.Kbm` 输入上下文（`InteractionShowcaseRuntime`） | 控制方案本来就是「一组输入上下文的组合」，C# 绕过了它 | 已落地。这段 push / pop 和前 90 帧打回 `scheme.default` 的分支已删。座位方案见缺口 5 |
+| `ControlSchemeRuntime` 的偏好仓库可空（`preferences = null` + `?.`），`ClientControlSchemePreferenceStore.Save` 生产零调用 | 缺仓库时静默跳过 = 回退；只读不写 = 半接线 | 已落地。仓库必填。切方案写入 `game.json` 的 `controlSchemePreferencePath`（根资产 `user://control-scheme.json`，展开到本机 Ludots 目录）。坏文件报路径。存的方案 id 不在允许集里直接抛。测试进程加载了 nunit.framework 时，每个引擎写自己的临时文件，避免后一个游戏读到前一个游戏的方案 id |
 | 缺口只记在私人笔记里，没进本页 | 违反「进度只认本页」 | 本节就是补这一条 |
 
 **机制缺口和方案（按「先通用件、再删数据副本」做）：**
@@ -194,8 +194,8 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | 1 | 每个游戏手抄一份进入图（冠军 / MOBA / 交互 / 方案展示四份同骨架）。原因：`ActivateContext` 的父上下文、集合 key、模板都是编译期符号，`InvokeGraph` 不能传符号参数 | 进入图只留能力 mod 一份 `graph.aim.enter`。`ActivateContext` 不写 `parentContext` 时，父上下文取「本挂载所属的上下文」（运行期取挂载 id，通用）。游戏只在自己战斗上下文的 `triggers[]` 里引用这张图，不再抄。下游说的「Case E 每个 rep 都要单独写一份图」随这条和切片 R 的共用规则图一起解决 |
 | 2 | 钩子全局生效 | 同上表：钩子只许本 mod 内用，跨 mod 定制走事件。先盘点仓库里现有的跨 mod 钩子，有的话同批迁走 |
 | 3 | 选中变化后重绑瞄准演员：`Select.End` 归 `core.selecting`，战斗上下文里的图收不到，只能往能力图里织钩子 | 集合唯一写点在成员增删时同时发通用地图事件（载荷：集合 key、成员、所有者），TriggerGraph 入口用现有 `filters.payload` 按 key 订阅。能力 mod 的重绑图订阅选中集合，不靠钩子 |
-| 4 | `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 两份配置的 `schemes` / `profiles` 改 ArrayById 按 `id` 字段级合并；`allowedSchemes` 用 `ArrayAppendFields` 追加并去重，重复 id 失败关闭。和 `Enums/enums.json` 同一套管线 |
-| 5 | 地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 座位已有 `ControlSchemeId`（`MapLaunchContext.LocalSeats`），补一个数据入口：`game.json` / 地图声明座位初始方案；SHOW-6 从「启动方案必须是 `scheme.default`」改成「启动方案必须显式声明」 |
+| 4 | 原先 `control_schemes.json`、`command_intent_profiles.json` 合并时数组整替换，后加载的 mod 要把能力 mod 的方案 / 意图整段抄一遍 | 已落地。目录策略仍是 DeepObject：管线没有「对象根加一条按 id 合并的数组」这一档，加载器把现成的 DeepObject 和 ArrayById 拼在一起。`schemes` / `profiles` 按 `id` 字段级合并，后加载的字段赢，`inputContexts` 和 `rules` 整段替换。`allowedSchemes` 用 `ArrayAppendFields` 追加，重复 id 在校验里失败关闭。和根资产、能力 mod 相同的副本已从游戏 mod 删掉 |
+| 5 | 原先地图 / 座位没法声明初始输入方案，只能 C# 推 `Aim.Kbm` | 已落地。进图读的就是 `game.json` 的 `startupLocalSeats[].controlSchemeId`（写进 `MapLaunchContext.LocalSeats`）。SHOW-6 改成「启动方案必须显式声明」，空了报这个字段名。交互展示座位是 `scheme.aim.kbm`。没写这个字段的其他座位仍保持运行时已经激活的方案，这是 `ParticipantBindingResolver` 的既有合同 |
 | 6 | 换方案时没法带默认施法方式（LoL 手柄该默认松开施放，现在只能按 F2） | DEC-15 修订已定：方案只是键位档案，不带偏好。Core 在切方案时发通用事件（新旧方案 id），能力 mod 的图收到后用 `SetPref` 写施法方式 |
 | 7 | 技能槽固定 4 个（`Aim.Slot1..4` 写死在 press / release_confirm） | 输入动作允许带一个整型参数（绑定数据声明），按下图只留一个入口，从入口载荷读槽号。加槽只改绑定，不改能力图 |
 | 8 | 施法方式是按下图里一条固定判断链，新增方式要改能力图 | 施法方式的取值直接就是手势交互状态的 id；按下图用一个通用 op「激活某偏好键当前取值所指的 context」。即时施放 = `onActivated` 里提交并关掉自己的状态。新增方式 = 新 profile + 新取值，零图改动 |
@@ -211,7 +211,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 
 **还没删的 `CoreInputMod` 部分：** 小地图指针交互改走前台交互状态（删 `MinimapInputConsumer` / `PointerInputCaptured` / `interactionActions`）；`collection.command.source` 换成各 mod 自己的集合；最后删 `CoreInputMod` 目录和它的依赖，去掉 `Default_Gameplay`，启动交互状态找不到就报错，加禁名守卫。
 
-**顺序：** 切片 R → 施法方式改通用偏好键 + 第 8 条 → 第 1、2、3 条（删钩子、删进入图副本）→ 第 4 条 → 第 5、6 条和偏好仓库 → 通用工具栏删 C# → 第 7、10、13 条 → `CoreInputMod` 收尾。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
+**顺序：** 切片 R → 施法方式改通用偏好键 + 第 8 条 → 第 1、2、3 条（删钩子、删进入图副本）→ 第 6 条 → 通用工具栏删 C# → 第 7、10、13 条 → `CoreInputMod` 收尾。第 4、5 条和偏好仓库已落地。每项一个切片，叠在 #1755 上依次合；Core 通用件和删副本放在同一切片，不留「以后再说」的空票。
 
 ### 3.4 不要当成这轮图能力去合
 

@@ -158,7 +158,8 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 var schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                    orderTypes);
+                    orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")));
                 var inputConfig = new InputConfigRoot
                 {
                     Actions = new List<InputActionDef>

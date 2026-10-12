@@ -33,15 +33,15 @@ namespace Ludots.Core.Input.Interaction
         public ControlSchemeRuntime(
             StringIntRegistry schemeIdRegistry,
             OrderTypeRegistry orderTypes,
+            ClientControlSchemePreferenceStore preferences,
             Func<PlayerInputHandler> handlerProvider = null,
-            ClientControlSchemePreferenceStore preferences = null,
             InputConfigRoot inputConfig = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+            _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
             _inputConfig = inputConfig;
             _handlerProvider = handlerProvider;
-            _preferences = preferences;
         }
 
         /// <summary>Scheme id space; players/mods reference schemes by these ids.</summary>
@@ -154,7 +154,8 @@ namespace Ludots.Core.Input.Interaction
 
             if (switched)
             {
-                _preferences?.SetActiveScheme(_schemeIds.GetName(schemeId));
+                _preferences.SetActiveScheme(_schemeIds.GetName(schemeId));
+                _preferences.Save();
             }
 
             return true;
@@ -353,7 +354,7 @@ namespace Ludots.Core.Input.Interaction
                 return;
             }
 
-            if (_preferences != null && !string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
+            if (!string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
             {
                 string preferredScheme = _preferences.ActiveSchemeId;
                 if (!_schemeIds.TryGetId(preferredScheme, out int preferredSchemeId))
