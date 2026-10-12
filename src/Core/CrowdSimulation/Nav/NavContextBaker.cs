@@ -176,7 +176,8 @@ public static class NavContextBaker
             SpeedDivisor = speedDivisor,
             Walk = walk,
             Passable = passable,
-            Cells = cellList.ToArray(),
+            Cells = PackCells(cellList, n2),
+            CellCount = cellList.Count,
             Comp = comp,
             CompCount = compCount,
             Links = links,
@@ -193,7 +194,23 @@ public static class NavContextBaker
             ReachOut = reachOut,
         };
         nav.Hpa = HpaGraph.Build(nav, config);
+        // 增量重烘的全图缓冲在装载期备好。第一次放置不再为它们分配。
+        nav.FloodQueue = new int[n2];
+        nav.MergeBuffer = new int[n2];
+        nav.DeckCompBuffer = new int[n2];
+        nav.UnionParent = new int[n2 * 2];
+        nav.UnionDense = new int[n2 * 2];
+        nav.ErodeRow = new byte[n2];
+        nav.PrevTiles = new NavTileEntry?[64];
+        nav.PrefillRebakePools();
         return nav;
+    }
+
+    private static int[] PackCells(List<int> cells, int n2)
+    {
+        var packed = new int[n2];
+        for (int i = 0; i < cells.Count; i++) packed[i] = cells[i];
+        return packed;
     }
 
     /// <summary>跳跃链接过滤（buildProfileLinks 移植）：候选端点都可走、格距 ≤ rangeCells、
@@ -335,10 +352,10 @@ public static class NavContextBaker
     }
 
     /// <summary>连通域标号(4 连通洪泛,格号升序首见分配编号):全量烘焙与增量重烘共用一份划分。</summary>
-    internal static int Components(byte[] passable, int navCellsPerSide, int[] comp)
+    internal static int Components(byte[] passable, int navCellsPerSide, int[] comp, int[]? queue = null)
     {
         int n2 = navCellsPerSide * navCellsPerSide, compCount = 0;
-        var queue = new int[n2];
+        queue ??= new int[n2];
         for (int s = 0; s < n2; s++)
         {
             if (passable[s] == 0 || comp[s] >= 0) continue;

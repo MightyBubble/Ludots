@@ -54,11 +54,14 @@ public sealed class CrowdFog
     private List<(int GroupIndex, int[] Cells, int Until)> _obscured = new();
     public readonly ushort[] ObsN;  // 每组每格的活跃遮蔽条目数
 
-    // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)
-    private readonly Dictionary<int, HashSet<int>> _idx = new();
-    private readonly Dictionary<int, List<int>> _cellsOf = new();
+    // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)。
+    // 每格的集在构造时留好;放置只往已有集里加 id,不再按格 new。
+    private readonly HashSet<int>[] _idx;
+    private List<int>?[] _cellsOf = Array.Empty<List<int>>();
+    private readonly Stack<List<int>> _cellListPool = new();
     // 逐 tick 复用暂存(对账/遗忘/遮蔽到期;调用序不嵌套,清空即借出)
-    private readonly HashSet<int> _reconcileDone = new();
+    // 一次刷新里可见实体数不超过结构上限。容量在构造时给满,首见实体不再扩容。
+    private readonly HashSet<int> _reconcileDone;
     private readonly List<int> _reconcileForget = new();
     private readonly List<(int GroupIndex, int[] Cells, int Until)> _obscureKeep = new();
     private readonly int[] _disc;   // 视盘偏移(dx, dy 平铺;R = visionCm / fcs 的圆盘)
@@ -100,12 +103,19 @@ public sealed class CrowdFog
         EntRev = new long[VisionGroupCount];
         Rev = new long[VisionGroupCount];
         ObsN = new ushort[VisionGroupCount * f2];
+        _reconcileDone = new HashSet<int>(Math.Max(16, store.EntityIds.Count + 64));
+        _idx = new HashSet<int>[f2];
+        for (int c = 0; c < f2; c++) _idx[c] = new HashSet<int>(4);
+        int cellSlots = Math.Max(16, store.EntityIds.Count + 64);
+        _cellsOf = new List<int>?[cellSlots];
+        for (int i = 0; i < 64; i++) _cellListPool.Push(new List<int>(8));
         Belief = new Dictionary<int, (int, CrowdStructureFootprint)>[VisionGroupCount];
         Tiles = new HashSet<int>[VisionGroupCount];
+        int beliefCap = Math.Max(16, store.EntityIds.Count + 64);
         for (int g = 0; g < VisionGroupCount; g++)
         {
-            Belief[g] = new Dictionary<int, (int, CrowdStructureFootprint)>();
-            Tiles[g] = new HashSet<int>();
+            Belief[g] = new Dictionary<int, (int, CrowdStructureFootprint)>(beliefCap);
+            Tiles[g] = new HashSet<int>(NavTilesPerSide * NavTilesPerSide);
         }
 
         double radius = fc.VisionCm.ToDouble() / FogCellSizeCm;
@@ -256,7 +266,8 @@ public sealed class CrowdFog
     private void IndexAdd(int id, CrowdStructureFootprint fp)
     {
         var (a, b, c, d) = fp.Bbox();
-        var cells = new List<int>();
+        if (!_cellListPool.TryPop(out var cells)) cells = new List<int>(8);
+        cells.Clear();
         Fix64 fogCellCm = Fix64.FromInt(FogCellSizeCm);
         int x0 = Math.Max(0, (int)(a / fogCellCm).ToLong()), y0 = Math.Max(0, (int)(b / fogCellCm).ToLong());
         int x1 = Math.Min(FogCellsPerSide - 1, (int)(c / fogCellCm).ToLong()), y1 = Math.Min(FogCellsPerSide - 1, (int)(d / fogCellCm).ToLong());
@@ -265,10 +276,16 @@ public sealed class CrowdFog
             for (int x = x0; x <= x1; x++)
             {
                 int k = y * FogCellsPerSide + x;
-                if (!_idx.TryGetValue(k, out var s)) _idx[k] = s = new HashSet<int>();
-                s.Add(id);
+                _idx[k].Add(id);
                 cells.Add(k);
             }
+        }
+
+        if ((uint)id >= (uint)_cellsOf.Length)
+        {
+            int n = _cellsOf.Length;
+            while ((uint)id >= (uint)n) n *= 2;
+            Array.Resize(ref _cellsOf, n);
         }
 
         _cellsOf[id] = cells;
@@ -276,17 +293,21 @@ public sealed class CrowdFog
 
     private void IndexDel(int id)
     {
-        if (!_cellsOf.TryGetValue(id, out var cells)) return;
-        foreach (int k in cells)
+        if ((uint)id >= (uint)_cellsOf.Length || _cellsOf[id] is not { } cells) return;
+        foreach (int k in cells) _idx[k].Remove(id);
+        cells.Clear();
+        _cellListPool.Push(cells);
+        _cellsOf[id] = null;
+    }
+
+    private static bool CellsInside(List<int> cells, HashSet<int> member)
+    {
+        for (int i = 0; i < cells.Count; i++)
         {
-            if (_idx.TryGetValue(k, out var s))
-            {
-                s.Remove(id);
-                if (s.Count == 0) _idx.Remove(k);
-            }
+            if (!member.Contains(cells[i])) return false;
         }
 
-        _cellsOf.Remove(id);
+        return true;
     }
 
     /// <summary>一个 tick:刷新本 tick 槽位的组(单位位置取 Fix64 厘米域,格号向零截断)。</summary>
@@ -462,7 +483,8 @@ public sealed class CrowdFog
 
     private void ReconcileCell(int g, int c, HashSet<int> done, List<int> forget)
     {
-        if (!_idx.TryGetValue(c, out var ids)) return;
+        var ids = _idx[c];
+        if (ids.Count == 0) return;
         foreach (int id in ids)
         {
             if (!done.Add(id)) continue;
@@ -582,7 +604,7 @@ public sealed class CrowdFog
                 ExploredCount[g]--;
             }
 
-            if (_idx.TryGetValue(c, out var s)) ids.UnionWith(s);
+            if (_idx[c].Count > 0) ids.UnionWith(_idx[c]);
         }
 
         int Tile(int v) => Math.Min(NavTilesPerSide - 1, v / NavCellsPerTile);
@@ -619,7 +641,7 @@ public sealed class CrowdFog
         foreach (int id in ordered)
         {
             if (!Belief[g].ContainsKey(id)) continue;
-            if (!_cellsOf.TryGetValue(id, out var idCells) || !idCells.All(member.Contains)) continue;
+            if ((uint)id >= (uint)_cellsOf.Length || _cellsOf[id] is not { } idCells || !CellsInside(idCells, member)) continue;
             Belief[g].Remove(id);
             if (!Store.TryGetFootprint(id, out _)) GhostCount[g]--;
             Key[g] ^= Mix(id);

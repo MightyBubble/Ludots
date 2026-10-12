@@ -18,7 +18,7 @@ public readonly record struct CrowdCommand(int Tick, CrowdSimCommand Cmd);
 /// </summary>
 public sealed class CrowdCommandQueue
 {
-    private readonly List<(int Tick, CrowdSimCommand Cmd)> _log = new();
+    private readonly List<(int Tick, CrowdSimCommand Cmd)> _log = new(64);
     private List<(int Tick, CrowdSimCommand Cmd)> _queue = new();
     private int _head;
 

@@ -8,9 +8,12 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// <summary>阻挡物盒的逐格 CSR 索引(S5 静态建;S7 起动态仓随结构变更整体重建)。</summary>
 public sealed class CrowdBlockerColliders
 {
-    private readonly int[] _cellStart;
-    private readonly int[] _cellItems;
-    private readonly (Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)[] _colliders;
+    private int[] _cellStart;
+    private int[] _cellItems;
+    private (Fix64 X, Fix64 Y, Fix64 Hx, Fix64 Hy)[] _colliders;
+    private int _count;
+    private int _pending;
+    private int[]? _counts;
 
     private static readonly int[] _emptyStart = new int[1];
     private static readonly (Fix64, Fix64, Fix64, Fix64)[] _emptyBoxes = Array.Empty<(Fix64, Fix64, Fix64, Fix64)>();
@@ -23,9 +26,78 @@ public sealed class CrowdBlockerColliders
         _cellStart = cellStart;
         _cellItems = cellItems;
         _colliders = colliders;
+        _count = colliders.Length;
     }
 
-    public int Count => _colliders.Length;
+    /// <summary>结构仓持有的可重填索引。格起点、条目与盒表在装载时按网格留出余量,
+    /// 之后只增少数阻挡盒的重建落在余量内,不再分配。</summary>
+    internal static CrowdBlockerColliders CreateReusable(int navCellsPerSide)
+    {
+        int n2 = navCellsPerSide * navCellsPerSide;
+        var colliders = new CrowdBlockerColliders(new int[n2 + 1], new int[n2 * 2], new (Fix64, Fix64, Fix64, Fix64)[256])
+        {
+            _counts = new int[n2],
+        };
+        colliders._count = 0;
+        return colliders;
+    }
+
+    public int Count => _count;
+
+    /// <summary>开始一次原地重建:清空格计数,盒写入复用的盒表。</summary>
+    internal void BeginRebuild()
+    {
+        if (_counts == null)
+        {
+            throw new InvalidOperationException("一次性碰撞索引不能原地重建。");
+        }
+
+        Array.Clear(_counts, 0, _counts.Length);
+        _pending = 0;
+    }
+
+    /// <summary>按放置序登记一个阻挡盒(只计数,不写条目)。</summary>
+    internal void AddBox(Fix64 x, Fix64 y, Fix64 hx, Fix64 hy, int navCellsPerSide, int navCellSizeCm, Fix64 reachCm)
+    {
+        if (_pending == _colliders.Length)
+        {
+            int cap = Math.Max(_pending + 64, _colliders.Length * 2);
+            Array.Resize(ref _colliders, cap);
+        }
+
+        _colliders[_pending] = (x, y, hx, hy);
+        VisitCells(_pending, x, y, hx, hy, navCellsPerSide, navCellSizeCm, reachCm, writeItems: false);
+        _pending++;
+    }
+
+    /// <summary>前缀和后按同一放置序把盒号写入 CSR。条目容量不足时多留一整张网格,避免下一次增量放置再分配。</summary>
+    internal void CommitRebuild(int navCellsPerSide, int navCellSizeCm, Fix64 reachCm)
+    {
+        int n2 = navCellsPerSide * navCellsPerSide;
+        int[] counts = _counts!;
+        int total = 0;
+        for (int c = 0; c < n2; c++)
+        {
+            int n = counts[c];
+            _cellStart[c] = total;
+            counts[c] = total;
+            total += n;
+        }
+
+        _cellStart[n2] = total;
+        if (_cellItems.Length < total)
+        {
+            _cellItems = new int[Math.Max(total + n2, _cellItems.Length * 2)];
+        }
+
+        for (int id = 0; id < _pending; id++)
+        {
+            var (x, y, hx, hy) = _colliders[id];
+            VisitCells(id, x, y, hx, hy, navCellsPerSide, navCellSizeCm, reachCm, writeItems: true);
+        }
+
+        _count = _pending;
+    }
 
     /// <summary>阻挡足迹(方块)按覆盖格登记;格内圆盘推出在查询时精确解。</summary>
     public static CrowdBlockerColliders Build(IReadOnlyList<BlockerFootprint> blockers, int navCellsPerSide, int navCellSizeCm)
@@ -83,6 +155,29 @@ public sealed class CrowdBlockerColliders
         }
 
         return new CrowdBlockerColliders(cellStart, cellItems, colliders);
+    }
+
+    private void VisitCells(int id, Fix64 x, Fix64 y, Fix64 hx, Fix64 hy, int navCellsPerSide, int navCellSizeCm, Fix64 reachCm, bool writeItems)
+    {
+        int x0 = CrowdSimulationSpace.NavCellCoord(x - hx - reachCm, navCellSizeCm);
+        int y0 = CrowdSimulationSpace.NavCellCoord(y - hy - reachCm, navCellSizeCm);
+        int x1 = CrowdSimulationSpace.NavCellCoord(x + hx + reachCm, navCellSizeCm);
+        int y1 = CrowdSimulationSpace.NavCellCoord(y + hy + reachCm, navCellSizeCm);
+        x0 = Math.Max(0, x0);
+        y0 = Math.Max(0, y0);
+        x1 = Math.Min(navCellsPerSide - 1, x1);
+        y1 = Math.Min(navCellsPerSide - 1, y1);
+        int[] counts = _counts!;
+        for (int cy = y0; cy <= y1; cy++)
+        {
+            int row = cy * navCellsPerSide;
+            for (int cx = x0; cx <= x1; cx++)
+            {
+                int cell = row + cx;
+                if (writeItems) _cellItems[counts[cell]++] = id;
+                else counts[cell]++;
+            }
+        }
     }
 
     /// <summary>把圆盘推出该格登记的每个阻挡盒(resolveColliders 移植);返回 true 并写出修正位置与法线。</summary>

@@ -45,7 +45,7 @@ public sealed class HpaGraph
     public required int EdgeCount { get; set; }
 
     // 查询暂存(不可重入:每次查询独占;并行作业须各自持有)
-    public NavMinHeap Heap = new(512);
+    public NavMinHeap Heap = new(4096);
     public Fix64[] Dist => _dist;
     public Fix64[] StartDist => _startDist;
     public Fix64[] GoalDist => _goalDist;
@@ -55,36 +55,95 @@ public sealed class HpaGraph
     private int[] _localNb = Array.Empty<int>();
     private Fix64[] _localW = Array.Empty<Fix64>();
     private byte[] _localWant = Array.Empty<byte>();
-    // Update 的升序缓冲。本图独占:重烘在导航锁内,查询不碰它;变体克隆不共享。
+    // Update 的升序缓冲与集合。本图独占:重烘在导航锁内,查询不碰它们。
+    // 变体克隆深拷内层数组,所以这里原地复用不会写穿真相。
     private StableInt[] _ascend = Array.Empty<StableInt>();
+    private readonly HashSet<int> _own = new();
+    private readonly HashSet<int> _aff = new();
+    private readonly HashSet<int> _rebake = new();
+    private readonly HashSet<int> _east = new();
+    private readonly HashSet<int> _south = new();
+    private readonly List<int> _border = new();
+    private readonly List<int> _held = new();
+    private readonly List<Fix64> _upCosts = new();
+    private readonly List<int> _dropKeys = new();
+    private Dictionary<int, List<int>> _linkAlt = new();
+    private Dictionary<int, List<int>>? _linkAltSpare;
+    private static readonly Dictionary<int, List<int>> EmptyLinks = new();
+    private List<(int To, Fix64 Cost)>[]? _outE;
+    private readonly Dictionary<int, int> _oldIdx = new(512);
+    private readonly Dictionary<long, Fix64> _oldDist = new(4096);
+    private int[] _nE = Array.Empty<int>();
+    private int[] _nS = Array.Empty<int>();
+    private int[] _nUpE = Array.Empty<int>();
+    private int[] _nUpS = Array.Empty<int>();
+    private int[] _nUpEc = Array.Empty<int>();
+    private int[] _nUpSc = Array.Empty<int>();
+    private int[] _nCells = Array.Empty<int>();
+    private int[] _nIntra = Array.Empty<int>();
+    private int[] _nCross = Array.Empty<int>();
+    private readonly List<int> _snap = new(64);
+    private readonly List<int> _snapUp = new(64);
+    private readonly List<Fix64> _snapCost = new(32);
+    private readonly List<int> _bakeCells = new(512);
+    private readonly List<int> _bakeUp = new(512);
+    private readonly List<int> _bakeXl = new(512);
+    private readonly List<int> _bakeIntra = new(4096);
+    private readonly List<Fix64> _bakeIntraDist = new(2048);
+    private readonly HashSet<int> _bakeSeen = new(512);
+    private readonly HashSet<int> _bakeUSeen = new(512);
 
-    /// <summary>认知变体克隆(F02):外层容器全拷;内层数组/tile 块/LinkOut 的 List 与真相(及
-    /// 其他同源变体)共用,禁止原地写——写了就击穿全体共享者。一切改写只能整体替换变体自有的
-    /// 外层槽位(增量重烘的全部写入点均如此);查询暂存全新。</summary>
+    /// <summary>认知变体克隆(F02):内层数组、簇块和链接表深拷。增量重烘原地复用缓冲,
+    /// 共享内层会被写穿,所以变体必须独占自己的数组。</summary>
     public HpaGraph CloneForVariant()
     {
-        return new HpaGraph
+        var blocks = new HpaTileBlock[Blocks.Length];
+        for (int i = 0; i < Blocks.Length; i++)
+        {
+            var b = Blocks[i];
+            blocks[i] = new HpaTileBlock
+            {
+                Cells = (int[])b.Cells.Clone(),
+                Index = CopyIndex(b.Index),
+                AdjStart = (int[])b.AdjStart.Clone(),
+                AdjTo = (int[])b.AdjTo.Clone(),
+                AdjCost = (Fix64[])b.AdjCost.Clone(),
+                EdgeCount = b.EdgeCount,
+                CellCount = b.CellCount,
+            };
+        }
+
+        var linkOut = new Dictionary<int, List<(int To, Fix64 Cost)>>(LinkOut.Count);
+        foreach (var kv in LinkOut) linkOut[kv.Key] = new List<(int To, Fix64 Cost)>(kv.Value);
+        Dictionary<int, List<int>>? linkTiles = null;
+        if (LinkTiles != null)
+        {
+            linkTiles = new Dictionary<int, List<int>>(LinkTiles.Count);
+            foreach (var kv in LinkTiles) linkTiles[kv.Key] = new List<int>(kv.Value);
+        }
+
+        var copy = new HpaGraph
         {
             NavCellsPerTile = NavCellsPerTile,
             NavTilesPerSide = NavTilesPerSide,
             NavCellTotal = NavCellTotal,
             MaxEntranceWidthNavCells = MaxEntranceWidthNavCells,
-            BorderE = (int[][])BorderE.Clone(),
-            BorderS = (int[][])BorderS.Clone(),
-            UpE = (int[][])UpE.Clone(),
-            UpECost = (Fix64[][])UpECost.Clone(),
-            UpS = (int[][])UpS.Clone(),
-            UpSCost = (Fix64[][])UpSCost.Clone(),
-            Cells = (int[][])Cells.Clone(),
-            Intra = (int[][])Intra.Clone(),
-            IntraDist = (Fix64[][])IntraDist.Clone(),
-            CrossLayer = (int[][])CrossLayer.Clone(),
-            Blocks = (HpaTileBlock[])Blocks.Clone(),
-            LinkOut = new Dictionary<int, List<(int, Fix64)>>(LinkOut),
-            LinkTiles = LinkTiles == null ? null : new Dictionary<int, List<int>>(LinkTiles),
+            BorderE = CopyJagged(BorderE),
+            BorderS = CopyJagged(BorderS),
+            UpE = CopyJagged(UpE),
+            UpECost = CopyJagged(UpECost),
+            UpS = CopyJagged(UpS),
+            UpSCost = CopyJagged(UpSCost),
+            Cells = CopyJagged(Cells),
+            Intra = CopyJagged(Intra),
+            IntraDist = CopyJagged(IntraDist),
+            CrossLayer = CopyJagged(CrossLayer),
+            Blocks = blocks,
+            LinkOut = linkOut,
+            LinkTiles = linkTiles,
             NodeCount = NodeCount,
             EdgeCount = EdgeCount,
-            Heap = new NavMinHeap(512),
+            Heap = new NavMinHeap(4096),
             _dist = new Fix64[_dist.Length],
             _startDist = new Fix64[_startDist.Length],
             _goalDist = new Fix64[_goalDist.Length],
@@ -92,6 +151,38 @@ public sealed class HpaGraph
             _localW = new Fix64[_localW.Length == 0 ? NavCellsPerTile * NavCellsPerTile * 8 : _localW.Length],
             _localWant = new byte[_localWant.Length == 0 ? NavCellsPerTile * NavCellsPerTile : _localWant.Length],
         };
+        copy._nE = (int[])_nE.Clone();
+        copy._nS = (int[])_nS.Clone();
+        copy._nUpE = (int[])_nUpE.Clone();
+        copy._nUpS = (int[])_nUpS.Clone();
+        copy._nUpEc = (int[])_nUpEc.Clone();
+        copy._nUpSc = (int[])_nUpSc.Clone();
+        copy._nCells = (int[])_nCells.Clone();
+        copy._nIntra = (int[])_nIntra.Clone();
+        copy._nCross = (int[])_nCross.Clone();
+        copy.PrepareIncrementalScratch(NavTilesPerSide * NavTilesPerSide);
+        return copy;
+    }
+
+    private static Dictionary<int, int> CopyIndex(Dictionary<int, int> source)
+    {
+        var copy = new Dictionary<int, int>(512);
+        foreach (var kv in source) copy.Add(kv.Key, kv.Value);
+        return copy;
+    }
+
+    private static int[][] CopyJagged(int[][] src)
+    {
+        var copy = new int[src.Length][];
+        for (int i = 0; i < src.Length; i++) copy[i] = (int[])src[i].Clone();
+        return copy;
+    }
+
+    private static Fix64[][] CopyJagged(Fix64[][] src)
+    {
+        var copy = new Fix64[src.Length][];
+        for (int i = 0; i < src.Length; i++) copy[i] = (Fix64[])src[i].Clone();
+        return copy;
     }
 
     public static HpaGraph Build(NavContext nav, CrowdSimulationRuntimeConfig config)
@@ -124,6 +215,15 @@ public sealed class HpaGraph
         g._localNb = new int[navCellsPerTile * navCellsPerTile * 8];
         g._localW = new Fix64[navCellsPerTile * navCellsPerTile * 8];
         g._localWant = new byte[navCellsPerTile * navCellsPerTile];
+        g._nE = new int[navTileCount];
+        g._nS = new int[navTileCount];
+        g._nUpE = new int[navTileCount];
+        g._nUpS = new int[navTileCount];
+        g._nUpEc = new int[navTileCount];
+        g._nUpSc = new int[navTileCount];
+        g._nCells = new int[navTileCount];
+        g._nIntra = new int[navTileCount];
+        g._nCross = new int[navTileCount];
 
         for (int cl = 0; cl < navTileCount; cl++) { ScanE(g, nav, cl); ScanS(g, nav, cl); UpScan(g, nav, cl, true); UpScan(g, nav, cl, false); }
         var lk = LinksByTile(nav.Links, navCellsPerSide, navCellsPerTile, navTilesPerSide);
@@ -131,26 +231,63 @@ public sealed class HpaGraph
         for (int cl = 0; cl < navTileCount; cl++) BakeTile(g, nav, cl, lk, keep: false);
         for (int cl = 0; cl < navTileCount; cl++) g.Blocks[cl] = BuildBlock(g, nav, cl);
         FinishGraph(g, nav.Links);
+        FillLinkTiles(g._linkAlt, nav.Links, navCellsPerSide, navCellsPerTile, navTilesPerSide);
+        g.PrepareIncrementalScratch(navTileCount);
         return g;
+    }
+
+    /// <summary>增量重烘的暂存都在装载期留够:集合槽位、块索引、链接桶,以及字典的键视图对象。
+    /// 这些东西第一次用才会分配,不能留到放置 tick。</summary>
+    private void PrepareIncrementalScratch(int navTileCount)
+    {
+        _own.EnsureCapacity(navTileCount);
+        _aff.EnsureCapacity(navTileCount);
+        _rebake.EnsureCapacity(navTileCount);
+        _east.EnsureCapacity(navTileCount);
+        _south.EnsureCapacity(navTileCount);
+        StableOrder.Ensure(ref _ascend, navTileCount);
+        _linkAlt.EnsureCapacity(navTileCount);
+        _linkAltSpare ??= new Dictionary<int, List<int>>(navTileCount);
+        _linkAltSpare.EnsureCapacity(navTileCount);
+        _ = EmptyLinks.Count;
+        _ = _linkAlt.Keys.Count;
+        _ = _linkAltSpare.Keys.Count;
+        if (LinkTiles != null) _ = LinkTiles.Keys.Count;
+        for (int cl = 0; cl < Blocks.Length; cl++)
+            Blocks[cl].Index.EnsureCapacity(512);
     }
 
     // ── 增量维护(updateHpa 移植) ─────────────────────────────────────
     /// <summary>脏 tile 的 HPA 增量维护:触到的共享边界各重扫一次,入口表变化的簇(及边界对面
     /// 的邻居)重烘簇内边——入口未变的邻居块仍重建(边代价从本侧格现读)。结果与同一栅格的
     /// 全量构建逐位一致。</summary>
-    public void Update(NavContext nav, NavLinkSet? links, IReadOnlyCollection<int> tiles, HashSet<int>? same)
+    public void Update(NavContext nav, NavLinkSet? links, IReadOnlyList<int> tiles, HashSet<int>? same)
     {
         int navTilesPerSide = NavTilesPerSide;
-        var own = new HashSet<int>(tiles);
-        var aff = new HashSet<int>(tiles);
-        var rebake = new HashSet<int>(tiles);
-        var east = new HashSet<int>();
-        var south = new HashSet<int>();
+        var own = _own;
+        var aff = _aff;
+        var rebake = _rebake;
+        var east = _east;
+        var south = _south;
+        own.Clear();
+        aff.Clear();
+        rebake.Clear();
+        east.Clear();
+        south.Clear();
+        // tiles 按具体下标走。foreach 接口会每调用装箱一个枚举器。
+        for (int ti = 0; ti < tiles.Count; ti++)
+        {
+            int t = tiles[ti];
+            own.Add(t);
+            aff.Add(t);
+            rebake.Add(t);
+        }
         // 遍历序合同:本方法对无序集合(HashSet/字典键)的枚举一律按簇号升序显式化——
         // 各枚举只做集合并集或逐簇独立读写(Rescan 只加集,BakeTile/BuildBlock 逐簇
         // 写自有槽位),结果与序无关,升序仅为把序写成合同不依赖运行时枚举序。
-        foreach (int t in tiles) // tiles 是调用方 List(CrowdNavRebake.TilesOf),有序容器
+        for (int ti = 0; ti < tiles.Count; ti++)
         {
+            int t = tiles[ti];
             int cx = t % navTilesPerSide, cy = t / navTilesPerSide;
             east.Add(t);
             south.Add(t);
@@ -158,47 +295,33 @@ public sealed class HpaGraph
             if (cy > 0) south.Add(t - navTilesPerSide);
         }
 
-        // 每条触到脏 tile 的边界只重扫一次(相邻脏 tile 共享边界);入口表未变则对面簇不重烘簇内边
-        void Rescan(int cl, int nb, bool isEast)
-        {
-            var b0 = (isEast ? BorderE : BorderS)[cl];
-            var u0 = (isEast ? UpE : UpS)[cl];
-            var u0c = (isEast ? UpECost : UpSCost)[cl];
-            if (isEast) ScanE(this, nav, cl);
-            else ScanS(this, nav, cl);
-            UpScan(this, nav, cl, isEast);
-            if (nb < 0) return;
-            aff.Add(cl);
-            aff.Add(nb);
-            bool changed = !SameCells(b0, (isEast ? BorderE : BorderS)[cl])
-                || !SameCells(u0, (isEast ? UpE : UpS)[cl])
-                || !SameCosts(u0c, (isEast ? UpECost : UpSCost)[cl]);
-            if (changed)
-            {
-                rebake.Add(cl);
-                rebake.Add(nb);
-            }
-        }
-
         int eastCount = LoadAscending(east);
         for (int i = 0; i < eastCount; i++)
         {
             int cl = _ascend[i].Key;
-            Rescan(cl, cl % navTilesPerSide < navTilesPerSide - 1 ? cl + 1 : -1, true);
+            Rescan(nav, cl, cl % navTilesPerSide < navTilesPerSide - 1 ? cl + 1 : -1, true);
         }
 
         int southCount = LoadAscending(south);
         for (int i = 0; i < southCount; i++)
         {
             int cl = _ascend[i].Key;
-            Rescan(cl, cl / navTilesPerSide < navTilesPerSide - 1 ? cl + navTilesPerSide : -1, false);
+            Rescan(nav, cl, cl / navTilesPerSide < navTilesPerSide - 1 ? cl + navTilesPerSide : -1, false);
         }
 
         int ownCount = LoadAscending(own);
         for (int i = 0; i < ownCount; i++) aff.Add(_ascend[i].Key);
-        var lk = LinksByTile(links, nav.NavCellsPerSide, NavCellsPerTile, navTilesPerSide);
+        var lk = _linkAlt;
+        FillLinkTiles(lk, links, nav.NavCellsPerSide, NavCellsPerTile, navTilesPerSide);
+        _dropKeys.Clear();
+        foreach (var kv in lk)
+        {
+            if (kv.Value.Count == 0) _dropKeys.Add(kv.Key);
+        }
+
+        for (int i = 0; i < _dropKeys.Count; i++) lk.Remove(_dropKeys[i]);
         // 重生成的跳跃链接可能落进干净簇(链接跨 tile)——端点表变化的簇一并重烘
-        var oldLk = LinkTiles ?? new Dictionary<int, List<int>>();
+        var oldLk = LinkTiles ?? EmptyLinks;
         int oldCount = LoadAscendingKeys(oldLk);
         for (int i = 0; i < oldCount; i++) aff.Add(_ascend[i].Key);
         int linkCount = LoadAscendingKeys(lk);
@@ -213,6 +336,15 @@ public sealed class HpaGraph
         }
 
         LinkTiles = lk;
+        if (oldLk == EmptyLinks)
+        {
+            _linkAlt = _linkAltSpare ??= new Dictionary<int, List<int>>(Math.Max(1, NavTilesPerSide * NavTilesPerSide));
+        }
+        else
+        {
+            _linkAlt = oldLk;
+        }
+
         int rebakeCount = LoadAscending(rebake);
         for (int i = 0; i < rebakeCount; i++)
         {
@@ -223,6 +355,28 @@ public sealed class HpaGraph
         int affCount = LoadAscending(aff);
         for (int i = 0; i < affCount; i++) Blocks[_ascend[i].Key] = BuildBlock(this, nav, _ascend[i].Key);
         FinishGraph(this, links);
+    }
+
+    // 每条触到脏 tile 的边界只重扫一次;入口表未变则对面簇不重烘簇内边。
+    private void Rescan(NavContext nav, int cl, int nb, bool isEast)
+    {
+        CopyPrefix(_snap, isEast ? BorderE[cl] : BorderS[cl], isEast ? _nE[cl] : _nS[cl]);
+        CopyPrefix(_snapUp, isEast ? UpE[cl] : UpS[cl], isEast ? _nUpE[cl] : _nUpS[cl]);
+        CopyCosts(_snapCost, isEast ? UpECost[cl] : UpSCost[cl], isEast ? _nUpEc[cl] : _nUpSc[cl]);
+        if (isEast) ScanE(this, nav, cl);
+        else ScanS(this, nav, cl);
+        UpScan(this, nav, cl, isEast);
+        if (nb < 0) return;
+        _aff.Add(cl);
+        _aff.Add(nb);
+        bool changed = !SamePrefix(_snap, isEast ? BorderE[cl] : BorderS[cl], isEast ? _nE[cl] : _nS[cl])
+            || !SamePrefix(_snapUp, isEast ? UpE[cl] : UpS[cl], isEast ? _nUpE[cl] : _nUpS[cl])
+            || !SameCostPrefix(_snapCost, isEast ? UpECost[cl] : UpSCost[cl], isEast ? _nUpEc[cl] : _nUpSc[cl]);
+        if (changed)
+        {
+            _rebake.Add(cl);
+            _rebake.Add(nb);
+        }
     }
 
     private int LoadAscending(HashSet<int> source)
@@ -289,40 +443,74 @@ public sealed class HpaGraph
     }
 
     // ── 边界入口扫描 ─────────────────────────────────────────────
-    private static int[] ScanBorder(byte[] passable, int maxW, Func<int, int> cellA, Func<int, int> cellB, int len)
+    /// <summary>cellA(k) = origin + k * stride, cellB(k) = cellA(k) + side。不用委托,扫描不分配。</summary>
+    private static void ScanBorder(HpaGraph g, byte[] passable, int maxW, int origin, int stride, int side, int len)
     {
-        var output = new List<int>();
+        var output = g._border;
+        output.Clear();
         int run = -1;
         for (int k = 0; k <= len; k++)
         {
-            bool open = k < len && passable[cellA(k)] != 0 && passable[cellB(k)] != 0;
+            int a = origin + k * stride;
+            bool open = k < len && passable[a] != 0 && passable[a + side] != 0;
             if (open && run < 0) run = k;
             else if (!open && run >= 0)
             {
                 int e = k - 1;
-                if (e - run + 1 > maxW) { output.Add(cellA(run)); output.Add(cellB(run)); output.Add(cellA(e)); output.Add(cellB(e)); }
-                else { int p = (run + e) >> 1; output.Add(cellA(p)); output.Add(cellB(p)); }
+                int ar = origin + run * stride, ae = origin + e * stride;
+                if (e - run + 1 > maxW) { output.Add(ar); output.Add(ar + side); output.Add(ae); output.Add(ae + side); }
+                else { int p = origin + ((run + e) >> 1) * stride; output.Add(p); output.Add(p + side); }
                 run = -1;
             }
         }
+    }
 
-        return output.ToArray();
+    /// <summary>写入已有缓冲的前缀。容量按 slack 在首次分配时留出,入口个数变化不再换数组。</summary>
+    private int[] PlaceInts(int[]? slot, int count, int slack)
+    {
+        if (slot == null || slot.Length < count)
+        {
+            int cap = Math.Max(count, slack);
+            if (slot != null && slot.Length * 2 > cap) cap = slot.Length * 2;
+            slot = new int[cap];
+        }
+
+        for (int i = 0; i < count; i++) slot[i] = _border[i];
+        return slot;
+    }
+
+    private int[] PlaceList(int[]? slot, List<int> src, int slack)
+    {
+        int count = src.Count;
+        if (slot == null || slot.Length < count)
+        {
+            int cap = Math.Max(count, slack);
+            if (slot != null && slot.Length * 2 > cap) cap = slot.Length * 2;
+            slot = new int[cap];
+        }
+
+        for (int i = 0; i < count; i++) slot[i] = src[i];
+        return slot;
     }
 
     private static void ScanE(HpaGraph g, NavContext nav, int cl)
     {
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cx = cl % navTilesPerSide;
-        if (cx >= navTilesPerSide - 1) { g.BorderE[cl] = Array.Empty<int>(); return; }
+        if (cx >= navTilesPerSide - 1) { g.BorderE[cl] = Array.Empty<int>(); g._nE[cl] = 0; return; }
         int x0 = (cx + 1) * navCellsPerTile - 1, ys = cl / navTilesPerSide * navCellsPerTile;
-        g.BorderE[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => (ys + k) * navCellsPerSide + x0, k => (ys + k) * navCellsPerSide + x0 + 1, navCellsPerTile);
+        ScanBorder(g, nav.Passable, g.MaxEntranceWidthNavCells, ys * navCellsPerSide + x0, navCellsPerSide, 1, navCellsPerTile);
+        g.BorderE[cl] = g.PlaceInts(g.BorderE[cl], g._border.Count, 64);
+        g._nE[cl] = g._border.Count;
     }
 
     private static void ScanS(HpaGraph g, NavContext nav, int cl)
     {
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, cy = cl / navTilesPerSide;
-        if (cy >= navTilesPerSide - 1) { g.BorderS[cl] = Array.Empty<int>(); return; }
+        if (cy >= navTilesPerSide - 1) { g.BorderS[cl] = Array.Empty<int>(); g._nS[cl] = 0; return; }
         int y0 = (cy + 1) * navCellsPerTile - 1, xs = cl % navTilesPerSide * navCellsPerTile;
-        g.BorderS[cl] = ScanBorder(nav.Passable, g.MaxEntranceWidthNavCells, k => y0 * navCellsPerSide + xs + k, k => (y0 + 1) * navCellsPerSide + xs + k, navCellsPerTile);
+        ScanBorder(g, nav.Passable, g.MaxEntranceWidthNavCells, y0 * navCellsPerSide + xs, 1, navCellsPerSide, navCellsPerTile);
+        g.BorderS[cl] = g.PlaceInts(g.BorderS[cl], g._border.Count, 64);
+        g._nS[cl] = g._border.Count;
     }
 
     // 桥面跨界入口(仅桥面↔桥面;桥头 portal 的跨层边在 BakeTile 的 xl 里)
@@ -331,23 +519,76 @@ public sealed class HpaGraph
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide;
         int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
         int nb = east ? (cx < navTilesPerSide - 1 ? cl + 1 : -1) : (cy < navTilesPerSide - 1 ? cl + navTilesPerSide : -1);
-        var list = new List<int>();
-        var costs = new List<Fix64>();
+        var list = g._border;
+        var costs = g._upCosts;
+        costs.Clear();
         if (nb >= 0 && AnyUp(nav, cl, navCellsPerTile) && AnyUp(nav, nb, navCellsPerTile))
         {
-            // 与 scanBorder 同一 run 逻辑,目标格函数映射到桥面可走格
-            int Ga(int k) => east ? (cy * navCellsPerTile + k) * navCellsPerSide + cx * navCellsPerTile + navCellsPerTile - 1 : (cy * navCellsPerTile + navCellsPerTile - 1) * navCellsPerSide + cx * navCellsPerTile + k;
-            var pairs = ScanBorder(nav.UpPass, g.MaxEntranceWidthNavCells, Ga, k => Ga(k) + (east ? 1 : navCellsPerSide), navCellsPerTile);
-            for (int p = 0; p < pairs.Length; p += 2)
+            // 与 scanBorder 同一 run 逻辑,目标格函数映射到桥面可走格。先把入口对抄走,再复用 _border。
+            int origin = east
+                ? (cy * navCellsPerTile) * navCellsPerSide + cx * navCellsPerTile + navCellsPerTile - 1
+                : (cy * navCellsPerTile + navCellsPerTile - 1) * navCellsPerSide + cx * navCellsPerTile;
+            int stride = east ? navCellsPerSide : 1;
+            int side = east ? 1 : navCellsPerSide;
+            ScanBorder(g, nav.UpPass, g.MaxEntranceWidthNavCells, origin, stride, side, navCellsPerTile);
+            var held = g._held;
+            held.Clear();
+            for (int i = 0; i < g._border.Count; i++) held.Add(g._border[i]);
+            list = g._border;
+            list.Clear();
+            for (int p = 0; p < held.Count; p += 2)
             {
-                list.Add(g.NavCellTotal + pairs[p]);
-                list.Add(g.NavCellTotal + pairs[p + 1]);
-                costs.Add((nav.UpCost[pairs[p]] + nav.UpCost[pairs[p + 1]]) * Fix64.HalfValue);
+                list.Add(g.NavCellTotal + held[p]);
+                list.Add(g.NavCellTotal + held[p + 1]);
+                costs.Add((nav.UpCost[held[p]] + nav.UpCost[held[p + 1]]) * Fix64.HalfValue);
             }
         }
+        else
+        {
+            list.Clear();
+        }
 
-        if (east) { g.UpE[cl] = list.ToArray(); g.UpECost[cl] = costs.ToArray(); }
-        else { g.UpS[cl] = list.ToArray(); g.UpSCost[cl] = costs.ToArray(); }
+        if (east)
+        {
+            g.UpE[cl] = g.PlaceInts(g.UpE[cl], list.Count, 64);
+            g._nUpE[cl] = list.Count;
+            g.UpECost[cl] = g.PlaceCosts(g.UpECost[cl], costs.Count, 32);
+            g._nUpEc[cl] = costs.Count;
+        }
+        else
+        {
+            g.UpS[cl] = g.PlaceInts(g.UpS[cl], list.Count, 64);
+            g._nUpS[cl] = list.Count;
+            g.UpSCost[cl] = g.PlaceCosts(g.UpSCost[cl], costs.Count, 32);
+            g._nUpSc[cl] = costs.Count;
+        }
+    }
+
+    private Fix64[] PlaceCosts(Fix64[]? slot, int count, int slack)
+    {
+        if (slot == null || slot.Length < count)
+        {
+            int cap = Math.Max(count, slack);
+            if (slot != null && slot.Length * 2 > cap) cap = slot.Length * 2;
+            slot = new Fix64[cap];
+        }
+
+        for (int i = 0; i < count; i++) slot[i] = _upCosts[i];
+        return slot;
+    }
+
+    private Fix64[] PlaceDist(Fix64[]? slot, List<Fix64> src, int slack)
+    {
+        int count = src.Count;
+        if (slot == null || slot.Length < count)
+        {
+            int cap = Math.Max(count, slack);
+            if (slot != null && slot.Length * 2 > cap) cap = slot.Length * 2;
+            slot = new Fix64[cap];
+        }
+
+        for (int i = 0; i < count; i++) slot[i] = src[i];
+        return slot;
     }
 
     // 该 tile 是否有桥面可走格
@@ -371,57 +612,68 @@ public sealed class HpaGraph
     private static Dictionary<int, List<int>> LinksByTile(NavLinkSet? links, int navCellsPerSide, int navCellsPerTile, int navTilesPerSide)
     {
         var m = new Dictionary<int, List<int>>();
+        FillLinkTiles(m, links, navCellsPerSide, navCellsPerTile, navTilesPerSide);
+        return m;
+    }
+
+    private static void FillLinkTiles(Dictionary<int, List<int>> m, NavLinkSet? links, int navCellsPerSide, int navCellsPerTile, int navTilesPerSide)
+    {
+        foreach (var list in m.Values) list.Clear();
         if (links != null)
         {
             for (int e = 0; e < links.Count; e++)
             {
-                foreach (var cell in new[] { links.From[e], links.To[e] })
-                {
-                    int cl = NavGridSteps.TileOf(cell, navCellsPerSide, navCellsPerTile, navTilesPerSide);
-                    if (!m.TryGetValue(cl, out var l)) m[cl] = l = new List<int>();
-                    l.Add(cell);
-                }
+                AddLinkCell(m, links.From[e], navCellsPerSide, navCellsPerTile, navTilesPerSide);
+                AddLinkCell(m, links.To[e], navCellsPerSide, navCellsPerTile, navTilesPerSide);
             }
         }
+    }
 
-        return m;
+    private static void AddLinkCell(Dictionary<int, List<int>> m, int cell, int navCellsPerSide, int navCellsPerTile, int navTilesPerSide)
+    {
+        int cl = NavGridSteps.TileOf(cell, navCellsPerSide, navCellsPerTile, navTilesPerSide);
+        if (!m.TryGetValue(cl, out var l)) m[cl] = l = new List<int>(8);
+        l.Add(cell);
     }
 
     private static void BakeTile(HpaGraph g, NavContext nav, int cl, Dictionary<int, List<int>> lk, bool keep)
     {
         int navCellsPerTile = g.NavCellsPerTile, navTilesPerSide = g.NavTilesPerSide, navCellsPerSide = nav.NavCellsPerSide, n2 = navCellsPerSide * navCellsPerSide;
         int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
-        var cells = new List<int>();
-        var seen = new HashSet<int>();
-        void Add(int cell) { if (seen.Add(cell)) cells.Add(cell); }
-        void Each(int[] b, int side) { for (int k = side; k < b.Length; k += 2) Add(b[k]); }
-
-        Each(g.BorderE[cl], 0);
-        if (cx > 0) Each(g.BorderE[cl - 1], 1);
-        Each(g.BorderS[cl], 0);
-        if (cy > 0) Each(g.BorderS[cl - navTilesPerSide], 1);
-        if (lk.TryGetValue(cl, out var linkCells)) foreach (var cell in linkCells) Add(cell);
+        var cells = g._bakeCells;
+        var seen = g._bakeSeen;
+        cells.Clear();
+        seen.Clear();
+        AddBorder(g, g.BorderE[cl], g._nE[cl], 0);
+        if (cx > 0) AddBorder(g, g.BorderE[cl - 1], g._nE[cl - 1], 1);
+        AddBorder(g, g.BorderS[cl], g._nS[cl], 0);
+        if (cy > 0) AddBorder(g, g.BorderS[cl - navTilesPerSide], g._nS[cl - navTilesPerSide], 1);
+        if (lk.TryGetValue(cl, out var linkCells))
+        {
+            for (int i = 0; i < linkCells.Count; i++) AddNode(g, linkCells[i]);
+        }
 
         // 桥面节点:跨界入口 + portal 跨层对
-        var up = new List<int>();
-        var uSeen = new HashSet<int>();
-        var xl = new List<int>();
-        void UAdd(int key) { if (uSeen.Add(key)) up.Add(key); }
-        void UEach(int[] b, int side) { for (int k = side; k < b.Length; k += 2) UAdd(b[k]); }
+        var up = g._bakeUp;
+        var uSeen = g._bakeUSeen;
+        var xl = g._bakeXl;
+        up.Clear();
+        uSeen.Clear();
+        xl.Clear();
         if (AnyUp(nav, cl, navCellsPerTile))
         {
-            UEach(g.UpE[cl], 0);
-            if (cx > 0) UEach(g.UpE[cl - 1], 1);
-            UEach(g.UpS[cl], 0);
-            if (cy > 0) UEach(g.UpS[cl - navTilesPerSide], 1);
+            AddUp(g, g.UpE[cl], g._nUpE[cl], 0);
+            if (cx > 0) AddUp(g, g.UpE[cl - 1], g._nUpE[cl - 1], 1);
+            AddUp(g, g.UpS[cl], g._nUpS[cl], 0);
+            if (cy > 0) AddUp(g, g.UpS[cl - navTilesPerSide], g._nUpS[cl - navTilesPerSide], 1);
             for (int i = 0; i < n2; i++)
             {
                 if (nav.Portal[i] == 0) continue;
                 int px = i % navCellsPerSide, py = i / navCellsPerSide;
                 if (px / navCellsPerTile != cx || py / navCellsPerTile != cy) continue;
                 if (nav.Passable[i] == 0) continue;
-                Add(i);
-                UAdd(n2 + i);
+                AddNode(g, i);
+                AddUpNode(g, n2 + i);
                 xl.Add(i);
                 xl.Add(n2 + i);
             }
@@ -430,26 +682,31 @@ public sealed class HpaGraph
         // 簇内边:逐节点对(i<j)的簇内 Dijkstra(只读到 j 的距离即停)。
         // keep(节点集未变的干净簇/同内容 tile):旧 Dijkstra 距离逐位复用——旧表与新的节点集
         // 前缀一致时,同源同内积的距离不变(参考实现 bakeCluster 的 oldIdx/oldD 复用)。
-        var intra = new List<int>();
-        var intraDist = new List<Fix64>();
+        var intra = g._bakeIntra;
+        var intraDist = g._bakeIntraDist;
+        intra.Clear();
+        intraDist.Clear();
         int gCount = cells.Count;
-        Dictionary<int, int>? oldIdx = null;
-        Dictionary<long, Fix64>? oldDist = null;
-        if (keep && g.Cells[cl] != null)
+        var oldIdx = g._oldIdx;
+        var oldDist = g._oldDist;
+        oldIdx.Clear();
+        oldDist.Clear();
+        bool reuseIntra = keep && g._nCells[cl] > 0;
+        if (reuseIntra)
         {
             var oc = g.Cells[cl];
             var oi = g.Intra[cl];
             var od = g.IntraDist[cl];
-            oldIdx = new Dictionary<int, int>();
-            for (int k = 0; k < oc.Length && oc[k] < n2; k++) oldIdx[oc[k]] = k;
-            oldDist = new Dictionary<long, Fix64>();
-            for (int k = 0, d = 0; k < oi.Length; k += 2, d++) oldDist[(long)oi[k] * 65536 + oi[k + 1]] = od[d];
+            int cellCount = g._nCells[cl];
+            int intraCount = g._nIntra[cl];
+            for (int k = 0; k < cellCount && oc[k] < n2; k++) oldIdx[oc[k]] = k;
+            for (int k = 0, d = 0; k < intraCount; k += 2, d++) oldDist[(long)oi[k] * 65536 + oi[k + 1]] = od[d];
         }
 
         bool prepared = false;
         for (int i = 0; i < gCount; i++)
         {
-            if (oldIdx != null && oldIdx.TryGetValue(cells[i], out int oiIdx))
+            if (reuseIntra && oldIdx.TryGetValue(cells[i], out int oiIdx))
             {
                 bool ok = true;
                 for (int j = i + 1; j < gCount && ok; j++)
@@ -518,13 +775,41 @@ public sealed class HpaGraph
             }
         }
 
-        var joined = new int[cells.Count + up.Count];
-        for (int i = 0; i < cells.Count; i++) joined[i] = cells[i];
+        int joinedCount = cells.Count + up.Count;
+        var joined = g.PlaceList(g.Cells[cl], cells, Math.Max(512, joinedCount));
+        if (joined.Length < joinedCount)
+        {
+            joined = g.PlaceList(null, cells, joinedCount);
+        }
+
         for (int i = 0; i < up.Count; i++) joined[cells.Count + i] = up[i];
         g.Cells[cl] = joined;
-        g.Intra[cl] = intra.ToArray();
-        g.IntraDist[cl] = intraDist.ToArray();
-        g.CrossLayer[cl] = xl.ToArray();
+        g._nCells[cl] = joinedCount;
+        g.Intra[cl] = g.PlaceList(g.Intra[cl], intra, 4096);
+        g._nIntra[cl] = intra.Count;
+        g.IntraDist[cl] = g.PlaceDist(g.IntraDist[cl], intraDist, 2048);
+        g.CrossLayer[cl] = g.PlaceList(g.CrossLayer[cl], xl, 512);
+        g._nCross[cl] = xl.Count;
+    }
+
+    private static void AddNode(HpaGraph g, int cell)
+    {
+        if (g._bakeSeen.Add(cell)) g._bakeCells.Add(cell);
+    }
+
+    private static void AddUpNode(HpaGraph g, int key)
+    {
+        if (g._bakeUSeen.Add(key)) g._bakeUp.Add(key);
+    }
+
+    private static void AddBorder(HpaGraph g, int[] border, int count, int side)
+    {
+        for (int k = side; k < count; k += 2) AddNode(g, border[k]);
+    }
+
+    private static void AddUp(HpaGraph g, int[] border, int count, int side)
+    {
+        for (int k = side; k < count; k += 2) AddUpNode(g, border[k]);
     }
 
     private static int LocalOf(int cell, int navCellsPerSide, int navCellsPerTile) => NavGridSteps.LocalIndex(cell, navCellsPerSide, navCellsPerTile);
@@ -614,39 +899,25 @@ public sealed class HpaGraph
         int navTilesPerSide = g.NavTilesPerSide;
         int cx = cl % navTilesPerSide, cy = cl / navTilesPerSide;
         var list = g.Cells[cl];
-        int count = list.Length;
-        var index = new Dictionary<int, int>();
-        var outE = new List<(int To, Fix64 Cost)>[count];
-        for (int i = 0; i < count; i++) { index[list[i]] = i; outE[i] = new List<(int, Fix64)>(); }
+        int count = g._nCells[cl];
+        var block = g.Blocks[cl];
+        var index = block != null ? block.Index : new Dictionary<int, int>();
+        if (block != null) index.Clear();
+        var outE = g.OutScratch(count);
+        for (int i = 0; i < count; i++) index[list[i]] = i;
 
-        void Border(int[] b, int own)
-        {
-            for (int k = 0; k < b.Length; k += 2)
-            {
-                outE[index[b[k + own]]].Add((b[k + 1 - own], (nav.Cost[b[k]] + nav.Cost[b[k + 1]]) * Fix64.HalfValue));
-            }
-        }
+        AddBlockBorder(g, nav, outE, index, g.BorderE[cl], g._nE[cl], 0);
+        if (cx > 0) AddBlockBorder(g, nav, outE, index, g.BorderE[cl - 1], g._nE[cl - 1], 1);
+        AddBlockBorder(g, nav, outE, index, g.BorderS[cl], g._nS[cl], 0);
+        if (cy > 0) AddBlockBorder(g, nav, outE, index, g.BorderS[cl - navTilesPerSide], g._nS[cl - navTilesPerSide], 1);
 
-        Border(g.BorderE[cl], 0);
-        if (cx > 0) Border(g.BorderE[cl - 1], 1);
-        Border(g.BorderS[cl], 0);
-        if (cy > 0) Border(g.BorderS[cl - navTilesPerSide], 1);
-
-        void Up(int[] b, Fix64[] costs, int own)
-        {
-            for (int k = 0; k < b.Length; k += 2)
-            {
-                outE[index[b[k + own]]].Add((b[k + 1 - own], costs[k / 2]));
-            }
-        }
-
-        Up(g.UpE[cl], g.UpECost[cl], 0);
-        if (cx > 0) Up(g.UpE[cl - 1], g.UpECost[cl - 1], 1);
-        Up(g.UpS[cl], g.UpSCost[cl], 0);
-        if (cy > 0) Up(g.UpS[cl - navTilesPerSide], g.UpSCost[cl - navTilesPerSide], 1);
+        AddBlockUp(outE, index, g.UpE[cl], g.UpECost[cl], g._nUpE[cl], 0);
+        if (cx > 0) AddBlockUp(outE, index, g.UpE[cl - 1], g.UpECost[cl - 1], g._nUpE[cl - 1], 1);
+        AddBlockUp(outE, index, g.UpS[cl], g.UpSCost[cl], g._nUpS[cl], 0);
+        if (cy > 0) AddBlockUp(outE, index, g.UpS[cl - navTilesPerSide], g.UpSCost[cl - navTilesPerSide], g._nUpS[cl - navTilesPerSide], 1);
 
         var xl = g.CrossLayer[cl];
-        for (int k = 0; k < xl.Length; k += 2)
+        for (int k = 0; k < g._nCross[cl]; k += 2)
         {
             outE[index[xl[k]]].Add((xl[k + 1], Fix64.Zero));
             outE[index[xl[k + 1]]].Add((xl[k], Fix64.Zero));
@@ -654,7 +925,7 @@ public sealed class HpaGraph
 
         var intra = g.Intra[cl];
         var intraDist = g.IntraDist[cl];
-        for (int k = 0; k < intra.Length; k += 2)
+        for (int k = 0; k < g._nIntra[cl]; k += 2)
         {
             int i = intra[k], j = intra[k + 1];
             var d = intraDist[k / 2];
@@ -662,48 +933,149 @@ public sealed class HpaGraph
             outE[j].Add((list[i], d));
         }
 
-        var adjStart = new int[count + 1];
-        for (int i = 0; i < count; i++) adjStart[i + 1] = adjStart[i] + outE[i].Count;
-        var adjTo = new int[adjStart[count]];
-        var adjCost = new Fix64[adjStart[count]];
+        int edges = g._nE[cl] / 2 + g._nS[cl] / 2 + g._nIntra[cl] / 2
+            + g._nUpE[cl] / 2 + g._nUpS[cl] / 2 + g._nCross[cl] / 2;
+        int edgeSlots = 0;
+        for (int i = 0; i < count; i++) edgeSlots += outE[i].Count;
+        if (block != null && block.AdjStart.Length >= count + 1 && block.AdjTo.Length >= edgeSlots && block.AdjCost.Length >= edgeSlots)
+        {
+            var adjStart = block.AdjStart;
+            var adjTo = block.AdjTo;
+            var adjCost = block.AdjCost;
+            adjStart[0] = 0;
+            for (int i = 0; i < count; i++) adjStart[i + 1] = adjStart[i] + outE[i].Count;
+            for (int i = 0, p = 0; i < count; i++)
+            {
+                var row = outE[i];
+                for (int k = 0; k < row.Count; k++)
+                {
+                    adjTo[p] = row[k].To;
+                    adjCost[p] = row[k].Cost;
+                    p++;
+                }
+            }
+
+            block.Cells = list;
+            block.CellCount = count;
+            block.EdgeCount = edges;
+            return block;
+        }
+
+        int startCap = Math.Max(count + 1, 64);
+        int edgeCap = Math.Max(edgeSlots, 4096);
+        var freshStart = new int[startCap];
+        for (int i = 0; i < count; i++) freshStart[i + 1] = freshStart[i] + outE[i].Count;
+        var freshTo = new int[edgeCap];
+        var freshCost = new Fix64[edgeCap];
         for (int i = 0, p = 0; i < count; i++)
         {
-            foreach (var (to, cost) in outE[i])
+            var row = outE[i];
+            for (int k = 0; k < row.Count; k++)
             {
-                adjTo[p] = to;
-                adjCost[p] = cost;
+                freshTo[p] = row[k].To;
+                freshCost[p] = row[k].Cost;
                 p++;
             }
         }
 
-        int edges = g.BorderE[cl].Length / 2 + g.BorderS[cl].Length / 2 + intra.Length / 2
-            + g.UpE[cl].Length / 2 + g.UpS[cl].Length / 2 + xl.Length / 2;
         return new HpaTileBlock
         {
             Cells = list,
-            AdjStart = adjStart,
-            AdjTo = adjTo,
-            AdjCost = adjCost,
+            AdjStart = freshStart,
+            AdjTo = freshTo,
+            AdjCost = freshCost,
             EdgeCount = edges,
+            CellCount = count,
             Index = index,
         };
     }
 
+    private static void AddBlockBorder(
+        HpaGraph g, NavContext nav, List<(int To, Fix64 Cost)>[] outE, Dictionary<int, int> index, int[] border, int count, int own)
+    {
+        for (int k = 0; k < count; k += 2)
+        {
+            outE[index[border[k + own]]].Add((border[k + 1 - own], (nav.Cost[border[k]] + nav.Cost[border[k + 1]]) * Fix64.HalfValue));
+        }
+    }
+
+    private static void AddBlockUp(List<(int To, Fix64 Cost)>[] outE, Dictionary<int, int> index, int[] border, Fix64[] costs, int count, int own)
+    {
+        for (int k = 0; k < count; k += 2)
+        {
+            outE[index[border[k + own]]].Add((border[k + 1 - own], costs[k / 2]));
+        }
+    }
+
+    private static void CopyPrefix(List<int> dst, int[]? src, int count)
+    {
+        dst.Clear();
+        if (src == null) return;
+        for (int i = 0; i < count; i++) dst.Add(src[i]);
+    }
+
+    private static void CopyCosts(List<Fix64> dst, Fix64[]? src, int count)
+    {
+        dst.Clear();
+        if (src == null) return;
+        for (int i = 0; i < count; i++) dst.Add(src[i]);
+    }
+
+    private static bool SamePrefix(List<int> prev, int[]? now, int count)
+    {
+        if (prev.Count != count) return false;
+        if (now == null) return count == 0;
+        for (int i = 0; i < count; i++)
+        {
+            if (prev[i] != now[i]) return false;
+        }
+
+        return true;
+    }
+
+    private static bool SameCostPrefix(List<Fix64> prev, Fix64[]? now, int count)
+    {
+        if (prev.Count != count) return false;
+        if (now == null) return count == 0;
+        for (int i = 0; i < count; i++)
+        {
+            if (prev[i] != now[i]) return false;
+        }
+
+        return true;
+    }
+
+    private List<(int To, Fix64 Cost)>[] OutScratch(int count)
+    {
+        var cur = _outE;
+        if (cur == null || cur.Length < count)
+        {
+            var grown = new List<(int To, Fix64 Cost)>[Math.Max(count, 8)];
+            int old = cur?.Length ?? 0;
+            for (int i = 0; i < old; i++) grown[i] = cur![i];
+            for (int i = old; i < grown.Length; i++) grown[i] = new List<(int To, Fix64 Cost)>(32);
+            _outE = cur = grown;
+        }
+
+        for (int i = 0; i < count; i++) cur[i].Clear();
+        return cur;
+    }
+
     private static void FinishGraph(HpaGraph g, NavLinkSet? links)
     {
-        var lo = new Dictionary<int, List<(int, Fix64)>>();
+        var lo = g.LinkOut;
+        foreach (var list in lo.Values) list.Clear();
         if (links != null)
         {
             for (int e = 0; e < links.Count; e++)
             {
-                if (!lo.TryGetValue(links.From[e], out var a)) lo[links.From[e]] = a = new List<(int, Fix64)>();
+                if (!lo.TryGetValue(links.From[e], out var a)) lo[links.From[e]] = a = new List<(int, Fix64)>(4);
                 a.Add((links.To[e], links.Cost[e]));
             }
         }
 
         int nodes = 0, edges = links?.Count ?? 0;
-        foreach (var b in g.Blocks) { nodes += b.Cells.Length; edges += b.EdgeCount; }
-        g.LinkOut = lo;
+        foreach (var b in g.Blocks) { nodes += b.CellCount; edges += b.EdgeCount; }
         g.NodeCount = nodes;
         g.EdgeCount = edges;
     }
@@ -721,7 +1093,7 @@ public sealed class HpaGraph
         for (int cl = 0; cl < Blocks.Length; cl++)
         {
             var b = Blocks[cl];
-            for (int i = 0; i < b.Cells.Length; i++)
+            for (int i = 0; i < b.CellCount; i++)
             {
                 int cell = b.Cells[i];
                 nodeCell.Add(cell % NavCellTotal);
@@ -758,4 +1130,5 @@ public sealed class HpaTileBlock
     public required int[] AdjTo { get; set; }
     public required Fix64[] AdjCost { get; set; }
     public required int EdgeCount { get; set; }
+    public int CellCount { get; set; }
 }

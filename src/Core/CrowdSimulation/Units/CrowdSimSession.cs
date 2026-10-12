@@ -88,6 +88,9 @@ public sealed class CrowdSimSession
     public Nav.NavTileCache? NavTileCache { get; set; }
     /// <summary>跨 tick 推进的重烘收尾 job(RT-04 切片;null = 无在途变更)。</summary>
     public CrowdRebakeJob? RebakeJob { get; set; }
+    internal CrowdRebakeJob? RebakeScratch { get; set; }
+    internal CrowdRebakeReport? ReportScratch { get; set; }
+    internal readonly HashSet<int> RebakeUnionSeen = new(32);
     /// <summary>最近一次已完结的结构变更报告(遥测 / 对拍)。</summary>
     public CrowdRebakeReport? LastRebakeReport { get; set; }
     /// <summary>最近一次挤离中无处安放的单位数(计数,进重烘报告)。</summary>
@@ -124,13 +127,27 @@ public sealed class CrowdSimSession
     /// 组停在真相槽——旧真值(S5/S7)在迷雾内核落地后原样全等的保证;新场景不置。</summary>
     public bool TruthNavFrozen { get; set; }
 
+    private readonly struct BeliefNavLookup
+    {
+        public readonly CrowdBeliefNavs Beliefs;
+        public readonly int NavId;
+        public BeliefNavLookup(CrowdBeliefNavs beliefs, int navId)
+        {
+            Beliefs = beliefs;
+            NavId = navId;
+        }
+    }
+
+    private static readonly Func<BeliefNavLookup, NavContext> ReadBeliefNav = static lookup => lookup.Beliefs.Get(lookup.NavId);
+
     /// <summary>nav 号解析(&lt; Stride = 真相字典;否则认知注册表取/懒建变体)。
-    /// 变体构建经路径服务的导航互斥锁串行(Monitor 同线程可重入,worker 侧安全)。</summary>
+    /// 变体构建经路径服务的导航互斥锁串行(Monitor 同线程可重入,worker 侧安全)。
+    /// 慢路径用静态委托，不在 tick 里捕获 navId。</summary>
     public NavContext ResolveNavContext(int navId)
     {
         if (navId < CrowdBeliefNavs.BeliefStride) return Navs[navId];
         var beliefs = Beliefs ?? throw new InvalidOperationException($"变体 nav {navId}:会话没有认知注册表(迷雾未启用)。");
-        return Planner!.Service.RunExclusive(() => beliefs.Get(navId));
+        return Planner!.Service.RunExclusive(new BeliefNavLookup(beliefs, navId), ReadBeliefNav);
     }
 
     /// <summary>
@@ -179,9 +196,9 @@ public sealed class CrowdSimSession
 
     // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
     internal readonly List<Arch.Core.Entity> SelectionMembers = new();
-    internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new();
-    internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new();
-    internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new();
+    internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new(16);
+    internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new(16);
+    internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new(8);
     internal readonly CrowdOrder[] IssueBatch = new CrowdOrder[1];
     internal Fix64[] FormationDiameter = Array.Empty<Fix64>();
     internal Fix64[] FormationForward = Array.Empty<Fix64>();
@@ -189,6 +206,16 @@ public sealed class CrowdSimSession
     internal CrowdFormations.FormationRank[] FormationRanks = Array.Empty<CrowdFormations.FormationRank>();
     internal int[] FormationOrder = Array.Empty<int>();
     internal CrowdFormations.RowRank[] FormationRows = Array.Empty<CrowdFormations.RowRank>();
+
+    internal void EnsureFormationScratch(int count)
+    {
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationDiameter, count);
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationForward, count);
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationLateral, count);
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationRanks, count);
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationOrder, count);
+        Ludots.Core.CrowdSimulation.StableOrder.Ensure(ref FormationRows, count);
+    }
 
     public int TickCount { get; private set; }
     public int SpawnSeq { get; set; }
@@ -205,7 +232,7 @@ public sealed class CrowdSimSession
     {
         Telemetry.MarkRebake();
         RebakeReported?.Invoke(report);
-        Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Engine,
+        Ludots.Core.Diagnostics.Log.Dbg(in Ludots.Core.Diagnostics.LogChannels.Engine,
             $"CrowdSimulation rebake: kind={(report.Kind == CrowdRebakeReport.KindPlace ? "place" : "remove")} " +
             $"tiles={report.Tiles} contexts={report.Contexts} costOnly={report.CostOnly} " +
             $"cacheHits={report.Hits} misses={report.Misses} orders={report.Orders} refreshes={report.Refreshes} " +
@@ -223,7 +250,7 @@ public sealed class CrowdSimSession
     /// </summary>
     public bool Step(out ulong checksum)
     {
-        Commands.Flush(this, CrowdSimCommands.Exec);
+        Commands.Flush(this, ExecCommand);
         if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
         if (Structures != null) CrowdStructureOps.ExpireStructures(this);
         if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
@@ -234,6 +261,7 @@ public sealed class CrowdSimSession
             checksum = 0;
             return false;
         }
+
         if (Movement != null)
         {
             if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
@@ -309,6 +337,8 @@ public sealed class CrowdSimSession
         int contacts = stalled || Movement == null ? 0 : Movement.ContactSum;
         Telemetry.BeginFrame(Units.Count, contacts, stalled, tickMs);
     }
+
+    private static readonly Func<CrowdSimSession, CrowdSimCommand, object?> ExecCommand = CrowdSimCommands.Exec;
 
     private int _stateHistogramMembers;
 

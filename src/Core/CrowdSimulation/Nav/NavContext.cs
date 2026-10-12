@@ -26,8 +26,10 @@ public sealed class NavContext
     public required byte[] Walk { get; init; }
     /// <summary>逐格可通行（walk 经净空腐蚀,地图边缘视为阻挡）。</summary>
     public required byte[] Passable { get; init; }
-    /// <summary>升序可走格表。</summary>
+    /// <summary>升序可走格表。Cells 的前 CellCount 项有效;缓冲可以比计数长,
+    /// 增量重烘把新表写进已有缓冲,计数变化不再分配。</summary>
     public required int[] Cells { get; set; }
+    public int CellCount { get; set; }
     /// <summary>逐格连通域编号（-1 = 不可通行;4 连通洪泛,跳跃链接不参与标号）。</summary>
     public required int[] Comp { get; set; }
     public required int CompCount { get; set; }
@@ -58,7 +60,24 @@ public sealed class NavContext
     /// <summary>合并可达图:跳跃链接出边 + 桥头双层互通边(桥面域 = 两岸地面的接驳节)。</summary>
     public Dictionary<int, HashSet<int>>? ReachOut { get; set; }
 
-    private readonly Dictionary<long, bool> _reachMemo = new();
+    private readonly Dictionary<long, bool> _reachMemo = new(4096);
+    private readonly HashSet<int> _reachSeen = new(1024);
+    private readonly Queue<int> _reachQueue = new(1024);
+    private readonly object _reachGate = new();
+    internal readonly Stack<HashSet<int>> ReachSetPool = new(1024);
+    // 增量重烘的全图缓冲。首次重烘分配,之后原地复用。变体克隆各自一份,不与真相共享。
+    internal int[]? FloodQueue;
+    internal int[]? MergeBuffer;
+    internal int[]? DeckCompBuffer;
+    internal int[]? UnionParent;
+    internal int[]? UnionDense;
+    internal byte[]? ErodeRow;
+    internal readonly Dictionary<int, int> AreaCompScratch = new(8);
+    internal readonly List<int> TileScratch = new(16);
+    internal readonly HashSet<int> TileSeenScratch = new(16);
+    internal readonly List<int> ChangedTileList = new(16);
+    internal readonly HashSet<int> SameTiles = new(16);
+    internal NavTileEntry?[]? PrevTiles;
 
     /// <summary>导航版本:cost / passable 增量重烘各 +1;在途规划与流场答复按它判陈旧。</summary>
     public int Version { get; set; }
@@ -85,25 +104,73 @@ public sealed class NavContext
         if (a < 0 || b < 0) return false;
         var reachOut = ReachOut;
         if (reachOut == null) return false;
-        long key = (long)a * CompCountTotal + b;
-        if (_reachMemo.TryGetValue(key, out bool cached)) return cached;
-
-        var seen = new HashSet<int> { a };
-        var queue = new Queue<int>(new[] { a });
-        bool result = false;
-        while (queue.Count > 0 && !result)
+        // 运动意图可并行读备忘;未命中的搜索与写入串行。搜索暂存挂在上下文上,不逐次 new。
+        lock (_reachGate)
         {
-            int cur = queue.Dequeue();
-            if (!reachOut.TryGetValue(cur, out var next)) continue;
-            foreach (int c in next)
+            long key = (long)a * CompCountTotal + b;
+            if (_reachMemo.TryGetValue(key, out bool cached)) return cached;
+
+            var seen = _reachSeen;
+            var queue = _reachQueue;
+            seen.Clear();
+            queue.Clear();
+            seen.Add(a);
+            queue.Enqueue(a);
+            bool result = false;
+            while (queue.Count > 0 && !result)
             {
-                if (c == b) { result = true; break; }
-                if (seen.Add(c)) queue.Enqueue(c);
+                int cur = queue.Dequeue();
+                if (!reachOut.TryGetValue(cur, out var next)) continue;
+                foreach (int c in next)
+                {
+                    if (c == b) { result = true; break; }
+                    if (seen.Add(c)) queue.Enqueue(c);
+                }
             }
+
+            _reachMemo[key] = result;
+            return result;
+        }
+    }
+
+    internal HashSet<int> RentReachSet()
+    {
+        if (!ReachSetPool.TryPop(out var set)) set = new HashSet<int>(128);
+        return set;
+    }
+
+    /// <summary>重烘会按新连通域号租出集合。装载期把池留够，放置 tick 不再 new。
+    /// 初始烘焙留下的小集合不回收：它们一加边就会再分配。</summary>
+    internal void PrefillRebakePools()
+    {
+        AreaCompScratch.EnsureCapacity(256);
+        TileScratch.EnsureCapacity(64);
+        TileSeenScratch.EnsureCapacity(64);
+        ChangedTileList.EnsureCapacity(64);
+        SameTiles.EnsureCapacity(64);
+        ReachOut?.EnsureCapacity(512);
+        if (ReachOut != null) _ = ReachOut.Values.Count;
+        while (ReachSetPool.Count < 256) ReachSetPool.Push(new HashSet<int>(128));
+        if (Links != null)
+        {
+            Links.CompOut.EnsureCapacity(512);
+            _ = Links.CompOut.Values.Count;
+            while (Links.CompSetPool.Count < 256) Links.CompSetPool.Push(new HashSet<int>(128));
+        }
+    }
+
+    internal void ReleaseReachGraph(Dictionary<int, HashSet<int>> graph)
+    {
+        foreach (var set in graph.Values)
+        {
+            // 初始烘焙的小集合一回池就会压在预填集合上面,下一次 Add 再扩容。
+            // 容量够的才回收。EnsureCapacity(0) 只读当前槽位数,不增长。
+            int slots = set.EnsureCapacity(0);
+            set.Clear();
+            if (slots >= 128) ReachSetPool.Push(set);
         }
 
-        _reachMemo[key] = result;
-        return result;
+        graph.Clear();
     }
 }
 
@@ -138,4 +205,5 @@ public sealed class NavLinkSet
     /// <summary>连通域 → 可达连通域（有向;只含跳跃链接边,桥头互通边在 NavContext.ReachOut 合并）。
     /// 增量重烘的 relink 会按新连通域标号整表重导出(链表本体不动)。</summary>
     public required Dictionary<int, HashSet<int>> CompOut { get; set; }
+    internal readonly Stack<HashSet<int>> CompSetPool = new(1024);
 }

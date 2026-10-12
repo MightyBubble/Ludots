@@ -11,6 +11,13 @@ public static class DistanceField
     public static byte[] ComputeClearance(byte[] walk, int navCellsPerSide)
     {
         var d = new byte[navCellsPerSide * navCellsPerSide];
+        ComputeClearance(walk, navCellsPerSide, d);
+        return d;
+    }
+
+    public static void ComputeClearance(byte[] walk, int navCellsPerSide, byte[] d)
+    {
+        Array.Clear(d, 0, navCellsPerSide * navCellsPerSide);
         for (int y = 0; y < navCellsPerSide; y++)
         {
             for (int x = 0; x < navCellsPerSide; x++)
@@ -34,6 +41,5 @@ public static class DistanceField
             }
         }
 
-        return d;
     }
 }

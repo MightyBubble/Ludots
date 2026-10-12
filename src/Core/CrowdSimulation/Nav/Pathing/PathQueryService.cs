@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -154,7 +153,6 @@ public sealed class PathQueryService : IDisposable
     /// <summary>生效帧取答复:没算完就阻塞等待(仿真暂停,结果仍于生效帧生效);超时即故障。</summary>
     public PathResult AwaitDue(int id)
     {
-        var sw = Stopwatch.StartNew();
         bool waited = false;
         lock (_gate)
         {
@@ -267,6 +265,14 @@ public sealed class PathQueryService : IDisposable
     public T RunExclusive<T>(Func<T> action)
     {
         lock (_navGate) return action();
+    }
+
+    /// <summary>
+    /// 状态是值类型，委托在调用方做成静态字段。tick 里不要传捕获变量的 lambda。
+    /// </summary>
+    public T RunExclusive<TState, T>(TState state, Func<TState, T> action)
+    {
+        lock (_navGate) return action(state);
     }
 
     private PathResult Compute(PathQuery q, FlowPool pool, CorridorQuery.Scratch scratch)

@@ -61,10 +61,11 @@ public static class NavMeshAssembler
         var res = new List<int>();
         var (polyA, sideArrA, loA, hiA) = (ea.BorderPoly, ea.BorderSide, ea.BorderLo, ea.BorderHi);
         var (polyB, sideArrB, loB, hiB) = (eb.BorderPoly, eb.BorderSide, eb.BorderLo, eb.BorderHi);
-        for (int i = 0; i < polyA.Length; i++)
+        int bordersA = ea.LiveBorders, bordersB = eb.LiveBorders;
+        for (int i = 0; i < bordersA; i++)
         {
             if (sideArrA[i] != sideA) continue;
-            for (int j = 0; j < polyB.Length; j++)
+            for (int j = 0; j < bordersB; j++)
             {
                 if (sideArrB[j] != sideB) continue;
                 int lo = Math.Max(loA[i], loB[j]), hi = Math.Min(hiA[i], hiB[j]);
@@ -105,8 +106,8 @@ public static class NavMeshAssembler
         {
             var e = tiles[t] ?? EmptyEntry;
             polyBase[t + 1] = polyBase[t] + e.Count;
-            vertBase[t + 1] = vertBase[t] + e.Vx.Length;
-            idxBase[t + 1] = idxBase[t] + e.PolyVerts.Length;
+            vertBase[t + 1] = vertBase[t] + e.LiveVertices;
+            idxBase[t + 1] = idxBase[t] + e.LivePolyVerts;
             regionCount += e.RegionCount;
         }
 
@@ -131,8 +132,8 @@ public static class NavMeshAssembler
             var e = tiles[t] ?? EmptyEntry;
             int ox = (t % navTilesPerSide) * navCellsPerTile, oy = (t / navTilesPerSide) * navCellsPerTile;
             int pb = polyBase[t], vb = vertBase[t], ib = idxBase[t];
-            for (int v = 0; v < e.Vx.Length; v++) { vx[vb + v] = e.Vx[v] + ox; vy[vb + v] = e.Vy[v] + oy; }
-            for (int k = 0; k < e.PolyVerts.Length; k++) polyVerts[ib + k] = vb + e.PolyVerts[k];
+            for (int v = 0; v < e.LiveVertices; v++) { vx[vb + v] = e.Vx[v] + ox; vy[vb + v] = e.Vy[v] + oy; }
+            for (int k = 0; k < e.LivePolyVerts; k++) polyVerts[ib + k] = vb + e.PolyVerts[k];
             for (int p = 0; p < e.Count; p++)
             {
                 int g = pb + p;

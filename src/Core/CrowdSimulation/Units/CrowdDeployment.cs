@@ -50,7 +50,7 @@ public static class CrowdDeployment
                         continue;
                     }
                     var nav = sim.NavFor(l, r);
-                    if (nav.Cells.Length == 0) continue;
+                    if (nav.CellCount == 0) continue;
                     var centerCells = new List<int>();
                     for (int k = 0; k < dp.CentersPerGroup; k++)
                     {

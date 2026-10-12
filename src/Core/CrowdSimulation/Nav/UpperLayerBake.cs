@@ -192,14 +192,19 @@ public static class UpperLayerBake
         byte[] upPass,
         byte[] portal,
         int navCellsPerSide,
-        int[] scratchCompOut)
+        int[] scratchCompOut,
+        int[]? deckComp = null,
+        int[]? queue = null,
+        int[]? parent = null,
+        int[]? dense = null)
     {
-        // 桥面 4 连通洪泛
-        var deckComp = new int[navCellsPerSide * navCellsPerSide];
+        int n2 = navCellsPerSide * navCellsPerSide;
+        // 桥面 4 连通洪泛。缓冲由增量重烘传入;全量烘焙路径仍在这里分配。
+        if (deckComp == null || deckComp.Length < n2) deckComp = new int[n2];
         Array.Fill(deckComp, -1);
         int deckCount = 0;
-        var queue = new int[navCellsPerSide * navCellsPerSide];
-        for (int s = 0; s < navCellsPerSide * navCellsPerSide; s++)
+        if (queue == null || queue.Length < n2) queue = new int[n2];
+        for (int s = 0; s < n2; s++)
         {
             if (upPass[s] == 0 || deckComp[s] >= 0) continue;
             int head = 0, tail = 0;
@@ -225,8 +230,9 @@ public static class UpperLayerBake
         }
 
         // 并查集:0..groundCount-1 = 地面域,groundCount.. = 桥面域
-        var parent = new int[groundCount + deckCount];
-        for (int i = 0; i < parent.Length; i++) parent[i] = i;
+        int unionCount = groundCount + deckCount;
+        if (parent == null || parent.Length < unionCount) parent = new int[unionCount];
+        for (int i = 0; i < unionCount; i++) parent[i] = i;
         void Union(int a, int b)
         {
             a = Find(a); b = Find(b);
@@ -239,7 +245,7 @@ public static class UpperLayerBake
         }
 
         // deck ↔ ground 只在桥头 portal 格合并
-        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
+        for (int c = 0; c < n2; c++)
         {
             if (portal[c] != 0 && groundPassable[c] != 0 && upPass[c] != 0)
             {
@@ -248,16 +254,16 @@ public static class UpperLayerBake
         }
 
         // 稠密化:按地面域号序、再桥面域号序(与 mergeTiles 的槽序同规则)
-        var dense = new int[parent.Length];
-        Array.Fill(dense, -1);
+        if (dense == null || dense.Length < unionCount) dense = new int[unionCount];
+        Array.Fill(dense, -1, 0, unionCount);
         int count = 0;
-        for (int i = 0; i < parent.Length; i++)
+        for (int i = 0; i < unionCount; i++)
         {
             int root = Find(i);
             if (dense[root] < 0) dense[root] = count++;
         }
 
-        for (int c = 0; c < navCellsPerSide * navCellsPerSide; c++)
+        for (int c = 0; c < n2; c++)
         {
             scratchCompOut[c] = groundComp[c] < 0 ? -1 : dense[Find(groundComp[c])];
         }

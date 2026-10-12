@@ -109,7 +109,8 @@ public static class CrowdSimCommands
                     }
                 }
 
-                return Movement.CrowdIssueOrder.Issue(
+                // 模式是值类型。tick 的 Flush 把返回值收成 object，直接 return 会装箱。
+                Movement.CrowdIssueOrder.Issue(
                     sim,
                     Fix64.FromInt(cmd.XCm),
                     Fix64.FromInt(cmd.YCm),
@@ -118,6 +119,7 @@ public static class CrowdSimCommands
                     cmd.HasAuto ? cmd.Auto : null,
                     cmd.HasFace ? new Fix64Vec2(cmd.FaceX, cmd.FaceY) : null,
                     Fix64.FromInt(cmd.WidthCm));
+                return null;
             case CrowdSimCommandKind.FogSight:
                 (sim.Fog ?? throw new System.InvalidOperationException("fogSight: 迷雾未启用(会话没有运动内核)。")).Los =
                     cmd.On;

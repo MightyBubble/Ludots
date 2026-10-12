@@ -145,6 +145,7 @@ public sealed class CrowdMovementKernel
         var world = session.World;
         int n = units.Count;
         EnsureCapacity(units.Capacity);
+        session.EnsureFormationScratch(units.Capacity);
         var playerIndex = session.Config.PairRules.IndexByPlayerId;
         var states = States; var kins = Kins; var positions = Positions; var radii = Radii;
         var speeds = Speeds; var push = PushPriorities; var playerIdx = PlayerIdx;

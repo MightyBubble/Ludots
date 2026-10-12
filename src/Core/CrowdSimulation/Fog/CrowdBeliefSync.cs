@@ -41,6 +41,18 @@ public sealed class CrowdBeliefState
 
     // 同步暂存(切换帧/原位揭示帧复用;调用序不嵌套)
     public readonly HashSet<int> ChangedGroups = new();
+    internal readonly HashSet<int> UsedSlots = new(8);
+    internal readonly Predicate<Entry> AwakeIfUsed;
+
+    public CrowdBeliefState()
+    {
+        AwakeIfUsed = entry =>
+        {
+            if (!UsedSlots.Contains(entry.Slot)) return false;
+            entry.Dormant = false;
+            return true;
+        };
+    }
     public readonly List<CrowdNavGroupSet.Group> RevealedMoved = new();
     public readonly HashSet<CrowdNavGroupSet.Group> RevealedStale = new();
     public readonly List<CrowdNavGroupSet.Group> RetargetMoved = new();
@@ -127,8 +139,10 @@ public static class CrowdBeliefSync
             var stale = b.RevealedStale;
             moved.Clear();
             stale.Clear();
-            foreach (var g in sim.Groups.Groups)
+            var revealedGroups = sim.Groups.Groups;
+            for (int gi = 0; gi < revealedGroups.Count; gi++)
             {
+                var g = revealedGroups[gi];
                 if (g == null) continue;
                 int v = fog.GroupOf[g.Player];
                 if (!b.Revealed.TryGetValue(v, out var d) || g.Flow == null || changed.Contains(v)) continue;
@@ -158,14 +172,25 @@ public static class CrowdBeliefSync
         var touched = b.RetargetTouched;
         moved2.Clear();
         touched.Clear();
-        foreach (var g in sim.Groups.Groups)
+        var changedGroups = sim.Groups.Groups;
+        for (int gi = 0; gi < changedGroups.Count; gi++)
         {
+            var g = changedGroups[gi];
             if (g == null || !changed.Contains(fog.GroupOf[g.Player])) continue;
             g.NavId = sim.NavIdFor(g.Player, g.LayerIdx, g.RIdx);
             moved2.Add(g);
             if (g.OrderId != 0)
             {
-                var o = sim.Orders.List.FirstOrDefault(x => x.Id == g.OrderId);
+                CrowdOrder? o = null;
+                var orderList = sim.Orders.List;
+                for (int oi = 0; oi < orderList.Count; oi++)
+                {
+                    if (orderList[oi].Id == g.OrderId)
+                    {
+                        o = orderList[oi];
+                        break;
+                    }
+                }
                 if (o != null) touched.Add(o);
             }
         }
@@ -177,12 +202,34 @@ public static class CrowdBeliefSync
         if (orders2.Count > 0) pl.Plan(orders2, sim.TickCount);
     }
 
-    private static bool SameSet(ICollection<int> a, IReadOnlyCollection<int> b)
+    private static bool BeliefMatches(Dictionary<int, (int TplIndex, CrowdStructureFootprint Fp)> bel, IReadOnlyList<int> ids)
+    {
+        if (bel.Count != ids.Count) return false;
+        for (int i = 0; i < ids.Count; i++)
+        {
+            if (!bel.ContainsKey(ids[i])) return false;
+        }
+
+        return true;
+    }
+
+    private static bool SameTiles(HashSet<int> a, HashSet<int> b)
     {
         if (a.Count != b.Count) return false;
-        foreach (int id in b)
+        foreach (int t in a)
         {
-            if (!a.Contains(id)) return false;
+            if (!b.Contains(t)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool BucketMatches(Dictionary<int, (int TplIndex, CrowdStructureFootprint Fp)> bel, HashSet<int> ids)
+    {
+        if (bel.Count != ids.Count) return false;
+        foreach (var kv in bel)
+        {
+            if (!ids.Contains(kv.Key)) return false;
         }
 
         return true;
@@ -194,21 +241,21 @@ public static class CrowdBeliefSync
         var b = sim.Belief!;
         uint key = fog.BeliefKey(v);
         var bel = fog.Belief[v];
-        if (fog.KnowsTerrain(v) && fog.Key[v] == fog.TruthKey && SameSet(bel.Keys, sim.Structures!.EntityIds)) return 0;
+        if (fog.KnowsTerrain(v) && fog.Key[v] == fog.TruthKey && BeliefMatches(bel, sim.Structures!.EntityIds)) return 0;
         // 探索 tile 集只在乐观迷雾开启时是认知的一部分
         HashSet<int>? tiles = fog.KnowsTerrain(v) ? null : fog.Tiles[v];
         if (b.SlotOfKey.TryGetValue(key, out var bucket))
         {
             foreach (var e in bucket)
             {
-                if (SameSet(bel.Keys, e.Ids) && (tiles != null ? e.Tiles != null && tiles.SetEquals(e.Tiles) : e.Tiles == null))
+                if (BucketMatches(bel, e.Ids) && (tiles != null ? e.Tiles != null && SameTiles(tiles, e.Tiles) : e.Tiles == null))
                 {
                     return e.Slot;
                 }
             }
         }
 
-        if (tiles != null && RevealInPlace(sim, v, key, bel.Keys, tiles)) return b.Slot[v];
+        if (tiles != null && RevealInPlace(sim, v, key, bel, tiles)) return b.Slot[v];
         int slot = ++b.Seq;
         var entry = new CrowdBeliefState.Entry
         {
@@ -237,7 +284,7 @@ public static class CrowdBeliefSync
 
     /// <summary>仅探索推进(实体认知没变)且该组独占此槽:槽原位演化(BeliefNavs.Reveal),
     /// 不开新槽;delta 按升序,两侧同序同 op。</summary>
-    private static bool RevealInPlace(CrowdSimSession sim, int v, uint key, ICollection<int> bel, HashSet<int> tiles)
+    private static bool RevealInPlace(CrowdSimSession sim, int v, uint key, Dictionary<int, (int TplIndex, CrowdStructureFootprint Fp)> bel, HashSet<int> tiles)
     {
         var b = sim.Belief!;
         int prev = b.Slot[v];
@@ -247,7 +294,7 @@ public static class CrowdBeliefSync
             if (u != v && b.Slot[u] == prev) return false; // 槽被共享,不能原位改
         }
 
-        if (!b.Entries.TryGetValue(prev, out var e) || e.Tiles == null || !SameSet(bel, e.Ids)) return false;
+        if (!b.Entries.TryGetValue(prev, out var e) || e.Tiles == null || !BucketMatches(bel, e.Ids)) return false;
         foreach (int t in e.Tiles)
         {
             if (!tiles.Contains(t)) return false; // 只会前进(忘记走 forget 命令,不走这条)
@@ -282,10 +329,13 @@ public static class CrowdBeliefSync
     {
         var b = sim.Belief!;
         var fc = sim.Config.Fog;
-        var used = new HashSet<int>(b.Slot);
+        var used = b.UsedSlots;
+        used.Clear();
+        for (int i = 0; i < b.Slot.Length; i++) used.Add(b.Slot[i]);
         // 唤醒 = 在用即出表(参考端 filter 无条件移除在用项);表内条目恒为休眠标志位,
         // 加 "!Dormant" 守卫会让在用槽永远唤不醒——休眠表虚涨,淘汰会误杀在用槽。
-        b.DormantList.RemoveAll(e => used.Contains(e.Slot) ? SetAwake(e) : false);
+        // 谓词在认知状态构造时生成一次,捕获的是状态自身,tick 里不再分配委托。
+        b.DormantList.RemoveAll(b.AwakeIfUsed);
         // 淘汰次序 = 注册序:槽号单调递增不复用,插入序即槽号升序。
         // 字典删键后复用槽位会打乱枚举序,按槽号排,槽号相同时保本次枚举序。
         int retireCount = b.Entries.Count;
@@ -319,12 +369,6 @@ public static class CrowdBeliefSync
             if (bucket.Count == 0) b.SlotOfKey.Remove(e.Key);
             b.Entries.Remove(e.Slot);
             sim.Beliefs!.Drop(e.Slot);
-        }
-
-        static bool SetAwake(CrowdBeliefState.Entry e)
-        {
-            e.Dormant = false;
-            return true;
         }
     }
 }
