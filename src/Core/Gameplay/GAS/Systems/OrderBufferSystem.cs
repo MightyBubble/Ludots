@@ -33,6 +33,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly bool _closeEntityIntakeOnUpdate;
         private ExternalOrderBatchConsumer[]? _externalConsumers;
 
+        /// <summary>
+        /// 每一行提交之后、整批释放之前调用。提交中途失败时，载荷只走 finally 的那一次释放。
+        /// </summary>
+        internal Action<int>? ExternalCommitProbe;
+
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
 
@@ -203,34 +208,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _externalConsumers[orderTypeId] = consumer;
         }
 
-        /// <summary>
-        /// 只消费队头连续的、已登记类型的批次。碰到未登记类型就停下，后面的单位订单留给本系统的常规接入。
-        /// 会话步进之前调用，本 tick 入队的群体订单能在运动前落地。
-        /// </summary>
-        public void DispatchExternalOrderConsumers()
-        {
-            if (_incomingOrders == null)
-            {
-                return;
-            }
-
-            while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
-            {
-                if (!TryGetExternalConsumer(_incomingBatchScratch[0].OrderTypeId, out ExternalOrderBatchConsumer consumer))
-                {
-                    return;
-                }
-
-                HandOffExternalConsumerBatch(batchCount, consumer);
-            }
-        }
-
         private void ProcessIncomingOrders(int currentStep)
         {
             if (_incomingOrders == null) return;
 
             while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
             {
+                // 单位订单不截断队列：这一轮里后面的已登记批次也要交到消费者。
                 if (TryGetExternalConsumer(_incomingBatchScratch[0].OrderTypeId, out ExternalOrderBatchConsumer consumer))
                 {
                     HandOffExternalConsumerBatch(batchCount, consumer);
@@ -313,11 +297,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         in _incomingBatchScratch[i],
                         OrderSubmitResult.Activated);
                     _entityAdmissionReservationsScratch[i] = default;
-                    OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
                     IncomingRevision++;
+                    ExternalCommitProbe?.Invoke(i);
                 }
 
                 committed = true;
+                for (int i = 0; i < batchCount; i++)
+                {
+                    OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                }
+
                 ClearEntityAdmissionReservations(batchCount);
             }
             finally

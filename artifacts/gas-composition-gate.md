@@ -52,7 +52,7 @@
 |-------|----------|---------------------|
 | 无新 graph op | | `RelationshipQueryOutgoing` 在要求完整结果时，按 `QueryFromCollection` 的方式把目标缓冲长大再收一次。截断查询（flags == 1）仍把丢下的条数交给调用方。 |
 
-`OrderBufferSystem` 的外部消费者按订单类型 id 登记。队头连续的已登记批次在会话步进前交出去，并按实体接入的方式写 EntityIntake，使 GlobalIntake 不会留到下一步。未登记类型留在队列里，走原来的单位订单接入。
+`OrderBufferSystem` 的外部消费者按订单类型 id 登记。排空在 `ProcessIncomingOrders`（AbilityActivation）。同一次排空里，已登记类型的批次都交给消费者，并按实体接入写 EntityIntake；单位订单照旧走实体接入。群体现场点击在下一拍会话步进执行。
 
 ### 5. Transaction boundary
 

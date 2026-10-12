@@ -481,7 +481,7 @@ public sealed class OrderAdmissionPipelineTests
 
         results.BeginLogicStep();
         Assert.That(queue.TryEnqueueSharedBatch(first), Is.EqualTo(OrderSubmitResult.Queued));
-        system.DispatchExternalOrderConsumers();
+        system.Update(0f);
         Assert.That(seen, Is.EqualTo(batchSize));
         Assert.That(queue.Count, Is.EqualTo(0));
         Assert.That(results.TryGet(first[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome paired), Is.True);
@@ -500,11 +500,51 @@ public sealed class OrderAdmissionPipelineTests
         }
 
         Assert.That(queue.TryEnqueueSharedBatch(second), Is.EqualTo(OrderSubmitResult.Queued));
-        Assert.DoesNotThrow(() => system.DispatchExternalOrderConsumers());
+        Assert.DoesNotThrow(() => system.Update(0f));
         Assert.That(results.IsTerminalFaulted, Is.False);
         Assert.That(seen, Is.EqualTo(batchSize * 2));
         Assert.That(results.TryGet(second[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome secondIntake), Is.True);
         Assert.That(secondIntake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+    }
+
+    [Test]
+    public void ExternalConsumer_CommitFailure_ReleasesSpatialPayloadOnce()
+    {
+        using var world = World.Create();
+        Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+        var results = new OrderAdmissionResultBuffer(8, 8);
+        var queue = new OrderQueue(8, results);
+        var system = new OrderBufferSystem(
+            world,
+            new DiscreteClock(),
+            CreateOrderTypes(),
+            new OrderRuleRegistry(),
+            results,
+            queue,
+            closeEntityIntakeOnUpdate: false);
+        system.RegisterExternalOrderConsumer(1, _ => { });
+        system.ExternalCommitProbe = row =>
+        {
+            if (row == 0)
+            {
+                throw new InvalidOperationException("ORDER.ADMISSION.ERR.ProbeCommit");
+            }
+        };
+
+        var order = new Order { OrderTypeId = 1, PlayerId = 1, Actor = actor };
+        int[] xs = { 10, 20, 30 };
+        int[] ys = { 40, 50, 60 };
+        OrderSpatialPayloadOps.SetPath(world, actor, ref order, xs, ys, xs.Length);
+        var batch = new[] { order };
+        results.BeginLogicStep();
+        Assert.That(queue.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+
+        var ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f));
+        Assert.That(ex!.Message, Does.Contain("ORDER.ADMISSION.ERR.ProbeCommit"));
+        Assert.That(ex.Message, Does.Not.Contain("ORDER.SPATIAL.ERR.StalePayloadHandle"));
+
+        var stale = Assert.Throws<InvalidOperationException>(() => OrderSpatialPayloadOps.Release(world, in batch[0]));
+        Assert.That(stale!.Message, Does.Contain("ORDER.SPATIAL.ERR.StalePayloadHandle"));
     }
 
     private static OrderAdmissionResultBuffer CreateAdmissionResults(int capacity = 64) =>
