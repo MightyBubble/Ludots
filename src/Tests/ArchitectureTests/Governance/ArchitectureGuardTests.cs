@@ -737,7 +737,8 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Platform"),
             };
             var hits = new List<string>();
-            string[] forbidden = { "AbilityAim", "AbilityAcceptsTargetKind" };
+            string retiredOp = string.Concat("AbilityAccepts", "TargetKind");
+            string[] forbidden = { "AbilityAim", retiredOp };
             for (int i = 0; i < roots.Length; i++)
             {
                 foreach (string file in Directory.EnumerateFiles(roots[i], "*.cs", SearchOption.AllDirectories))
