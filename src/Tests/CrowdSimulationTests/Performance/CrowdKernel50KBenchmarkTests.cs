@@ -127,6 +127,17 @@ public sealed class CrowdKernel50KBenchmarkTests
         TestContext.Out.WriteLine($"50k phases p95: {p95Line}");
         TestContext.Out.WriteLine($"50k phases max: {maxLine}");
         TestContext.Out.WriteLine($"50k spike: {spikeLine}");
+        var hash = session.Movement!.Hash;
+        int activeCells = hash.ActiveCount;
+        int maxInCell = 0;
+        for (int i = 0; i < activeCells; i++)
+        {
+            int count = hash.CountOf(hash.Active[i]);
+            if (count > maxInCell) maxInCell = count;
+        }
+
+        TestContext.Out.WriteLine(
+            $"50k hash: activeCells={activeCells} maxInCell={maxInCell} stride={session.Movement.Stride} hashCellRaw={hash.CellSizeCm.RawValue}");
 #if DEBUG
         Assert.Inconclusive(
             $"Debug 不测 33 ms 门。avg={avg:F4} p50={p50:F4} p95={p95:F4} max={max:F4}");
