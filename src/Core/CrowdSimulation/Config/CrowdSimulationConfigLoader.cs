@@ -597,7 +597,7 @@ public sealed class CrowdSimulationConfigLoader
             foreach (var entry in config.Structures.Templates)
             {
                 string area = entry.Value?.Area;
-                if (string.IsNullOrEmpty(area) || mapBinding.ContainsNavArea(area))
+                if (string.IsNullOrEmpty(area) || !areaIndexById.ContainsKey(area) || mapBinding.ContainsNavArea(area))
                 {
                     continue;
                 }
