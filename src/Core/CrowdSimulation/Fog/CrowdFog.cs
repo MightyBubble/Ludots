@@ -59,6 +59,7 @@ public sealed class CrowdFog
     private readonly int[] _stampCells;
     private readonly byte[] _stampSeen;
     private readonly int[] _stampCount;
+    private readonly byte[] _visibleMask;
 
     // 索引:fog 格 → 足迹 bbox 触格的实体 id 集(真值 + 仍被信的残影)。
     // 每格的集在构造时留好;放置只往已有集里加 id,不再按格 new。
@@ -117,6 +118,7 @@ public sealed class CrowdFog
         _stampCells = new int[VisionGroupCount * f2];
         _stampSeen = new byte[VisionGroupCount * f2];
         _stampCount = new int[VisionGroupCount];
+        _visibleMask = new byte[f2];
         GhostCount = new int[VisionGroupCount];
         Version = new uint[VisionGroupCount];
         Key = new uint[VisionGroupCount];
@@ -378,20 +380,19 @@ public sealed class CrowdFog
     {
         int side = FogCellsPerSide;
         int f2 = side * side;
-        FogField field = _vision[g];
-        field.AgeVisibleToExplored();
         if (Los && _opaqueDirty) BuildOpaque();
         ReadOnlySpan<int> occupied = _stampCells.AsSpan(g * f2, _stampCount[g]);
-        ReadOnlySpan<ushort> obscured = ObsN.AsSpan(g * f2, f2);
+        ReadOnlySpan<ushort> obscured = _obscured.Count > 0 ? ObsN.AsSpan(g * f2, f2) : default;
+        FogField field = _vision[g];
         if (Los)
         {
             var filter = new LosStamp(this, g);
-            VisionBulkStamp.Stamp(field, side, occupied, _disc, obscured, ref filter);
+            VisionBulkStamp.Stamp(field, side, occupied, _disc, obscured, _visibleMask, ref filter);
         }
         else
         {
             var filter = new OpenStamp(this, g);
-            VisionBulkStamp.Stamp(field, side, occupied, _disc, obscured, ref filter);
+            VisionBulkStamp.StampOpen(field, side, occupied, _disc, obscured, _visibleMask, ref filter);
         }
 
         Reconcile(g);
@@ -513,10 +514,9 @@ public sealed class CrowdFog
         var forget = _reconcileForget;
         done.Clear();
         forget.Clear();
-        FogField field = _vision[g];
         for (int c = 0; c < f2; c++)
         {
-            if (field.GetVisibility(new FogCell(c % FogCellsPerSide, c / FogCellsPerSide)) == CellVisibility.Visible)
+            if (_visibleMask[c] != 0)
             {
                 ReconcileCell(g, c, done, forget);
             }

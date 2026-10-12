@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
@@ -167,6 +168,70 @@ namespace Ludots.Core.Vision
             }
         }
 
+        internal void CommitVisibleMask<TFilter>(ReadOnlySpan<byte> mask, int side, ref TFilter filter)
+            where TFilter : struct, IVisionStampFilter
+        {
+            if (_lanes == null || _laneChunks == null || side != _blockSide || mask.Length != side * side)
+            {
+                throw new InvalidOperationException("Visible mask requires a prepared fog block of the same side.");
+            }
+
+            int chunkSize = 1 << _chunkShift;
+            for (int cy = 0; cy < _chunksPerSide; cy++)
+            {
+                int y0 = cy << _chunkShift;
+                for (int cx = 0; cx < _chunksPerSide; cx++)
+                {
+                    int index = cy * _chunksPerSide + cx;
+                    CellVisibility[] lane = _lanes[index];
+                    FieldChunk2D<CellVisibility> chunk = _laneChunks[index];
+                    int x0 = cx << _chunkShift;
+                    for (int ly = 0; ly < chunkSize; ly++)
+                    {
+                        int y = y0 + ly;
+                        if ((uint)y >= (uint)side)
+                        {
+                            continue;
+                        }
+
+                        int row = y * side;
+                        int localBase = ly << _chunkShift;
+                        for (int lx = 0; lx < chunkSize; lx++)
+                        {
+                            int x = x0 + lx;
+                            if ((uint)x >= (uint)side)
+                            {
+                                continue;
+                            }
+
+                            int local = localBase + lx;
+                            CellVisibility previous = lane[local];
+                            if (mask[row + x] != 0)
+                            {
+                                if (previous == CellVisibility.Visible)
+                                {
+                                    continue;
+                                }
+
+                                bool firstExplore = previous == CellVisibility.Unseen;
+                                ApplyVisible(lane, chunk, local, previous);
+                                if (firstExplore)
+                                {
+                                    filter.OnFirstExplore(x, y);
+                                }
+                            }
+                            else if (previous == CellVisibility.Visible)
+                            {
+                                lane[local] = CellVisibility.Explored;
+                                _visibleCount--;
+                                _cells.NoteDirty(chunk, local);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void AgeVisibleToExplored()
         {
             if (_lanes != null && _laneChunks != null)
@@ -286,6 +351,29 @@ namespace Ludots.Core.Vision
             chunk = _laneChunks[index];
             local = ((y & _chunkMask) << _chunkShift) + (x & _chunkMask);
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ApplyVisible(CellVisibility[] lane, FieldChunk2D<CellVisibility> chunk, int local, CellVisibility previous)
+        {
+            lane[local] = CellVisibility.Visible;
+            if (previous == CellVisibility.Explored)
+            {
+                _visibleCount++;
+            }
+            else if (previous == CellVisibility.Unseen)
+            {
+                _visibleCount++;
+                _exploredInclusiveCount++;
+                _cells.AddNonDefault(1);
+            }
+            else
+            {
+                AdjustCounts(previous, -1);
+                AdjustCounts(CellVisibility.Visible, 1);
+            }
+
+            _cells.NoteDirty(chunk, local);
         }
 
         private void WriteLane(CellVisibility[] lane, FieldChunk2D<CellVisibility> chunk, int local, CellVisibility visibility)
