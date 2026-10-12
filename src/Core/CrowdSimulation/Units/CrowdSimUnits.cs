@@ -39,6 +39,7 @@ public sealed class CrowdSimUnits
 {
     public const int SlotBits = 18, SlotMask = (1 << SlotBits) - 1, GenMask = (1 << 14) - 1;
     public const string ReceiptChannelName = "crowd_simulation.units";
+    private const string AgentBatchComponentName = "CrowdSimulationAgent";
     private const int MaxTemplateKeysPerDeploy = 48;
 
     private readonly ArchWorld _world;
@@ -105,7 +106,7 @@ public sealed class CrowdSimUnits
 
         _initializer = new CrowdUnitSpawnInitializer(this);
         _initializerKind = _spawns.RegisterInstanceInitializer(_initializer);
-        _spawns.RegisterBatchComponent<CrowdSimulationAgent>("CrowdSimulationAgent");
+        _spawns.RegisterBatchComponent<CrowdSimulationAgent>(AgentBatchComponentName);
         Clear();
     }
 
@@ -413,13 +414,15 @@ public sealed class CrowdSimUnits
         _world.SetSlot(b, slotA);
     }
 
-    /// <summary>从引擎的生成系统上摘掉本会话的初始化器。无头自建的系统随会话一起丢。</summary>
+    /// <summary>从引擎的生成系统上摘掉本会话的初始化器和批组件准入。无头自建的系统随会话一起丢。</summary>
     public void ReleaseSpawnInitializer()
     {
         if (_initializerKind != 0)
         {
             _spawns.UnregisterInstanceInitializer(_initializerKind);
         }
+
+        _spawns.UnregisterBatchComponent(AgentBatchComponentName);
     }
 
     /// <summary>

@@ -104,5 +104,9 @@ public sealed class TemplateBatchAdmissionContractTests
 
         Assert.That(spawner.IsBatchCompatible(template.Id, template), Is.True);
         Assert.That(world.Size, Is.EqualTo(0));
+
+        Assert.That(spawner.UnregisterBatchComponent("CrowdSimulationAgent"), Is.True);
+        Assert.That(spawner.IsBatchCompatible(template.Id, template), Is.False);
+        Assert.That(spawner.UnregisterBatchComponent("CrowdSimulationAgent"), Is.False);
     }
 }

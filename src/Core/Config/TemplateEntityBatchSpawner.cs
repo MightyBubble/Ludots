@@ -96,6 +96,11 @@ namespace Ludots.Core.Config
             _admission.Register<T>(componentName);
         }
 
+        public bool UnregisterBatchComponent(string componentName)
+        {
+            return _admission.Unregister(componentName);
+        }
+
         public int LargestCreatedBatch { get; private set; }
 
         public double LastWorldCreateMs { get; private set; }

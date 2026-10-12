@@ -40,6 +40,22 @@ internal sealed class TemplateBatchComponentAdmission
         Generation++;
     }
 
+    public bool Unregister(string componentName)
+    {
+        if (string.IsNullOrWhiteSpace(componentName))
+        {
+            throw new ArgumentException("Admitted batch component name is required.", nameof(componentName));
+        }
+
+        if (!_byName.Remove(componentName))
+        {
+            return false;
+        }
+
+        Generation++;
+        return true;
+    }
+
     public bool IsAdmitted(string componentName)
     {
         return !string.IsNullOrWhiteSpace(componentName) && _byName.ContainsKey(componentName);
