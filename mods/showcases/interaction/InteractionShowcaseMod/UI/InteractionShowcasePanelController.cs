@@ -523,9 +523,11 @@ namespace InteractionShowcaseMod.UI
         {
             if (_engine != null)
             {
+                Entity rep = RequireHeroRep(_engine);
                 EntityCommandPanelToolbarCatalog.Require(_engine).Activate(
                     _engine,
                     InteractionShowcaseIds.ToolbarPanelId,
+                    rep,
                     modeId);
             }
         }
@@ -554,7 +556,7 @@ namespace InteractionShowcaseMod.UI
             EntityCommandPanelToolbarCatalog toolbar = EntityCommandPanelToolbarCatalog.Require(engine);
             Entity hero = RequireHeroRep(engine);
             string activeModeId = toolbar.ActiveButtonId(engine, InteractionShowcaseIds.ToolbarPanelId, hero);
-            string activeModeName = toolbar.ButtonLabel(engine, InteractionShowcaseIds.ToolbarPanelId, activeModeId);
+            string activeModeName = toolbar.ButtonLabel(engine, InteractionShowcaseIds.ToolbarPanelId, hero, activeModeId);
 
             var telemetry = ResolveStressTelemetry(engine);
             BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);

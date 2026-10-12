@@ -1,3 +1,4 @@
+using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -40,7 +41,7 @@ namespace EntityCommandPanelMod.Runtime
             _tailFor = tailFor ?? throw new ArgumentNullException(nameof(tailFor));
         }
 
-        public bool IsVisible => _catalog.IsPanelVisible(_engine, _panelId);
+        public bool IsVisible => _catalog.IsPanelVisible(_engine, _panelId, VisibilityRep());
 
         public uint Revision
         {
@@ -51,15 +52,25 @@ namespace EntityCommandPanelMod.Runtime
                     return 0;
                 }
 
-                uint revision = 1u ^ _catalog.HighlightRevision(_engine, _panelId);
-                IEntityCommandPanelToolbarTail? tail = VisibleTail();
-                if (tail != null)
-                {
-                    revision ^= tail.Revision;
-                }
-
-                return revision;
+                return RevisionFor(RenderRep());
             }
+        }
+
+        public uint RevisionFor(Entity rep)
+        {
+            if (!_catalog.IsPanelVisible(_engine, _panelId, rep))
+            {
+                return 0;
+            }
+
+            uint revision = 1u ^ _catalog.HighlightRevision(_engine, _panelId, rep);
+            IEntityCommandPanelToolbarTail? tail = TailFor(rep);
+            if (tail != null)
+            {
+                revision ^= tail.Revision;
+            }
+
+            return revision;
         }
 
         public string Title => Text(title: true);
@@ -68,13 +79,18 @@ namespace EntityCommandPanelMod.Runtime
 
         public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
         {
-            if (destination.IsEmpty || !IsVisible)
+            return CopyButtons(RenderRep(), destination);
+        }
+
+        public int CopyButtons(Entity rep, Span<EntityCommandPanelToolbarButtonView> destination)
+        {
+            if (destination.IsEmpty || !_catalog.IsPanelVisible(_engine, _panelId, rep))
             {
                 return 0;
             }
 
-            int dataWritten = _catalog.CopyVisibleButtons(_engine, _panelId, destination, out int dataTotal);
-            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            int dataWritten = _catalog.CopyVisibleButtons(_engine, _panelId, rep, destination, out int dataTotal);
+            IEntityCommandPanelToolbarTail? tail = TailFor(rep);
             int tailTotal = tail?.ButtonCount ?? 0;
             int want = Math.Min(destination.Length, dataTotal + tailTotal);
             if (want <= dataWritten)
@@ -95,17 +111,22 @@ namespace EntityCommandPanelMod.Runtime
 
         public void Activate(string buttonId)
         {
+            Activate(RenderRep(), buttonId);
+        }
+
+        public void Activate(Entity rep, string buttonId)
+        {
             if (string.IsNullOrWhiteSpace(buttonId))
             {
                 throw new InvalidOperationException($"'{EntityCommandPanelToolbarCatalog.RelativePath}' button id is empty.");
             }
 
-            if (_catalog.TryActivate(_engine, _panelId, buttonId))
+            if (_catalog.TryActivate(_engine, _panelId, rep, buttonId))
             {
                 return;
             }
 
-            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            IEntityCommandPanelToolbarTail? tail = TailFor(rep);
             if (tail != null && tail.TryActivate(buttonId))
             {
                 return;
@@ -116,12 +137,13 @@ namespace EntityCommandPanelMod.Runtime
 
         private string Text(bool title)
         {
-            if (!IsVisible)
+            Entity rep = VisibilityRep();
+            if (!_catalog.IsPanelVisible(_engine, _panelId, rep))
             {
                 return string.Empty;
             }
 
-            IEntityCommandPanelToolbarTail? tail = VisibleTail();
+            IEntityCommandPanelToolbarTail? tail = TailFor(rep);
             string? tailText = title ? tail?.Title : tail?.Subtitle;
             if (!string.IsNullOrEmpty(tailText))
             {
@@ -129,18 +151,30 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return title
-                ? _catalog.VisibleTitle(_engine, _panelId)
-                : _catalog.VisibleSubtitle(_engine, _panelId);
+                ? _catalog.VisibleTitle(_engine, _panelId, rep)
+                : _catalog.VisibleSubtitle(_engine, _panelId, rep);
         }
 
-        private IEntityCommandPanelToolbarTail? VisibleTail()
+        private IEntityCommandPanelToolbarTail? TailFor(Entity rep)
         {
-            if (!IsVisible)
+            if (!_catalog.IsPanelVisible(_engine, _panelId, rep))
             {
                 return null;
             }
 
-            return _tailFor(_catalog.VisibleToolbarId(_engine, _panelId));
+            return _tailFor(_catalog.VisibleToolbarId(_engine, _panelId, rep));
+        }
+
+        private Entity VisibilityRep()
+        {
+            return _catalog.PanelUsesContextVisibility(_panelId)
+                ? EntityCommandPanelToolbarRep.Require(_engine)
+                : Entity.Null;
+        }
+
+        private Entity RenderRep()
+        {
+            return EntityCommandPanelToolbarRep.Require(_engine);
         }
     }
 }

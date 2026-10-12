@@ -1,3 +1,4 @@
+using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -163,23 +164,74 @@ namespace EntityCommandPanelMod.Runtime
 
         public string Subtitle => Resolve()?.Subtitle ?? string.Empty;
 
+        public bool ActiveToolbarReadsRep
+        {
+            get
+            {
+                IEntityCommandPanelToolbarProvider? provider = Resolve();
+                return ReferenceEquals(provider, _data) && provider.IsVisible;
+            }
+        }
+
         public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
         {
-            IEntityCommandPanelToolbarProvider? provider = Resolve();
+            return CopyResolved(Resolve(), rep: null, destination);
+        }
+
+        public int CopyButtons(Entity rep, Span<EntityCommandPanelToolbarButtonView> destination)
+        {
+            return CopyResolved(Resolve(), rep, destination);
+        }
+
+        public void Activate(string buttonId)
+        {
+            ActivateResolved(ResolveProvider(), rep: null, buttonId);
+        }
+
+        public void Activate(Entity rep, string buttonId)
+        {
+            ActivateResolved(ResolveProvider(), rep, buttonId);
+        }
+
+        private int CopyResolved(
+            IEntityCommandPanelToolbarProvider? provider,
+            Entity? rep,
+            Span<EntityCommandPanelToolbarButtonView> destination)
+        {
             if (provider == null || destination.IsEmpty)
             {
                 return 0;
             }
 
+            if (ReferenceEquals(provider, _data))
+            {
+                if (rep == null && !_data!.IsVisible)
+                {
+                    return 0;
+                }
+
+                return _data!.CopyButtons(rep ?? EntityCommandPanelToolbarRep.Require(_engine), destination);
+            }
+
             return provider.CopyButtons(destination);
         }
 
-        public void Activate(string buttonId)
+        private void ActivateResolved(IEntityCommandPanelToolbarProvider provider, Entity? rep, string buttonId)
         {
-            IEntityCommandPanelToolbarProvider? provider = Resolve()
+            if (ReferenceEquals(provider, _data))
+            {
+                _data!.Activate(rep ?? EntityCommandPanelToolbarRep.Require(_engine), buttonId);
+                return;
+            }
+
+            provider.Activate(buttonId);
+        }
+
+        private IEntityCommandPanelToolbarProvider ResolveProvider()
+        {
+            return Resolve()
                 ?? throw new InvalidOperationException(
                     $"'{EntityCommandPanelToolbarCatalog.RelativePath}' panel '{CommandPanelId}' has no toolbar.");
-            provider.Activate(buttonId);
         }
 
         private IEntityCommandPanelToolbarTail? TailFor(string toolbarId)
@@ -235,12 +287,15 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             bool hasData = catalog.HasToolbarForPanel(CommandPanelId);
-            bool dataVisible = hasData && data.IsVisible;
+            Entity visibilityRep = hasData && catalog.PanelUsesContextVisibility(CommandPanelId)
+                ? EntityCommandPanelToolbarRep.Require(_engine)
+                : Entity.Null;
+            bool dataVisible = hasData && catalog.IsPanelVisible(_engine, CommandPanelId, visibilityRep);
             var visibleIds = new List<string>();
             Contributor? visibleContributor = null;
             if (dataVisible)
             {
-                visibleIds.Add(catalog.VisibleToolbarId(_engine, CommandPanelId));
+                visibleIds.Add(catalog.VisibleToolbarId(_engine, CommandPanelId, visibilityRep));
             }
 
             for (int i = 0; i < contributors.Length; i++)

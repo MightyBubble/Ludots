@@ -127,13 +127,26 @@ namespace EntityCommandPanelMod.UI
         private UiElementBuilder BuildGlobalToolbar(IEntityCommandPanelToolbarProvider provider, float viewportWidth)
         {
             var buttons = new EntityCommandPanelToolbarButtonView[16];
-            int buttonCount = provider.CopyButtons(buttons);
+            int buttonCount;
+            Action<string> activate;
+            if (provider is EntityCommandPanelToolbarComposer composer && composer.ActiveToolbarReadsRep)
+            {
+                Entity rep = EntityCommandPanelToolbarRep.Require(_engine);
+                buttonCount = composer.CopyButtons(rep, buttons);
+                activate = buttonId => composer.Activate(rep, buttonId);
+            }
+            else
+            {
+                buttonCount = provider.CopyButtons(buttons);
+                activate = buttonId => provider.Activate(buttonId);
+            }
+
             var buttonElements = new UiElementBuilder[buttonCount];
             for (int i = 0; i < buttonCount; i++)
             {
                 var button = buttons[i];
                 string accent = NormalizeColor(button.AccentColorHex, button.Active ? "#F6D37A" : "#4FA9E6");
-                buttonElements[i] = Ui.Button(button.Label, _ => { provider.Activate(button.ButtonId); })
+                buttonElements[i] = Ui.Button(button.Label, _ => { activate(button.ButtonId); })
                     .Padding(10f, 7f)
                     .Radius(999f)
                     .Background(button.Active ? accent : "#132232")

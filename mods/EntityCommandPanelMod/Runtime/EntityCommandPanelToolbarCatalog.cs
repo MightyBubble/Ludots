@@ -137,35 +137,26 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        public bool IsPanelVisible(GameEngine engine, string panelId)
+        public bool IsPanelVisible(GameEngine engine, string panelId, Entity rep)
         {
-            return TryGetVisible(engine, panelId, out _);
+            return TryGetVisible(engine, panelId, rep, out _);
         }
 
-        public string VisibleToolbarId(GameEngine engine, string panelId)
+        public string VisibleToolbarId(GameEngine engine, string panelId, Entity rep)
         {
-            return RequireVisible(engine, panelId).Id;
+            return RequireVisible(engine, panelId, rep).Id;
         }
 
-        public string VisibleTitle(GameEngine engine, string panelId)
+        public string VisibleTitle(GameEngine engine, string panelId, Entity rep)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId, rep);
             return TextFor(toolbar, engine.CurrentMapSession?.MapId.Value, title: true);
         }
 
-        public string VisibleSubtitle(GameEngine engine, string panelId)
+        public string VisibleSubtitle(GameEngine engine, string panelId, Entity rep)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId, rep);
             return TextFor(toolbar, engine.CurrentMapSession?.MapId.Value, title: false);
-        }
-
-        public int CopyVisibleButtons(
-            GameEngine engine,
-            string panelId,
-            Span<EntityCommandPanelToolbarButtonView> destination,
-            out int total)
-        {
-            return CopyVisibleButtons(engine, panelId, TrySoleRep(engine), destination, out total);
         }
 
         public int CopyVisibleButtons(
@@ -175,7 +166,7 @@ namespace EntityCommandPanelMod.Runtime
             Span<EntityCommandPanelToolbarButtonView> destination,
             out int total)
         {
-            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, rep, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 total = 0;
                 return 0;
@@ -197,14 +188,9 @@ namespace EntityCommandPanelMod.Runtime
             return count;
         }
 
-        public uint HighlightRevision(GameEngine engine, string panelId)
-        {
-            return HighlightRevision(engine, panelId, TrySoleRep(engine));
-        }
-
         public uint HighlightRevision(GameEngine engine, string panelId, Entity rep)
         {
-            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, rep, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 return 0;
             }
@@ -222,14 +208,9 @@ namespace EntityCommandPanelMod.Runtime
             return revision;
         }
 
-        public string ActiveButtonId(GameEngine engine, string panelId)
-        {
-            return ActiveButtonId(engine, panelId, TrySoleRep(engine));
-        }
-
         public string ActiveButtonId(GameEngine engine, string panelId, Entity rep)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId, rep);
             bool[] active = Evaluate(engine, toolbar, rep);
             string? found = null;
             for (int i = 0; i < active.Length; i++)
@@ -255,9 +236,9 @@ namespace EntityCommandPanelMod.Runtime
             return found;
         }
 
-        public string ButtonLabel(GameEngine engine, string panelId, string buttonId)
+        public string ButtonLabel(GameEngine engine, string panelId, Entity rep, string buttonId)
         {
-            ToolbarDeclaration toolbar = RequireVisible(engine, panelId);
+            ToolbarDeclaration toolbar = RequireVisible(engine, panelId, rep);
             for (int i = 0; i < toolbar.Buttons.Length; i++)
             {
                 if (string.Equals(toolbar.Buttons[i].Id, buttonId, StringComparison.Ordinal))
@@ -269,14 +250,9 @@ namespace EntityCommandPanelMod.Runtime
             throw Error($"toolbar '{toolbar.Id}' has no button '{buttonId}'.");
         }
 
-        public bool TryActivate(GameEngine engine, string panelId, string buttonId)
-        {
-            return TryActivate(engine, panelId, TrySoleRep(engine), buttonId);
-        }
-
         public bool TryActivate(GameEngine engine, string panelId, Entity rep, string buttonId)
         {
-            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, rep, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 return false;
             }
@@ -295,11 +271,6 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        public void Activate(GameEngine engine, string panelId, string buttonId)
-        {
-            Activate(engine, panelId, TrySoleRep(engine), buttonId);
-        }
-
         public void Activate(GameEngine engine, string panelId, Entity rep, string buttonId)
         {
             if (!TryActivate(engine, panelId, rep, buttonId))
@@ -308,9 +279,9 @@ namespace EntityCommandPanelMod.Runtime
             }
         }
 
-        private ToolbarDeclaration RequireVisible(GameEngine engine, string panelId)
+        private ToolbarDeclaration RequireVisible(GameEngine engine, string panelId, Entity rep)
         {
-            if (!TryGetVisible(engine, panelId, out ToolbarDeclaration? toolbar) || toolbar == null)
+            if (!TryGetVisible(engine, panelId, rep, out ToolbarDeclaration? toolbar) || toolbar == null)
             {
                 throw Error($"panel '{panelId}' has no visible toolbar for map '{engine.CurrentMapSession?.MapId.Value ?? ""}'.");
             }
@@ -318,13 +289,13 @@ namespace EntityCommandPanelMod.Runtime
             return toolbar;
         }
 
-        private bool TryGetVisible(GameEngine engine, string panelId, out ToolbarDeclaration? toolbar)
+        private bool TryGetVisible(GameEngine engine, string panelId, Entity rep, out ToolbarDeclaration? toolbar)
         {
             toolbar = null;
             for (int i = 0; i < _toolbars.Length; i++)
             {
                 if (!string.Equals(_toolbars[i].Panel, panelId, StringComparison.Ordinal) ||
-                    !Matches(engine, _toolbars[i]))
+                    !Matches(engine, _toolbars[i], rep))
                 {
                     continue;
                 }
@@ -340,7 +311,7 @@ namespace EntityCommandPanelMod.Runtime
             return toolbar != null;
         }
 
-        private static bool Matches(GameEngine engine, ToolbarDeclaration toolbar)
+        private static bool Matches(GameEngine engine, ToolbarDeclaration toolbar, Entity rep)
         {
             if (toolbar.Maps.Length > 0)
             {
@@ -356,9 +327,9 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep))
+            if (rep == Entity.Null || !engine.World.IsAlive(rep))
             {
-                return false;
+                throw Error($"toolbar '{toolbar.Id}' context visibility requires the rep it is rendering for.");
             }
 
             InteractionContextInstanceRuntime contexts = engine.GetService(CoreServiceKeys.InteractionContextInstances)
@@ -374,19 +345,14 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        private static Entity TrySoleRep(GameEngine engine)
-        {
-            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ? rep : Entity.Null;
-        }
-
         private bool[] Evaluate(GameEngine engine, ToolbarDeclaration toolbar, Entity rep)
         {
-            var active = new bool[toolbar.Buttons.Length];
             if (rep == Entity.Null || !engine.World.IsAlive(rep))
             {
-                return active;
+                throw Error($"toolbar '{toolbar.Id}' requires the rep it is rendering for.");
             }
 
+            var active = new bool[toolbar.Buttons.Length];
             // A live context is the gesture that is open now. Preference highlights stay dark
             // while one is open, so a stored preference and that gesture do not both light.
             if (TryActivateContextHighlight(engine, rep, toolbar, active))
