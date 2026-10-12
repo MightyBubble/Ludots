@@ -364,7 +364,10 @@ public sealed class CrowdMovementKernel
         if (length <= 0) return;
         if (length == 1 || configured == 1)
         {
+            long workBefore = Session.Telemetry.ReadParallelWorkTicks();
+            long wall0 = Stopwatch.GetTimestamp();
             ExecuteRange(phase, 0, length, 1, dt);
+            RecordRangeParallel(phase, wall0, workBefore);
             return;
         }
 
@@ -391,8 +394,7 @@ public sealed class CrowdMovementKernel
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
-        var telemetry = Session.Telemetry;
-        long workBefore = telemetry.ReadParallelWorkTicks();
+        long workBefore = Session.Telemetry.ReadParallelWorkTicks();
         long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
@@ -420,6 +422,12 @@ public sealed class CrowdMovementKernel
 
         scheduler.Flush();
         for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
+        RecordRangeParallel(phase, wall0, workBefore);
+    }
+
+    private void RecordRangeParallel(int phase, long wall0, long workBefore)
+    {
+        var telemetry = Session.Telemetry;
         long wall = Stopwatch.GetTimestamp() - wall0;
         long work = telemetry.ReadParallelWorkTicks() - workBefore;
         telemetry.AddParallelWallTicks(wall);
