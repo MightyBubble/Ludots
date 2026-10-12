@@ -138,7 +138,8 @@ namespace Ludots.Tests.RaylibAdapter
         public void BuildOverviewSampleSteps_UsesTheChunkUnderTheSample_AndThrowsWhenMissing()
         {
             var source = new TwoScaleHeightmapSource(declareOceanVoid: false, chunk0StepCm: 10f, chunk1StepCm: 40f);
-            RaylibContinuousHeightmapRenderer.BuildOverviewSampleSteps(source, out float[] stepX, out float[] stepY);
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(source, out float[] stepX, out float[] stepY, out float?[]? sentinel);
+            Assert.That(sentinel, Is.Null);
             Assert.That(stepX[0], Is.EqualTo(10f));
             Assert.That(stepY[0], Is.EqualTo(10f));
 
@@ -150,7 +151,26 @@ namespace Ludots.Tests.RaylibAdapter
 
             var missing = new TwoScaleHeightmapSource(declareOceanVoid: true, omitChunk: 1, chunk0StepCm: 10f, chunk1StepCm: 40f);
             Assert.Throws<InvalidOperationException>(() =>
-                RaylibContinuousHeightmapRenderer.BuildOverviewSampleSteps(missing, out _, out _));
+                RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(missing, out _, out _, out _));
+        }
+
+        [Test]
+        public void BuildOverviewChunkTables_ResolvesSentinelPerChunkOnlyWhenDeclared()
+        {
+            var undeclared = new TwoScaleHeightmapSource(declareOceanVoid: false);
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(undeclared, out _, out _, out float?[]? off);
+            Assert.That(off, Is.Null);
+
+            var declared = new TwoScaleHeightmapSource(declareOceanVoid: true);
+            int callsBefore = declared.TryGetChunkCalls;
+            RaylibContinuousHeightmapRenderer.BuildOverviewChunkTables(
+                declared, out _, out _, out float?[]? on);
+            Assert.That(declared.TryGetChunkCalls - callsBefore, Is.EqualTo(declared.ChunkColumns * declared.ChunkRows));
+            Assert.That(on, Is.Not.Null);
+            Assert.That(on![0], Is.EqualTo(57_671f));
+            int slot = RaylibContinuousHeightmapRenderer.OverviewChunkSlot(declared, 450f, 10f);
+            Assert.That(on[slot], Is.EqualTo(57_671f * 140_000f / 65_535f).Within(0.01f));
+            Assert.That(on[slot], Is.Not.EqualTo(on[0]));
         }
 
         [Test]

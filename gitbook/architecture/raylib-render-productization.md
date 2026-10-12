@@ -51,7 +51,7 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 
 地图若使用数十米以上量级的落差，必须显式声明与自身海拔匹配的 `AbsoluteColorPeakSpanCm`；默认值按小落差场景调校。不声明时山不会被染成水，但高出默认跨度的部分会挤在峰顶色上。
 
-大地图远景 overview 网格的分辨率吃满 `OverviewVertexLimit`（与 chunk 栅格解耦）。法线步长取样本所在 chunk 的采样步长。chunk 缺失则建网格失败，不用 chunk (0,0)，也不把 overview 间距除以 32。两侧都采到用两倍步长，只采到一侧用单侧步长。海洋/虚空哨兵按样本所在 chunk 的 sample scale 换算，不拿 chunk (0,0) 套全图。轮廓由网格保，坡向细节由法线保。
+大地图远景 overview 网格的分辨率吃满 `OverviewVertexLimit`（与 chunk 栅格解耦）。法线步长取样本所在 chunk 的采样步长。chunk 缺失则建网格失败，不用 chunk (0,0)，也不把 overview 间距除以 32。两侧都采到用两倍步长，只采到一侧用单侧步长。声明 `OceanVoidFillAtSampleCeiling` 时，哨兵在顶点循环之前按 chunk 各算一次，循环里用样本所在 chunk 的下标取；未声明时不建这张表。轮廓由网格保，坡向细节由法线保。
 
 大地图远景实拍（引擎画廊 `terrain_heightmap` 场景：绝对海拔色带 + 水下陆架 + 超密降采样）：
 

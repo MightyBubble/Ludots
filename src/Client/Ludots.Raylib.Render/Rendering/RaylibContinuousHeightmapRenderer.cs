@@ -1511,12 +1511,14 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// 概览法线步长取样本所在 chunk 的采样步长。栅格里缺一块就失败,不用 (0,0) 的步长,也不用 overview 间距 / 32。
+        /// 概览在顶点循环前按 chunk 各取一次采样步长。声明海洋哨兵时同一轮把哨兵也算进表;未声明时表保持 null,不解码。
+        /// 栅格里缺一块就失败,不用 (0,0) 的步长,也不用 overview 间距 / 32。
         /// </summary>
-        internal static void BuildOverviewSampleSteps(
+        internal static void BuildOverviewChunkTables(
             IContinuousHeightmapRenderSource source,
             out float[] sampleStepXCm,
-            out float[] sampleStepYCm)
+            out float[] sampleStepYCm,
+            out float?[]? oceanVoidSentinelCm)
         {
             int columns = source.ChunkColumns;
             int rows = source.ChunkRows;
@@ -1529,6 +1531,8 @@ namespace Ludots.Raylib.Render
             int count = checked(columns * rows);
             sampleStepXCm = new float[count];
             sampleStepYCm = new float[count];
+            bool oceanVoidFillDeclared = source.RenderProfile.OceanVoidFillAtSampleCeiling;
+            oceanVoidSentinelCm = oceanVoidFillDeclared ? new float?[count] : null;
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < columns; x++)
@@ -1542,6 +1546,10 @@ namespace Ludots.Raylib.Render
                     int index = (y * columns) + x;
                     sampleStepXCm[index] = MathF.Max(1f, chunk.SampleStepXCm);
                     sampleStepYCm[index] = MathF.Max(1f, chunk.SampleStepYCm);
+                    if (oceanVoidFillDeclared)
+                    {
+                        oceanVoidSentinelCm![index] = ResolveOceanVoidSentinelCm(true, in chunk);
+                    }
                 }
             }
         }
@@ -1765,7 +1773,21 @@ namespace Ludots.Raylib.Render
             float? absoluteSeaCm = _absoluteColorSeaLevelCm;
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             float displayHeightScale = _displayHeightScale;
-            BuildOverviewSampleSteps(source, out float[] overviewStepXCm, out float[] overviewStepYCm);
+            BuildOverviewChunkTables(
+                source,
+                out float[] overviewStepXCm,
+                out float[] overviewStepYCm,
+                out float?[]? oceanVoidSentinelCm);
+
+            float? SentinelAt(float sampleXCm, float sampleYCm)
+            {
+                if (oceanVoidSentinelCm == null)
+                {
+                    return null;
+                }
+
+                return oceanVoidSentinelCm[OverviewChunkSlot(source, sampleXCm, sampleYCm)];
+            }
 
             float DisplayHeightAt(float sampleXCm, float sampleYCm, float heightCm)
             {
@@ -1774,10 +1796,7 @@ namespace Ludots.Raylib.Render
                     return heightCm;
                 }
 
-                return ResolveAbsoluteDisplayHeightCm(
-                    heightCm,
-                    seaCm,
-                    ResolveOceanVoidSentinelAtWorld(source, sampleXCm, sampleYCm));
+                return ResolveAbsoluteDisplayHeightCm(heightCm, seaCm, SentinelAt(sampleXCm, sampleYCm));
             }
 
             float minHeightCm = float.PositiveInfinity;
@@ -1884,7 +1903,7 @@ namespace Ludots.Raylib.Render
                             heightCm,
                             seaCm,
                             absolutePeakSpanCm,
-                            ResolveOceanVoidSentinelAtWorld(source, worldXCm, worldYCm));
+                            SentinelAt(worldXCm, worldYCm));
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
