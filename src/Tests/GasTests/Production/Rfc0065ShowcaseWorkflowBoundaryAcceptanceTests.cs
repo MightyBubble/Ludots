@@ -37,7 +37,6 @@ namespace Ludots.Tests.GAS.Production
         private const string LauncherBindingName = "interaction_showcase";
         private const string LauncherTargetPath = "mods/showcases/interaction/InteractionShowcaseMod";
         private const string ManualGuiLaunchCommand = ".\\scripts\\run-mod-launcher.cmd cli launch interaction_showcase --adapter raylib";
-        private const string DefaultSchemeId = "scheme.default";
         private const string WasdSchemeId = "scheme.wasd_move";
         private const string DefaultIntentId = "intent.command.default";
         private const string AllTogetherDispatchId = InteractionShowcaseIds.BlinkDispatchAllTogetherProfileId;
@@ -83,8 +82,10 @@ namespace Ludots.Tests.GAS.Production
 
             var schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
                 ?? throw new InvalidOperationException("ControlSchemeRuntime service is missing.");
-            int schemeId = schemes.SchemeIdRegistry.GetId(DefaultSchemeId);
-            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemeId), "SHOW-6 requires scheme.default to be active from production startup.");
+            string launchScheme = RequireDeclaredLaunchScheme(engine);
+            int schemeId = schemes.SchemeIdRegistry.GetId(launchScheme);
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemeId),
+                "SHOW-6 requires game.json startupLocalSeats[].controlSchemeId to be active from production startup.");
 
             var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
                 ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
@@ -165,7 +166,8 @@ namespace Ludots.Tests.GAS.Production
                 targetWorldCm,
                 intentProfileId,
                 dispatchProfileId,
-                schemeId);
+                schemeId,
+                launchScheme);
         }
 
         [Test]
@@ -185,10 +187,12 @@ namespace Ludots.Tests.GAS.Production
 
                 var schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
                     ?? throw new InvalidOperationException("ControlSchemeRuntime service is missing.");
-                int defaultSchemeId = schemes.SchemeIdRegistry.GetId(DefaultSchemeId);
+                string launchScheme = RequireDeclaredLaunchScheme(engine);
+                int launchSchemeId = schemes.SchemeIdRegistry.GetId(launchScheme);
                 int wasdSchemeId = schemes.SchemeIdRegistry.GetId(WasdSchemeId);
-                Assert.That(schemes.ActiveSchemeId, Is.EqualTo(defaultSchemeId));
-                Assert.That(schemes.TryGetActiveAxisMove(out _), Is.False);
+                Assert.That(schemes.ActiveSchemeId, Is.EqualTo(launchSchemeId));
+                Assert.That(schemes.TryGetActiveAxisMove(out _), Is.False,
+                    "the declared launch scheme keeps axis movement disabled until the WASD hot switch.");
 
                 Tick(engine, 90);
 
@@ -282,11 +286,12 @@ namespace Ludots.Tests.GAS.Production
 
             var schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
                 ?? throw new InvalidOperationException("ControlSchemeRuntime service is missing.");
-            int defaultSchemeId = schemes.SchemeIdRegistry.GetId(DefaultSchemeId);
+            string launchScheme = RequireDeclaredLaunchScheme(engine);
+            int launchSchemeId = schemes.SchemeIdRegistry.GetId(launchScheme);
             int wasdSchemeId = schemes.SchemeIdRegistry.GetId(WasdSchemeId);
-            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(defaultSchemeId));
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(launchSchemeId));
             Assert.That(schemes.TryGetActiveAxisMove(out _), Is.False,
-                "scheme.default intentionally keeps axis movement disabled by missing axisMove declaration.");
+                "the declared launch scheme keeps axis movement disabled by missing axisMove.");
 
             Assert.That(schemes.TrySwitch(wasdSchemeId), Is.True);
             Assert.That(schemes.ActiveSchemeId, Is.EqualTo(wasdSchemeId));
@@ -317,11 +322,26 @@ namespace Ludots.Tests.GAS.Production
             WriteWasdAcceptanceArtifact(
                 artifactDir,
                 localPlayer,
-                defaultSchemeId,
+                launchScheme,
+                launchSchemeId,
                 wasdSchemeId,
                 binding,
                 order,
                 start);
+        }
+
+        private static string RequireDeclaredLaunchScheme(GameEngine engine)
+        {
+            string? schemeId = engine.MergedConfig.StartupLocalSeats is { Count: > 0 } seats
+                ? seats[0].ControlSchemeId
+                : null;
+            if (string.IsNullOrWhiteSpace(schemeId))
+            {
+                throw new InvalidOperationException(
+                    "game.json startupLocalSeats[].controlSchemeId is required; the launch scheme must be declared explicitly.");
+            }
+
+            return schemeId;
         }
 
         private static GameEngine CreateEngine(string repoRoot, TestInputBackend backend)
@@ -893,23 +913,25 @@ namespace Ludots.Tests.GAS.Production
             Vector2 targetWorldCm,
             int intentProfileId,
             int dispatchProfileId,
-            int schemeId)
+            int schemeId,
+            string launchScheme)
         {
             File.WriteAllText(
                 Path.Combine(artifactDir, "battle-report.md"),
-                BuildBattleReport(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId),
+                BuildBattleReport(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId, launchScheme),
                 Encoding.UTF8);
             File.WriteAllText(
                 Path.Combine(artifactDir, "trace.jsonl"),
-                BuildTraceJsonl(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId),
+                BuildTraceJsonl(localPlayer, actors, hovered, commandSource, orders, dispatchVariants, targetWorldCm, intentProfileId, dispatchProfileId, schemeId, launchScheme),
                 Encoding.UTF8);
-            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid(), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid(launchScheme), Encoding.UTF8);
         }
 
         private static void WriteWasdAcceptanceArtifact(
             string artifactDir,
             Entity localPlayer,
-            int defaultSchemeId,
+            string launchScheme,
+            int launchSchemeId,
             int wasdSchemeId,
             ControlSchemeAxisMoveBinding binding,
             Order order,
@@ -924,7 +946,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- execution timestamp UTC: {DateTimeOffset.UtcNow:O}");
             sb.AppendLine();
             sb.AppendLine("## Scenario Card");
-            sb.AppendLine("- Player goal: hot-switch from mouse/default command scheme to a WASD movement scheme and hold D.");
+            sb.AppendLine($"- Player goal: hot-switch from the declared launch scheme `{launchScheme}` to a WASD movement scheme and hold D.");
             sb.AppendLine("- Runtime path: `ControlSchemeRuntime.TrySwitch` -> `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `AxisMoveOrderSystem` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine("- Primary success condition: the local showcase actor receives a moveTo order offset by the scheme-owned axisMove step distance.");
             sb.AppendLine("- Evidence boundary: this is headless production-path evidence; it does not claim a captured visible UAT recording.");
@@ -933,7 +955,8 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("| Field | Value |");
             sb.AppendLine("|---|---|");
             sb.AppendLine($"| local player actor | {localPlayer} |");
-            sb.AppendLine($"| scheme.default registry id | {defaultSchemeId.ToString(CultureInfo.InvariantCulture)} |");
+            sb.AppendLine($"| launch scheme | {launchScheme} |");
+            sb.AppendLine($"| launch scheme registry id | {launchSchemeId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| scheme.wasd_move registry id | {wasdSchemeId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| axis action | {binding.ActionId} |");
             sb.AppendLine($"| step distance cm | {binding.StepDistanceCm.ToString(CultureInfo.InvariantCulture)} |");
@@ -953,7 +976,8 @@ namespace Ludots.Tests.GAS.Production
             Vector2 targetWorldCm,
             int intentProfileId,
             int dispatchProfileId,
-            int schemeId)
+            int schemeId,
+            string launchScheme)
         {
             var sb = new StringBuilder();
             sb.AppendLine("# Scenario: rfc0065-showcase-workflow");
@@ -974,7 +998,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with CoreInputMod and InteractionShowcaseMod.");
-            sb.AppendLine($"- T+004: production startup has active `{DefaultSchemeId}` and resolves `{DefaultIntentId}`.");
+            sb.AppendLine($"- T+004: production startup has active `{launchScheme}` and resolves `{DefaultIntentId}`.");
             sb.AppendLine("- T+008: publish local `(owner, collection.command.source)` with Arcweaver, Vanguard, and Commander.");
             sb.AppendLine($"- T+012: submit ground pointer command target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");
             sb.AppendLine($"- T+016: `dispatch.all_together` fans out {orders.Length.ToString(CultureInfo.InvariantCulture)} moveTo orders in admission batch {orders[0].AdmissionBatchId.ToString(CultureInfo.InvariantCulture)} with order receipts {string.Join(", ", orders.Select(static order => order.OrderId.ToString(CultureInfo.InvariantCulture)))}.");
@@ -988,7 +1012,8 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("| Field | Value |");
             sb.AppendLine("|---|---|");
             sb.AppendLine($"| local player | {localPlayer} |");
-            sb.AppendLine($"| scheme.default registry id | {schemeId.ToString(CultureInfo.InvariantCulture)} |");
+            sb.AppendLine($"| launch scheme | {launchScheme} |");
+            sb.AppendLine($"| launch scheme registry id | {schemeId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| intent.command.default registry id | {intentProfileId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| dispatch.all_together registry id | {dispatchProfileId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| command source rows | {string.Join(", ", commandSource.Select(static e => e.ToString()))} |");
@@ -1030,7 +1055,8 @@ namespace Ludots.Tests.GAS.Production
             Vector2 targetWorldCm,
             int intentProfileId,
             int dispatchProfileId,
-            int schemeId)
+            int schemeId,
+            string launchScheme)
         {
             object[] traces =
             {
@@ -1048,7 +1074,7 @@ namespace Ludots.Tests.GAS.Production
                     at = "show5-show6.scheme",
                     phase = "control-scheme",
                     status = "pass",
-                    scheme = DefaultSchemeId,
+                    scheme = launchScheme,
                     schemeId,
                     intent = DefaultIntentId,
                     intentProfileId
@@ -1105,12 +1131,12 @@ namespace Ludots.Tests.GAS.Production
                 traces.Select(trace => JsonSerializer.Serialize(trace, TraceJsonOptions))) + Environment.NewLine;
         }
 
-        private static string BuildPathMermaid()
+        private static string BuildPathMermaid(string launchScheme)
         {
             return string.Join(Environment.NewLine, new[]
             {
                 "flowchart TD",
-                "    A[\"Load interaction_showcase_hub\"] --> B[\"Startup active scheme.default\"]",
+                $"    A[\"Load interaction_showcase_hub\"] --> B[\"Startup active {launchScheme}\"]",
                 "    B --> C[\"Default frame resolves intent.command.default\"]",
                 "    C --> D[\"Publish collection.command.source for 3 actors\"]",
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",

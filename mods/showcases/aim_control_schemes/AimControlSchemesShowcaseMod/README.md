@@ -6,7 +6,7 @@
 
 ## 四套方案差在哪
 
-设备差异只在 `AimInteractionMod` 的 control scheme 和输入 context。本 mod 不另写 `control_schemes.json`（那份列表是整表替换，写了会把瞄准方案清掉）。
+设备差异只在 `AimInteractionMod` 的 control scheme 和输入 context。本 mod 不另写 `control_schemes.json`：方案按 id 并进能力 mod 的列表，这一场只在 `game.json` 里选座位的初始方案。
 
 | 启动后要切到 | 方案 | 瞄准 | 技能键 | 施法手感 |
 |---|---|---|---|---|

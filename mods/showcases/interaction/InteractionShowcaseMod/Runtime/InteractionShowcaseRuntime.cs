@@ -154,10 +154,12 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
-            string targetScheme = _visibleUatFrame >= 90
-                ? "scheme.wasd_move"
-                : "scheme.default";
-            if (schemes.SchemeIdRegistry.TryGetId(targetScheme, out int schemeId) &&
+            if (_visibleUatFrame < 90)
+            {
+                return;
+            }
+
+            if (schemes.SchemeIdRegistry.TryGetId("scheme.wasd_move", out int schemeId) &&
                 schemes.ActiveSchemeId != schemeId)
             {
                 schemes.TrySwitch(schemeId);
@@ -425,14 +427,7 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             EnsureShowcaseInputSchema(input);
-            if (!input.HasContext(InteractionShowcaseInputContexts.AimKbm))
-            {
-                throw new InvalidOperationException(
-                    $"Missing input context: {InteractionShowcaseInputContexts.AimKbm}");
-            }
-
             input.PushContext(InteractionShowcaseInputContexts.Showcase);
-            input.PushContext(InteractionShowcaseInputContexts.AimKbm);
             _inputContextActive = true;
         }
 
@@ -443,7 +438,6 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
-            input.PopContext(InteractionShowcaseInputContexts.AimKbm);
             input.PopContext(InteractionShowcaseInputContexts.Showcase);
             _inputContextActive = false;
         }
