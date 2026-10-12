@@ -29,7 +29,7 @@ public sealed class CrowdOrderBridgeTests
             OrderAt(session, 1),
         };
 
-        CrowdSimulationOrderBridgeSystem.Accept(session, batch);
+        CrowdSimulationOrderBridge.Accept(session, batch);
         Assert.That(session.Commands.Log, Is.Empty);
         Assert.That(session.Step(out _), Is.True);
 
@@ -37,7 +37,7 @@ public sealed class CrowdOrderBridgeTests
         var order = session.Commands.Log[0].Cmd;
         Assert.That(order.XCm, Is.EqualTo(120000));
         Assert.That(order.YCm, Is.EqualTo(800000));
-        Assert.That(order.ShapeId, Is.EqualTo(CrowdSimulationOrderBridgeSystem.PlainClickShapeId));
+        Assert.That(order.ShapeId, Is.EqualTo(CrowdSimulationOrderBridge.PlainClickShapeId));
         Assert.That(order.Members, Has.Length.EqualTo(2));
     }
 
@@ -111,7 +111,7 @@ public sealed class CrowdOrderBridgeTests
     {
         using var engine = new GameEngine();
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            new CrowdSimulationOrderBridgeSystem(engine, engine.CrowdRuntime));
+            CrowdSimulationOrderBridge.Register(engine, engine.CrowdRuntime));
         Assert.That(ex!.Message, Does.Contain("OrderBufferSystem"));
     }
 
@@ -129,7 +129,7 @@ public sealed class CrowdOrderBridgeTests
             results,
             queue,
             closeEntityIntakeOnUpdate: false);
-        system.RegisterExternalOrderConsumer(1, batch => CrowdSimulationOrderBridgeSystem.Accept(session, batch));
+        system.RegisterExternalOrderConsumer(1, batch => CrowdSimulationOrderBridge.Accept(session, batch));
         return (session, system, queue, results);
     }
 

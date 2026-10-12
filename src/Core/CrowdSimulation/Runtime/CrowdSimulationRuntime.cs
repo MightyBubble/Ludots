@@ -230,8 +230,7 @@ public sealed partial class CrowdSimulationRuntime
             // 同步会让该判定恒为 false,成员格冻结在出生位置。
             engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
                 new CrowdSimulationSessionTickSystem(this), SystemGroup.PostMovement);
-            engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(
-                new CrowdSimulationOrderBridgeSystem(engine, this), SystemGroup.PostMovement);
+            CrowdSimulationOrderBridge.Register(engine, this);
         }
 
         // 体型档案:配置显式声明来源(crowd 会话的半径级只属于它自己的档案集);

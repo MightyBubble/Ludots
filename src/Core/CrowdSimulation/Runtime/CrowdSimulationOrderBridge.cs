@@ -1,6 +1,5 @@
 using System;
 using Arch.Core;
-using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -10,21 +9,18 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.CrowdSimulation.Runtime;
 
 /// <summary>
-/// 安装时向 <see cref="OrderBufferSystem"/> 登记 <c>crowdSimulationMove</c> 的外部消费者。
+/// 会话首次激活时向 <see cref="OrderBufferSystem"/> 登记 <c>crowdSimulationMove</c> 的外部消费者。
 /// 排空留在订单接入自己的阶段。消费者把批次排进下一拍会话步进：成员在那时钉死，
 /// 普通右键只有一个地面点，形状固定为 <see cref="PlainClickShapeId"/>。
 /// <see cref="OrderArgs.Spatial"/> 的 WorldCm 写成 (X, 0, Y)，平面坐标取 X 与 Z，按整数截断。
 /// </summary>
-public sealed class CrowdSimulationOrderBridgeSystem : ISystem<float>
+public static class CrowdSimulationOrderBridge
 {
     public const string OrderTypeKey = "crowdSimulationMove";
     public const string PlainClickShapeId = "box";
 
-    private readonly CrowdSimulationRuntime _runtime;
-
-    public CrowdSimulationOrderBridgeSystem(GameEngine engine, CrowdSimulationRuntime runtime)
+    public static void Register(GameEngine engine, CrowdSimulationRuntime runtime)
     {
-        _runtime = runtime;
         var buffer = engine.GetService(CoreServiceKeys.OrderBufferSystem)
             ?? throw new InvalidOperationException("群体下令桥已安装，但缺少 OrderBufferSystem。");
         var registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
@@ -36,18 +32,12 @@ public sealed class CrowdSimulationOrderBridgeSystem : ISystem<float>
 
         buffer.RegisterExternalOrderConsumer(id, batch =>
         {
-            var session = _runtime.Session
+            var session = runtime.Session
                 ?? throw new InvalidOperationException("crowdSimulationMove: 会话未激活。");
             Accept(session, batch);
-            _runtime.NoteLiveCommand();
+            runtime.NoteLiveCommand();
         });
     }
-
-    public void Initialize() { }
-    public void BeforeUpdate(in float t) { }
-    public void Update(in float dt) { }
-    public void AfterUpdate(in float t) { }
-    public void Dispose() { }
 
     /// <summary>
     /// 成员数组在这里一次成形。地面点取 WorldCm.X 与 WorldCm.Z。
